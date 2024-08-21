@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-09 20:07+0800\n"
+"POT-Creation-Date: 2024-08-20 11:54+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -94,7 +94,7 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/models/mount.py:39
 #: paas_wl/bk_app/cnative/specs/models/mount.py:58
 #: paas_wl/bk_app/cnative/specs/models/mount.py:79
-#: paasng/platform/bkapp_model/models.py:134
+#: paasng/platform/bkapp_model/models.py:129
 #: paasng/platform/engine/models/preset_envvars.py:32
 msgid "环境名称"
 msgstr "Env Name"
@@ -285,7 +285,7 @@ msgstr ""
 msgid "scaling_config 配置格式有误：{}"
 msgstr "Incorrect format for scaling_config: {}"
 
-#: paas_wl/bk_app/processes/views.py:102
+#: paas_wl/bk_app/processes/views.py:103
 msgid "环境未就绪或已下架, 请尝试重新部署"
 msgstr ""
 
@@ -698,7 +698,7 @@ msgid "{url} 并非 {module_name} 模块的访问入口"
 msgstr "{url} is not an access entry for the {module_name} module"
 
 #: paasng/accessories/publish/market/serializers.py:442
-#: paasng/platform/modules/serializers.py:310
+#: paasng/platform/modules/serializers.py:312
 msgid "This field is required."
 msgstr ""
 
@@ -786,7 +786,7 @@ msgid "创建"
 msgstr "Create "
 
 #: paasng/bk_plugins/pluginscenter/constants.py:142
-#: paasng/misc/audit/constants.py:70
+#: paasng/misc/audit/constants.py:73
 msgid "新建"
 msgstr "Create"
 
@@ -799,16 +799,17 @@ msgid "终止发布"
 msgstr "Unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
+#: paasng/misc/audit/constants.py:75
 msgid "修改"
 msgstr "Modify"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:146
-#: paasng/misc/audit/constants.py:71
+#: paasng/misc/audit/constants.py:74
 msgid "删除"
 msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
-#: paasng/misc/audit/constants.py:88
+#: paasng/misc/audit/constants.py:92
 msgid "下架"
 msgstr "archive"
 
@@ -1628,103 +1629,107 @@ msgstr "Ongoing"
 msgid "中断"
 msgstr "interrupt"
 
-#: paasng/misc/audit/constants.py:57
+#: paasng/misc/audit/constants.py:60
 msgid "应用"
 msgstr "APP ID"
 
-#: paasng/misc/audit/constants.py:58
+#: paasng/misc/audit/constants.py:61
 msgid "模块"
 msgstr "Module"
 
-#: paasng/misc/audit/constants.py:59
+#: paasng/misc/audit/constants.py:62
 msgid "进程"
 msgstr "process"
 
-#: paasng/misc/audit/constants.py:60
+#: paasng/misc/audit/constants.py:63
 msgid "用户限制"
 msgstr "access control"
 
-#: paasng/misc/audit/constants.py:61
+#: paasng/misc/audit/constants.py:64
 msgid "云 API 权限"
 msgstr "API permissions"
 
-#: paasng/misc/audit/constants.py:62
+#: paasng/misc/audit/constants.py:65
 msgid "密钥"
 msgstr "secret"
 
-#: paasng/misc/audit/constants.py:63
+#: paasng/misc/audit/constants.py:66
 msgid "环境变量"
 msgstr "environment variables"
 
-#: paasng/misc/audit/constants.py:64"
+#: paasng/misc/audit/constants.py:67
 msgid "增强服务"
 msgstr "Add-ons"
 
-#: paasng/misc/audit/constants.py:73 paasng/misc/operations/constant.py:57
+#: paasng/misc/audit/constants.py:77 paasng/misc/operations/constant.py:57
 msgid "创建应用"
 msgstr "create APP"
 
-#: paasng/misc/audit/constants.py:74
+#: paasng/misc/audit/constants.py:78
 msgid "发布到应用市场"
 msgstr " publish to APP market"
 
-#: paasng/misc/audit/constants.py:75 paasng/misc/operations/constant.py:64
+#: paasng/misc/audit/constants.py:79 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
 msgstr "remove from the APP market"
 
-#: paasng/misc/audit/constants.py:76 paasng/misc/operations/constant.py:61
+#: paasng/misc/audit/constants.py:80 paasng/misc/operations/constant.py:61
 msgid "完善应用市场配置"
 msgstr "improve market configuration"
 
-#: paasng/misc/audit/constants.py:77
+#: paasng/misc/audit/constants.py:81
 msgid "修改应用市场访问地址"
 msgstr "modify market url"
 
-#: paasng/misc/audit/constants.py:78
+#: paasng/misc/audit/constants.py:82
 msgid "修改基本信息"
 msgstr "modify basic information"
 
-#: paasng/misc/audit/constants.py:80
+#: paasng/misc/audit/constants.py:84
 msgid "启动"
 msgstr "start"
 
-#: paasng/misc/audit/constants.py:81
+#: paasng/misc/audit/constants.py:85
 msgid "停止"
 msgstr "stop"
 
-#: paasng/misc/audit/constants.py:82
+#: paasng/misc/audit/constants.py:86
 msgid "扩缩容"
 msgstr "scale"
 
-#: paasng/misc/audit/constants.py:83
+#: paasng/misc/audit/constants.py:87
 msgid "启用"
 msgstr "enable"
 
-#: paasng/misc/audit/constants.py:84
+#: paasng/misc/audit/constants.py:88
 msgid "停用"
 msgstr "disable"
 
-#: paasng/misc/audit/constants.py:85
+#: paasng/misc/audit/constants.py:89
 msgid "申请"
 msgstr "apply"
 
-#: paasng/misc/audit/constants.py:86
+#: paasng/misc/audit/constants.py:90
 msgid "续期"
 msgstr "renew"
 
-#: paasng/misc/audit/constants.py:87
+#: paasng/misc/audit/constants.py:91
 msgid "部署"
 msgstr "Deploy"
 
-#: paasng/misc/audit/models.py:105
-#, python-brace-format
-msgid " {self.module_name} 模块"
-msgstr " {self.module_name} module"
+#: paasng/misc/audit/constants.py:94
+msgid "修改特性标记"
+msgstr "modify feature flag"
 
 #: paasng/misc/audit/models.py:103
 #, python-brace-format
 msgid " {self.module_name} 模块{env}"
 msgstr " {self.module_name} module {env}"
+
+#: paasng/misc/audit/models.py:105
+#, python-brace-format
+msgid " {self.module_name} 模块"
+msgstr " {self.module_name} module"
 
 #: paasng/misc/audit/models.py:107
 #, python-brace-format
@@ -1751,14 +1756,14 @@ msgstr "{user} {operation}{module_env_info} {attribute} {target}{result}"
 msgid "{user} {operation}{module_env_info}{target}{result}"
 msgstr "{user} {operation}{module_env_info}{target}{result}"
 
-#: paasng/misc/monitoring/healthz/probes.py:152
+#: paasng/misc/monitoring/healthz/probes.py:153
 #, python-brace-format
 msgid "远程增强服务「{config_name}」状态异常, 请检查服务可用性。"
 msgstr ""
 "The status of the remote Add-ons '{config_name}' is abnormal, please check "
 "the availability of the service."
 
-#: paasng/misc/monitoring/healthz/probes.py:161
+#: paasng/misc/monitoring/healthz/probes.py:162
 #, python-brace-format
 msgid "探测远程增强服务「{config_name}」时发生未知异常, 请检查配置情况。"
 msgstr ""
@@ -2131,30 +2136,30 @@ msgstr "APP Name"
 msgid "S-Mart 不可关闭应用描述文件"
 msgstr "S-Mart cannot close the APP description file"
 
-#: paasng/platform/applications/serializers/app.py:57
+#: paasng/platform/applications/serializers/app.py:58
 msgid "应用引擎参数未提供"
 msgstr "APP engine parameters not provided"
 
-#: paasng/platform/applications/serializers/app.py:63
+#: paasng/platform/applications/serializers/app.py:64
 #, fuzzy
 #| msgid "已开启引擎，类型不能为 \"enginess_app\""
 msgid "已开启引擎，类型不能为 \"engineless_app\""
 msgstr "Engine enabled, type cannot be \"enginess_app"
 
-#: paasng/platform/applications/serializers/app.py:95
+#: paasng/platform/applications/serializers/app.py:96
 msgid "该接口只支持创建外链应用"
 msgstr ""
 
-#: paasng/platform/applications/serializers/app.py:137
+#: paasng/platform/applications/serializers/app.py:138
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 
-#: paasng/platform/applications/serializers/app.py:250
+#: paasng/platform/applications/serializers/app.py:253
 #, python-format
 msgid "无效的选项: %s"
 msgstr "Invalid option: %s"
 
-#: paasng/platform/applications/serializers/app.py:285
+#: paasng/platform/applications/serializers/app.py:288
 #, python-format
 msgid "无效的分类选项: %s"
 msgstr "Invalid classification option: %s"
@@ -2247,31 +2252,31 @@ msgstr "Prod Env"
 msgid "应用市场"
 msgstr " Market "
 
-#: paasng/platform/bkapp_model/serializers.py:113
+#: paasng/platform/bkapp_model/serializers/serializers.py:113
 msgid "至多设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers.py:115
+#: paasng/platform/bkapp_model/serializers/serializers.py:115
 msgid "至少设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers.py:198
+#: paasng/platform/bkapp_model/serializers/serializers.py:184
 msgid "应用{}不存在"
 msgstr "The application {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers.py:203
+#: paasng/platform/bkapp_model/serializers/serializers.py:189
 msgid "模块{}不存在"
 msgstr "The module {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers.py:221
+#: paasng/platform/bkapp_model/serializers/serializers.py:207
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers.py:240
+#: paasng/platform/bkapp_model/serializers/serializers.py:226
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers.py:246
+#: paasng/platform/bkapp_model/serializers/serializers.py:232
 msgid "BkApp 配置信息"
 msgstr "config info"
 
@@ -2303,23 +2308,19 @@ msgid "当前应用未定义主模块"
 msgstr "The current APP does not define a default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:139
-#: paasng/platform/declarative/application/validations/v3.py:149
+#: paasng/platform/declarative/application/validations/v3.py:133
 msgid "一个应用只能有一个主模块"
 msgstr "An app can only have one default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:142
-#: paasng/platform/declarative/application/validations/v3.py:152
+#: paasng/platform/declarative/application/validations/v3.py:136
 msgid "一个应用必须有一个主模块"
 msgstr "An APP must have a default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:149
-#: paasng/platform/declarative/application/validations/v3.py:159
+#: paasng/platform/declarative/application/validations/v3.py:143
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
-
-#: paasng/platform/declarative/deployment/validations/v2.py:116
-msgid "至少需要指定一个有效的探活检测机制"
-msgstr ""
 
 #: paasng/platform/declarative/handlers.py:190
 #: paasng/platform/declarative/handlers.py:192
@@ -2342,7 +2343,7 @@ msgid "通过描述文件定义的应用不支持该操作"
 msgstr ""
 "This operation is not supported by the APP defined by the description file"
 
-#: paasng/platform/declarative/serializers.py:142
+#: paasng/platform/declarative/serializers.py:138
 msgid ""
 "格式错误，只能以 \"BKAPP_\" 开头，由大写字母、数字与下划线组成，长度不超过 "
 "50。"
@@ -2523,33 +2524,33 @@ msgstr ""
 msgid "使用 Dockerfile 构建"
 msgstr ""
 
-#: paasng/platform/engine/constants.py:159
+#: paasng/platform/engine/constants.py:153
 msgid "蓝鲸应用ID"
 msgstr "BK APP ID"
 
-#: paasng/platform/engine/constants.py:160
+#: paasng/platform/engine/constants.py:154
 msgid "蓝鲸应用密钥"
 msgstr "BK APP Secret"
 
-#: paasng/platform/engine/constants.py:166
+#: paasng/platform/engine/constants.py:160
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/platform/engine/constants.py:167
+#: paasng/platform/engine/constants.py:161
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/platform/engine/constants.py:168
+#: paasng/platform/engine/constants.py:162
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/platform/engine/constants.py:169
+#: paasng/platform/engine/constants.py:163
 msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
-#: paasng/platform/engine/constants.py:172
+#: paasng/platform/engine/constants.py:166
 msgid ""
 "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
 "\"http://prod.com\"}"
@@ -2682,32 +2683,32 @@ msgstr ""
 "The current runtime image does not support WebConsole functionality, please "
 "try to bundle the latest APP Runtime"
 
-#: paasng/platform/engine/serializers.py:100
+#: paasng/platform/engine/serializers.py:94
 msgid "version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:309
+#: paasng/platform/engine/serializers.py:303
 #, python-brace-format
 msgid "Object with {slug_name}={value} does not exist."
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:310
+#: paasng/platform/engine/serializers.py:304
 msgid "Invalid value."
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:350
+#: paasng/platform/engine/serializers.py:344
 #, python-brace-format
 msgid "该环境下同名变量 {key} 已存在。"
 msgstr "A variable with the same name {key} already exists in this environment"
 
-#: paasng/platform/engine/serializers.py:352
+#: paasng/platform/engine/serializers.py:346
 #, python-brace-format
 msgid "该环境下名称为 {key} 的变量已经存在，不能重复添加。"
 msgstr ""
 "The variable named {key} already exists in this environment and cannot be "
 "added repeatedly."
 
-#: paasng/platform/engine/serializers.py:419
+#: paasng/platform/engine/serializers.py:413
 #, python-format
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
@@ -3064,31 +3065,31 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:346
-#: paasng/platform/modules/manager.py:384
+#: paasng/platform/modules/manager.py:349
+#: paasng/platform/modules/manager.py:387
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:349
-#: paasng/platform/modules/manager.py:420
+#: paasng/platform/modules/manager.py:352
+#: paasng/platform/modules/manager.py:423
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:354
-#: paasng/platform/modules/manager.py:410
-#: paasng/platform/modules/manager.py:414
+#: paasng/platform/modules/manager.py:357
+#: paasng/platform/modules/manager.py:413
+#: paasng/platform/modules/manager.py:417
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:390
+#: paasng/platform/modules/manager.py:393
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:417
+#: paasng/platform/modules/manager.py:420
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:424
+#: paasng/platform/modules/manager.py:427
 #, fuzzy
 #| msgid "代码初始化过程失败，请稍候再试"
 msgid "初始化应用模型失败, 请稍候再试"
@@ -3129,35 +3130,35 @@ msgid "删除模块前，请先确认所有独立域名已经下线"
 msgstr ""
 "Before deleting the module, please make sure all domains have been archived"
 
-#: paasng/platform/modules/serializers.py:155
+#: paasng/platform/modules/serializers.py:157
 #: paasng/platform/templates/models.py:41
 msgid "模板名称"
 msgstr ""
 
-#: paasng/platform/modules/serializers.py:164
-#: paasng/platform/modules/serializers.py:405
+#: paasng/platform/modules/serializers.py:166
+#: paasng/platform/modules/serializers.py:407
 msgid "名称为 {} 的模块已存在"
 msgstr " APP name %s already exists "
 
-#: paasng/platform/modules/serializers.py:170
-#: paasng/platform/modules/serializers.py:269
+#: paasng/platform/modules/serializers.py:172
+#: paasng/platform/modules/serializers.py:271
 msgid "模板 {} 不可用"
 msgstr "Template {} is unavailabl"
 
-#: paasng/platform/modules/serializers.py:344
+#: paasng/platform/modules/serializers.py:346
 msgid "镜像凭证信息"
 msgstr "Image credential information"
 
-#: paasng/platform/modules/serializers.py:366
+#: paasng/platform/modules/serializers.py:368
 msgid "构建配置"
 msgstr "Build configuration"
 
-#: paasng/platform/modules/serializers.py:384
+#: paasng/platform/modules/serializers.py:386
 msgid "源码配置"
 msgstr "Source code configuration"
 
-#: paasng/platform/modules/serializers.py:447
-#: paasng/platform/modules/serializers.py:457
+#: paasng/platform/modules/serializers.py:449
+#: paasng/platform/modules/serializers.py:459
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 

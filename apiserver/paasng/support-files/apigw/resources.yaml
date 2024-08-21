@@ -1525,7 +1525,7 @@ paths:
         disabledStages: []
         descriptionEn:
     post:
-      operationId: list_bk_plugin_logs_clone
+      operationId: list_bk_plugin_logs_cloned
       description: 查询单个蓝鲸插件的日志
       tags:
       - 蓝鲸应用插件

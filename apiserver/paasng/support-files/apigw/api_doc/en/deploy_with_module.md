@@ -15,7 +15,6 @@ App deployment interface for deploying applications to a specified environment.
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
-| url            | string         | Yes      | Deployment source code path (including trunk) |
 | revision       | string         | Yes      | Source code repository version number |
 | version_name   | string         | Yes      | Branch or tag name |
 | version_type   | string         | Yes      | For svn, supports passing trunk / tag; for git, supports passing branch |
@@ -29,7 +28,7 @@ Before calling the interface, please obtain your access_token first. For specifi
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in App deployment environment: stag or prod}/deployments/ -d '{"url": "http://git.example.com/Your project path.git", "revision": "commit sha value", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in App deployment environment: stag or prod}/deployments/ -d '{"revision": "commit sha value", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
 ```
 
 ### Response Result Example

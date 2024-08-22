@@ -267,8 +267,8 @@ paths:
         default:
           description: ''
       x-bk-apigateway-resource:
-        isPublic: false
-        allowApplyPermission: false
+        isPublic: true
+        allowApplyPermission: true
         matchSubpath: false
         backend:
           type: HTTP

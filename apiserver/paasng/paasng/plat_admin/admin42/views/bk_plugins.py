@@ -63,6 +63,7 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
         instance = self.get_object()
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=instance.to_dict())
         instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,
@@ -78,6 +79,7 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
         slz.is_valid(raise_exception=True)
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=instance.to_dict())
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY,
@@ -108,6 +110,7 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
         slz = BkPluginDistributorSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.CREATE,
@@ -121,6 +124,7 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
         instance = self.get_object()
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=instance.to_dict())
         instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,
@@ -136,6 +140,7 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
         slz.is_valid(raise_exception=True)
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=instance.to_dict())
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY,

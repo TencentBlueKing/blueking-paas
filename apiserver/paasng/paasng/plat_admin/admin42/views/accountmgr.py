@@ -137,6 +137,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         # profile.role = SiteRole.NOBODY.value
         profile.role = SiteRole.BANNED_USER.value
         profile.save()
+
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=constants.OperationEnum.MODIFY,

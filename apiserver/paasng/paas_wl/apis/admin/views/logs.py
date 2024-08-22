@@ -73,6 +73,7 @@ class AppLogConfigViewSet(ViewSet):
         )
         config.mount_log_to_host = data["mount_log_to_host"]
         config.save(update_fields=["mount_log_to_host", "updated"])
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY_LOG_CONFIG,

@@ -74,6 +74,7 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
         slz = self.get_serializer(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.CREATE_APP_ENV_VAR,
@@ -93,6 +94,7 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
             data={"key": instance.key, "value": instance.value, "description": instance.description},
         )
         instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE_APP_ENV_VAR,
@@ -114,6 +116,7 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
             data={"key": instance.key, "value": instance.value, "description": instance.description},
         )
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY_APP_ENV_VAR,

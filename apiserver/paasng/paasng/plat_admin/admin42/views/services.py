@@ -234,6 +234,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
             mixed_service_mgr.destroy(service)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,

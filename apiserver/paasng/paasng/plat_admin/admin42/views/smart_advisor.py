@@ -59,6 +59,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
         slz = DocumentaryLinkSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.CREATE,
@@ -72,6 +73,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
         instance = self.get_object()
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
         instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,
@@ -87,6 +89,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY,
@@ -126,6 +129,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
         slz = DeployFailurePatternSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.CREATE,
@@ -139,6 +143,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
         instance = self.get_object()
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
         instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.DELETE,
@@ -154,6 +159,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=constants.OperationEnum.MODIFY,

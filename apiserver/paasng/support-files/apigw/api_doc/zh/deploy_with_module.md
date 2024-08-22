@@ -19,6 +19,7 @@ App 部署接口，用于部署应用到指定环境。
 | version_name  | string   | 是   | branch 或 tag 的名称                           |
 | version_type  | string   | 是   | 对于 svn，支持传 trunk / tag； 对于 git，支持传 branch |
 
+确保revision，version_name，version_type可以在对应仓库查到
 
 ### 请求示例
 
@@ -38,7 +39,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 	"deployment_id": "22d0e9c8-9cfc-45a5-b5a8-718137c515db"
 }
 ```
-确保revision，version_name，version_type可以在对应仓库查到，否则会异常返回http code 500。
+
 
 ### 返回结果参数说明
 

@@ -19,6 +19,7 @@ App deployment interface for deploying applications to a specified environment.
 | version_name   | string         | Yes      | Branch or tag name |
 | version_type   | string         | Yes      | For svn, supports passing trunk / tag; for git, supports passing branch |
 
+Make sure that revision, version_name, and version_type can be found in the corresponding repository.
 
 ### Request Example
 
@@ -38,7 +39,6 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 	"deployment_id": "22d0e9c8-9cfc-45a5-b5a8-718137c515db"
 }
 ```
-Make sure that revision, version_name, and version_type can be found in the corresponding repository, otherwise the http code 500 will be returned abnormally.
 
 ### Response Result Parameter Description
 

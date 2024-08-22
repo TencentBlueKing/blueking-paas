@@ -125,7 +125,7 @@ def submit_canary_release_ticket(
     # 组装提单数据,包含插件的基本信息和灰度发布信息
     basic_fields = _get_basic_fields(pd, plugin)
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]灰度发布审批"}]
-    fields = basic_fields + title_fields + canary_fields
+    itsm_fields = basic_fields + title_fields + canary_fields
 
     service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
@@ -137,7 +137,7 @@ def submit_canary_release_ticket(
 
     # 提交 itsm 申请单据
     client = ItsmClient()
-    itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
+    itsm_detail = client.create_ticket(service_id, operator, callback_url, itsm_fields)
     release_strategy.itsm_detail = itsm_detail
     release_strategy.save()
     return itsm_detail

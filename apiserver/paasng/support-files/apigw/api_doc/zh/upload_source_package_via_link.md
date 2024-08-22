@@ -7,8 +7,8 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | --- | -------- |
-| app_code    | string | 是 | 应用 ID  |
-| module_name | string | 是 | 模块名称 |
+| app_code | string | 是 | 应用 ID  |
+| modules  | string | 是 | 模块名称 |
 
 #### 2、接口参数：
 

@@ -24,6 +24,7 @@
           >
             {{ $t('查看审批详情') }}
           </bk-button>
+          <i class="paasng-icon paasng-refresh-line refresh" @click="getVisibleRange" />
         </div>
       </bk-alert>
       <!-- 无数据状态 -->
@@ -107,7 +108,6 @@
 import paasPluginTitle from '@/components/pass-plugin-title';
 import userSelectorDialog from '@/components/user-selector';
 import renderMemberList from '@/views/dev-center/app/market/render-member-list';
-import { buildPath } from '@/common/tools';
 
 export default {
   components: {
@@ -130,8 +130,6 @@ export default {
       visibleRangeData: {},
       isEditingFormData: true,
       submitBtnTips: '',
-      // 用于缓存上一次请求的结果
-      cachePool: new Map(),
       organizationLevel: [],
       rules: {
         projectIds: [
@@ -172,6 +170,9 @@ export default {
       }
       return false;
     },
+    cachePool() {
+      return this.$store.getters['plugin/getCachePool'];
+    },
   },
   watch: {
     formData: {
@@ -179,6 +180,9 @@ export default {
         this.isEditingFormData = this.initStatus === JSON.stringify(newValue);
       },
       deep: true,
+    },
+    initStatus(newValue) {
+      this.isEditingFormData = newValue === JSON.stringify(this.formData);
     },
     'departments.length'() {
       this.triggerValidate();
@@ -258,25 +262,10 @@ export default {
         });
       }
     },
-    // 请求组织的层级结构
     async requestAllOrganization(data) {
       if (!data.length) return;
-
-      // 过滤出需要请求的新数据
-      const newData = data.filter(item => !this.cachePool.has(item.id));
-
-      // 对新数据发送请求
-      const requests = newData.map(item => this.$store.dispatch('plugin/getOrganizationLevel', { id: item.id }));
-      const res = await Promise.all(requests);
-
-      // 处理返回的数据
-      res.forEach((item, index) => {
-        const name = buildPath(item);
-        const { id } = newData[index];  // 对应的 id
-        this.cachePool.set(id, { name, id });  // 缓存处理后的结果
-      });
-
-      this.organizationLevel = data.map(item => this.cachePool.get(item.id));
+      const organizationLevel = await this.$store.dispatch('plugin/requestAllOrganization', data);
+      this.organizationLevel = organizationLevel;
     },
     // 过滤出指定部门
     handleDepartments(data, type) {
@@ -339,6 +328,7 @@ export default {
     margin-bottom: 16px;
   }
   .warning-alert-cls {
+    position: relative;
     i {
       font-size: 14px;
       color: #ff9c01;
@@ -352,6 +342,14 @@ export default {
     }
     /deep/ .bk-button-text.bk-button-small {
       padding: 0;
+    }
+    .refresh {
+      cursor: pointer;
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      color: #3a84ff;
     }
   }
 }

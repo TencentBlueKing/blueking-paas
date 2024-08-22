@@ -206,7 +206,7 @@
                 class="mr10"
                 @click="handleCodeccReleaseDetails(row)"
               >
-                {{ $t('版本详情') }}
+                {{ $t('详情') }}
               </bk-button>
               <!-- is_rolled_back = true 表示已回滚 -->
               <span

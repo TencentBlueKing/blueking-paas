@@ -65,7 +65,7 @@
                 >
                   <render-member-list
                     type="department"
-                    :data="departments"
+                    :data="organizationLevel"
                   />
                 </div>
                 <p
@@ -117,7 +117,7 @@
                   v-if="data.latest_release_strategy.organization?.length"
                 >
                   <li
-                    v-for="item in data.latest_release_strategy.organization"
+                    v-for="item in organizationLevel"
                     :key="item.id"
                   >
                     {{ item.name }}
@@ -194,6 +194,7 @@ export default {
         { value: 'gray', name: this.$t('先灰度后全量发布') },
         { value: 'full', name: this.$t('直接全量发布') },
       ],
+      organizationLevel: [],
       rules: {
         strategy: [
           {
@@ -223,6 +224,9 @@ export default {
     versionId() {
       return this.$route.query.versionId;
     },
+    cachePool() {
+      return this.$store.getters['plugin/getCachePool'];
+    },
   },
   watch: {
     data: {
@@ -230,6 +234,9 @@ export default {
         if (this.step === 'release') {
           this.releaseStrategy = newValue?.latest_release_strategy || {};
           this.departments = newValue.latest_release_strategy?.organization || [];
+          if (this.departments.length) {
+            this.requestAllOrganization(this.departments);
+          }
         }
         if (this.versionId) {
           this.setVersionDefaultValue();
@@ -258,6 +265,9 @@ export default {
         organization,
       };
       this.departments = organization || [];
+      if (this.departments.length) {
+        this.requestAllOrganization(this.departments);
+      }
     },
     // 表单校验
     validate() {
@@ -282,7 +292,14 @@ export default {
     async handleSubmit(payload) {
       this.releaseStrategy.organization = payload;
       this.departments = payload;
+      await this.requestAllOrganization(payload);
       this.isShow = false;
+    },
+    // 请求组织的层级结构
+    async requestAllOrganization(data) {
+      if (!data.length) return;
+      const organizationLevel = await this.$store.dispatch('plugin/requestAllOrganization', data);
+      this.organizationLevel = organizationLevel;
     },
     // 过滤出指定部门
     handleDepartments(data, type) {
@@ -366,6 +383,9 @@ export default {
         }
       }
     }
+  }
+  .render-member-wrapper .render-member-list-wrapper {
+    padding: 0 12px 12px 12px;
   }
 }
 </style>

@@ -22,7 +22,7 @@
     云API相关数据
 */
 import http from '@/api';
-import { json2Query } from '@/common/tools';
+import { json2Query, buildPath } from '@/common/tools';
 import bartOptions from '@/json/bar_chart_default';
 import moment from 'moment';
 
@@ -36,9 +36,12 @@ export default {
     // 当前插件的当前发布版本
     curRelease: {},
     pluginApplyUrl: '',
+    // 组织层级缓存池
+    cachePool: new Map(),
   },
   getters: {
     chartData: state => state.chartData,
+    getCachePool: state => state.cachePool,
   },
   mutations: {
     /**
@@ -85,8 +88,36 @@ export default {
     updatePluginApplyUrl(state, url) {
       state.pluginApplyUrl = url;
     },
+    setCachePool(state, { id, data }) {
+      state.cachePool.set(id, data);
+    },
   },
   actions: {
+    /**
+     * 获取组织层级前缀
+     * @param {Object} params 请求参数：data
+     */
+    async requestAllOrganization({ commit, state }, data) {
+      if (!data.length) return [];
+
+      // 过滤出需要请求的新数据
+      const newData = data.filter(item => !state.cachePool.has(item.id));
+
+      // 对新数据发送请求
+      const requests = newData.map(item => this.dispatch('plugin/getOrganizationLevel', { id: item.id }));
+      const res = await Promise.all(requests);
+
+      // 处理返回的数据
+      res.forEach((item, index) => {
+        console.log('rr', item, index);
+
+        const name = buildPath(item);
+        const { id } = newData[index];  // 对应的 id
+        commit('setCachePool', { id, data: { name, id } });  // 缓存处理后的结果
+      });
+
+      return data.map(item => state.cachePool.get(item.id));
+    },
     /**
      * --
      * @param {Object} params 请求参数：无

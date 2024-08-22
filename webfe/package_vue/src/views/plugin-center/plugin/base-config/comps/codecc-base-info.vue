@@ -9,10 +9,9 @@
         class="codecc-base-alert-cls"
       >
         <i class="bk-icon icon-info"></i>
-        <p>{{ $t('CodeCC 工具信息从代码仓库的配置文件中获取，') }}</p>
-        <span class="link" @click="handleToConfig">{{ $t('可前往 tool.json 和 checkers.json 修改') }}</span>
-        <div class="line"></div>
-        <i class="paasng-icon paasng-refresh-line link" @click="getCodeccBasicInfo"></i>
+        {{ $t('CodeCC 工具信息展示的是最新的测试版本，如需修改') }}&nbsp;
+        <span class="link" @click="handleToConfig">{{ $t('可前往 tool.json 和 checkers.json') }}</span>
+        &nbsp;{{ $t('修改后重新测试') }}
       </div>
     </bk-alert>
     <ul class="info">
@@ -42,7 +41,7 @@ export default {
         type: this.$t('插件类型'),
         name: this.$t('插件标识'),
         displayName: this.$t('插件名称'),
-        devLanguage: this.$t('开发工具'),
+        devLanguage: this.$t('开发语言'),
         toolCnTypes: this.$t('工具类别'),
         langList: this.$t('适用语言'),
         needBuildScript: this.$t('业务编译脚本'),
@@ -160,12 +159,6 @@ export default {
     display: flex;
     align-items: center;
     font-size: 12px;
-    .line {
-      margin: 0 8px;
-      width: 1px;
-      height: 16px;
-      background: #c4c6cc;
-    }
     .link {
       color: #3a84ff;
       cursor: pointer;

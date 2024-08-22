@@ -19,7 +19,7 @@
         />
 
         <!-- 更多信息 -->
-        <div class="basic-info-item mt16 card-style" v-if="isMoreInfo">
+        <div class="basic-info-item mt16 card-style" v-if="isMoreInfo && !isCodecc">
           <div class="title">
             {{ $t('更多信息') }}
             <span

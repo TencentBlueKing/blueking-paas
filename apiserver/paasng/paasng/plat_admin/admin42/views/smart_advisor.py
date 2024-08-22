@@ -15,13 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework import status
+from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paasng.accessories.smart_advisor.models import DeployFailurePattern, DocumentaryLink
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.smart_advisor import DeployFailurePatternSLZ, DocumentaryLinkSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
@@ -43,14 +47,54 @@ class DocumentaryLinkView(GenericTemplateView):
         return kwargs
 
 
-class DocumentaryLinkManageViewSet(
-    CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet
-):
+class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
     """智能顾问-文档管理API"""
 
     serializer_class = DocumentaryLinkSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     queryset = DocumentaryLink.objects.all()
+
+    def create(self, request):
+        """创建文档"""
+        slz = DocumentaryLinkSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE,
+            target=constants.OperationTarget.DOCUMENT,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除文档"""
+        instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
+        instance.delete()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE,
+            target=constants.OperationTarget.DOCUMENT,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        """更新文档"""
+        instance = self.get_object()
+        slz = DocumentaryLinkSLZ(instance, data=request.data)
+        slz.is_valid(raise_exception=True)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.DOCUMENT,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(slz.data)
 
 
 class DeployFailurePatternView(GenericTemplateView):
@@ -70,11 +114,51 @@ class DeployFailurePatternView(GenericTemplateView):
         return kwargs
 
 
-class DeployFailurePatternManageViewSet(
-    CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet
-):
+class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
     """智能顾问-失败提示管理API"""
 
     serializer_class = DeployFailurePatternSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     queryset = DeployFailurePattern.objects.all()
+
+    def create(self, request):
+        """创建失败提示"""
+        slz = DeployFailurePatternSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE,
+            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除失败提示"""
+        instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
+        instance.delete()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE,
+            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        """更新失败提示"""
+        instance = self.get_object()
+        slz = DeployFailurePatternSLZ(instance, data=request.data)
+        slz.is_valid(raise_exception=True)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(slz.data)

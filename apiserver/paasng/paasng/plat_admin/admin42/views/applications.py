@@ -36,6 +36,7 @@ from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
+    fetch_user_roles,
     remove_user_all_roles,
 )
 from paasng.misc.audit import constants
@@ -313,8 +314,22 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
         # Get the environment object
         application = get_object_or_404(Application, code=code)
         env = application.get_module(module_name).envs.get(environment=environment)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
 
         EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.BIND_CLUSTER,
+            target=constants.OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name()
+            ),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -353,10 +368,34 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
     def destroy(self, request, code):
         application = get_object_or_404(Application, code=code)
+        username = request.query_params["username"]
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
+            },
+        )
         try:
-            remove_user_all_roles(application.code, request.query_params["username"])
+            remove_user_all_roles(application.code, username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
+            target=constants.OperationTarget.APP,
+            app_code=code,
+            attribute="member",
+            data_before=data_before,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={
+                    "username": username,
+                    "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
+                },
+            ),
+        )
 
         self.sync_membership(application)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -364,12 +403,34 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     def update(self, request, code):
         application = get_object_or_404(Application, code=code)
         username, role = request.data["username"], request.data["role"]
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
+            },
+        )
 
         try:
             remove_user_all_roles(application.code, username)
             add_role_members(application.code, ApplicationRole(role), username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
+            target=constants.OperationTarget.APP,
+            app_code=code,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={
+                    "username": username,
+                    "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
+                },
+            ),
+        )
 
         self.sync_membership(application)
         return Response(status=status.HTTP_204_NO_CONTENT)

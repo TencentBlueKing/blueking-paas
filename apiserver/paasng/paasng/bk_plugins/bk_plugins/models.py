@@ -146,6 +146,15 @@ class BkPluginDistributor(TimestampedModel):
     def __str__(self) -> str:
         return f"{self.name} - [{self.code_name}]{self.bk_app_code}"
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "code_name": self.code_name,
+            "bk_app_code": self.bk_app_code,
+            "introduction": self.introduction,
+        }
+
 
 class BkPluginTag(AuditedModel):
     """Plugins and applications use different markets, and plugins should have their own separate tags"""

@@ -49,6 +49,8 @@ from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 logger = logging.getLogger(__name__)
 
@@ -68,15 +70,41 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         slz = ClusterRegisterRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+
+        data_before = ReadonlyClusterSLZ(Cluster.objects.get(pk=pk)).data if pk else None
         cluster = Cluster.objects.register_cluster(**data)
-        return Response(data=ReadonlyClusterSLZ(cluster).data)
+        data_after = ReadonlyClusterSLZ(cluster).data
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE if request.method == "POST" else constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.CLUSTER,
+            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data_after),
+        )
+        return Response(data=data_after)
 
     def set_as_default(self, request, pk):
         cluster = self.get_object()
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA, data=Cluster.objects.get(region=cluster.region, is_default=True).name
+        )
+        result_code = constants.ResultCode.SUCCESS
+
         try:
             Cluster.objects.switch_default_cluster(region=cluster.region, cluster_name=cluster.name)
         except SwitchDefaultClusterError as e:
+            result_code = constants.ResultCode.FAILURE
             raise error_codes.SWITCH_DEFAULT_CLUSTER_FAILED.f(str(e))
+        finally:
+            add_admin_audit_record(
+                user=request.user.pk,
+                operation=constants.OperationEnum.SWITCH_DEFAULT_CLUSTER,
+                target=constants.OperationTarget.CLUSTER,
+                data_before=data_before,
+                result_code=result_code,
+                data_after=DataDetail(type=constants.DataType.RAW_DATA, data=cluster.name),
+            )
         return Response()
 
     @swagger_auto_schema(request_body=APIServerSLZ)
@@ -85,14 +113,31 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         cluster = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
         api_server, _ = APIServer.objects.update_or_create(
             cluster=cluster, host=data["host"], defaults=dict(overridden_hostname=data["overridden_hostname"])
+        )
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.CLUSTER,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
         return Response(data=APIServerSLZ(api_server).data)
 
     def unbind_api_server(self, request, pk, api_server_id):
         cluster = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
         APIServer.objects.filter(cluster=cluster, uuid=api_server_id).delete()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.CLUSTER,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
+        )
         return Response()
 
     def gen_node_state(self, request, cluster_name, *args, **kwargs):
@@ -114,6 +159,16 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE,
+            target=constants.OperationTarget.CLUSTER,
+            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(instance).data),
+        )
+        return super().destroy(request, *args, **kwargs)
 
 
 class ClusterComponentViewSet(ViewSet):

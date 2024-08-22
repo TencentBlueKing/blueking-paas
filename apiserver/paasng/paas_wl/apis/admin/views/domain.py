@@ -27,6 +27,8 @@ from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import Application
 from paasng.utils.api_docs import openapi_empty_response
 
@@ -80,6 +82,16 @@ class AppDomainsViewSet(GenericViewSet):
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE_APP_DOMAIN,
+            target=constants.OperationTarget.APP,
+            app_code=application.code,
+            module_name=data["module"]["name"],
+            environment=data["environment"]["environment"],
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=DomainSLZ(instance).data),
+        )
         return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -92,10 +104,22 @@ class AppDomainsViewSet(GenericViewSet):
         """更新一个独立域名的域名与路径信息"""
         application = get_object_or_404(Application, code=kwargs["code"])
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DomainSLZ(instance).data)
 
         data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
         new_instance = get_custom_domain_mgr(application).update(
             instance, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
+        )
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_APP_DOMAIN,
+            target=constants.OperationTarget.APP,
+            app_code=application.code,
+            module_name=instance.module.name,
+            environment=instance.environment.environment,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=DomainSLZ(new_instance).data),
         )
         return Response(DomainSLZ(new_instance).data)
 
@@ -104,6 +128,16 @@ class AppDomainsViewSet(GenericViewSet):
         """通过 ID 删除一个独立域名"""
         application = get_object_or_404(Application, code=kwargs["code"])
         instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
-
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DomainSLZ(instance).data)
         get_custom_domain_mgr(application).delete(instance)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE_APP_DOMAIN,
+            target=constants.OperationTarget.APP,
+            app_code=application.code,
+            module_name=instance.module.name,
+            environment=instance.environment.environment,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -33,6 +33,8 @@ from paasng.infras.accounts.models import AccountFeatureFlag, User, UserPrivateT
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers import accountmgr
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -90,7 +92,15 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             )
             obj.refresh_from_db(fields=["role", "enable_regions"])
             results.append(obj)
-        return Response(self.get_serializer(results, many=True).data)
+
+        results = self.get_serializer(results, many=True).data
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=constants.OperationEnum.CREATE,
+            target=constants.OperationTarget.ACCESS_CONTROL,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=list(results)),
+        )
+        return Response(results)
 
     def update(self, request):
         slz = accountmgr.UserProfileUpdateFormSLZ(
@@ -104,18 +114,36 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         user_id = data["user"]
         profile = UserProfile.objects.get(user=user_id)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data)
         profile.role = data["role"]
         profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
+
+        profile.refresh_from_db(fields=["role", "enable_regions"])
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.ACCESS_CONTROL,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data),
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request):
         provider_type = int(request.query_params["provider_type"])
         user_id = user_id_encoder.encode(ProviderType(provider_type).value, request.query_params["username"])
         profile = UserProfile.objects.get(user=user_id)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data)
         # profile.role = SiteRole.NOBODY.value
         profile.role = SiteRole.BANNED_USER.value
         profile.save()
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.ACCESS_CONTROL,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data),
+        )
         return Response(self.get_serializer(profile).data, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -145,6 +173,18 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         slz = AccountFeatureFlagSLZ(data=dict(user=dict(username=request.data["username"]), **request.data))
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
-
-        AccountFeatureFlag.objects.set_feature(get_user_by_user_id(data["user"]), data["name"], data["effect"])
+        user = get_user_by_user_id(data["user"])
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)
+        )
+        AccountFeatureFlag.objects.set_feature(user, data["name"], data["effect"])
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=constants.OperationEnum.MODIFY_USER_FEATURE_FLAG,
+            target=constants.OperationTarget.ACCESS_CONTROL,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)
+            ),
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

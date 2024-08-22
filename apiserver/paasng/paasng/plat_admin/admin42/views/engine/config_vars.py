@@ -15,12 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import copy
 import logging
 
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import ConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
@@ -50,9 +57,74 @@ class ConfigVarManageView(ApplicationDetailBaseView):
 class ConfigVarViewSet(BaseConfigVarViewSet):
     schema = None
     serializer_class = ConfigVarSLZ
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    permission_classes = [
+        IsAuthenticated,
+        site_perm_class(SiteAction.MANAGE_PLATFORM),
+        application_perm_class(AppAction.BASIC_DEVELOP),
+    ]
 
     def get_queryset(self):
         application = self.get_application()
         queryset = ConfigVar.objects.filter(module__in=application.modules.all()).order_by("module__is_default")
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        """创建应用内环境变量"""
+        data_after = DataDetail(type=constants.DataType.RAW_DATA, data=copy.deepcopy(request.data))
+        slz = self.get_serializer(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.CREATE_APP_ENV_VAR,
+            target=constants.OperationTarget.APP,
+            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            module_name=slz.validated_data.get("module").name,
+            environment=slz.validated_data.get("environment_name"),
+            data_after=data_after,
+        )
+        return Response(slz.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除应用内环境变量"""
+        instance = self.get_object()
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={"key": instance.key, "value": instance.value, "description": instance.description},
+        )
+        instance.delete()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE_APP_ENV_VAR,
+            target=constants.OperationTarget.APP,
+            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            module_name=instance.module.name,
+            environment=instance.environment.environment,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        """更新应用内环境变量"""
+        instance = self.get_object()
+        slz = self.get_serializer(instance=instance, data=request.data)
+        slz.is_valid(raise_exception=True)
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={"key": instance.key, "value": instance.value, "description": instance.description},
+        )
+        slz.save()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_APP_ENV_VAR,
+            target=constants.OperationTarget.APP,
+            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            module_name=instance.module.name,
+            environment=instance.environment.environment,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={"key": instance.key, "value": instance.value, "description": instance.description},
+            ),
+        )
+        return Response(slz.data)

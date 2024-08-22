@@ -31,6 +31,8 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.models import Application
@@ -78,8 +80,18 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
         # 2. 检查是否有现存的配置，如果有则对比并更新，否则全部新建
         spec = EgressSpec.objects.filter(wl_app=wl_app).first()
+        data_before = None
         if spec:
             # 更新 EgressSpec
+            data_before = DataDetail(
+                type=constants.DataType.RAW_DATA,
+                data={
+                    "replicas": spec.replicas,
+                    "cpu_limit": spec.cpu_limit,
+                    "memory_limit": spec.memory_limit,
+                    "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
+                },
+            )
             spec.replicas = slz.data["replicas"]
             spec.cpu_limit = slz.data["cpu_limit"]
             spec.memory_limit = slz.data["memory_limit"]
@@ -108,6 +120,19 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         ]
         EgressRule.objects.bulk_create(rules)
 
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY_EGRESS_SPEC
+            if data_before
+            else constants.OperationEnum.CREATE_EGRESS_SPEC,
+            target=constants.OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_before=data_before,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+        )
+
         # 3. 下发 Egress 到 k8s 集群，支持更新或者创建
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
@@ -127,6 +152,16 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         if not spec:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "replicas": spec.replicas,
+                "cpu_limit": spec.cpu_limit,
+                "memory_limit": spec.memory_limit,
+                "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
+            },
+        )
+
         # 从集群中删除 egress 资源
         manifest = spec.build_manifest()
         with get_client_by_app(wl_app) as client:
@@ -137,6 +172,15 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
         # 删除 EgressSpec
         spec.delete()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.DELETE_EGRESS_SPEC,
+            target=constants.OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_egress_ips(self, request, code, module_name, environment):

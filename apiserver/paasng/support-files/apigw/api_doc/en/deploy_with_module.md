@@ -28,7 +28,7 @@ Before calling the interface, please obtain your access_token first. For specifi
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in App deployment environment: stag or prod}/deployments/ -d '{"revision": "commit sha value", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{Fill in your AppCode}/modules/default/envs/{Fill in App deployment environment: stag or prod}/deployments/ -d '{"revision": "Source code repository version number", "version_type": "Branch or tag name", "version_name": "For svn, supports passing trunk / tag; for git, supports passing branch"}' -H 'Content-Type: application/json'
 ```
 
 ### Response Result Example
@@ -38,6 +38,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 	"deployment_id": "22d0e9c8-9cfc-45a5-b5a8-718137c515db"
 }
 ```
+Make sure that revision, version_name, and version_type can be found in the corresponding repository, otherwise the http code 500 will be returned abnormally.
 
 ### Response Result Parameter Description
 

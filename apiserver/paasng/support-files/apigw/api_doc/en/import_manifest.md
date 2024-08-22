@@ -9,7 +9,6 @@ Import manifest, update cloud-native app resources.
 |----------------|----------------|----------|------------------------|
 | app_code       | string         | Yes      | Application ID         |
 | module         | string         | Yes      | Module name, e.g., "default" |
-| env            | string         | Yes      | Environment name, options "stag" / "prod" |
 
 #### 2. Body Parameters:
 
@@ -20,53 +19,123 @@ Import manifest, update cloud-native app resources.
 
 ### Request Example
 
+```bash
+curl -X PUT -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***", "bk_token": "***"}' -d '{ "manifest": { "apiVersion": "example.com/v1alpha2", "kind": "BkApp", "metadata": { "annotations": { "bkapp.example.com/code": "test", "bkapp.example.com/image-credentials": "test--dockerconfigjson", "bkapp.example.com/module-name": "default", "bkapp.example.com/name": "test", "bkapp.example.com/region": "default" }, "name": "test" }, "spec": { "addons": [ ], "build": { "imagePullPolicy": "IfNotPresent" }, "configuration": { "env": [ ] }, "envOverlay": { "envVariables": [ ] }, "hooks": { }, "mounts": [ ], "processes": [ { "args": [ ], "command": [ ], "name": "web", "replicas": 4, "resQuotaPlan": "default", "targetPort": 5000 } ] } } }' --insecure http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/test/modules/default/bkapp_model/manifests/current/
+```
+#### Request Body Example
 ```json
 {
-  "manifest": {
-    "apiVersion": "paas.bk.tencent.com/v1alpha1",
-    "kind": "BkApp",
-    "spec": {
-      "processes": [
-        {
-          "cpu": "1000m",
-          "args": [],
-          "name": "web",
-          "image": "nginx:latest",
-          "memory": "256Mi",
-          "command": [],
-          "replicas": 1,
-          "targetPort": 80
+    "manifest": {
+        "apiVersion": "example.com/v1alpha2",
+        "kind": "BkApp",
+        "metadata": {
+            "annotations": {
+                "bkapp.example.com/code": "test",
+                "bkapp.example.com/image-credentials": "test--dockerconfigjson",
+                "bkapp.example.com/module-name": "default",
+                "bkapp.example.com/name": "test",
+                "bkapp.example.com/region": "default"
+            },
+            "name": "test"
+        },
+        "spec": {
+            "addons": [
+            ],
+            "build": {
+                "imagePullPolicy": "IfNotPresent"
+            },
+            "configuration": {
+                "env": [
+                ]
+            },
+            "envOverlay": {
+                "envVariables": [
+                ]
+            },
+            "hooks": {
+            },
+            "mounts": [
+            ],
+            "processes": [
+                {
+                    "args": [
+                    ],
+                    "command": [
+                    ],
+                    "name": "web",
+                    "replicas": 2,
+                    "resQuotaPlan": "default",
+                    "targetPort": 5000
+                }
+            ]
         }
-      ],
-      "configuration": {
-        "env": []
-      }
     }
-  }
 }
 ```
+manifest.metafata.name should be equal to the name of the application.
 
 #### Obtain Your Access Token
 
 Before using the API, please obtain your access token. Refer to [Accessing PaaS V3 with access_token](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 ### Response Example
-
+#### Success Response
 ```json
-[{
-  "apiVersion": "paas.bk.tencent.com/v1alpha1",
-  "kind": "BkApp",
-  "metadata": {
-    // Resource metadata, content omitted
-  },
-  "spec": {
-    // App model configuration, content omitted
-  },
-  "status": {
-    // Current resource status, content omitted
-  }
-}]
+[
+    {
+        "apiVersion": "example.com/v1alpha2",
+        "kind": "BkApp",
+        "metadata": {
+            "name": "test",
+            "annotations": {
+                "bkapp.example.com/region": "default",
+                "bkapp.example.com/name": "test",
+                "bkapp.example.com/code": "test",
+                "bkapp.example.com/module-name": "default",
+                "bkapp.example.com/image-credentials": "test--dockerconfigjson"
+            }
+        },
+        "spec": {
+            "build": {
+                "imagePullPolicy": "IfNotPresent"
+            },
+            "processes": [
+                {
+                    "name": "web",
+                    "replicas": 4,
+                    "command": [],
+                    "args": [],
+                    "targetPort": 5000,
+                    "resQuotaPlan": "default"
+                }
+            ],
+            "hooks": {},
+            "addons": [],
+            "mounts": [],
+            "configuration": {
+                "env": []
+            },
+            "envOverlay": {
+                "envVariables": []
+            }
+        }
+    }
+]
 ```
+
+#### Exception Response
+Example of returning when an exception is caught:
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "apiVersion ... is not valid, ...",
+    "fields_detail": [
+        "apiVersion ... is not valid, ..."
+    ]
+}
+```
+When the manifest is misconfigured and the exception is not caught, the http status 500 is returned.
+
 
 ### Response Parameters Description
 
@@ -76,4 +145,3 @@ Before using the API, please obtain your access token. Refer to [Accessing PaaS 
 | kind       | string | Resource type             |
 | metadata   | object | Resource metadata         |
 | spec       | object | App model configuration   |
-| status     | object | Current resource status   |

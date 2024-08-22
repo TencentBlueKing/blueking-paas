@@ -28,7 +28,7 @@ App 部署接口，用于部署应用到指定环境。
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{AppCode}/modules/default/envs/{env:stag/prod}/deployments/ -d '{"revision": "commit的sha值", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{AppCode}/modules/default/envs/{env:stag/prod}/deployments/ -d '{"revision": "Source code repository version number", "version_type": "Branch or tag name", "version_name": "For svn, supports passing trunk / tag; for git, supports passing branch"}' -H 'Content-Type: application/json'
 ```
 
 ### 返回结果示例
@@ -38,6 +38,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 	"deployment_id": "22d0e9c8-9cfc-45a5-b5a8-718137c515db"
 }
 ```
+确保revision，version_name，version_type可以在对应仓库查到，否则会异常返回http code 500。
 
 ### 返回结果参数说明
 

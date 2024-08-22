@@ -6,8 +6,8 @@
 #### 1、路径参数：
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
-| -------- | -------- | ---- | -------- |
-| code     | string   | 是   | 应用 ID  |
+| -------- | -------- | --- | -------- |
+| app_code    | string | 是 | 应用 ID  |
 | module_name | string | 是 | 模块名称 |
 
 #### 2、接口参数：
@@ -20,26 +20,35 @@
 
 ### 请求示例
 ```bash
-curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sundy820/modules/default/source_package/link/' \
-  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' \
-  -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohLfLFHX1EPDP7rB' \
-  --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   你的源码包链接  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  你的版本号  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
+curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/app_code/modules/default/source_package/link/
 ```
 
 #### 获取你的 access_token
 在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 ### 返回结果示例
+#### 正常返回
 ```json
 {
-  "version": "v1",
-  "package_name": "tmpcvml_dsm.tar.gz",
-  "package_size": "4586",
-  "sha256_signature": null,
-  "updated": "2020-08-24 17:15:51",
-  "created": "2020-08-24 17:15:51"
+    "id": 1347,
+    "version": "0.0.5",
+    "package_name": "package_name:0.0.5",
+    "package_size": "1415656",
+    "sha256_signature": "a0c5e14c38eeaf3681bd5b429338e4e95ea8af3f30c05348a1479cfcf1cdf4d1",
+    "is_deleted": false,
+    "updated": "2024-08-20 19:37:00",
+    "created": "2024-08-20 19:37:00",
+    "operator": "operator name"
 }
 ```
+#### 异常返回
+```
+{
+    "code": "UNSUPPORTED_SOURCE_ORIGIN",
+    "detail": "未支持的源码来源"
+}
+```
+
 
 ### 返回结果参数说明
 
@@ -51,3 +60,5 @@ curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sund
 | sha256_signature | string | sha256数字签名 |
 | updated          | string | 更新时间   |
 | created          | string | 创建时间   |
+| is_deleted       | boolean | 是否软删除 |
+| operator         | string | 操作人 |

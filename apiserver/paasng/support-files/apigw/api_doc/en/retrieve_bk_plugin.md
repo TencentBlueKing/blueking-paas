@@ -7,7 +7,7 @@ Query the detailed information of a "Blueking Plugin" type application, for inte
 
 | Parameter Name | Parameter Type | Required | Parameter Description          |
 | -------------- | -------------- | -------- | ------------------------------ |
-| code           | string         | No       | Position parameter, plugin code to be queried |
+| code           | string         | Yes       | Position parameter, plugin code to be queried |
 
 #### 2. API Parameters:
 None.
@@ -18,42 +18,74 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ```
 
 ### Response Result Example
-```javascript
+#### Success Response
+```json
 {
-  "plugin": {
-    "id": "70604e3d6491472eb0066ff6f7b75617",
-    "region": "ieod",
-    "name": "bkplugindemo2",
-    "code": "bk-plugin-demo2",
-    "logo_url": "https://example.com/app-logo/blueking_app_default.png",
-    "has_deployed": true,
-    "creator": "username",
-    "created": "2021-08-13 10:37:29",
-    "updated": "2021-08-13 10:37:29"
-  },
-  "deployed_statuses": {
-    "stag": {
-      "deployed": true,
-      "addresses": [
-        {
-          "address": "http://stag-dot-bk-plugin-demo2.example.com",
-          "type": 2
-        },
-        {
-          "address": "http://foo.example.com",
-          "type": 4
+    "plugin": {
+        "id": "id",
+        "region": "default",
+        "name": "example",
+        "code": "example",
+        "logo_url": "http://bkpaas.example.com/static/images/plugin-default.svg",
+        "has_deployed": true,
+        "creator": "name",
+        "created": "2024-07-25 14:45:26",
+        "updated": "2024-07-25 14:45:26",
+        "tag_info": {
+            "id": 1,
+            "name": "未分类",
+            "code_name": "OTHER",
+            "priority": 1
         }
-      ]
     },
-    "prod": {
-      "deployed": false,
-      "addresses": []
+    "deployed_statuses": {
+        "stag": {
+            "deployed": true,
+            "addresses": [
+                {
+                    "address": "http://apps.example.com/stag--example/",
+                    "type": 2
+                },
+                {
+                    "address": "http://apps.example.com/stag--default--example/",
+                    "type": 2
+                }
+            ]
+        },
+        "prod": {
+            "deployed": true,
+            "addresses": [
+                {
+                    "address": "http://apps.example.com/example/",
+                    "type": 2
+                },
+                {
+                    "address": "http://apps.example.com/prod--example/",
+                    "type": 2
+                },
+                {
+                    "address": "http://apps.example.com/prod--default--example/",
+                    "type": 2
+                }
+            ]
+        }
+    },
+    "profile": {
+        "introduction": "",
+        "contact": "name",
+        "api_gw_name": "bp-example",
+        "api_gw_id": 36,
+        "api_gw_last_synced_at": "2024-07-25 14:48:36",
+        "tag": 1
     }
-  },
-  "profile": {
-    "introduction": "a demo plugin",
-    "contact": "user1"
-  }
+}
+```
+
+#### Exception Response
+```
+{
+    "detail": "No Application matches the given query.",
+    "code": "ERROR"
 }
 ```
 
@@ -83,6 +115,10 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 `profile` element object field description:
 
 | Parameter Name | Parameter Type | Parameter Description              |
-| -------------- | -------------- | ----------------------------------- |
-| introduction   | str            | Plugin introduction information     |
+| -------------- | -------------- | ---------------------------------- |
+| introduction   | str            | Plugin introduction information    |
 | contact        | str            | Plugin contact, multiple plugins separated by ; |
+| api_gw_name    | string         | API gateway name |
+| api_gw_id      | int             | API gateway id |
+| api_gw_last_synced_at| string   | API gateway last sync time |
+| tag            | int            | tag  |

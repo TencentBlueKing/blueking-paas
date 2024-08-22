@@ -78,20 +78,20 @@ None.
             "name": "Detect deployment result",
             "display_name": "Detect deployment result"
         }]
-    ]
+    }]
 ```
 
 ### Response Result Parameter Description
 
 #### Phase Object Field Description
 |   Parameter Name   |    Parameter Type  |     Parameter Description     |
-|---|---|---|---|
+|--------------------|--------------------|-------------------------------|
 | display_name | string | Display name of the current phase (changes with i18n) |
 | type | string | Type of the current phase (can be used as an identifier) |
 | steps | List | Steps included in the current phase |
 
 #### Step Object Field Description
 |   Parameter Name   |    Parameter Type  |     Parameter Description     |
-|---|---|---|---|
+|--------------------|--------------------|-------------------------------|
 | display_name | string | Display name of the current step (changes with i18n) |
 | name | string | Unique name of the current step |

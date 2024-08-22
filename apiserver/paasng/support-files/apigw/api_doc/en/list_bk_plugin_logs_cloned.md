@@ -1,26 +1,26 @@
-### 功能描述
-查询某个“蓝鲸插件”类型应用的日志，仅供内部系统使用。该接口默认检索最近 14 天范围内的所有日志，每次返回 200 条，暂不支持定制。
+### Description
+Query the logs of a "BlueKing Plugin" type application for internal system use only. This interface defaults to searching all logs within the last 14 days, returning 200 logs each time, and does not support customization.
 
-### 请求参数
+### Request Parameters
 
-#### 1、路径参数：
-|   参数名称   |    参数类型  |  必须  |     参数说明     |
-| ------------ | ------------ | ------ | ---------------- |
-| code | string | 是 | 位置参数，待查询插件的 code |
+#### 1. Path Parameters:
+| Parameter Name | Parameter Type | Required | Parameter Description |
+| -------------- | -------------- | -------- | --------------------- |
+| code           | string         | Yes       | Positional parameter, the code of the plugin to be queried |
 
-#### 2、接口参数：
-| 字段 |   类型 |  是否必填 | 描述 |
-| ------ | ------ | ------ | ------ |
-| scroll_id | string | 否 | 用于滚动翻页的标识字段 |
-| trace_id | string | 是 | 用于过滤日志的 `trace_id` 标识符 |
+#### 2. API Parameters:
+| Field     | Type   | Required | Description                                  |
+| --------- | ------ | -------- | -------------------------------------------- |
+| scroll_id | string | No       | Identifier field for scroll pagination       |
+| trace_id  | string | Yes      | `trace_id` identifier for filtering logs     |
 
-### 请求示例
+### Request Example
 ```bash
-curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
 ```
 
-### 返回结果示例
-#### 正常返回
+### Response Result Example
+#### Success Response
 ```javascript
 {
     "logs": [
@@ -90,8 +90,8 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 }
 ```
 
-#### 异常返回
-```json
+#### Exception Response
+```
 {
     "code": "VALIDATION_ERROR",
     "detail": "trace_id: 该字段是必填项。",
@@ -103,25 +103,25 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 }
 ```
 
-### 返回结果参数说明
-|   参数名称   |  参数类型  |           参数说明             |
-| ------------ | ---------- | ------------------------------ |
-  scroll_id    | str        | 翻页标识字段，获取下一页时传入该值 |
-| logs         | list[objects] | 日志对象列表，按创建时间从新到旧排序 |
-| total        | int        | 日志总数 |
-| dsl          | string     | DSL查询语句 |
+### Response Result Parameter Description
+| Parameter Name | Parameter Type | Parameter Description                          |
+| -------------- | -------------- | ---------------------------------------------- |
+| scroll_id      | str            | Pagination identifier, pass this value to get the next page |
+| logs           | list[objects]  | List of log objects, sorted by creation time from newest to oldest |
+| total          | int            | Total number of logs                           |
+| dsl            | string         | DSL query |
 
-`logs` 内对象字段说明：
+`logs` object field description:
 
-|   参数名称   |  参数类型  |           参数说明             |
-| ------------ | ---------- | ------------------------------ |
-| plugin_code | str       | 插件标识符 |
-| environment | str       | 产生日志的部署环境，`stag` -> 预发布环境，`prod` -> 生产环境 |
-| message     | str       | 日志信息 |
-| raw         | object    | 原生log  |
-| detail      | object    | 结构化日志详情 |
-| process_id  | string    | 进程唯一类型  |
-| stream      | string    | 流对象 |
-| ts          | string    | 时间戳 |
+| Parameter Name | Parameter Type | Parameter Description                          |
+| -------------- | -------------- | ---------------------------------------------- |
+| plugin_code    | str            | Plugin identifier                              |
+| environment    | str            | Deployment environment where the log was generated, `stag` -> Pre-release environment, `prod` -> Production environment |
+| message        | str            | Log message                                    |
+| raw            | object         | Raw log                                        |
+| detail         | object         | Structured log details                         |
+| process_id     | string         | Process unique type                            |
+| stream         | string         | Stream                                         |
+| ts             | string         | Timestamp                                      |
 
-**注意**：`detail.json.trace_id` 字段里，有用来标示字段高亮的 `[bk-mark]...[/bk-mark]` 标记字符，如需用于前端展示，请妥善处理。
+**Note**: In the `detail.json.trace_id` field, there are `[bk-mark]...[/bk-mark]` marker characters for highlighting fields. If used for frontend display, please handle them properly.

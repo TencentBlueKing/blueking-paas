@@ -8,7 +8,7 @@ Upload the source code package to the platform according to the download link.
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
-| code           | string         | Yes      | Application ID        |
+| app_code       | string         | Yes      | Application ID        |
 | module_name    | string         | Yes      | Module name           |
 
 #### 2. API Parameters:
@@ -21,29 +21,33 @@ Upload the source code package to the platform according to the download link.
 
 ### Request Example
 ```bash
-curl -X POST 'http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/sundy820/modules/default/source_package/link/' \
-  -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' \
-  -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohLfLFHX1EPDP7rB' \
-  --data-binary $'------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="package_url"\r\n\r\n   your source code package link  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="version"\r\n\r\n  your version number  \r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB\r\nContent-Disposition: form-data; name="allow_overwrite"\r\n\r\nfalse\r\n------WebKitFormBoundaryohLfLFHX1EPDP7rB--\r\n'
-```
-
-### Request Example
-```bash
-curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your_access_token"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{code}/modules/{module_name}/envs/{environment}/released_info/
+curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure https://paas.example.apigw.o.woav3..com/stag/bkapps/applications/app_code/modules/default/source_package/link/
 ```
 
 #### Get your access_token
 Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 ### Response Result Example
+#### Success Response
 ```json
 {
-  "version": "v1",
-  "package_name": "tmpcvml_dsm.tar.gz",
-  "package_size": "4586",
-  "sha256_signature": null,
-  "updated": "2020-08-24 17:15:51",
-  "created": "2020-08-24 17:15:51"
+    "id": 1347,
+    "version": "0.0.5",
+    "package_name": "package_name:0.0.5",
+    "package_size": "1415656",
+    "sha256_signature": "a0c5e14c38eeaf3681bd5b429338e4e95ea8af3f30c05348a1479cfcf1cdf4d1",
+    "is_deleted": false,
+    "updated": "2024-08-20 19:37:00",
+    "created": "2024-08-20 19:37:00",
+    "operator": "operator name"
+}
+```
+
+#### Exception Response
+```
+{
+    "code": "UNSUPPORTED_SOURCE_ORIGIN",
+    "detail": "未支持的源码来源"
 }
 ```
 
@@ -57,3 +61,5 @@ Before calling the interface, please obtain your access_token first. For specifi
 | sha256_signature  | string | sha256 digital signature |
 | updated           | string | Update time       |
 | created           | string | Creation time     |
+| is_deleted        | boolean | soft delete indicator |
+| operator          | string | operator's name |

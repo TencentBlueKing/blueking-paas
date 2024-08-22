@@ -13,20 +13,15 @@ Query application standard output logs.
 
 #### 2. API Parameters:
 
-| Parameter Name | Parameter Location | Type                              | Required | Description |
-| -------------- | ------------------ | --------------------------------- | -------- | ----------- |
-| end_time       | `query`            | string                            | No       |             |
-| log_type       | `query`            | string                            | No       |             |
-| scroll_id      | `query`            | string                            | No       |             |
-| start_time     | `query`            | string                            | No       |             |
-| time_range     | `query`            | string                            | Yes      |             |
-| data           | `body`             | SearchStandardLogWithPostBody     | Yes      |             |
+| Parameter Name | Type | Required | Description |
+|-------------|--------| ------ |-------------|
+| time_range  | string | Yes | Time range，one of "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
+| start_time  | string | No | Start time, input if time time_range = "customized" |
+| end_time    | string | No | End time, input if time time_range = "customized" |
+| scroll_id   | string | No | Scroll ID |
+| page        | int    | No | Page，Integer greater than 0  |
+| page_size   | int    | No | Page size，Integer greater than 0  |
 
-data
-| Field  | Type                              | Required | Description |
-| ------ | --------------------------------- | -------- | ----------- |
-| query  | SearchStandardLogWithPostParamsBodyQuery | Yes       |             |
-| sort   | interface{}                       | No       | Sort, e.g., {'response_time': 'desc', 'other': 'asc'} |
 
 ### Request Example
 
@@ -35,32 +30,64 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_ap
 ```
 
 ### Response Result Example
-
+#### Success Response
 ```json
 {
-  "code": 200,
-  "data": {
-    "logs": [
-      {
-        "environment": "prod",
-        "message": "log message",
-        "pod_name": "app-1",
-        "process_id": "123",
-        "timestamp": "2021-01-01T00:00:00Z"
-      }
-    ],
-    "scroll_id": "scroll_id",
-    "total": 1
-  }
+    "code": 0,
+    "data": {
+        "scroll_id": "scroll id",
+        "logs": [
+            {
+                "environment": "prod",
+                "process_id": "web",
+                "pod_name": "pod name",
+                "message": "message",
+                "timestamp": "2024-08-20 12:21:08"
+            }
+        ],
+        "total": 10299,
+        "dsl": "dsl"
+    }
+}
+```
+
+#### Exception Response
+example 1
+```json
+{
+    "code": "QUERY_LOG_FAILED",
+    "detail": "Query log failed: ..."
+}
+```
+example 2
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "...",
+    "fields_detail": {
+        "time_range": [
+            "this field can't be empty。"
+        ]
+    }
 }
 ```
 
 ### Response Result Parameter Description
 
-| Field          | Type                                            | Required | Description       |
-| -------------- | ----------------------------------------------- | -------- | ----------------- |
-| code           | integer                                         | Yes      | Status code       |
-| data           | SearchStandardLogWithPostOKBodyData             | Yes      | Returned data     |
-| data.logs      | []SearchStandardLogWithPostOKBodyDataLogsItems0 | Yes      | Log list          |
-| data.scroll_id | string                                          | Yes      | ES scroll_id for pagination |
-| data.total     | integer                                         | Yes      | Log count         |
+| Field          | Type         | Description       |
+| -------------- | ------------ | ----------------- |
+| code           | integer      | Status code       |
+| data           | object       | Returned data     |
+| data.scroll_id | string       | ES scroll_id for pagination |
+| data.logs      | []object     | Log list          |
+| data.total     | integer      | Log count         |
+| data.dsl       | string       | DSL query         |
+
+data.logs field description
+| Field          | Type         | Description       |
+| -------------- | ------------ | ----------------- |
+| environment    | string       | Running environment, "prod" or "stag" |
+| message        | string       | Log message       |
+| pod_name       | string       | Pod name          |
+| process_id     | string       | Process unique type        |
+| timestamp      | string       | Timestamp         |

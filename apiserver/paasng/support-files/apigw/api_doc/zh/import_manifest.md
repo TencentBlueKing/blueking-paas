@@ -9,64 +9,131 @@
 | ------------ | ------------ | ------ | ---------------- |
 | app_code   | string | 是 | 应用 ID |
 | module   | string | 是 | 模块名称，如 "default" |
-| env | string | 是 | 环境名称，可选值 "stag" / "prod" |
 
 #### 2、接口参数：
 
 | 字段 |   类型 |  是否必填 | 描述 |
 | ------ | ------ | ------ | ------ |
-| manifest | object | 是 | 云原生应用的应用模型 Json 对象 |
+| manifest | object | 是 | 云原生应用的应用模型 Json 对象。位置请求Body |
 
 
 ### 请求示例
-
+```bash
+curl -X PUT -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***", "bk_token": "***"}' -d '{ "manifest": { "apiVersion": "example.com/v1alpha2", "kind": "BkApp", "metadata": { "annotations": { "bkapp.example.com/code": "test", "bkapp.example.com/image-credentials": "test--dockerconfigjson", "bkapp.example.com/module-name": "default", "bkapp.example.com/name": "test", "bkapp.example.com/region": "default" }, "name": "test" }, "spec": { "addons": [ ], "build": { "imagePullPolicy": "IfNotPresent" }, "configuration": { "env": [ ] }, "envOverlay": { "envVariables": [ ] }, "hooks": { }, "mounts": [ ], "processes": [ { "args": [ ], "command": [ ], "name": "web", "replicas": 4, "resQuotaPlan": "default", "targetPort": 5000 } ] } } }' --insecure http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/test/modules/default/bkapp_model/manifests/current/
+```
+#### 请求体示例
 ```json
 {
-  "manifest": {
-    "apiVersion": "paas.bk.tencent.com/v1alpha1",
-    "kind": "BkApp",
-    "spec": {
-      "processes": [
-        {
-          "cpu": "1000m",
-          "args": [],
-          "name": "web",
-          "image": "nginx:latest",
-          "memory": "256Mi",
-          "command": [],
-          "replicas": 1,
-          "targetPort": 80
+    "manifest": {
+        "apiVersion": "example.com/v1alpha2",
+        "kind": "BkApp",
+        "metadata": {
+            "annotations": {
+                "bkapp.example.com/code": "test",
+                "bkapp.example.com/image-credentials": "test--dockerconfigjson",
+                "bkapp.example.com/module-name": "default",
+                "bkapp.example.com/name": "test",
+                "bkapp.example.com/region": "default"
+            },
+            "name": "test"
+        },
+        "spec": {
+            "addons": [
+            ],
+            "build": {
+                "imagePullPolicy": "IfNotPresent"
+            },
+            "configuration": {
+                "env": [
+                ]
+            },
+            "envOverlay": {
+                "envVariables": [
+                ]
+            },
+            "hooks": {
+            },
+            "mounts": [
+            ],
+            "processes": [
+                {
+                    "args": [
+                    ],
+                    "command": [
+                    ],
+                    "name": "web",
+                    "replicas": 2,
+                    "resQuotaPlan": "default",
+                    "targetPort": 5000
+                }
+            ]
         }
-      ],
-      "configuration": {
-        "env": []
-      }
     }
-  }
 }
 ```
+manifest.metafata.name应该等于应用的名称
 
 #### 获取你的 access_token
 
 在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 ### 返回结果示例
-
+#### 正常返回
 ```json
-[{
-  "apiVersion": "paas.bk.tencent.com/v1alpha1",
-  "kind": "BkApp",
-  "metadata": {
-    // 资源元信息，内容省略
-  },
-  "spec": {
-    // 应用模型配置，内容省略
-  },
-  "status": {
-    // 资源当前状态，内容省略
-  }
-}]
+[
+    {
+        "apiVersion": "example.com/v1alpha2",
+        "kind": "BkApp",
+        "metadata": {
+            "name": "test",
+            "annotations": {
+                "bkapp.example.com/region": "default",
+                "bkapp.example.com/name": "test",
+                "bkapp.example.com/code": "test",
+                "bkapp.example.com/module-name": "default",
+                "bkapp.example.com/image-credentials": "test--dockerconfigjson"
+            }
+        },
+        "spec": {
+            "build": {
+                "imagePullPolicy": "IfNotPresent"
+            },
+            "processes": [
+                {
+                    "name": "web",
+                    "replicas": 4,
+                    "command": [],
+                    "args": [],
+                    "targetPort": 5000,
+                    "resQuotaPlan": "default"
+                }
+            ],
+            "hooks": {},
+            "addons": [],
+            "mounts": [],
+            "configuration": {
+                "env": []
+            },
+            "envOverlay": {
+                "envVariables": []
+            }
+        }
+    }
+]
 ```
+#### 异常返回
+捕获到异常时返回示例：
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "apiVersion ... is not valid, ...",
+    "fields_detail": [
+        "apiVersion ... is not valid, ..."
+    ]
+}
+```
+当manifest配置错且异常未捕获到， 会返回http状态500
+
 
 ### 返回结果参数说明
 
@@ -76,4 +143,3 @@
 | kind | string | 资源类型 |
 | metadata | object | 资源元信息 |
 | spec | object | 应用模型配置 |
-| status | object | 资源当前状态 |

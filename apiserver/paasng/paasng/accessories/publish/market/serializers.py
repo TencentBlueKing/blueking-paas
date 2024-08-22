@@ -357,6 +357,10 @@ class MarketConfigSLZ(serializers.ModelSerializer):
         validated_data["source_url_type"] = ProductSourceUrlType.THIRD_PARTY.value
 
 
+class MarketConfigSwitchInputSLZ(serializers.Serializer):
+    enabled = serializers.BooleanField(required=True, help_text="是否上架到市场")
+
+
 class AvailableAddressSLZ(serializers.Serializer):
     address = serializers.URLField(required=True)
     type = serializers.ChoiceField(

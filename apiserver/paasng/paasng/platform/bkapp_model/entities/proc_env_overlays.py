@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -63,21 +62,3 @@ class AutoscalingOverlay(AutoscalingConfig):
 
     env_name: str
     process: str
-
-
-class ProcEnvOverlay(BaseModel):
-    """
-    单个进程的 env overlay
-
-    :param env_name: 生效环境名
-    :param plan_name: 资源配额套餐名称
-    :param target_replicas: 副本数
-    :param autoscaling: 是否开启自动扩缩容
-    :param scaling_config: 自动扩缩容配置
-    """
-
-    env_name: str
-    plan_name: Optional[str] = None
-    target_replicas: Optional[int] = None
-    autoscaling: bool = False
-    scaling_config: Optional[AutoscalingConfig] = None

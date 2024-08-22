@@ -9,8 +9,8 @@ apigateway:
 # 更新了 resource.yaml 后必须修改 title
 release:
   version: 1.3.2
-  title: "Fix some incomplete or incorrect description"
-  comment: "Fix some incomplete or incorrect description"
+  title: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
+  comment: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
 
 
 stage:

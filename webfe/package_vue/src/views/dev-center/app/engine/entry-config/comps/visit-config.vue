@@ -140,6 +140,7 @@
         <bk-table-column
           :label="$t('访问地址')"
           :min-width="600"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row, $index }">
             <div
@@ -221,6 +222,7 @@
         <bk-table-column
           :label="$t('进程')"
           :width="110"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row }">
             <div
@@ -259,6 +261,7 @@
           :label="$t('操作')"
           :width="120"
           fixed="right"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row, $index }">
             <div
@@ -308,7 +311,7 @@
                   </section>
                 </div>
                 <div v-else>--</div>
-                <div class="line" :style="{top: $index < 4 ? '100%' : 'calc(100% - 0.5px)'}"></div>
+                <div :class="['line', { 'show-last-line': (entryList.length === $index + 1) }]"></div>
               </div>
             </div>
           </template>
@@ -479,7 +482,7 @@ export default {
     },
     configIpTip() {
       let displayIp = this.defaultIp;
-      if(!this.isIpConsistent) {
+      if (!this.isIpConsistent) {
         displayIp = this.ipConfigInfo.frontend_ingress_ip;
       }
       return {
@@ -1077,6 +1080,20 @@ export default {
     top: 100%;
     left: -15px;
     z-index: 1;
+    &.show-last-line {
+      top: calc(100% - 0.5%);
+    }
+  }
+
+  .custom-line-column .cell .cell-container:last-child {
+    .url-container:last-child {
+      .line {
+        display: none;
+        &.show-last-line {
+          display: block;
+        }
+      }
+    }
   }
 
   .url-container {

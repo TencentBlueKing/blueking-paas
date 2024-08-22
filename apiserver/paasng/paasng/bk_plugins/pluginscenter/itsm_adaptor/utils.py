@@ -110,6 +110,8 @@ def submit_canary_release_ticket(
     visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
     # 灰度发布在 ITSM 中展示的字段
     canary_fields = [
+        # 提单人，ITSM 回调的信息不准确，需要自己存储获取
+        {"key": "submitter", "value": operator},
         # 发布策略的字段
         {"key": "strategy_id", "value": release_strategy.id},
         {"key": "strategy", "value": release_strategy.get_strategy_display()},
@@ -157,6 +159,8 @@ def submit_visible_range_ticket(
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
 
     visible_range_fields = [
+        # 提单人，ITSM 回调的信息不准确，需要自己存储获取
+        {"key": "submitter", "value": operator},
         # 需要单独存储原始数据，用户审批成功后回调后用于更新 DB 的可见范围
         {"key": "origin_bkci_project", "value": bkci_project},
         {"key": "origin_organization", "value": organization},

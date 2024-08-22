@@ -93,7 +93,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
-        operator = serializer.validated_data["updated_by"]
 
         visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
         if ticket_status in ItsmTicketStatus.completed_status():
@@ -103,6 +102,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
         visible_range_obj.save()
 
         # 单据结束且结果为审批成功, 则更新 DB 中的可见范围并回调第三方
+        operator = visible_range_obj.itsm_submitter
         if ticket_status == ItsmTicketStatus.FINISHED and approve_result:
             shim.update_visible_range_and_callback(plugin, operator=operator)
         return Response({"message": "success", "code": 0, "data": None, "result": True})
@@ -120,7 +120,6 @@ class PluginCallBackApiViewSet(GenericViewSet):
         serializer.is_valid(raise_exception=True)
         ticket_status = serializer.validated_data["current_status"]
         approve_result = serializer.validated_data["approve_result"]
-        operator = serializer.validated_data["updated_by"]
 
         # 根据 itsm 的回调结果更新单据状态
         release.status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
@@ -128,6 +127,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
         # 审批结束后，将插件状态和版本信息（包含灰度策略）同步给第三方
         if ticket_status in ItsmTicketStatus.completed_status():
+            operator = latest_release_strategy.itsm_submitter
             release_api.update_release(pd=plugin.pd, instance=plugin, version=release, operator=operator)
         return Response({"message": "success", "code": 0, "data": None, "result": True})
 

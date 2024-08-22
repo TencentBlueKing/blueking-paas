@@ -405,6 +405,20 @@ class PluginReleaseStrategy(AuditedModel):
             return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
         return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 
+    @cached_property
+    def itsm_detail_fields(self):
+        if not self.itsm_detail:
+            return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用版本的创建者
+        release_creator = self.release.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", release_creator)
+        return release_creator
+
 
 class ApprovalService(UuidAuditedModel):
     """审批服务信息"""
@@ -452,6 +466,14 @@ class PluginVisibleRange(AuditedModel):
         if self.itsm_detail_fields:
             return self.itsm_detail_fields.get("origin_organization")
         return None
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用插件的创建者
+        plugin_creator = self.plugin.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", plugin_creator)
+        return plugin_creator
 
     @classmethod
     def get_or_initialize_with_default(cls, plugin: "PluginInstance") -> "PluginVisibleRange":

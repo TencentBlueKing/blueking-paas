@@ -9,7 +9,7 @@ Upload the source code package to the platform according to the download link.
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
 | app_code       | string         | Yes      | Application ID        |
-| module_name    | string         | Yes      | Module name           |
+| module         | string         | Yes      | Module name           |
 
 #### 2. API Parameters:
 

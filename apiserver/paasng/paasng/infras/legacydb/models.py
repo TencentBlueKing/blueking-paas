@@ -73,6 +73,9 @@ def get_v2_application_by_developer(username: str, session: Optional[Session] = 
 
     # 用户有权限的 PaaS2.0 的普通应用列表，从权限中心查询过滤条件，sql_filters 为原生的 sql 查询条件
     sql_filters = permission.app_filters(username)
+    # 如果 PaaS2.0 没有接入权限中心，则查询到的权限表达式为空，不能进行后续的表达式操作
+    if not sql_filters:
+        return []
     # SQLAlchemy 1.4 版本开始，原生 SQL 表达式必须通过 text 函数显式声明，以提高代码的明确性与安全性
     normal_app_subquery = session.query(LApplication).filter(text(sql_filters)).all()
     # 权限中心会返回 1=1 这样的过滤条件，不能用子查询

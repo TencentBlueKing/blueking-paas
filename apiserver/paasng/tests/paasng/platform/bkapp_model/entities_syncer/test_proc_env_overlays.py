@@ -22,11 +22,10 @@ from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     AutoscalingOverlay,
-    ProcEnvOverlay,
     ReplicasOverlay,
     ResQuotaOverlay,
 )
-from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_proc_env_overlays
+from paasng.platform.bkapp_model.entities_syncer import sync_proc_env_overlays
 from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
 
 pytestmark = pytest.mark.django_db
@@ -141,51 +140,3 @@ class Test__sync_proc_env_overlays:
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
-
-
-class Test__sync_proc_env_overlay:
-    def test_create(self, bk_module, proc_web):
-        ret = sync_env_overlay_by_proc(
-            bk_module,
-            proc_web.name,
-            ProcEnvOverlay(
-                env_name="prod",
-                target_replicas=2,
-                autoscaling=True,
-                scaling_config={"min_replicas": 1, "max_replicas": 10, "policy": "default"},
-            ),
-        )
-
-        assert ret.created_num == 1
-
-        spec_overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod")
-        assert spec_overlay.target_replicas == 2
-        assert spec_overlay.autoscaling is True
-        assert spec_overlay.scaling_config.max_replicas == 10
-
-    def test_update(self, bk_module, proc_web):
-        G(
-            ProcessSpecEnvOverlay,
-            proc_spec=proc_web,
-            environment_name="stag",
-            target_replicas=2,
-            plan_name=ResQuotaPlan.P_DEFAULT,
-            autoscaling=True,
-            scaling_config={"min_replicas": 1, "max_replicas": 1, "policy": "default"},
-        )
-
-        ret = sync_env_overlay_by_proc(
-            bk_module,
-            proc_web.name,
-            ProcEnvOverlay(
-                env_name="stag",
-                target_replicas=2,
-                autoscaling=False,
-            ),
-        )
-
-        assert ret.updated_num == 1
-
-        spec_overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="stag")
-        assert spec_overlay.autoscaling is False
-        assert spec_overlay.scaling_config is None

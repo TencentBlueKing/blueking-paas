@@ -23,6 +23,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.templates.command import EnhancedTemplateCommand
+from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.exceptions import TmplNotExists, TmplRegionNotSupported
 from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
@@ -42,7 +43,7 @@ class Templater:
     def __init__(
         self,
         tmpl_name: str,
-        type: str,
+        type: TemplateType,
         region: str,
         owner_username: str,
         app_code: str,

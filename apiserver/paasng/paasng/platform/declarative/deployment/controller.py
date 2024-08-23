@@ -27,13 +27,14 @@ from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, ProbeSet, Process, SvcDiscConfig, v1alpha2
-from paasng.platform.bkapp_model.entities_syncer import sync_preset_env_vars, sync_svc_discovery
+from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
 from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.engine.configurations import preset_envvars
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
@@ -201,8 +202,7 @@ class DeploymentDeclarativeController:
             for process_type, process in processes.items():
                 self.update_probes(process_type=process_type, probes=process.probes)
 
-        # 导入预定义环境变量
-        sync_preset_env_vars(module, *get_preset_env_vars(desc.spec))
+        preset_envvars.batch_save(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)

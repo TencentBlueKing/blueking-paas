@@ -253,6 +253,8 @@ class PipelineBuildProcessExecutor(DeployStep):
     max_env_var_block_num = 5
     # 环境变量字符串单块最大长度
     mac_env_var_block_length = 3500
+    # 蓝盾流水线 Job ID
+    bk_ci_pipeline_job_id = "BUILD_CNATIVE_IMAGE"
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
@@ -357,7 +359,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         start_following = False
         for log in self.ctl.retrieve_full_log(pb).logs:
             # 注：丢弃流水线/构建机启动相关日志，只保留构建组件的日志
-            if not (log.tag.startswith("e-") and log.jobId.startswith("c-")):
+            if not (log.tag.startswith("e-") and log.jobId == self.bk_ci_pipeline_job_id):
                 continue
 
             # 只保留 [Install plugin] 到 [Output] 之间的日志，不需要其他的

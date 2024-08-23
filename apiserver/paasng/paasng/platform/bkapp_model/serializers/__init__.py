@@ -20,6 +20,7 @@ from .serializers import (
     DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
+    ModuleProcessSpecsInputSLZ,
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
     ProbeSetSLZ,
@@ -35,4 +36,5 @@ __all__ = [
     "ModuleProcessSpecsOutputSLZ",
     "ProbeSetSLZ",
     "SvcDiscConfigSLZ",
+    "ModuleProcessSpecsInputSLZ",
 ]

@@ -49,7 +49,7 @@ from paasng.platform.bkapp_model.serializers import (
     DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
-    ModuleProcessSpecSLZ,
+    ModuleProcessSpecsInputSLZ,
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
 )
@@ -158,6 +158,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     for environment_name in AppEnvName
                 },
                 "probes": proc_spec.probes or {},
+                "services": proc_spec.services,
             }
             for proc_spec in proc_specs
         ]
@@ -167,15 +168,14 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-    @swagger_auto_schema(request_body=ModuleProcessSpecSLZ(many=True))
+    @swagger_auto_schema(request_body=ModuleProcessSpecsInputSLZ)
     @atomic
     def batch_upsert(self, request, code, module_name):
         """批量更新模块的进程配置"""
         module = self.get_module_via_path()
-        slz = ModuleProcessSpecSLZ(data=request.data, many=True)
+        slz = ModuleProcessSpecsInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        proc_specs = slz.validated_data
-
+        proc_specs = slz.validated_data["proc_specs"]
         processes = [
             Process(
                 name=proc_spec["name"],
@@ -183,6 +183,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 args=proc_spec["args"],
                 target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
+                services=proc_spec.get("services", None),
             )
             for proc_spec in proc_specs
         ]

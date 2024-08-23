@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -65,6 +66,7 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
@@ -140,9 +142,9 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
         )
 
         # Set the annotation to inform operator what the image pull secret name is
-        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = (
-            f"{generate_bkapp_name(module)}--dockerconfigjson"
-        )
+        model_res.metadata.annotations[
+            IMAGE_CREDENTIALS_REF_ANNO_KEY
+        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
 
 
 class BuildConfigManifestConstructor(ManifestConstructor):
@@ -187,6 +189,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes,
+                services=process_spec.services,
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 
@@ -481,6 +484,12 @@ def get_bkapp_resource_for_deploy(
     # Set log collector type to inform operator do some special logic.
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
+
+    # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
+    proc_svc_enabled = "true"
+    if deployment and (desc_obj := DeploymentDescription.objects.filter(deployment=deployment).first()):
+        proc_svc_enabled = desc_obj.runtime.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true")
+    model_res.set_proc_services_annotation(proc_svc_enabled)
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

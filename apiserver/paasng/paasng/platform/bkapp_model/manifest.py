@@ -142,9 +142,9 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
         )
 
         # Set the annotation to inform operator what the image pull secret name is
-        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = (
-            f"{generate_bkapp_name(module)}--dockerconfigjson"
-        )
+        model_res.metadata.annotations[
+            IMAGE_CREDENTIALS_REF_ANNO_KEY
+        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
 
 
 class BuildConfigManifestConstructor(ManifestConstructor):
@@ -487,7 +487,7 @@ def get_bkapp_resource_for_deploy(
 
     # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
     proc_svc_enabled = "true"
-    if deployment and (desc_obj := DeploymentDescription.objects.first(deployment=deployment)):
+    if deployment and (desc_obj := DeploymentDescription.objects.filter(deployment=deployment).first()):
         proc_svc_enabled = desc_obj.runtime.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true")
     model_res.set_proc_services_annotation(proc_svc_enabled)
 

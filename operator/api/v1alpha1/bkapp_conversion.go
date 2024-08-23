@@ -34,6 +34,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 			Command:      proc.Command,
 			Args:         proc.Args,
 			TargetPort:   proc.TargetPort,
+			Services:     proc.Services,
 		}
 		if proc.Image != "" {
 			legacyProcImageConfig[proc.Name] = map[string]string{
@@ -163,6 +164,7 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			Command:      proc.Command,
 			Args:         proc.Args,
 			TargetPort:   proc.TargetPort,
+			Services:     proc.Services,
 
 			// Legacy fields
 			Image:           legacyProcImageConfig[proc.Name]["image"],

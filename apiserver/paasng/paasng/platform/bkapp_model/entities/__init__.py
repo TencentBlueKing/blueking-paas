@@ -35,6 +35,7 @@ from .hooks import HookCmd, Hooks
 from .mounts import ConfigMapSource, Mount, MountOverlay, PersistentStorage, VolumeSource
 from .probes import ExecAction, HTTPGetAction, HTTPHeader, Probe, ProbeHandler, ProbeSet, TCPSocketAction
 from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
+from .proc_service import ProcService
 from .processes import Process
 from .scaling_config import AutoscalingConfig
 from .svc_discovery import SvcDiscConfig, SvcDiscEntryBkSaaS
@@ -69,4 +70,5 @@ __all__ = [
     "ReplicasOverlay",
     "ResQuotaOverlay",
     "MountOverlay",
+    "ProcService",
 ]

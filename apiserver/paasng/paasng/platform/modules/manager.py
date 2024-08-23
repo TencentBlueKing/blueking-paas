@@ -284,6 +284,7 @@ class ModuleInitializer:
                 args=proc_spec["args"],
                 target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
+                services=proc_spec.get("services", None),
             )
             for proc_spec in bkapp_spec["processes"]
         ]

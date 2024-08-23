@@ -49,6 +49,7 @@ def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult
             "port": process.target_port,
             "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
             "probes": process.probes,
+            "services": process.services,
         }
 
         # When the replicas value is None, only update the data if the process appears

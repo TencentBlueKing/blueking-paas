@@ -54,6 +54,7 @@ from paasng.platform.bkapp_model.models import (
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
 from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
+from paasng.platform.engine.models.deployment import ProcService
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
@@ -205,6 +206,21 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
+    @pytest.fixture()
+    def process_web_with_proc_services(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with services"""
+        process_web.services = [
+            ProcService(
+                name="web",
+                port=8000,
+                target_port=8000,
+                exposed_type={"name": "bk/http"},
+            ),
+            ProcService(name="metric", port=8001, target_port=8001),
+        ]
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         ("plan_name", "expected"),
         [
@@ -262,6 +278,7 @@ class TestProcessesManifestConstructor:
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
+                    "services": None,
                 }
             ],
             "envOverlay": {
@@ -297,6 +314,14 @@ class TestProcessesManifestConstructor:
             "maxReplicas": 2,
             "policy": "default",
         }
+
+    def test_integrated_proc_services(self, bk_module, blank_resource, process_web_with_proc_services):
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
+        assert data["services"] == [
+            {"name": "web", "port": 8000, "protocol": "TCP", "targetPort": 8000, "exposedType": {"name": "bk/http"}},
+            {"name": "metric", "port": 8001, "protocol": "TCP", "targetPort": 8001},
+        ]
 
 
 class TestMountsManifestConstructor:

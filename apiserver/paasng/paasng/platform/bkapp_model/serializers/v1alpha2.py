@@ -15,9 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from rest_framework import serializers
+from typing import List
 
-from paasng.platform.bkapp_model.constants import ImagePullPolicy, ResQuotaPlan, ScalingPolicy
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.platform.bkapp_model.constants import ImagePullPolicy, NetworkProtocol, ResQuotaPlan, ScalingPolicy
 from paasng.platform.bkapp_model.entities import (
     Addon,
     AppBuildConfig,
@@ -37,6 +40,8 @@ from paasng.platform.bkapp_model.entities import (
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
+
+from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -186,26 +191,12 @@ class BuildInputSLZ(serializers.Serializer):
         return AppBuildConfig(**d)
 
 
-class ExecActionInputSLZ(serializers.Serializer):
-    command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
-
-
-class TCPSocketActionInputSLZ(serializers.Serializer):
-    port = IntegerOrCharField(help_text="探活端口")
-    host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
-
-
-class HTTPHeaderInputSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="标头名称")
-    value = serializers.CharField(help_text="标头值")
-
-
 class HTTPGetActionInputSLZ(serializers.Serializer):
     port = IntegerOrCharField(help_text="探活端口")
     path = serializers.CharField(help_text="探活路径", max_length=128)
     host = serializers.CharField(help_text="主机名", required=False, allow_null=True)
     httpHeaders = serializers.ListField(
-        help_text="HTTP 请求标头", required=False, child=HTTPHeaderInputSLZ(), source="http_headers"
+        help_text="HTTP 请求标头", required=False, child=HTTPHeaderSLZ(), source="http_headers"
     )
     scheme = serializers.CharField(help_text="http/https", required=False, default="HTTP")
 
@@ -213,9 +204,9 @@ class HTTPGetActionInputSLZ(serializers.Serializer):
 class ProbeInputSLZ(serializers.Serializer):
     """探针配置"""
 
-    exec = ExecActionInputSLZ(help_text="exec 探活配置", required=False, allow_null=True)
+    exec = ExecProbeActionSLZ(help_text="exec 探活配置", required=False, allow_null=True)
     httpGet = HTTPGetActionInputSLZ(help_text="http get 探活配置", required=False, allow_null=True, source="http_get")
-    tcpSocket = TCPSocketActionInputSLZ(
+    tcpSocket = TCPSocketProbeActionSLZ(
         help_text="tcp socket 探活配置", required=False, allow_null=True, source="tcp_socket"
     )
     initialDelaySeconds = serializers.IntegerField(
@@ -235,6 +226,14 @@ class ProbeSetInputSLZ(serializers.Serializer):
     startup = ProbeInputSLZ(help_text="启动探针", required=False, allow_null=True)
 
 
+class ProcServiceInputSLZ(serializers.Serializer):
+    name = serializers.CharField()
+    targetPort = serializers.IntegerField(min_value=1, max_value=65535, source="target_port")
+    protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
+    exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")
+    port = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -251,10 +250,7 @@ class ProcessInputSLZ(serializers.Serializer):
     procCommand = serializers.CharField(allow_null=True, required=False, source="proc_command")
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
-
-    def to_internal_value(self, data) -> Process:
-        d = super().to_internal_value(data)
-        return Process(**d)
+    services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
 
 
 class HooksInputSLZ(serializers.Serializer):
@@ -304,7 +300,7 @@ class DomainResolutionInputSLZ(serializers.Serializer):
 
 
 class BkAppSpecInputSLZ(serializers.Serializer):
-    """Validate the `spec` field of BkApp resource."""
+    """BkApp resource slz in camel-case format"""
 
     build = BuildInputSLZ(allow_null=True, default=None)
     processes = serializers.ListField(child=ProcessInputSLZ())
@@ -319,3 +315,42 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     def to_internal_value(self, data) -> v1alpha2.BkAppSpec:
         d = super().to_internal_value(data)
         return v1alpha2.BkAppSpec(**d)
+
+    def validate(self, data: v1alpha2.BkAppSpec):
+        self._validate_proc_services(data.processes)
+        return data
+
+    def _validate_proc_services(self, processes: List[Process]):
+        """validate process services by two rules as below:
+        - check whether service name, targetPort or port are duplicated in one process
+        - check whether exposedTypes are duplicated in one module
+        """
+        exposed_types = set()
+
+        for proc in processes:
+            names = set()
+            target_ports = set()
+            ports = set()
+
+            for svc in proc.services or []:
+                name = svc.name
+                if name in names:
+                    raise ValidationError(f"duplicate service name: {name}")
+                names.add(name)
+
+                target_port = svc.target_port
+                if target_port in target_ports:
+                    raise ValidationError(f"duplicate targetPort: {target_port}")
+                target_ports.add(target_port)
+
+                port = svc.port
+                if port:
+                    if port in ports:
+                        raise ValidationError(f"duplicate port: {port}")
+                    ports.add(port)
+
+                exposed_type = svc.exposed_type
+                if exposed_type:
+                    if exposed_type.name in exposed_types:
+                        raise ValidationError(f"duplicate exposedType: {exposed_type.name}")
+                    exposed_types.add(exposed_type.name)

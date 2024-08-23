@@ -19,13 +19,16 @@ from typing import Any, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from typing_extensions import TypeAlias
 
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.constants import ExposedTypeName, NetworkProtocol
 from paasng.platform.modules.constants import DeployHookType
+from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
 
 
@@ -64,6 +67,20 @@ class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
 
     # TODO allow_multiple_image has been deprecated, remove it in the future
     allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
+
+
+class ExposedTypeSLZ(serializers.Serializer):
+    name = serializers.ChoiceField(help_text="暴露服务的类型名", choices=ExposedTypeName.get_django_choices())
+
+
+class ProcServiceSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="服务名称")
+    target_port = serializers.IntegerField(help_text="目标容器端口", min_value=1, max_value=65535)
+    protocol = serializers.ChoiceField(
+        help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value
+    )
+    exposed_type = ExposedTypeSLZ(help_text="暴露类型", required=False, allow_null=True)
+    port = serializers.IntegerField(help_text="服务端口", min_value=1, max_value=65535, required=False)
 
 
 class ExecProbeActionSLZ(serializers.Serializer):
@@ -137,16 +154,79 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     args = serializers.ListSerializer(
         child=serializers.CharField(), help_text="命令参数", default=list, allow_null=True
     )
+    services = serializers.ListSerializer(
+        child=ProcServiceSLZ(), help_text="进程服务列表", allow_null=True, required=False
+    )
     port = serializers.IntegerField(
         help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False
     )
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
 
+    def validate_services(self, value):
+        """check whether name, target_port or port are duplicated"""
+        if not value:
+            return value
+
+        names = set()
+        target_ports = set()
+        ports = set()
+
+        for svc in value:
+            name = svc["name"]
+            if name in names:
+                raise ValidationError(f"duplicate service name: {name}")
+            names.add(name)
+
+            target_port = svc["target_port"]
+            if target_port in target_ports:
+                raise ValidationError(f"duplicate target_port: {target_port}")
+            target_ports.add(target_port)
+
+            port = svc.get("port")
+            if port:
+                if port in ports:
+                    raise ValidationError(f"duplicate port: {port}")
+                ports.add(port)
+
+        return value
+
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
     proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
     metadata = ModuleProcessSpecMetadataSLZ(read_only=True)
+
+
+class ModuleProcessSpecsInputSLZ(serializers.Serializer):
+    proc_specs = serializers.ListField(child=ModuleProcessSpecSLZ(), min_length=1)
+
+    def validate(self, data):
+        data = super().validate(data)
+        self._validate_exposed_types(data["proc_specs"])
+        return data
+
+    def _validate_exposed_types(self, proc_specs):
+        """check whether exposed_types are duplicated.
+        说明: 一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
+        """
+        exposed_types = set()
+
+        for proc in proc_specs:
+            proc_services = proc.get("services")
+
+            if not proc_services:
+                continue
+
+            for svc in proc_services:
+                exposed_type_name = get_items(svc, ["exposed_type", "name"])
+
+                if not exposed_type_name:
+                    continue
+
+                if exposed_type_name in exposed_types:
+                    raise ValidationError(f"exposed_type {exposed_type_name} is duplicated in one app module")
+
+                exposed_types.add(exposed_type_name)
 
 
 class ModuleDeployHookSLZ(serializers.Serializer):

@@ -22,6 +22,7 @@ import cattr
 from attrs import define
 from django.db.transaction import atomic
 
+from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
@@ -118,12 +119,20 @@ class DeploymentDeclarativeController:
         application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
         processes: Dict[str, Process] = desc.get_processes()
+
+        runtime = {
+            "source_dir": desc.source_dir,
+        }
+        # specVersion: 3 ，默认开启 proc services 特性; 旧版本不启用
+        if desc.spec_version == AppSpecVersion.VER_3:
+            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
+        else:
+            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "false"
+
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "runtime": {
-                    "source_dir": desc.source_dir,
-                },
+                "runtime": runtime,
                 "spec": desc.spec,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },

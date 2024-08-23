@@ -24,7 +24,13 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, HostAlias, ProbeSet, SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities import (
+    AutoscalingConfig,
+    HostAlias,
+    ProbeSet,
+    ProcService,
+    SvcDiscEntryBkSaaS,
+)
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import DeployHookType
@@ -48,8 +54,8 @@ def env_overlay_getter_factory(field_name: str):
 
 
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
-
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
+ProcServicesField = make_json_field("ProcServicesField", List[ProcService])
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -68,6 +74,7 @@ class ModuleProcessSpec(TimestampedModel):
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
+    services: Optional[List[ProcService]] = ProcServicesField(help_text="进程服务列表", default=None, null=True)
 
     # Global settings
     target_replicas = models.IntegerField("期望副本数", default=1)

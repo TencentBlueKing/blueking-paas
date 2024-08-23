@@ -23,6 +23,7 @@ from paasng.platform.bkapp_model.entities import (
     Probe,
     ProbeSet,
     Process,
+    ProcService,
     TCPSocketAction,
 )
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
@@ -55,6 +56,7 @@ class Test__sync_processes:
                         ),
                         readiness=Probe(tcp_socket=TCPSocketAction(port=30000)),
                     ),
+                    services=[ProcService(name="web", target_port=30000, exposed_type={"name": "bk/http"})],
                 ),
                 Process(
                     name="sleep",
@@ -83,6 +85,7 @@ class Test__sync_processes:
         assert spec.probes.liveness.period_seconds == 5
         assert spec.probes.readiness.tcp_socket.port == 30000
         assert spec.plan_name == "4C1G"
+        assert spec.services[0].exposed_type.name == "bk/http"
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="sleep")
         assert spec.proc_command == "sleep 100"
@@ -91,3 +94,4 @@ class Test__sync_processes:
         assert spec.scaling_config.max_replicas == 10
         assert spec.scaling_config.min_replicas == 2
         assert spec.plan_name == "4C2G"
+        assert spec.services is None

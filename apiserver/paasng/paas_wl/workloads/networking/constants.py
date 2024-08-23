@@ -20,3 +20,7 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 class NetworkProtocol(str, StructuredEnum):
     TCP = EnumField("TCP", label="TCP")
     UDP = EnumField("UDP", label="UDP")
+
+
+class ExposedTypeName(str, StructuredEnum):
+    BK_HTTP = "bk/http"

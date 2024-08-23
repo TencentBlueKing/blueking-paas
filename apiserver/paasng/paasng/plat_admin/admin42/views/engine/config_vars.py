@@ -27,6 +27,7 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import ConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
@@ -77,9 +78,9 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE_APP_ENV_VAR,
-            target=constants.OperationTarget.APP,
-            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            operation=OperationEnum.CREATE_APP_ENV_VAR,
+            target=OperationTarget.APP,
+            app_code=self.get_application().code,
             module_name=slz.validated_data.get("module").name,
             environment=slz.validated_data.get("environment_name"),
             data_after=data_after,
@@ -97,9 +98,9 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE_APP_ENV_VAR,
-            target=constants.OperationTarget.APP,
-            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            operation=OperationEnum.DELETE_APP_ENV_VAR,
+            target=OperationTarget.APP,
+            app_code=self.get_application().code,
             module_name=instance.module.name,
             environment=instance.environment.environment,
             data_before=data_before,
@@ -119,9 +120,9 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_APP_ENV_VAR,
-            target=constants.OperationTarget.APP,
-            app_code=self._get_param_from_kwargs(["code", "app_code"]),
+            operation=OperationEnum.MODIFY_APP_ENV_VAR,
+            target=OperationTarget.APP,
+            app_code=self.get_application().code,
             module_name=instance.module.name,
             environment=instance.environment.environment,
             data_before=data_before,

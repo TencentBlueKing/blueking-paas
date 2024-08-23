@@ -38,6 +38,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
@@ -126,8 +127,8 @@ class ApplicationServicesManageViewSet(GenericViewSet):
         rel.provision()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.PROVISION_INSTANCE,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.PROVISION_INSTANCE,
+            target=OperationTarget.APP,
             app_code=code,
             module_name=module_name,
             environment=environment,
@@ -165,8 +166,8 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             instance_rel.recycle_resource()
             add_admin_audit_record(
                 user=request.user.pk,
-                operation=constants.OperationEnum.RECYCLE_RESOURCE,
-                target=constants.OperationTarget.APP,
+                operation=OperationEnum.RECYCLE_RESOURCE,
+                target=OperationTarget.APP,
                 app_code=code,
                 module_name=module_name,
                 data_before=DataDetail(
@@ -217,8 +218,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
         LocalServiceMgr().create(data)
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.ADD_ON,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ADD_ON,
             attribute=data["name"],
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
         )
@@ -237,8 +238,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.ADD_ON,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADD_ON,
             attribute=service.name,
             data_before=data_before,
         )
@@ -262,8 +263,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.ADD_ON,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADD_ON,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
         )
@@ -313,8 +314,8 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.ADD_ON_PLAN,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ADDON_PLAN,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -336,8 +337,8 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.ADD_ON_PLAN,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADDON_PLAN,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -359,8 +360,8 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.ADD_ON_PLAN,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADDON_PLAN,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
         )

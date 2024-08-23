@@ -32,6 +32,7 @@ from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
@@ -49,6 +50,16 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
+    @staticmethod
+    def _gen_spec_data(spec: EgressSpec) -> dict:
+        return {
+            "enabled": True,
+            "replicas": spec.replicas,
+            "cpu_limit": spec.cpu_limit,
+            "memory_limit": spec.memory_limit,
+            "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
+        }
+
     def get(self, request, code, module_name, environment):
         """获取 Egress 配置"""
         wl_app = self._get_wl_app(code, module_name, environment)
@@ -56,15 +67,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         if not spec:
             return Response(data={"enabled": False})
 
-        return Response(
-            data={
-                "enabled": True,
-                "replicas": spec.replicas,
-                "cpu_limit": spec.cpu_limit,
-                "memory_limit": spec.memory_limit,
-                "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
-            }
-        )
+        return Response(data=self._gen_spec_data(spec))
 
     def create(self, request, code, module_name, environment):
         """创建/更新 Egress 配置"""
@@ -83,15 +86,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         data_before = None
         if spec:
             # 更新 EgressSpec
-            data_before = DataDetail(
-                type=constants.DataType.RAW_DATA,
-                data={
-                    "replicas": spec.replicas,
-                    "cpu_limit": spec.cpu_limit,
-                    "memory_limit": spec.memory_limit,
-                    "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
-                },
-            )
+            data_before = DataDetail(type=constants.DataType.RAW_DATA, data=self._gen_spec_data(spec))
             spec.replicas = slz.data["replicas"]
             spec.cpu_limit = slz.data["cpu_limit"]
             spec.memory_limit = slz.data["memory_limit"]
@@ -122,10 +117,8 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_EGRESS_SPEC
-            if data_before
-            else constants.OperationEnum.CREATE_EGRESS_SPEC,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_EGRESS_SPEC if data_before else OperationEnum.CREATE_EGRESS_SPEC,
+            target=OperationTarget.APP,
             app_code=code,
             module_name=module_name,
             environment=environment,
@@ -154,12 +147,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
         data_before = DataDetail(
             type=constants.DataType.RAW_DATA,
-            data={
-                "replicas": spec.replicas,
-                "cpu_limit": spec.cpu_limit,
-                "memory_limit": spec.memory_limit,
-                "rules": [{"host": r.host, "port": r.dst_port, "protocol": r.protocol} for r in spec.rules.all()],
-            },
+            data=self._gen_spec_data(spec),
         )
 
         # 从集群中删除 egress 资源
@@ -174,8 +162,8 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         spec.delete()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE_EGRESS_SPEC,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.DELETE_EGRESS_SPEC,
+            target=OperationTarget.APP,
             app_code=code,
             module_name=module_name,
             environment=environment,

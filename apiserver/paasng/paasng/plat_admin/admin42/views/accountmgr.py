@@ -34,6 +34,7 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers import accountmgr
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
@@ -96,8 +97,8 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         results = self.get_serializer(results, many=True).data
         add_admin_audit_record(
             user=self.request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.ACCESS_CONTROL,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.PLAT_USER,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=list(results)),
         )
         return Response(results)
@@ -114,17 +115,17 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         user_id = data["user"]
         profile = UserProfile.objects.get(user=user_id)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data)
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=accountmgr.UserProfileSLZ(profile).data)
         profile.role = data["role"]
         profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
 
-        profile.refresh_from_db(fields=["role", "enable_regions"])
+        profile.refresh_from_db(fields=["enable_regions"])
         add_admin_audit_record(
             user=self.request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.ACCESS_CONTROL,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data),
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.PLAT_USER,
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=accountmgr.UserProfileSLZ(profile).data),
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -140,8 +141,8 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=self.request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.ACCESS_CONTROL,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.PLAT_USER,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data),
         )
@@ -181,8 +182,8 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         AccountFeatureFlag.objects.set_feature(user, data["name"], data["effect"])
         add_admin_audit_record(
             user=self.request.user.pk,
-            operation=constants.OperationEnum.MODIFY_USER_FEATURE_FLAG,
-            target=constants.OperationTarget.ACCESS_CONTROL,
+            operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
+            target=OperationTarget.PLAT_USER,
             data_after=DataDetail(
                 type=constants.DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)
             ),

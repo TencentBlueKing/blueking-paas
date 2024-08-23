@@ -70,10 +70,11 @@ class OperationTarget(str, StructuredEnum):
     BKPLUGIN_TAG = EnumField("bkplugin_tag", label=_("插件分类"))
     BKPLUGIN_DISTRIBUTOR = EnumField("bkplugin_distributor", label=_("插件使用方"))
     DOCUMENT = EnumField("document", label=_("文档"))
-    DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("失败提示"))
+    DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("部署失败提示"))
     SOURCE_TYPE_SPEC = EnumField("source_type_spec", label=_("代码库配置"))
     SHARED_CERT = EnumField("shared_cert", label=_("共享证书"))
-    ADD_ON_PLAN = EnumField("addon_plan", label=_("服务方案"))
+    ADDON_PLAN = EnumField("addon_plan", label=_("服务方案"))
+    PLAT_USER = EnumField("plat_user", label=_("平台用户"))
 
 
 class OperationEnum(str, StructuredEnum):
@@ -99,7 +100,7 @@ class OperationEnum(str, StructuredEnum):
     RENEW = EnumField("renew", label=_("续期"))
     DEPLOY = EnumField("deploy", label=_("部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
-    SWITCH = EnumField("switch", label=_("切换资源方案"))
+    MODIFY_PLAN = EnumField("switch", label=_("切换资源方案"))
     # admin42相关操作
     MODIFY_FEATURE_FLAG = EnumField("modify_feature_flag", label=_("修改特性标记"))
     MODIFY_USER_FEATURE_FLAG = EnumField("modify_user_feature_flag", label=_("修改用户特性"))
@@ -117,3 +118,5 @@ class OperationEnum(str, StructuredEnum):
     CREATE_APP_ENV_VAR = EnumField("create_app_env_var", label=_("创建环境变量"))
     MODIFY_APP_ENV_VAR = EnumField("modify_app_env_var", label=_("修改环境变量"))
     DELETE_APP_ENV_VAR = EnumField("delete_app_env_var", label=_("删除环境变量"))
+    MODIFY_APP_MEMBER = EnumField("modify_app_member", label=_("修改应用成员"))
+    DELETE_APP_MEMBER = EnumField("delete_app_member", label=_("删除应用成员"))

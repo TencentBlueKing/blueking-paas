@@ -32,6 +32,7 @@ from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.bk_app.processes.readers import instance_kmodel
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -72,8 +73,8 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
         slz.save()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.PROCESS_SPEC_PLAN,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.validated_data),
         )
         return Response(slz.validated_data, status=status.HTTP_201_CREATED)
@@ -93,8 +94,8 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.PROCESS_SPEC_PLAN,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.validated_data),
         )
@@ -152,8 +153,8 @@ class ProcessSpecManageViewSet(GenericViewSet):
         defaults["plan"] = plan.name
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.SWITCH,
-            target=constants.OperationTarget.PROCESS,
+            operation=OperationEnum.MODIFY_PLAN,
+            target=OperationTarget.PROCESS,
             attribute=wl_app.name,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=defaults),
         )
@@ -169,8 +170,8 @@ class ProcessSpecManageViewSet(GenericViewSet):
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
             add_admin_audit_record(
                 user=request.user.pk,
-                operation=constants.OperationEnum.SCALE,
-                target=constants.OperationTarget.PROCESS,
+                operation=OperationEnum.SCALE,
+                target=OperationTarget.PROCESS,
                 attribute=wl_app.name,
                 data_before=data_before,
                 data_after=DataDetail(type=constants.DataType.RAW_DATA, data={"replicas": data["target_replicas"]}),

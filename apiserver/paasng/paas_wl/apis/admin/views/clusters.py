@@ -50,6 +50,7 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,8 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE if request.method == "POST" else constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.CLUSTER,
+            operation=OperationEnum.CREATE if request.method == "POST" else OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
             data_before=DataDetail(type=constants.DataType.RAW_DATA, data=data_before),
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data_after),
         )
@@ -89,18 +90,18 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         data_before = DataDetail(
             type=constants.DataType.RAW_DATA, data=Cluster.objects.get(region=cluster.region, is_default=True).name
         )
-        result_code = constants.ResultCode.SUCCESS
+        result_code = constants.ResultCode.FAILURE
 
         try:
             Cluster.objects.switch_default_cluster(region=cluster.region, cluster_name=cluster.name)
+            result_code = constants.ResultCode.SUCCESS
         except SwitchDefaultClusterError as e:
-            result_code = constants.ResultCode.FAILURE
             raise error_codes.SWITCH_DEFAULT_CLUSTER_FAILED.f(str(e))
         finally:
             add_admin_audit_record(
                 user=request.user.pk,
-                operation=constants.OperationEnum.SWITCH_DEFAULT_CLUSTER,
-                target=constants.OperationTarget.CLUSTER,
+                operation=OperationEnum.SWITCH_DEFAULT_CLUSTER,
+                target=OperationTarget.CLUSTER,
                 data_before=data_before,
                 result_code=result_code,
                 data_after=DataDetail(type=constants.DataType.RAW_DATA, data=cluster.name),
@@ -120,8 +121,8 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.CLUSTER,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
@@ -133,8 +134,8 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         APIServer.objects.filter(cluster=cluster, uuid=api_server_id).delete()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.CLUSTER,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
@@ -162,13 +163,16 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(instance).data)
+        instance.delete()
+
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.CLUSTER,
-            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=ReadonlyClusterSLZ(instance).data),
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.CLUSTER,
+            data_before=data_before,
         )
-        return super().destroy(request, *args, **kwargs)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ClusterComponentViewSet(ViewSet):

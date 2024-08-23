@@ -26,6 +26,7 @@ from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_pref
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -85,25 +86,11 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.SOURCE_TYPE_SPEC,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        """删除代码库配置"""
-        instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(instance).data)
-        instance.delete()
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.SOURCE_TYPE_SPEC,
-            data_before=data_before,
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新代码库配置"""
@@ -115,9 +102,23 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.SOURCE_TYPE_SPEC,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除代码库配置"""
+        instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(instance).data)
+        instance.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

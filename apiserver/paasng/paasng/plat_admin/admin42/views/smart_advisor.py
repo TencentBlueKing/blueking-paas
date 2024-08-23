@@ -25,6 +25,7 @@ from paasng.accessories.smart_advisor.models import DeployFailurePattern, Docume
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.smart_advisor import DeployFailurePatternSLZ, DocumentaryLinkSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -62,25 +63,11 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.DOCUMENT,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.DOCUMENT,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        """删除文档"""
-        instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
-        instance.delete()
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.DOCUMENT,
-            data_before=data_before,
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新文档"""
@@ -92,12 +79,26 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.DOCUMENT,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.DOCUMENT,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除文档"""
+        instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
+        instance.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.DOCUMENT,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DeployFailurePatternView(GenericTemplateView):
@@ -132,25 +133,11 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.DEPLOY_FAILURE_TIPS,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        """删除失败提示"""
-        instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
-        instance.delete()
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
-            data_before=data_before,
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新失败提示"""
@@ -162,9 +149,23 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.DEPLOY_FAILURE_TIPS,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.DEPLOY_FAILURE_TIPS,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
         )
-        return Response(slz.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除失败提示"""
+        instance = self.get_object()
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
+        instance.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.DEPLOY_FAILURE_TIPS,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

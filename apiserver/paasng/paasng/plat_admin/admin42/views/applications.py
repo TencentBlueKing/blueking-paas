@@ -40,6 +40,7 @@ from paasng.infras.iam.helpers import (
     remove_user_all_roles,
 )
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
@@ -320,8 +321,8 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.BIND_CLUSTER,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.BIND_CLUSTER,
+            target=OperationTarget.APP,
             app_code=code,
             module_name=module_name,
             environment=environment,
@@ -361,14 +362,23 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
+    @staticmethod
+    def _gen_data_detail(code: str, username: str) -> DataDetail:
+        return DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [role.name.lower() for role in fetch_user_roles(code, username)],
+            },
+        )
+
     def list(self, request, *args, **kwargs):
         application = get_object_or_404(Application, code=kwargs["code"])
         members = fetch_application_members(application.code)
         return Response(ApplicationMemberSLZ(members, many=True).data)
 
-    def destroy(self, request, code):
+    def destroy(self, request, code, username):
         application = get_object_or_404(Application, code=code)
-        username = request.query_params["username"]
         data_before = DataDetail(
             type=constants.DataType.RAW_DATA,
             data={
@@ -383,18 +393,12 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.DELETE_APP_MEMBER,
+            target=OperationTarget.APP,
             app_code=code,
             attribute="member",
             data_before=data_before,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA,
-                data={
-                    "username": username,
-                    "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
-                },
-            ),
+            data_after=self._gen_data_detail(application.code, username),
         )
 
         self.sync_membership(application)
@@ -403,13 +407,7 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     def update(self, request, code):
         application = get_object_or_404(Application, code=code)
         username, role = request.data["username"], request.data["role"]
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "username": username,
-                "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
-            },
-        )
+        data_before = self._gen_data_detail(application.code, username)
 
         try:
             remove_user_all_roles(application.code, username)
@@ -419,17 +417,11 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_APP_MEMBER,
+            target=OperationTarget.APP,
             app_code=code,
             data_before=data_before,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA,
-                data={
-                    "username": username,
-                    "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
-                },
-            ),
+            data_after=self._gen_data_detail(application.code, username),
         )
 
         self.sync_membership(application)
@@ -480,8 +472,8 @@ class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_FEATURE_FLAG,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_FEATURE_FLAG,
+            target=OperationTarget.APP,
             app_code=application.code,
             data_after=DataDetail(
                 type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()

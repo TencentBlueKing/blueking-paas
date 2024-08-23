@@ -25,6 +25,7 @@ from rest_framework.viewsets import ViewSet
 from paas_wl.apis.admin.serializers.logs import ModuleEnvLogsConfigSLZ
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import Application
 
@@ -76,8 +77,8 @@ class AppLogConfigViewSet(ViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_LOG_CONFIG,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_LOG_CONFIG,
+            target=OperationTarget.APP,
             app_code=application.code,
             module_name=data["module_name"],
             environment=data["environment"],

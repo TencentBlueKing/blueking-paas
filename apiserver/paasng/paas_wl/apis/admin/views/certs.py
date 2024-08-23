@@ -25,6 +25,7 @@ from paas_wl.workloads.networking.ingress.models import AppDomainSharedCert
 from paas_wl.workloads.networking.ingress.serializers import AppDomainSharedCertSLZ, UpdateAppDomainSharedCertSLZ
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
 from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 
@@ -50,8 +51,8 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.SHARED_CERT,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SHARED_CERT,
             data_before=data_before,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data),
         )
@@ -59,13 +60,13 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Create a shared certificate"""
-        serializer = self.get_serializer(data=request.data)
+        serializer = AppDomainSharedCertSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.SHARED_CERT,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SHARED_CERT,
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=serializer.data),
         )
         return Response(serializer.data)
@@ -77,8 +78,8 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
         instance.delete()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.DELETE,
-            target=constants.OperationTarget.SHARED_CERT,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SHARED_CERT,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

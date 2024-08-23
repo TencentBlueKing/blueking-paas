@@ -15,11 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.addons import PlugableAppConfig
+from django.dispatch import receiver
+
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.platform.applications.signals import application_default_module_switch
 
 
-class AppsConfig(PlugableAppConfig):
-    name = "paasng.accessories.publish.market"
-
-    def ready(self):
-        from . import handlers  # noqa: F401
+@receiver(application_default_module_switch)
+def update_market_config_source_module(sender, application, new_module, old_module, **kwargs):
+    try:
+        market_config = application.market_config
+        market_config.source_module = new_module
+        market_config.save()
+    except MarketConfig.DoesNotExist:
+        pass

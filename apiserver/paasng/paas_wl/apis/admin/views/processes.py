@@ -68,7 +68,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
 
     def create(self, request, **kwargs):
         """创建 ProcessSpecPlan"""
-        slz = self.get_serializer(data=request.data)
+        slz = ProcessSpecPlanSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
         add_admin_audit_record(
@@ -82,7 +82,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     def edit(self, request, **kwargs):
         """更新已有 ProcessSpecPlan"""
         instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        slz = self.get_serializer(instance)
+        slz = ProcessSpecPlanSLZ(instance)
         data_before = DataDetail(
             type=constants.DataType.RAW_DATA,
             data={key: slz.data[key] for key in request.data},

@@ -109,8 +109,6 @@ export default {
 
       // 处理返回的数据
       res.forEach((item, index) => {
-        console.log('rr', item, index);
-
         const name = buildPath(item);
         const { id } = newData[index];  // 对应的 id
         commit('setCachePool', { id, data: { name, id } });  // 缓存处理后的结果

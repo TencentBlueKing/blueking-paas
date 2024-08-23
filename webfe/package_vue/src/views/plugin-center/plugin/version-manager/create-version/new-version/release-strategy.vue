@@ -49,6 +49,10 @@
                   :placeholder="$t('请输入蓝盾项目 ID，多个 ID 以英文分号分隔，最多可输入 10 个 ID')"
                   :has-delete-icon="true"
                   :allow-create="true"
+                  :paste-fn="customCopyRules"
+                  :clearable="!isDetailStep"
+                  :tag-tpl="renderMemberTag"
+                  @blur="handleBlur"
                   ext-cls="projec-id-tag-cls"
                 ></bk-tag-input>
               </bk-form-item>
@@ -89,7 +93,7 @@
           <li class="item">
             <div class="label">{{ $t('发布策略') }}：</div>
             <div class="value">
-              {{ releaseStrategyMap.find(v => v.value === data.latest_release_strategy.strategy)?.name }}
+              {{ releaseStrategyMap.find((v) => v.value === data.latest_release_strategy.strategy)?.name }}
             </div>
           </li>
           <li
@@ -100,9 +104,7 @@
             <div class="value range">
               <div class="c-item">
                 <p class="c-title">{{ $t('蓝盾项目') }}：</p>
-                <p
-                  class="c-value"
-                >
+                <p class="c-value">
                   {{
                     data.latest_release_strategy.bkci_project?.length
                       ? data.latest_release_strategy.bkci_project.join()
@@ -123,7 +125,12 @@
                     {{ item.name }}
                   </li>
                 </ul>
-                <p v-else class="c-value">--</p>
+                <p
+                  v-else
+                  class="c-value"
+                >
+                  --
+                </p>
               </div>
             </div>
           </li>
@@ -152,6 +159,7 @@ import userSelectorDialog from '@/components/user-selector';
 import renderMemberList from '@/views/dev-center/app/market/render-member-list';
 import card from '@/components/card/card.vue';
 import viewMode from './view-mode.vue';
+import { cloneDeep } from 'lodash';
 
 export default {
   name: 'ReleaseStrategy',
@@ -195,6 +203,7 @@ export default {
         { value: 'full', name: this.$t('直接全量发布') },
       ],
       organizationLevel: [],
+      disableDeletionMapping: {},
       rules: {
         strategy: [
           {
@@ -227,15 +236,23 @@ export default {
     cachePool() {
       return this.$store.getters['plugin/getCachePool'];
     },
+    isDetailStep() {
+      return this.step === 'release';
+    },
   },
   watch: {
     data: {
       handler(newValue) {
-        if (this.step === 'release') {
-          this.releaseStrategy = newValue?.latest_release_strategy || {};
+        if (this.isDetailStep) {
+          this.releaseStrategy = cloneDeep(newValue?.latest_release_strategy || {});
           this.departments = newValue.latest_release_strategy?.organization || [];
           if (this.departments.length) {
             this.requestAllOrganization(this.departments);
+          }
+          if (this.releaseStrategy?.bkci_project?.length) {
+            this.releaseStrategy.bkci_project.forEach((v) => {
+              this.disableDeletionMapping[v] = true;
+            });
           }
         }
         if (this.versionId) {
@@ -313,6 +330,33 @@ export default {
       const tc = data.find(v => v.id === TCID);
       return tc ? [tc] : [];
     },
+    // 自定义粘贴规则
+    customCopyRules(val) {
+      const value = String(val).trim();
+      if (!value) {
+        this.$bkMessage({ theme: 'error', message: this.$t('粘贴内容不能为空'), delay: 2000, dismissable: false });
+        return [];
+      }
+      const commandArr = value.split(',');
+      commandArr.forEach((item) => {
+        if (!this.releaseStrategy.bkci_project.includes(item)) {
+          this.releaseStrategy.bkci_project.push(item);
+        }
+      });
+      return this.releaseStrategy.bkci_project;
+    },
+    renderMemberTag(node) {
+      const h = this.$createElement;
+
+      return h('div', { class: ['tag', { 'hide-delete-icon': this.disableDeletionMapping[node.id] }] }, [
+        h('span', { class: ['text'], attrs: { tabIndex: 0 } }, node.id),
+      ]);
+    },
+    handleBlur(input) {
+      if (input !== '') {
+        this.releaseStrategy.bkci_project.push(input);
+      }
+    },
   },
 };
 </script>
@@ -379,6 +423,9 @@ export default {
           border-radius: 2px;
           .tag {
             background-color: #fafbfd;
+          }
+          .hide-delete-icon + .icon-close {
+            display: none;
           }
         }
       }

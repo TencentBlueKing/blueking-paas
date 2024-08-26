@@ -86,8 +86,8 @@ class AppDomainsViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.CREATE_APP_DOMAIN,
-            target=OperationTarget.APP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.APP_DOMAIN,
             app_code=application.code,
             module_name=env.module.name,
             environment=env.environment,
@@ -114,8 +114,8 @@ class AppDomainsViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.MODIFY_APP_DOMAIN,
-            target=OperationTarget.APP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_DOMAIN,
             app_code=application.code,
             module_name=domain.module.name,
             environment=domain.environment.environment,
@@ -134,8 +134,8 @@ class AppDomainsViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.DELETE_APP_DOMAIN,
-            target=OperationTarget.APP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP_DOMAIN,
             app_code=application.code,
             module_name=domain.module.name,
             environment=domain.environment.environment,

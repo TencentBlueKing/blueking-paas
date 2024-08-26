@@ -75,6 +75,10 @@ class OperationTarget(str, StructuredEnum):
     SHARED_CERT = EnumField("shared_cert", label=_("共享证书"))
     ADDON_PLAN = EnumField("addon_plan", label=_("服务方案"))
     PLAT_USER = EnumField("plat_user", label=_("平台用户"))
+    FEATURE_FLAG = EnumField("feature_flag", label=_("特性标记"))
+    EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
+    APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
+    APP_MEMBER = EnumField("app_member", label=_("应用成员"))
 
 
 class OperationEnum(str, StructuredEnum):
@@ -102,21 +106,10 @@ class OperationEnum(str, StructuredEnum):
     OFFLINE = EnumField("offline", label=_("下架"))
     MODIFY_PLAN = EnumField("switch", label=_("切换资源方案"))
     # admin42相关操作
-    MODIFY_FEATURE_FLAG = EnumField("modify_feature_flag", label=_("修改特性标记"))
     MODIFY_USER_FEATURE_FLAG = EnumField("modify_user_feature_flag", label=_("修改用户特性"))
     SWITCH_DEFAULT_CLUSTER = EnumField("switch_default_cluster", label=_("切换默认集群"))
     BIND_CLUSTER = EnumField("bind_cluster", label=_("切换绑定集群"))
-    CREATE_EGRESS_SPEC = EnumField("create_egress_spec", label=_("创建 Egress 配置"))
-    MODIFY_EGRESS_SPEC = EnumField("MODIFY_egress_spec", label=_("修改 Egress 配置"))
-    DELETE_EGRESS_SPEC = EnumField("delete_egress_spec", label=_("删除 Egress 配置"))
     CREATE_APP_DOMAIN = EnumField("create_app_domain", label=_("创建独立域名"))
-    MODIFY_APP_DOMAIN = EnumField("modify_app_domain", label=_("修改独立域名"))
-    DELETE_APP_DOMAIN = EnumField("delete_app_domain", label=_("删除独立域名"))
     MODIFY_LOG_CONFIG = EnumField("modify_log_config", label=_("日志采集管理"))
     PROVISION_INSTANCE = EnumField("provision_instance", label=_("分配增强服务实例"))
     RECYCLE_RESOURCE = EnumField("recycle_resource", label=_("回收增强服务实例"))
-    CREATE_APP_ENV_VAR = EnumField("create_app_env_var", label=_("创建环境变量"))
-    MODIFY_APP_ENV_VAR = EnumField("modify_app_env_var", label=_("修改环境变量"))
-    DELETE_APP_ENV_VAR = EnumField("delete_app_env_var", label=_("删除环境变量"))
-    MODIFY_APP_MEMBER = EnumField("modify_app_member", label=_("修改应用成员"))
-    DELETE_APP_MEMBER = EnumField("delete_app_member", label=_("删除应用成员"))

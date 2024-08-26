@@ -117,8 +117,8 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.MODIFY_EGRESS_SPEC if data_before else OperationEnum.CREATE_EGRESS_SPEC,
-            target=OperationTarget.APP,
+            operation=OperationEnum.MODIFY if data_before else OperationEnum.CREATE,
+            target=OperationTarget.EGRESS_SPEC,
             app_code=code,
             module_name=module_name,
             environment=environment,
@@ -162,8 +162,8 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         spec.delete()
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.DELETE_EGRESS_SPEC,
-            target=OperationTarget.APP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.EGRESS_SPEC,
             app_code=code,
             module_name=module_name,
             environment=environment,

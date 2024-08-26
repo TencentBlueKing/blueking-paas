@@ -78,34 +78,14 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.CREATE_APP_ENV_VAR,
-            target=OperationTarget.APP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ENV_VAR,
             app_code=self.get_application().code,
             module_name=slz.validated_data.get("module").name,
             environment=slz.validated_data.get("environment_name"),
             data_after=data_after,
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        """删除应用内环境变量"""
-        instance = self.get_object()
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={"key": instance.key, "value": instance.value, "description": instance.description},
-        )
-        instance.delete()
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.DELETE_APP_ENV_VAR,
-            target=OperationTarget.APP,
-            app_code=self.get_application().code,
-            module_name=instance.module.name,
-            environment=instance.environment.environment,
-            data_before=data_before,
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, *args, **kwargs):
         """更新应用内环境变量"""
@@ -120,8 +100,8 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.MODIFY_APP_ENV_VAR,
-            target=OperationTarget.APP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ENV_VAR,
             app_code=self.get_application().code,
             module_name=instance.module.name,
             environment=instance.environment.environment,
@@ -132,3 +112,23 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
             ),
         )
         return Response(slz.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除应用内环境变量"""
+        instance = self.get_object()
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={"key": instance.key, "value": instance.value, "description": instance.description},
+        )
+        instance.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ENV_VAR,
+            app_code=self.get_application().code,
+            module_name=instance.module.name,
+            environment=instance.environment.environment,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

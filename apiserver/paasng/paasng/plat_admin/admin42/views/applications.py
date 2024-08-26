@@ -393,8 +393,8 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.DELETE_APP_MEMBER,
-            target=OperationTarget.APP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP_MEMBER,
             app_code=code,
             attribute="member",
             data_before=data_before,
@@ -417,8 +417,8 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.MODIFY_APP_MEMBER,
-            target=OperationTarget.APP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_MEMBER,
             app_code=code,
             data_before=data_before,
             data_after=self._gen_data_detail(application.code, username),
@@ -472,8 +472,8 @@ class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.MODIFY_FEATURE_FLAG,
-            target=OperationTarget.APP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.FEATURE_FLAG,
             app_code=application.code,
             data_after=DataDetail(
                 type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()

@@ -76,6 +76,7 @@ class AdminAppOperationAuditManageView(GenericTemplateView):
         context["pagination"] = self.get_pagination_context(self.request)
         context["result_types"] = dict(ResultCode.get_choices())
         context["access_types"] = dict(AccessType.get_choices())
+        context["target_types"] = dict(OperationTarget.get_choices())
         context["operation_types"] = dict(OperationEnum.get_choices())
         context["env_types"] = dict(AppEnvName.get_choices())
         return context

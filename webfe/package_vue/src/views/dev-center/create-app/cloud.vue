@@ -6,9 +6,7 @@
         :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力')"></bk-alert>
 
       <div class="default-app-type mb20">
-        <default-app-type
-          @on-change-type="handleSwitchAppType"
-        />
+        <default-app-type @on-change-type="handleSwitchAppType" />
       </div>
       <!-- 不是smart应用 -->
       <section v-if="curCodeSource !== 'smart'">
@@ -1401,6 +1399,7 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.activeIndex = 1;
       this.curStep = 1;
       this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;

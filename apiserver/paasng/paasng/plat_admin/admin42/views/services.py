@@ -254,7 +254,9 @@ class PlatformServicesManageViewSet(GenericViewSet):
         slz = ServiceObjSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
+        data_before = ServiceObjSLZ(service).data
+        # specifications 字段无法序列化，同时 specifications 配置能在 config 字段中看到
+        del data_before["specifications"]
 
         try:
             mixed_service_mgr.update(service, data)
@@ -265,7 +267,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADD_ON,
-            data_before=data_before,
+            attribute=service.name,
+            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=data_before),
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

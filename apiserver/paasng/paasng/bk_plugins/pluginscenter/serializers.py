@@ -263,7 +263,11 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     def get_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
         if release_definition.reportFromat:
-            return release_definition.reportFromat.format(plugin_id=instance.plugin.id, version_id=instance.version)
+            return release_definition.reportFromat.format(
+                plugin_id=instance.plugin.id,
+                version_id=instance.version,
+                source_version_name=instance.source_version_name,
+            )
         return None
 
     def to_representation(self, instance):

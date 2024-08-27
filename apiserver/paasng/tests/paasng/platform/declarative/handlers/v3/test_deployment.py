@@ -75,7 +75,7 @@ def yaml_v3_example() -> str:
 class TestCnativeAppDescriptionHandler:
     def test_handle_deployment_normal(self, bk_deployment, yaml_v3_example):
         with mock.patch(
-            "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
+            "paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"
         ) as update_bkmonitor:
             handler = get_desc_handler(yaml.safe_load(yaml_v3_example))
 

@@ -125,7 +125,7 @@ class TestAppDescriptionHandler:
         """Handle a normal YAML content."""
 
         with mock.patch(
-            "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
+            "paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"
         ) as update_bkmonitor:
             get_desc_handler(yaml.safe_load(yaml_v2_normal)).handle_deployment(bk_deployment)
 

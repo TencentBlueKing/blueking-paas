@@ -300,7 +300,7 @@ def itsm_test_stage(release):
 
 
 @pytest.fixture()
-def release_strategy(plugin):
+def release_strategy(plugin, bk_user):
     plugin.pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
     plugin.pd.save()
     release: PluginRelease = G(
@@ -312,6 +312,7 @@ def release_strategy(plugin):
         source_version_name="test-master",
         version="0.0.1",
         comment="",
+        creator=bk_user,
     )
     release.initial_stage_set()
     release_strategy = PluginReleaseStrategy.objects.create(

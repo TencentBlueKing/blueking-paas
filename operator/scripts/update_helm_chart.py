@@ -546,7 +546,7 @@ class HelmChartUpdater:
         self._print_dividing_line()
 
         # 4. 清理工作空间
-        self._clear_workspace()
+        self._clean_workspace()
 
     def _check_target_chart(self):
         """检查目标路径的 chart 是否存在"""
@@ -726,9 +726,9 @@ class HelmChartUpdater:
         for line in difflib.unified_diff(old_values, new_values, "old", "new"):
             print(line)
 
-    def _clear_workspace(self):
+    def _clean_workspace(self):
         """一切执行完成后，清理工作空间"""
-        print("clear workspace...")
+        print("clean workspace...")
         shutil.rmtree(self.chart_source_dir)
 
     @staticmethod

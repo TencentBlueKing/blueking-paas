@@ -252,6 +252,11 @@ class PluginRelease(AuditedModel):
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
     is_rolled_back = models.BooleanField(default=False, help_text="是否已回滚")
+    # 灰度状态需要根据 itsm 审批单据的状态来确定，为避免每次查询灰度状态的时候都调用 itsm API，记录到 DB 中，在 itsm 回调时更新灰度状态
+    # 同时，也方便前端根据”灰度状态“过滤发布版本
+    gray_status = models.CharField(
+        verbose_name="灰度发布状态", max_length=16, default=constants.GrayReleaseStatus.IN_GRAY
+    )
 
     creator = BkUserField()
 

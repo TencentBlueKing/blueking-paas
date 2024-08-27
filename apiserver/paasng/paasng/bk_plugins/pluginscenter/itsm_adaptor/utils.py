@@ -20,7 +20,12 @@ from typing import List, Optional
 
 from django.conf import settings
 
-from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, ReleaseStageInvokeMethod
+from paasng.bk_plugins.pluginscenter.constants import (
+    GrayReleaseStatus,
+    PluginReleaseStatus,
+    ReleaseStageInvokeMethod,
+    ReleaseStrategy,
+)
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName, ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -140,6 +145,14 @@ def submit_canary_release_ticket(
     itsm_detail = client.create_ticket(service_id, operator, callback_url, itsm_fields)
     release_strategy.itsm_detail = itsm_detail
     release_strategy.save()
+    # 更新版本的灰度状态
+    release_status = (
+        GrayReleaseStatus.FULL_APPROVAL_IN_PROGRESS
+        if release_strategy.strategy == ReleaseStrategy.FULL
+        else GrayReleaseStatus.GRAY_APPROVAL_IN_PROGRESS
+    )
+    version.gray_status = release_status
+    version.save()
     return itsm_detail
 
 

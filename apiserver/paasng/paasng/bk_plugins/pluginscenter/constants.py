@@ -194,8 +194,8 @@ class PluginRevisionType(str, StructuredEnum):
     TESTED_VERSION = EnumField("tested_version", label=_("已经测试通过的版本"))
 
 
-class CodeccDisplayStatus(str, StructuredEnum):
-    """Codecc 插件灰度发布展示的状态，提供给前端展示的字段不需要国际化标记"""
+class GrayReleaseStatus(str, StructuredEnum):
+    """插件灰度发布展示的状态，提供给前端展示的字段不需要国际化标记"""
 
     GRAY_APPROVAL_IN_PROGRESS = EnumField("gray_approval_in_progress", label="灰度发布审批中")
     IN_GRAY = EnumField("in_gray", label="灰度中")
@@ -204,3 +204,4 @@ class CodeccDisplayStatus(str, StructuredEnum):
     FULLY_RELEASED = EnumField("fully_released", label="已全量发布")
     FULL_APPROVAL_FAILED = EnumField("full_approval_failed", label="全量发布审批失败")
     ROLLED_BACK = EnumField("rolled_back", label="已回滚")
+    INTERRUPTED = EnumField("interrupted", label="已终止")

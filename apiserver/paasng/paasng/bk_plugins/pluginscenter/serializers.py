@@ -28,7 +28,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
-    CodeccDisplayStatus,
     LogTimeChoices,
     PluginReleaseStatus,
     PluginReleaseType,
@@ -259,46 +258,13 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     complete_time = serializers.ReadOnlyField()
     report_url = serializers.SerializerMethodField(read_only=True)
     latest_release_strategy = PluginReleaseStrategySLZ()
-    display_status = serializers.SerializerMethodField(read_only=True)
+    display_status = serializers.CharField(source="gray_status", read_only=True)
 
     def get_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
         if release_definition.reportFromat:
             return release_definition.reportFromat.format(plugin_id=instance.plugin.id, version_id=instance.version)
         return None
-
-    def get_display_status(self, instance) -> str:
-        """灰度发布时需要定制化展示状态"""
-        release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
-        # 发布类型为 TESTED_VERSION 时，才需要处理
-        if release_definition.revisionType != PluginRevisionType.TESTED_VERSION:
-            return ""
-
-        if instance.is_rolled_back:
-            return CodeccDisplayStatus.ROLLED_BACK
-
-        if instance.status == PluginReleaseStatus.SUCCESSFUL:
-            return CodeccDisplayStatus.FULLY_RELEASED
-
-        # 发布失败，按灰度策略区分是全量发布失败还是灰度发布失败
-        if instance.status in PluginReleaseStatus.abnormal_status():
-            return (
-                CodeccDisplayStatus.FULL_APPROVAL_FAILED
-                if instance.latest_release_strategy.strategy == ReleaseStrategy.FULL
-                else CodeccDisplayStatus.GRAY_APPROVAL_FAILED
-            )
-
-        # 如果 ITSM 的审批单据已经是结束状态，则转态为灰度中
-        if instance.latest_release_strategy.itsm_detail:
-            ticket_info = get_ticket_status(instance.latest_release_strategy.itsm_detail.sn)
-            if ticket_info["current_status"] in ItsmTicketStatus.completed_status():
-                return CodeccDisplayStatus.IN_GRAY
-
-        return (
-            CodeccDisplayStatus.FULL_APPROVAL_IN_PROGRESS
-            if instance.latest_release_strategy.strategy == ReleaseStrategy.FULL
-            else CodeccDisplayStatus.GRAY_APPROVAL_IN_PROGRESS
-        )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

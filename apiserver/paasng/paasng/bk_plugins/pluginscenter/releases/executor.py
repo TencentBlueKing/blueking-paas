@@ -20,6 +20,9 @@ from django.utils.translation import gettext as _
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
 from paasng.bk_plugins.pluginscenter.models import PluginRelease
 from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controller
 from paasng.bk_plugins.pluginscenter.tasks import poll_stage_status
@@ -171,4 +174,18 @@ class PluginReleaseExecutor:
             and current_stage.status in constants.PluginReleaseStatus.running_status()
         ):
             raise error_codes.CANNOT_CANCEL_RELEASE.f(_("请到 ITSM 撤回审批单据"))
+
+        if current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
+            latest_release_strategy = self.release.latest_release_strategy
+            if latest_release_strategy and latest_release_strategy.itsm_detail:
+                ticket_info = get_ticket_status(latest_release_strategy.itsm_detail.sn)
+                # 灰度发布审批时，如果审批单据还未完结，需要后台调用 API 主动撤销单据
+                if ticket_info["current_status"] not in ItsmTicketStatus.completed_status():
+                    client = ItsmClient()
+                    client.withdraw_ticket(
+                        latest_release_strategy.itsm_detail.sn, latest_release_strategy.itsm_submitter
+                    )
+                # 更新版本的灰度状态
+                self.release.gray_status = constants.GrayReleaseStatus.INTERRUPTED
+                self.release.save()
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))

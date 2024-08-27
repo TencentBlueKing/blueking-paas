@@ -18,6 +18,7 @@
 import logging
 from typing import List
 
+from attrs import define
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -30,6 +31,12 @@ from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginVisible
 from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 
 logger = logging.getLogger(__name__)
+
+
+@define
+class CanaryStatus:
+    status: str
+    itsm_gray_status: str
 
 
 class PluginCallBackApiViewSet(GenericViewSet):
@@ -122,8 +129,10 @@ class PluginCallBackApiViewSet(GenericViewSet):
         approve_result = serializer.validated_data["approve_result"]
 
         # 根据 itsm 的回调结果更新单据状态
-        release.status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
-        release.save(update_fields=["status", "updated"])
+        canary_status = self._convert_canary_status(ticket_status, approve_result, latest_release_strategy.strategy)
+        release.status = canary_status.status
+        release.gray_status = canary_status.itsm_gray_status
+        release.save(update_fields=["status", "gray_status", "updated"])
 
         # 审批结束后，将插件状态和版本信息（包含灰度策略）同步给第三方
         if ticket_status in ItsmTicketStatus.completed_status():
@@ -133,7 +142,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
 
     def _convert_canary_status(
         self, ticket_status: ItsmTicketStatus, approve_result: bool, strategy: str
-    ) -> constants.PluginReleaseStatus:
+    ) -> CanaryStatus:
         """将ITSM单据状态和结果转换为插件版本的发布状态
         @param ticket_status: 单据状态，如结束、中断等
         @param approve_result: 审批结果，如通过、不通过
@@ -141,7 +150,12 @@ class PluginCallBackApiViewSet(GenericViewSet):
         """
         # 审批结果为不通过，则将版本发布状态为失败
         if ticket_status == ItsmTicketStatus.FINISHED and (not approve_result):
-            return constants.PluginReleaseStatus.FAILED
+            gray_status = (
+                constants.GrayReleaseStatus.FULL_APPROVAL_FAILED
+                if strategy == constants.ReleaseStrategy.FULL
+                else constants.GrayReleaseStatus.GRAY_APPROVAL_FAILED
+            )
+            return CanaryStatus(status=constants.PluginReleaseStatus.FAILED, itsm_gray_status=gray_status)
 
         # 仅发布策略为全量且审批结果为成功时，版本发布的状态才是成功
         if (
@@ -149,12 +163,20 @@ class PluginCallBackApiViewSet(GenericViewSet):
             and approve_result
             and strategy == constants.ReleaseStrategy.FULL
         ):
-            return constants.PluginReleaseStatus.SUCCESSFUL
+            return CanaryStatus(
+                status=constants.PluginReleaseStatus.SUCCESSFUL,
+                itsm_gray_status=constants.GrayReleaseStatus.FULLY_RELEASED,
+            )
 
         # 单据被撤销，则审批阶段状态设置为已中断
         if ticket_status in [ItsmTicketStatus.TERMINATED, ItsmTicketStatus.REVOKED]:
-            return constants.PluginReleaseStatus.INTERRUPTED
-        return constants.PluginReleaseStatus.PENDING
+            return CanaryStatus(
+                status=constants.PluginReleaseStatus.INTERRUPTED,
+                itsm_gray_status=constants.GrayReleaseStatus.INTERRUPTED,
+            )
+        return CanaryStatus(
+            status=constants.PluginReleaseStatus.PENDING, itsm_gray_status=constants.GrayReleaseStatus.IN_GRAY
+        )
 
     def _convert_release_status(
         self, ticket_status: ItsmTicketStatus, approve_result: bool

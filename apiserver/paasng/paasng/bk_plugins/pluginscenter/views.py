@@ -549,6 +549,8 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
+        if gray_status_list := query_params.get("gray_status", []):
+            queryset = queryset.filter(status__in=gray_status_list)
         if creator := query_params.get("creator"):
             queryset = queryset.filter(creator=creator)
         if is_rolled_back := query_params.get("is_rolled_back"):
@@ -703,6 +705,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("只允许最新版本回滚"))
 
         release.is_rolled_back = True
+        release.gray_status = constants.GrayReleaseStatus.ROLLED_BACK
         release.save()
 
         api_call_success = release_api.rollback_release(plugin.pd, plugin, release, operator=request.user.username)

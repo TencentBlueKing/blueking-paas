@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pluginrelease',
             name='gray_status',
-            field=models.CharField(default=paasng.bk_plugins.pluginscenter.constants.GrayReleaseStatus['IN_GRAY'], max_length=16, verbose_name='灰度发布状态'),
+            field=models.CharField(default=paasng.bk_plugins.pluginscenter.constants.GrayReleaseStatus['IN_GRAY'], max_length=32, verbose_name='灰度发布状态'),
         ),
         migrations.AlterField(
             model_name='operationrecord',

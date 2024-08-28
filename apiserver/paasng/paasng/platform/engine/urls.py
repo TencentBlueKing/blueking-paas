@@ -102,7 +102,7 @@ urlpatterns = [
         name="api.deploy.result",
     ),
     re_path(
-        make_app_pattern(r"/deployments/%s/result/export/$" % PVAR_UUID, include_envs=False),
+        make_app_pattern(r"/deployments/%s/logs/export/$" % PVAR_UUID, include_envs=False),
         views.DeploymentViewSet.as_view({"get": "export_deployment_log"}),
         name="api.deploy.export_log",
     ),

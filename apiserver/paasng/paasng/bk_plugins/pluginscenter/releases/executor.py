@@ -22,7 +22,7 @@ from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_canary_release_ticket
 from paasng.bk_plugins.pluginscenter.models import PluginRelease
 from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controller
 from paasng.bk_plugins.pluginscenter.tasks import poll_stage_status
@@ -45,7 +45,10 @@ class PluginReleaseExecutor:
         if not is_success:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("同步版本信息失败, 不能新建版本"))
 
-        self.execute_current_stage(operator=operator)
+        if self.release.current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
+            self.gray_release(operator=operator)
+        else:
+            self.execute_current_stage(operator=operator)
 
     def enter_next_stage(self, operator: str):
         """进入下一个发布阶段: 切换 release.current_stage 至 next_stage 并执行
@@ -189,3 +192,8 @@ class PluginReleaseExecutor:
                 self.release.gray_status = constants.GrayReleaseStatus.INTERRUPTED
                 self.release.save()
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
+
+    def gray_release(self, operator: str):
+        """灰度发布，只需要发送审批单据和回调第三方 API"""
+        self.release.refresh_from_db()
+        submit_canary_release_ticket(self.release.plugin.pd, self.release.plugin, self.release, operator)

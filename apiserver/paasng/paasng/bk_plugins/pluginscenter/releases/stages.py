@@ -31,7 +31,6 @@ from paasng.bk_plugins.pluginscenter.definitions import ReleaseStageDefinition, 
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
     get_ticket_status,
-    submit_canary_release_ticket,
     submit_online_approval_ticket,
 )
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
@@ -214,13 +213,6 @@ class ItsmStage(BaseStageController):
             **basic_info,
             "detail": ItsmTicketInfoSlz(ticket_info).data,
         }
-
-
-class CanaryWithItsmStage(BaseStageController):
-    invoke_method = constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM
-
-    def execute(self, operator: str):
-        submit_canary_release_ticket(self.pd, self.plugin, self.release, operator)
 
 
 class PipelineStage(BaseStageController):

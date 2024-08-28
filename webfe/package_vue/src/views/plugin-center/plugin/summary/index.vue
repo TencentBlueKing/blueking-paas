@@ -130,7 +130,7 @@
                   <span>{{ curPluginInfo.language }}</span>
                 </p>
                 <p class="repos">
-                  <span>{{ $t('代码仓库：') }}</span>
+                  {{ $t('代码仓库：') }}
                   <span
                     v-bk-tooltips.top-end="curPluginInfo.repository"
                     class="repository-tooltips"

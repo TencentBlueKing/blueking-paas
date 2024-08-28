@@ -287,4 +287,5 @@ export const CODECC_RELEASE_STATUS = {
   fully_released: '已全量发布',
   full_approval_failed: '全量发布审批失败',
   rolled_back: '已回滚',
+  interrupted: '已终止',
 };

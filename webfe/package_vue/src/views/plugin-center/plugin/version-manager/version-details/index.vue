@@ -5,7 +5,14 @@
       :version-data="versionData"
       :status-map="CODECC_RELEASE_STATUS"
       :is-codecc="true"
-    />
+    >
+      <template slot="right" v-if="canTerminateStatus.includes(versionData.gray_status)">
+        <bk-button @click="handleCodeccCancelReleases">
+          <i class="paasng-icon paasng-minus-circle" />
+          {{ $t('终止发布') }}
+        </bk-button>
+      </template>
+    </paas-plugin-title>
     <!-- 版本发布 -->
     <paas-content-loader
       :is-loading="isLoading"
@@ -183,6 +190,7 @@ export default {
       scheme: {
         source_versions: [],
       },
+      canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
     };
   },
   computed: {
@@ -367,6 +375,37 @@ export default {
         query: {
           type: 'prod',
           versionId: this.versionId,
+        },
+      });
+    },
+
+    // 终止发布版本
+    handleCodeccCancelReleases() {
+      this.$bkInfo({
+        title: `${this.$t('确认终止发布版本')}${this.versionData.source_version_name} ？`,
+        width: 540,
+        maskClose: true,
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.$store.dispatch('plugin/codeccCancelReleases', {
+              pdId: this.pdId,
+              pluginId: this.pluginId,
+              releaseId: this.versionData.id,
+            });
+            this.$bkMessage({
+              theme: 'success',
+              message: this.$t('已终止当前的发布版本'),
+            });
+            this.$router.go(-1);
+          } catch (e) {
+            this.$bkMessage({
+              theme: 'error',
+              message: e.detail || e.message || this.$t('接口异常'),
+            });
+          } finally {
+            return true;
+          }
         },
       });
     },

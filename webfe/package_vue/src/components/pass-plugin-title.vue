@@ -43,6 +43,9 @@
       </div>
       <span v-if="tips" class="tips">{{ tips }}</span>
     </div>
+    <div class="right-tool flex-row align-items-center">
+      <slot name="right"></slot>
+    </div>
   </div>
 </template>
 <script>
@@ -131,6 +134,8 @@ export default {
 </script>
 <style lang="scss" scoped>
 .plugin-top-title {
+  display: flex;
+  justify-content: space-between;
   i {
     transform: translateY(0px);
   }
@@ -153,6 +158,7 @@ export default {
     }
   }
   .title-container {
+    flex: 1;
     .title {
       display: flex;
       align-items: center;

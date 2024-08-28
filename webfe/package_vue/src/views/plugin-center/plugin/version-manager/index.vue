@@ -170,10 +170,12 @@
           :label="$t('发布状态')"
           prop="status"
           column-key="status"
+          :filters="codeccStatusFilters"
+          :filter-multiple="true"
         >
           <template slot-scope="{ row }">
-            <div :class="['dot', row.display_status]" />
-            <span class="status-text">{{ $t(CODECC_RELEASE_STATUS[row.display_status]) || '--' }}</span>
+            <div :class="['dot', row.gray_status]" />
+            <span class="status-text">{{ $t(CODECC_RELEASE_STATUS[row.gray_status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -197,7 +199,7 @@
           :label="$t('操作')"
           :width="localLanguage === 'en' ? 320 : 240"
         >
-          <template slot-scope="{ row }">
+          <div slot-scope="{ row }">
             <!-- Codecc 灰度审批详情 -->
             <template v-if="row.source_version_type === 'tested_version' && isOfficialVersion">
               <bk-button
@@ -207,6 +209,15 @@
                 @click="handleCodeccReleaseDetails(row)"
               >
                 {{ $t('详情') }}
+              </bk-button>
+              <bk-button
+                v-if="canTerminateStatus.includes(row.gray_status)"
+                theme="primary"
+                text
+                class="mr10"
+                @click="handleCodeccCancelReleases(row)"
+              >
+                {{ $t('终止发布') }}
               </bk-button>
               <!-- is_rolled_back = true 表示已回滚 -->
               <span
@@ -224,7 +235,7 @@
               </span>
             </template>
             <template v-else>
-              <div v-if="isOfficialVersion">
+              <span v-if="isOfficialVersion">
                 <bk-button
                   theme="primary"
                   text
@@ -241,7 +252,7 @@
                 >
                   {{ $t('发布进度') }}
                 </bk-button>
-              </div>
+              </span>
               <bk-button
                 v-else
                 theme="primary"
@@ -269,7 +280,7 @@
                 {{ $t('测试报告') }}
               </bk-button>
             </template>
-          </template>
+          </div>
         </bk-table-column>
       </bk-table>
     </paas-content-loader>
@@ -429,11 +440,15 @@ export default {
       user: {},
       CODECC_RELEASE_STATUS,
       rollbacks: [],
+      canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
     };
   },
   computed: {
     statusFilters() {
       return this.formatStatusFilters(this.curVersionStatus);
+    },
+    codeccStatusFilters() {
+      return this.formatStatusFilters(CODECC_RELEASE_STATUS);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -550,7 +565,7 @@ export default {
     formatStatusParams() {
       let statusParams = '';
       if (this.filterStatus.length) {
-        const key = this.isCodecc ? 'display_status' : 'status';
+        const key = this.isCodecc ? 'gray_status' : 'status';
         let paramsText = '';
         this.filterStatus.forEach((item) => {
           // 选择发布中直接传递 status=pending&status=inital
@@ -897,6 +912,37 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 终止发布弹窗
+    handleCodeccCancelReleases(row) {
+      this.$bkInfo({
+        title: `${this.$t('确认终止发布版本')}${row.source_version_name} ？`,
+        width: 540,
+        maskClose: true,
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.$store.dispatch('plugin/codeccCancelReleases', {
+              pdId: this.pdId,
+              pluginId: this.pluginId,
+              releaseId: row.id,
+            });
+            this.$bkMessage({
+              theme: 'success',
+              message: this.$t('已终止当前的发布版本'),
+            });
+            this.getVersionList();
+          } catch (e) {
+            this.$bkMessage({
+              theme: 'error',
+              message: e.detail || e.message || this.$t('接口异常'),
+            });
+          } finally {
+            return true;
+          }
+        },
+      });
     },
   },
 };

@@ -668,5 +668,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/basic_info/`;
       return http.get(url, {}, config);
     },
+
+    /**
+     * Codecc 终止发布
+     * @param {Object} params 请求参数：id
+     */
+    codeccCancelReleases({}, { pdId, pluginId, releaseId }, config) {
+      const url = `${BACKEND_URL}/api/bkplugins/${pdId}/plugins/${pluginId}/releases/${releaseId}/cancel/`;
+      return http.post(url, {}, config);
+    },
   },
 };

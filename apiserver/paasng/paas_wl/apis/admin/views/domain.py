@@ -107,7 +107,7 @@ class AppDomainsViewSet(GenericViewSet):
         data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
 
         data = validate_domain_payload(request.data, application, instance=domain, serializer_cls=DomainForUpdateSLZ)
-        new_instance = get_custom_domain_mgr(application).update(
+        new_domain = get_custom_domain_mgr(application).update(
             domain, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
         )
 
@@ -119,9 +119,9 @@ class AppDomainsViewSet(GenericViewSet):
             module_name=domain.module.name,
             environment=domain.environment.environment,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
         )
-        return Response(DomainSLZ(new_instance).data)
+        return Response(DomainSLZ(new_domain).data)
 
     @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):

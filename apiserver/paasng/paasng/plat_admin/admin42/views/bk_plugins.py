@@ -50,6 +50,7 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
         slz = BKPluginTagSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
@@ -60,9 +61,10 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
 
     def update(self, request, *args, **kwargs):
         """更新插件分类"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
-        slz = BKPluginTagSLZ(instance, data=request.data)
+        plugin_tag = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data)
+
+        slz = BKPluginTagSLZ(plugin_tag, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -71,15 +73,15 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_TAG,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件分类"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
-        instance.delete()
+        plugin_tag = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data)
+        plugin_tag.delete()
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -121,9 +123,9 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
 
     def update(self, request, *args, **kwargs):
         """更新插件使用方"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
-        slz = BkPluginDistributorSLZ(instance, data=request.data)
+        plugin_distributor = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data)
+        slz = BkPluginDistributorSLZ(plugin_distributor, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -132,15 +134,15 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data),
         )
         return Response(slz.data)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件使用方"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
-        instance.delete()
+        plugin_distributor = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data)
+        plugin_distributor.delete()
 
         add_admin_audit_record(
             user=request.user.pk,

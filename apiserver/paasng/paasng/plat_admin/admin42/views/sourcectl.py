@@ -93,10 +93,10 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
 
     def update(self, request, *args, **kwargs):
         """更新代码库配置"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(instance).data)
+        source_type_spec = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
-        slz = SourceTypeSpecConfigSLZ(instance, data=request.data)
+        slz = SourceTypeSpecConfigSLZ(source_type_spec, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -111,9 +111,9 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """删除代码库配置"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(instance).data)
-        instance.delete()
+        source_type_spec = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        source_type_spec.delete()
 
         add_admin_audit_record(
             user=request.user.pk,

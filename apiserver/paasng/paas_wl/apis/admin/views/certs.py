@@ -74,9 +74,9 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """Delete a shared certificate"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(instance).data)
-        instance.delete()
+        cert = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data)
+        cert.delete()
 
         add_admin_audit_record(
             user=request.user.pk,

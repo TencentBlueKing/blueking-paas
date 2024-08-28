@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-28 14:32+0800\n"
+"POT-Creation-Date: 2024-08-28 15:22+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1698,7 +1698,9 @@ msgid "共享证书"
 msgstr "Shared Cert"
 
 #: paasng/misc/audit/constants.py:76
-msgid "服务方案"
+#, fuzzy
+#| msgid "增强服务"
+msgid "增强服务方案"
 msgstr "Add-ons Plan"
 
 #: paasng/misc/audit/constants.py:77
@@ -2172,7 +2174,7 @@ msgstr ""
 msgid "由于: {reason}, 该功能暂不支持"
 msgstr "Due to: {reason}, this feature is not supported at this time"
 
-#: paasng/plat_admin/admin42/views/engine/egress.py:82
+#: paasng/plat_admin/admin42/views/engine/egress.py:81
 msgid "当前环境所部署的集群不支持 BCS Egress"
 msgstr ""
 
@@ -4146,6 +4148,9 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:46
 msgid "zh-cn"
 msgstr ""
+
+#~ msgid "服务方案"
+#~ msgstr "Add-ons Plan"
 
 #, fuzzy
 #~| msgid "创建独立域名失败"

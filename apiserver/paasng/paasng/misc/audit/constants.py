@@ -73,7 +73,7 @@ class OperationTarget(str, StructuredEnum):
     DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("部署失败提示"))
     SOURCE_TYPE_SPEC = EnumField("source_type_spec", label=_("代码库配置"))
     SHARED_CERT = EnumField("shared_cert", label=_("共享证书"))
-    ADDON_PLAN = EnumField("addon_plan", label=_("服务方案"))
+    ADDON_PLAN = EnumField("addon_plan", label=_("增强服务方案"))
     PLAT_USER = EnumField("plat_user", label=_("平台用户"))
     FEATURE_FLAG = EnumField("feature_flag", label=_("特性标记"))
     EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))

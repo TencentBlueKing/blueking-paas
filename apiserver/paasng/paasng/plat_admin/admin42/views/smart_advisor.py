@@ -70,9 +70,9 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
 
     def update(self, request, *args, **kwargs):
         """更新文档"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
-        slz = DocumentaryLinkSLZ(instance, data=request.data)
+        documentary_link = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(documentary_link).data)
+        slz = DocumentaryLinkSLZ(documentary_link, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -87,9 +87,9 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """删除文档"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
-        instance.delete()
+        documentary_link = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(documentary_link).data)
+        documentary_link.delete()
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -140,9 +140,9 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
 
     def update(self, request, *args, **kwargs):
         """更新失败提示"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
-        slz = DeployFailurePatternSLZ(instance, data=request.data)
+        deploy_failure_pattern = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(deploy_failure_pattern).data)
+        slz = DeployFailurePatternSLZ(deploy_failure_pattern, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -157,9 +157,9 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """删除失败提示"""
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
-        instance.delete()
+        deploy_failure_pattern = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(deploy_failure_pattern).data)
+        deploy_failure_pattern.delete()
 
         add_admin_audit_record(
             user=request.user.pk,

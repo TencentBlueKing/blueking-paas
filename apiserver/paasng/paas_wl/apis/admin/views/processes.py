@@ -81,10 +81,10 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
 
     def edit(self, request, **kwargs):
         """更新已有 ProcessSpecPlan"""
-        instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(instance).data)
+        plan = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data)
 
-        slz = ProcessSpecPlanSLZ(data=request.data, instance=instance)
+        slz = ProcessSpecPlanSLZ(data=request.data, instance=plan)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -93,14 +93,14 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PROCESS_SPEC_PLAN,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data),
         )
         return Response(slz.validated_data, status=status.HTTP_200_OK)
 
     def list_binding_app(self, request, **kwargs):
         """获取已有的 AppList"""
-        instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        qs = self.paginate_queryset(instance.processspec_set.all())
+        plan = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
+        qs = self.paginate_queryset(plan.processspec_set.all())
         return Response(ProcessSpecBoundInfoSLZ(qs, many=True).data)
 
 

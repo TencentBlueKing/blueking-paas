@@ -95,7 +95,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             obj, _ = UserProfile.objects.update_or_create(
                 user=user_id, defaults={"role": role, "enable_regions": enable_regions}
             )
-            obj.refresh_from_db(fields=["role", "enable_regions"])
+            obj.refresh_from_db()
             results.append(obj)
 
         results = UserProfileSLZ(results, many=True).data
@@ -124,7 +124,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
 
-        profile.refresh_from_db(fields=["enable_regions"])
+        profile.refresh_from_db()
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY,

@@ -70,19 +70,20 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         slz = ClusterRegisterRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(Cluster.objects.get(pk=pk)).data if pk else None
+        )
 
-        data_before = ReadonlyClusterSLZ(Cluster.objects.get(pk=pk)).data if pk else None
         cluster = Cluster.objects.register_cluster(**data)
-        data_after = ReadonlyClusterSLZ(cluster).data
 
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE if request.method == "POST" else OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
-        return Response(data=data_after)
+        return Response(data=ReadonlyClusterSLZ(cluster).data)
 
     def set_as_default(self, request, pk):
         cluster = self.get_object()
@@ -105,7 +106,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
                 data_before=data_before,
                 data_after=DataDetail(type=DataType.RAW_DATA, data=cluster.name),
             )
-        return Response()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(request_body=APIServerSLZ)
     def bind_api_server(self, request, pk):
@@ -161,9 +162,9 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(instance).data)
-        instance.delete()
+        cluster = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
+        cluster.delete()
 
         add_admin_audit_record(
             user=request.user.pk,

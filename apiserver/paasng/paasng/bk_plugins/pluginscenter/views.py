@@ -188,7 +188,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
+    filter_backends = [PluginInstancePermissionFilter, SearchFilter]
     search_fields = ["id", "name_zh_cn", "name_en"]
     permission_classes = [
         IsAuthenticated,
@@ -211,14 +211,13 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         if pd__identifier_list := query_params.get("pd__identifier", []):
             queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
 
-        # 执行顺序是：get_queryset -> OrderingFilter -> filter_queryset，故需要在这里定义才能保证已下架的应用排在最末尾
         queryset = queryset.annotate(
             is_archived=Case(
                 When(status="archived", then=Value(1)),
                 default=Value(0),
                 output_field=IntegerField(),
             )
-        ).order_by("is_archived")
+        ).order_by("is_archived", query_params.get("order_by"))
         return queryset
 
     @atomic

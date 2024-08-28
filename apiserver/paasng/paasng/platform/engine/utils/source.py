@@ -39,7 +39,12 @@ from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.controllers.package import PackageController
-from paasng.platform.sourcectl.exceptions import GetAppYamlError, GetDockerIgnoreError, GetProcfileError
+from paasng.platform.sourcectl.exceptions import (
+    GetAppYamlError,
+    GetDockerIgnoreError,
+    GetProcfileError,
+    GetProcfileFormatError,
+)
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.platform.sourcectl.utils import DockerIgnore
@@ -159,6 +164,9 @@ def get_deploy_desc_handler_by_version(
     procfile_data, procfile_exc = None, None
     try:
         procfile_data = metadata_reader.get_procfile(version_info)
+    except GetProcfileFormatError as e:
+        # The format error in Procfile in not tolerable
+        raise InitDeployDescHandlerError(str(e))
     except GetProcfileError as e:
         procfile_exc = e
 

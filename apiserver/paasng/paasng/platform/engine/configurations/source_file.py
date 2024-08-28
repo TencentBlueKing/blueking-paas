@@ -94,10 +94,9 @@ class MetaDataFileReader:
         try:
             procfile = yaml.full_load(content)
         except Exception as e:
-            raise exceptions.GetProcfileError('file "Procfile"\'s format is not YAML') from e
-
+            raise exceptions.GetProcfileFormatError('file "Procfile"\'s format is not YAML') from e
         if not isinstance(procfile, dict):
-            raise exceptions.GetProcfileError('file "Procfile" must be dict type')
+            raise exceptions.GetProcfileFormatError('file "Procfile" must be dict type')
         return procfile
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:

@@ -186,7 +186,7 @@ class ImageReleaseMgr(DeployStep):
                 self.deployment.operator,
                 self.deployment.version_info,
             )
-            return handler.handle(self.deployment, ignore_invalid_desc=True)
+            return handler.handle(self.deployment)
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except Exception as e:

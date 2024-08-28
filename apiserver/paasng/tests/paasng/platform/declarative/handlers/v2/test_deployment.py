@@ -205,11 +205,8 @@ class TestAppDescriptionHandler:
         handler = get_deploy_desc_handler(
             {"not": "valid yaml"}, procfile_data={"web": "gunicorn app", "worker": "celery"}
         )
-        ret = handler.handle(bk_deployment, ignore_invalid_desc=True)
-
-        assert query_proc_dict(bk_module) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
-        assert ret.processes
-        assert len(ret.processes) == 2
+        with pytest.raises(DescriptionValidationError):
+            _ = handler.handle(bk_deployment)
 
     def test_with_modules_found(self, bk_deployment, bk_module):
         _yaml_content = dedent(

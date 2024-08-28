@@ -234,12 +234,10 @@ def get_deploy_desc_by_module(desc_data: Dict, module_name: str) -> DeploymentDe
 
 
 class DeployDescHandler(Protocol):
-    def handle(self, deployment: Deployment, ignore_invalid_desc: bool = False) -> DeployHandleResult:
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
         """Handle a deployment object.
 
         :param deployment: The deployment object
-        :param ignore_invalid_desc: Whether to ignore error when the desc data is invalid, set this value to true to continue
-            process the procfile data.
         """
         ...
 
@@ -284,28 +282,10 @@ class DefaultDeployDescHandler:
     def get_desc_obj(self, module_name: str) -> DeploymentDesc:
         return self.desc_getter(self.json_data, module_name)
 
-    def handle(self, deployment: Deployment, ignore_invalid_desc: bool = False) -> DeployHandleResult:
-        try:
-            desc = self.get_desc_obj(deployment.app_environment.module.name)
-        except DescriptionValidationError as e:
-            if not ignore_invalid_desc:
-                raise
-            else:
-                desc_getting_exc = e
-                desc = None
-
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
+        desc = self.get_desc_obj(deployment.app_environment.module.name)
         procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None
-        if desc is not None:
-            return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
-        else:
-            # Error getting the desc data but the error has been ignored, continue to
-            # process the procfile data.
-            if not procfile_procs:
-                # Raise the original exception when the procfile data is also absent
-                raise desc_getting_exc
-
-            assert procfile_procs
-            return handle_procfile_procs(deployment, procfile_procs)
+        return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
 
 
 class ProcfileOnlyDeployDescHandler:
@@ -320,7 +300,7 @@ class ProcfileOnlyDeployDescHandler:
     def get_desc_obj(self, module_name: str) -> DeploymentDesc:
         raise TypeError("Not supported because there is no desc data")
 
-    def handle(self, deployment: Deployment, ignore_invalid_desc: bool = False) -> DeployHandleResult:
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
         procfile_procs = validate_procfile_procs(self.procfile_data)
         return handle_procfile_procs(deployment, procfile_procs)
 

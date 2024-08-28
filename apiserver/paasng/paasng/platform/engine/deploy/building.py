@@ -144,13 +144,10 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self, ignore_invalid_desc: bool = False) -> DeployHandleResult:
+    def handle_app_description(self) -> DeployHandleResult:
         """Handle the description files for deployment. It try to parse the app description
         file and store the related configurations, e.g. processes.
 
-        :param ignore_invalid_desc: whether to ignore the error when the desc data is
-            invalid, normal app need this flag to be true because they can still use
-            the Procfile.
         :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
@@ -160,7 +157,7 @@ class BaseBuilder(DeployStep):
                 self.deployment.version_info,
                 self.deployment.get_source_dir(),
             )
-            return handler.handle(self.deployment, ignore_invalid_desc=ignore_invalid_desc)
+            return handler.handle(self.deployment)
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
@@ -243,7 +240,7 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            handle_result = self.handle_app_description(ignore_invalid_desc=not is_cnative_app)
+            handle_result = self.handle_app_description()
             self.deployment.update_fields(processes=handle_result.processes)
 
         bkapp_revision_id = None
@@ -335,7 +332,7 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            handle_result = self.handle_app_description(ignore_invalid_desc=not is_cnative_app)
+            handle_result = self.handle_app_description()
             self.deployment.update_fields(processes=handle_result.processes)
 
         bkapp_revision_id = None

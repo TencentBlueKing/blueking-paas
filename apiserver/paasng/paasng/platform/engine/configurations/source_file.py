@@ -134,9 +134,9 @@ class MetaDataFileReader:
         try:
             app_description = yaml.full_load(content)
         except Exception as e:
-            raise exceptions.GetAppYamlError('file "app.yaml"\'s format is not YAML') from e
+            raise exceptions.GetAppYamlFormatError('file "app.yaml"\'s format is not YAML') from e
         if not isinstance(app_description, dict):
-            raise exceptions.GetAppYamlError('file "app.yaml" must be dict type')
+            raise exceptions.GetAppYamlFormatError('file "app.yaml" must be dict type')
         return app_description
 
     def get_dockerignore(self, version_info: VersionInfo) -> str:

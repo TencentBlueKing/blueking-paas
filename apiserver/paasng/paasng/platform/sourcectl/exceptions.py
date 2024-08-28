@@ -89,7 +89,7 @@ class ExceptionWithMessage(Exception):
 
 
 class GetProcfileError(ExceptionWithMessage):
-    """When no valid Procfile can not be found in application directory"""
+    """When no valid Procfile can be found in application directory"""
 
 
 class GetProcfileFormatError(GetProcfileError):
@@ -97,7 +97,11 @@ class GetProcfileFormatError(GetProcfileError):
 
 
 class GetAppYamlError(ExceptionWithMessage):
-    """When a valid app.yaml can not be found in application directory"""
+    """When no valid app.yaml can be found in application directory"""
+
+
+class GetAppYamlFormatError(GetAppYamlError):
+    """The app.yaml exists but the content format is incorrect"""
 
 
 class GetDockerIgnoreError(ExceptionWithMessage):

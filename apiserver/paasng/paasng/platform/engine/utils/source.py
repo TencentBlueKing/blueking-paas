@@ -41,6 +41,7 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.exceptions import (
     GetAppYamlError,
+    GetAppYamlFormatError,
     GetDockerIgnoreError,
     GetProcfileError,
     GetProcfileFormatError,
@@ -158,6 +159,9 @@ def get_deploy_desc_handler_by_version(
     else:
         try:
             app_desc = metadata_reader.get_app_desc(version_info)
+        except GetAppYamlFormatError as e:
+            # The format error in app_desc is not tolerable
+            raise InitDeployDescHandlerError(str(e))
         except GetAppYamlError as e:
             app_desc_exc = e
 

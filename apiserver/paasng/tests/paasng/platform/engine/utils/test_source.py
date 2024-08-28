@@ -33,9 +33,12 @@ from paasng.platform.engine.utils.source import (
     TypeProcesses,
     check_source_package,
     download_source_to_dir,
+    get_source_dir,
     get_source_package_path,
 )
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.exceptions import GetAppYamlError
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -184,3 +187,32 @@ class TestCheckSourcePackage:
 
             out, err = capsys.readouterr()
             assert out
+
+
+class Test__get_source_dir:
+    # A dummy version instance
+    version_info = VersionInfo(revision="rev", version_type="tag", version_name="foo")
+
+    def test_s_mart_desc_found(self, bk_module):
+        bk_module.source_origin = SourceOrigin.S_MART
+        bk_module.save()
+
+        with mock.patch(
+            "paasng.platform.engine.configurations.source_file.PackageMetaDataReader.get_app_desc",
+            return_value={"spec_version": 2, "module": {"language": "python", "source_dir": "src"}},
+        ):
+            source_dir = get_source_dir(bk_module, "admin", self.version_info)
+
+        assert source_dir == "src"
+
+    def test_s_mart_desc_not_found(self, bk_module):
+        bk_module.source_origin = SourceOrigin.S_MART
+        bk_module.save()
+
+        with mock.patch(
+            "paasng.platform.engine.configurations.source_file.PackageMetaDataReader.get_app_desc",
+            side_effect=GetAppYamlError("Not found"),
+        ):
+            source_dir = get_source_dir(bk_module, "admin", self.version_info)
+
+        assert source_dir == ""

@@ -828,6 +828,7 @@ class CodeCommitSearchSLZ(serializers.Serializer):
 
 
 class PluginReleaseFilterSLZ(serializers.Serializer):
+    gray_status = serializers.ListField(required=False)
     status = serializers.ListField(required=False)
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
     creator = serializers.CharField(required=False)

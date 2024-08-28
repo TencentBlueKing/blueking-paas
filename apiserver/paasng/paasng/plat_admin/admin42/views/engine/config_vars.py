@@ -71,7 +71,7 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
         return context
 
     @staticmethod
-    def _gen_data_detail(config_var: ConfigVar):
+    def _gen_data_detail(config_var: ConfigVar) -> DataDetail:
         return DataDetail(
             type=DataType.RAW_DATA,
             data={"key": config_var.key, "value": config_var.value, "description": config_var.description},

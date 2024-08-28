@@ -550,7 +550,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
         if gray_status_list := query_params.get("gray_status", []):
-            queryset = queryset.filter(status__in=gray_status_list)
+            queryset = queryset.filter(gray_status__in=gray_status_list)
         if creator := query_params.get("creator"):
             queryset = queryset.filter(creator=creator)
         if is_rolled_back := query_params.get("is_rolled_back"):

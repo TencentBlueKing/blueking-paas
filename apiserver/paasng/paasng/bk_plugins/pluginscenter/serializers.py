@@ -833,7 +833,6 @@ class PluginReleaseFilterSLZ(serializers.Serializer):
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
     creator = serializers.CharField(required=False)
     is_rolled_back = serializers.BooleanField(required=False)
-    order_by = serializers.CharField(default="id")
 
     def validate(self, attrs):
         if "creator" in attrs:
@@ -845,6 +844,7 @@ class PluginListFilterSlZ(serializers.Serializer):
     status = serializers.ListField(required=False)
     language = serializers.ListField(required=False)
     pd__identifier = serializers.ListField(required=False)
+    order_by = serializers.CharField(default="id")
 
 
 class CodeCheckInfoSLZ(serializers.Serializer):

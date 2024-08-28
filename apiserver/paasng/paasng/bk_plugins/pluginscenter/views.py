@@ -185,6 +185,7 @@ class PluginInstanceMixin:
 
 
 class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
+    queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
     filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
@@ -194,18 +195,6 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         PluginCenterFeaturePermission,
         plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
     ]
-
-    def get_queryset(self):
-        queryset = PluginInstance.objects.all()
-        # 将已下架的插件排到最后
-        queryset = queryset.annotate(
-            is_archived=Case(
-                When(status="archived", then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField(),
-            )
-        ).order_by("is_archived")
-        return queryset
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -221,6 +210,15 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         if pd__identifier_list := query_params.get("pd__identifier", []):
             queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
+
+        # 执行顺序是：get_queryset -> OrderingFilter -> filter_queryset，故需要在这里定义才能保证已下架的应用排在最末尾
+        queryset = queryset.annotate(
+            is_archived=Case(
+                When(status="archived", then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by("is_archived")
         return queryset
 
     @atomic

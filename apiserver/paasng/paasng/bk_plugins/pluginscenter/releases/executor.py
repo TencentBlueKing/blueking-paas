@@ -20,6 +20,7 @@ from django.utils.translation import gettext as _
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.handlers import post_save, update_release_status_when_stage_status_change
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_canary_release_ticket
@@ -194,6 +195,15 @@ class PluginReleaseExecutor:
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
 
     def gray_release(self, operator: str):
-        """灰度发布，只需要发送审批单据和回调第三方 API"""
+        """灰度发布，只需要创建审批单据"""
         self.release.refresh_from_db()
+        # 不需要回调第三方 API，仅在审批成功后才回调
+        post_save.disconnect(update_release_status_when_stage_status_change)
+
+        current_stage = self.release.current_stage
+        current_stage.status = constants.PluginReleaseStatus.PENDING
+        current_stage.operator = operator
+        current_stage.save(update_fields=["operator", "status"])
+
+        # 创建灰度审批单据
         submit_canary_release_ticket(self.release.plugin.pd, self.release.plugin, self.release, operator)

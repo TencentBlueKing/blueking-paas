@@ -26,13 +26,14 @@ from django.utils.translation import gettext as _
 
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
-from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.engine.exceptions import DeployShouldAbortError, SkipPatchCode
+from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
-from paasng.platform.engine.utils.output import DeployStream, NullStream, Style
+from paasng.platform.engine.utils.output import DeployStream, Style
 from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -103,69 +104,6 @@ def get_dockerignore(deployment: Deployment) -> Optional[DockerIgnore]:
     return DockerIgnore(content, whitelist=[dockerfile_path])
 
 
-def get_processes(
-    deployment: Deployment,
-    stream: Optional[DeployStream] = None,
-    proc_data_from_desc: Optional[TypeProcesses] = None,
-) -> TypeProcesses:  # noqa: C901, PLR0912
-    """Get the ProcessTmpl from SourceCode via metadata reader
-    return result is a dict containing a process type and its corresponding DeclarativeProcess
-
-    If processes data from DeploymentDescription is not None,
-    and the process data from Procfile is not None either,
-    and the process data from Procfile is not equal than the one from DeploymentDescription
-    then will use the one from procfile.
-
-    :param Deployment deployment: 当前的部署对象
-    :param DeployStream stream: 日志流对象, 用于记录日志
-    :param proc_data_from_desc: 从应用描述文件读取的进程信息
-    :raises: DeployShouldAbortError
-    """
-    module: Module = deployment.app_environment.module
-    operator = deployment.operator
-    version_info = deployment.version_info
-    relative_source_dir = deployment.get_source_dir()
-    stream = stream or NullStream()
-
-    proc_data: Optional[Dict[str, Dict[str, str]]] = cattr.unstructure(proc_data_from_desc)
-    try:
-        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=relative_source_dir)
-        proc_data_from_procfile = {
-            name: {"command": command} for name, command in metadata_reader.get_procfile(version_info).items()
-        }
-    except GetProcfileError as e:
-        if not proc_data:
-            raise DeployShouldAbortError(reason=f"Procfile error: {e.message}") from e
-    except NotImplementedError:
-        """对于不支持从源码读取进程信息的应用, 忽略异常, 因为可能在其他分支已成功获取到 proc_data"""
-    else:
-        if proc_data is None:
-            proc_data = proc_data_from_procfile
-        else:
-            # 当 proc_name 在 proc_data 中未定义或 proc_data 中的进程命令与 proc_data_from_procfile 的进程命令不一致时, 判定冲突
-            # 冲突时将强制使用 proc_data_from_procfile
-            def find_conflict_process(proc_name):
-                assert proc_data is not None
-                if proc_name not in proc_data:
-                    return True
-                if proc_data[proc_name]["command"] != proc_data_from_procfile[proc_name]["command"]:
-                    return True
-                return False
-
-            if next(filter(find_conflict_process, proc_data_from_procfile), None):
-                logger.warning("Process definition conflict, will use the one defined in `Procfile`")
-                stream.write_message(
-                    Style.Warning(_("Warning: Process definition conflict, will use the one defined in `Procfile`"))
-                )
-                proc_data = proc_data_from_procfile
-    if proc_data is None:
-        raise DeployShouldAbortError(_("Missing process definition"))
-    try:
-        return validate_processes(processes=proc_data)
-    except ValidationError as e:
-        raise DeployShouldAbortError(e.message) from e
-
-
 def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> str:
     """A helper to get source_dir.
     For package App, we should parse source_dir from Application Description File.
@@ -179,29 +117,61 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
         return ""
 
     # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
-    handler = get_app_description_handler(module, operator, version_info)
-    if handler is None:
+    try:
+        handler = get_deploy_desc_handler_by_version(module, operator, version_info)
+    except InitDeployDescHandlerError:
         return ""
-    return handler.get_deploy_desc(module.name).source_dir
+
+    try:
+        return handler.get_desc_obj(module.name).source_dir
+    except TypeError:
+        return ""
 
 
 _current_path = Path(".")
 
 
-def get_app_description_handler(
+def get_deploy_desc_handler_by_version(
     module: Module, operator: str, version_info: VersionInfo, source_dir: Path = _current_path
-) -> Optional[DescriptionHandler]:
-    """Get App Description handler from app.yaml/app_desc.yaml"""
+) -> DeployDescHandler:
+    """Get the description handler for the given module and version.
+
+    :raise InitDeployDescHandlerError: When fail to initialize the handler instance
+    """
     try:
         metadata_reader = get_metadata_reader(module, operator=operator, source_dir=source_dir)
     except NotImplementedError:
-        return None
-    try:
-        app_desc = metadata_reader.get_app_desc(version_info)
-    except GetAppYamlError:
-        return None
+        raise InitDeployDescHandlerError("Unsupported source type")
 
-    return get_desc_handler(app_desc)
+    # Try to read the "app_desc.yaml" and "Procfile"
+    app_desc, app_desc_exc = None, None
+    # 已经禁用“描述文件特性”的应用，跳过该内容读取，仅非云原生应用可以禁用应用描述文件
+    if module.application.type != ApplicationType.CLOUD_NATIVE and not module.application.feature_flag.has_feature(
+        AppFeatureFlag.APPLICATION_DESCRIPTION
+    ):
+        logger.info("Skip reading app description file because feature has been turned off")
+    else:
+        try:
+            app_desc = metadata_reader.get_app_desc(version_info)
+        except GetAppYamlError as e:
+            app_desc_exc = e
+
+    procfile_data, procfile_exc = None, None
+    try:
+        procfile_data = metadata_reader.get_procfile(version_info)
+    except GetProcfileError as e:
+        procfile_exc = e
+
+    # Raise error when none data source can be found
+    if not (app_desc or procfile_data):
+        msg = []
+        if app_desc_exc:
+            msg.append(f"[app_desc] {app_desc_exc}")
+        if procfile_exc:
+            msg.append(f"[Procfile] {procfile_exc}")
+        raise InitDeployDescHandlerError("; ".join(msg))
+
+    return get_deploy_desc_handler(app_desc, procfile_data)
 
 
 def get_source_package_path(deployment: Deployment) -> str:

@@ -28,17 +28,11 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
-from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
-from paasng.platform.declarative.deployment.controller import PerformResult
-from paasng.platform.declarative.exceptions import (
-    AppDescriptionNotFoundError,
-    ControllerError,
-    DescriptionValidationError,
-)
-from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler
+from paasng.platform.declarative.deployment.controller import DeployHandleResult
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
     SlugbuilderInfo,
     get_build_args,
@@ -55,7 +49,7 @@ from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import HandleAppDescriptionError
+from paasng.platform.engine.exceptions import HandleAppDescriptionError, InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
@@ -64,9 +58,8 @@ from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
-    get_app_description_handler,
+    get_deploy_desc_handler_by_version,
     get_dockerignore,
-    get_processes,
     get_source_package_path,
     tag_module_from_source_files,
 )
@@ -151,52 +144,29 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self, raise_exception: bool = False) -> Optional[PerformResult]:
-        """Handle application description for deployment. It try to parse the app description
+    def handle_app_description(self, ignore_invalid_desc: bool = False) -> DeployHandleResult:
+        """Handle the description files for deployment. It try to parse the app description
         file and store the related configurations, e.g. processes.
 
-        :param raise_exception: If true, raise the exception instead of failing silently,
-            default to False. The *validation error* will always be raised no matter what.
+        :param ignore_invalid_desc: whether to ignore the error when the desc data is
+            invalid, normal app need this flag to be true because they can still use
+            the Procfile.
         :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
-            return self._handle_app_description()
-        except AppDescriptionNotFoundError:
-            logger.debug("App description file(app_desc.yaml) does not exist, skip.")
-            return None
+            handler = get_deploy_desc_handler_by_version(
+                self.deployment.app_environment.module,
+                self.deployment.operator,
+                self.deployment.version_info,
+                self.deployment.get_source_dir(),
+            )
+            return handler.handle(self.deployment, ignore_invalid_desc=ignore_invalid_desc)
+        except InitDeployDescHandlerError as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
-            # Always raise the exception if the content is not valid, it's better to inform
-            # the developer early than to let the invalid content fail silently.
             raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
-        except ControllerError as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=e.message) from e
-            logger.exception("Exception while processing app description file, skip.")
         except Exception as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
-            logger.exception("Exception while processing app description file, skip.")
-        return None
-
-    def _handle_app_description(self) -> Optional[PerformResult]:
-        """Handle application description for deployment"""
-        module = self.deployment.app_environment.module
-        application = module.application
-        operator = self.deployment.operator
-        version_info = self.deployment.version_info
-        relative_source_dir = self.deployment.get_source_dir()
-        is_cnative_app = application.type == ApplicationType.CLOUD_NATIVE
-
-        # 仅非云原生应用可以禁用应用描述文件
-        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION) and not is_cnative_app:
-            logger.debug("App description disabled.")
-            return None
-
-        handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if handler is None or not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
-            raise AppDescriptionNotFoundError("No valid app description file found.")
-
-        return handler.handle_deployment(self.deployment)
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
@@ -273,19 +243,8 @@ class ApplicationBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
-
-        with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
-            processes = get_processes(
-                deployment=self.deployment,
-                stream=self.stream,
-                proc_data_from_desc=proc_data_from_desc,
-            )
-            self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
-            if proc_data_from_desc != processes:
-                sync_to_bkapp_model(module, processes=list(processes.values()))
+            handle_result = self.handle_app_description(ignore_invalid_desc=not is_cnative_app)
+            self.deployment.update_fields(processes=handle_result.processes)
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -376,19 +335,8 @@ class DockerBuilder(BaseBuilder):
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
-
-        with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
-            processes = get_processes(
-                deployment=self.deployment,
-                stream=self.stream,
-                proc_data_from_desc=proc_data_from_desc,
-            )
-            self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
-            if proc_data_from_desc != processes:
-                sync_to_bkapp_model(module, processes=list(processes.values()))
+            handle_result = self.handle_app_description(ignore_invalid_desc=not is_cnative_app)
+            self.deployment.update_fields(processes=handle_result.processes)
 
         bkapp_revision_id = None
         if is_cnative_app:

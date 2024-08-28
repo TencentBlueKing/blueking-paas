@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Manage configurations related with source files"""
+
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -206,14 +207,13 @@ class PackageMetaDataReader(MetaDataFileReader):
 
     def get_procfile(self, version_info: VersionInfo) -> Dict[str, str]:
         """Read Procfile config from SourcePackage.meta_data(the field stored app_desc) or repository"""
-        from paasng.platform.declarative.handlers import get_desc_handler
+        from paasng.platform.declarative.handlers import get_deploy_desc_by_module
 
         _, version = self.extract_version_info(version_info)
         package_storage = self.module.packages.get(version=version)
         if package_storage.meta_info:
             try:
-                handler = get_desc_handler(package_storage.meta_info)
-                deploy_desc = handler.get_deploy_desc(self.module.name)
+                deploy_desc = get_deploy_desc_by_module(package_storage.meta_info, self.module.name)
                 return deploy_desc.get_procfile()
             except Exception as e:
                 raise exceptions.GetProcfileError('unable to read file "Procfile"') from e

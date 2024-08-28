@@ -17,14 +17,14 @@
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 import yaml
 from django.utils.functional import cached_property
 
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.handlers import DescriptionHandler, get_desc_handler
+from paasng.platform.declarative.handlers import get_deploy_desc_by_module, get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.services.detector import ManifestDetector
@@ -57,7 +57,7 @@ class SourceCodePatcher:
         patcher = cls(
             module=module,
             source_dir=LocalFSPath(source_dir),
-            desc_handler=get_desc_handler(stat.meta_info),
+            desc_data=stat.meta_info,
             relative_path=stat.relative_path,
         )
         # 尝试添加 Procfile
@@ -70,19 +70,18 @@ class SourceCodePatcher:
         compress_directory(source_dir, dest)
         return dest
 
-    def __init__(
-        self, module: "Module", source_dir: PathProtocol, desc_handler: DescriptionHandler, relative_path: str = "./"
-    ):
+    def __init__(self, module: "Module", source_dir: PathProtocol, desc_data: Dict, relative_path: str = "./"):
         """
         :param module: 模块
         :param source_dir: 源码根路径
-        :param desc_handler :应用描述文件处理器
+        :param desc_data: 应用描述文件中的数据
         :param relative_path: app_description file 的相对源代码的路径(只有在上传 S-Mart 包前的 patch, 才需要传递这个参数.)
         """
         self.module = module
         self.source_dir = source_dir
         self.relative_path = relative_path
-        self.desc_handler = desc_handler
+        self.desc_data = desc_data
+        self.desc_handler = get_desc_handler(desc_data)
 
     @cached_property
     def app_description(self):
@@ -91,7 +90,7 @@ class SourceCodePatcher:
     @cached_property
     def deploy_description(self):
         # TODO: 需要保证 module 这个 key 存在
-        return self.desc_handler.get_deploy_desc(self.module.name)
+        return get_deploy_desc_by_module(self.desc_data, self.module.name)
 
     @cached_property
     def module_dir(self) -> PathProtocol:

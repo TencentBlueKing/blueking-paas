@@ -18,8 +18,6 @@
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-import cattr
-from attrs import define
 from django.db.transaction import atomic
 
 from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
@@ -32,62 +30,13 @@ from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
-from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
+from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProcfileProc
+from paasng.platform.declarative.entities import DeployHandleResult
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations import preset_envvars
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
-
-
-@define
-class PerformResult:
-    """应用描述文件的导入结果
-
-    :param loaded_processes: 导入的进程信息, 进程命令为 Procfile 格式.
-                             如进程信息与 Procfile 中的进程冲突, 将根据应用类型作出不同的策略.
-                             - 普通应用, 以 Procfile 为准
-                             - 云原生应用, 以应用描述文件为准
-    """
-
-    spec_version: AppSpecVersion
-    loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
-
-    def set_processes(self, processes: Dict[str, Process]):
-        """Set the "loaded_processes" property, basically it do a type conversion
-        from Process to ProcessTmpl.
-        """
-        self.loaded_processes = {proc_name: to_proc_tmpl(process) for proc_name, process in processes.items()}
-
-    def is_use_cnb(self) -> bool:
-        return self.spec_version == AppSpecVersion.VER_3
-
-
-def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:
-    """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
-    # 应用描述文件中的环境变量不展示到产品页面
-    exclude: Mapping[Union[str, int], Any] = {
-        "configuration": ...,
-        "env_overlay": {"env_variables"},
-    }
-    return spec.dict(exclude_none=True, exclude=exclude)
-
-
-def get_preset_env_vars(spec: v1alpha2.BkAppSpec) -> Tuple[List[EnvVar], List[EnvVarOverlay]]:
-    """从应用描述文件中提取预定义环境变量, 存储到 PresetEnvVariable 表中"""
-    overlay_env_vars: List[EnvVarOverlay] = []
-    if spec.env_overlay:
-        overlay_env_vars = spec.env_overlay.env_variables or []
-    return spec.configuration.env, overlay_env_vars
-
-
-def get_svc_discovery(spec: v1alpha2.BkAppSpec) -> Optional[SvcDiscConfig]:
-    """从应用描述文件中提取服务发现配置, 存储到 SvcDiscConfig 表中
-
-    NOTE: 仅用于普通应用, 让普通应用也可以通过 SvcDiscConfig 模型拿到服务发现配置的环境变量
-    (云原生应用在 import_manifest 已导入服务发现配置)
-    """
-    return spec.svc_discovery
 
 
 class DeploymentDeclarativeController:
@@ -107,24 +56,23 @@ class DeploymentDeclarativeController:
         self.application = self.module.application
 
     @atomic
-    def perform_action(self, desc: DeploymentDesc) -> PerformResult:
-        """Perform action by given description
+    def perform_action(
+        self, desc: DeploymentDesc, procfile_procs: Optional[List[ProcfileProc]] = None
+    ) -> DeployHandleResult:
+        """Perform action by given description and procfile data.
 
         :param desc: The deployment specification
+        :param procfile_procs: The processes list defined by the Procfile
         """
+        if procfile_procs:
+            desc.use_procfile_procs_if_conflict(procfile_procs)
+
         self.handle_desc(desc)
 
-        processes = desc.get_processes()
-
-        # Sync the process data to the model only when the application is not using
-        # the cloud-native style.
-        if not self._favor_cnative_style(desc) and processes:
-            proc_tmpls = [to_proc_tmpl(p) for p in processes.values()]
-            ModuleProcessSpecManager(self.module).sync_from_desc(processes=proc_tmpls)
-
-        result = PerformResult(spec_version=desc.spec_version)
-        result.set_processes(processes=processes)
-        return result
+        return DeployHandleResult(
+            use_cnb=desc.spec_version == AppSpecVersion.VER_3,
+            processes=desc.get_proc_tmpls(),
+        )
 
     def handle_desc(self, desc: DeploymentDesc):
         """Handle the description object, which was read from the app description file."""
@@ -181,6 +129,10 @@ class DeploymentDeclarativeController:
     def _handle_desc_normal_style(self, desc: DeploymentDesc, deploy_desc: DeploymentDescription):
         # # == 普通应用
         #
+        # 同步进程配置
+        proc_tmpls = list(desc.get_proc_tmpls().values())
+        ModuleProcessSpecManager(self.module).sync_from_desc(processes=proc_tmpls)
+
         # 仅声明 hooks 时才同步 hooks
         # 由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不代表禁用 hooks.
         if hooks := deploy_desc.get_deploy_hooks():
@@ -255,15 +207,41 @@ class DeploymentDeclarativeController:
         return desc.spec_version == AppSpecVersion.VER_3 or self.application.type == ApplicationType.CLOUD_NATIVE
 
 
-def to_proc_tmpl(process: Process) -> ProcessTmpl:
-    """Turn a Process object to a ProcessTmpl object."""
-    return cattr.structure(
-        {
-            "name": process.name,
-            "command": process.get_proc_command(),
-            "replicas": process.replicas,
-            "plan": process.res_quota_plan,
-            "probes": process.probes,
-        },
-        ProcessTmpl,
-    )
+def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileProc]) -> DeployHandleResult:
+    """Handle the processes defined by Procfile, this function only sync the process
+    configs to the database model.
+
+    :param deployment: The deployment object
+    :param procfile_procs: The processes defined by Procfile
+    """
+    module = deployment.app_environment.module
+    proc_tmpls = [ProcessTmpl(name=p.name, command=p.command) for p in procfile_procs]
+    ModuleProcessSpecManager(module).sync_from_desc(processes=proc_tmpls)
+    return DeployHandleResult(use_cnb=False, processes={p.name: p for p in proc_tmpls})
+
+
+def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:
+    """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
+    # 应用描述文件中的环境变量不展示到产品页面
+    exclude: Mapping[Union[str, int], Any] = {
+        "configuration": ...,
+        "env_overlay": {"env_variables"},
+    }
+    return spec.dict(exclude_none=True, exclude=exclude)
+
+
+def get_preset_env_vars(spec: v1alpha2.BkAppSpec) -> Tuple[List[EnvVar], List[EnvVarOverlay]]:
+    """从应用描述文件中提取预定义环境变量, 存储到 PresetEnvVariable 表中"""
+    overlay_env_vars: List[EnvVarOverlay] = []
+    if spec.env_overlay:
+        overlay_env_vars = spec.env_overlay.env_variables or []
+    return spec.configuration.env, overlay_env_vars
+
+
+def get_svc_discovery(spec: v1alpha2.BkAppSpec) -> Optional[SvcDiscConfig]:
+    """从应用描述文件中提取服务发现配置, 存储到 SvcDiscConfig 表中
+
+    NOTE: 仅用于普通应用, 让普通应用也可以通过 SvcDiscConfig 模型拿到服务发现配置的环境变量
+    (云原生应用在 import_manifest 已导入服务发现配置)
+    """
+    return spec.svc_discovery

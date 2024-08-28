@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import shlex
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import cattr
 from django.conf import settings
@@ -30,11 +30,12 @@ from paasng.platform.applications.serializers import AppIDSMartField, AppNameFie
 from paasng.platform.bkapp_model.entities import Addon, v1alpha2
 from paasng.platform.declarative import constants
 from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc
-from paasng.platform.declarative.deployment.resources import DeploymentDesc
+from paasng.platform.declarative.deployment.resources import DeploymentDesc, ProcfileProc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.utils import get_quota_plan
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.serializers import Base64FileField
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 def validate_desc(
@@ -261,3 +262,38 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
             DeploymentDesc,
         )
         return application_desc, deployment_desc
+
+
+def validate_procfile_procs(data: Dict[str, str]) -> List[ProcfileProc]:
+    """Validate process data which was read from procfile.
+
+    :param data: Processes data, format: {proc_type: command}
+    :return: Validated process list
+    :raise DescriptionValidationError: When the data is not valid
+    """
+    if len(data) > settings.MAX_PROCESSES_PER_MODULE:
+        raise DescriptionValidationError(
+            f"The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, "
+            f"but got {len(data)}"
+        )
+
+    for proc_type in data:
+        if not PROC_TYPE_PATTERN.match(proc_type):
+            raise DescriptionValidationError(
+                f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}"
+            )
+        if len(proc_type) > PROC_TYPE_MAX_LENGTH:
+            raise DescriptionValidationError(
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
+            )
+
+    # Formalize processes data and return
+    try:
+        return cattr.structure(
+            [{"name": name.lower(), "command": command} for name, command in data.items()],
+            List[ProcfileProc],
+        )
+    except KeyError as e:
+        raise DescriptionValidationError(f"Invalid process data, missing: {e}")
+    except ValueError as e:
+        raise DescriptionValidationError(f"Invalid process data, {e}")

@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Optional
 
 from celery import shared_task
 from django.utils.translation import gettext as _
@@ -27,20 +26,24 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler, PerformResult
+from paasng.platform.declarative.handlers import (
+    DeployHandleResult,
+)
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import DeployShouldAbortError
+from paasng.platform.engine.exceptions import (
+    DeployShouldAbortError,
+    HandleAppDescriptionError,
+    InitDeployDescHandlerError,
+)
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
-from paasng.platform.engine.utils.source import get_app_description_handler, get_processes
+from paasng.platform.engine.utils.source import get_deploy_desc_handler_by_version
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
 from paasng.utils.i18n.celery import I18nTask
 
@@ -95,13 +98,9 @@ class ImageReleaseMgr(DeployStep):
                 use_cnb = False
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
-                    perform_result = self.handle_smart_app_description()
-                    if perform_result is not None:
-                        proc_data_from_desc = perform_result.loaded_processes
-                        use_cnb = perform_result.is_use_cnb()
-                    processes = list(
-                        get_processes(deployment=self.deployment, proc_data_from_desc=proc_data_from_desc).values()
-                    )
+                    handle_result = self.handle_smart_app_description()
+                    processes = list(handle_result.processes.values())
+                    use_cnb = handle_result.use_cnb
                 else:
                     processes = [
                         ProcessTmpl(
@@ -179,41 +178,16 @@ class ImageReleaseMgr(DeployStep):
 
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
-    def _handle_app_description(self) -> Optional[PerformResult]:
-        """Handle application description for deployment"""
-        module = self.deployment.app_environment.module
-        handler = get_app_description_handler(module, self.deployment.operator, self.deployment.version_info)
-        if not handler:
-            logger.debug("No valid app description file found.")
-            return None
-
-        if not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
-            logger.debug(
-                "Currently only runtime configs such as environment variables declared in app_desc.yaml are applied."
-            )
-            return None
-
-        return handler.handle_deployment(self.deployment)
-
-    def handle_smart_app_description(self) -> Optional[PerformResult]:
-        """A tiny wrapper for _handle_app_description, will ignore all exception raise from _handle_app_description.
-        And will do something for s-mart app
-
-        - complete scripts command
-        """
-        result = None
+    def handle_smart_app_description(self) -> DeployHandleResult:
+        """Handle the description files for S-Mart app."""
         try:
-            result = self._handle_app_description()
-        except FileNotFoundError:
-            logger.debug("App description file not defined, do not process.")
-        except (DescriptionValidationError, ManifestImportError) as e:
-            self.stream.write_message(Style.Error(_("应用描述文件解析异常: {}").format(e.message)))
-            logger.exception("Exception while parsing app description file, skip.")
-        except ControllerError as e:
-            self.stream.write_message(Style.Error(e.message))
-            logger.exception("Exception while processing app description file, skip.")
-        except Exception:
-            self.stream.write_message(Style.Error(_("处理应用描述文件时出现异常, 请检查应用描述文件")))
-            logger.exception("Exception while processing app description file, skip.")
-
-        return result
+            handler = get_deploy_desc_handler_by_version(
+                self.deployment.app_environment.module,
+                self.deployment.operator,
+                self.deployment.version_info,
+            )
+            return handler.handle(self.deployment, ignore_invalid_desc=True)
+        except InitDeployDescHandlerError as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+        except Exception as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e

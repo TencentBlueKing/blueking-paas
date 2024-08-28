@@ -121,8 +121,8 @@ class DeploymentDesc:
     def equal_with_procs(self, procfile_procs: List[ProcfileProc]) -> bool:
         """Check if current process list is equal with given Procfile processes.
 
-        Only "name" and "command" fields are compared because the template object
-        might be create through procfile which do not contain extra fields.
+        Only "name" and "command" fields are compared because the ProcfileProc object
+        do not contain any other fields.
         """
         d1 = {p.name: p.get_proc_command() for p in self.get_processes().values()}
         d2 = {p.name: p.command for p in procfile_procs}

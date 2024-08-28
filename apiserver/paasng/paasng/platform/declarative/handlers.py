@@ -241,13 +241,6 @@ class DeployDescHandler(Protocol):
         """
         ...
 
-    def get_desc_obj(self, module_name: str) -> DeploymentDesc:
-        """Get the description object by module name
-
-        :raise TypeError: when it's impossible to get the desc object
-        """
-        ...
-
 
 # A simple function type that get the deploy description object from the json data.
 DescGetterFunc: TypeAlias = Callable[[Dict, str], DeploymentDesc]
@@ -279,11 +272,8 @@ class DefaultDeployDescHandler:
         self.procfile_data = procfile_data
         self.desc_getter = desc_getter
 
-    def get_desc_obj(self, module_name: str) -> DeploymentDesc:
-        return self.desc_getter(self.json_data, module_name)
-
     def handle(self, deployment: Deployment) -> DeployHandleResult:
-        desc = self.get_desc_obj(deployment.app_environment.module.name)
+        desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
         procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None
         return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
 
@@ -296,9 +286,6 @@ class ProcfileOnlyDeployDescHandler:
 
     def __init__(self, procfile_data: Dict):
         self.procfile_data = procfile_data
-
-    def get_desc_obj(self, module_name: str) -> DeploymentDesc:
-        raise TypeError("Not supported because there is no desc data")
 
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         procfile_procs = validate_procfile_procs(self.procfile_data)

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 class DeploymentDeclarativeController:
     """A controller which process deployment description, it was triggered by a
-    new deployment action. The controller handel a given description which was parsed
+    new deployment action. The controller handle a given description which was parsed
     from the source file and do following things:
 
     - Get and save the processes data

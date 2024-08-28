@@ -27,7 +27,8 @@ from django.utils.translation import gettext as _
 from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
-from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler
+from paasng.platform.applications.models import Application
+from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_by_module, get_deploy_desc_handler
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
@@ -115,26 +116,51 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     For package App, we should parse source_dir from Application Description File.
     Otherwise,  we must get source_dir from property of module.
     """
-    # Note: 对于非源码包类型的应用, 只有产品上配置的部署目录会生效
+    # NOTE: 对于非源码包类型的应用, 只有产品上配置的部署目录会生效
     if not ModuleSpecs(module).deploy_via_package:
         if source_obj := module.get_source_obj():
             return source_obj.get_source_dir()
         # 模块未绑定 source_obj, 可能是仅托管镜像的云原生应用
         return ""
 
-    # Note: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
-    try:
-        handler = get_deploy_desc_handler_by_version(module, operator, version_info)
-    except InitDeployDescHandlerError:
+    # NOTE: 对于源码包类型的应用, 部署目录需要从源码包根目录下的 app_desc.yaml 中读取
+    desc_data = get_desc_data_by_version(module, operator, version_info)
+    if not desc_data:
         return ""
-
-    try:
-        return handler.get_desc_obj(module.name).source_dir
-    except TypeError:
-        return ""
+    return get_deploy_desc_by_module(desc_data, module.name).source_dir
 
 
 _current_path = Path(".")
+
+
+def _description_flag_disabled(application: Application) -> bool:
+    """Check if the description feature is disabled for the application"""
+    # 仅非云原生应用可以禁用应用描述文件
+    return application.type != ApplicationType.CLOUD_NATIVE and not application.feature_flag.has_feature(
+        AppFeatureFlag.APPLICATION_DESCRIPTION
+    )
+
+
+def get_desc_data_by_version(module: Module, operator: str, version_info: VersionInfo) -> Optional[Dict]:
+    """Get the app description data by version.
+
+    :param module: The module object
+    :param operator: The operator name
+    :param version_info: The version info, will be used to read the description file
+    :return: the app description data, or None if the file cannot be found
+    """
+    try:
+        metadata_reader = get_metadata_reader(module, operator=operator, source_dir=_current_path)
+    except NotImplementedError:
+        return None
+
+    if _description_flag_disabled(module.application):
+        return None
+
+    try:
+        return metadata_reader.get_app_desc(version_info)
+    except GetAppYamlError:
+        return None
 
 
 def get_deploy_desc_handler_by_version(
@@ -142,6 +168,11 @@ def get_deploy_desc_handler_by_version(
 ) -> DeployDescHandler:
     """Get the description handler for the given module and version.
 
+    :param module: The module object
+    :param operator: The operator name
+    :param version_info: The version info, will be used to read the description file
+    :param source_dir: The source directory path to find the description file
+    :return: The handler instance
     :raise InitDeployDescHandlerError: When fail to initialize the handler instance
     """
     try:
@@ -151,12 +182,7 @@ def get_deploy_desc_handler_by_version(
 
     # Try to read the "app_desc.yaml" and "Procfile"
     app_desc, app_desc_exc = None, None
-    # 已经禁用“描述文件特性”的应用，跳过该内容读取，仅非云原生应用可以禁用应用描述文件
-    if module.application.type != ApplicationType.CLOUD_NATIVE and not module.application.feature_flag.has_feature(
-        AppFeatureFlag.APPLICATION_DESCRIPTION
-    ):
-        logger.info("Skip reading app description file because feature has been turned off")
-    else:
+    if not _description_flag_disabled(module.application):
         try:
             app_desc = metadata_reader.get_app_desc(version_info)
         except GetAppYamlFormatError as e:

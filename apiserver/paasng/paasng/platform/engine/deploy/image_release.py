@@ -190,4 +190,5 @@ class ImageReleaseMgr(DeployStep):
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except Exception as e:
+            logger.exception("Error while handling s-mart app description file, deployment: %s.", self.deployment)
             raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e

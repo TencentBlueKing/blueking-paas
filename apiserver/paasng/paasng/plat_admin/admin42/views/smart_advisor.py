@@ -24,8 +24,7 @@ from rest_framework.viewsets import GenericViewSet
 from paasng.accessories.smart_advisor.models import DeployFailurePattern, DocumentaryLink
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.smart_advisor import DeployFailurePatternSLZ, DocumentaryLinkSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -65,16 +64,16 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.DOCUMENT,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新文档"""
         instance = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
         slz = DocumentaryLinkSLZ(instance, data=request.data)
         slz.is_valid(raise_exception=True)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
         slz.save()
 
         add_admin_audit_record(
@@ -82,14 +81,14 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.DOCUMENT,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除文档"""
         instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DocumentaryLinkSLZ(instance).data)
         instance.delete()
 
         add_admin_audit_record(
@@ -135,16 +134,16 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.DEPLOY_FAILURE_TIPS,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新失败提示"""
         instance = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
         slz = DeployFailurePatternSLZ(instance, data=request.data)
         slz.is_valid(raise_exception=True)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
         slz.save()
 
         add_admin_audit_record(
@@ -152,14 +151,14 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.DEPLOY_FAILURE_TIPS,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除失败提示"""
         instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DeployFailurePatternSLZ(instance).data)
         instance.delete()
 
         add_admin_audit_record(

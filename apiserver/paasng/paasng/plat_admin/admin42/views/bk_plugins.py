@@ -24,8 +24,7 @@ from rest_framework.viewsets import GenericViewSet
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -55,16 +54,16 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.BKPLUGIN_TAG,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新插件分类"""
         instance = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
         slz = BKPluginTagSLZ(instance, data=request.data)
         slz.is_valid(raise_exception=True)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
         slz.save()
 
         add_admin_audit_record(
@@ -72,14 +71,14 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_TAG,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件分类"""
         instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(instance).data)
         instance.delete()
 
         add_admin_audit_record(
@@ -116,16 +115,16 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新插件使用方"""
         instance = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
         slz = BkPluginDistributorSLZ(instance, data=request.data)
         slz.is_valid(raise_exception=True)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
         slz.save()
 
         add_admin_audit_record(
@@ -133,14 +132,14 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data),
         )
         return Response(slz.data)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件使用方"""
         instance = self.get_object()
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(instance).data)
         instance.delete()
 
         add_admin_audit_record(

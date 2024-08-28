@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-26 15:15+0800\n"
+"POT-Creation-Date: 2024-08-28 14:32+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1802,22 +1802,16 @@ msgid "切换绑定集群"
 msgstr "switch binding cluster"
 
 #: paasng/misc/audit/constants.py:112
-#, fuzzy
-#| msgid "创建独立域名失败"
-msgid "创建独立域名"
-msgstr "create standalone domain"
-
-#: paasng/misc/audit/constants.py:113
 msgid "日志采集管理"
 msgstr "log config manage"
 
-#: paasng/misc/audit/constants.py:114
+#: paasng/misc/audit/constants.py:113
 #, fuzzy
 #| msgid "增强服务"
 msgid "分配增强服务实例"
 msgstr "provision add-ons instance"
 
-#: paasng/misc/audit/constants.py:115
+#: paasng/misc/audit/constants.py:114
 #, fuzzy
 #| msgid "增强服务"
 msgid "回收增强服务实例"
@@ -2182,12 +2176,12 @@ msgstr "Due to: {reason}, this feature is not supported at this time"
 msgid "当前环境所部署的集群不支持 BCS Egress"
 msgstr ""
 
-#: paasng/plat_admin/admin42/views/services.py:125
+#: paasng/plat_admin/admin42/views/services.py:124
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
-#: paasng/plat_admin/admin42/views/services.py:163
+#: paasng/plat_admin/admin42/views/services.py:162
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 
@@ -4152,6 +4146,11 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:46
 msgid "zh-cn"
 msgstr ""
+
+#, fuzzy
+#~| msgid "创建独立域名失败"
+#~ msgid "创建独立域名"
+#~ msgstr "create standalone domain"
 
 #~ msgid "修改 Egress 配置"
 #~ msgstr "modify Egress setting"

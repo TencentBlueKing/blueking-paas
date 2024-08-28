@@ -31,8 +31,7 @@ from paas_wl.bk_app.processes.controllers import get_proc_ctl
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.bk_app.processes.readers import instance_kmodel
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -71,24 +70,21 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
         slz = ProcessSpecPlanSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
+
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PROCESS_SPEC_PLAN,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.validated_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.validated_data),
         )
         return Response(slz.validated_data, status=status.HTTP_201_CREATED)
 
     def edit(self, request, **kwargs):
         """更新已有 ProcessSpecPlan"""
         instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        slz = ProcessSpecPlanSLZ(instance)
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={key: slz.data[key] for key in request.data},
-        )
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(instance).data)
 
-        slz = self.get_serializer(data=request.data, instance=instance)
+        slz = ProcessSpecPlanSLZ(data=request.data, instance=instance)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -97,7 +93,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PROCESS_SPEC_PLAN,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=slz.validated_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(instance).data),
         )
         return Response(slz.validated_data, status=status.HTTP_200_OK)
 
@@ -156,7 +152,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
             operation=OperationEnum.MODIFY_PLAN,
             target=OperationTarget.PROCESS,
             attribute=wl_app.name,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=defaults),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=defaults),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -165,8 +161,9 @@ class ProcessSpecManageViewSet(GenericViewSet):
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
         ctl = get_proc_ctl(get_env_by_wl_app(wl_app))
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data={"replicas": process_spec.target_replicas})
+
         if process_spec.target_replicas != int(data["target_replicas"]):
+            data_before = DataDetail(type=DataType.RAW_DATA, data={"replicas": process_spec.target_replicas})
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
             add_admin_audit_record(
                 user=request.user.pk,
@@ -174,7 +171,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
                 target=OperationTarget.PROCESS,
                 attribute=wl_app.name,
                 data_before=data_before,
-                data_after=DataDetail(type=constants.DataType.RAW_DATA, data={"replicas": data["target_replicas"]}),
+                data_after=DataDetail(type=DataType.RAW_DATA, data={"replicas": data["target_replicas"]}),
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

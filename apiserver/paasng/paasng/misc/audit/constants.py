@@ -109,7 +109,6 @@ class OperationEnum(str, StructuredEnum):
     MODIFY_USER_FEATURE_FLAG = EnumField("modify_user_feature_flag", label=_("修改用户特性"))
     SWITCH_DEFAULT_CLUSTER = EnumField("switch_default_cluster", label=_("切换默认集群"))
     BIND_CLUSTER = EnumField("bind_cluster", label=_("切换绑定集群"))
-    CREATE_APP_DOMAIN = EnumField("create_app_domain", label=_("创建独立域名"))
     MODIFY_LOG_CONFIG = EnumField("modify_log_config", label=_("日志采集管理"))
     PROVISION_INSTANCE = EnumField("provision_instance", label=_("分配增强服务实例"))
     RECYCLE_RESOURCE = EnumField("recycle_resource", label=_("回收增强服务实例"))

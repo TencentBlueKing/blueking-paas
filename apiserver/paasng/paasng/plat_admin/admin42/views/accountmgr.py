@@ -33,10 +33,14 @@ from paasng.infras.accounts.models import AccountFeatureFlag, User, UserPrivateT
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_admin.admin42.serializers import accountmgr
+from paasng.plat_admin.admin42.serializers.accountmgr import (
+    PROVIDER_TYPE_CHCOISE,
+    UserProfileBulkCreateFormSLZ,
+    UserProfileSLZ,
+    UserProfileUpdateFormSLZ,
+)
 from paasng.plat_admin.admin42.utils.filters import UserProfileFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
@@ -46,7 +50,7 @@ logger = logging.getLogger(__name__)
 class UserProfilesManageView(GenericTemplateView):
     name = "用户列表"
     queryset = UserProfile.objects.order_by("role", "-created")
-    serializer_class = accountmgr.UserProfileSLZ
+    serializer_class = UserProfileSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     template_name = "admin42/accountmgr/user_profile_list.html"
     filter_backends = [UserProfileFilterBackend]
@@ -56,7 +60,7 @@ class UserProfilesManageView(GenericTemplateView):
         kwargs["user_profile_list"] = self.list(self.request, *self.args, **self.kwargs)
         kwargs["pagination"] = self.get_pagination_context(self.request)
         kwargs["SITE_ROLE"] = dict(SiteRole.get_choices())
-        kwargs["PROVIDER_TYPE"] = dict(accountmgr.PROVIDER_TYPE_CHCOISE)
+        kwargs["PROVIDER_TYPE"] = dict(PROVIDER_TYPE_CHCOISE)
         kwargs["ALL_REGIONS"] = list(get_all_regions())
         return kwargs
 
@@ -65,12 +69,12 @@ class UserProfilesManageView(GenericTemplateView):
 
 
 class UserProfilesManageViewSet(viewsets.GenericViewSet):
-    serializer_class = accountmgr.UserProfileSLZ
+    serializer_class = UserProfileSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     @atomic
     def bulk_create(self, request):
-        serializer = accountmgr.UserProfileBulkCreateFormSLZ(data=request.data)
+        serializer = UserProfileBulkCreateFormSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         provider_type = ProviderType(serializer.validated_data["provider_type"])
         role = serializer.validated_data["role"]
@@ -94,17 +98,17 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             obj.refresh_from_db(fields=["role", "enable_regions"])
             results.append(obj)
 
-        results = self.get_serializer(results, many=True).data
+        results = UserProfileSLZ(results, many=True).data
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=list(results)),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=list(results)),
         )
         return Response(results)
 
     def update(self, request):
-        slz = accountmgr.UserProfileUpdateFormSLZ(
+        slz = UserProfileUpdateFormSLZ(
             data=dict(
                 user=dict(username=request.data["username"], provider_type=request.data["provider_type"]),
                 **request.data,
@@ -115,7 +119,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         user_id = data["user"]
         profile = UserProfile.objects.get(user=user_id)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=accountmgr.UserProfileSLZ(profile).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data)
         profile.role = data["role"]
         profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
@@ -125,8 +129,8 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=accountmgr.UserProfileSLZ(profile).data),
             data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -134,7 +138,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         provider_type = int(request.query_params["provider_type"])
         user_id = user_id_encoder.encode(ProviderType(provider_type).value, request.query_params["username"])
         profile = UserProfile.objects.get(user=user_id)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data)
         # profile.role = SiteRole.NOBODY.value
         profile.role = SiteRole.BANNED_USER.value
         profile.save()
@@ -144,9 +148,9 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=self.get_serializer(profile).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
         )
-        return Response(self.get_serializer(profile).data, status=status.HTTP_204_NO_CONTENT)
+        return Response(UserProfileSLZ(profile).data, status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountFeatureFlagManageView(GenericTemplateView):
@@ -176,17 +180,14 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         user = get_user_by_user_id(data["user"])
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)
-        )
+        data_before = DataDetail(type=DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user))
         AccountFeatureFlag.objects.set_feature(user, data["name"], data["effect"])
+
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)
-            ),
             data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

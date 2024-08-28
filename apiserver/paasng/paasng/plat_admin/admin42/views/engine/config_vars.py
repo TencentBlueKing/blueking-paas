@@ -18,20 +18,19 @@
 import copy
 import logging
 
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import ConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.engine.views import ConfigVarViewSet as BaseConfigVarViewSet
@@ -58,20 +57,22 @@ class ConfigVarManageView(ApplicationDetailBaseView):
 class ConfigVarViewSet(BaseConfigVarViewSet):
     schema = None
     serializer_class = ConfigVarSLZ
-    permission_classes = [
-        IsAuthenticated,
-        site_perm_class(SiteAction.MANAGE_PLATFORM),
-        application_perm_class(AppAction.BASIC_DEVELOP),
-    ]
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_queryset(self):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=self.kwargs["code"])
         queryset = ConfigVar.objects.filter(module__in=application.modules.all()).order_by("module__is_default")
         return queryset
 
+    def get_serializer_context(self):
+        application = get_object_or_404(Application, code=self.kwargs["code"])
+        module_name = self._get_param_from_kwargs(["module_name"])
+        context = {"module": application.get_module(module_name)}
+        return context
+
     def create(self, request, *args, **kwargs):
         """创建应用内环境变量"""
-        data_after = DataDetail(type=constants.DataType.RAW_DATA, data=copy.deepcopy(request.data))
+        data_after = DataDetail(type=DataType.RAW_DATA, data=copy.deepcopy(request.data))
         slz = self.get_serializer(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
@@ -80,9 +81,9 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ENV_VAR,
-            app_code=self.get_application().code,
+            app_code=self.kwargs["code"],
             module_name=slz.validated_data.get("module").name,
-            environment=slz.validated_data.get("environment_name"),
+            environment=request.data["environment_name"],
             data_after=data_after,
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
@@ -90,24 +91,24 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
     def update(self, request, *args, **kwargs):
         """更新应用内环境变量"""
         instance = self.get_object()
-        slz = self.get_serializer(instance=instance, data=request.data)
-        slz.is_valid(raise_exception=True)
         data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
+            type=DataType.RAW_DATA,
             data={"key": instance.key, "value": instance.value, "description": instance.description},
         )
+        slz = self.get_serializer(instance=instance, data=request.data)
+        slz.is_valid(raise_exception=True)
         slz.save()
 
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ENV_VAR,
-            app_code=self.get_application().code,
+            app_code=self.kwargs["code"],
             module_name=instance.module.name,
-            environment=instance.environment.environment,
+            environment="_global_" if instance.environment_id == -1 else instance.environment.environment,
             data_before=data_before,
             data_after=DataDetail(
-                type=constants.DataType.RAW_DATA,
+                type=DataType.RAW_DATA,
                 data={"key": instance.key, "value": instance.value, "description": instance.description},
             ),
         )
@@ -117,7 +118,7 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
         """删除应用内环境变量"""
         instance = self.get_object()
         data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
+            type=DataType.RAW_DATA,
             data={"key": instance.key, "value": instance.value, "description": instance.description},
         )
         instance.delete()
@@ -126,9 +127,9 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ENV_VAR,
-            app_code=self.get_application().code,
+            app_code=self.kwargs["code"],
             module_name=instance.module.name,
-            environment=instance.environment.environment,
+            environment="_global_" if instance.environment_id == -1 else instance.environment.environment,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

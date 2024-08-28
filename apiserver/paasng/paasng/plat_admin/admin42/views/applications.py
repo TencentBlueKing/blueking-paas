@@ -379,13 +379,7 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 
     def destroy(self, request, code, username):
         application = get_object_or_404(Application, code=code)
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "username": username,
-                "roles": [role.name.lower() for role in fetch_user_roles(application.code, username)],
-            },
-        )
+        data_before = self._gen_data_detail(code, username)
         try:
             remove_user_all_roles(application.code, username)
         except BKIAMGatewayServiceError as e:

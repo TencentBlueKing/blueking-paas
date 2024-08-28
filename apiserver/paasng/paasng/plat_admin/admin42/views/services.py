@@ -37,8 +37,7 @@ from paasng.accessories.services.providers import (
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
@@ -133,7 +132,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             module_name=module_name,
             environment=environment,
             data_after=DataDetail(
-                type=constants.DataType.RAW_DATA,
+                type=DataType.RAW_DATA,
                 data=ServiceInstanceBindInfoSLZ(
                     environment=env,
                     module=module.name,
@@ -171,7 +170,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
                 app_code=code,
                 module_name=module_name,
                 data_before=DataDetail(
-                    type=constants.DataType.RAW_DATA,
+                    type=DataType.RAW_DATA,
                     data={
                         "instance": ServiceInstanceSLZ(instance_rel.get_instance()),
                         "service": ServiceObjSLZ(instance_rel.get_service()),
@@ -221,7 +220,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADD_ON,
             attribute=data["name"],
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -230,7 +229,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
     def destroy(self, request, pk):
         service = mixed_service_mgr.get_without_region(uuid=pk)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
         try:
             mixed_service_mgr.destroy(service)
         except UnsupportedOperationError as e:
@@ -268,8 +267,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADD_ON,
             attribute=service.name,
-            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -319,7 +318,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADDON_PLAN,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -331,7 +330,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要删除的 plan
         plans = service.get_plans()
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.delete(service, plan_id)
@@ -354,7 +353,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         service = mixed_service_mgr.get_without_region(uuid=service_id)
         plans = service.get_plans()
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
@@ -366,7 +365,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADDON_PLAN,
             data_before=data_before,
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

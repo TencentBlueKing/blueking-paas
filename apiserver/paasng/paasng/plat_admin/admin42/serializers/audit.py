@@ -51,6 +51,7 @@ class AppAuditOperationListOutputSLZ(serializers.Serializer):
     uuid = serializers.UUIDField()
     operation = serializers.CharField()
     app_code = serializers.CharField()
+    target = serializers.CharField()
     module_name = serializers.CharField(allow_blank=True, allow_null=True)
     environment = serializers.CharField(allow_blank=True, allow_null=True)
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
@@ -61,6 +62,7 @@ class AppAuditOperationListOutputSLZ(serializers.Serializer):
 class AppAuditOperationRetrieveOutputSLZ(serializers.Serializer):
     operation = serializers.CharField()
     app_code = serializers.CharField()
+    target = serializers.CharField()
     module_name = serializers.CharField(allow_blank=True, allow_null=True)
     environment = serializers.ChoiceField(allow_blank=True, allow_null=True, choices=AppEnvName.get_choices())
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")

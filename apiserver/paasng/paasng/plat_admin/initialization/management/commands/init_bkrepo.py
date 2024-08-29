@@ -47,6 +47,9 @@ BUILTIN_REPOS = [
     Repo(name="docker", type=RepositoryType.DOCKER, public=True),
     Repo(name="pypi", type=RepositoryType.PYPI, public=True),
     Repo(name="npm", type=RepositoryType.NPM, public=True),
+    # bk-apigateway复用bkpaas仓库，以下是网关java/gosdk需要
+    Repo(name="maven", type=RepositoryType.MAVEN, public=True),
+    Repo(name="generic", type=RepositoryType.GENERIC, public=True),
 ]
 
 BUILTIN_APP_TMPLS = {

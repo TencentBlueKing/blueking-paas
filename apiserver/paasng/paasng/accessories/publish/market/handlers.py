@@ -17,15 +17,12 @@
 
 from django.dispatch import receiver
 
-from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.signals import application_default_module_switch
 
 
 @receiver(application_default_module_switch)
 def update_market_config_source_module(sender, application, new_module, old_module, **kwargs):
-    try:
+    if application.market_config:
         market_config = application.market_config
         market_config.source_module = new_module
         market_config.save()
-    except MarketConfig.DoesNotExist:
-        pass

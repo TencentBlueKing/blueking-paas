@@ -65,6 +65,20 @@ class OperationTarget(str, StructuredEnum):
     SECRET = EnumField("secret", label=_("密钥"))
     ENV_VAR = EnumField("env_var", label=_("环境变量"))
     ADD_ON = EnumField("addon", label=_("增强服务"))
+    CLUSTER = EnumField("cluster", label=_("集群"))
+    PROCESS_SPEC_PLAN = EnumField("process_spec_plan", label=_("应用资源方案"))
+    BKPLUGIN_TAG = EnumField("bkplugin_tag", label=_("插件分类"))
+    BKPLUGIN_DISTRIBUTOR = EnumField("bkplugin_distributor", label=_("插件使用方"))
+    DOCUMENT = EnumField("document", label=_("文档"))
+    DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("部署失败提示"))
+    SOURCE_TYPE_SPEC = EnumField("source_type_spec", label=_("代码库配置"))
+    SHARED_CERT = EnumField("shared_cert", label=_("共享证书"))
+    ADDON_PLAN = EnumField("addon_plan", label=_("增强服务方案"))
+    PLAT_USER = EnumField("plat_user", label=_("平台用户"))
+    FEATURE_FLAG = EnumField("feature_flag", label=_("特性标记"))
+    EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
+    APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
+    APP_MEMBER = EnumField("app_member", label=_("应用成员"))
 
 
 class OperationEnum(str, StructuredEnum):
@@ -90,5 +104,11 @@ class OperationEnum(str, StructuredEnum):
     RENEW = EnumField("renew", label=_("续期"))
     DEPLOY = EnumField("deploy", label=_("部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
+    MODIFY_PLAN = EnumField("switch", label=_("切换资源方案"))
     # admin42相关操作
-    MODIFY_FEATURE_FLAG = EnumField("modify_feature_flag", label=_("修改特性标记"))
+    MODIFY_USER_FEATURE_FLAG = EnumField("modify_user_feature_flag", label=_("修改用户特性"))
+    SWITCH_DEFAULT_CLUSTER = EnumField("switch_default_cluster", label=_("切换默认集群"))
+    BIND_CLUSTER = EnumField("bind_cluster", label=_("切换绑定集群"))
+    MODIFY_LOG_CONFIG = EnumField("modify_log_config", label=_("日志采集管理"))
+    PROVISION_INSTANCE = EnumField("provision_instance", label=_("分配增强服务实例"))
+    RECYCLE_RESOURCE = EnumField("recycle_resource", label=_("回收增强服务实例"))

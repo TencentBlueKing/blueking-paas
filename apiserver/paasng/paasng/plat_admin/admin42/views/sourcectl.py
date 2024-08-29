@@ -16,13 +16,17 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin
+from rest_framework import status
+from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
@@ -66,9 +70,55 @@ class SourceTypeSpecManageView(GenericTemplateView):
         return kwargs
 
 
-class SourceTypeSpecViewSet(CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):
+class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
     """平台服务管理-代码库配置API"""
 
     queryset = SourceTypeSpecConfig.objects.all()
     serializer_class = SourceTypeSpecConfigSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def create(self, request):
+        """创建代码库配置"""
+        slz = SourceTypeSpecConfigSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        """更新代码库配置"""
+        source_type_spec = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+
+        slz = SourceTypeSpecConfigSLZ(source_type_spec, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除代码库配置"""
+        source_type_spec = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        source_type_spec.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SOURCE_TYPE_SPEC,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

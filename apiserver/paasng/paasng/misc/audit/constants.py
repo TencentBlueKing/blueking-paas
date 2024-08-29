@@ -79,6 +79,7 @@ class OperationTarget(str, StructuredEnum):
     EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
     APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
     APP_MEMBER = EnumField("app_member", label=_("应用成员"))
+    TEMPLATE = EnumField("template", label=_("模板"))
 
 
 class OperationEnum(str, StructuredEnum):

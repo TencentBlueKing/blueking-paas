@@ -13,11 +13,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Dict
-
-from attrs import define, field
-
-from paasng.platform.engine.models.deployment import ProcessTmpl
+from attrs import define
 
 
 @define
@@ -25,8 +21,6 @@ class DeployHandleResult:
     """部署阶段处理应用描述文件的结果类。
 
     :param use_cnb: 是否使用了 v3 版本 CNB 模式，对 S-Mart 应用有意义
-    :param processes: 本次处理的进程列表, 命令为 Procfile 的单字符串格式
     """
 
     use_cnb: bool
-    processes: Dict[str, ProcessTmpl] = field(factory=dict)

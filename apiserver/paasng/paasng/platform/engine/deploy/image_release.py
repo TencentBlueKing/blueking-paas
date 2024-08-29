@@ -99,21 +99,23 @@ class ImageReleaseMgr(DeployStep):
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
                     handle_result = self.handle_smart_app_description()
-                    processes = list(handle_result.processes.values())
                     use_cnb = handle_result.use_cnb
                 else:
-                    processes = [
-                        ProcessTmpl(
+                    env_name = self.module_environment.environment
+                    processes_dict = {
+                        proc_spec.name: ProcessTmpl(
                             name=proc_spec.name,
                             command=proc_spec.get_proc_command(),
-                            replicas=proc_spec.get_target_replicas(self.module_environment.environment),
-                            plan=proc_spec.get_plan_name(self.module_environment.environment),
-                            autoscaling=bool(proc_spec.get_autoscaling(self.module_environment.environment)),
-                            scaling_config=proc_spec.get_scaling_config(self.module_environment.environment),
+                            replicas=proc_spec.get_target_replicas(env_name),
+                            plan=proc_spec.get_plan_name(env_name),
+                            autoscaling=bool(proc_spec.get_autoscaling(env_name)),
+                            scaling_config=proc_spec.get_scaling_config(env_name),
                             probes=proc_spec.probes,
                         )
                         for proc_spec in ModuleProcessSpec.objects.filter(module=module)
-                    ]
+                    }
+                    # 手动将进程配置数据保存到本次的 Deployment 对象中
+                    self.deployment.update_fields(processes=processes_dict)
 
                 runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
                 # 目前构建流程必须 build_id, 因此需要构造 Build 对象
@@ -127,9 +129,7 @@ class ImageReleaseMgr(DeployStep):
                     },
                 )
 
-            self.deployment.update_fields(
-                processes={p.name: p for p in processes}, build_status=JobStatus.SUCCESSFUL, build_id=build_id
-            )
+            self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
         with self.procedure_force_phase("配置镜像访问凭证", phase=preparation_phase):
             self._setup_image_credentials()

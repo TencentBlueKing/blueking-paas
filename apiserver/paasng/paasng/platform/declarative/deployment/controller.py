@@ -69,10 +69,7 @@ class DeploymentDeclarativeController:
 
         self.handle_desc(desc)
 
-        return DeployHandleResult(
-            use_cnb=desc.spec_version == AppSpecVersion.VER_3,
-            processes=desc.get_proc_tmpls(),
-        )
+        return DeployHandleResult(use_cnb=desc.spec_version == AppSpecVersion.VER_3)
 
     def handle_desc(self, desc: DeploymentDesc):
         """Handle the description object, which was read from the app description file."""
@@ -81,13 +78,16 @@ class DeploymentDeclarativeController:
         if desc.bk_monitor:
             self._update_bkmonitor(desc.bk_monitor)
 
-        deploy_desc = self._save_desc_obj(desc)
+        desc_obj = self._save_desc_obj(desc)
         if self._favor_cnative_style(desc):
-            self._handle_desc_cnative_style(deploy_desc)
+            self._handle_desc_cnative_style(desc, desc_obj)
         else:
-            self._handle_desc_normal_style(desc, deploy_desc)
+            self._handle_desc_normal_style(desc, desc_obj)
 
-    def _handle_desc_cnative_style(self, deploy_desc: DeploymentDescription):
+        # 总是将本次解析的进程数据保存到当前 deployment 对象中
+        self.deployment.update_fields(processes=desc.get_proc_tmpls())
+
+    def _handle_desc_cnative_style(self, desc: DeploymentDesc, desc_obj: DeploymentDescription):
         # == 云原生应用 或者 使用了 version 3 版本的应用描述文件
         #
         # TODO: 优化 import 方式, 例如直接接受 desc.spec
@@ -119,14 +119,14 @@ class DeploymentDeclarativeController:
         #
         import_bkapp_spec_entity(
             self.module,
-            spec_entity=v1alpha2.BkAppSpec(**sanitize_bkapp_spec_to_dict(deploy_desc.spec)),
+            spec_entity=v1alpha2.BkAppSpec(**sanitize_bkapp_spec_to_dict(desc_obj.spec)),
             # Don't remove existed overlays data when no overlays data in input_data
             reset_overlays_when_absent=False,
         )
-        if hooks := deploy_desc.get_deploy_hooks():
+        if hooks := desc_obj.get_deploy_hooks():
             self.deployment.update_fields(hooks=hooks)
 
-    def _handle_desc_normal_style(self, desc: DeploymentDesc, deploy_desc: DeploymentDescription):
+    def _handle_desc_normal_style(self, desc: DeploymentDesc, desc_obj: DeploymentDescription):
         # # == 普通应用
         #
         # 同步进程配置
@@ -135,7 +135,7 @@ class DeploymentDeclarativeController:
 
         # 仅声明 hooks 时才同步 hooks
         # 由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不代表禁用 hooks.
-        if hooks := deploy_desc.get_deploy_hooks():
+        if hooks := desc_obj.get_deploy_hooks():
             sync_hooks(self.module, hooks)
             self.deployment.update_fields(hooks=hooks)
 
@@ -215,9 +215,11 @@ def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileP
     :param procfile_procs: The processes defined by Procfile
     """
     module = deployment.app_environment.module
-    proc_tmpls = [ProcessTmpl(name=p.name, command=p.command) for p in procfile_procs]
-    ModuleProcessSpecManager(module).sync_from_desc(processes=proc_tmpls)
-    return DeployHandleResult(use_cnb=False, processes={p.name: p for p in proc_tmpls})
+    proc_tmpls = {p.name: ProcessTmpl(name=p.name, command=p.command) for p in procfile_procs}
+    # Save the process configs to both the module's spec and current deployment object.
+    ModuleProcessSpecManager(module).sync_from_desc(processes=list(proc_tmpls.values()))
+    deployment.update_fields(processes=proc_tmpls)
+    return DeployHandleResult(use_cnb=False)
 
 
 def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:

@@ -31,6 +31,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_a
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.models.module import Module
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -166,11 +167,10 @@ class TestAppDescriptionHandler:
             """
         )
         handler = get_deploy_desc_handler(yaml.safe_load(content), procfile_data={"web": "python manage.py runserver"})
-        ret = handler.handle(bk_deployment)
+        handler.handle(bk_deployment)
 
-        assert query_proc_dict(bk_module) == {"web": ("python manage.py runserver", 3)}
-        assert ret.processes
-        assert len(ret.processes) == 1
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("python manage.py runserver", 3)}
+        assert len(bk_deployment.get_processes()) == 1
 
     def test_desc_and_procfile_different(self, bk_module, bk_deployment):
         content = dedent(
@@ -187,19 +187,15 @@ class TestAppDescriptionHandler:
         handler = get_deploy_desc_handler(
             yaml.safe_load(content), procfile_data={"web": "gunicorn app", "worker": "celery"}
         )
-        ret = handler.handle(bk_deployment)
+        handler.handle(bk_deployment)
 
-        assert query_proc_dict(bk_module) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
-        assert ret.processes
-        assert len(ret.processes) == 2
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
 
     def test_procfile_only(self, bk_module, bk_deployment):
         handler = get_deploy_desc_handler(None, procfile_data={"web": "gunicorn app", "worker": "celery"})
-        ret = handler.handle(bk_deployment)
+        handler.handle(bk_deployment)
 
-        assert query_proc_dict(bk_module) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
-        assert ret.processes
-        assert len(ret.processes) == 2
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
 
     def test_invalid_desc_and_valid_procfile(self, bk_module, bk_deployment):
         handler = get_deploy_desc_handler(
@@ -265,9 +261,16 @@ class TestAppDescriptionHandler:
             get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
 
-def query_proc_dict(module: Module) -> Dict[str, Tuple[str, int]]:
-    """A helper function that queries module's all process specs for comparison."""
+def query_proc_dict(module: Module, deployment: Deployment) -> Dict[str, Tuple[str, int]]:
+    """A helper function that queries process specs for comparison. It get the data form
+    both the module and deployment objects.
+    """
     proc_dict = {}
     for p in ModuleProcessSpec.objects.filter(module=module):
         proc_dict[p.name] = (p.proc_command, p.target_replicas)
+
+    # Get the data from the deployment object and assert the two data are the same.
+    proc_dict_d = {p.name: (p.command, p.replicas or 1) for p in deployment.get_processes()}
+    if proc_dict != proc_dict_d:
+        raise ValueError("The processes in module and deployment are not the same.")
     return proc_dict

@@ -81,6 +81,8 @@
         :data="versionData"
         step="release"
       />
+      <!-- 发布结果 -->
+      <release-result :url="versionData.report_url" />
       <section
         class="version-tools"
         v-if="!isFullReleaseSuccessful"
@@ -162,6 +164,7 @@ import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import releaseContent from '../create-version/new-version/release-content.vue';
 import visibleRange from '../create-version/new-version/visible-range.vue';
 import releaseStrategy from '../create-version/new-version/release-strategy.vue';
+import releaseResult from '../create-version/new-version/release-result.vue';
 import { CODECC_RELEASE_STATUS } from '@/common/constants';
 
 export default {
@@ -171,6 +174,7 @@ export default {
     releaseContent,
     visibleRange,
     releaseStrategy,
+    releaseResult,
   },
   mixins: [pluginBaseMixin],
   data() {

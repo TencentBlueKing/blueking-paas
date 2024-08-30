@@ -143,6 +143,7 @@
         ref="deployLogRef"
         :build-list="streamLogs"
         :ready-list="readyLogs"
+        :release-list="releaseLogs"
         :process-list="allProcesses"
         :state-process="appearDeployState"
         :process-loading="processLoading"
@@ -227,13 +228,14 @@ export default {
     return {
       serverLogEvent: null,
       timelineComKey: -1,
-      streamLogs: [],       // 日志流信息
+      readyLogs: [],        // 准备阶段日志流信息
+      streamLogs: [],       // 构建阶段日志流信息
+      releaseLogs: [],       // 部署阶段日志流信息
       eventSourceState: {
         CLOSED: 2,
       },
       isLogError: false,        // 日志错误
       appearDeployState: [],
-      readyLogs: [],        // 准备阶段日志
       deployStartTimeQueue: [],
       deployEndTimeQueue: [],
       isDeploySuccess: false,
@@ -251,6 +253,7 @@ export default {
       prevInstanceVersion: 0,
       releaseId: '',   // 部署id
       isDeployReady: true,
+      isBuildReady: false,
       curModuleInfo: {},  // 当前模块的信息
       serverProcessEvent: null,
       watchServerTimer: null,
@@ -322,6 +325,8 @@ export default {
     });
     // 部署处于准备阶段的判断标识，用于获取准备阶段的日志
     this.isDeployReady = true;
+    // 部署处于构建阶段的判断标识，用于获取构建阶段的日志
+    this.isBuildReady = false;
   },
   beforeDestroy() {
     // 页面销毁 关闭右边的部署进程watch事件
@@ -364,15 +369,27 @@ export default {
               this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'pending', '');
             });
             this.readyLogs.push(this.ansiUp.ansi_to_html(item.line));
-          } else {
+            console.log(this.isDeployReady, this.isBuildReady);
+          } else if (this.isBuildReady) {
             this.streamLogs.push(this.ansiUp.ansi_to_html(item.line));
+            console.log(this.isDeployReady, this.isBuildReady);
+          } else {
+            this.releaseLogs.push(this.ansiUp.ansi_to_html(item.line));
+            console.log(this.isDeployReady, this.isBuildReady);
           }
         };
 
         this.serverLogEvent.addEventListener('phase', (event) => {
           const item = JSON.parse(event.data);
           if (item.name === 'build') {
+            // 更改输出流到构建阶段 streamLogs
             this.isDeployReady = false;
+            this.isBuildReady = true;
+          }
+          if (item.name === 'release') {
+            // 更改输出流到部署阶段 releaseLogs
+            this.isDeployReady = false;
+            this.isBuildReady = false;
           }
 
           if (['build', 'preparation'].includes(item.name)) {
@@ -417,6 +434,9 @@ export default {
 
           if (item.name === this.$t('检测部署结果') && item.status === 'pending') {
             this.appearDeployState.push('release');
+            // 更新日志输出流到 releaseLogs
+            this.isDeployReady = false;
+            this.isBuildReady = false;
             this.releaseId = item.bkapp_release_id;
             if (!this.processLoading) {
               this.getModuleProcessList(true).then(() => {

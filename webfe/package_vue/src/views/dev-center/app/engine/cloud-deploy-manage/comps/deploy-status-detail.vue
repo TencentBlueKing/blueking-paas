@@ -369,13 +369,10 @@ export default {
               this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'pending', '');
             });
             this.readyLogs.push(this.ansiUp.ansi_to_html(item.line));
-            console.log(this.isDeployReady, this.isBuildReady);
           } else if (this.isBuildReady) {
             this.streamLogs.push(this.ansiUp.ansi_to_html(item.line));
-            console.log(this.isDeployReady, this.isBuildReady);
           } else {
             this.releaseLogs.push(this.ansiUp.ansi_to_html(item.line));
-            console.log(this.isDeployReady, this.isBuildReady);
           }
         };
 

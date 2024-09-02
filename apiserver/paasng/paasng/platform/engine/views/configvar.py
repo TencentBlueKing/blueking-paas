@@ -28,6 +28,8 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
@@ -45,6 +47,7 @@ from paasng.platform.engine.models.config_var import add_prefix_to_key
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import (
     ConfigVarApplyResultSLZ,
+    ConfigVarFormatSLZ,
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
@@ -75,12 +78,93 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         context["module"] = self.get_module_via_path()
         return context
 
+    def create(self, request, *args, **kwargs):
+        """创建环境变量"""
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+        )
+
+        slz = self.get_serializer(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        application = self.get_application()
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ENV_VAR,
+            module_name=self.get_module_via_path().name,
+            environment=request.data["environment_name"],
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+            ),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        """更新环境变量"""
+        instance = self.get_object()
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+        )
+
+        slz = self.get_serializer(instance, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        application = self.get_application()
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ENV_VAR,
+            module_name=self.get_module_via_path().name,
+            environment=request.data["environment_name"],
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+            ),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除环境变量"""
+        instance = self.get_object()
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+        )
+        instance.delete()
+
+        application = self.get_application()
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ENV_VAR,
+            module_name=instance.environment.environment,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @swagger_auto_schema(
         tags=["环境配置"],
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def clone(self, request, **kwargs):
         """从某一模块克隆环境变量至当前模块"""
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+        )
+
         application = self.get_application()
         source = application.get_module(module_name=self.kwargs["source_module_name"])
         dest = self.get_module_via_path()
@@ -88,6 +172,19 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         res_nums = ConfigVarManager().clone_vars(source, dest)
 
         slz = ConfigVarApplyResultSLZ(res_nums)
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ENV_VAR,
+            module_name=self.kwargs["source_module_name"],
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+            ),
+        )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -97,6 +194,10 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     )
     def batch(self, request, **kwargs):
         """批量保存环境变量"""
+        data_before = DataDetail(
+            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+        )
+
         module = self.get_module_via_path()
         slz = ConfigVarFormatWithIdSLZ(data=request.data, context={"module": module}, many=True)
         slz.is_valid(raise_exception=True)
@@ -104,6 +205,20 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
         apply_result = ConfigVarManager().batch_save(module, env_variables)
         res = ConfigVarApplyResultSLZ(apply_result)
+
+        application = self.get_application()
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ENV_VAR,
+            module_name=module.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
+            ),
+        )
         return Response(res.data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(

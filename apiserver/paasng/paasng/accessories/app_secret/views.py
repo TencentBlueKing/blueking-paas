@@ -42,6 +42,8 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.api import BkOauthClient
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 from paasng.infras.oauth2.utils import get_app_secret_in_env_var
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -81,6 +83,14 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_(f"密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"))
 
         client.create_app_secret(code)
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["鉴权信息"], request_body=AppSecretStatusSLZ, responses={"204": "没有返回数据"})
@@ -98,6 +108,14 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("当前密钥为内置密钥，不允许被禁用"))
 
         BkOauthClient().toggle_app_secret(code, bk_app_secret_id, enabled)
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.ENABLE if enabled else OperationEnum.DISABLE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["鉴权信息"], responses={"204": "没有返回数据"})
@@ -125,6 +143,14 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("当前密钥为内置密钥，不允许删除"))
 
         client.del_app_secret(code, bk_app_secret_id)
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["鉴权信息"], request_body=VerificationCodeSLZ)

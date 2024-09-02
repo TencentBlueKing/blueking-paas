@@ -31,6 +31,8 @@ from paas_wl.workloads.networking.egress.models import RCStateAppBinding, Region
 from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 
@@ -79,6 +81,17 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("请稍候再试")
 
         serializer = RCStateAppBindingSLZ(binding)
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.EXIT_IP,
+            module_name=module_name,
+            environment=environment,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=serializer.data),
+        )
         return Response({"name": "default", "rcs_binding_data": serializer.data}, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, code, module_name, environment):
@@ -88,5 +101,17 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
             binding = RCStateAppBinding.objects.get(app=wl_app)
         except RCStateAppBinding.DoesNotExist:
             raise error_codes.ERROR_RECYCLING_EGRESS_GATEWAY_INFO.f("未获取过网关信息")
+        data_before = DataDetail(type=DataType.RAW_DATA, data=RCStateAppBindingSLZ(binding).data)
         binding.delete()
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.EXIT_IP,
+            module_name=module_name,
+            environment=environment,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

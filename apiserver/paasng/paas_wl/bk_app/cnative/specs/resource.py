@@ -39,8 +39,8 @@ from paas_wl.infras.resources.base import base, crd
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
+from paas_wl.workloads.networking.constants import ExposedTypeName
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -107,16 +107,21 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 创建或更新 BkApp
         bkapp = create_or_update_bkapp_with_retries(client, env, manifest)
 
-    # Deploy other dependencies
-    deploy_networking(env)
+    sync_networking(env, BkAppResource(**bkapp))
     return bkapp.to_dict()
+
+
+def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
+    """Sync the networking related resources for env, such as Ingress etc."""
+
+    if _need_exposed_services(res):
+        deploy_networking(env)
+    else:
+        delete_networking(env)
 
 
 def deploy_networking(env: ModuleEnvironment) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
-    if not _has_web_process(env):
-        return
-
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
@@ -144,9 +149,6 @@ def delete_bkapp(env: ModuleEnvironment):
 
 def delete_networking(env: ModuleEnvironment):
     """Delete network group mapping in cluster"""
-    if not _has_web_process(env):
-        return
-
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
@@ -206,6 +208,19 @@ class MresConditionParser:
         return None
 
 
-def _has_web_process(env: ModuleEnvironment) -> bool:
-    """Check if the module has web process"""
-    return ModuleProcessSpec.objects.filter(module=env.module, name="web").exists()
+def _need_exposed_services(res: BkAppResource) -> bool:
+    """
+    _need_exposed_services checks if the bkapp needs to expose services outside the cluster
+    """
+    enabled = res.get_proc_services_annotation()
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要向集群外暴露服务
+    if enabled == "false":
+        return True
+
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要向集群外暴露服务
+    for proc in res.spec.processes:
+        for svc in proc.services or []:
+            if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:
+                return True
+
+    return False

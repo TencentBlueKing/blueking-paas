@@ -25,7 +25,13 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion, MResPhaseType, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import (
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
+    ApiVersion,
+    MResPhaseType,
+    ResQuotaPlan,
+)
+from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.structure import register
 
@@ -111,6 +117,34 @@ class ProbeSet(BaseModel):
     startup: Optional[Probe] = None
 
 
+class ExposedType(BaseModel):
+    """ExposedType is the exposed type of the ProcService
+
+    :param name: the name of the exposed type
+    """
+
+    name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
+
+
+class ProcService(BaseModel):
+    """ProcService is a process service which used to expose network
+
+    :param name: the name of the service
+    :param targetPort: the target port of the service
+    :param protocol: the protocol of the service
+    :param exposedType: the exposed type of the service. If not specified, the service can only
+        be accessed within the cluster, not from outside.
+    :param port: the port that will be exposed by this service. If not specified, the value of
+        the 'targetPort' field is used.
+    """
+
+    name: str
+    targetPort: int
+    protocol: Literal["TCP", "UDP"] = "TCP"
+    exposedType: Optional[ExposedType] = None
+    port: Optional[int] = None
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -123,6 +157,7 @@ class BkAppProcess(BaseModel):
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
     probes: Optional[ProbeSet] = None
+    services: Optional[List[ProcService]] = None
 
 
 class Hook(BaseModel):
@@ -346,3 +381,14 @@ class BkAppResource(BaseModel):
         result = self.dict(exclude_none=True, exclude={"status"})
         result["metadata"].pop("generation", None)
         return result
+
+    def set_proc_services_annotation(self, enabled: str):
+        """set proc services feature annotation
+
+        :param enabled: "true" or "false". "true" 表示启用, "false" 表示不启用
+        """
+        self.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = enabled
+
+    def get_proc_services_annotation(self) -> Optional[str]:
+        """get proc services feature annotation"""
+        return self.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)

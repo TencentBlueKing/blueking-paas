@@ -30,7 +30,7 @@ from paasng.plat_admin.admin42.serializers.audit import (
     AuditOperationRetrieveOutputSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.constants import ConfigVarEnvName
 
 
 class AdminOperationAuditManageView(GenericTemplateView):
@@ -76,8 +76,9 @@ class AdminAppOperationAuditManageView(GenericTemplateView):
         context["pagination"] = self.get_pagination_context(self.request)
         context["result_types"] = dict(ResultCode.get_choices())
         context["access_types"] = dict(AccessType.get_choices())
+        context["target_types"] = dict(OperationTarget.get_choices())
         context["operation_types"] = dict(OperationEnum.get_choices())
-        context["env_types"] = dict(AppEnvName.get_choices())
+        context["env_types"] = dict(ConfigVarEnvName.get_choices())
         return context
 
     def filter_queryset(self, queryset):

@@ -34,17 +34,22 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.bkapp_model.entities import ProcEnvOverlay, Process
-from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_processes
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
-from paasng.platform.bkapp_model.models import DomainResolution, ModuleProcessSpec, SvcDiscConfig
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    ProcessSpecEnvOverlay,
+    SvcDiscConfig,
+)
 from paasng.platform.bkapp_model.serializers import (
     BkAppModelSLZ,
     DomainResolutionSLZ,
     GetManifestInputSLZ,
     ModuleDeployHookSLZ,
-    ModuleProcessSpecSLZ,
+    ModuleProcessSpecsInputSLZ,
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
 )
@@ -153,6 +158,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     for environment_name in AppEnvName
                 },
                 "probes": proc_spec.probes or {},
+                "services": proc_spec.services,
             }
             for proc_spec in proc_specs
         ]
@@ -162,15 +168,14 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-    @swagger_auto_schema(request_body=ModuleProcessSpecSLZ(many=True))
+    @swagger_auto_schema(request_body=ModuleProcessSpecsInputSLZ)
     @atomic
     def batch_upsert(self, request, code, module_name):
         """批量更新模块的进程配置"""
         module = self.get_module_via_path()
-        slz = ModuleProcessSpecSLZ(data=request.data, many=True)
+        slz = ModuleProcessSpecsInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        proc_specs = slz.validated_data
-
+        proc_specs = slz.validated_data["proc_specs"]
         processes = [
             Process(
                 name=proc_spec["name"],
@@ -178,6 +183,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 args=proc_spec["args"],
                 target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
+                services=proc_spec.get("services", None),
             )
             for proc_spec in proc_specs
         ]
@@ -187,8 +193,8 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
-                    sync_env_overlay_by_proc(
-                        module, proc_spec["name"], ProcEnvOverlay(**{"env_name": env_name, **proc_env_overlay})
+                    ProcessSpecEnvOverlay.objects.save_by_module(
+                        module, proc_spec["name"], env_name, **proc_env_overlay
                     )
 
         return self.retrieve(request, code, module_name)

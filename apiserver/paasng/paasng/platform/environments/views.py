@@ -23,14 +23,14 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import app_view_actions_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.utils import batch_save_protections
 
 from . import serializers
 from .constants import EnvRoleOperation
 from .models import EnvRoleProtection
-from ...misc.audit.constants import DataType, OperationEnum, OperationTarget
-from ...misc.audit.service import DataDetail, add_app_audit_record
 
 
 class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.GenericViewSet):

@@ -43,7 +43,11 @@ from paasng.platform.engine.constants import (
     ConfigVarEnvName,
 )
 from paasng.platform.engine.models import ConfigVar
-from paasng.platform.engine.models.config_var import add_prefix_to_key
+from paasng.platform.engine.models.config_var import (
+    ENVIRONMENT_ID_FOR_GLOBAL,
+    ENVIRONMENT_NAME_FOR_GLOBAL,
+    add_prefix_to_key,
+)
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import (
     ConfigVarApplyResultSLZ,
@@ -102,16 +106,16 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
                 type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
             ),
         )
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(slz.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
-        instance = self.get_object()
+        config_var = self.get_object()
         data_before = DataDetail(
             type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
         )
 
-        slz = self.get_serializer(instance, data=request.data)
+        slz = self.get_serializer(config_var, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -122,7 +126,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ENV_VAR,
-            module_name=self.get_module_via_path().name,
+            module_name=config_var.module.name,
             environment=request.data["environment_name"],
             data_before=data_before,
             data_after=DataDetail(
@@ -130,16 +134,19 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             ),
         )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(slz.data)
 
     def destroy(self, request, *args, **kwargs):
         """删除环境变量"""
-        instance = self.get_object()
+        config_var = self.get_object()
         data_before = DataDetail(
             type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
         )
-        instance.delete()
+        config_var.delete()
 
+        env = ENVIRONMENT_NAME_FOR_GLOBAL
+        if config_var.environment_id != ENVIRONMENT_ID_FOR_GLOBAL:
+            env = config_var.environment.environment
         application = self.get_application()
         add_app_audit_record(
             app_code=application.code,
@@ -147,7 +154,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ENV_VAR,
-            module_name=instance.environment.environment,
+            module_name=config_var.module.name,
+            environment=env,
             data_before=data_before,
             data_after=DataDetail(
                 type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)

@@ -368,7 +368,7 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
             type=constants.DataType.RAW_DATA,
             data={
                 "username": username,
-                "roles": [role.name.lower() for role in fetch_user_roles(code, username)],
+                "roles": [ApplicationRole(role).name.lower() for role in fetch_user_roles(code, username)],
             },
         )
 

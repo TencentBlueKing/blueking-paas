@@ -36,7 +36,7 @@
       <div
         v-if="startService"
         class="start-service-sign"
-        v-bk-tooltips="$t('已开启服务')"
+        v-bk-tooltips="$t('已启用进程服务')"
       >
         <img
           class="servie-icon"

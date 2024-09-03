@@ -508,7 +508,7 @@
         </div>
 
 
-        <div class="mt20 flex-row" v-if="isBkDefaultCode">
+        <div class="mt20 flex-row align-items-center" v-if="isBkDefaultCode">
           <!-- :disabled="" -->
           <div class="mr10" v-if="curStep === 1">
             <bk-button

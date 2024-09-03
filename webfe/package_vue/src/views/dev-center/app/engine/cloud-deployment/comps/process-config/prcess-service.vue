@@ -83,11 +83,17 @@ export default {
   watch: {
     data(newValue) {
       // 外界更新当前name，需要重新获取主入口
-      this.mainName = newValue.find(v => this.isMainEntry(v.services))?.name;
+      this.setMainEntryName(newValue);
     },
     deep: true,
   },
+  mounted() {
+    this.setMainEntryName(this.data);
+  },
   methods: {
+    setMainEntryName(list = []) {
+      this.mainName = list.find(v => this.isMainEntry(v.services))?.name;
+    },
     handleChange(name, index) {
       this.$emit('change', name, index);
     },

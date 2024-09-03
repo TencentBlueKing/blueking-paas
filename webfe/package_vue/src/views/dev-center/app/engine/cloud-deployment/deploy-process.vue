@@ -198,7 +198,11 @@
                     ></bk-switcher>
                     <span class="tips">
                       <i class="paasng-icon paasng-info-line" />
-                      {{ $t('开启后可通过"进程服务名称+服务端口"进行应用内部通信') }}
+                      {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                      <a
+                        target="_blank"
+                        :href="GLOBAL.DOC.ENTRY_PROC_SERVICES"
+                      >{{ $t('进程服务说明') }}</a>
                     </span>
                   </div>
                 </bk-form-item>
@@ -213,6 +217,7 @@
                       :name="formData.name"
                       :services="formData.services"
                       :main-entry-data="curProcessMainEntryData"
+                      :address="moduleAccessAddress"
                       @change-service="handleChangeService"
                       @delete-service="handleDeleteService"
                       @change-access-entry="changeMainEntry"
@@ -236,12 +241,6 @@
                 <bk-form-item
                   v-if="ifopen"
                   :label="$t('配置环境')"
-                  :label-width="labelWidth"
-                >
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
                   ext-cls="env-form-item-cls"
                 >
                   <div class="env-name">{{ $t('预发布环境') }}</div>
@@ -416,12 +415,6 @@
                       </section>
                     </bk-form>
                   </div>
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
-                  ext-cls="env-form-item-cls"
-                >
                   <div class="env-name">{{ $t('生产环境') }}</div>
                   <div class="env-container">
                     <bk-form
@@ -654,17 +647,25 @@
               <bk-form-item :label="`${$t('进程服务')}：`">
                 <div class="view-process-service">
                   <span :class="['servie-tag', { enable: formData.services?.length }]">
-                    {{ formData.services?.length ? $t('已开启') : $t('未开启') }}
+                    {{ formData.services?.length ? $t('已启用') : $t('未启用') }}
                   </span>
                   <span class="tips">
                     <i class="paasng-icon paasng-info-line" />
-                    {{ $t('开启后可通过"进程服务名称+服务端口"进行应用内部通信') }}
+                    {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                    <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.ENTRY_PROC_SERVICES"
+                    >{{ $t('进程服务说明') }}</a>
                   </span>
                 </div>
               </bk-form-item>
               <bk-form-item :label="`${$t('端口映射')}：`" v-if="formData.services?.length">
                 <div class="port-mapping-wrapper">
-                  <pord-map-table :services="formData.services" :mode="'view'" />
+                  <pord-map-table
+                    :services="formData.services"
+                    :address="moduleAccessAddress"
+                    :mode="'view'"
+                  />
                 </div>
               </bk-form-item>
               <bk-form-item :label-width="55">
@@ -774,6 +775,9 @@
         </div>
       </paas-content-loader>
 
+      <!-- 分割线 -->
+      <div class="dividing-line"></div>
+
       <!-- 钩子命令-创建应用、模块不展示 -->
       <deploy-hook v-if="!isCreate" />
     </template>
@@ -801,7 +805,7 @@
             <bk-radio :checked="true">
               {{ $t('进程') }}
             </bk-radio>
-            <p class="tips">{{ $t('适合长时间运行的进程，可暴露给外部或内部流量') }}</p>
+            <p class="tips">{{ $t('适合长时间运行的进程，可暴露外部或内部流量') }}</p>
           </div>
         </bk-form-item>
         <bk-form-item
@@ -820,6 +824,15 @@
       </bk-form>
     </bk-dialog>
 
+    <!-- 访问地址变更弹窗 -->
+    <entry-change-dialog
+      v-model="entryDialog.visible"
+      ref="entryChangeDialog"
+      :config="entryDialog"
+      :address="moduleAccessAddress"
+      @confirm="saveAppProcessInfo"
+    />
+
     <!-- 指南 -->
     <user-guide ref="userGuideRef" />
   </div>
@@ -835,6 +848,7 @@ import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import probe from './comps/probe/index.vue';
 import prcessService from './comps/process-config/prcess-service.vue';
 import pordMapTable from './comps/process-config/pord-map-table.vue';
+import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
 
 export default {
   components: {
@@ -844,6 +858,7 @@ export default {
     probe,
     prcessService,
     pordMapTable,
+    entryChangeDialog,
   },
   props: {
     moduleId: {
@@ -1058,6 +1073,15 @@ export default {
       prodQuotaData: {},
       isEditPopup: false,
       serviceProcess: {},
+      moduleAccessAddress: '',
+      // 访问地址变更
+      entryDialog: {
+        visible: false,
+        entryData: null,
+        type: '',
+      },
+      // 初始访问入口
+      initEntryData: null,
     };
   },
   computed: {
@@ -1162,6 +1186,7 @@ export default {
     }
     // 获取资源配额数据
     await this.getQuotaPlans();
+    this.getEntryList();
   },
   methods: {
     async init() {
@@ -1189,6 +1214,9 @@ export default {
           }
           this.panels = cloneDeep(this.processData);
         }
+        this.$nextTick(() => {
+          this.initEntryData = this.getEntryNames();
+        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1474,6 +1502,20 @@ export default {
       if (this.isCreate) {
         return [...this.processData];
       }
+      const saveEntryData = this.getEntryNames();
+      // 判断是否变更访问地址
+      if (!this.isAccessEntryPointChanged(this.initEntryData, saveEntryData)) {
+        // 变更访问入口
+        this.entryDialog.visible = true;
+        this.entryDialog.entryData = saveEntryData;
+        this.entryDialog.type = saveEntryData === null ? 'cancel' : 'change';
+      } else {
+        this.saveAppProcessInfo();
+      }
+    },
+
+    // 保存进程配置信息
+    async saveAppProcessInfo() {
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,
@@ -1482,6 +1524,7 @@ export default {
             proc_specs: [...this.processData],
           },
         });
+        this.$refs.entryChangeDialog?.handleAfterLeave();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('保存成功！'),
@@ -1588,15 +1631,46 @@ export default {
         }
       });
     },
+    getEntryNames() {
+      if (!this.curProcessMainEntryData) return null;
+      const entry = this.curProcessMainEntryData?.services?.find(v => v.exposed_type?.name === 'bk/http');
+      return {
+        processName: this.curProcessMainEntryData.name,
+        servieName: entry.name,
+      };
+    },
+    // 是否变更访问入口
+    isAccessEntryPointChanged(entry1, entry2) {
+      if (entry1 === null && entry2 === null) return true;
+      if (entry1 === null || entry2 === null) return false;
+      return entry1.servieName === entry2.servieName && entry1.processName === entry2.processName;
+    },
+    // 访问地址列表数据
+    async getEntryList() {
+      try {
+        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+          appCode: this.appCode,
+        });
+        const module = res.find(module => module.name === this.curModuleId);
+        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type === 'subdomain')?.address?.url || '';
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 .process-container {
   border-top: none;
-  padding-bottom: 20px;
   .port-mapping-wrapper {
     margin-right: 56px;
+  }
+  .service-explain {
+    padding: 0;
   }
 }
 .ml24 {
@@ -1702,9 +1776,13 @@ export default {
     align-items: center;
     font-size: 12px;
     color: #63656E;
+    .bk-switcher {
+      flex-shrink: 0;
+    }
     .tips i {
       font-size: 14px;
       margin-left: 24px;
+      margin-right: 1px;
       color: #979BA5;
     }
   }
@@ -1736,8 +1814,6 @@ export default {
     margin-left: 0px;
   }
   .view-process-service {
-    display: flex;
-    align-items: center;
     .servie-tag {
       display: inline-block;
       height: 22px;
@@ -1756,6 +1832,11 @@ export default {
       color: #63656E;
       font-size: 12px;
       margin-left: 16px;
+      i {
+        font-size: 14px;
+        margin-right: 1px;
+        color: #979BA5;
+      }
     }
   }
 }
@@ -1853,5 +1934,10 @@ export default {
 }
 /deep/ .prcess-dialog-cls .bk-dialog .bk-dialog-header {
   padding-bottom: 5px;
+}
+.dividing-line {
+  height: 1px;
+  margin: 24px;
+  background: #EAEBF0;
 }
 </style>

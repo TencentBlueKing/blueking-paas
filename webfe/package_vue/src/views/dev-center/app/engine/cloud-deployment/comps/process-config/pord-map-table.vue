@@ -22,8 +22,13 @@
           <div v-else>
             {{ row.name }}
             <span
-              class="tag"
               v-if="row.exposed_type?.name"
+              class="tag"
+              v-bk-tooltips="{
+                content: $t('每个模块可以设置一个访问入口，请求访问地址时（如：{r}）会被转发到访问入口指向的目标服务上。', { r: address }),
+                width: 260,
+                placement: 'bottom'
+              }"
             >
               {{ $t('访问入口') }}
             </span>
@@ -171,51 +176,6 @@
         </div>
       </template>
     </bk-table>
-
-    <bk-dialog
-      v-model="dialogCofig.visiable"
-      width="480"
-      :theme="'primary'"
-      :header-position="'left'"
-      :mask-close="false"
-      :title="isSetAccessEntry ? $t('设为访问入口') : $t('确认取消访问入口')"
-      ext-cls="main-dialog-cls"
-      @confirm="handleDialogConfirm"
-    >
-      <div v-if="!isSetAccessEntry">
-        {{ $t('取消后，该模块将不再暴露外部访问地址。') }}
-      </div>
-      <div class="dialog-content" v-else>
-        <div class="item">
-          <div class="label">{{ $t('访问协议') }}：</div>
-          <div class="value">
-            <bk-radio :checked="true">HTTP</bk-radio>
-          </div>
-        </div>
-        <bk-alert
-          type="warning"
-          :show-icon="false"
-        >
-          <div
-            slot="title"
-            class="alert-content"
-          >
-            <i class="paasng-icon paasng-remind"></i>
-            <div class="tips">
-              <p v-if="mainEntryData && mainEntryData.services?.length">
-                {{
-                  $t('当前主访问入口为：{p1} 进程下的 {p2} 端口。', {
-                    p1: mainEntryData.name,
-                    p2: mainEntryData.services.find((v) => v.exposed_type?.name)?.name,
-                  })
-                }}
-              </p>
-              <p>{{ $t('确定切换为：{p1} 进程下的 {p2} 端口？', { p1: name, p2: curProcessServie.name }) }}</p>
-            </div>
-          </div>
-        </bk-alert>
-      </div>
-    </bk-dialog>
   </div>
 </template>
 
@@ -236,13 +196,13 @@ export default {
       type: String,
       default: '',
     },
+    address: {
+      type: String,
+      default: '',
+    },
     services: {
       type: Array,
       default: () => [],
-    },
-    mainEntryData: {
-      type: Object,
-      default: () => {},
     },
   },
   data() {
@@ -324,9 +284,6 @@ export default {
   computed: {
     editMode() {
       return this.mode === 'edit';
-    },
-    isSetAccessEntry() {
-      return this.dialogCofig.type === 'set';
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -436,15 +393,10 @@ export default {
     },
     // 设为访问入口
     setAccessEntryPoint(row, type) {
-      this.curProcessServie = row;
-      this.dialogCofig.visiable = true;
-      this.dialogCofig.type = type;
-    },
-    handleDialogConfirm() {
       this.$emit('change-access-entry', {
         name: this.name,
-        type: this.dialogCofig.type,
-        row: this.curProcessServie,
+        type,
+        row,
       });
     },
   },

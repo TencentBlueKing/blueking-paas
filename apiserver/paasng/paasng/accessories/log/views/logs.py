@@ -35,7 +35,7 @@ from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.log import serializers
 from paasng.accessories.log.client import instantiate_log_client
-from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
+from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, MAX_RESULT_WINDOW, LogType
 from paasng.accessories.log.dsl import SearchRequestSchema
 from paasng.accessories.log.exceptions import NoIndexError
 from paasng.accessories.log.filters import EnvFilter, ModuleFilter
@@ -219,6 +219,7 @@ class LogAPIView(LogBaseAPIView):
                 timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             )
         except RequestError:
+            logger.exception("failed to get logs")
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
@@ -229,6 +230,8 @@ class LogAPIView(LogBaseAPIView):
                 "logs": clean_logs(list(response), log_config.search_params),
                 "total": total,
                 "dsl": json.dumps(search.to_dict()),
+                # 前端使用该配置控制页面上展示的日志分页的最大页数
+                "max_result_window": MAX_RESULT_WINDOW,
             },
             Logs[self.line_model],  # type: ignore
         )

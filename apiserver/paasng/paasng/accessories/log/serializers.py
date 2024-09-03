@@ -24,7 +24,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import get_attribute
 
-from paasng.accessories.log.constants import LogTimeChoices
+from paasng.accessories.log.constants import MAX_RESULT_WINDOW, LogTimeChoices
 from paasng.infras.bk_log.constatns import BkLogType
 from paasng.utils.es_log.time_range import SmartTimeRange
 
@@ -115,7 +115,13 @@ class LogFieldFilterSLZ(serializers.Serializer):
 
 
 class LogQueryParamsSLZ(serializers.Serializer):
-    """查询日志的 query 参数"""
+    """查询日志的 query 参数，包含：
+    - 结构化日志：需要分页
+    - 访问日志：需要分页
+    - 标准输出日志：不需要分页
+    - 日志事件直方图：不需要分页
+    - 日志字段统计：不需要分页
+    """
 
     time_range = serializers.ChoiceField(choices=LogTimeChoices.get_choices(), required=True)
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
@@ -143,6 +149,10 @@ class LogQueryParamsSLZ(serializers.Serializer):
             attrs["limit"] = attrs["page_size"]
         if "page" in attrs:
             attrs["offset"] = (attrs["page"] - 1) * attrs["limit"]
+
+        # 限制最大分页条数
+        if attrs["offset"] + attrs["limit"] > MAX_RESULT_WINDOW:
+            raise ValidationError(_(f"最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"))
         return attrs
 
 

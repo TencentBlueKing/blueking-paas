@@ -47,7 +47,10 @@ BUILTIN_REPOS = [
     Repo(name="docker", type=RepositoryType.DOCKER, public=True),
     Repo(name="pypi", type=RepositoryType.PYPI, public=True),
     Repo(name="npm", type=RepositoryType.NPM, public=True),
-    # bk-apigateway复用bkpaas仓库，以下是网关java/go sdk需要
+    # bk-apigateway 复用 bkpaas 仓库:
+    #  Q: 为什么要在开发者中心初始化而不是在网关侧初始化？
+    #  A: bkrepo 上的 bkpaas 项目是在开发者中心部署的时候创建的。私有化版本部署时先部署网关再部署开发者中心，故统一放到开发者中心减少部署依赖。
+    # 以下是网关java/go sdk需要
     Repo(name="maven", type=RepositoryType.MAVEN, public=True),
     Repo(name="generic", type=RepositoryType.GENERIC, public=True),
 ]

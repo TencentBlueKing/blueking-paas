@@ -64,6 +64,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.DOCUMENT,
+            attribute=slz.data["title_zh_cn"],
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -80,6 +81,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.DOCUMENT,
+            attribute=slz.data["title_zh_cn"],
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
@@ -95,6 +97,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.DOCUMENT,
+            attribute=documentary_link.title_zh_cn,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -134,6 +137,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.DEPLOY_FAILURE_TIPS,
+            attribute=slz.data["tag_str"],
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -150,6 +154,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.DEPLOY_FAILURE_TIPS,
+            attribute=slz.data["tag_str"],
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
@@ -165,6 +170,7 @@ class DeployFailurePatternManageViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.DEPLOY_FAILURE_TIPS,
+            attribute=deploy_failure_pattern.tag_str,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

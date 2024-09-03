@@ -324,6 +324,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name} - {data['name']}",
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -347,6 +348,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -373,6 +375,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data),
         )

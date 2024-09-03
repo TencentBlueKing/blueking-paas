@@ -87,6 +87,7 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.SOURCE_TYPE_SPEC,
+            attribute=slz.data["name"],
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -104,6 +105,7 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.SOURCE_TYPE_SPEC,
+            attribute=slz.data["name"],
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
@@ -119,6 +121,7 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.SOURCE_TYPE_SPEC,
+            attribute=source_type_spec.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

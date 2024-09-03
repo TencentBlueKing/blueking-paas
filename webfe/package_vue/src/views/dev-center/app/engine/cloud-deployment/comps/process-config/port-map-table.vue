@@ -2,7 +2,7 @@
   <div>
     <bk-table
       :data="portMapList"
-      ext-cls="pord-map-table-cls"
+      ext-cls="port-map-table-cls"
     >
       <bk-table-column
         :label="$t('端口名称')"
@@ -404,7 +404,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.pord-map-table-cls {
+.port-map-table-cls {
   .append-wrapper {
     height: 42px;
     .add-port {

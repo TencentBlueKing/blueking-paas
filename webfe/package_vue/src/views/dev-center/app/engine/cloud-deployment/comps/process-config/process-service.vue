@@ -1,5 +1,5 @@
 <template>
-  <div class="prcess-service">
+  <div class="process-service">
     <section :class="[isEdit ? 'edit-mode' : 'view-mode']">
       <div
         class="tools"
@@ -126,7 +126,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.prcess-service {
+.process-service {
   padding: 0 24px;
   margin-bottom: 20px;
   .edit-mode {

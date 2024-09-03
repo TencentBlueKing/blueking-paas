@@ -43,7 +43,7 @@
           class="process-container"
         >
           <section>
-            <prcess-service
+            <process-service
               :data="panels"
               :active="processNameActive"
               :active-data="formData"
@@ -201,7 +201,7 @@
                       {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
                       <a
                         target="_blank"
-                        :href="GLOBAL.DOC.ENTRY_PROC_SERVICES"
+                        :href="GLOBAL.DOC.PROCESS_SERVICE"
                       >{{ $t('进程服务说明') }}</a>
                     </span>
                   </div>
@@ -213,7 +213,7 @@
                   :label-width="labelWidth"
                 >
                   <div class="port-mapping-wrapper">
-                    <pord-map-table
+                    <port-map-table
                       :name="formData.name"
                       :services="formData.services"
                       :main-entry-data="curProcessMainEntryData"
@@ -654,14 +654,14 @@
                     {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
                     <a
                       target="_blank"
-                      :href="GLOBAL.DOC.ENTRY_PROC_SERVICES"
+                      :href="GLOBAL.DOC.PROCESS_SERVICE"
                     >{{ $t('进程服务说明') }}</a>
                   </span>
                 </div>
               </bk-form-item>
               <bk-form-item :label="`${$t('端口映射')}：`" v-if="formData.services?.length">
                 <div class="port-mapping-wrapper">
-                  <pord-map-table
+                  <port-map-table
                     :services="formData.services"
                     :address="moduleAccessAddress"
                     :mode="'view'"
@@ -846,8 +846,8 @@ import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import probe from './comps/probe/index.vue';
-import prcessService from './comps/process-config/prcess-service.vue';
-import pordMapTable from './comps/process-config/pord-map-table.vue';
+import processService from './comps/process-config/process-service.vue';
+import portMapTable from './comps/process-config/port-map-table.vue';
 import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
 
 export default {
@@ -856,8 +856,8 @@ export default {
     quotaPopver,
     deployHook,
     probe,
-    prcessService,
-    pordMapTable,
+    processService,
+    portMapTable,
     entryChangeDialog,
   },
   props: {
@@ -1652,7 +1652,7 @@ export default {
           appCode: this.appCode,
         });
         const module = res.find(module => module.name === this.curModuleId);
-        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type === 'subdomain')?.address?.url || '';
+        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type !== 'custom')?.address?.url || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

@@ -153,3 +153,5 @@ var AllowedImagePullPolicies = []corev1.PullPolicy{corev1.PullIfNotPresent, core
 // 该正则匹配以'/'开头，不包含空字符(\0)和连续'/'的文件路径，且根目录'/'不合法
 // 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
 const FilePathPattern = `^/([^/\x00]+(/)?)+$`
+
+// FileContentPattern 文件内容正则

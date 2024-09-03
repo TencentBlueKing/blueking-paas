@@ -179,6 +179,13 @@ var _ = Describe("test build expect service", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
+				Annotations: map[string]string{
+					"bkapp.paas.bk.tencent.com/region":      "foo",
+					"bkapp.paas.bk.tencent.com/code":        "bkapp-sample",
+					"bkapp.paas.bk.tencent.com/name":        "bkapp-sample",
+					"bkapp.paas.bk.tencent.com/module-name": "default",
+					"bkapp.paas.bk.tencent.com/environment": "stag",
+				},
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
@@ -209,7 +216,9 @@ var _ = Describe("test build expect service", func() {
 
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(80)))
-		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "web")))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/code"]).To(Equal("bkapp-sample"))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/process-name"]).To(Equal("web"))
+		Expect(service.Labels["monitoring.bk.tencent.com/bk_app_code"]).To(Equal("bkapp-sample"))
 		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "web")))
 	})
 
@@ -219,7 +228,8 @@ var _ = Describe("test build expect service", func() {
 		Expect(service).NotTo(BeNil())
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(5000)))
-		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "hi")))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/process-name"]).To(Equal("hi"))
+		Expect(service.Labels["monitoring.bk.tencent.com/bk_app_code"]).To(Equal("bkapp-sample"))
 		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "hi")))
 	})
 

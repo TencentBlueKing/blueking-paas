@@ -453,7 +453,8 @@
               <deploy-process
                 ref="processRef"
                 :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
-                :is-create="isCreate"></deploy-process>
+                :is-create="isCreate">
+              </deploy-process>
             </collapseContent>
 
             <collapseContent
@@ -461,7 +462,8 @@
               collapse-item-name="hook"
               :title="$t('部署前置命令')"
               class="mt20">
-              <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
+              <deploy-hook ref="hookRef" :is-create="isCreate">
+              </deploy-hook>
             </collapseContent>
           </div>
 
@@ -1286,6 +1288,11 @@ export default {
 @import "./index.scss";
 .created-module-container{
   background: #F5F7FA;
+  .form-actions {
+    button:first-child {
+      margin-left: 0;
+    }
+  }
 }
 .item-cls {
   /deep/ .bk-form-control .group-text {

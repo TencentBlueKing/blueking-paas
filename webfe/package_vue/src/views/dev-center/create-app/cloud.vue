@@ -491,7 +491,10 @@
             :title="$t('进程配置')"
           >
             <deploy-process
-              ref="processRef" :cloud-form-data="formData" :is-create="isCreate"></deploy-process>
+              ref="processRef"
+              :cloud-form-data="formData"
+              :is-create="isCreate">
+            </deploy-process>
           </collapseContent>
 
           <collapseContent
@@ -505,9 +508,9 @@
         </div>
 
 
-        <div class="mt20 flex-row" v-if="isBkDefaultCode">
+        <div class="mt20 flex-row align-items-center" v-if="isBkDefaultCode">
           <!-- :disabled="" -->
-          <div class="mr20" v-if="curStep === 1">
+          <div class="mr10" v-if="curStep === 1">
             <bk-button
               theme="primary"
               :disabled="!curExtendConfig.isAuth"
@@ -522,7 +525,7 @@
             </bk-button>
             <bk-button
               theme="primary"
-              class="ml20 mr20"
+              class="m10 mr10"
               :loading="formLoading"
               @click="handleCreateApp"
             >
@@ -820,7 +823,6 @@ export default {
       const tagStrList = [];
       // eslint-disable-next-line no-restricted-syntax
       for (const key in tagOptions) {
-        console.log('tagOptions[key]', tagOptions[key]);
         if (tagOptions[key] && key !== 'prefix') {
           tagStrList.push(this.$t(TAG_MAP[key]));
         }
@@ -1082,7 +1084,6 @@ export default {
       this.sourceDirData.error = false;
       this.sourceDirData.value = '';
       this.sourceControlTypeItem = item.value;
-      console.log('this.sourceControlTypeItem', this.sourceControlTypeItem);
       const curGitConfig = this.gitExtendConfig[this.sourceControlTypeItem];
       if (curGitConfig && curGitConfig.repoList.length < 1 && ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)) {
         curGitConfig.fetchMethod();

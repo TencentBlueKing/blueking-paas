@@ -13,7 +13,7 @@
           <div class="title-wrapper">
             <bk-checkbox value="liveness">
               {{ $t('存活探测') }}
-              <span>
+              <span @click.stop>
                 <i class="paasng-icon paasng-info-line"></i>
                 {{ $t('探测容器是否正常，不正常则会重启容器，在容器生命周期中，该探针会按照设定频率持续运行') }}
               </span>
@@ -31,7 +31,7 @@
           <div class="title-wrapper">
             <bk-checkbox value="readiness">
               {{ $t('就绪探测') }}
-              <span>
+              <span @click.stop>
                 <i class="paasng-icon paasng-info-line"></i>
                 {{ $t('探测容器是否就绪，若未就绪则不会转发流量到该实例，在容器就绪之前该探针会按照设定频率持续运行') }}
               </span>

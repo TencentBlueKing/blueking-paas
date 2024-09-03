@@ -65,6 +65,7 @@ class TemplateViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.TEMPLATE,
+            attribute=slz.data["name"],
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -82,6 +83,7 @@ class TemplateViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.TEMPLATE,
+            attribute=slz.data["name"],
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
         )
@@ -97,6 +99,7 @@ class TemplateViewSet(ListModelMixin, GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.TEMPLATE,
+            attribute=template.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

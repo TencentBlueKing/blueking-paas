@@ -25,6 +25,7 @@ from paasng.accessories.log.client import LogClientProtocol as BkSaaSLogClientPr
 from paasng.accessories.log.client import instantiate_log_client as instantiate_bksaas_log_client
 from paasng.accessories.log.constants import LogType
 from paasng.accessories.log.models import ProcessLogQueryConfig
+from paasng.accessories.log.shim import setup_env_log_model
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
 from paasng.bk_plugins.pluginscenter.log.client import (
     FieldBucketData,
@@ -250,6 +251,8 @@ def _instantiate_log_client(
         return log_client, search_params
     # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
     env = Application.objects.get(code=instance.id).get_app_envs("prod")
+    # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
+    setup_env_log_model(env)
     if log_type == LogType.INGRESS:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
         search_params = log_config.search_params

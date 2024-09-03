@@ -18,6 +18,10 @@
 <       echo "       Learn More: https://devcenter.heroku.com/articles/python-runtimes"
 ---
 >       echo "       Learn More: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+154c154
+< PIP_VERSION='22.1.2'
+---
+> PIP_VERSION='22.2.2'
 174c174,175
 <   SETUPTOOLS_VERSION='59.6.0'
 ---

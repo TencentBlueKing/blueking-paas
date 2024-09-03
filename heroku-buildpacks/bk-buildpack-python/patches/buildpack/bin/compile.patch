@@ -4,11 +4,11 @@
 > if [[ -f $APT_PROFILE_FILE ]]; then
 >     source $APT_PROFILE_FILE
 > fi
->
+> 
 37a44,46
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/setup-user-compile-hook
->
+> 
 212c221
 < elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]]; then
 ---
@@ -24,8 +24,8 @@
 241a251,253
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/pre-install
->
+> 
 352a365,367
->
+> 
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/post-install

@@ -27,6 +27,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     HostAlias,
+    Metric,
     Monitoring,
     ProbeSet,
     ProcService,
@@ -326,14 +327,24 @@ class ObservabilityConfig(TimestampedModel):
     last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
 
     @classmethod
-    def save_by_module(cls, module: Module, monitoring: Optional[Monitoring] = None):
+    def upsert_by_module(cls, module: Module, monitoring: Optional[Monitoring] = None):
         try:
             obj = cls.objects.get(module=module)
         except cls.DoesNotExist:
-            cls.objects.create(module=module, monitoring=monitoring)
+            return cls.objects.create(module=module, monitoring=monitoring), True
         else:
             last_monitoring = obj.monitoring
-            cls.objects.filter(module=module).update(monitoring=monitoring, last_monitoring=last_monitoring)
+            obj.monitoring = monitoring
+            obj.last_monitoring = last_monitoring
+            obj.save(update_fields=["monitoring", "last_monitoring"])
+            return obj, False
+
+    @property
+    def monitoring_metrics(self) -> List[Metric]:
+        """当前监控 metric 列表"""
+        if self.monitoring:
+            return self.monitoring.metrics or []
+        return []
 
     @property
     def metric_processes(self) -> List[str]:

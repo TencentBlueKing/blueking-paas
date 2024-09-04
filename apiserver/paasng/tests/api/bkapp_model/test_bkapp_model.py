@@ -18,8 +18,8 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProcService
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
 
@@ -363,3 +363,103 @@ class TestModuleProcessSpecWithProcServicesViewSet:
             {"name": "web", "target_port": 8000, "port": None, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
             {"name": "backend", "target_port": 8001, "port": 80, "exposed_type": None, "protocol": "TCP"},
         ]
+
+
+class TestModuleProcessSpecWithMonitoringViewSet:
+    @pytest.fixture()
+    def _create_web_process_and_monitoring(self, bk_module):
+        G(
+            ModuleProcessSpec,
+            module=bk_module,
+            name="web",
+            command=["python"],
+            args=["-m", "http.server"],
+            port=8000,
+            services=[
+                ProcService(name="web", target_port=8000, exposed_type={"name": "bk/http"}),
+                ProcService(name="foo", target_port=8001, port=80),
+            ],
+        )
+        G(
+            ObservabilityConfig,
+            module=bk_module,
+            monitoring={"metrics": [{"service_name": "foo", "path": "/bar", "process": "web"}]},
+        )
+
+    @pytest.mark.parametrize(
+        ("monitoring", "expected_status_code", "expected_detail_str"),
+        [
+            (None, 200, ""),
+            ({"metric": {"service_name": "metric"}}, 200, ""),
+            ({"metric": {"service_name": "foo"}}, 400, "not match any service"),
+            ({"metric": {"service_name": "metric", "params": []}}, 400, "期望是包含类目的字典"),
+        ],
+    )
+    def test_validate(
+        self, api_client, bk_cnative_app, bk_module, monitoring, expected_status_code, expected_detail_str
+    ):
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "services": [
+                    {"name": "web", "target_port": 5000, "port": 80, "exposed_type": {"name": "bk/http"}},
+                    {"name": "metric", "target_port": 8001},
+                ],
+                "monitoring": monitoring,
+            }
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == expected_status_code
+        assert expected_detail_str in resp.data.get("detail", "")
+
+    def test_save(self, api_client, bk_cnative_app, bk_module):
+        web_monitoring = {"metric": {"service_name": "metric", "path": "/metrics", "params": {"foo": "bar"}}}
+        celery_monitoring = {"metric": {"service_name": "metric", "path": "/metrics", "params": {"foo": "bar"}}}
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "services": [
+                    {"name": "web", "target_port": 5000, "port": 80, "exposed_type": {"name": "bk/http"}},
+                    {"name": "metric", "target_port": 5001},
+                ],
+                "monitoring": web_monitoring,
+            },
+            {
+                "name": "celery",
+                "image": "python:latest",
+                "command": ["celery", "-l"],
+                "args": ["info"],
+                "services": [
+                    {"name": "metric", "target_port": 8080},
+                ],
+                "monitoring": celery_monitoring,
+            },
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        data = resp.json()
+
+        proc_specs = data["proc_specs"]
+        assert proc_specs[0]["monitoring"] == web_monitoring
+        assert proc_specs[1]["monitoring"] == celery_monitoring
+        assert ObservabilityConfig.objects.get(module=bk_module).monitoring.metrics == [
+            Metric(**{"process": "web", **web_monitoring["metric"]}),  # type: ignore
+            Metric(**{"process": "celery", **celery_monitoring["metric"]}),  # type: ignore
+        ]
+
+    @pytest.mark.usefixtures("_create_web_process_and_monitoring")
+    def test_retrieve(self, api_client, bk_cnative_app, bk_module):
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.get(url)
+        data = resp.json()
+        web_spec = data["proc_specs"][0]
+        assert web_spec["monitoring"] == {"metric": {"service_name": "foo", "path": "/bar", "params": None}}

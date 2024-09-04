@@ -33,7 +33,7 @@ from .domain_resolution import DomainResolution, HostAlias
 from .env_vars import EnvVar, EnvVarOverlay
 from .hooks import HookCmd, Hooks
 from .mounts import ConfigMapSource, Mount, MountOverlay, PersistentStorage, VolumeSource
-from .observability import Monitoring, Observability
+from .observability import Metric, Monitoring, Observability
 from .probes import ExecAction, HTTPGetAction, HTTPHeader, Probe, ProbeHandler, ProbeSet, TCPSocketAction
 from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from .proc_service import ProcService
@@ -71,7 +71,10 @@ __all__ = [
     "ReplicasOverlay",
     "ResQuotaOverlay",
     "MountOverlay",
+    # proc-service types
     "ProcService",
+    # observability types
     "Monitoring",
     "Observability",
+    "Metric",
 ]

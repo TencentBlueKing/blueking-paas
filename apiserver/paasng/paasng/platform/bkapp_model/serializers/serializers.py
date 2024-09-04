@@ -214,7 +214,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
         if not metric:
             return
 
-        if metric["service_name"] not in [svc.name for svc in data.get("services") or []]:
+        if metric["service_name"] not in [svc.get("name") for svc in data.get("services") or []]:
             raise ValidationError(f"metric service_name({metric['service_name']}) not match any service")
 
 

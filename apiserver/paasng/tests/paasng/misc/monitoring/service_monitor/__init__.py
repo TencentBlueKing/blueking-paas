@@ -14,22 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from typing import Optional
-
-from paasng.platform.bkapp_model.entities import Observability
-from paasng.platform.bkapp_model.models import ObservabilityConfig
-from paasng.platform.modules.models import Module
-
-from .result import CommonSyncResult
-
-
-def sync_observability(module: Module, observability: Optional[Observability]) -> CommonSyncResult:
-    """Sync observability config to db model. only create or update the config, not delete"""
-    ret = CommonSyncResult()
-
-    monitoring = observability.monitoring if observability else None
-    _, created = ObservabilityConfig.upsert_by_module(module=module, monitoring=monitoring)
-    ret.incr_by_created_flag(created)
-
-    return ret

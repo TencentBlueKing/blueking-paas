@@ -34,7 +34,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
@@ -56,6 +56,7 @@ from paasng.platform.bkapp_model.serializers import (
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName
+from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -141,8 +142,13 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         proc_specs = ModuleProcessSpec.objects.filter(module=module)
         image_repository, image_credential_name = get_image_info(module)
 
-        proc_specs_data = [
-            {
+        metric_map = {}
+        if observability := ObservabilityConfig.objects.filter(module=module).first():
+            metric_map = {m.process: m for m in observability.monitoring_metrics}
+
+        proc_specs_data = []
+        for proc_spec in proc_specs:
+            data = {
                 "name": proc_spec.name,
                 "image": image_repository,
                 "image_credential_name": image_credential_name,
@@ -161,8 +167,11 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "probes": proc_spec.probes or {},
                 "services": proc_spec.services,
             }
-            for proc_spec in proc_specs
-        ]
+
+            if metric := metric_map.get(proc_spec.name):
+                data["monitoring"] = {"metric": metric.dict()}
+
+            proc_specs_data.append(data)
         return Response(
             ModuleProcessSpecsOutputSLZ(
                 {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs_data}
@@ -190,14 +199,20 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ]
 
         sync_processes(module, processes)
+
         # 更新环境覆盖&更新可观测功能配置
+        metrics = []
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         module, proc_spec["name"], env_name, **proc_env_overlay
                     )
-            ObservabilityConfig.save_by_module(module, proc_spec.get("monitoring"))
+            if metric := get_items(proc_spec, ["monitoring", "metric"]):
+                metrics.append({"process": proc_spec["name"], **metric})
+
+        if metrics:
+            ObservabilityConfig.upsert_by_module(module, Monitoring(metrics=metrics))
 
         return self.retrieve(request, code, module_name)
 

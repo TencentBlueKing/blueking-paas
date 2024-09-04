@@ -27,6 +27,7 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     HostAlias,
+    Monitoring,
     ProbeSet,
     ProcService,
     SvcDiscEntryBkSaaS,
@@ -73,7 +74,7 @@ class ModuleProcessSpec(TimestampedModel):
     )
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
-    port = models.IntegerField(help_text="容器端口", null=True)
+    port = models.IntegerField(help_text="[deprecated] 容器端口", null=True)
     services: Optional[List[ProcService]] = ProcServicesField(help_text="进程服务列表", default=None, null=True)
 
     # Global settings
@@ -314,3 +315,38 @@ def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     return BkSaaSEnvVariableFactory(
         [SvcDiscEntryBkSaaS(bk_app_code=item.bk_app_code, module_name=item.module_name) for item in svc_disc.bk_saas]
     ).make()
+
+
+MonitoringField = make_json_field("MonitoringField", Monitoring)
+
+
+class ObservabilityConfig(TimestampedModel):
+    module = models.OneToOneField("modules.Module", on_delete=models.CASCADE, db_constraint=False)
+    monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
+    last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
+
+    @classmethod
+    def save_by_module(cls, module: Module, monitoring: Optional[Monitoring] = None):
+        try:
+            obj = cls.objects.get(module=module)
+        except cls.DoesNotExist:
+            cls.objects.create(module=module, monitoring=monitoring)
+        else:
+            last_monitoring = obj.monitoring
+            cls.objects.filter(module=module).update(monitoring=monitoring, last_monitoring=last_monitoring)
+
+    @property
+    def metric_processes(self) -> List[str]:
+        """当前监控 metric 的进程名列表"""
+        if not self.monitoring or not self.monitoring.metrics:
+            return []
+
+        return [metric.process for metric in self.monitoring.metrics]
+
+    @property
+    def last_metric_processes(self) -> List[str]:
+        """最近一次监控 metric 的进程名列表"""
+        if not self.last_monitoring or not self.last_monitoring.metrics:
+            return []
+
+        return [metric.process for metric in self.last_monitoring.metrics]

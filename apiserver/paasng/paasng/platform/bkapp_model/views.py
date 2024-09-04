@@ -41,6 +41,7 @@ from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ObservabilityConfig,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -189,13 +190,14 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ]
 
         sync_processes(module, processes)
-        # 更新环境覆盖
+        # 更新环境覆盖&更新可观测功能配置
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         module, proc_spec["name"], env_name, **proc_env_overlay
                     )
+            ObservabilityConfig.save_by_module(module, proc_spec.get("monitoring"))
 
         return self.retrieve(request, code, module_name)
 

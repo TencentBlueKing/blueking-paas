@@ -27,6 +27,7 @@ from .domain_resolution import DomainResolution
 from .env_vars import EnvVar, EnvVarOverlay
 from .hooks import Hooks
 from .mounts import Mount, MountOverlay
+from .observability import Observability
 from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from .processes import Process
 from .svc_discovery import SvcDiscConfig
@@ -61,6 +62,7 @@ class BkAppSpec(BaseModel):
     :param domain_resolution: 域名解析
     :param svc_discovery: 服务发现
     :param env_overlay: 分环境重写配置
+    :param observability: 可观测功能配置
     """
 
     build: Optional[AppBuildConfig] = None
@@ -72,3 +74,4 @@ class BkAppSpec(BaseModel):
     domain_resolution: Optional[DomainResolution] = None
     svc_discovery: Optional[SvcDiscConfig] = None
     env_overlay: Optional[BkAppEnvOverlay] = None
+    observability: Optional[Observability] = None

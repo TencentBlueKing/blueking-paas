@@ -43,7 +43,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
-from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ObservabilityConfig, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -290,13 +290,14 @@ class ModuleInitializer:
         ]
 
         sync_processes(self.module, processes)
-        # 更新环境覆盖
+        # 更新环境覆盖&更新可观测功能配置
         for proc_spec in bkapp_spec["processes"]:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         self.module, proc_spec["name"], env_name, **proc_env_overlay
                     )
+            ObservabilityConfig.save_by_module(self.module, proc_spec.get("monitoring"))
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):

@@ -57,6 +57,7 @@ from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ObservabilityConfig,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -411,6 +412,21 @@ class DomainResolutionManifestConstructor(ManifestConstructor):
         )
 
 
+class ObservabilityManifestConstructor(ManifestConstructor):
+    """Construct the observability part."""
+
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
+        try:
+            observability = ObservabilityConfig.objects.get(module=module)
+        except ObservabilityConfig.DoesNotExist:
+            return
+
+        if observability.monitoring:
+            model_res.spec.observability = crd.Observability(
+                **dict_to_camel({"monitoring": observability.monitoring.dict()})
+            )
+
+
 def get_manifest(module: Module) -> List[Dict]:
     """Get the manifest of current module, the result might contain multiple items."""
     return [
@@ -435,6 +451,7 @@ def get_bkapp_resource(module: Module) -> crd.BkAppResource:
         MountsManifestConstructor(),
         SvcDiscoveryManifestConstructor(),
         DomainResolutionManifestConstructor(),
+        ObservabilityManifestConstructor(),
     ]
     obj = crd.BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,

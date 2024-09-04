@@ -209,7 +209,7 @@ export default {
       return `${BACKEND_URL}/api/bkapps/s-mart/`;
     },
     maxPackageSize() {
-      return window.BK_MAX_PACKAGE_SIZE || 500;
+      return Number(window.BK_MAX_PACKAGE_SIZE) || 500;
     },
   },
   methods: {

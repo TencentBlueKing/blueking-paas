@@ -593,8 +593,9 @@
     </div>
   </section>
 </template>
-<script>import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
-import _ from 'lodash';
+<script>
+import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
+import { cloneDeep } from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
@@ -891,10 +892,10 @@ export default {
       }
       // 如果有cloudAppData 则将cloudAppData赋值给initCloudAppData
       if (Object.keys(this.cloudAppData).length) {
-        this.initCloudAppData = _.cloneDeep(this.cloudAppData);
+        this.initCloudAppData = cloneDeep(this.cloudAppData);
       }
       this.initCloudAppData.metadata.name = value;
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
 
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
@@ -1003,7 +1004,7 @@ export default {
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
-            this.$set(this.gitExtendConfig, item, _.cloneDeep({
+            this.$set(this.gitExtendConfig, item, cloneDeep({
               isAuth: true,
               isLoading: false,
               alertText: '',
@@ -1117,7 +1118,7 @@ export default {
               break;
           }
         }
-        this.repoData = this.$refs?.repoInfo?.getData();
+        this.repoData = this.$refs?.repoInfo?.getData() ?? {};
         // this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
         this.$nextTick(() => {
@@ -1146,7 +1147,7 @@ export default {
         return;
       }
       this.$refs?.processRef?.handleCancel();
-      this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
+      this.initCloudAppData = cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$router.push({
@@ -1332,7 +1333,7 @@ export default {
           processes: [this.cloudAppProcessData],
         },
       };
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
 

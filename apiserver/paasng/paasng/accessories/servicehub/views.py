@@ -53,6 +53,8 @@ from paasng.infras.accounts.permissions.application import app_action_required, 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
@@ -152,6 +154,17 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "module_name": module.name,
             }
         )
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.ENABLE,
+            target=OperationTarget.ADD_ON,
+            attribute=service_obj.name,
+            module_name=module.name,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=service_obj.config),
+        )
         return Response(serializer.data)
 
     @app_action_required(AppAction.BASIC_DEVELOP)
@@ -233,6 +246,16 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DESTROY_SERVICE.f(f"{e}")
 
         module_attachment.delete()
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_ADDONS_SERVICES,
+            operation=OperationEnum.DISABLE,
+            target=OperationTarget.ADD_ON,
+            attribute=module_attachment.service.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=module_attachment.service.config),
+        )
         return Response(status=status.HTTP_200_OK)
 
     @app_action_required(AppAction.BASIC_DEVELOP)

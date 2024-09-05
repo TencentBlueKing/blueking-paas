@@ -31,17 +31,6 @@ pytestmark = [
 ]
 
 
-class StubServiceMonitorKModel:
-    def get(self, *args, **kwargs):
-        ...
-
-    def update(self, *args, **kwargs):
-        ...
-
-    def delete(self, *args, **kwargs):
-        ...
-
-
 class TestServiceMonitorController:
     def test_init_sync(self, bk_stag_env):
         G(

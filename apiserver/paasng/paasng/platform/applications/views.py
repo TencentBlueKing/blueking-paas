@@ -347,6 +347,42 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         return slzs.IdleModuleEnvSLZ(idle_module_envs, many=True).data
 
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取应用评估详情列表",
+        responses={200: slzs.ApplicationEvaluationListOutputSLZ()},
+    )
+    def list_evaluation(self, request):
+        """获取应用评估详情"""
+        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
+
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        applications = []
+        for report in AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app"):
+            applications.append(
+                {
+                    "code": report.app.code,
+                    "name": report.app.name,
+                    "type": report.app.type,
+                    "is_plugin_app": report.app.is_plugin_app,
+                    "logo_url": report.app.get_logo_url(),
+                    "cpu_limits": report.cpu_limits,
+                    "mem_limits": report.mem_limits,
+                    "cpu_usage_avg": report.cpu_usage_avg,
+                    "mem_usage_avg": report.mem_usage_avg,
+                    "pv": report.pv,
+                    "uv": report.uv,
+                    "latest_operated_at": report.latest_operated_at,
+                    "issue_type": report.issue_type,
+                }
+            )
+
+        resp_data = {"collected_at": latest_collected_at, "applications": applications}
+        return Response(data=slzs.ApplicationEvaluationListOutputSLZ(resp_data).data)
+
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View class for a single application."""

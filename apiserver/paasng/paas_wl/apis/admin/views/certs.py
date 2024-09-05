@@ -53,6 +53,7 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.SHARED_CERT,
+            attribute=name,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data),
         )
@@ -68,6 +69,7 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.SHARED_CERT,
+            attribute=serializer.data["name"],
             data_after=DataDetail(type=DataType.RAW_DATA, data=serializer.data),
         )
         return Response(serializer.data)
@@ -82,6 +84,7 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.SHARED_CERT,
+            attribute=cert.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -187,7 +187,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.sanitize_port_placeholder() if process_spec.probes else None,
-                services=process_spec.services.sanitize_port_placeholder() if process_spec.services else None,
+                services=(
+                    [svc.sanitize_port_placeholder() for svc in process_spec.services]
+                    if process_spec.services
+                    else None
+                ),
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 

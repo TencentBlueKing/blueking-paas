@@ -339,7 +339,13 @@ class TestModuleProcessSpecWithProcServicesViewSet:
 
         proc_specs = data["proc_specs"]
         assert proc_specs[0]["services"] == [
-            {"name": "web", "target_port": 5000, "port": 80, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
+            {
+                "name": "web",
+                "target_port": "${PORT}",
+                "port": 80,
+                "exposed_type": {"name": "bk/http"},
+                "protocol": "TCP",
+            },
             {"name": "backend", "target_port": 5001, "port": None, "exposed_type": None, "protocol": "TCP"},
         ]
         assert proc_specs[1]["services"] is None

@@ -211,8 +211,8 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if metric := get_items(proc_spec, ["monitoring", "metric"]):
                 metrics.append({"process": proc_spec["name"], **metric})
 
-        if metrics:
-            ObservabilityConfig.upsert_by_module(module, Monitoring(metrics=metrics))
+        monitoring = Monitoring(metrics=metrics) if metrics else None
+        ObservabilityConfig.upsert_by_module(module, monitoring)
 
         return self.retrieve(request, code, module_name)
 

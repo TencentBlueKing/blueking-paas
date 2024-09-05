@@ -336,7 +336,7 @@ class ObservabilityConfig(TimestampedModel):
             last_monitoring = obj.monitoring
             obj.monitoring = monitoring
             obj.last_monitoring = last_monitoring
-            obj.save(update_fields=["monitoring", "last_monitoring"])
+            obj.save(update_fields=["monitoring", "last_monitoring", "updated"])
             return obj, False
 
     @property

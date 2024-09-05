@@ -41,7 +41,7 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.models import ObservabilityConfig, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
@@ -66,6 +66,7 @@ from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManag
 from paasng.platform.templates.models import Template
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -290,14 +291,21 @@ class ModuleInitializer:
         ]
 
         sync_processes(self.module, processes)
+
         # 更新环境覆盖&更新可观测功能配置
+        metrics = []
         for proc_spec in bkapp_spec["processes"]:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         self.module, proc_spec["name"], env_name, **proc_env_overlay
                     )
-            ObservabilityConfig.save_by_module(self.module, proc_spec.get("monitoring"))
+
+            if metric := get_items(proc_spec, ["monitoring", "metric"]):
+                metrics.append({"process": proc_spec["name"], **metric})
+
+        monitoring = Monitoring(metrics=metrics) if metrics else None
+        ObservabilityConfig.upsert_by_module(self.module, monitoring)
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):

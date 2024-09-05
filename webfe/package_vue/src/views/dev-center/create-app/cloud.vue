@@ -6,9 +6,7 @@
         :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力')"></bk-alert>
 
       <div class="default-app-type mb20">
-        <default-app-type
-          @on-change-type="handleSwitchAppType"
-        />
+        <default-app-type @on-change-type="handleSwitchAppType" />
       </div>
       <!-- 不是smart应用 -->
       <section v-if="curCodeSource !== 'smart'">
@@ -595,8 +593,9 @@
     </div>
   </section>
 </template>
-<script>import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
-import _ from 'lodash';
+<script>
+import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
+import { cloneDeep } from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
@@ -893,10 +892,10 @@ export default {
       }
       // 如果有cloudAppData 则将cloudAppData赋值给initCloudAppData
       if (Object.keys(this.cloudAppData).length) {
-        this.initCloudAppData = _.cloneDeep(this.cloudAppData);
+        this.initCloudAppData = cloneDeep(this.cloudAppData);
       }
       this.initCloudAppData.metadata.name = value;
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
 
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
@@ -1005,7 +1004,7 @@ export default {
         const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
-            this.$set(this.gitExtendConfig, item, _.cloneDeep({
+            this.$set(this.gitExtendConfig, item, cloneDeep({
               isAuth: true,
               isLoading: false,
               alertText: '',
@@ -1119,7 +1118,7 @@ export default {
               break;
           }
         }
-        this.repoData = this.$refs?.repoInfo?.getData();
+        this.repoData = this.$refs?.repoInfo?.getData() ?? {};
         // this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
         this.$nextTick(() => {
@@ -1148,7 +1147,7 @@ export default {
         return;
       }
       this.$refs?.processRef?.handleCancel();
-      this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
+      this.initCloudAppData = cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$router.push({
@@ -1334,7 +1333,7 @@ export default {
           processes: [this.cloudAppProcessData],
         },
       };
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
 
@@ -1401,6 +1400,7 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.activeIndex = 1;
       this.curStep = 1;
       this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;

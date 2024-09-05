@@ -21,6 +21,9 @@ from blue_krill.data_types.enum import EnumField, StructuredEnum
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
+# 端口标记
+PORT_PLACEHOLDER = "${PORT}"
+
 
 class ExposedTypeName(str, StructuredEnum):
     """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义

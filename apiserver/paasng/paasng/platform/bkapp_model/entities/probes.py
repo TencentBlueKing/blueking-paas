@@ -17,8 +17,10 @@
 
 from typing import List, Literal, Optional, Union
 
+from django.conf import settings
 from pydantic import BaseModel, Field
 
+from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
 from paasng.utils.structure import prepare_json_field
 
 
@@ -78,6 +80,16 @@ class Probe(BaseModel):
     def get_probe_handler(self) -> ProbeHandler:
         return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
+    def sanitize_port_placeholder(self):
+        """sanitize target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
+        if self.tcp_socket and self.tcp_socket.port == PORT_PLACEHOLDER:
+            self.tcp_socket.port = settings.CONTAINER_PORT
+
+        if self.http_get and self.http_get.port == PORT_PLACEHOLDER:
+            self.http_get.port = settings.CONTAINER_PORT
+
+        return self
+
 
 @prepare_json_field
 class ProbeSet(BaseModel):
@@ -92,3 +104,14 @@ class ProbeSet(BaseModel):
     liveness: Optional[Probe] = None
     readiness: Optional[Probe] = None
     startup: Optional[Probe] = None
+
+    def sanitize_port_placeholder(self):
+        """sanitize port to settings.CONTAINER_PORT if original value is ${PORT}"""
+        if self.liveness:
+            self.liveness = self.liveness.sanitize_port_placeholder()
+        if self.startup:
+            self.startup = self.startup.sanitize_port_placeholder()
+        if self.readiness:
+            self.readiness = self.readiness.sanitize_port_placeholder()
+
+        return self

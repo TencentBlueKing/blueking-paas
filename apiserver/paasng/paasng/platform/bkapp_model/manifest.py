@@ -52,7 +52,7 @@ from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, ResQuotaPlan
+from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -163,8 +163,6 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
-    PORT_PLACEHOLDER = "${PORT}"
-
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
         if not process_specs:
@@ -188,8 +186,8 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
-                probes=process_spec.probes,
-                services=process_spec.services,
+                probes=process_spec.probes.sanitize_port_placeholder() if process_spec.probes else None,
+                services=process_spec.services.sanitize_port_placeholder() if process_spec.services else None,
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 
@@ -299,7 +297,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace("${PORT:-5000}", self.PORT_PLACEHOLDER) for s in input]
+        return [s.replace("${PORT:-5000}", PORT_PLACEHOLDER) for s in input]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):

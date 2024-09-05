@@ -38,6 +38,8 @@ from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.api_docs import openapi_empty_response
@@ -96,13 +98,24 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
         env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
-        instance = get_custom_domain_mgr(application).create(
+        domain = get_custom_domain_mgr(application).create(
             env=env,
             host=data["name"],
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
-        return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.APP_DOMAIN,
+            module_name=env.module.name,
+            environment=env.environment,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data),
+        )
+        return Response(DomainSLZ(domain).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         operation_id="update-app-domain",
@@ -113,29 +126,54 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
+        domain = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
         if not self.allow_modifications(application.region):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format(
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
 
-        data = validate_domain_payload(request.data, application, serializer_cls=DomainForUpdateSLZ, instance=instance)
-        new_instance = get_custom_domain_mgr(application).update(
-            instance, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        data = validate_domain_payload(request.data, application, serializer_cls=DomainForUpdateSLZ, instance=domain)
+        new_domain = get_custom_domain_mgr(application).update(
+            domain, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
         )
-        return Response(DomainSLZ(new_instance).data)
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_DOMAIN,
+            module_name=domain.module.name,
+            environment=domain.environment,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
+        )
+        return Response(DomainSLZ(new_domain).data)
 
     @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
+        domain = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
         if not self.allow_modifications(application.region):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format(
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
 
-        get_custom_domain_mgr(application).delete(instance)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        get_custom_domain_mgr(application).delete(domain)
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP_DOMAIN,
+            module_name=domain.module.name,
+            environment=domain.environment,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(response_serializer=slzs.CustomDomainsConfigSLZ(many=True), tags=["访问入口"])

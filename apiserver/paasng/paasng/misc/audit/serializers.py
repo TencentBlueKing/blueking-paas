@@ -17,6 +17,7 @@
 
 from rest_framework import serializers
 
+from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.serializers import ApplicationSLZ4Record
 
@@ -25,10 +26,32 @@ class AppOperationRecordSLZ(serializers.ModelSerializer):
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
     operate = serializers.ReadOnlyField(source="get_display_text", help_text="操作名称")
     operator = serializers.ReadOnlyField(source="username", read_only=True)
+    detail_type = serializers.SerializerMethodField()
+
+    def get_detail_type(self, obj) -> str:
+        """操作详情中的数据类型，用于前端按照不同的类型来展示详情"""
+        if obj.data_before:
+            return obj.data_before.get("type")
+        if obj.data_after:
+            return obj.data_after.get("type")
+        return ""
 
     class Meta:
         model = AppOperationRecord
         fields = "__all__"
+
+
+class AppOperationRecordFilterSlZ(serializers.Serializer):
+    """操作审计筛选条件"""
+
+    target = serializers.ChoiceField(choices=OperationTarget.get_choices(), required=False)
+    operation = serializers.ChoiceField(choices=OperationEnum.get_choices(), required=False)
+    access_type = serializers.ChoiceField(choices=AccessType.get_choices(), required=False)
+    result_code = serializers.ChoiceField(choices=ResultCode.get_choices(), required=False)
+    module_name = serializers.CharField(required=False)
+    environment = serializers.CharField(required=False)
+    start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
 
 
 class QueryRecentOperationsSLZ(serializers.Serializer):

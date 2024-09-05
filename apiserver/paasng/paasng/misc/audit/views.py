@@ -14,7 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from django.conf import settings
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -25,6 +24,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.serializers import (
+    AppOperationRecordFilterSlZ,
     AppOperationRecordSLZ,
     QueryRecentOperationsSLZ,
     RecordForRecentAppSLZ,
@@ -45,6 +45,30 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
     serializer_class = AppOperationRecordSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
     queryset = AppOperationRecord.objects.all()
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        slz = AppOperationRecordFilterSlZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        if target := query_params.get("target"):
+            queryset = queryset.filter(target=target)
+        if operation := query_params.get("operation"):
+            queryset = queryset.filter(operation=operation)
+        if access_type := query_params.get("access_type"):
+            queryset = queryset.filter(access_type=access_type)
+        if result_code := query_params.get("result_code"):
+            queryset = queryset.filter(result_code=result_code)
+        if module_name := query_params.get("module_name"):
+            queryset = queryset.filter(module_name=module_name)
+        if environment := query_params.get("environment"):
+            queryset = queryset.filter(environment=environment)
+        if start_time := query_params.get("start_time"):
+            queryset = queryset.filter(created__gte=start_time)
+        if end_time := query_params.get("end_time"):
+            queryset = queryset.filter(created__lte=end_time)
+        return queryset
 
     def list(self, request, *args, **kwargs):
         application = self.get_application()

@@ -165,12 +165,6 @@ type MonoIngressBuilder struct {
 func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingress, error) {
 	bkapp := builder.bkapp
 
-	// Check if "web" process exists
-	webProc := bkapp.Spec.GetWebProcess()
-	if webProc == nil {
-		return nil, errors.New("web process not found")
-	}
-
 	results := []*networkingv1.Ingress{}
 	// TODO: The resource name might conflict if multiple DomainGroupMappings uses
 	// same sourceTypes.
@@ -212,12 +206,6 @@ type CustomIngressBuilder struct {
 // than 1 domains.
 func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingress, error) {
 	bkapp := builder.bkapp
-
-	// Check if "web" process exists
-	webProc := bkapp.Spec.GetWebProcess()
-	if webProc == nil {
-		return nil, errors.New("web process not found")
-	}
 
 	results := []*networkingv1.Ingress{}
 	for _, d := range domains {

@@ -121,6 +121,10 @@ class AlertSLZ(serializers.Serializer):
         return None
 
 
+class AlertCountSLZ(serializers.Serializer):
+    count = serializers.IntegerField()
+
+
 class ListAlarmStrategiesSLZ(serializers.Serializer):
     alert_code = serializers.CharField(required=False)
     environment = serializers.ChoiceField(choices=AppEnvName.get_choices(), required=False)

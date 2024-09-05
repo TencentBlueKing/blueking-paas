@@ -53,6 +53,7 @@ from .serializer import (
 )
 from .serializers import (
     AlarmStrategySLZ,
+    AlertCountSLZ,
     AlertRuleSLZ,
     AlertSLZ,
     ListAlarmStrategiesSLZ,
@@ -252,10 +253,10 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
+    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
-        serializer = ListAlertsSLZ(data=request.data, context={"app_code": code})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_code": [code]})
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -267,6 +268,24 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
         serializer = AlertSLZ(alerts, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertCountSLZ()})
+    def count(self, request):
+        """查询告警数量"""
+        app_codes = [i.code for i in UserApplicationFilter(request.user).filter(order_by=["name"])]
+        serializer = ListAlertsSLZ(data=request.data, context={"app_code": app_codes})
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
+        except BkMonitorSpaceDoesNotExist:
+            # BkMonitorSpace 不存在（应用未部署）时，返回空列表
+            return Response([])
+        except BkMonitorGatewayServiceError as e:
+            raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
+
+        serializer = AlertCountSLZ({"count": len(alerts)})
         return Response(serializer.data)
 
 

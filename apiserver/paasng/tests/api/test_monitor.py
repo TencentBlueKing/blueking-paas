@@ -57,6 +57,19 @@ class TestListAlertsView:
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
 
+    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
+    def test_count_alerts(self, api_client, bk_app, bk_monitor_space):
+        resp = api_client.post(
+            "/api/monitor/applications/alert/count",
+            data={
+                "start_time": (datetime.now() - timedelta(minutes=random.randint(1, 30))).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                "end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
+        assert resp.data["count"] == 3
+
 
 class TestAlarmStrategiesView:
     @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)

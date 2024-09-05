@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+import logging
 from functools import reduce
 from operator import add
 from typing import Dict, List, Protocol, Tuple
@@ -38,6 +38,8 @@ from paasng.bk_plugins.pluginscenter.thirdparty.utils import make_client
 from paasng.utils.es_log.misc import count_filters_options
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
+
+logger = logging.getLogger(__name__)
 
 
 class LogClientProtocol(Protocol):
@@ -115,7 +117,11 @@ class BKLogClient:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        return self.client.call(data=data, timeout=timeout)
+        resp = self.client.call(data=data, timeout=timeout)
+        if not resp.get("result"):
+            logger.error(f"query bk log error: {resp.get('message')}")
+            raise error_codes.QUERY_REQUEST_ERROR
+        return resp
 
 
 class ESLogClient:

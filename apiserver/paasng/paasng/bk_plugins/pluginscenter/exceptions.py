@@ -54,6 +54,8 @@ class ErrorCodes:
     QUERY_REPO_OVERVIEW_DATA_ERROR = ErrorCode(_("查询代码仓库概览数据异常"))
     # 日志查询异常
     QUERY_ES_ERROR = ErrorCode(_("日志系统异常, 请稍后重试"))
+    QUERY_LOG_FAILED = ErrorCode(_("查询日志失败"))
+    QUERY_REQUEST_ERROR = ErrorCode(_("查询日志失败，请检查查询条件"))
 
     # 可见范围修改失败
     VISIBLE_RANGE_UPDATE_FAIELD = ErrorCode(_("可见范围修改失败"))

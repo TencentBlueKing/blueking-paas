@@ -250,7 +250,8 @@ def _instantiate_log_client(
             search_params = cast(ElasticSearchParams, pd.log_config.ingress)
         return log_client, search_params
     # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
-    env = Application.objects.get(code=instance.id).get_app_envs("prod")
+    # 插件开发中心只部署主模块的生产环境
+    env = Application.objects.get(code=instance.id).envs.get(environment="prod", module__is_default=True)
     # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
     setup_env_log_model(env)
     if log_type == LogType.INGRESS:

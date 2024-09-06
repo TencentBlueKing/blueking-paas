@@ -110,7 +110,7 @@ class DeploymentDesc:
         """Use the processes defined in the Procfile if it's not identical with the
         process list in current spec object.
         """
-        if self.equal_with_procs(procfile_procs):
+        if self._equal_with_procs(procfile_procs):
             return
 
         # Replace the processes with the data defined by the Procfile
@@ -118,7 +118,7 @@ class DeploymentDesc:
         for proc in procfile_procs:
             self.spec.processes.append(Process(name=proc.name, proc_command=proc.command))
 
-    def equal_with_procs(self, procfile_procs: List[ProcfileProc]) -> bool:
+    def _equal_with_procs(self, procfile_procs: List[ProcfileProc]) -> bool:
         """Check if current process list is equal with given Procfile processes.
 
         Only "name" and "command" fields are compared because the ProcfileProc object
@@ -138,6 +138,9 @@ class DeploymentDesc:
                 "replicas": process.replicas,
                 "plan": process.res_quota_plan,
                 "probes": process.probes,
+                # FIXME: 是否需要补充 services 和 scaling_config 等字段，要弄明白增加
+                # 这些字段后会产生什么后果。以及 ProcessTmpl 到底代表什么，和 Process 的
+                # 区别如何。
             },
             ProcessTmpl,
         )

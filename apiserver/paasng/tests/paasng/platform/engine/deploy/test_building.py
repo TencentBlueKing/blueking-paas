@@ -64,11 +64,11 @@ class TestNormalApp:
             assert "[Procfile] Invalid Procfile format" in deployment.err_detail
 
             assert mocked_stream().write_title.called
-            assert mocked_stream().write_title.call_args[0][0] == "正在解析应用描述文件"
+            assert mocked_stream().write_title.call_args[0][0] == "正在解析应用进程信息"
             assert mocked_stream().write_message.called
             assert (
                 mocked_stream().write_message.call_args[0][0]
-                == "步骤 [解析应用描述文件] 出错了，原因：处理应用描述文件失败：[app_desc] unknown; [Procfile] Invalid Procfile format。"
+                == "步骤 [解析应用进程信息] 出错了，原因：处理应用描述文件失败：[app_desc] unknown; [Procfile] Invalid Procfile format。"
             )
 
     def test_failed_when_upload_source(self, builder_class, bk_deployment_full):

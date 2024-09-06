@@ -98,7 +98,7 @@ class ImageReleaseMgr(DeployStep):
                 use_cnb = False
                 if is_smart_app:
                     # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
-                    handle_result = self.handle_smart_app_description()
+                    handle_result = self._handle_smart_app_description()
                     use_cnb = handle_result.use_cnb
                 else:
                     env_name = self.module_environment.environment
@@ -178,7 +178,7 @@ class ImageReleaseMgr(DeployStep):
 
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
 
-    def handle_smart_app_description(self) -> DeployHandleResult:
+    def _handle_smart_app_description(self) -> DeployHandleResult:
         """Handle the description files for S-Mart app."""
         try:
             handler = get_deploy_desc_handler_by_version(

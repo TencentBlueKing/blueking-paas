@@ -274,7 +274,7 @@ def validate_procfile_procs(data: Dict[str, str]) -> List[ProcfileProc]:
     if len(data) > settings.MAX_PROCESSES_PER_MODULE:
         raise DescriptionValidationError(
             f"The number of processes exceeded: maximum {settings.MAX_PROCESSES_PER_MODULE} processes per module, "
-            f"but got {len(data)}"
+            + f"but got {len(data)}"
         )
 
     for proc_type in data:

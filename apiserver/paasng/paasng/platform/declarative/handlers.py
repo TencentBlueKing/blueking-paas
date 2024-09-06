@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
-    """Get the handler for handling description data, this handler handle the app
+    """Get the handler for handling description data, it handle the app
     level logics, see `get_deploy_desc_handler` for deployment level handler.
 
     :param json_data: The description data in dict format.
@@ -212,13 +212,13 @@ def get_deploy_desc_handler(
     """Get the handler for handling description data when performing new deployment.
 
     :param desc_data: The description data in dict format, optional
-    :param procfile_data: The "Procfile" data in dict format, format: {"type": "command"}
+    :param procfile_data: The "Procfile" data in dict format, format: {<proc_type>: <command>}
     """
     if not (desc_data or procfile_data):
         raise ValueError("json_data and procfile_data can't be both None")
 
     if not desc_data:
-        # Only procfile data is provided, use the handler to handel processes data only
+        # Only procfile data is provided, use the handler to handle processes data only
         assert procfile_data
         return ProcfileOnlyDeployDescHandler(procfile_data)
     return DefaultDeployDescHandler(desc_data, procfile_data, get_desc_getter_func(desc_data))
@@ -251,12 +251,11 @@ def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
     spec_version = detect_spec_version(desc_data)
     # TODO: 删除此分支，VER_1 存量版本基本不再支持
     if spec_version == AppSpecVersion.VER_1:
-        desc_getter = deploy_desc_getter_v1
+        return deploy_desc_getter_v1
     elif spec_version == AppSpecVersion.VER_2:
-        desc_getter = deploy_desc_getter_v2
+        return deploy_desc_getter_v2
     else:
-        desc_getter = deploy_desc_getter_v3
-    return desc_getter
+        return deploy_desc_getter_v3
 
 
 class DefaultDeployDescHandler:

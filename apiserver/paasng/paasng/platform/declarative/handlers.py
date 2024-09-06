@@ -206,6 +206,11 @@ class SMartDescriptionHandler:
         return controller.perform_action(self.app_desc)
 
 
+###
+# Deploy related functions
+###
+
+
 def get_deploy_desc_handler(
     desc_data: Optional[Dict] = None, procfile_data: Optional[Dict] = None
 ) -> "DeployDescHandler":

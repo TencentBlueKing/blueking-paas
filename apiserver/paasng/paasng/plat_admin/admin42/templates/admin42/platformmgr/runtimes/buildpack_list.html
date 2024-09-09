@@ -44,7 +44,7 @@
 
     <!--  修改绑定弹窗  -->
     <bk-dialog v-model="bindDialog.visible" width="900" theme="primary" :mask-close="false" header-position="left" :confirm-fn="submitBindDialog" :title="bindDialog.title">
-        <div style="display: flex;justify-content: space-between;align-items: center;">
+        <div class="draggable-wrapper">
             <div class="draggable-box">
                 <div class="draggable-box-header"> 未绑定的 slugbuilder (共$[ bindDialog.unselectedBuilders.length ]条)</div>
                 <div class="beauty-scrollbar">
@@ -65,7 +65,7 @@
                     </draggable>
                 </div>
             </div>
-            <div style="width: 30px;height: 30px;background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;"></div>
+            <div class="transfer-icon"></div>
             <div class="draggable-box">
                 <div class="draggable-box-header"> 已绑定的 slugbuilder (共$[ bindDialog.selectedBuilders.length ]条)</div>
                 <div class="beauty-scrollbar">
@@ -515,6 +515,18 @@
             color: #3a84ff;
             cursor: pointer;
         }
+    }
+
+    .transfer-icon {
+        width: 30px;
+        height: 30px;
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;
+    }
+
+    .draggable-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .draggable-box {

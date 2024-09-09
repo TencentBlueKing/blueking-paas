@@ -19,7 +19,6 @@ from typing import Type
 
 from django.db import transaction
 from django.db.models import QuerySet
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -182,7 +181,6 @@ class NewBuildPackAPIViewSet(GenericViewSet):
         )
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=BuildPackBindInputSLZ, responses={204: "OK"})
     def set_bound_builders(self, request, pk):
         """设置被哪些 SlugBuilder 绑定"""
         buildpack = AppBuildPack.objects.get(pk=pk)

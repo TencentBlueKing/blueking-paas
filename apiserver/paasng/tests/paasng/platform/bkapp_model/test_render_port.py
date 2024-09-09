@@ -19,23 +19,21 @@ from django.conf import settings
 from paasng.platform.bkapp_model.entities import ProbeSet, ProcService
 
 
-class TestSanitizePortPlaceholder:
+class TestRenderPort:
     def test_proc_service(self):
-        proc_service = ProcService(**{"target_port": "${PORT}", "name": "web"})
-        assert proc_service.sanitize_port_placeholder().target_port == settings.CONTAINER_PORT
+        proc_service = ProcService(target_port="${PORT}", name="web")
+        assert proc_service.render_port().target_port == settings.CONTAINER_PORT
 
-        proc_service = ProcService(**{"target_port": 8080, "name": "web"})
-        assert proc_service.sanitize_port_placeholder().target_port == 8080
+        proc_service = ProcService(target_port=8080, name="web")
+        assert proc_service.render_port().target_port == 8080
 
     def test_probes(self):
         probes = ProbeSet(
-            **{
-                "liveness": {"http_get": {"port": "${PORT}"}},
-                "readiness": {"tcp_socket": {"port": "${PORT}"}},
-                "startup": {"http_get": {"port": 8000}},
-            }
+            liveness={"http_get": {"port": "${PORT}"}},
+            readiness={"tcp_socket": {"port": "${PORT}"}},
+            startup={"http_get": {"port": 8000}},
         )
-        sanitized_probes = probes.sanitize_port_placeholder()
+        sanitized_probes = probes.render_port()
         assert sanitized_probes.liveness.http_get.port == settings.CONTAINER_PORT
         assert sanitized_probes.readiness.tcp_socket.port == settings.CONTAINER_PORT
         assert sanitized_probes.startup.http_get.port == 8000

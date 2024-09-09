@@ -80,8 +80,8 @@ class Probe(BaseModel):
     def get_probe_handler(self) -> ProbeHandler:
         return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
-    def sanitize_port_placeholder(self):
-        """sanitize target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
+    def render_port(self):
+        """render target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
         if self.tcp_socket and self.tcp_socket.port == PORT_PLACEHOLDER:
             self.tcp_socket.port = settings.CONTAINER_PORT
 
@@ -105,13 +105,13 @@ class ProbeSet(BaseModel):
     readiness: Optional[Probe] = None
     startup: Optional[Probe] = None
 
-    def sanitize_port_placeholder(self):
-        """sanitize port to settings.CONTAINER_PORT if original value is ${PORT}"""
+    def render_port(self):
+        """render port to settings.CONTAINER_PORT if original value is ${PORT}"""
         if self.liveness:
-            self.liveness = self.liveness.sanitize_port_placeholder()
+            self.liveness = self.liveness.render_port()
         if self.startup:
-            self.startup = self.startup.sanitize_port_placeholder()
+            self.startup = self.startup.render_port()
         if self.readiness:
-            self.readiness = self.readiness.sanitize_port_placeholder()
+            self.readiness = self.readiness.render_port()
 
         return self

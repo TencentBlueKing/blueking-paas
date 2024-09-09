@@ -85,8 +85,6 @@ ignore = [
   "SIM108",
   # flake8-pytest-style：忽略后，允许 fixture 显式指定 scope="function"
   "PT003",
-  # unnecessary-dict-kwargs: 忽略后，允许 dict kwargs
-  "PIE804",
 
   # === 谨慎忽略 ===
   # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便

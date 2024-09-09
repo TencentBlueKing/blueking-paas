@@ -53,8 +53,8 @@ class ProcService(BaseModel):
     exposed_type: Optional[ExposedType] = None
     port: Optional[int] = None
 
-    def sanitize_port_placeholder(self):
-        """sanitize target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
+    def render_port(self):
+        """render target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
         if self.target_port == PORT_PLACEHOLDER:
             self.target_port = settings.CONTAINER_PORT
         return self

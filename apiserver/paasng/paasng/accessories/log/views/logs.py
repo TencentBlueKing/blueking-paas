@@ -35,9 +35,9 @@ from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.log import serializers
 from paasng.accessories.log.client import instantiate_log_client
-from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
+from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, MAX_RESULT_WINDOW, LogType
 from paasng.accessories.log.dsl import SearchRequestSchema
-from paasng.accessories.log.exceptions import NoIndexError
+from paasng.accessories.log.exceptions import BkLogApiError, NoIndexError
 from paasng.accessories.log.filters import EnvFilter, ModuleFilter
 from paasng.accessories.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.accessories.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
@@ -218,7 +218,9 @@ class LogAPIView(LogBaseAPIView):
                 search=search,
                 timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             )
-        except RequestError:
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("Request error when querying logs: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
@@ -229,6 +231,8 @@ class LogAPIView(LogBaseAPIView):
                 "logs": clean_logs(list(response), log_config.search_params),
                 "total": total,
                 "dsl": json.dumps(search.to_dict()),
+                # 前端使用该配置控制页面上展示的日志分页的最大页数
+                "max_result_window": MAX_RESULT_WINDOW,
             },
             Logs[self.line_model],  # type: ignore
         )
@@ -264,7 +268,9 @@ class LogAPIView(LogBaseAPIView):
             # scan 失败大概率是 scroll_id 失效
             logger.exception("scroll_id 失效, 日志查询失败")
             raise error_codes.QUERY_LOG_FAILED.f(_("日志查询快照失效, 请刷新后重试。"))
-        except RequestError:
+        except (RequestError, BkLogApiError) as e:
+            # # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying logs: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
@@ -298,10 +304,18 @@ class LogAPIView(LogBaseAPIView):
             ),
             time_field=log_config.search_params.timeField,
         )
+        try:
+            response = log_client.aggregate_date_histogram(
+                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        except (RequestError, BkLogApiError) as e:
+            # # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when aggregate time-based histogram: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("failed to aggregate time-based histogram")
+            raise error_codes.QUERY_LOG_FAILED.f(_("聚合时间直方图失败，请稍后再试。"))
 
-        response = log_client.aggregate_date_histogram(
-            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-        )
         date_histogram = cattr.structure(
             {
                 **clean_histogram_buckets(response),

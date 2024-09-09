@@ -154,12 +154,12 @@ urlpatterns = [
     ),
     # 平台管理-运行时管理-BuildPack管理
     url(
-        r"^platform/runtime/buildpack/manage$",
+        r"^platform/runtime/buildpack/manage/$",
         runtimes.BuildPackTemplateView.as_view(),
         name="admin.runtime.buildpack.manage",
     ),
     url(
-        r"^platform/runtimes/buildpack/manage$",
+        r"^platform/runtimes/buildpack/manage/$",
         runtimes.NewBuildPackManageView.as_view(),
         name="admin.runtimes.buildpack.manage",
     ),
@@ -185,13 +185,13 @@ urlpatterns = [
         name="admin.runtimes.buildpack.detail",
     ),
     url(
-        r"^platform/runtimes/buildpack/(?P<pk>[^/]+)/bind$",
-        runtimes.NewBuildPackAPIViewSet.as_view(dict(post="set_binding_builders", get="get_binding_builders")),
+        r"^platform/runtimes/buildpack/(?P<pk>[^/]+)/bind/$",
+        runtimes.NewBuildPackAPIViewSet.as_view(dict(post="set_bound_builders", get="get_bound_builders")),
         name="admin.runtimes.buildpack.detail.bind",
     ),
     # 平台管理-运行时管理-SlugBuilder管理
     url(
-        r"^platform/runtime/slugbuilder/manage$",
+        r"^platform/runtime/slugbuilder/manage/$",
         runtimes.SlugBuilderTemplateView.as_view(),
         name="admin.runtime.slugbuilder.manage",
     ),

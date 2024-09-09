@@ -162,45 +162,48 @@ class NewBuildPackAPIViewSet(GenericViewSet):
         buildpacks = AppBuildPack.objects.order_by("region")
         return Response(BuildPackListOutputSLZ(buildpacks, many=True).data)
 
-    def get_binding_builders(self, request, pk):
+    def get_bound_builders(self, request, pk):
         """获取 BuildPack 绑定的 SlugBuilder 列表和未绑定的 SlugBuilder 列表"""
         buildpack = AppBuildPack.objects.get(pk=pk)
-        binding_slugbuilders = buildpack.slugbuilders.all()
+        bound_slugbuilders = buildpack.slugbuilders.all()
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
-        unbinding_slugbuilders = AppSlugBuilder.objects.exclude(type=AppImageType.LEGACY)
-        if buildpack.type == BuildPackType.TAR:
-            unbinding_slugbuilders = AppSlugBuilder.objects.filter(type=AppImageType.LEGACY)
+        unbound_slugbuilders = AppSlugBuilder.objects.exclude(id__in=bound_slugbuilders)
 
-        unbinding_slugbuilders = unbinding_slugbuilders.exclude(id__in=binding_slugbuilders)
+        if buildpack.type == BuildPackType.TAR:
+            unbound_slugbuilders = unbound_slugbuilders.filter(type=AppImageType.LEGACY)
+        else:
+            unbound_slugbuilders = unbound_slugbuilders.filter(type=AppImageType.CNB)
 
         return Response(
             data={
-                "binding_slugbuilders": AppSlugBuilderListOutputSLZ(binding_slugbuilders, many=True).data,
-                "unbinding_slugbuilders": AppSlugBuilderListOutputSLZ(unbinding_slugbuilders, many=True).data,
+                "bound_slugbuilders": AppSlugBuilderListOutputSLZ(bound_slugbuilders, many=True).data,
+                "unbound_slugbuilders": AppSlugBuilderListOutputSLZ(unbound_slugbuilders, many=True).data,
             }
         )
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=BuildPackBindInputSLZ)
-    def set_binding_builders(self, request, pk):
+    @swagger_auto_schema(request_body=BuildPackBindInputSLZ, responses={204: "OK"})
+    def set_bound_builders(self, request, pk):
         """设置被哪些 SlugBuilder 绑定"""
         buildpack = AppBuildPack.objects.get(pk=pk)
         slz = BuildPackBindInputSLZ(data=request.data, context={"buildpack_type": buildpack.type})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
-        slugbuilders = [
-            AppSlugBuilder.objects.get(id=slugbuilder_id) for slugbuilder_id in data["slugbuilder_id_list"]
-        ]
+        slugbuilders = AppSlugBuilder.objects.filter(id__in=data["slugbuilder_ids"])
         existing_slugbuilders = buildpack.slugbuilders.all()
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data={"bound_slugbuilders": [slugbuilder.name for slugbuilder in existing_slugbuilders]},
+        )
 
         # 找到需要删除的绑定
-        to_unbind = [slugbuilder for slugbuilder in existing_slugbuilders if slugbuilder not in slugbuilders]
-        for slugbuilder in to_unbind:
+        waiting_unbind_slugbuilders = existing_slugbuilders.exclude(id__in=slugbuilders)
+        for slugbuilder in waiting_unbind_slugbuilders:
             binder = SlugbuilderBinder(slugbuilder=slugbuilder)
             binder.unbind_buildpack(buildpack)
         # 找到需要新增的绑定
-        to_bind = [slugbuilder for slugbuilder in slugbuilders if slugbuilder not in existing_slugbuilders]
-        for slugbuilder in to_bind:
+        waiting_bind_slugbuilders = slugbuilders.exclude(id__in=existing_slugbuilders)
+        for slugbuilder in waiting_bind_slugbuilders:
             binder = SlugbuilderBinder(slugbuilder=slugbuilder)
             binder.bind_buildpack(buildpack)
 
@@ -209,18 +212,14 @@ class NewBuildPackAPIViewSet(GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BUILD_PACK,
             attribute=buildpack.name,
-            data_before=DataDetail(
-                type=DataType.RAW_DATA,
-                data={"binding_slugbuilders": [slugbuilder.name for slugbuilder in existing_slugbuilders]},
-            ),
+            data_before=data_before,
             data_after=DataDetail(
                 type=DataType.RAW_DATA,
-                data={"binding_slugbuilders": [slugbuilder.name for slugbuilder in slugbuilders]},
+                data={"bound_slugbuilders": [slugbuilder.name for slugbuilder in slugbuilders]},
             ),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(request_body=BuildPackCreateInputSLZ)
     def create(self, request):
         """创建 BuildPack"""
         slz = BuildPackCreateInputSLZ(data=request.data)
@@ -231,7 +230,7 @@ class NewBuildPackAPIViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.BUILD_PACK,
-            attribute=request.data["name"],
+            attribute=slz.data["name"],
             data_after=DataDetail(
                 type=DataType.RAW_DATA,
                 data=slz.data,
@@ -239,7 +238,6 @@ class NewBuildPackAPIViewSet(GenericViewSet):
         )
         return Response(status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(request_body=BuildPackUpdateInputSLZ)
     def update(self, request, pk):
         """更新 BuildPack"""
         buildpack = AppBuildPack.objects.get(pk=pk)

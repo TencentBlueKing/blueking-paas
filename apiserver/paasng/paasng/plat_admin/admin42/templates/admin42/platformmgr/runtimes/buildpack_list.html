@@ -1,11 +1,18 @@
-{% extends "./runtimes_base.html" %}
+{% extends "admin42/platformmgr/base.html" %}
 
 {% load admin_utils %}
 
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+    <li><a href="{% url 'admin.runtimes.buildpack.manage' %}">运行时管理 (新)</a></li>
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}
+
 {% block main_content %}
 <div id="buildpack-list" class="p20">
-    <bk-alert type="warning" class="mb20"
-              title="BuildPack 是用于构建的最小单位，一个 SlugBuilder 可以绑定多个 BuildPack，同一个 BuildPack 也可以被多个 SlugBuilder 绑定"></bk-alert>
+    <bk-alert class="mb20" title="BuildPack 是用于构建的最小单位，用于将源代码转换成镜像层，一般多个 BuildPack 会同属于一个 SlugBuilder。"></bk-alert>
 
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
@@ -16,11 +23,11 @@
         <bk-table-column label="名称" prop="name" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="引用类型" prop="type" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="可用区域" prop="region" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="编程语言" prop="language" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="是否隐藏" show-overflow-tooltip="true">
+        <bk-table-column label="引用类型" prop="type"></bk-table-column>
+        <bk-table-column label="可用区域" prop="region"></bk-table-column>
+        <bk-table-column label="编程语言" prop="language"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated"></bk-table-column>
+        <bk-table-column label="是否隐藏">
             <template slot-scope="props">
                 <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
             </template>
@@ -38,12 +45,12 @@
     <!--  修改绑定弹窗  -->
     <bk-dialog v-model="bindDialog.visible" width="900" theme="primary" :mask-close="false" header-position="left" :confirm-fn="submitBindDialog" :title="bindDialog.title">
         <div style="display: flex;justify-content: space-between;align-items: center;">
-            <div style="border: 1px solid #dcdee5; width: 400px;">
-                <div class="draggable-box-header"> 未绑定的 slugbuidler (共$[ bindDialog.unselectedBuilders.length ]条)</div>
-                <div style="overflow: scroll;" class="beauty-scrollbar">
+            <div class="draggable-box">
+                <div class="draggable-box-header"> 未绑定的 slugbuilder (共$[ bindDialog.unselectedBuilders.length ]条)</div>
+                <div class="beauty-scrollbar">
                     <draggable :list="bindDialog.unselectedBuilders" group="buildpack" style="min-height: 320px;">
                         <div
-                            class="draggable-content" style="line-height: 40px; "
+                            class="draggable-content"
                             v-for="(element, index) in bindDialog.unselectedBuilders"
                             :class="element.buildpacks.indexOf(bindDialog.row.id) === -1?'':'draggable-content-remove'"
                             :key="element.id"
@@ -59,12 +66,12 @@
                 </div>
             </div>
             <div style="width: 30px;height: 30px;background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;"></div>
-            <div style="border: 1px solid #dcdee5; width: 400px;">
+            <div class="draggable-box">
                 <div class="draggable-box-header"> 已绑定的 slugbuilder (共$[ bindDialog.selectedBuilders.length ]条)</div>
-                <div style="overflow: scroll;" class="beauty-scrollbar">
+                <div class="beauty-scrollbar">
                     <draggable :list="bindDialog.selectedBuilders" group="buildpack" style="min-height: 320px;">
                         <div
-                            class="draggable-content" style="line-height: 40px; "
+                            class="draggable-content"
                             v-for="(element, index) in bindDialog.selectedBuilders"
                             :class="element.buildpacks.indexOf(bindDialog.row.id) !== -1?'':'draggable-content-new'"
                             :key="element.id"
@@ -269,7 +276,9 @@
                         unselectedBuilders: [],
                         selectedBuilders: [],
                         url: '',
-                        row: undefined
+                        row: {
+                            id: 0,
+                        }
                     },
                     envList: [],
                     // oldEnvRow 记录修改前环境变量的数据，用于取消操作恢复数据
@@ -293,7 +302,7 @@
                     this.dialog.row = row;
                     this.dialog.form = {...row};
                     this.dialog.type = 'detail';
-                    this.envList = this.jsonToEnvList(this.dialog.form.environments || {});
+                    this.envList = this.jsonToEnvList(this.dialog.form.env_vars || {});
                     this.$nextTick(() => {
                         // Clear any previous errors
                         this.$refs.form.clearError();
@@ -308,7 +317,7 @@
                         this.cancelDialog();
                         return;
                     }
-                    this.dialog.form.environments = this.envListToJson(this.envList);
+                    this.dialog.form.env_vars = this.envListToJson(this.envList);
                     const url = this.dialog.type === 'create' ? URLRouter.create : this.fillUrlTemplate(URLRouter.detail, {row: this.dialog.row});
                     let success = true;
                     const method = this.dialog.type === 'create' ? 'post' : 'put';
@@ -347,7 +356,7 @@
                     this.dialog.type = "edit";
                     this.dialog.row = row;
                     this.dialog.form = {...row};
-                    this.envList = this.jsonToEnvList(this.dialog.form.environments || {});
+                    this.envList = this.jsonToEnvList(this.dialog.form.env_vars || {});
                     this.$nextTick(() => {
                         // Clear any previous errors
                         this.$refs.form.clearError();
@@ -388,13 +397,13 @@
                     try {
                         let url = this.fillUrlTemplate(URLRouter.bind, {row});
                         await this.$http.get(url).then(res => {
-                            this.bindDialog.selectedBuilders = res.binding_slugbuilders;
-                            this.bindDialog.unselectedBuilders = res.unbinding_slugbuilders;
+                            this.bindDialog.selectedBuilders = res.bound_slugbuilders;
+                            this.bindDialog.unselectedBuilders = res.unbound_slugbuilders;
                         });
                         this.bindDialog.url = url;
                         this.bindDialog.title = `${row.name} 绑定详情`;
-                        this.bindDialog.visible = true;
                         this.bindDialog.row = row;
+                        this.bindDialog.visible = true;
                     } catch (e) {
                         this.$bkMessage({
                             theme: 'error',
@@ -406,7 +415,7 @@
                     try {
                         let url = this.bindDialog.url;
                         await this.$http.post(url, {
-                            slugbuilder_id_list: this.bindDialog.selectedBuilders.map(item => item.id),
+                            slugbuilder_ids: this.bindDialog.selectedBuilders.map(item => item.id),
                         });
                         this.bindDialog.visible = false;
                         this.$bkMessage({
@@ -507,6 +516,13 @@
             cursor: pointer;
         }
     }
+
+    .draggable-box {
+        border: 1px solid #dcdee5;
+        width: 400px;
+        height: 360px;
+    }
+
     .draggable-box-header {
         background-color: #fafbfd;
         height: 38px;
@@ -523,6 +539,7 @@
         width: 100%;
         padding: 0px 20px;
         cursor: pointer;
+        line-height: 40px;
     }
 
     .draggable-content:hover {
@@ -551,11 +568,13 @@
     }
 
     .beauty-scrollbar::-webkit-scrollbar {
+        overflow: scroll;
         width: 4px;
         background-color: hsla(0,0%,80%,0);
     }
 
     .beauty-scrollbar::-webkit-scrollbar-thumb {
+        overflow: scroll;
         height: 5px;
         border-radius: 2px;
         background-color: #e6e9ea;

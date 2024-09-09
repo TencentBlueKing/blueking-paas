@@ -31,12 +31,12 @@ class BuildPackCreateInputSLZ(serializers.ModelSerializer):
     type = serializers.ChoiceField(required=True, choices=BuildPackType.get_choices())
     address = serializers.CharField(required=True, max_length=2048)
     version = serializers.CharField(required=True, max_length=32)
-    environments = serializers.JSONField(required=False, default={})
+    env_vars = serializers.JSONField(required=False, default={}, source="environments", help_text="环境变量")
     is_hidden = serializers.BooleanField(required=False, default=False)
 
     class Meta:
         model = AppBuildPack
-        exclude = ["id", "created", "updated", "modules"]
+        exclude = ["id", "created", "updated", "modules", "environments"]
 
 
 class BuildPackUpdateInputSLZ(BuildPackCreateInputSLZ):
@@ -46,37 +46,41 @@ class BuildPackUpdateInputSLZ(BuildPackCreateInputSLZ):
 class BuildPackListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
-    environments = serializers.JSONField()
+    env_vars = serializers.JSONField(source="environments", help_text="环境变量")
 
     class Meta:
         model = AppBuildPack
-        exclude = ["modules"]
+        exclude = ["modules", "environments"]
 
 
 class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
-    environments = serializers.JSONField()
+    env_vars = serializers.JSONField(source="environments", help_text="环境变量")
     labels = serializers.JSONField()
 
     class Meta:
         model = AppSlugBuilder
-        exclude = ["modules"]
+        exclude = ["modules", "environments"]
 
 
 class BuildPackBindInputSLZ(serializers.Serializer):
-    slugbuilder_id_list = serializers.ListField(child=serializers.CharField())
+    slugbuilder_ids = serializers.ListField(child=serializers.CharField())
 
-    def validate_slugbuilder_id_list(self, slugbuilder_id_list: List[str]) -> List[str]:
-        for slugbuilder_id in slugbuilder_id_list:
-            if not AppSlugBuilder.objects.filter(id=int(slugbuilder_id)).exists():
-                raise serializers.ValidationError(f"slug builder {slugbuilder_id} not exists")
-            builder_type = AppSlugBuilder.objects.get(id=int(slugbuilder_id)).type
+    def validate_slugbuilder_ids(self, slugbuilder_ids: List[str]) -> List[str]:
+        builder_types = {sb.type for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
 
-            # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
-            if (builder_type == AppImageType.CNB and self.context["buildpack_type"] == BuildPackType.TAR) or (
-                builder_type == AppImageType.LEGACY and self.context["buildpack_type"] != BuildPackType.TAR
-            ):
-                raise serializers.ValidationError(f"builder {slugbuilder_id}: does not match buildpack type")
+        if len(builder_types) > 1:
+            raise serializers.ValidationError("slugbuilder type must be same")
 
-        return slugbuilder_id_list
+        if not builder_types:
+            return slugbuilder_ids
+
+        builder_type = builder_types.pop()
+        # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
+        if (builder_type == AppImageType.CNB and self.context["buildpack_type"] == BuildPackType.TAR) or (
+            builder_type == AppImageType.LEGACY and self.context["buildpack_type"] != BuildPackType.TAR
+        ):
+            raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
+
+        return slugbuilder_ids

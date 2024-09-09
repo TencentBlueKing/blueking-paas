@@ -34,6 +34,7 @@ from paasng.bk_plugins.pluginscenter.definitions import (
 )
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.log.constants import DEFAULT_LOG_BATCH_SIZE
+from paasng.bk_plugins.pluginscenter.log.exceptions import BkLogApiError
 from paasng.bk_plugins.pluginscenter.thirdparty.utils import make_client
 from paasng.utils.es_log.misc import count_filters_options
 from paasng.utils.es_log.models import FieldFilter
@@ -119,8 +120,8 @@ class BKLogClient:
             data["bkdata_data_token"] = self.config.bkdataDataToken
         resp = self.client.call(data=data, timeout=timeout)
         if not resp.get("result"):
-            logger.error(f"query bk log error: {resp.get('message')}")
-            raise error_codes.QUERY_REQUEST_ERROR
+            logger.error(f"query bk log error: {resp['message']}")
+            raise BkLogApiError(resp["message"])
         return resp
 
 

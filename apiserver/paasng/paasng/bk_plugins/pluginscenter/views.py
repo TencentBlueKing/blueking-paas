@@ -50,6 +50,7 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
     submit_create_approval_ticket,
     submit_visible_range_ticket,
 )
+from paasng.bk_plugins.pluginscenter.log.exceptions import BkLogApiError
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -1004,8 +1005,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
                 limit=query_params["limit"],
                 offset=query_params["offset"],
             )
-        except RequestError as e:
-            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，故仅打 error 日志
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
             logger.error("request error when querying stdout log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
@@ -1042,8 +1043,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
                 limit=query_params["limit"],
                 offset=query_params["offset"],
             )
-        except RequestError as e:
-            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，故仅打 error 日志
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
             logger.error("request error when querying structure log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
@@ -1078,8 +1079,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
                 limit=query_params["limit"],
                 offset=query_params["offset"],
             )
-        except RequestError as e:
-            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，故仅打 error 日志
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
             logger.error("request error when querying ingress log: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
@@ -1115,8 +1116,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
                 time_range=query_params["smart_time_range"],
                 query_string=data["query"]["query_string"],
             )
-        except RequestError as e:
-            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，故仅打 error 日志
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
             logger.error("failed to aggregate time-based histogram: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
@@ -1154,8 +1155,8 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
                 terms=data["query"]["terms"],
                 exclude=data["query"]["exclude"],
             )
-        except RequestError as e:
-            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，故仅打 error 日志
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
             logger.error("request error when aggregating log fields: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:

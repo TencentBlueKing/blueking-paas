@@ -116,11 +116,11 @@ class LogFieldFilterSLZ(serializers.Serializer):
 
 class LogQueryParamsSLZ(serializers.Serializer):
     """查询日志的 query 参数，包含：
-    - 结构化日志：需要分页
-    - 访问日志：需要分页
-    - 标准输出日志：不需要分页
-    - 日志事件直方图：不需要分页
-    - 日志字段统计：不需要分页
+    - 结构化日志
+    - 访问日志
+    - 标准输出日志
+    - 日志事件直方图
+    - 日志字段统计
     """
 
     time_range = serializers.ChoiceField(choices=LogTimeChoices.get_choices(), required=True)

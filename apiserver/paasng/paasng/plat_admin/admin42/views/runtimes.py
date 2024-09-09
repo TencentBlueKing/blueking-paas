@@ -19,20 +19,32 @@ from typing import Type
 
 from django.db import transaction
 from django.db.models import QuerySet
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_204_NO_CONTENT
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
+from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.runtime import (
     AppBuildPackSLZ,
     AppSlugBuilderSLZ,
     AppSlugRunnerSLZ,
     SlugBuilderBindRequest,
 )
+from paasng.plat_admin.admin42.serializers.runtimes import (
+    AppSlugBuilderListOutputSLZ,
+    BuildPackBindInputSLZ,
+    BuildPackCreateInputSLZ,
+    BuildPackListOutputSLZ,
+    BuildPackUpdateInputSLZ,
+)
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.platform.modules.helpers import SlugbuilderBinder
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 
@@ -113,7 +125,7 @@ class SlugBuilderAPIViewSet(slugbuilder_generator.gen_model_view_set()):  # type
 
         binder = SlugbuilderBinder(slugbuilder=slugbuilder)
         binder.set_buildpacks(buildpacks)
-        return Response(status=HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 slugrunner_generator = RuntimeAdminViewGenerator(
@@ -125,3 +137,148 @@ slugrunner_generator = RuntimeAdminViewGenerator(
 
 SlugRunnerTemplateView = slugrunner_generator.gen_template_view()
 SlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
+
+
+# ----------------------------------------------------- new -------------------------------------------------------
+class NewBuildPackManageView(GenericTemplateView):
+    name = "BuildPack 管理"
+    template_name = "admin42/platformmgr/runtimes/buildpack_list.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["regions"] = list(get_all_regions().keys())
+        context["buildpack_types"] = dict(BuildPackType.get_choices())
+        return context
+
+
+class NewBuildPackAPIViewSet(GenericViewSet):
+    """BuildPack 管理 API 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list(self, request):
+        """获取所有 BuildPack 列表和详细信息"""
+        buildpacks = AppBuildPack.objects.order_by("region")
+        return Response(BuildPackListOutputSLZ(buildpacks, many=True).data)
+
+    def get_binding_builders(self, request, pk):
+        """获取 BuildPack 绑定的 SlugBuilder 列表和未绑定的 SlugBuilder 列表"""
+        buildpack = AppBuildPack.objects.get(pk=pk)
+        binding_slugbuilders = buildpack.slugbuilders.all()
+        # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
+        unbinding_slugbuilders = AppSlugBuilder.objects.exclude(type=AppImageType.LEGACY)
+        if buildpack.type == BuildPackType.TAR:
+            unbinding_slugbuilders = AppSlugBuilder.objects.filter(type=AppImageType.LEGACY)
+
+        unbinding_slugbuilders = unbinding_slugbuilders.exclude(id__in=binding_slugbuilders)
+
+        return Response(
+            data={
+                "binding_slugbuilders": AppSlugBuilderListOutputSLZ(binding_slugbuilders, many=True).data,
+                "unbinding_slugbuilders": AppSlugBuilderListOutputSLZ(unbinding_slugbuilders, many=True).data,
+            }
+        )
+
+    @transaction.atomic
+    @swagger_auto_schema(request_body=BuildPackBindInputSLZ)
+    def set_binding_builders(self, request, pk):
+        """设置被哪些 SlugBuilder 绑定"""
+        buildpack = AppBuildPack.objects.get(pk=pk)
+        slz = BuildPackBindInputSLZ(data=request.data, context={"buildpack_type": buildpack.type})
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        slugbuilders = [
+            AppSlugBuilder.objects.get(id=slugbuilder_id) for slugbuilder_id in data["slugbuilder_id_list"]
+        ]
+        existing_slugbuilders = buildpack.slugbuilders.all()
+
+        # 找到需要删除的绑定
+        to_unbind = [slugbuilder for slugbuilder in existing_slugbuilders if slugbuilder not in slugbuilders]
+        for slugbuilder in to_unbind:
+            binder = SlugbuilderBinder(slugbuilder=slugbuilder)
+            binder.unbind_buildpack(buildpack)
+        # 找到需要新增的绑定
+        to_bind = [slugbuilder for slugbuilder in slugbuilders if slugbuilder not in existing_slugbuilders]
+        for slugbuilder in to_bind:
+            binder = SlugbuilderBinder(slugbuilder=slugbuilder)
+            binder.bind_buildpack(buildpack)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_PACK,
+            attribute=buildpack.name,
+            data_before=DataDetail(
+                type=DataType.RAW_DATA,
+                data={"binding_slugbuilders": [slugbuilder.name for slugbuilder in existing_slugbuilders]},
+            ),
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data={"binding_slugbuilders": [slugbuilder.name for slugbuilder in slugbuilders]},
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(request_body=BuildPackCreateInputSLZ)
+    def create(self, request):
+        """创建 BuildPack"""
+        slz = BuildPackCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.BUILD_PACK,
+            attribute=request.data["name"],
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(request_body=BuildPackUpdateInputSLZ)
+    def update(self, request, pk):
+        """更新 BuildPack"""
+        buildpack = AppBuildPack.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=BuildPackUpdateInputSLZ(buildpack).data,
+        )
+
+        slz = BuildPackUpdateInputSLZ(buildpack, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_PACK,
+            attribute=buildpack.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, pk):
+        """删除 BuildPack"""
+        buildpack = AppBuildPack.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=BuildPackListOutputSLZ(buildpack).data,
+        )
+        buildpack.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.BUILD_PACK,
+            attribute=buildpack.name,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

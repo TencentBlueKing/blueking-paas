@@ -86,6 +86,7 @@ class OperationTarget(str, StructuredEnum):
     DOMAIN_RESOLUTION = EnumField("domain_resolution", label=_("域名解析"))
     DEPLOY_RESTRICTION = EnumField("deploy_restriction", label=_("部署限制"))
     EXIT_IP = EnumField("exit_ip", label=_("出口 IP"))
+    BUILD_PACK = EnumField("build_pack", label="BuildPack")
 
 
 class OperationEnum(str, StructuredEnum):

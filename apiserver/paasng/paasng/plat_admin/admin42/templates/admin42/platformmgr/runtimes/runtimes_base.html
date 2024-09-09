@@ -1,0 +1,10 @@
+{% extends "admin42/platformmgr/base.html" %}
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+    <li><a href="{% url 'admin.runtimes.buildpack.manage' %}">运行时管理 (新)</a></li>
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}

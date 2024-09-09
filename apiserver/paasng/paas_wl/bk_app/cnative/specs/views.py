@@ -58,6 +58,8 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
@@ -235,6 +237,20 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
+
+        # source_config 字段无法被序列化
+        data_after = MountSLZ(mount_instance).data
+        del data_after["source_config"]
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+        )
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
@@ -242,6 +258,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def update(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+        data_before = MountSLZ(mount_instance).data
+        del data_before["source_config"]
 
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
@@ -273,12 +291,28 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_(e))
+
+        data_after = MountSLZ(mount_instance).data
+        del data_after["source_config"]
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+        )
         return Response(data=slz.data, status=status.HTTP_200_OK)
 
     @transaction.atomic
     def destroy(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+        data_before = MountSLZ(mount_instance).data
+        del data_before["source_config"]
 
         controller = init_volume_source_controller(mount_instance.source_type)
         controller.delete_by_env(
@@ -289,6 +323,16 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
         mount_instance.delete()
 
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -10,7 +10,12 @@
       slot="header"
       class="deploy-header"
     >
-      {{ historySideslider.title }}
+      <div style="float: left;">
+        {{ historySideslider.title }}
+      </div>
+      <div style="float: right;">
+        <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+      </div>
     </div>
     <div
       slot="content"
@@ -96,6 +101,7 @@ export default {
         isShow: false,
       },
       errorTips: {},
+      logExportUrl: '',
     };
   },
 
@@ -124,7 +130,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getDeployTimeline', {
           appCode: this.appCode,
-          moduleId: this.moduleId,
+          moduleId: this.moduleId || params.moduleName,
           env: params.environment,
           deployId: params.deployment_id,
         });
@@ -162,6 +168,7 @@ export default {
         return false;
       }
       this.isLogLoading = true;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.moduleName || this.moduleId}/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -273,6 +280,10 @@ export default {
       }
       this.historySideslider.isShow = true;
     },
+
+    handleExportLog() {
+      window.open(this.logExportUrl, '_blank')
+    }
   },
 };
 </script>

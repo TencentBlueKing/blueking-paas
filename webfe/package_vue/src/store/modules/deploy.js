@@ -560,7 +560,7 @@ const actions = {
    * @param {Object} params 请求参数：appCode, moduleId
    */
   updateVolumeData({}, { appCode, moduleId, id, data }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}/`;
     return http.put(url, data, config);
   },
 

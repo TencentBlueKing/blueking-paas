@@ -252,7 +252,7 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
 class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    @swagger_auto_schema(query_serializer=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
+    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
         serializer = ListAlertsSLZ(data=request.data, context={"app_code": code})

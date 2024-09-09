@@ -79,6 +79,13 @@ class OperationTarget(str, StructuredEnum):
     EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
     APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
     APP_MEMBER = EnumField("app_member", label=_("应用成员"))
+    TEMPLATE = EnumField("template", label=_("模板"))
+    BUILD_CONFIG = EnumField("build_config", label=_("构建配置"))
+    VOLUME_MOUNT = EnumField("volume_mount", label=_("挂载卷"))
+    SERVICE_DISCOVERY = EnumField("service_discovery", label=_("服务发现"))
+    DOMAIN_RESOLUTION = EnumField("domain_resolution", label=_("域名解析"))
+    DEPLOY_RESTRICTION = EnumField("deploy_restriction", label=_("部署限制"))
+    EXIT_IP = EnumField("exit_ip", label=_("出口 IP"))
 
 
 class OperationEnum(str, StructuredEnum):

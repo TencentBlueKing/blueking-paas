@@ -1,5 +1,5 @@
 <template>
-  <div class="deploy-hook-container">
+  <div :class="['deploy-hook-container', { special: !isCreate }]">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-hook-loading"
@@ -458,7 +458,7 @@ export default {
     background: #E4FAF0;
   }
 }
-.deploy-hook-container {
+.deploy-hook-container.special {
   min-height: 200px;
 }
 .hook-tag-cls .bk-tag:first-child {

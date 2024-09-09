@@ -80,6 +80,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE if request.method == "POST" else OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
@@ -102,6 +103,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
                 user=request.user.pk,
                 operation=OperationEnum.SWITCH_DEFAULT_CLUSTER,
                 target=OperationTarget.CLUSTER,
+                attribute=cluster.name,
                 result_code=result_code,
                 data_before=data_before,
                 data_after=DataDetail(type=DataType.RAW_DATA, data=cluster.name),
@@ -123,6 +125,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
@@ -136,6 +139,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
@@ -170,6 +174,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -256,19 +256,25 @@ class PlatformServicesManageViewSet(GenericViewSet):
         data_before = ServiceObjSLZ(service).data
         # specifications 字段无法序列化，同时 specifications 配置能在 config 字段中看到
         del data_before["specifications"]
+        # logo 字段太长，前端比较时会导致浏览器 OOM
+        del data_before["logo"]
 
         try:
             mixed_service_mgr.update(service, data)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
+        service = mixed_service_mgr.get_without_region(uuid=pk)
+        data_after = ServiceObjSLZ(service).data
+        del data_after["specifications"]
+        del data_after["logo"]
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADD_ON,
             attribute=service.name,
             data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -318,6 +324,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name} - {data['name']}",
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
@@ -328,7 +335,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
     def destroy(self, request, service_id, plan_id):
         service = mixed_service_mgr.get_without_region(uuid=service_id)
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要删除的 plan
-        plans = service.get_plans()
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
@@ -341,6 +348,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -351,7 +359,8 @@ class PlatformPlanManageViewSet(GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get_without_region(uuid=service_id)
-        plans = service.get_plans()
+        # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要更新的 plan
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
@@ -360,12 +369,15 @@ class PlatformPlanManageViewSet(GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
+        plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

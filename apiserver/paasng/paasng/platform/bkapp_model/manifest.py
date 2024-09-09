@@ -186,12 +186,8 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
-                probes=process_spec.probes.sanitize_port_placeholder() if process_spec.probes else None,
-                services=(
-                    [svc.sanitize_port_placeholder() for svc in process_spec.services]
-                    if process_spec.services
-                    else None
-                ),
+                probes=process_spec.probes.render_port() if process_spec.probes else None,
+                services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 

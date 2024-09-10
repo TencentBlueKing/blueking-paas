@@ -73,9 +73,6 @@ export default {
   },
   created() {
     this.switchAppType();
-    this.$nextTick(() => {
-      this.appType = this.cloudFlag ? 'cloud' : 'external';
-    });
   },
   methods: {
     async handleToggleType(type) {

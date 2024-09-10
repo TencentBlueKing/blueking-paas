@@ -25,7 +25,10 @@
               v-if="row.exposed_type?.name"
               class="tag"
               v-bk-tooltips="{
-                content: $t('每个模块可以设置一个访问入口，请求访问地址时（如：{r}）会被转发到访问入口指向的目标服务上。', { r: address }),
+                content: $t(
+                  '每个模块可以设置一个访问入口，请求访问地址时{t}会被转发到访问入口指向的目标服务上。',
+                  { t: address ? `（${$t('如：')}${address}）` : ''}
+                ),
                 width: 260,
                 placement: 'bottom'
               }"

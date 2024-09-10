@@ -90,17 +90,7 @@
             :tippy-options="{ hideOnClick: false }"
           >
             <div class="header-help is-left">
-              <svg
-                class="bk-icon"
-                style="width: 1em; height: 1em; vertical-align: middle; fill: currentColor; overflow: hidden"
-                viewBox="0 0 64 64"
-                version="1.1"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M32,4C16.5,4,4,16.5,4,32c0,3.6,0.7,7.1,2,10.4V56c0,1.1,0.9,2,2,2h13.6C36,63.7,52.3,56.8,58,42.4S56.8,11.7,42.4,6C39.1,4.7,35.6,4,32,4z M31.3,45.1c-1.7,0-3-1.3-3-3s1.3-3,3-3c1.7,0,3,1.3,3,3S33,45.1,31.3,45.1z M36.7,31.7c-2.3,1.3-3,2.2-3,3.9v0.9H29v-1c-0.2-2.8,0.7-4.4,3.2-5.8c2.3-1.4,3-2.2,3-3.8s-1.3-2.8-3.3-2.8c-1.8-0.1-3.3,1.2-3.5,3c0,0.1,0,0.1,0,0.2h-4.8c0.1-4.4,3.1-7.4,8.5-7.4c5,0,8.3,2.8,8.3,6.9C40.5,28.4,39.2,30.3,36.7,31.7z"
-                />
-              </svg>
+              <i class="paasng-icon paasng-help" />
             </div>
             <template #content>
               <ul class="monitor-navigation-admin">
@@ -550,7 +540,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-
 .ps-header {
   position: fixed;
   left: 0px;
@@ -601,12 +590,12 @@ export default {
       img {
         display: inline-block;
         vertical-align: middle;
-        height: 30px;
+        height: 28px;
       }
       .logo-text {
         color: #eaebf0;
         font-size: 16px;
-        padding-left: 10px;
+        padding-left: 16px;
       }
     }
   }
@@ -627,6 +616,7 @@ export default {
   z-index: 99;
   // min-width: 1200px;
   min-width: 1000px;
+  height: 52px;
   display: flex;
   justify-content: space-between;
   flex-wrap: nowrap;
@@ -640,6 +630,9 @@ export default {
 .ps-header {
   a {
     color: #96a2b9;
+    &:hover {
+      color: #c2cee5;
+    }
   }
   .active a {
     color: #ffffff;
@@ -664,7 +657,7 @@ export default {
 .ps-nav li > a {
   line-height: 36px;
   position: relative;
-  padding: 7px 0;
+  padding: 8px 0;
 
   &.has-angle {
     padding: 7px 16px 7px 0;
@@ -702,11 +695,14 @@ export default {
   align-items: center;
   color: #96a2b9;
 
+  /deep/ .bk-tooltip:not(:last-child) {
+    margin-right: 8px;
+  }
+
   li {
     float: left;
   }
 }
-
 
 .ps-head-right .notice-button {
   width: 18px;
@@ -1095,19 +1091,32 @@ export default {
 .top-bar-popover {
   .tippy-tooltip.light-theme {
     box-shadow: 0 0 6px 0 #dcdee5 !important;
-    padding:0;
+    padding: 0 !important;
   }
   .tippy-content {
-    box-shadow: 0 2px 6px 0 rgba(0,0,0,0.10) !important;
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.1) !important;
     border-radius: 2px;
   }
 }
+.top-bar-wrapper {
+  .header-mind,
+  .header-help {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    &.is-left {
+      color: #96a2b9;
+      cursor: pointer;
+      &:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+      }
+    }
+  }
+}
 .top-bar-wrapper .header-mind {
-  color: #768197;
-  font-size: 16px;
   position: relative;
-  height: 32px;
-  width: 32px;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -1117,15 +1126,7 @@ export default {
   -webkit-box-pack: center;
   -ms-flex-pack: center;
   justify-content: center;
-  margin-right: 8px;
-}
-.top-bar-wrapper .header-mind.is-left {
-  color: #96a2b9;
-  line-height: 34px;
-}
-.top-bar-wrapper .header-mind.is-left:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  font-size: 18px;
 }
 .top-bar-wrapper .header-mind-mark {
   position: absolute;
@@ -1140,25 +1141,8 @@ export default {
 .top-bar-wrapper .header-mind-mark.is-left {
   border-color: #f0f1f5;
 }
-.top-bar-wrapper .header-mind:hover {
-  background: -webkit-gradient(linear, right top, left top, from(rgba(37, 48, 71, 1)), to(rgba(38, 50, 71, 1)));
-  background: linear-gradient(270deg, rgba(37, 48, 71, 1) 0%, rgba(38, 50, 71, 1) 100%);
-  border-radius: 100%;
-  cursor: pointer;
-  color: #d3d9e4;
-}
-.top-bar-wrapper .header-mind .lang-icon {
-  font-size: 18px;
-}
-.top-bar-wrapper .header-mind .nav-lang-icon {
-  transform: translateY(1px);
-}
 .top-bar-wrapper .header-help {
-  color: #768197;
-  font-size: 16px;
   position: relative;
-  height: 32px;
-  width: 32px;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -1168,21 +1152,8 @@ export default {
   -webkit-box-pack: center;
   -ms-flex-pack: center;
   justify-content: center;
-  margin-right: 8px;
-}
-.top-bar-wrapper .header-help.is-left {
-  color: #96a2b9;
-}
-.top-bar-wrapper .header-help.is-left:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-.top-bar-wrapper .header-help:hover {
-  background: -webkit-gradient(linear, right top, left top, from(rgba(37, 48, 71, 1)), to(rgba(38, 50, 71, 1)));
-  background: linear-gradient(270deg, rgba(37, 48, 71, 1) 0%, rgba(38, 50, 71, 1) 100%);
-  border-radius: 100%;
-  cursor: pointer;
-  color: #d3d9e4;
+  font-size: 16px;
+  transform: translateY(0px);
 }
 .top-bar-wrapper .header-user {
   height: 100%;
@@ -1223,40 +1194,34 @@ export default {
   margin: 0;
   color: #63656e;
 }
-.monitor-navigation-admin .nav-item{
-    -webkit-box-flex: 0;
-    -ms-flex: 0 0 32px;
-    flex: 0 0 32px;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    padding: 0 16px;
-    list-style: none;
-    color: #63656E;
-    a {
-      color: #63656E;
-    }
-    &.active {
-      background-color: #eaf3ff;
-      color: #3a84ff;
-      a {
-        color: #3a84ff;
-      }
-    }
-}
-.monitor-navigation-admin .nav-item .lang-icon {
-  font-size: 18px;
-  margin-right: 6px;
-}
-.monitor-navigation-admin .nav-item:hover{
-    cursor:pointer;
+.monitor-navigation-admin .nav-item {
+  flex: 0 0 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  list-style: none;
+  color: #63656e;
+  a {
+    color: #63656e;
+  }
+  .lang-icon {
+    font-size: 18px;
+    margin-right: 6px;
+  }
+  &.active {
     background-color: #eaf3ff;
     color: #3a84ff;
     a {
       color: #3a84ff;
     }
+  }
+}
+.monitor-navigation-admin .nav-item:hover {
+  cursor: pointer;
+  background-color: #eaf3ff;
+  color: #3a84ff;
+  a {
+    color: #3a84ff;
+  }
 }
 </style>

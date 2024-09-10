@@ -40,8 +40,8 @@ def bk_monitor_space(bk_app):
     )
 
 
+@mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
 class TestListAlertsView:
-    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
     def test_list_alerts(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
             f"/api/monitor/applications/{bk_app.code}/alerts/",
@@ -57,10 +57,9 @@ class TestListAlertsView:
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
 
-    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
-    def test_count_alerts(self, api_client, bk_app, bk_monitor_space):
+    def test_list_alerts_by_apps(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
-            "/api/monitor/applications/alert/count",
+            "/api/monitor/applications/alerts/",
             data={
                 "start_time": (datetime.now() - timedelta(minutes=random.randint(1, 30))).strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -69,6 +68,8 @@ class TestListAlertsView:
             },
         )
         assert resp.data["count"] == 3
+        assert len(resp.data["alerts"]) == 1
+        assert resp.data["alerts"][0]["count"] == 3
 
 
 class TestAlarmStrategiesView:

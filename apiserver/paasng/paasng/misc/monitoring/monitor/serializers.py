@@ -121,8 +121,19 @@ class AlertSLZ(serializers.Serializer):
         return None
 
 
-class AlertCountSLZ(serializers.Serializer):
-    count = serializers.IntegerField()
+class AlertListByAppsSLZ(serializers.Serializer):
+    app_code = serializers.CharField(help_text="应用 Code")
+    name = serializers.CharField(help_text="应用名称")
+    type = serializers.CharField(help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
+    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
+    count = serializers.IntegerField(help_text="应用告警数")
+    alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
+
+
+class AlertListByAppsRespSLZ(serializers.Serializer):
+    count = serializers.IntegerField(help_text="告警总数")
+    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListByAppsSLZ())
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

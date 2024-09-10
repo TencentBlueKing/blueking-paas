@@ -27,7 +27,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             "id": generate_random_string(6),
-            "bk_biz_id": random.randint(-5000000, -4000000),
+            "bk_biz_id": -5000000,
             "alert_name": generate_random_string(6),
             "status": random.choice(["ABNORMAL", "CLOSED", "RECOVERED"]),
             "description": generate_random_string(),
@@ -81,12 +81,29 @@ def get_fake_alarm_strategies() -> Dict:
     }
 
 
+def get_fake_space_biz_id(app_codes: List) -> List:
+    return [
+        {
+            "biz_id": -5000000,
+            "app_code": code,
+            "name": generate_random_string(6),
+            "type": random.choice(["true", "false"]),
+            "is_plugin_app": random.choice(["default", "engineless_app", "cloud_native"]),
+            "logo_url": "http://get_logo_url",
+        }
+        for code in app_codes
+    ]
+
+
 class StubBKMonitorClient(BkMonitorClient):
     """蓝鲸监控提供的API，仅供单元测试使用"""
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         query_data = query_params.to_dict()
         return get_fake_alerts(query_data["start_time"], query_data["end_time"])
+
+    def query_space_biz_id(self, app_codes: List) -> List:
+        return get_fake_space_biz_id(app_codes)
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         query_params.to_dict()

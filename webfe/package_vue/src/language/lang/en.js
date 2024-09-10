@@ -2755,4 +2755,5 @@ export default {
   '每个模块可以设置一个访问入口，请求访问地址时（如：{r}）会被转发到访问入口指向的目标服务上。': 'Each module can set an access entry. When requesting the access address (e.g., {r}), it will be forwarded to the target service pointed to by the access entry.',
   '每个模块可以设置一个访问入口，请求访问地址时{t}会被转发到访问入口指向的目标服务上。': 'Each module can set an access entry. When requesting the access address {t}, it will be forwarded to the target service pointed to by the access entry.',
   '如：': 'e.g., ',
+  '每次查询最多返回 {n} 条日志。如需查看全部日志，请缩小查询时间范围。': 'Each query returns a maximum of {n} logs. To view all logs, please narrow the query time range.',
 };

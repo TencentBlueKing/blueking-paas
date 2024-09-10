@@ -28,7 +28,7 @@ from jsonfield import JSONField
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet, ProcService
 from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
@@ -74,8 +74,9 @@ class AdvancedOptions:
 
 @dataclass
 class ProcessTmpl:
-    """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
-    avoids a circular import problem.
+    """进程配置
+
+    TODO 尝试使用 bkapp_model.entities.Process 替换 ProcessTmpl
     """
 
     name: str
@@ -85,6 +86,7 @@ class ProcessTmpl:
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
     probes: Optional[ProbeSet] = None
+    services: Optional[List[ProcService]] = None
 
     def __post_init__(self):
         self.name = self.name.lower()

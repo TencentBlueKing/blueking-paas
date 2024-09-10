@@ -97,6 +97,7 @@
     const URLRouter = {
         list: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
         detail: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        delete: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code '${username}' %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -142,7 +143,8 @@
                     })
                 },
                 handleDelete: function (user, role){
-                    this.$http.delete(URLRouter.detail, {params: {username: user.username}})
+                    let url = URLRouter.delete.replace('${username}', user.username)
+                    this.$http.delete(url)
                     .then(resp => {
                         this.memberships = this.memberships.filter(x => x.user !== user)
                     })

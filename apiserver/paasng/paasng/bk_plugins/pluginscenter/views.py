@@ -26,6 +26,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
+from elasticsearch.exceptions import RequestError
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -49,6 +50,7 @@ from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
     submit_create_approval_ticket,
     submit_visible_range_ticket,
 )
+from paasng.bk_plugins.pluginscenter.log.exceptions import BkLogApiError
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -993,15 +995,23 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_standard_output_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_standard_output_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying stdout log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query stdout log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询标准输出日志失败，请稍后再试。"))
         return Response(data=serializers.StandardOutputLogsSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -1021,17 +1031,25 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_structure_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            terms=data["query"]["terms"],
-            exclude=data["query"]["exclude"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_structure_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                terms=data["query"]["terms"],
+                exclude=data["query"]["exclude"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying structure log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query structure log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询结构化日志失败，请稍后再试。"))
         return Response(data=serializers.StructureLogsSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -1051,15 +1069,23 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_ingress_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_ingress_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying ingress log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query ingress log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询访问日志失败，请稍后再试。"))
         return Response(data=serializers.IngressLogSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -1081,14 +1107,22 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        date_histogram = log_api.aggregate_date_histogram(
-            pd=plugin.pd,
-            instance=plugin,
-            log_type=log_type,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-        )
+        try:
+            date_histogram = log_api.aggregate_date_histogram(
+                pd=plugin.pd,
+                instance=plugin,
+                log_type=log_type,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("failed to aggregate time-based histogram: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("failed to aggregate time-based histogram")
+            raise error_codes.QUERY_LOG_FAILED.f(_("聚合时间直方图失败，请稍后再试。"))
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
     @swagger_auto_schema(
@@ -1099,7 +1133,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
     def aggregate_fields_filters(
         self, request, pd_id, plugin_id, log_type: Literal["standard_output", "structure", "ingress"]
     ):
-        """查询日志基于时间分布的直方图"""
+        """统计日志的字段分布"""
         plugin = self.get_plugin_instance()
 
         slz = serializers.PluginLogQueryBodySLZ(data=request.data)
@@ -1110,16 +1144,24 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        fields_filters = log_api.aggregate_fields_filters(
-            pd=plugin.pd,
-            instance=plugin,
-            log_type=log_type,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            terms=data["query"]["terms"],
-            exclude=data["query"]["exclude"],
-        )
+        try:
+            fields_filters = log_api.aggregate_fields_filters(
+                pd=plugin.pd,
+                instance=plugin,
+                log_type=log_type,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                terms=data["query"]["terms"],
+                exclude=data["query"]["exclude"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when aggregating log fields: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to aggregate log fields")
+            raise error_codes.QUERY_LOG_FAILED.f(_("统计日志的字段失败，请稍后再试。"))
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 

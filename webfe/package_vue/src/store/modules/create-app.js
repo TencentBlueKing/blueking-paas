@@ -34,19 +34,27 @@ export default {
   },
   actions: {
     /**
-         * 获取增强服务实例
-         */
-    getRegionsServices({ commit, state }, { region, language }, config = {}) {
+     * 获取增强服务实例
+     */
+    getRegionsServices({}, { region, language }, config = {}) {
       const url = `${BACKEND_URL}/api/services/regions/${region}/init_templates/${language}`;
       return http.get(url, config);
     },
 
     /**
-         * 获取与应用创建有关的可选项
-         */
-    getOptions({ commit, state }, config = {}) {
+     * 获取与应用创建有关的可选项
+     */
+    getOptions({}, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/creation/options/`;
       return http.get(url, config);
+    },
+
+    /**
+     * 创建外链应用
+     */
+    createExternalLinkApp({}, { data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/third-party/`;
+      return http.post(url, data, config);
     },
   },
 };

@@ -159,6 +159,7 @@
 
     const URLRouter = {
         memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
+        exitApp: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code request.user.username %}"),
         bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
     }
 
@@ -194,12 +195,7 @@
                 },
                 exitApp: function () {
                     this.$http.delete(
-                        URLRouter.memberManage,
-                        {
-                            params: {
-                                username: '{{ request.user.username }}'
-                            }
-                        }
+                        URLRouter.exitApp
                     ).then(resp => {
                         this.USER_IS_ADMIN_IN_APP = false
                     })

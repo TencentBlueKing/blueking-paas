@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+import logging
 from operator import attrgetter
 from typing import Dict, List, Optional, Protocol, Tuple, Union
 
@@ -27,7 +27,7 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE
-from paasng.accessories.log.exceptions import LogQueryError, NoIndexError
+from paasng.accessories.log.exceptions import BkLogApiError, LogQueryError, NoIndexError
 from paasng.accessories.log.filters import (
     FieldFilter,
     agg_builtin_filters,
@@ -39,6 +39,8 @@ from paasng.accessories.log.models import BKLogConfig, ElasticSearchConfig, Elas
 from paasng.infras.bk_log.client import _APIGWOperationStub, make_bk_log_esquery_client
 from paasng.utils.es_log.misc import filter_indexes_by_time_range
 from paasng.utils.es_log.search import SmartSearch, SmartTimeRange
+
+logger = logging.getLogger(__name__)
 
 
 class LogClientProtocol(Protocol):
@@ -178,7 +180,11 @@ class BKLogClient:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        return method(data=data, timeout=timeout)
+        resp = method(data=data, timeout=timeout)
+        if not resp.get("result"):
+            logger.error(f"query bk log error: {resp['message']}")
+            raise BkLogApiError(resp["message"])
+        return resp
 
 
 class ESLogClient:

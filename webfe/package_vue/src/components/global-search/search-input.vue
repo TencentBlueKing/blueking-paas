@@ -1,5 +1,5 @@
 <template>
-  <div class="mr20 global-search-modal">
+  <div class="global-search-modal">
     <!-- 查看态 -->
     <div
       ref="outFocusRef"
@@ -160,6 +160,7 @@ export default {
   font-size: 12px;
 }
 .global-search-modal {
+  margin-right: 17px;
   .global-search-focus {
     position: fixed;
     top: calc(var(--app-notice-height) + 9px);

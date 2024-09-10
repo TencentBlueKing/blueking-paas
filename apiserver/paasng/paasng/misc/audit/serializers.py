@@ -52,6 +52,7 @@ class AppOperationRecordFilterSlZ(serializers.Serializer):
     environment = serializers.CharField(required=False)
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
     end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    operator = serializers.CharField(required=False, help_text="操作人")
 
 
 class QueryRecentOperationsSLZ(serializers.Serializer):

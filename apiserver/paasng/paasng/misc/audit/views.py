@@ -14,7 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -37,7 +39,6 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
     """
     应用的操作审计记录
     list: 单应用的操作记录
-    - [测试地址](/api/bkapps/applications/awesome-app/audit/records/)
     - 接口返回的顺序为按操作时间逆序
     - 返回记录条数通过limit设置，默认值5
     """
@@ -68,8 +69,12 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
             queryset = queryset.filter(created__gte=start_time)
         if end_time := query_params.get("end_time"):
             queryset = queryset.filter(created__lte=end_time)
+        if operator := query_params.get("operator"):
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator)
+            queryset = queryset.filter(user=operator)
         return queryset
 
+    @swagger_auto_schema(tags=["操作记录"], query_serializer=AppOperationRecordFilterSlZ)
     def list(self, request, *args, **kwargs):
         application = self.get_application()
         self.queryset = self.queryset.filter(app_code=application.code).order_by("-created")

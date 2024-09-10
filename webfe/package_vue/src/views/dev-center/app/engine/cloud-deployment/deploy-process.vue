@@ -241,6 +241,7 @@
                 <bk-form-item
                   v-if="ifopen"
                   :label="$t('配置环境')"
+                  :label-width="labelWidth"
                   ext-cls="env-form-item-cls"
                 >
                   <div class="env-name">{{ $t('预发布环境') }}</div>
@@ -1654,10 +1655,7 @@ export default {
         const module = res.find(module => module.name === this.curModuleId);
         this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type !== 'custom')?.address?.url || '';
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.moduleAccessAddress = '';
       }
     },
   },

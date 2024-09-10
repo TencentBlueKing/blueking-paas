@@ -69,6 +69,7 @@ class StructureLogsSLZ(serializers.Serializer):
     logs = StructureLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class IngressLogLineSLZ(serializers.Serializer):
@@ -93,6 +94,7 @@ class IngressLogSLZ(serializers.Serializer):
     logs = IngressLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class DateHistogramSLZ(serializers.Serializer):

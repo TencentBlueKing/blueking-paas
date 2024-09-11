@@ -373,7 +373,12 @@ urlpatterns = [
     # 应用详情-成员管理 API
     url(
         r"^api/applications/(?P<code>[^/]+)/base_info/memberships/$",
-        applications.ApplicationMembersManageViewSet.as_view({"get": "list", "post": "update", "delete": "destroy"}),
+        applications.ApplicationMembersManageViewSet.as_view({"get": "list", "post": "update"}),
+        name="admin.applications.detail.base_info.members.api",
+    ),
+    url(
+        r"^api/applications/(?P<code>[^/]+)/base_info/memberships/(?P<username>[^/]+)/$",
+        applications.ApplicationMembersManageViewSet.as_view({"delete": "destroy"}),
         name="admin.applications.detail.base_info.members.api",
     ),
     # 应用详情-特性管理

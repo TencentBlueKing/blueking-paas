@@ -41,8 +41,8 @@ from paasng.infras.accounts.permissions.application import (
     check_application_perm,
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.service import add_app_audit_record
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch
@@ -442,12 +442,8 @@ class ModuleRuntimeOverviewView(views.APIView, ApplicationCodeInPathMixin):
 class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(response_serializer=ModuleBuildConfigSLZ)
-    def retrieve(self, request, code, module_name):
-        """获取当前模块的构建配置"""
-        module = self.get_module_via_path()
-        build_config = BuildConfig.objects.get_or_create_by_module(module)
-
+    @staticmethod
+    def _gen_build_config_data(module: Module, build_config: BuildConfig):
         info = {
             "build_method": build_config.build_method,
             "use_bk_ci_pipeline": build_config.use_bk_ci_pipeline,
@@ -474,7 +470,16 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 image_repository=build_config.image_repository,
                 image_credential_name=build_config.image_credential_name,
             )
-        return Response(data=ModuleBuildConfigSLZ(info).data)
+
+        return ModuleBuildConfigSLZ(info).data
+
+    @swagger_auto_schema(response_serializer=ModuleBuildConfigSLZ)
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的构建配置"""
+        module = self.get_module_via_path()
+        build_config = BuildConfig.objects.get_or_create_by_module(module)
+
+        return Response(data=self._gen_build_config_data(module, build_config))
 
     @swagger_auto_schema(request_body=ModuleBuildConfigSLZ)
     def modify(self, request, code, module_name):
@@ -485,6 +490,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         module = self.get_module_via_path()
         build_config = BuildConfig.objects.get_or_create_by_module(module)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=self._gen_build_config_data(module, build_config))
 
         build_method = data["build_method"]
         if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE, RuntimeType.CUSTOM_IMAGE]:
@@ -499,7 +505,17 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except BPNotFound:
             raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
 
-        return Response()
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BUILD_CONFIG,
+            module_name=module_name,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(response_serializer=ModuleRuntimeSLZ(many=True))
     def list_available_bp_runtimes(self, request, code, module_name):

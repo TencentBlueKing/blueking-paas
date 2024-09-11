@@ -165,12 +165,6 @@ type MonoIngressBuilder struct {
 func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingress, error) {
 	bkapp := builder.bkapp
 
-	// Check if "web" process exists
-	webProc := bkapp.Spec.GetWebProcess()
-	if webProc == nil {
-		return nil, errors.New("web process not found")
-	}
-
 	results := []*networkingv1.Ingress{}
 	// TODO: The resource name might conflict if multiple DomainGroupMappings uses
 	// same sourceTypes.
@@ -212,12 +206,6 @@ type CustomIngressBuilder struct {
 // than 1 domains.
 func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingress, error) {
 	bkapp := builder.bkapp
-
-	// Check if "web" process exists
-	webProc := bkapp.Spec.GetWebProcess()
-	if webProc == nil {
-		return nil, errors.New("web process not found")
-	}
 
 	results := []*networkingv1.Ingress{}
 	for _, d := range domains {
@@ -298,18 +286,55 @@ func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.
 		path := networkingv1.HTTPIngressPath{
 			Path:     makeLocationPath(prefix),
 			PathType: lo.ToPtr(networkingv1.PathTypeImplementationSpecific),
-			Backend: networkingv1.IngressBackend{
-				Service: &networkingv1.IngressServiceBackend{
-					Name: names.Service(bkapp, DefaultServiceProcName),
-					Port: networkingv1.ServiceBackendPort{
-						Name: DefaultServicePortName,
-					},
-				},
-			},
+			Backend:  *makeIngressServiceBackend(bkapp),
 		}
 		results = append(results, path)
 	}
 	return results
+}
+
+// makeIngressServiceBackend return the ingress backend related to the process service with exposed type bk/http,
+// otherwise return the default one.
+func makeIngressServiceBackend(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	if bkapp.HasProcServices() {
+		if backend := makeIngressBackendByProcService(bkapp); backend != nil {
+			return backend
+		}
+	}
+
+	return makeDefaultIngressBackend(bkapp)
+}
+
+// makeIngressBackendByProcService return the ingress backend by the process service with exposed type bk/http,
+// otherwise return nil.
+func makeIngressBackendByProcService(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	for _, proc := range bkapp.Spec.Processes {
+		for _, procSvc := range proc.Services {
+			if procSvc.ExposedType != nil && procSvc.ExposedType.Name == paasv1alpha2.ExposedTypeNameBkHttp {
+				return &networkingv1.IngressBackend{
+					Service: &networkingv1.IngressServiceBackend{
+						Name: names.Service(bkapp, proc.Name),
+						Port: networkingv1.ServiceBackendPort{
+							Name: procSvc.Name,
+						},
+					},
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// makeDefaultIngressBackend return the default ingress backend for the bkapp which not enable proc services feature
+func makeDefaultIngressBackend(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
+	return &networkingv1.IngressBackend{
+		Service: &networkingv1.IngressServiceBackend{
+			Name: names.Service(bkapp, DefaultServiceProcName),
+			Port: networkingv1.ServiceBackendPort{
+				Name: DefaultServicePortName,
+			},
+		},
+	}
 }
 
 // RegexLocationBuilder provide a generic location path which will rewrite request path to root

@@ -175,7 +175,7 @@ class TestModuleBuildConfigViewSet:
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert cfg.build_method == RuntimeType.BUILDPACK
         assert cfg.buildpack_builder == slugbuilder
@@ -193,7 +193,7 @@ class TestModuleBuildConfigViewSet:
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert cfg.build_method == RuntimeType.DOCKERFILE
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
@@ -208,7 +208,7 @@ class TestModuleBuildConfigViewSet:
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert cfg.build_method == RuntimeType.DOCKERFILE
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
@@ -222,7 +222,7 @@ class TestModuleBuildConfigViewSet:
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         assert cfg.build_method == RuntimeType.CUSTOM_IMAGE
         assert cfg.image_repository == "example.com/bar"

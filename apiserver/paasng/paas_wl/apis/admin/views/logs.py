@@ -24,6 +24,8 @@ from rest_framework.viewsets import ViewSet
 
 from paas_wl.apis.admin.serializers.logs import ModuleEnvLogsConfigSLZ
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import Application
 
 
@@ -66,6 +68,22 @@ class AppLogConfigViewSet(ViewSet):
         env = module.get_envs(data["environment"])
         wl_app = env.wl_app
         config = wl_app.latest_config
+        data_before = DataDetail(type=DataType.RAW_DATA, data={"mount_log_to_host": config.mount_log_to_host})
         config.mount_log_to_host = data["mount_log_to_host"]
         config.save(update_fields=["mount_log_to_host", "updated"])
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY_LOG_CONFIG,
+            target=OperationTarget.APP,
+            app_code=application.code,
+            module_name=data["module_name"],
+            environment=data["environment"],
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data={"mount_log_to_host": config.mount_log_to_host},
+            ),
+        )
+
         return Response(status=status.HTTP_204_NO_CONTENT)

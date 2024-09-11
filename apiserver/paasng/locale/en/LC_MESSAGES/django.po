@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-20 11:54+0800\n"
+"POT-Creation-Date: 2024-09-02 17:35+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,23 +18,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:73
+#: paas_wl/bk_app/cnative/specs/constants.py:79
 msgid "待实施"
 msgstr "Pending"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:74
+#: paas_wl/bk_app/cnative/specs/constants.py:80
 msgid "进行中"
 msgstr "Ongoing"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:75
+#: paas_wl/bk_app/cnative/specs/constants.py:81
 msgid "已就绪"
 msgstr "Ready"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:76
+#: paas_wl/bk_app/cnative/specs/constants.py:82
 msgid "错误"
 msgstr "Error"
 
-#: paas_wl/bk_app/cnative/specs/constants.py:77
+#: paas_wl/bk_app/cnative/specs/constants.py:83
 #: paasng/misc/operations/models.py:112 paasng/misc/operations/models.py:166
 #: paasng/misc/operations/models.py:220 paasng/misc/operations/models.py:269
 msgid "未知"
@@ -94,7 +94,7 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/models/mount.py:39
 #: paas_wl/bk_app/cnative/specs/models/mount.py:58
 #: paas_wl/bk_app/cnative/specs/models/mount.py:79
-#: paasng/platform/bkapp_model/models.py:129
+#: paasng/platform/bkapp_model/models.py:174
 #: paasng/platform/engine/models/preset_envvars.py:32
 msgid "环境名称"
 msgstr "Env Name"
@@ -205,30 +205,30 @@ msgstr "Bound module information"
 msgid "显示名称"
 msgstr "Display name"
 
-#: paas_wl/bk_app/cnative/specs/views.py:117
+#: paas_wl/bk_app/cnative/specs/views.py:119
 msgid "权限不足或仓库不可达"
 msgstr "Insufficient permissions or repository unreachable"
 
-#: paas_wl/bk_app/cnative/specs/views.py:139
+#: paas_wl/bk_app/cnative/specs/views.py:141
 msgid "镜像凭证不存在"
 msgstr "Image credentials not found"
 
-#: paas_wl/bk_app/cnative/specs/views.py:156
+#: paas_wl/bk_app/cnative/specs/views.py:158
 msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
-#: paas_wl/bk_app/cnative/specs/views.py:164
-#: paasng/platform/sourcectl/views.py:418
+#: paas_wl/bk_app/cnative/specs/views.py:166
+#: paasng/platform/sourcectl/views.py:443
 #, python-format
 msgid "%s的仓库信息查询异常"
 msgstr "The warehouse information query of %s is abnormal"
 
-#: paas_wl/bk_app/cnative/specs/views.py:221
-#: paas_wl/bk_app/cnative/specs/views.py:260
+#: paas_wl/bk_app/cnative/specs/views.py:223
+#: paas_wl/bk_app/cnative/specs/views.py:278
 msgid "同环境和路径挂载卷已存在"
 msgstr "Mount volume already exists in the same environment and path."
 
-#: paas_wl/bk_app/cnative/specs/views.py:323
+#: paas_wl/bk_app/cnative/specs/views.py:367
 msgid "当前应用暂不支持持久存储功能，请联系管理员"
 msgstr ""
 "The current application does not support persistent storage functionality. "
@@ -466,7 +466,7 @@ msgstr "Credential with the same name already exists"
 msgid "该凭证已被应用使用"
 msgstr "The credential is already in use by an application."
 
-#: paas_wl/workloads/networking/egress/views.py:64
+#: paas_wl/workloads/networking/egress/views.py:66
 msgid "新建出口 IP 绑定功能已禁用，如有需要请联系管理员"
 msgstr ""
 "Creation of egress IP binding is disabled; please contact the administrator "
@@ -490,43 +490,43 @@ msgstr "Internal service ports list ports cannot be empty"
 msgid "端口列表中发现重复值 {value}"
 msgstr "Duplicate value {value} found in the ports list"
 
-#: paasng/accessories/app_secret/views.py:81
+#: paasng/accessories/app_secret/views.py:83
 #, python-brace-format
 msgid "密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"
 msgstr ""
 "Secrets have reached the limit, the application is only allowed to have "
 "{MAX_SECRET_COUNT} secrets"
 
-#: paasng/accessories/app_secret/views.py:98
+#: paasng/accessories/app_secret/views.py:108
 msgid "当前密钥为内置密钥，不允许被禁用"
 msgstr "The current key is built-in and cannot be disabled."
 
-#: paasng/accessories/app_secret/views.py:113
+#: paasng/accessories/app_secret/views.py:131
 #, python-brace-format
 msgid "应用至少有 {MAX_SECRET_COUNT} 个密钥"
 msgstr "Application must have at least {MAX_SECRET_COUNT} secrets"
 
-#: paasng/accessories/app_secret/views.py:118
-#: paasng/accessories/app_secret/views.py:149
-#: paasng/accessories/app_secret/views.py:188
+#: paasng/accessories/app_secret/views.py:136
+#: paasng/accessories/app_secret/views.py:175
+#: paasng/accessories/app_secret/views.py:214
 msgid "密钥不存在"
 msgstr "Secret does not exist"
 
-#: paasng/accessories/app_secret/views.py:121
+#: paasng/accessories/app_secret/views.py:139
 msgid "密钥状态为：已启用，请先禁用后再删除密钥"
 msgstr "The secret is enabled; please disable it before deletion"
 
-#: paasng/accessories/app_secret/views.py:125
+#: paasng/accessories/app_secret/views.py:143
 msgid "当前密钥为内置密钥，不允许删除"
 msgstr "The current secret is built-in and cannot be deleted"
 
-#: paasng/accessories/app_secret/views.py:143
+#: paasng/accessories/app_secret/views.py:169
 #: paasng/platform/applications/views.py:1103
-#: paasng/platform/sourcectl/views.py:176
+#: paasng/platform/sourcectl/views.py:178
 msgid "验证码错误"
 msgstr "Verification code error"
 
-#: paasng/accessories/app_secret/views.py:190
+#: paasng/accessories/app_secret/views.py:216
 msgid "密钥已被禁用，不能设置为内置密钥"
 msgstr "A disabled secret cannot be set as a built-in secret"
 
@@ -692,17 +692,17 @@ msgid "不支持的操作类型"
 msgstr "Types of operations not supported"
 
 #: paasng/accessories/publish/market/serializers.py:337
-#: paasng/accessories/publish/market/serializers.py:456
+#: paasng/accessories/publish/market/serializers.py:460
 #, python-brace-format
 msgid "{url} 并非 {module_name} 模块的访问入口"
 msgstr "{url} is not an access entry for the {module_name} module"
 
-#: paasng/accessories/publish/market/serializers.py:442
+#: paasng/accessories/publish/market/serializers.py:446
 #: paasng/platform/modules/serializers.py:312
 msgid "This field is required."
 msgstr ""
 
-#: paasng/accessories/publish/market/serializers.py:448
+#: paasng/accessories/publish/market/serializers.py:452
 #, python-brace-format
 msgid "{module_name} 模块不存在"
 msgstr "Module {module_name} does not exist"
@@ -724,25 +724,25 @@ msgstr ""
 "Binding instance exception: unable to provision instance for "
 "services<{service_obj_name}>"
 
-#: paasng/accessories/servicehub/views.py:135
+#: paasng/accessories/servicehub/views.py:137
 msgid "当前配置规格不可用"
 msgstr ""
 
-#: paasng/accessories/servicehub/views.py:614
+#: paasng/accessories/servicehub/views.py:637
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"
 msgstr "Module {ref_module_name} does not exist"
 
-#: paasng/accessories/servicehub/views.py:622
+#: paasng/accessories/servicehub/views.py:645
 msgid "未知错误"
 msgstr "Unknown error"
 
-#: paasng/accessories/servicehub/views.py:625
+#: paasng/accessories/servicehub/views.py:648
 #, python-brace-format
 msgid "模块 {ref_module_name} 无法被共享"
 msgstr "Module {ref_module_name} cannot be shared"
 
-#: paasng/accessories/servicehub/views.py:628
+#: paasng/accessories/servicehub/views.py:651
 msgid "不能重复共享"
 msgstr "Cannot be shared repeatedly"
 
@@ -786,7 +786,7 @@ msgid "创建"
 msgstr "Create "
 
 #: paasng/bk_plugins/pluginscenter/constants.py:142
-#: paasng/misc/audit/constants.py:73
+#: paasng/misc/audit/constants.py:94
 msgid "新建"
 msgstr "Create"
 
@@ -799,17 +799,17 @@ msgid "终止发布"
 msgstr "Unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
-#: paasng/misc/audit/constants.py:75
+#: paasng/misc/audit/constants.py:96
 msgid "修改"
 msgstr "Modify"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:146
-#: paasng/misc/audit/constants.py:74
+#: paasng/misc/audit/constants.py:95
 msgid "删除"
 msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
-#: paasng/misc/audit/constants.py:92
+#: paasng/misc/audit/constants.py:113
 msgid "下架"
 msgstr "archive"
 
@@ -1490,7 +1490,7 @@ msgid "您的蓝鲸验证码是：{verification_code}，请妥善保管。"
 msgstr ""
 "Your BlueKing verification code is: {verification_code}, please keep it safe."
 
-#: paasng/infras/accounts/views.py:93 paasng/platform/sourcectl/views.py:116
+#: paasng/infras/accounts/views.py:93 paasng/platform/sourcectl/views.py:118
 msgid "蓝鲸平台"
 msgstr "BlueKing"
 
@@ -1661,65 +1661,197 @@ msgstr "environment variables"
 msgid "增强服务"
 msgstr "Add-ons"
 
-#: paasng/misc/audit/constants.py:77 paasng/misc/operations/constant.py:57
+#: paasng/misc/audit/constants.py:68
+#, fuzzy
+#| msgid "普通集群"
+msgid "集群"
+msgstr "Standard cluster"
+
+#: paasng/misc/audit/constants.py:69
+msgid "应用资源方案"
+msgstr "Process Spec Plan"
+
+#: paasng/misc/audit/constants.py:70
+msgid "插件分类"
+msgstr "Plugin Tag"
+
+#: paasng/misc/audit/constants.py:71
+msgid "插件使用方"
+msgstr "Plugin Distributor"
+
+#: paasng/misc/audit/constants.py:72
+msgid "文档"
+msgstr "Document"
+
+#: paasng/misc/audit/constants.py:73
+#, fuzzy
+#| msgid "失败提示"
+msgid "部署失败提示"
+msgstr "Failure Tip"
+
+#: paasng/misc/audit/constants.py:74
+msgid "代码库配置"
+msgstr "Source Type Setting"
+
+#: paasng/misc/audit/constants.py:75
+msgid "共享证书"
+msgstr "Shared Cert"
+
+#: paasng/misc/audit/constants.py:76
+#, fuzzy
+#| msgid "增强服务"
+msgid "增强服务方案"
+msgstr "Add-ons Plan"
+
+#: paasng/misc/audit/constants.py:77
+msgid "平台用户"
+msgstr "Platform User"
+
+#: paasng/misc/audit/constants.py:78
+#, fuzzy
+#| msgid "修改特性标记"
+msgid "特性标记"
+msgstr "Feature Flag"
+
+#: paasng/misc/audit/constants.py:79
+#, fuzzy
+#| msgid "创建 Egress 配置"
+msgid "Egress 配置"
+msgstr "Egress Setting"
+
+#: paasng/misc/audit/constants.py:80
+#, fuzzy
+#| msgid "组件 API 访问地址"
+msgid "访问地址"
+msgstr "Access URL"
+
+#: paasng/misc/audit/constants.py:81
+#, fuzzy
+#| msgid "删除应用"
+msgid "应用成员"
+msgstr "APP Member"
+
+#: paasng/misc/audit/constants.py:82
+#, fuzzy
+#| msgid "模块"
+msgid "模板"
+msgstr "Module"
+
+#: paasng/misc/audit/constants.py:83 paasng/platform/modules/serializers.py:368
+msgid "构建配置"
+msgstr "Build Configuration"
+
+#: paasng/misc/audit/constants.py:84
+#, fuzzy
+#| msgid "挂载卷名称"
+msgid "挂载卷"
+msgstr "Volume Name"
+
+#: paasng/misc/audit/constants.py:85
+msgid "服务发现"
+msgstr "Service Discovery"
+
+#: paasng/misc/audit/constants.py:86
+msgid "域名解析"
+msgstr "Domain Resolution"
+
+#: paasng/misc/audit/constants.py:87
+msgid "部署限制"
+msgstr "Deploy Restriction"
+
+#: paasng/misc/audit/constants.py:88
+#, fuzzy
+#| msgid "绑定出口 IP "
+msgid "出口 IP"
+msgstr "EXIT IP "
+
+#: paasng/misc/audit/constants.py:98 paasng/misc/operations/constant.py:57
 msgid "创建应用"
 msgstr "create APP"
 
-#: paasng/misc/audit/constants.py:78
+#: paasng/misc/audit/constants.py:99
 msgid "发布到应用市场"
 msgstr " publish to APP market"
 
-#: paasng/misc/audit/constants.py:79 paasng/misc/operations/constant.py:64
+#: paasng/misc/audit/constants.py:100 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
 msgstr "remove from the APP market"
 
-#: paasng/misc/audit/constants.py:80 paasng/misc/operations/constant.py:61
+#: paasng/misc/audit/constants.py:101 paasng/misc/operations/constant.py:61
 msgid "完善应用市场配置"
 msgstr "improve market configuration"
 
-#: paasng/misc/audit/constants.py:81
+#: paasng/misc/audit/constants.py:102
 msgid "修改应用市场访问地址"
 msgstr "modify market url"
 
-#: paasng/misc/audit/constants.py:82
+#: paasng/misc/audit/constants.py:103
 msgid "修改基本信息"
 msgstr "modify basic information"
 
-#: paasng/misc/audit/constants.py:84
+#: paasng/misc/audit/constants.py:105
 msgid "启动"
 msgstr "start"
 
-#: paasng/misc/audit/constants.py:85
+#: paasng/misc/audit/constants.py:106
 msgid "停止"
 msgstr "stop"
 
-#: paasng/misc/audit/constants.py:86
+#: paasng/misc/audit/constants.py:107
 msgid "扩缩容"
 msgstr "scale"
 
-#: paasng/misc/audit/constants.py:87
+#: paasng/misc/audit/constants.py:108
 msgid "启用"
 msgstr "enable"
 
-#: paasng/misc/audit/constants.py:88
+#: paasng/misc/audit/constants.py:109
 msgid "停用"
 msgstr "disable"
 
-#: paasng/misc/audit/constants.py:89
+#: paasng/misc/audit/constants.py:110
 msgid "申请"
 msgstr "apply"
 
-#: paasng/misc/audit/constants.py:90
+#: paasng/misc/audit/constants.py:111
 msgid "续期"
 msgstr "renew"
 
-#: paasng/misc/audit/constants.py:91
+#: paasng/misc/audit/constants.py:112
 msgid "部署"
 msgstr "Deploy"
 
-#: paasng/misc/audit/constants.py:94
-msgid "修改特性标记"
-msgstr "modify feature flag"
+#: paasng/misc/audit/constants.py:114
+msgid "切换资源方案"
+msgstr "switch process plan"
+
+#: paasng/misc/audit/constants.py:116
+msgid "修改用户特性"
+msgstr "modify user feature flag"
+
+#: paasng/misc/audit/constants.py:117
+msgid "切换默认集群"
+msgstr "switch default cluster"
+
+#: paasng/misc/audit/constants.py:118
+msgid "切换绑定集群"
+msgstr "switch binding cluster"
+
+#: paasng/misc/audit/constants.py:119
+msgid "日志采集管理"
+msgstr "log config manage"
+
+#: paasng/misc/audit/constants.py:120
+#, fuzzy
+#| msgid "增强服务"
+msgid "分配增强服务实例"
+msgstr "provision add-ons instance"
+
+#: paasng/misc/audit/constants.py:121
+#, fuzzy
+#| msgid "增强服务"
+msgid "回收增强服务实例"
+msgstr "recycle add-ons instance"
 
 #: paasng/misc/audit/models.py:103
 #, python-brace-format
@@ -2076,16 +2208,16 @@ msgstr ""
 msgid "由于: {reason}, 该功能暂不支持"
 msgstr "Due to: {reason}, this feature is not supported at this time"
 
-#: paasng/plat_admin/admin42/views/engine/egress.py:77
+#: paasng/plat_admin/admin42/views/engine/egress.py:81
 msgid "当前环境所部署的集群不支持 BCS Egress"
 msgstr ""
 
-#: paasng/plat_admin/admin42/views/services.py:121
+#: paasng/plat_admin/admin42/views/services.py:124
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
-#: paasng/plat_admin/admin42/views/services.py:141
+#: paasng/plat_admin/admin42/views/services.py:162
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 
@@ -2252,31 +2384,31 @@ msgstr "Prod Env"
 msgid "应用市场"
 msgstr " Market "
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:113
+#: paasng/platform/bkapp_model/serializers/serializers.py:130
 msgid "至多设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:115
+#: paasng/platform/bkapp_model/serializers/serializers.py:132
 msgid "至少设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:184
+#: paasng/platform/bkapp_model/serializers/serializers.py:264
 msgid "应用{}不存在"
 msgstr "The application {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:189
+#: paasng/platform/bkapp_model/serializers/serializers.py:269
 msgid "模块{}不存在"
 msgstr "The module {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:207
+#: paasng/platform/bkapp_model/serializers/serializers.py:287
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:226
+#: paasng/platform/bkapp_model/serializers/serializers.py:306
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:232
+#: paasng/platform/bkapp_model/serializers/serializers.py:312
 msgid "BkApp 配置信息"
 msgstr "config info"
 
@@ -2683,32 +2815,32 @@ msgstr ""
 "The current runtime image does not support WebConsole functionality, please "
 "try to bundle the latest APP Runtime"
 
-#: paasng/platform/engine/serializers.py:94
+#: paasng/platform/engine/serializers.py:95
 msgid "version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:303
+#: paasng/platform/engine/serializers.py:304
 #, python-brace-format
 msgid "Object with {slug_name}={value} does not exist."
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:304
+#: paasng/platform/engine/serializers.py:305
 msgid "Invalid value."
 msgstr ""
 
-#: paasng/platform/engine/serializers.py:344
+#: paasng/platform/engine/serializers.py:345
 #, python-brace-format
 msgid "该环境下同名变量 {key} 已存在。"
 msgstr "A variable with the same name {key} already exists in this environment"
 
-#: paasng/platform/engine/serializers.py:346
+#: paasng/platform/engine/serializers.py:347
 #, python-brace-format
 msgid "该环境下名称为 {key} 的变量已经存在，不能重复添加。"
 msgstr ""
 "The variable named {key} already exists in this environment and cannot be "
 "added repeatedly."
 
-#: paasng/platform/engine/serializers.py:413
+#: paasng/platform/engine/serializers.py:414
 #, python-format
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
@@ -2746,12 +2878,12 @@ msgstr "APP description file verification failed: {exception}"
 msgid "对象存储服务异常, 请稍后再试"
 msgstr "Object storage service exception, please try again later"
 
-#: paasng/platform/engine/views/deploy.py:332
+#: paasng/platform/engine/views/deploy.py:343
 #, python-brace-format
 msgid "没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id}"
 
-#: paasng/platform/engine/views/deploy.py:336
+#: paasng/platform/engine/views/deploy.py:347
 #, python-brace-format
 msgid "模块 {module_name} 下没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id} under module {module_name}"
@@ -3149,10 +3281,6 @@ msgstr "Template {} is unavailabl"
 msgid "镜像凭证信息"
 msgstr "Image credential information"
 
-#: paasng/platform/modules/serializers.py:368
-msgid "构建配置"
-msgstr "Build configuration"
-
 #: paasng/platform/modules/serializers.py:386
 msgid "源码配置"
 msgstr "Source code configuration"
@@ -3195,17 +3323,17 @@ msgstr "New modules are not allowed to be created under the current APP"
 msgid "单个应用下最多能创建 {num} 个模块"
 msgstr "Up to {num} modules can be created under a single APP"
 
-#: paasng/platform/modules/views.py:409 paasng/platform/modules/views.py:500
+#: paasng/platform/modules/views.py:409 paasng/platform/modules/views.py:506
 msgid "构建工具不存在"
 msgstr ""
 
-#: paasng/platform/modules/views.py:491
+#: paasng/platform/modules/views.py:497
 #, fuzzy
 #| msgid "不支持的操作类型"
 msgid "不支持的构建方式"
 msgstr "Types of operations not supported"
 
-#: paasng/platform/modules/views.py:593
+#: paasng/platform/modules/views.py:609
 msgid "当前应用不支持配置「启动命令」"
 msgstr ""
 "The current APP does not support the configuration of 「start commands」"
@@ -3256,7 +3384,7 @@ msgid "源码包文件格式错误，文件可能已经损坏"
 msgstr ""
 
 #: paasng/platform/smart_app/views.py:77 paasng/platform/smart_app/views.py:212
-#: paasng/platform/sourcectl/views.py:289
+#: paasng/platform/sourcectl/views.py:291
 msgid "请联系管理员"
 msgstr "Please contact administrator"
 
@@ -3400,7 +3528,7 @@ msgstr " tc_git Services"
 msgid "（腾讯内部 Git 源码托管系统）"
 msgstr "(Tencent's Git source code hosting system)"
 
-#: paasng/platform/sourcectl/views.py:111
+#: paasng/platform/sourcectl/views.py:113
 #, python-brace-format
 msgid ""
 "您的蓝鲸{region}开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保"
@@ -3409,58 +3537,58 @@ msgstr ""
 "Your BlueKing {region} development account, SVN account is {account}, "
 "password is: {password}, please keep it safe"
 
-#: paasng/platform/sourcectl/views.py:204
+#: paasng/platform/sourcectl/views.py:206
 msgid "用户未关联 oauth 授权"
 msgstr "User not associated with oauth authorization"
 
-#: paasng/platform/sourcectl/views.py:231
+#: paasng/platform/sourcectl/views.py:233
 msgid "当前 AccessToken 无法获取到仓库列表，请检查后重试"
 msgstr ""
 "The current AccessToken cannot get the warehouse list, please check and try "
 "again"
 
-#: paasng/platform/sourcectl/views.py:238
+#: paasng/platform/sourcectl/views.py:240
 msgid "访问源码仓库失败，请联系项目管理员"
 msgstr ""
 "Failed to access the source code repository, please contact the administrator"
 
-#: paasng/platform/sourcectl/views.py:354
+#: paasng/platform/sourcectl/views.py:356
 msgid "无引擎应用不支持切换源码类型"
 msgstr "APP do not support switching source code types"
 
-#: paasng/platform/sourcectl/views.py:367
+#: paasng/platform/sourcectl/views.py:378
 msgid "不支持切换到蓝鲸 SVN 仓库"
 msgstr "Switching to Blueking SVN repository is not supported"
 
-#: paasng/platform/sourcectl/views.py:375
+#: paasng/platform/sourcectl/views.py:386
 msgid "请稍候再试"
 msgstr "Please try again later"
 
-#: paasng/platform/sourcectl/views.py:413
-#: paasng/platform/sourcectl/views.py:485
-#: paasng/platform/sourcectl/views.py:550
+#: paasng/platform/sourcectl/views.py:438
+#: paasng/platform/sourcectl/views.py:510
+#: paasng/platform/sourcectl/views.py:575
 msgid "AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"
 msgstr ""
 "AccessToken does not have permission to access the warehouse, please check "
 "the authorization and its corresponding Scope"
 
-#: paasng/platform/sourcectl/views.py:415
+#: paasng/platform/sourcectl/views.py:440
 msgid "无法获取 SVN 分支信息, 请检查仓库地址和鉴权信息"
 msgstr ""
 "Unable to get SVN branch information, please check the warehouse address and "
 "authentication information"
 
-#: paasng/platform/sourcectl/views.py:488
+#: paasng/platform/sourcectl/views.py:513
 #, python-brace-format
 msgid "仓库信息查询异常: {e}"
 msgstr "Warehouse information query exception: {e}"
 
-#: paasng/platform/sourcectl/views.py:504
+#: paasng/platform/sourcectl/views.py:529
 #, python-brace-format
 msgid "{source_type} 类型源码暂不支持打包操作"
 msgstr "{source_type} source code does not currently support packaging"
 
-#: paasng/platform/sourcectl/views.py:557
+#: paasng/platform/sourcectl/views.py:582
 #, python-brace-format
 msgid "{module} 的仓库信息查询异常"
 msgstr "The warehouse information query of {module} is abnormal"
@@ -4050,6 +4178,45 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:46
 msgid "zh-cn"
 msgstr ""
+
+#~ msgid "服务方案"
+#~ msgstr "Add-ons Plan"
+
+#, fuzzy
+#~| msgid "创建独立域名失败"
+#~ msgid "创建独立域名"
+#~ msgstr "create standalone domain"
+
+#~ msgid "修改 Egress 配置"
+#~ msgstr "modify Egress setting"
+
+#~ msgid "删除 Egress 配置"
+#~ msgstr "delete Egress setting"
+
+#, fuzzy
+#~| msgid "修改独立域名失败"
+#~ msgid "修改独立域名"
+#~ msgstr "modify standalone domain"
+
+#, fuzzy
+#~| msgid "删除独立域名失败"
+#~ msgid "删除独立域名"
+#~ msgstr "delete standalone domain"
+
+#, fuzzy
+#~| msgid "环境变量"
+#~ msgid "创建环境变量"
+#~ msgstr "create environment variables"
+
+#, fuzzy
+#~| msgid "环境变量"
+#~ msgid "修改环境变量"
+#~ msgstr "modify environment variables"
+
+#, fuzzy
+#~| msgid "环境变量"
+#~ msgid "删除环境变量"
+#~ msgstr "delete environment variables"
 
 #~ msgid "允许选择源码来源"
 #~ msgstr "Allow selection of source code sources"

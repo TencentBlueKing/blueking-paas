@@ -149,6 +149,10 @@ type Process struct {
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
 
+	// Services is a list of ProcService which used to expose process network for access within or outside the cluster.
+	// +optional
+	Services []paasv1alpha2.ProcService `json:"services,omitempty"`
+
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
 	ResQuotaPlan paasv1alpha2.ResQuotaPlan `json:"resQuotaPlan,omitempty"`

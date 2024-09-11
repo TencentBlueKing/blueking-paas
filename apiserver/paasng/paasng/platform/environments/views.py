@@ -23,6 +23,8 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import app_view_actions_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.utils import batch_save_protections
 
@@ -73,6 +75,15 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
         protections = self.queryset.filter(module_env=env, operation=operation, allowed_role__in=allowed_roles)
         if protections:
             protections.delete()
+            add_app_audit_record(
+                app_code=code,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_ENV_PROTECTION,
+                operation=OperationEnum.DISABLE,
+                target=OperationTarget.DEPLOY_RESTRICTION,
+                module_name=module_name,
+                environment=env.environment,
+            )
             return Response(data=[])
 
         protections = []
@@ -81,6 +92,15 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
 
         protections = EnvRoleProtection.objects.bulk_create(protections)
 
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_ENV_PROTECTION,
+            operation=OperationEnum.ENABLE,
+            target=OperationTarget.DEPLOY_RESTRICTION,
+            module_name=module_name,
+            environment=env.environment,
+        )
         return Response(self.serializer_class(protections, many=True).data)
 
     @swagger_auto_schema(
@@ -99,5 +119,24 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
         operation = data.get("operation")
         # 目前产品上只支持默认角色(开发)
         allowed_roles = EnvRoleOperation.get_default_role(operation)
+
+        qs = EnvRoleProtection.objects.filter(
+            module_env__module=module, operation=operation, allowed_role__in=allowed_roles
+        )
+        data_before = []
+        for item in qs:
+            data_before.append(item.module_env.environment)
+
         qs = batch_save_protections(module, operation, allowed_roles, data["envs"])
+
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_ENV_PROTECTION,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.DEPLOY_RESTRICTION,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data["envs"]),
+        )
         return Response(self.serializer_class(qs, many=True).data)

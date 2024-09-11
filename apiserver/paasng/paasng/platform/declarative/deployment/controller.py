@@ -22,17 +22,19 @@ import cattr
 from attrs import define
 from django.db.transaction import atomic
 
+from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, ProbeSet, Process, SvcDiscConfig, v1alpha2
-from paasng.platform.bkapp_model.entities_syncer import sync_preset_env_vars, sync_svc_discovery
+from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc
 from paasng.platform.declarative.models import DeploymentDescription
+from paasng.platform.engine.configurations import preset_envvars
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
@@ -117,12 +119,20 @@ class DeploymentDeclarativeController:
         application = self.deployment.app_environment.application
         module = self.deployment.app_environment.module
         processes: Dict[str, Process] = desc.get_processes()
+
+        runtime = {
+            "source_dir": desc.source_dir,
+        }
+        # specVersion: 3 ，默认开启 proc services 特性; 旧版本不启用
+        if desc.spec_version == AppSpecVersion.VER_3:
+            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
+        else:
+            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "false"
+
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "runtime": {
-                    "source_dir": desc.source_dir,
-                },
+                "runtime": runtime,
                 "spec": desc.spec,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
@@ -192,8 +202,7 @@ class DeploymentDeclarativeController:
             for process_type, process in processes.items():
                 self.update_probes(process_type=process_type, probes=process.probes)
 
-        # 导入预定义环境变量
-        sync_preset_env_vars(module, *get_preset_env_vars(desc.spec))
+        preset_envvars.batch_save(module, *get_preset_env_vars(desc.spec))
 
         if desc.bk_monitor:
             self.update_bkmonitor(desc.bk_monitor)

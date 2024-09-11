@@ -45,7 +45,10 @@ from paasng.bk_plugins.pluginscenter.sourcectl import (
 from paasng.bk_plugins.pluginscenter.sourcectl.base import AlternativeVersion
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
-from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance, visible_range_update_approved_callback
+from paasng.bk_plugins.pluginscenter.thirdparty.instance import (
+    callback_on_visible_range_update_approved,
+    create_instance,
+)
 from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 
 logger = logging.getLogger(__name__)
@@ -127,7 +130,7 @@ def update_visible_range_and_callback(plugin: PluginInstance, operator: str):
     visible_range_obj.organization = visible_range_obj.itsm_organization
     visible_range_obj.save()
 
-    callback_result = visible_range_update_approved_callback(plugin.pd, plugin, operator)
+    callback_result = callback_on_visible_range_update_approved(plugin.pd, plugin, operator)
     if not callback_result:
         logger.exception("The callback to the third API fails when updating the visible range")
 
@@ -177,7 +180,7 @@ def get_source_hash_by_plugin_version(
     return get_plugin_repo_accessor(plugin).extract_smart_revision(f"{source_version_type}:{source_version_name}")
 
 
-def get_testd_versions(plugin: PluginInstance) -> List[AlternativeVersion]:
+def get_tested_versions(plugin: PluginInstance) -> List[AlternativeVersion]:
     """插件已经测试通过的版本，部分插件如 Codecc 正式发布时是选择测试通过的版本"""
     result = []
     # 获取所有已经测试成功的版本

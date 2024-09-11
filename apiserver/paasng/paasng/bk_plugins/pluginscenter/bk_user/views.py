@@ -20,7 +20,7 @@ from rest_framework.viewsets import ViewSet
 from paasng.bk_plugins.pluginscenter.bk_user.client import BkUserManageClient
 
 
-class UserManageView(ViewSet):
+class BkPluginUserManageView(ViewSet):
     """View for querying user organizational structure information"""
 
     def get_department(self, request, dept_id):

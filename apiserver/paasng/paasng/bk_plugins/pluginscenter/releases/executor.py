@@ -46,8 +46,8 @@ class PluginReleaseExecutor:
         if not is_success:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("同步版本信息失败, 不能新建版本"))
 
-        if self.release.current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
-            self.gray_release(operator=operator)
+        if self.release.current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM:
+            self.execute_gray_release(operator=operator)
         else:
             self.execute_current_stage(operator=operator)
 
@@ -179,7 +179,7 @@ class PluginReleaseExecutor:
         ):
             raise error_codes.CANNOT_CANCEL_RELEASE.f(_("请到 ITSM 撤回审批单据"))
 
-        if current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM:
+        if current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM:
             latest_release_strategy = self.release.latest_release_strategy
             if latest_release_strategy and latest_release_strategy.itsm_detail:
                 ticket_info = get_ticket_status(latest_release_strategy.itsm_detail.sn)
@@ -194,7 +194,7 @@ class PluginReleaseExecutor:
                 self.release.save()
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
 
-    def gray_release(self, operator: str):
+    def execute_gray_release(self, operator: str):
         """灰度发布，只需要创建审批单据"""
         self.release.refresh_from_db()
         # 不需要回调第三方 API，仅在审批成功后才回调

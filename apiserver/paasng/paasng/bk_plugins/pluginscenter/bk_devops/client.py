@@ -75,7 +75,7 @@ class BkDevopsClient(BaseBkDevopsClient):
 
         return resp["data"]["overview"]
 
-    def get_codecc_plugin_basic_info(self, plugin_id: str):
+    def get_codecc_plugin_basic_info(self, plugin_id: str) -> definitions.CodeccPluginBasicInfo:
         """查询 Codecc 工具插件的基本信息
 
         :param plugin_id: 插件 ID
@@ -96,7 +96,7 @@ class BkDevopsClient(BaseBkDevopsClient):
             )
             raise BkDevopsApiError(resp["message"])
         data = resp["data"]
-        return cattrs.structure(data, definitions.CodeccPluginbasicInfo)
+        return cattrs.structure(data, definitions.CodeccPluginBasicInfo)
 
 
 class PipelineController(BaseBkDevopsClient):

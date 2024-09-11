@@ -59,7 +59,7 @@ class ReleaseStageInvokeMethod(str, StructuredEnum):
     PIPELINE = EnumField("pipeline", label="流水线")
     SUBPAGE = EnumField("subpage", label="子页面")
     ITSM = EnumField("itsm", label="itsm 审批流程")
-    CANARY_WIHT_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
+    CANARY_WITH_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
     BUILTIN = EnumField("builtin", label="内置功能(完善市场信息market, 灰度grayScale, 上线online)")
 
 

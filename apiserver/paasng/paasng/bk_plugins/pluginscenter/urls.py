@@ -18,7 +18,7 @@ to the current version of the project delivered to anyone in the future.
 from django.urls import path
 
 from . import views
-from .bk_user.views import UserManageView
+from .bk_user.views import BkPluginUserManageView
 from .iam_adaptor.views import PluginSelectionView
 
 urlpatterns = [
@@ -206,6 +206,6 @@ urlpatterns = [
     # bk user api
     path(
         "api/usermanage/departments/<str:dept_id>/",
-        UserManageView.as_view({"get": "get_department"}),
+        BkPluginUserManageView.as_view({"get": "get_department"}),
     ),
 ]

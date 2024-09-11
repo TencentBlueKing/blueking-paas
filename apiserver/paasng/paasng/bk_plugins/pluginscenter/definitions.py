@@ -232,7 +232,7 @@ class ReleaseStageDefinition(BaseModel):
         constants.ReleaseStageInvokeMethod.PIPELINE,
         constants.ReleaseStageInvokeMethod.SUBPAGE,
         constants.ReleaseStageInvokeMethod.ITSM,
-        constants.ReleaseStageInvokeMethod.CANARY_WIHT_ITSM,
+        constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM,
         constants.ReleaseStageInvokeMethod.BUILTIN,
     ] = Field(description="触发方式")
     statusPollingMethod: Literal[constants.StatusPollingMethod.API, constants.StatusPollingMethod.FRONTEND] = Field(

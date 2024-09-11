@@ -300,7 +300,7 @@ class PipelineLogModel(BaseModel):
 
 
 @register
-class CodeccPluginbasicInfo(BaseModel):
+class CodeccPluginBasicInfo(BaseModel):
     """Codecc 工具插件基本信息
 
     :param name: 插件标识
@@ -315,9 +315,9 @@ class CodeccPluginbasicInfo(BaseModel):
 
     name: str
     displayName: str
+    checkerNum: int
     devLanguage: Optional[str] = None
     toolCnTypes: Optional[List[str]] = []
     langList: Optional[List[str]] = []
     needBuildScript: Optional[bool] = False
-    checkerNum: int
     description: Optional[str] = ""

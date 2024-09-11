@@ -748,7 +748,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
                 include_branch=False, include_tag=True
             )
         elif release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
-            versions = shim.get_testd_versions(plugin)
+            versions = shim.get_tested_versions(plugin)
         else:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=True, include_tag=True

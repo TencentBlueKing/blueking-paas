@@ -411,7 +411,7 @@ class PluginReleaseStrategy(AuditedModel):
         return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 
     @cached_property
-    def itsm_detail_fields(self):
+    def itsm_detail_fields(self) -> Optional[dict]:
         if not self.itsm_detail:
             return None
         return {item["key"]: item["value"] for item in self.itsm_detail.fields}
@@ -455,7 +455,7 @@ class PluginVisibleRange(AuditedModel):
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
     @cached_property
-    def itsm_detail_fields(self):
+    def itsm_detail_fields(self) -> Optional[dict]:
         if not self.itsm_detail:
             return None
         return {item["key"]: item["value"] for item in self.itsm_detail.fields}
@@ -489,7 +489,7 @@ class PluginVisibleRange(AuditedModel):
                 defaults = {"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)}
             else:
                 defaults = {}
-        visible_range_obj, _c = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
+        visible_range_obj, _created = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
         return visible_range_obj
 
 

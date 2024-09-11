@@ -120,7 +120,7 @@ class PluginCallBackApiViewSet(GenericViewSet):
         release = plugin.all_versions.get(pk=release_id)
         latest_release_strategy = release.latest_release_strategy
         if str(latest_release_strategy.id) != str(release_strategy_id):
-            logger.exception(f"Not the latest release strategy for the current version:{release_id}")
+            logger.error(f"Not the latest release strategy for the current version:{release_id}")
             raise ValidationError("Not the latest release strategy for the current version")
 
         serializer = serializers.ItsmApprovalSLZ(data=request.data)

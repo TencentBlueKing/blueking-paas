@@ -24,7 +24,7 @@ from paasng.platform.applications.serializers import ApplicationSLZ4Record
 
 class AppOperationRecordSLZ(serializers.ModelSerializer):
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created", help_text="操作时间")
-    operate = serializers.ReadOnlyField(source="get_display_text", help_text="操作名称")
+    operate = serializers.ReadOnlyField(source="get_display_text", help_text="操作记录的完整展示文案")
     operator = serializers.ReadOnlyField(source="username", read_only=True, help_text="操作人")
     detail_type = serializers.SerializerMethodField(help_text="操作详情中的数据类型")
 

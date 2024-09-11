@@ -257,7 +257,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
-        serializer = ListAlertsSLZ(data=request.data, context={"app_code": [code]})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_code": code})
         serializer.is_valid(raise_exception=True)
 
         try:

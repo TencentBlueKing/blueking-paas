@@ -291,7 +291,7 @@
                 outline
                 class="ml10 market-info-btn"
                 :title="$t('取消')"
-                @click="isSaveMarketInfo=true"
+                @click="handleCancel"
               >
                 {{ $t('取消') }}
               </bk-button>
@@ -376,12 +376,14 @@
   </paas-content-loader>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import user from '@/components/user';
 import userSelectorDialog from '@/components/user-selector';
 import RenderMemberItem from './render-member-display';
 import visibleRange from './visible-range';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
+import { cloneDeep } from 'lodash';
 
 export default {
   components: {
@@ -485,6 +487,7 @@ export default {
       platFormConfig: PLATFORM_CONFIG,
       apiHost: window.BK_COMPONENT_API_URL,
       isSaveMarketInfo: false,
+      baseInfoBackup: Object.freeze({}),
     };
   },
   computed: {
@@ -724,6 +727,7 @@ export default {
         if (!product) {
           this.changeNewtab();
         }
+        this.baseInfoBackup = cloneDeep(this.baseInfo);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -848,6 +852,12 @@ export default {
 
     handleGetAppInfo() {
       this.initAppMarketInfo(false);
+    },
+
+    // 取消处理
+    handleCancel() {
+      this.isSaveMarketInfo = true;
+      this.baseInfo = cloneDeep(this.baseInfoBackup);
     },
   },
 };

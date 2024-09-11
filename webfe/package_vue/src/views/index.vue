@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="index-main"
-    @click="closeOpen"
-  >
+  <div class="index-main">
     <div
       v-if="!userHasApp"
       class="paas-banner"
@@ -169,7 +166,6 @@
                       {{ $t('申请云 API 权限') }}
                     </bk-button>
                   </template>
-                  <!-- <a href="javascript:" target="_blank">权限管理</a> -->
                 </div>
               </li>
               <li
@@ -358,7 +354,8 @@
   </div>
 </template>
 
-<script>import auth from '@/auth';
+<script>
+import auth from '@/auth';
 import { bus } from '@/common/bus';
 import ECharts from 'vue-echarts/components/ECharts.vue';
 import echarts from 'echarts';
@@ -376,24 +373,15 @@ export default {
   data() {
     return {
       userHasApp: false,
-      isNewUser: global.isUser,
-      curServiceIndex: 0,
       flag: false,
-      activeVisit: -1,
       appCount: 0,
       records: [], // 操作记录
       isLoading: true,
       loading1: true,
       loading2: true,
-      colorList1: ['#3a84ff', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'],
-      colorList2: ['#ccdff3', '#cfeedc', '#f7eedb', '#fae5d5', '#fcc8c8'],
-      isnull: false,
       chartList1: [],
       chartList2: [],
-      defaultImg: '/static/images/default_logo.png',
       isShowOffAppAction: false,
-      type: 'default',
-      curSelectValue: 'default',
       envList: [
         { name: this.$t('访问模块'), id: 'default', showName: this.$t('访问模块') },
         { name: this.$t('预发布环境'), id: 'stag', showName: this.$t('访问模块') },
@@ -439,53 +427,60 @@ export default {
     });
   },
   created() {
-    // 获取最近四次操作记录
-    this.$http.get(`${BACKEND_URL}/api/bkapps/applications/lists/latest/`).then((response) => {
-      const resData = response;
-
-      this.appCount = resData.results.length;
-
-      resData.results.forEach((item) => {
-        const appinfo = item.application;
-
-        this.records.push({
-          applogo: appinfo.logo_url || '/static/images/default_logo.png',
-          appname: appinfo.name,
-          appcode: appinfo.code,
-          time: item.at,
-          type: item.operate,
-          appType: appinfo.type,
-          engine_enabled: appinfo.config_info.engine_enabled,
-          defaultModuleId: item.module_name,
-        });
-      });
-      this.isLoading = false;
-    });
-    this.chartSet({
-      type: 'app_groups',
-      url: `${BACKEND_URL}/api/bkapps/applications/statistics/group_by_state/`,
-      id: 'viewchart',
-      title: this.$t('我的应用(模块)分布'),
-      yAxisName: this.$t('单位（个）'),
-      colorList: this.colorList1,
-    });
-    this.chartSet({
-      type: 'pv',
-      url: `${BACKEND_URL}/api/bkapps/applications/statistics/pv/top5/?limit=5&days_before=30`,
-      id: 'visitedchart',
-      title: this.$t('访问量 Top 5 (最近 30 天)'),
-      yAxisName: this.$t('单位（次）'),
-      colorList: this.colorList2,
-    });
+    this.init();
   },
   methods: {
+    init() {
+      this.getRecentOperationRecords();
+      this.chartSet({
+        type: 'app_groups',
+        url: `${BACKEND_URL}/api/bkapps/applications/statistics/group_by_state/`,
+        id: 'viewchart',
+        title: this.$t('我的应用(模块)分布'),
+        yAxisName: this.$t('单位（个）'),
+        colorList: ['#3a84ff', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'],
+      });
+      this.chartSet({
+        type: 'pv',
+        url: `${BACKEND_URL}/api/bkapps/applications/statistics/pv/top5/?limit=5&days_before=30`,
+        id: 'visitedchart',
+        title: this.$t('访问量 Top 5 (最近 30 天)'),
+        yAxisName: this.$t('单位（次）'),
+        colorList: ['#ccdff3', '#cfeedc', '#f7eedb', '#fae5d5', '#fcc8c8'],
+      });
+    },
+
+    // 获取最近四次操作记录
+    getRecentOperationRecords() {
+      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/lists/latest/`).then((response) => {
+        const resData = response;
+
+        this.appCount = resData.results.length;
+
+        resData.results.forEach((item) => {
+          const appinfo = item.application;
+
+          this.records.push({
+            applogo: appinfo.logo_url || '/static/images/default_logo.png',
+            appname: appinfo.name,
+            appcode: appinfo.code,
+            time: item.at,
+            type: item.operate,
+            appType: appinfo.type,
+            engine_enabled: appinfo.config_info.engine_enabled,
+            defaultModuleId: item.module_name,
+          });
+        });
+        this.isLoading = false;
+      });
+    },
     async toDeploy(recordItem) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.appcode}/`;
       try {
         const res = await this.$http.get(url);
-        this.type = res.application.type;
+        const appType = res.application.type || 'default';
         this.$router.push({
-          name: this.type === 'cloud_native' ? 'cloudAppDeploy' : 'appDeploy',
+          name: appType === 'cloud_native' ? 'cloudAppDeployManageStag' : 'appDeploy',
           params: {
             id: recordItem.appcode,
           },
@@ -678,27 +673,6 @@ export default {
       if (!value) {
         bus.$emit('page-header-be-transparent');
       }
-    },
-    // 访问按钮展开
-    visitOpen(event, index) {
-      if (event.currentTarget.parentNode.classList.contains('disabledBox')) return;
-      const isopen = event.currentTarget.parentNode.parentNode.classList.contains('open');
-      if (isopen) {
-        this.activeVisit = -1;
-      } else {
-        this.activeVisit = index;
-      }
-    },
-    closeOpen() {
-      this.activeVisit = -1;
-    },
-    // 访问模块
-    handleSelectChange(env, data) {
-      if (env === 'default') {
-        return;
-      }
-      const url = data[env]?.url;
-      window.open(url, '_blank');
     },
   },
 };
@@ -1373,9 +1347,6 @@ export default {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-.access-module-wrapper {
-  transform: translateY(4px);
 }
 .access-module-custom {
   background: #f0f1f5;

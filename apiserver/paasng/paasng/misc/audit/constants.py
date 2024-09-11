@@ -49,6 +49,9 @@ class DataType(str, StructuredEnum):
     CLOUD_API_RECORD = EnumField(
         "cloud_api_record", label="云 API 权限申请记录 ID, 需要通过 ID 查询具体的申请单据详情展示"
     )
+    ESB_API_RECORD = EnumField(
+        "esb_api_record", label="组件 API 权限申请记录 ID, 需要通过 ID 查询具体的申请单据详情展示"
+    )
 
 
 class OperationTarget(str, StructuredEnum):
@@ -62,6 +65,27 @@ class OperationTarget(str, StructuredEnum):
     SECRET = EnumField("secret", label=_("密钥"))
     ENV_VAR = EnumField("env_var", label=_("环境变量"))
     ADD_ON = EnumField("addon", label=_("增强服务"))
+    CLUSTER = EnumField("cluster", label=_("集群"))
+    PROCESS_SPEC_PLAN = EnumField("process_spec_plan", label=_("应用资源方案"))
+    BKPLUGIN_TAG = EnumField("bkplugin_tag", label=_("插件分类"))
+    BKPLUGIN_DISTRIBUTOR = EnumField("bkplugin_distributor", label=_("插件使用方"))
+    DOCUMENT = EnumField("document", label=_("文档"))
+    DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("部署失败提示"))
+    SOURCE_TYPE_SPEC = EnumField("source_type_spec", label=_("代码库配置"))
+    SHARED_CERT = EnumField("shared_cert", label=_("共享证书"))
+    ADDON_PLAN = EnumField("addon_plan", label=_("增强服务方案"))
+    PLAT_USER = EnumField("plat_user", label=_("平台用户"))
+    FEATURE_FLAG = EnumField("feature_flag", label=_("特性标记"))
+    EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
+    APP_DOMAIN = EnumField("app_domain", label=_("访问地址"))
+    APP_MEMBER = EnumField("app_member", label=_("应用成员"))
+    TEMPLATE = EnumField("template", label=_("模板"))
+    BUILD_CONFIG = EnumField("build_config", label=_("构建配置"))
+    VOLUME_MOUNT = EnumField("volume_mount", label=_("挂载卷"))
+    SERVICE_DISCOVERY = EnumField("service_discovery", label=_("服务发现"))
+    DOMAIN_RESOLUTION = EnumField("domain_resolution", label=_("域名解析"))
+    DEPLOY_RESTRICTION = EnumField("deploy_restriction", label=_("部署限制"))
+    EXIT_IP = EnumField("exit_ip", label=_("出口 IP"))
 
 
 class OperationEnum(str, StructuredEnum):
@@ -69,6 +93,7 @@ class OperationEnum(str, StructuredEnum):
 
     CREATE = EnumField("create", label=_("新建"))
     DELETE = EnumField("delete", label=_("删除"))
+    MODIFY = EnumField("modify", label=_("修改"))
     # 直接操作应用相关的类型，展示的文案包括完整的动宾短语
     CREATE_APP = EnumField("create_app", label=_("创建应用"))
     RELEASE_TO_MARKET = EnumField("online_to_market", label=_("发布到应用市场"))
@@ -86,3 +111,11 @@ class OperationEnum(str, StructuredEnum):
     RENEW = EnumField("renew", label=_("续期"))
     DEPLOY = EnumField("deploy", label=_("部署"))
     OFFLINE = EnumField("offline", label=_("下架"))
+    MODIFY_PLAN = EnumField("switch", label=_("切换资源方案"))
+    # admin42相关操作
+    MODIFY_USER_FEATURE_FLAG = EnumField("modify_user_feature_flag", label=_("修改用户特性"))
+    SWITCH_DEFAULT_CLUSTER = EnumField("switch_default_cluster", label=_("切换默认集群"))
+    BIND_CLUSTER = EnumField("bind_cluster", label=_("切换绑定集群"))
+    MODIFY_LOG_CONFIG = EnumField("modify_log_config", label=_("日志采集管理"))
+    PROVISION_INSTANCE = EnumField("provision_instance", label=_("分配增强服务实例"))
+    RECYCLE_RESOURCE = EnumField("recycle_resource", label=_("回收增强服务实例"))

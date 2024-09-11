@@ -133,7 +133,8 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 		// Apply service discovery related changes
 		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToDeployment(ctx, deployment); ok {
-			log.V(1).Info("Applied svc-discovery related changes to deployments", "bkapp", bkapp.Name, "proc", proc.Name)
+			log.V(1).
+				Info("Applied svc-discovery related changes to deployments", "bkapp", bkapp.Name, "proc", proc.Name)
 		}
 
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {

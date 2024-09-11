@@ -18,7 +18,7 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import AutoscalingConfig
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
@@ -26,14 +26,15 @@ from paasng.platform.modules.models import BuildConfig
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestModuleProcessSpecViewSet:
-    @pytest.fixture(autouse=True)
-    def _setup(self, bk_cnative_app, bk_module):
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        cfg.build_method = RuntimeType.CUSTOM_IMAGE
-        cfg.image_repository = "example.com/foo"
-        cfg.save()
+@pytest.fixture(autouse=True)
+def _setup(bk_cnative_app, bk_module):
+    cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
+    cfg.build_method = RuntimeType.CUSTOM_IMAGE
+    cfg.image_repository = "example.com/foo"
+    cfg.save()
 
+
+class TestModuleProcessSpecViewSet:
     @pytest.fixture()
     def web(self, bk_module):
         return G(
@@ -67,11 +68,13 @@ class TestModuleProcessSpecViewSet:
             "metrics": [{"type": "Resource", "metric": "cpuUtilization", "value": "85"}],
             "policy": "default",
         }
+        assert proc_specs[0]["services"] is None
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["image"] == "example.com/foo"
         assert proc_specs[1]["command"] == ["celery"]
         assert proc_specs[1]["args"] == []
+        assert proc_specs[1]["services"] is None
 
     def test_save(self, api_client, bk_cnative_app, bk_module, web, celery_worker):
         G(
@@ -135,7 +138,6 @@ class TestModuleProcessSpecViewSet:
                 "port": 5000,
                 "env_overlay": {
                     "stag": {
-                        "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 2,
                         "autoscaling": False,
@@ -149,12 +151,10 @@ class TestModuleProcessSpecViewSet:
                 "args": ["celery", "beat"],
                 "env_overlay": {
                     "stag": {
-                        "environment_name": "stag",
                         "plan_name": "default",
                         "target_replicas": 1,
                     },
                     "prod": {
-                        "environment_name": "prod",
                         "plan_name": "default",
                         "target_replicas": 1,
                         "autoscaling": True,
@@ -173,7 +173,7 @@ class TestModuleProcessSpecViewSet:
                 },
             },
         ]
-        resp = api_client.post(url, data=request_data)
+        resp = api_client.post(url, data={"proc_specs": request_data})
         data = resp.json()
 
         proc_specs = data["proc_specs"]
@@ -185,6 +185,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["image"] == "example.com/foo"
         assert proc_specs[0]["command"] == ["python", "-m"]
         assert proc_specs[0]["args"] == ["http.server"]
+        assert proc_specs[0]["port"] == 5000
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
         assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
         assert proc_specs[0]["probes"] == probes_cfg
@@ -209,3 +210,162 @@ class TestModuleProcessSpecViewSet:
         )
         assert spec_obj.probes == {"liveness": None, "readiness": None, "startup": None}
         assert spec_obj.probes.liveness is None
+
+
+class TestModuleProcessSpecWithProcServicesViewSet:
+    @pytest.fixture()
+    def web(self, bk_module):
+        return G(
+            ModuleProcessSpec,
+            module=bk_module,
+            name="web",
+            command=["python"],
+            args=["-m", "http.server"],
+            port=8000,
+            services=[
+                ProcService(name="web", target_port=8000, exposed_type={"name": "bk/http"}),
+                ProcService(name="backend", target_port=8001, port=80),
+            ],
+        )
+
+    @pytest.mark.parametrize(
+        ("proc_services", "expected_status_code", "expected_detail_str"),
+        [
+            (None, 200, ""),
+            ([{"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}}], 200, ""),
+            # invalid exposed_type
+            ([{"name": "web", "target_port": 5000, "exposed_type": {"name": "foo/http"}}], 400, "不是合法选项"),
+            ([{"name": "web"}], 400, "services.target_port: 该字段是必填项"),
+            # duplicate name
+            (
+                [{"name": "web", "target_port": 5000}, {"name": "web", "target_port": 5001}],
+                400,
+                "duplicate service name: web",
+            ),
+            # duplicate target_port
+            (
+                [{"name": "web", "target_port": 5000}, {"name": "worker", "target_port": 5000}],
+                400,
+                "duplicate target_port: 5000",
+            ),
+        ],
+    )
+    def test_validate(
+        self, api_client, bk_cnative_app, bk_module, proc_services, expected_status_code, expected_detail_str
+    ):
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "services": proc_services,
+            }
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == expected_status_code
+        assert expected_detail_str in resp.data.get("detail", "")
+
+    @pytest.mark.parametrize(
+        "request_data",
+        [
+            [
+                {
+                    "name": "web",
+                    "image": "python:latest",
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "services": [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/http"}},
+                    ],
+                }
+            ],
+            [
+                {
+                    "name": "web",
+                    "image": "python:latest",
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "services": [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                    ],
+                },
+                {
+                    "name": "celery",
+                    "image": "python:latest",
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "services": [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                    ],
+                },
+            ],
+        ],
+    )
+    def test_validate_duplicated_exposed_type(self, api_client, bk_cnative_app, bk_module, request_data):
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == 400
+        assert "exposed_type bk/http is duplicated in one app module" in resp.data.get("detail", "")
+
+    def test_save(self, api_client, bk_cnative_app, bk_module, web):
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "port": 5000,
+                "services": [
+                    {"name": "web", "target_port": "${PORT}", "port": 80, "exposed_type": {"name": "bk/http"}},
+                    {"name": "backend", "target_port": 5001},
+                ],
+            },
+            {
+                "name": "celery",
+                "image": "python:latest",
+                "command": ["celery", "-l"],
+                "args": ["info"],
+                "port": 5000,
+            },
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        data = resp.json()
+
+        proc_specs = data["proc_specs"]
+        assert proc_specs[0]["services"] == [
+            {
+                "name": "web",
+                "target_port": "${PORT}",
+                "port": 80,
+                "exposed_type": {"name": "bk/http"},
+                "protocol": "TCP",
+            },
+            {"name": "backend", "target_port": 5001, "port": None, "exposed_type": None, "protocol": "TCP"},
+        ]
+        assert proc_specs[1]["services"] is None
+
+        web_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert web_process_spec.services[0].target_port == "${PORT}"
+        assert web_process_spec.services[0].port == 80
+        assert web_process_spec.services[0].exposed_type.name == "bk/http"
+
+        celery_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="celery")
+        assert celery_process_spec.services is None
+
+    def test_retrieve(self, api_client, bk_cnative_app, bk_module, web):
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.get(url)
+        data = resp.json()
+        proc_specs = data["proc_specs"]
+
+        assert len(proc_specs) == 1
+        assert proc_specs[0]["services"] == [
+            {"name": "web", "target_port": 8000, "port": None, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
+            {"name": "backend", "target_port": 8001, "port": 80, "exposed_type": None, "protocol": "TCP"},
+        ]

@@ -97,7 +97,9 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	originalBkapp.Status = paasv1alpha2.AppStatus{}
 	if err = r.Client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkapp)); err != nil {
 		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
-		return r.Result.WithError(errors.Wrapf(err, "update bkapp %s status when a new deploy action is detected", bkapp.Name))
+		return r.Result.WithError(
+			errors.Wrapf(err, "update bkapp %s status when a new deploy action is detected", bkapp.Name),
+		)
 	}
 	return r.Result
 }

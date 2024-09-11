@@ -38,6 +38,7 @@ def sync_domain_resolution(module: Module, domain_res: DomainResolution) -> Comm
 
     try:
         domain_config = DomainResolutionDB.objects.get(application=module.application)
+        # INFO/FIXME: 此处取并集，会导致条目数在修改并重复同步后，总是增多，不会减少？
         nameservers = list(set(domain_config.nameservers) | set(domain_res.nameservers))
         host_aliases = list(set(domain_config.host_aliases) | set(domain_res.host_aliases))
     except DomainResolutionDB.DoesNotExist:

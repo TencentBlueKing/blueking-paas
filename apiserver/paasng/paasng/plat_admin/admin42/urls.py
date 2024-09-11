@@ -23,6 +23,7 @@ from . import runtime_views, views
 from .views import (
     accountmgr,
     applications,
+    audit,
     bk_plugins,
     builtin_config_vars,
     runtimes,
@@ -372,7 +373,12 @@ urlpatterns = [
     # 应用详情-成员管理 API
     url(
         r"^api/applications/(?P<code>[^/]+)/base_info/memberships/$",
-        applications.ApplicationMembersManageViewSet.as_view({"get": "list", "post": "update", "delete": "destroy"}),
+        applications.ApplicationMembersManageViewSet.as_view({"get": "list", "post": "update"}),
+        name="admin.applications.detail.base_info.members.api",
+    ),
+    url(
+        r"^api/applications/(?P<code>[^/]+)/base_info/memberships/(?P<username>[^/]+)/$",
+        applications.ApplicationMembersManageViewSet.as_view({"delete": "destroy"}),
         name="admin.applications.detail.base_info.members.api",
     ),
     # 应用详情-特性管理
@@ -519,5 +525,31 @@ urlpatterns += [
         r"platform/builtin_config_vars/(?P<pk>[^/]+)/",
         builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
         name="admin.builtin_config_vars.detail",
+    ),
+]
+
+# 操作审计
+urlpatterns += [
+    # 操作审计
+    url(
+        r"audit/$",
+        audit.AdminOperationAuditManageView.as_view(),
+        name="admin.audit.index",
+    ),
+    url(
+        r"audit/application$",
+        audit.AdminAppOperationAuditManageView.as_view(),
+        name="admin.audit.app",
+    ),
+    # 操作审计相关 API
+    url(
+        r"api/audit/operations/(?P<pk>[^/]+)/",
+        audit.AdminOperationAuditViewSet.as_view(),
+        name="admin.audit.detail",
+    ),
+    url(
+        r"api/audit/application/operations/(?P<pk>[^/]+)/",
+        audit.AdminAppOperationAuditViewSet.as_view(),
+        name="admin.audit.app.detail",
     ),
 ]

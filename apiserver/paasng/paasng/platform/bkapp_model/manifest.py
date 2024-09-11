@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -51,7 +52,7 @@ from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, ResQuotaPlan
+from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -65,6 +66,7 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
@@ -161,8 +163,6 @@ class BuildConfigManifestConstructor(ManifestConstructor):
 class ProcessesManifestConstructor(ManifestConstructor):
     """Construct the processes part."""
 
-    PORT_PLACEHOLDER = "${PORT}"
-
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         process_specs = list(ModuleProcessSpec.objects.filter(module=module).order_by("created"))
         if not process_specs:
@@ -186,7 +186,8 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
-                probes=process_spec.probes,
+                probes=process_spec.probes.render_port() if process_spec.probes else None,
+                services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 
@@ -296,7 +297,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
-        return [s.replace("${PORT:-5000}", self.PORT_PLACEHOLDER) for s in input]
+        return [s.replace("${PORT:-5000}", PORT_PLACEHOLDER) for s in input]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -482,6 +483,12 @@ def get_bkapp_resource_for_deploy(
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
+    # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
+    proc_svc_enabled = "true"
+    if deployment and (desc_obj := DeploymentDescription.objects.filter(deployment=deployment).first()):
+        proc_svc_enabled = desc_obj.runtime.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true")
+    model_res.set_proc_services_annotation(proc_svc_enabled)
+
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
     apply_builtin_env_vars(model_res, env)
@@ -523,8 +530,8 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
         crd.EnvVarOverlay(envName=environment, name="PORT", value=str(settings.CONTAINER_PORT))
     ]
 
-    # deployment=None 意味着云原生应用不通过 get_env_variables 注入描述文件产生的环境变量
-    # include_config_vars=False 是因为 EnvVarsManifestConstructor 已处理了 config vars
+    # 此处，云原生应用忽略这些类型的环境变量：用户手动定义、描述文件定义、服务发现，
+    # 忽略用户手动定义（include_config_vars）是因为 EnvVarsManifestConstructor 已处理过。
     for name, value in get_env_variables(
         env, include_config_vars=False, include_preset_env_vars=False, include_svc_disc=False
     ).items():

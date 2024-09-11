@@ -16,12 +16,13 @@
               v-model="moduleValue"
               style="width: 150px;"
               :clearable="false"
+              placeholder=" "
               @change="getDeployHistory(1)"
             >
               <bk-option
-                v-for="option in curAppModuleList"
-                :key="option.name"
-                :id="option.name"
+                v-for="option in moduleList"
+                :key="option.key"
+                :id="option.key"
                 :name="option.name">
               </bk-option>
             </bk-select>
@@ -63,6 +64,15 @@
             @clear-filter="handleClearFilter"
           />
         </div>
+        <bk-table-column
+          width="150"
+          :label="$t('模块')"
+          prop="moduleName"
+          column-key="moduleName"
+          :render-header="$renderHeader"
+          show-overflow-tooltip
+        >
+        </bk-table-column>
         <bk-table-column
           :label="$t('部署环境')"
           prop="environment"
@@ -243,6 +253,7 @@ export default {
       height: window.innerHeight - 60,
       yamlData: {},
       isYamlLoading: false,
+      moduleList: [],
     };
   },
 
@@ -270,8 +281,11 @@ export default {
 
   methods: {
     init() {
-      this.moduleValue = this.curAppModuleList[0].name || 'default';
+      this.moduleValue = '';
       this.getDeployHistory();
+      this.moduleList = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
+       // 在列表头新增一项
+      this.moduleList.unshift({ key: '', name: `${this.$t('全部')}` });
     },
 
     /**
@@ -365,6 +379,7 @@ export default {
           operation.name = operation[key].repo.name;
           operation.revision = operation[key].repo.revision;
           operation.url = operation[key].repo.url;
+          operation.moduleName = operation.module_name;
 
           if (reg.test(operation[key].repo.revision)) {
             operation.revision = operation[key].repo.revision.substring(0, 8);
@@ -485,7 +500,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getDeployVersionDetails', {
           appCode: this.appCode,
-          moduleId: this.moduleValue,
+          moduleId: this.moduleValue || data.moduleName,
           environment: data.environment,
           revisionId: data.deployment.bkapp_revision_id,
         });

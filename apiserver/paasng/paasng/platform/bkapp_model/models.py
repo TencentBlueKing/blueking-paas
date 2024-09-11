@@ -24,7 +24,13 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, HostAlias, ProbeSet, SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities import (
+    AutoscalingConfig,
+    HostAlias,
+    ProbeSet,
+    ProcService,
+    SvcDiscEntryBkSaaS,
+)
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import DeployHookType
@@ -48,8 +54,8 @@ def env_overlay_getter_factory(field_name: str):
 
 
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
-
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
+ProcServicesField = make_json_field("ProcServicesField", List[ProcService])
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -68,6 +74,7 @@ class ModuleProcessSpec(TimestampedModel):
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     port = models.IntegerField(help_text="容器端口", null=True)
+    services: Optional[List[ProcService]] = ProcServicesField(help_text="进程服务列表", default=None, null=True)
 
     # Global settings
     target_replicas = models.IntegerField("期望副本数", default=1)
@@ -119,6 +126,44 @@ class ModuleProcessSpec(TimestampedModel):
     get_scaling_config = env_overlay_getter_factory("scaling_config")  # type: Callable[[str], Optional[AutoscalingConfig]]
 
 
+class ProcessSpecEnvOverlayManager(models.Manager):
+    """Custom manager for ProcessSpecEnvOverlay"""
+
+    def save_by_module(
+        self,
+        module: Module,
+        proc_name: str,
+        env_name: str,
+        plan_name: Optional[str] = None,
+        target_replicas: Optional[int] = None,
+        autoscaling: bool = False,
+        scaling_config: Optional[Dict] = None,
+    ):
+        """Save an overlay data by module and process name.
+
+        :param module: module instance
+        :param proc_name: process name
+        :param env_name: environment name
+        """
+        proc_spec = ModuleProcessSpec.objects.get(module=module, name=proc_name)
+        if scaling_config:
+            # Use AutoscalingConfig to validate the input
+            scaling_config_dict = AutoscalingConfig(**scaling_config).dict()
+        else:
+            scaling_config_dict = None
+
+        ProcessSpecEnvOverlay.objects.update_or_create(
+            proc_spec=proc_spec,
+            environment_name=env_name,
+            defaults={
+                "plan_name": plan_name,
+                "target_replicas": target_replicas,
+                "autoscaling": autoscaling,
+                "scaling_config": scaling_config_dict,
+            },
+        )
+
+
 class ProcessSpecEnvOverlay(TimestampedModel):
     """进程定义中允许按环境覆盖的配置"""
 
@@ -133,6 +178,8 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
     autoscaling = models.BooleanField("是否启用自动扩缩容", null=True)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
+
+    objects = ProcessSpecEnvOverlayManager()
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")

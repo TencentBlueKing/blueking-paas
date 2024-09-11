@@ -24,7 +24,7 @@ from iam import Action
 
 from paasng.misc.audit import constants
 from paasng.misc.audit.client import bk_audit_client
-from paasng.misc.audit.models import AppOperationRecord
+from paasng.misc.audit.models import AdminOperationRecord, AppOperationRecord
 from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def report_event_to_bk_audit(record: AppOperationRecord):
     """将操作记录中的数据上报到审计中心"""
     # 未设置审计中心相关配置则不上报
     if not settings.ENABLE_BK_AUDIT or not record.need_to_report_bk_audit:
-        logger.info(f"skip report to bk_audit, record:{record.uuid}")
+        logger.debug(f"skip report to bk_audit, record:{record.uuid}")
         return
     try:
         audit_context = AuditContext(
@@ -145,3 +145,46 @@ def add_app_audit_record(
     )
     report_event_to_bk_audit(record)
     return record
+
+
+def add_admin_audit_record(
+    user: str,
+    operation: str,
+    target: str,
+    app_code: Optional[str] = None,
+    attribute: Optional[str] = None,
+    module_name: Optional[str] = None,
+    environment: Optional[str] = None,
+    access_type: int = constants.AccessType.WEB,
+    result_code: int = constants.ResultCode.SUCCESS,
+    data_before: Optional[DataDetail] = None,
+    data_after: Optional[DataDetail] = None,
+) -> AdminOperationRecord:
+    """
+    创建 admin42 审计记录
+
+    :param user: encode 后的用户名，形如 0335cce79c92
+    :param operation: 操作类型，如：新建、部署、扩容等
+    :param target: 操作对象，如：模块、进程、增强服务等
+    :param app_code: 应用 ID，在 admin 中操作默认为 None
+    :param attribute: 对象属性，如 【web】进程、【mysql】增强服务
+    :param module_name: 模块名
+    :param environment: 环境，如: stag、prod
+    :param access_type: 访问方式，默认为网页访问
+    :param result_code: 操作结果，默认为成功
+    :param data_before: 操作前的数据，包含数据类型的对应的数据
+    :param data_after: 操作后的数据，包含数据类型的对应的数据
+    """
+    return AdminOperationRecord.objects.create(
+        user=user,
+        operation=operation,
+        target=target,
+        app_code=app_code,
+        attribute=attribute,
+        module_name=module_name,
+        environment=environment,
+        access_type=access_type,
+        result_code=result_code,
+        data_before=asdict(data_before) if data_before else None,
+        data_after=asdict(data_after) if data_after else None,
+    )

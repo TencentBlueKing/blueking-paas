@@ -31,7 +31,7 @@
     "acorn": "8.10.0",
     "ansi_up": "^5.0.0",
     "axios": "^1.6.0",
-    "bk-magic-vue": "^2.5.8",
+    "bk-magic-vue": "^2.5.9-beta.22",
     "chalk": "^1.1.3",
     "clipboard": "^1.7.1",
     "connect-history-api-fallback": "^1.3.0",

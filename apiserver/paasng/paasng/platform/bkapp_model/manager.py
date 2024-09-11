@@ -74,6 +74,7 @@ class ModuleProcessSpecManager:
                 target_replicas=process.replicas or PROC_DEFAULT_REPLICAS,
                 plan_name=process.plan or ResQuotaPlan.P_DEFAULT,
                 probes=process.probes,
+                services=process.services,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -91,14 +92,19 @@ class ModuleProcessSpecManager:
                 recorder.setattr("plan_name", process.plan)
             if process.replicas and process_spec.target_replicas != process.replicas:
                 recorder.setattr("target_replicas", process.replicas)
+
             if process.probes and process_spec.probes != process.probes:
                 recorder.setattr("probes", process.probes)
+
+            if process.services and process_spec.services != process.services:
+                recorder.setattr("services", process.services)
+
             return recorder.changed, process_spec
 
         self.bulk_update_procs(
             proc_updator=process_spec_updator,
             updating_procs=updating_procs,
-            updated_fields=["proc_command", "target_replicas", "plan_name", "probes", "updated"],
+            updated_fields=["proc_command", "target_replicas", "plan_name", "services", "probes", "updated"],
         )
         # update spec objects end
 

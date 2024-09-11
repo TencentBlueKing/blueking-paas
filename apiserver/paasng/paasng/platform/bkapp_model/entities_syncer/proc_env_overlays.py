@@ -18,7 +18,7 @@
 import logging
 from typing import Any, Callable, Dict, List, Type, cast
 
-from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ProcEnvOverlay, ReplicasOverlay, ResQuotaOverlay
+from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
 
@@ -111,33 +111,4 @@ def sync_proc_env_overlays(
 
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).delete()
-    return ret
-
-
-def sync_env_overlay_by_proc(module, proc_name: str, proc_env_overlay: ProcEnvOverlay) -> CommonSyncResult:
-    """Sync proc_env_overlay to ProcessSpecEnvOverlay(db model) by one process. It will update or create
-    ProcessSpecEnvOverlay by one process, not delete.
-
-    :param module: module
-    :param proc_name: process name to set env_overlay
-    :param proc_env_overlay: proc env_overlay data
-    :return: sync result
-    """
-
-    ret = CommonSyncResult()
-
-    proc_spec = ModuleProcessSpec.objects.get(module=module, name=proc_name)
-
-    _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec,
-        environment_name=proc_env_overlay.env_name,
-        defaults={
-            "target_replicas": proc_env_overlay.target_replicas,
-            "plan_name": proc_env_overlay.plan_name,
-            "autoscaling": proc_env_overlay.autoscaling,
-            "scaling_config": proc_env_overlay.scaling_config.dict() if proc_env_overlay.scaling_config else None,
-        },
-    )
-    ret.incr_by_created_flag(created)
-
     return ret

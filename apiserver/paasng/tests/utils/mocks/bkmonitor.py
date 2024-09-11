@@ -82,17 +82,7 @@ def get_fake_alarm_strategies() -> Dict:
 
 
 def get_fake_space_biz_id(app_codes: List) -> List:
-    return [
-        {
-            "biz_id": -5000000,
-            "app_code": code,
-            "name": generate_random_string(6),
-            "type": random.choice(["true", "false"]),
-            "is_plugin_app": random.choice(["default", "engineless_app", "cloud_native"]),
-            "logo_url": "http://get_logo_url",
-        }
-        for code in app_codes
-    ]
+    return [{"application": 1, "bk_biz_id": -5000000}]
 
 
 class StubBKMonitorClient(BkMonitorClient):

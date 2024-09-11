@@ -31,7 +31,7 @@ def get_bk_biz_id(app_code: str) -> str:
         raise BkMonitorSpaceDoesNotExist(e)
 
 
-def get_bk_biz_ids(app_codes: List[str]) -> List[str]:
+def get_exist_bk_biz_ids(app_codes: List[str]) -> List[str]:
     monitor_spaces = BKMonitorSpace.objects.filter(application__code__in=app_codes)
     if not monitor_spaces:
         raise BkMonitorSpaceDoesNotExist(BKMonitorSpace.DoesNotExist)
@@ -65,7 +65,7 @@ class QueryAlertsParams:
         d = {
             "start_time": int(self.start_time.timestamp()),
             "end_time": int(self.end_time.timestamp()),
-            "bk_biz_ids": [int(biz_id) for biz_id in get_bk_biz_ids(self.app_code)],
+            "bk_biz_ids": [int(biz_id) for biz_id in get_exist_bk_biz_ids(self.app_code)],
             "page": 1,
             "page_size": 500,
             # 按照 ID 降序

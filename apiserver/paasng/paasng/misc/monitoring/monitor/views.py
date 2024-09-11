@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from collections import defaultdict
-from typing import DefaultDict, List, Text
+from typing import Text
 
 from django.db.models import Q
 from django.http import Http404
@@ -274,43 +274,33 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertListByAppsRespSLZ()})
     def list_by_apps(self, request):
         """查询用户各应用告警及数量"""
-        app_codes = [i.code for i in UserApplicationFilter(request.user).filter(order_by=["name"])]
+        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
         serializer = ListAlertsSLZ(data=request.data, context={"app_code": app_codes})
         serializer.is_valid(raise_exception=True)
 
         try:
             alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
-            # 用户所有应用BkMonitorSpace 不存在（应用未部署）时，返回空列表
+            # 用户所有应用BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response({"count": 0, "alerts": []})
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
         if not alerts:
             return Response({"count": 0, "alerts": []})
 
-        aggred_alerts = self._aggregate_alerts_by_bk_biz_id(alerts)
+        grouped_alerts = defaultdict(list)
+        for alert in alerts:
+            bk_biz_id = alert["bk_biz_id"]
+            grouped_alerts[bk_biz_id].append(alert)
 
         monitor_spaces = make_bk_monitor_client().query_space_biz_id(app_codes=app_codes)
-        bizid_app_map = {
-            space["biz_id"]: {
-                "app_code": space["app_code"],
-                "name": space["name"],
-                "type": space["type"],
-                "is_plugin_app": space["is_plugin_app"],
-                "logo_url": space["logo_url"],
-            }
-            for space in monitor_spaces
-        }
+        bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
 
         app_aggred_alerts = []
-        for bizid, app_alerts in aggred_alerts.items():
+        for bizid, app_alerts in grouped_alerts.items():
             app_aggred_alerts.append(
                 {
-                    "app_code": bizid_app_map[bizid]["app_code"],
-                    "name": bizid_app_map[bizid]["name"],
-                    "type": bizid_app_map[bizid]["type"],
-                    "is_plugin_app": bizid_app_map[bizid]["is_plugin_app"],
-                    "logo_url": bizid_app_map[bizid]["logo_url"],
+                    "application": bizid_app_map[bizid],
                     "count": len(app_alerts),
                     "alerts": app_alerts,
                 }
@@ -318,16 +308,6 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
 
         serializer = AlertListByAppsRespSLZ({"count": len(alerts), "alerts": app_aggred_alerts})
         return Response(serializer.data)
-
-    @staticmethod
-    def _aggregate_alerts_by_bk_biz_id(alerts: List) -> DefaultDict[str, List]:
-        grouped_alerts = defaultdict(list)
-
-        for alert in alerts:
-            bk_biz_id = alert["bk_biz_id"]
-            grouped_alerts[bk_biz_id].append(alert)
-
-        return grouped_alerts
 
 
 class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):

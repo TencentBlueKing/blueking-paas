@@ -169,24 +169,12 @@ class BkMonitorClient:
         return resp.get("data", {}).get("alerts", [])
 
     def query_space_biz_id(self, app_codes: List) -> List:
-        """查询应用的蓝鲸监控空间在权限中心的资源id
+        """查询应用的蓝鲸监控空间在权限中心的资源 id
 
-        :param app_codes: 查询监控空间资源id的应用id
+        :param app_codes: 查询监控空间资源 id 的应用 id
         """
-        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes).select_related(
-            "application"
-        )
-        return [
-            {
-                "biz_id": space.iam_resource_id,
-                "app_code": space.application.code,
-                "name": space.application.name,
-                "type": space.application.type,
-                "is_plugin_app": space.application.is_plugin_app,
-                "logo_url": space.application.get_logo_url(),
-            }
-            for space in monitor_spaces
-        ]
+        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes)
+        return [{"application": space.application, "bk_biz_id": space.iam_resource_id} for space in monitor_spaces]
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略

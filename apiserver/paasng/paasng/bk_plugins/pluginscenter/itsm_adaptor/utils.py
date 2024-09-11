@@ -23,9 +23,11 @@ from django.conf import settings
 from paasng.bk_plugins.pluginscenter.constants import (
     GrayReleaseStatus,
     PluginReleaseStatus,
+    PluginRole,
     ReleaseStageInvokeMethod,
     ReleaseStrategy,
 )
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName, ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.models import (
@@ -132,7 +134,16 @@ def submit_canary_release_ticket(
     title_fields = [{"key": "title", "value": f"插件[{plugin.id}]灰度发布审批"}]
     itsm_fields = basic_fields + title_fields + canary_fields
 
-    service_id = ApprovalService.objects.get(service_name=release_strategy.get_itsm_service_name()).service_id
+    service_name = release_strategy.get_itsm_service_name()
+    service_id = ApprovalService.objects.get(service_name=service_name).service_id
+    # 灰度审批是由插件的管理员审批，需要单独添加审批字段
+    if service_name == ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL:
+        plugin_admins = members_api.fetch_role_members(plugin, PluginRole.ADMINISTRATOR)
+        itsm_fields += [
+            # 插件管理员
+            {"key": "plugin_admins", "value": ",".join(plugin_admins)},
+        ]
+
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
     callback_url = (
@@ -265,7 +276,7 @@ def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict
         },
         {
             "key": "approver",
-            # 审批者为插件管理员
+            # 审批者为插件的平台管理员
             "value": ",".join(pd.administrator),
         },
     ]

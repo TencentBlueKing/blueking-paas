@@ -350,11 +350,20 @@ class ApplicationListViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["应用列表"],
         operation_description="获取应用评估详情列表",
-        responses={200: slzs.ApplicationEvaluationListOutputSLZ()},
+        query_serializer=slzs.ApplicationEvaluationListQuerySLZ,
+        responses={200: slzs.ApplicationEvaluationListResultSLZ()},
     )
     def list_evaluation(self, request):
         """获取应用评估详情"""
+        serializer = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
+        page = params.get("page", 1)
+        page_size = params.get("page_size", 10)
+
         app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
+        count = len(app_codes)
+        app_codes = app_codes[(page - 1) * page_size : page * page_size]
 
         latest_collected_at = None
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
@@ -380,8 +389,14 @@ class ApplicationListViewSet(viewsets.ViewSet):
                 }
             )
 
-        resp_data = {"collected_at": latest_collected_at, "applications": applications}
-        return Response(data=slzs.ApplicationEvaluationListOutputSLZ(resp_data).data)
+        resp_data = {
+            "page": page,
+            "page_size": page_size,
+            "count": count,
+            "collected_at": latest_collected_at,
+            "applications": applications,
+        }
+        return Response(data=slzs.ApplicationEvaluationListResultSLZ(resp_data).data)
 
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

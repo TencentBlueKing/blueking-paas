@@ -16,7 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .app import (
-    ApplicationEvaluationListOutputSLZ,
+    ApplicationEvaluationListQuerySLZ,
+    ApplicationEvaluationListResultSLZ,
     ApplicationFeatureFlagSLZ,
     ApplicationGroupFieldSLZ,
     ApplicationListDetailedSLZ,
@@ -82,7 +83,8 @@ __all__ = [
     "SearchApplicationSLZ",
     "IdleModuleEnvSLZ",
     "IdleApplicationListOutputSLZ",
-    "ApplicationEvaluationListOutputSLZ",
+    "ApplicationEvaluationListQuerySLZ",
+    "ApplicationEvaluationListResultSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
     "CreateCloudNativeAppSLZ",

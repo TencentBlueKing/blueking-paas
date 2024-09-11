@@ -18,6 +18,7 @@
 from typing import Dict, Optional
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
@@ -186,6 +187,11 @@ class IdleApplicationListOutputSLZ(serializers.Serializer):
     applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
+class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
+    page = serializers.IntegerField(help_text="页码， 从1开始", default=1, validators=[MinValueValidator(1)])
+    page_size = serializers.IntegerField(help_text="页长", default=10, validators=[MinValueValidator(1)])
+
+
 class ApplicationEvaluationSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用 Code")
     name = serializers.CharField(help_text="应用名称")
@@ -202,7 +208,10 @@ class ApplicationEvaluationSLZ(serializers.Serializer):
     issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="问题类型")
 
 
-class ApplicationEvaluationListOutputSLZ(serializers.Serializer):
+class ApplicationEvaluationListResultSLZ(serializers.Serializer):
+    page = serializers.IntegerField(help_text="页码， 从1开始")
+    page_size = serializers.IntegerField(help_text="页长")
+    count = serializers.IntegerField(help_text="总数")
     collected_at = serializers.DateTimeField(help_text="采集时间")
     applications = serializers.ListField(help_text="应用列表", child=ApplicationEvaluationSLZ())
 

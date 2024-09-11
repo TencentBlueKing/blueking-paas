@@ -89,14 +89,32 @@
                 <span class="user-count">0</span>
               </template>
             </div>
-            <bk-button theme="primary" text :disabled="!isShowSelectedText" @click="handleDeleteAll"> {{ $t('清空') }} </bk-button>
+            <!-- 是否允许清空 -->
+            <bk-button
+              theme="primary"
+              text
+              :disabled="clearable || !isShowSelectedText"
+              @click="handleDeleteAll">
+              {{ $t('清空') }}
+            </bk-button>
           </div>
           <div class="content">
             <div class="organization-content" v-if="isDepartSelectedEmpty">
               <div class="organization-item" v-for="item in hasSelectedDepartments" :key="item.id">
                 <img class="folder-icon" src="./images/file-close.svg" alt="">
                 <span class="organization-name" :title="item.name">{{ item.name }}</span>
-                <img class="delete-depart-icon" src="./images/delete-fill.svg" alt="" @click="handleDelete(item, 'organization')">
+                <!-- 禁用删除icon -->
+                <i
+                  v-if="organizeDisableIconFn(item.id)"
+                  class="paasng-icon paasng-plus-circle-shape disabled-del"
+                  v-bk-tooltips="$t('扩大灰度范围不允许删除已经灰度过的组织')"
+                />
+                <img
+                  v-else
+                  class="delete-depart-icon"
+                  src="./images/delete-fill.svg"
+                  @click="handleDelete(item, 'organization')"
+                />
               </div>
             </div>
             <div class="user-content" v-if="isUserSelectedEmpty">
@@ -199,6 +217,14 @@ export default {
     },
     departmentsFn: {
       type: Function,
+    },
+    clearable: {
+      type: Boolean,
+      default: false,
+    },
+    organizeDisableIconFn: {
+      type: Function,
+      default: () => false,
     },
   },
   data() {
@@ -709,6 +735,8 @@ export default {
           name: item.name,
           id: item.id,
           type: 'department',
+          // 兼容插件
+          ...(this.departmentsType === 'tc' && { tof_id: item.extras?.code || '' }),
         });
       });
       if (!this.customClose) {

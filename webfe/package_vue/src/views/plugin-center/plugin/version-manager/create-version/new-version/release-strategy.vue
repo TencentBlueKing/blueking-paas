@@ -148,6 +148,8 @@
       :custom-close="true"
       :range="'departments'"
       :departments-fn="handleDepartments"
+      :clearable="isDetailStep"
+      :organize-disable-icon-fn="handleDisableIconFn"
       departments-type="tc"
       @sumbit="handleSubmit"
     />
@@ -198,6 +200,7 @@ export default {
       isShow: false,
       apiHost: window.BK_COMPONENT_API_URL,
       departments: [],
+      initDepartments: [],
       releaseStrategyMap: [
         { value: 'gray', name: this.$t('先灰度后全量发布') },
         { value: 'full', name: this.$t('直接全量发布') },
@@ -246,6 +249,7 @@ export default {
         if (this.isDetailStep) {
           this.releaseStrategy = cloneDeep(newValue?.latest_release_strategy || {});
           this.departments = newValue.latest_release_strategy?.organization || [];
+          this.initDepartments = cloneDeep(this.departments);
           if (this.departments.length) {
             this.requestAllOrganization(this.departments);
           }
@@ -307,9 +311,9 @@ export default {
       this.isShow = true;
     },
     async handleSubmit(payload) {
+      await this.requestAllOrganization(payload);
       this.releaseStrategy.organization = payload;
       this.departments = payload;
-      await this.requestAllOrganization(payload);
       this.isShow = false;
     },
     // 请求组织的层级结构
@@ -356,6 +360,11 @@ export default {
       if (input !== '') {
         this.releaseStrategy.bkci_project.push(input);
       }
+    },
+    // 是否允许删除已勾选的组织
+    handleDisableIconFn(id) {
+      if (!this.isDetailStep) return false;
+      return this.initDepartments.findIndex(v => v.id === id) !== -1;
     },
   },
 };

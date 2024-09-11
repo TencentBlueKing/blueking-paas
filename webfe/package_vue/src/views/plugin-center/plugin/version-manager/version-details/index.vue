@@ -137,7 +137,7 @@
               :loading="isApplyLoading"
               @click="handleSubmit"
             >
-              {{ $t('申请灰度发布') }}
+              {{ $t('申请扩大灰度范围') }}
             </bk-button>
             <bk-button
               :theme="'default'"

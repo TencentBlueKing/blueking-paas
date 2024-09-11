@@ -2806,4 +2806,5 @@ export default {
   '请输入蓝盾项目 ID，多个 ID 以英文分号分隔，最多可输入 10 个 ID': 'Please enter Blue Shield Project IDs, separate multiple IDs with English semicolons, up to 10 IDs',
   '灰度发布需由<em>工具管理员</em>进行审批；若选择了灰度组织范围，还需要由<em>工具发布者的组长</em>同时进行审批。': 'Gray release needs to be approved by the <em>tool administrator</em>; if a gray organization scope is selected, it also needs to be approved by the <em>team leader of the tool publisher</em>.',
   已终止当前的发布版本: 'The current release version has been terminated',
+  扩大灰度范围不允许删除已经灰度过的组织: 'Expanding the gray range does not allow deleting organizations that have already been grayed out',
 };

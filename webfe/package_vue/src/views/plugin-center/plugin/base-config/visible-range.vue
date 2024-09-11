@@ -2,7 +2,7 @@
   <div class="visible-range">
     <paas-plugin-title :tips="$t('仅可见范围内的组织、用户可在研发商店查看并使用该插件')" />
     <paas-content-loader
-      class="app-container middle"
+      class="app-container"
       :is-loading="isContentLoading"
       placeholder="visible-range-loading"
       :is-transform="false"

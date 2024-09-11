@@ -129,6 +129,7 @@
 <script>
 import card from '@/components/card/card.vue';
 import viewMode from './view-mode.vue';
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 
 export default {
   name: 'ReleaseContent',
@@ -136,6 +137,7 @@ export default {
     card,
     viewMode,
   },
+  mixins: [pluginBaseMixin],
   props: {
     mode: {
       type: String,
@@ -298,13 +300,8 @@ export default {
     toTestDetails() {
       const url = this.isEdit ? this.curVersionData.url : this.versionInfo.url;
       const id = url.split('=')[1];
-      this.$router.push({
-        name: 'pluginVersionRelease',
-        query: {
-          release_id: id,
-          type: 'test',
-        },
-      });
+      const newTabUrl = `${location.origin}/plugin-center/plugin/${this.pdId}/${this.pluginId}/version-release?release_id=${id}&type=test`;
+      window.open(newTabUrl, '_blank');
     },
   },
 };

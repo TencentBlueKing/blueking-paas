@@ -184,14 +184,14 @@ export default {
         version: [
           {
             required: true,
-            message: '必填项',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
         comment: [
           {
             required: true,
-            message: '必填项',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
@@ -220,7 +220,7 @@ export default {
       deep: true,
     },
     'releaseContent.version'(newVal) {
-      this.releaseContent.versionDisplay = `${newVal} (主版本号、次版本号、修正版本号)`;
+      this.releaseContent.versionDisplay = `${newVal} (${this.$t('主版本号、次版本号、修正版本号')})`;
     },
     'releaseContent.source_versions'() {
       this.releaseContent.comment = this.curVersionData.message;
@@ -259,16 +259,16 @@ export default {
         'self-fill': '',
       };
       this.releaseContent.version = versionMapping[data.version_no] || '';
-      // 重新申请默认值
+      // 重新发布默认值
       if (this.versionId) {
         this.setVersionDefaultValue(data);
       }
     },
-    // 重新申请设置默认值
+    // 重新发布设置默认值
     setVersionDefaultValue() {
       const { source_version_name, semver_type, comment } = this.versionData;
       const version = this.versionTypes.find(v => v.key === semver_type).value;
-      const versionDisplay = `${version} (主版本号、次版本号、修正版本号)`;
+      const versionDisplay = `${version} (${this.$t('主版本号、次版本号、修正版本号')})`;
       this.releaseContent = {
         ...this.releaseContent,
         source_versions: source_version_name,

@@ -80,6 +80,7 @@
         :mode="releaseStrategyMode"
         :data="versionData"
         step="release"
+        @strategy-change="handleStrategyChange"
       />
       <!-- 发布结果 -->
       <release-result :url="versionData.report_url" />
@@ -98,7 +99,7 @@
             class="mr8"
             @click="handleReapply"
           >
-            {{ $t('重新申请') }}
+            {{ $t('重新发布') }}
           </bk-button>
           <!-- 审批中 -->
           <bk-button
@@ -137,7 +138,7 @@
               :loading="isApplyLoading"
               @click="handleSubmit"
             >
-              {{ $t('申请扩大灰度范围') }}
+              {{ $t(submitText) }}
             </bk-button>
             <bk-button
               :theme="'default'"
@@ -195,6 +196,7 @@ export default {
         source_versions: [],
       },
       canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
+      submitText: '申请扩大灰度范围',
     };
   },
   computed: {
@@ -272,6 +274,7 @@ export default {
       // 只允许扩大灰度范围
       this.releaseStrategyMode = 'edit';
       this.isRequestGrayRelease = true;
+      this.submitText = type === 'full' ? '申请全量发布' : '申请扩大灰度范围';
       if (type === 'full') {
         // 全量
         this.versionData.latest_release_strategy.strategy = 'full';
@@ -368,7 +371,7 @@ export default {
       }
     },
 
-    // 重新申请
+    // 重新发布
     handleReapply() {
       this.$router.push({
         name: 'pluginVersionEditor',
@@ -412,6 +415,10 @@ export default {
           }
         },
       });
+    },
+
+    handleStrategyChange(type) {
+      this.submitText = type === 'full' ? '申请全量发布' : '申请扩大灰度范围';
     },
   },
 };

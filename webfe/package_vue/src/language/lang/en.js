@@ -2798,7 +2798,7 @@ export default {
   申请灰度发布: 'Apply for Gray Release',
   扩大灰度范围: 'Expand Gray Release Scope',
   申请全量发布: 'Apply for Full Release',
-  重新申请: 'Reapply',
+  申请扩大灰度范围: 'Apply to expand the gray range',
   已测试版本: 'Tested Version',
   最小范围可以选择中心: 'Minimum Scope Can Select Center',
   '灰度发布审批中，请耐心等待': 'Gray release approval in progress, please wait patiently',
@@ -2807,4 +2807,7 @@ export default {
   '灰度发布需由<em>工具管理员</em>进行审批；若选择了灰度组织范围，还需要由<em>工具发布者的组长</em>同时进行审批。': 'Gray release needs to be approved by the <em>tool administrator</em>; if a gray organization scope is selected, it also needs to be approved by the <em>team leader of the tool publisher</em>.',
   已终止当前的发布版本: 'The current release version has been terminated',
   扩大灰度范围不允许删除已经灰度过的组织: 'Expanding the gray range does not allow deleting organizations that have already been grayed out',
+  测试号: 'Test number',
+  已终止: 'Terminated',
+  '主版本号、次版本号、修正版本号': 'Major version number, minor version number, patch version number',
 };

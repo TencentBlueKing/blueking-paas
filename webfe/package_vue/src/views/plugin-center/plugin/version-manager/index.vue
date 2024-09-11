@@ -508,6 +508,7 @@ export default {
         this.curVersionType = this.$route.query.type || 'test';
       }
       this.getVersionList();
+      this.getReleasedVersion();
       if (this.isCodecc) {
         this.getRollbackVersion();
       }
@@ -580,6 +581,25 @@ export default {
       return statusParams;
     },
 
+    // 获取指定状态版本，判断是否有版本正在灰度或者发布中
+    async getReleasedVersion() {
+      if (!this.isOfficialVersion) return;
+      try {
+        const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+          data: {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+          },
+          pageParams: { type: 'prod' },
+          statusParams: 'status=pending&status=initial',
+        });
+        // 当前是否已有任务进行中
+        this.curIsPending = !!res.results.length;
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
     // 获取版本列表
     async getVersionList(page = 1) {
       this.isTableLoading = true;
@@ -597,8 +617,6 @@ export default {
         });
         this.versionList = res.results;
         this.pagination.count = res.count;
-        // 当前是否已有任务进行中
-        this.curIsPending = this.versionList.find(item => item.status === 'pending');
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -933,6 +951,7 @@ export default {
               message: this.$t('已终止当前的发布版本'),
             });
             this.getVersionList();
+            this.getReleasedVersion();
           } catch (e) {
             this.$bkMessage({
               theme: 'error',

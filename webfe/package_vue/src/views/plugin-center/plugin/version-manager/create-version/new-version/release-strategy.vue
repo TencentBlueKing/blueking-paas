@@ -19,7 +19,7 @@
           :error-display-type="'normal'"
           :rules="rules.strategy"
         >
-          <bk-radio-group v-model="releaseStrategy.strategy">
+          <bk-radio-group v-model="releaseStrategy.strategy" @change="handleChange">
             <bk-radio
               v-for="item in releaseStrategyMap"
               :value="item.value"
@@ -211,7 +211,7 @@ export default {
         strategy: [
           {
             required: true,
-            message: '必填项',
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
         ],
@@ -365,6 +365,9 @@ export default {
     handleDisableIconFn(id) {
       if (!this.isDetailStep) return false;
       return this.initDepartments.findIndex(v => v.id === id) !== -1;
+    },
+    handleChange(value) {
+      this.$emit('strategy-change', value);
     },
   },
 };

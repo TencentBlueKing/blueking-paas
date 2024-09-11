@@ -24,6 +24,7 @@ from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
+from paasng.platform.applications.serializers import ApplicationSLZ4Record
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
@@ -122,11 +123,7 @@ class AlertSLZ(serializers.Serializer):
 
 
 class AlertListByAppsSLZ(serializers.Serializer):
-    app_code = serializers.CharField(help_text="应用 Code")
-    name = serializers.CharField(help_text="应用名称")
-    type = serializers.CharField(help_text="应用类型")
-    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
-    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
+    applcation = ApplicationSLZ4Record(read_only=True)
     count = serializers.IntegerField(help_text="应用告警数")
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
 

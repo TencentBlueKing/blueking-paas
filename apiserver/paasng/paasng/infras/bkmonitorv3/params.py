@@ -31,7 +31,9 @@ def get_bk_biz_id(app_code: str) -> str:
         raise BkMonitorSpaceDoesNotExist(e)
 
 
-def get_exist_bk_biz_ids(app_codes: List[str]) -> List[str]:
+def get_exist_bk_biz_ids(app_codes: Union[str, List[str]]) -> List[str]:
+    if isinstance(app_codes, str):
+        app_codes = [app_codes]
     monitor_spaces = BKMonitorSpace.objects.filter(application__code__in=app_codes)
     if not monitor_spaces:
         raise BkMonitorSpaceDoesNotExist(BKMonitorSpace.DoesNotExist)
@@ -46,13 +48,13 @@ class QueryAlertsParams:
     :param app_code: 应用 code
     :param start_time: 发生时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
     :param end_time: 结束时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
-    :param environment: 应用部署环境. 可选
+    :param environment: 应用部署环境. 可选isinstance(param, list)
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
     :param keyword: 告警名称包含的关键字. 可选
     """
 
-    app_code: List[str]
+    app_code: Union[str, List[str]]
     start_time: datetime
     end_time: datetime
     environment: Optional[str] = None

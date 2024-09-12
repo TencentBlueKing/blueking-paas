@@ -18,6 +18,7 @@
 import base64
 import json
 from textwrap import dedent
+from typing import Dict, Tuple
 from unittest import mock
 
 import pytest
@@ -27,9 +28,10 @@ from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTAT
 from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
+from paasng.platform.modules.models.module import Module
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -73,16 +75,13 @@ def yaml_v3_example() -> str:
 
 
 class TestCnativeAppDescriptionHandler:
-    def test_handle_deployment_normal(self, bk_deployment, yaml_v3_example):
+    def test_handle_normal(self, bk_module, bk_deployment, yaml_v3_example):
         with mock.patch(
-            "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
+            "paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"
         ) as update_bkmonitor:
-            handler = get_desc_handler(yaml.safe_load(yaml_v3_example))
+            handler = get_deploy_desc_handler(yaml.safe_load(yaml_v3_example))
 
-            handler.handle_deployment(bk_deployment)
-
-            deploy_desc = handler.get_deploy_desc(bk_deployment.app_environment.module.name)
-            assert deploy_desc.get_procfile() == {"web": "python manage.py runserver"}
+            handler.handle(bk_deployment)
 
             assert bk_deployment.hooks[0].command == []
             assert bk_deployment.hooks[0].args == ["python", "manage.py", "migrate"]
@@ -115,6 +114,8 @@ class TestCnativeAppDescriptionHandler:
                 ).decode()
             }
 
+            assert query_proc_dict(bk_module) == {"web": ("python manage.py runserver", 1)}
+
             spec = ModuleProcessSpec.objects.get(module=bk_deployment.app_environment.module, name="web")
             assert spec.services == [
                 ProcService(
@@ -128,6 +129,17 @@ class TestCnativeAppDescriptionHandler:
             ]
 
             assert not update_bkmonitor.called
+
+    def test_desc_and_procfile_different(self, bk_module, bk_deployment, yaml_v3_example):
+        with mock.patch("paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"):
+            handler = get_deploy_desc_handler(
+                yaml.safe_load(yaml_v3_example), procfile_data={"worker": "celery worker"}
+            )
+
+            handler.handle(bk_deployment)
+
+            # Should use the process data in procfile when conflicts
+            assert query_proc_dict(bk_module) == {"worker": ("celery worker", 1)}
 
     def test_with_modules_found(self, bk_deployment, bk_module):
         _yaml_content = dedent(
@@ -143,7 +155,7 @@ class TestCnativeAppDescriptionHandler:
                       procCommand: python manage.py runserver
         """
         )
-        get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+        get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_modules_not_found(self, bk_deployment):
         _yaml_content = dedent(
@@ -160,7 +172,15 @@ class TestCnativeAppDescriptionHandler:
         """
         )
         with pytest.raises(DescriptionValidationError, match="未找到.*当前已配置"):
-            get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+            get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     # Other tests that cover different cases when modules/module field uses different values
     # share similar logic with TestAppDescriptionHandler, no need to duplicate in here.
+
+
+def query_proc_dict(module: Module) -> Dict[str, Tuple[str, int]]:
+    """A helper function to query module's all process specs for comparison."""
+    proc_dict = {}
+    for p in ModuleProcessSpec.objects.filter(module=module):
+        proc_dict[p.name] = (p.proc_command, p.target_replicas)
+    return proc_dict

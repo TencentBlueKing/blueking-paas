@@ -26,7 +26,7 @@ from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.declarative.handlers import get_deploy_desc_by_module
 from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
@@ -110,8 +110,7 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     """
     logger.debug("dispatching slug-image for module '%s', working at '%s'", module.name, workplace)
 
-    desc_handler = get_desc_handler(stat.meta_info)
-    deploy_desc = desc_handler.get_deploy_desc(module.name)
+    deploy_desc = get_deploy_desc_by_module(stat.meta_info, module.name)
 
     layer_path = workplace / stat.relative_path / deploy_desc.source_dir / "layer.tar.gz"
     procfile_path = workplace / stat.relative_path / deploy_desc.source_dir / f"{module.name}.Procfile.tar.gz"

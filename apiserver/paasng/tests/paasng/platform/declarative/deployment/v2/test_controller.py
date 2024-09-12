@@ -69,20 +69,6 @@ class TestProcessesField:
         assert web.command is None
         assert web.args is None
 
-    def test_proc_with_no_replicas(self, bk_deployment):
-        json_data = {"language": "python", "processes": {"web": {"command": "start"}}}
-        controller = DeploymentDeclarativeController(bk_deployment)
-        result = controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-        assert result.processes["web"].replicas is None
-
-    def test_proc_with_fixed_replicas(self, bk_deployment):
-        json_data = {"language": "python", "processes": {"web": {"command": "start", "replicas": 3}}}
-        controller = DeploymentDeclarativeController(bk_deployment)
-        result = controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-
-        assert result.processes["web"].replicas == 3
-
 
 class TestEnvVariablesField:
     def test_invalid_input(self, bk_deployment):

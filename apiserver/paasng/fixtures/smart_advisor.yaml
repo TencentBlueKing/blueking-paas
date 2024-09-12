@@ -4,7 +4,7 @@
             title_en: "Guide to building a local Python development environment",
             short_description_zh_cn: '',
             short_description_en: '',
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/company_tencent/python_framework_usage#python',
+            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/quickstart/python/python_setup_dev',
             affinity_tags: '["app-pl:python","plat-panel:app_created"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink

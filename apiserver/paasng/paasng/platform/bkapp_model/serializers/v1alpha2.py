@@ -20,7 +20,13 @@ from typing import List
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model.constants import ImagePullPolicy, NetworkProtocol, ResQuotaPlan, ScalingPolicy
+from paasng.platform.bkapp_model.constants import (
+    PORT_PLACEHOLDER,
+    ImagePullPolicy,
+    NetworkProtocol,
+    ResQuotaPlan,
+    ScalingPolicy,
+)
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
@@ -179,10 +185,24 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 class ProcServiceInputSLZ(serializers.Serializer):
     name = serializers.CharField()
-    targetPort = serializers.IntegerField(min_value=1, max_value=65535, source="target_port")
+    targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")
     port = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
+
+    def validate_targetPort(self, value):  # noqa: N802
+        """validate whether targetPort is a valid number or str '$PORT'"""
+        try:
+            target_port = int(value)
+        except ValueError:
+            if value != PORT_PLACEHOLDER:
+                raise serializers.ValidationError(f"Invalid targetPort: {value}")
+            return value
+
+        if target_port < 1 or target_port > 65535:
+            raise serializers.ValidationError(f"Invalid targetPort: {value}")
+
+        return value
 
 
 class ProcessInputSLZ(serializers.Serializer):

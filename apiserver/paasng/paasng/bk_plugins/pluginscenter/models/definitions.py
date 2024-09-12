@@ -31,6 +31,7 @@ from paasng.bk_plugins.pluginscenter.definitions import (
     PluginFeature,
     PluginLogConfig,
     PluginoverviewPage,
+    PluginVisibleRangeLevel,
     ReleaseRevisionDefinition,
     ReleaseStageDefinition,
 )
@@ -50,6 +51,7 @@ PluginConfigColumnDefinitionField = make_json_field(
 )
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
 PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
+PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", List[PluginVisibleRangeLevel])
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -145,5 +147,5 @@ class PluginVisibleRangeDefinition(AuditedModel):
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range_definition"
     )
-    description = TranslatedFieldWithFallback(models.TextField(default=""))
-    scope = models.JSONField(default=list)
+    api: PluginBackendAPI = PluginBackendAPIField(null=True)
+    initial: PluginVisibleRangeLevel = PluginVisibleRangeLevelField(null=True)

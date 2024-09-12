@@ -218,7 +218,7 @@ class TestProcessesManifestConstructor:
                 target_port=8000,
                 exposed_type={"name": "bk/http"},
             ),
-            ProcService(name="metric", port=8001, target_port=8001),
+            ProcService(name="metric", port=8001, target_port="${PORT}"),
         ]
         process_web.save()
         return process_web
@@ -322,7 +322,7 @@ class TestProcessesManifestConstructor:
         data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
         assert data["services"] == [
             {"name": "web", "port": 8000, "protocol": "TCP", "targetPort": 8000, "exposedType": {"name": "bk/http"}},
-            {"name": "metric", "port": 8001, "protocol": "TCP", "targetPort": 8001},
+            {"name": "metric", "port": 8001, "protocol": "TCP", "targetPort": settings.CONTAINER_PORT},
         ]
 
 

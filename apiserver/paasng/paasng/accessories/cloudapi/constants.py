@@ -46,6 +46,7 @@ class PermissionActionEnum(StructuredEnum):
 
 
 class PermissionApplyExpireDaysEnum(StructuredEnum):
+    PERMANENT = EnumField(0, label="永久")
     SIX_MONTH = EnumField(180, label="6个月")
     TWELVE_MONTH = EnumField(360, label="12个月")
 

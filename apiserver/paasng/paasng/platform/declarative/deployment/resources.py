@@ -15,13 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
+import cattr
 from attrs import define
 
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.engine.models.deployment import ProcessTmpl
 
 
 @define
@@ -38,6 +40,18 @@ class BluekingMonitor:
     def __attrs_post_init__(self):
         if self.target_port is None:
             self.target_port = self.port
+
+
+@define
+class ProcfileProc:
+    """The process object defined by Procfile.
+
+    :param name: The process name, such as "web", "worker"
+    :param command: The command to run the process
+    """
+
+    name: str
+    command: str
 
 
 @define
@@ -59,7 +73,14 @@ class DeploymentDesc:
     spec_version: AppSpecVersion = AppSpecVersion.VER_2
 
     def get_procfile(self) -> Dict[str, str]:
+        """Get the processes in Procfile format. This function is used by patchers
+        such as `SourceCodePatcher` for generating "Procfile" file.
+        """
         return {proc_type: process.get_proc_command() for proc_type, process in self.get_processes().items()}
+
+    def get_proc_tmpls(self) -> Dict[str, ProcessTmpl]:
+        """Get the process objects as the `ProcessTmpl` type"""
+        return {name: self.to_proc_tmpl(p) for name, p in self.get_processes().items()}
 
     def get_processes(self) -> Dict[str, Process]:
         """Get the Process objects. These objects are used to synchronize with the
@@ -84,3 +105,42 @@ class DeploymentDesc:
             # TODO: Try read envOverlay to get the "replicas" and "plan" values
             result[process.name] = process
         return result
+
+    def use_procfile_procs_if_conflict(self, procfile_procs: List[ProcfileProc]):
+        """Use the processes defined in the Procfile if it's not identical with the
+        process list in current spec object.
+        """
+        if self._equal_with_procs(procfile_procs):
+            return
+
+        # Replace the processes with the data defined by the Procfile
+        self.spec.processes = []
+        for proc in procfile_procs:
+            self.spec.processes.append(Process(name=proc.name, proc_command=proc.command))
+
+    def _equal_with_procs(self, procfile_procs: List[ProcfileProc]) -> bool:
+        """Check if current process list is equal with given Procfile processes.
+
+        Only "name" and "command" fields are compared because the ProcfileProc object
+        do not contain any other fields.
+        """
+        d1 = {p.name: p.get_proc_command() for p in self.get_processes().values()}
+        d2 = {p.name: p.command for p in procfile_procs}
+        return d1 == d2
+
+    @staticmethod
+    def to_proc_tmpl(process: Process) -> ProcessTmpl:
+        """Turn a Process object into a ProcessTmpl object."""
+        return cattr.structure(
+            {
+                "name": process.name,
+                "command": process.get_proc_command(),
+                "replicas": process.replicas,
+                "plan": process.res_quota_plan,
+                "probes": process.probes,
+                # FIXME: 是否需要补充 services 和 scaling_config 等字段，要弄明白增加
+                # 这些字段后会产生什么后果。以及 ProcessTmpl 到底代表什么，和 Process 的
+                # 区别如何。
+            },
+            ProcessTmpl,
+        )

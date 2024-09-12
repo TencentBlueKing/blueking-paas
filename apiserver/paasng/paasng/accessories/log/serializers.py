@@ -24,7 +24,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import get_attribute
 
-from paasng.accessories.log.constants import LogTimeChoices
+from paasng.accessories.log.constants import MAX_RESULT_WINDOW, LogTimeChoices
 from paasng.infras.bk_log.constatns import BkLogType
 from paasng.utils.es_log.time_range import SmartTimeRange
 
@@ -69,6 +69,7 @@ class StructureLogsSLZ(serializers.Serializer):
     logs = StructureLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class IngressLogLineSLZ(serializers.Serializer):
@@ -93,6 +94,7 @@ class IngressLogSLZ(serializers.Serializer):
     logs = IngressLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class DateHistogramSLZ(serializers.Serializer):
@@ -115,7 +117,13 @@ class LogFieldFilterSLZ(serializers.Serializer):
 
 
 class LogQueryParamsSLZ(serializers.Serializer):
-    """查询日志的 query 参数"""
+    """查询日志的 query 参数，包含：
+    - 结构化日志
+    - 访问日志
+    - 标准输出日志
+    - 日志事件直方图
+    - 日志字段统计
+    """
 
     time_range = serializers.ChoiceField(choices=LogTimeChoices.get_choices(), required=True)
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
@@ -143,6 +151,10 @@ class LogQueryParamsSLZ(serializers.Serializer):
             attrs["limit"] = attrs["page_size"]
         if "page" in attrs:
             attrs["offset"] = (attrs["page"] - 1) * attrs["limit"]
+
+        # 限制最大分页条数
+        if attrs["offset"] + attrs["limit"] > MAX_RESULT_WINDOW:
+            raise ValidationError(_(f"最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"))
         return attrs
 
 

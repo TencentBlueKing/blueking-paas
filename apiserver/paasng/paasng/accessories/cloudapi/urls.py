@@ -37,6 +37,11 @@ urlpatterns = [
         name="api.cloudapi.v1.apply_resource_permissions",
     ),
     path(
+        "api/cloudapi/apps/<slug:app_code>/apis/permissions/apply/",
+        views.CloudAPIViewSet.as_view({"post": "batch_apply"}),
+        name="api.cloudapi.v1.batch_apply_resource_permissions",
+    ),
+    path(
         "api/cloudapi/apps/<slug:app_code>/apis/permissions/renew/",
         views.CloudAPIViewSet.as_view({"post": "renew"}),
         name="api.cloudapi.v1.renew_resource_permissions",

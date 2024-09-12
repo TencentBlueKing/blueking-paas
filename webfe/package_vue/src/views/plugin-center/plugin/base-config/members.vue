@@ -214,10 +214,12 @@
   </div>
 </template>
 
-<script>import auth from '@/auth';
+<script>
+import auth from '@/auth';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import user from '@/components/user';
 import paasPluginTitle from '@/components/pass-plugin-title';
+import { paginationFun } from '@/common/utils';
 
 const ROLE_BACKEND_IDS = {
   administrator: 2,
@@ -292,10 +294,7 @@ export default {
         count: 0,
         limit: 10,
       },
-      currentBackup: 1,
-      enableToAddRole: false,
       keyword: '',
-      memberListClone: [],
       isTableLoading: false,
       isDelLoading: false,
       tableEmptyConf: {
@@ -306,7 +305,7 @@ export default {
   },
   computed: {
     curUserInfo() {
-      return this.memberListShow.find(item => item.username === this.currentUser) || {};
+      return this.memberList.find(item => item.username === this.currentUser) || {};
     },
     // 当前用户是否为当前插件的管理员
     isPluginAdmin() {
@@ -315,7 +314,7 @@ export default {
     isExitDisabled() {
       if (this.curUserInfo.role.roleName === 'developer') return false; // 开发者允许退出
       // 当前插件如果只剩下一个管理员，不允许退出
-      const adminUsers = this.memberListShow.filter(user => user.role.roleName === 'administrator');
+      const adminUsers = this.memberList.filter(user => user.role.roleName === 'administrator');
       return adminUsers.length <= 1;
     },
     localLanguage() {
@@ -327,13 +326,15 @@ export default {
       }
       return this.localLanguage === 'en' ? 'en-icon-left' : '';
     },
+    filterMemberList() {
+      return this.keyword
+        ? this.memberList.filter(v => v.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1)
+        : this.memberList;
+    },
   },
   watch: {
     $route() {
       this.init();
-    },
-    'pagination.current'(value) {
-      this.currentBackup = value;
     },
     keyword(val) {
       if (!val) {
@@ -346,14 +347,11 @@ export default {
   },
   methods: {
     pageChange(page) {
-      if (this.currentBackup === page) {
-        return;
-      }
       this.pagination.current = page;
-      this.handleSearch();
+      this.setTableData(this.filterMemberList, page, this.pagination.limit);
     },
 
-    limitChange(currentLimit, prevLimit) {
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.handleSearch();
@@ -364,7 +362,6 @@ export default {
     },
 
     init() {
-      this.enableToAddRole = this.curPluginInfo && this.curPluginInfo.role && this.curPluginInfo.role.id === ROLE_BACKEND_IDS.administrator;
       this.fetchMemberList();
     },
 
@@ -379,10 +376,8 @@ export default {
         res.forEach((element) => {
           this.$set(element.role, 'roleName', ROLE_ID_TO_NAME[element.role.id]);
         });
-        const start = this.pagination.limit * (this.pagination.current - 1);
-        const end = start + this.pagination.limit;
-        this.memberList.splice(0, this.memberList.length, ...(res || []));
-        this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
+        this.memberList = res || [];
+        this.setTableData(this.memberList, this.pagination.current, this.pagination.limit);
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -600,21 +595,15 @@ export default {
     isCurrentUser(memberInfo) {
       return memberInfo.username === this.currentUser;
     },
-
+    setTableData(data, page, limit) {
+      const result = paginationFun(data, page, limit);
+      this.memberListShow = result.pageData;
+    },
+    // 成员名称搜索
     handleSearch() {
-      if (this.keyword) {
-        this.memberListShow = this.memberList.filter(apigw => apigw.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1);
-        this.memberListClone = [...this.memberListShow];
-        this.pagination.count = this.memberListClone.length;
-        if (this.memberListClone.length > 10) {
-          const start = this.pagination.limit * (this.pagination.current - 1);
-          const end = start + this.pagination.limit;
-          this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
-        }
-        this.updateTableEmptyConfig();
-      } else {
-        this.fetchMemberList();
-      }
+      this.pagination.current = 1;
+      this.pagination.count = this.filterMemberList.length;
+      this.setTableData(this.filterMemberList, this.pagination.current, this.pagination.limit);
     },
     clearFilterKey() {
       this.keyword = '';

@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
-# TencentBlueKing is pleased to support the open source community by making
-# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-# Licensed under the MIT License (the "License"); you may not use this file except
-# in compliance with the License. You may obtain a copy of the License at
-#
-#     http://opensource.org/licenses/MIT
-#
-# Unless required by applicable law or agreed to in writing, software distributed under
-# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-# either express or implied. See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# We undertake not to change the open source license (MIT license) applicable
-# to the current version of the project delivered to anyone in the future.
+"""
+TencentBlueKing is pleased to support the open source community by making
+蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except
+in compliance with the License. You may obtain a copy of the License at
 
+    http://opensource.org/licenses/MIT
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the License for the specific language governing permissions and
+limitations under the License.
+
+We undertake not to change the open source license (MIT license) applicable
+to the current version of the project delivered to anyone in the future.
+"""
 from django.urls import path
 
 from . import views
+from .bk_user.views import BkPluginUserManageView
 from .iam_adaptor.views import PluginSelectionView
 
 urlpatterns = [
@@ -30,6 +31,10 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/",
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/basic_info/",
+        views.PluginInstanceViewSet.as_view({"get": "get_basic_info"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/extra_fields/",
@@ -101,6 +106,10 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"post": "re_release"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/rollback/",
+        views.PluginReleaseViewSet.as_view({"post": "rollback_release"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/",
         views.PluginReleaseStageViewSet.as_view({"get": "retrieve"}),
     ),
@@ -111,6 +120,11 @@ urlpatterns = [
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/status/",
         views.PluginReleaseStageViewSet.as_view({"post": "update_stage_status"}),
+    ),
+    # 灰度发布策略
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/strategy/",
+        views.PluginReleaseStrategyViewSet.as_view({"get": "list", "post": "update"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/market/",
@@ -188,5 +202,10 @@ urlpatterns = [
     path(
         "api/bkplugins/shim/iam/selection/plugin_view/",
         PluginSelectionView.as_view(),
+    ),
+    # bk user api
+    path(
+        "api/usermanage/departments/<str:dept_id>/",
+        BkPluginUserManageView.as_view({"get": "get_department"}),
     ),
 ]

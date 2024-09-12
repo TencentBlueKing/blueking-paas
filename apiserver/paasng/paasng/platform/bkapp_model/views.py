@@ -33,6 +33,8 @@ from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
@@ -267,14 +269,23 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
-        svc_disc, _ = SvcDiscConfig.objects.update_or_create(
+        svc_disc, created = SvcDiscConfig.objects.update_or_create(
             application_id=application.id,
             defaults={
                 "bk_saas": validated_data["bk_saas"],
             },
         )
         svc_disc.refresh_from_db()
-        return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
+        data = SvcDiscConfigSLZ(svc_disc).data
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
+            target=OperationTarget.SERVICE_DISCOVERY,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
@@ -303,7 +314,19 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         if host_aliases is not None:
             defaults["host_aliases"] = host_aliases
 
-        domain_resolution, _ = DomainResolution.objects.update_or_create(application=application, defaults=defaults)
+        domain_resolution, created = DomainResolution.objects.update_or_create(
+            application=application, defaults=defaults
+        )
 
         domain_resolution.refresh_from_db()
-        return Response(DomainResolutionSLZ(domain_resolution).data, status=status.HTTP_200_OK)
+
+        data = DomainResolutionSLZ(domain_resolution).data
+        add_app_audit_record(
+            app_code=code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
+            target=OperationTarget.DOMAIN_RESOLUTION,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data, status=status.HTTP_200_OK)

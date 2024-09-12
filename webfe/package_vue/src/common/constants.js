@@ -275,3 +275,17 @@ export const CIRCLED_NUMBERS = [
   '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
   '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',
 ];
+
+/**
+ * Codecc 版本发布状态
+ */
+export const CODECC_RELEASE_STATUS = {
+  gray_approval_in_progress: '灰度发布审批中',
+  in_gray: '灰度中',
+  gray_approval_failed: '灰度审批失败',
+  full_approval_in_progress: '全量发布审批中',
+  fully_released: '已全量发布',
+  full_approval_failed: '全量发布审批失败',
+  rolled_back: '已回滚',
+  interrupted: '已终止',
+};

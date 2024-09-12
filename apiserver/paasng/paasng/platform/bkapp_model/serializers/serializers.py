@@ -26,7 +26,7 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.constants import ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -75,12 +75,26 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 class ProcServiceSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="服务名称")
-    target_port = serializers.IntegerField(help_text="目标容器端口", min_value=1, max_value=65535)
+    target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value
     )
     exposed_type = ExposedTypeSLZ(help_text="暴露类型", required=False, allow_null=True)
     port = serializers.IntegerField(help_text="服务端口", min_value=1, max_value=65535, required=False)
+
+    def validate_target_port(self, value):
+        """validate whether target_port is a valid number or str '$PORT'"""
+        try:
+            target_port = int(value)
+        except ValueError:
+            if value != PORT_PLACEHOLDER:
+                raise ValidationError(f"invalid target_port: {value}")
+            return value
+
+        if target_port < 1 or target_port > 65535:
+            raise ValidationError(f"invalid target_port: {value}")
+
+        return value
 
 
 class ExecProbeActionSLZ(serializers.Serializer):

@@ -154,7 +154,7 @@ export const PLATFORM_CONFIG = {
         API_HELP: BK_APIGW_DOC_URL,
 
         // Python 开发框架（blueapps）- 框架文档
-        PYTHON_FRAMEWORK: DOCS_URL_PREFIX + '/topics/company_tencent/python_framework_usage',
+        PYTHON_FRAMEWORK: BK_DOCS_URL_PREFIX + '/markdown/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md',
 
         // Go 开发框架- 快速开始
         GO_START: DOCS_URL_PREFIX + '/quickstart/golang/golang_preparations',
@@ -557,7 +557,7 @@ export const PAAS_STATIC_CONFIG = {
                 "list": [
                     {
                         "title": staticI18n.$t("如何使用蓝鲸开发框架？"),
-                        "url": DOCS_URL_PREFIX + "/topics/company_tencent/python_framework_usage",
+                        "url": BK_DOCS_URL_PREFIX + "/markdown/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md",
                         "info": staticI18n.$t("集成登录鉴权、安全防护、权限控制等基础模块，更有后台任务、云API调用等样例供您参考")
                     },
                     {

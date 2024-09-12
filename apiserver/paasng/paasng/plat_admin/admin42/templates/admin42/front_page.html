@@ -131,6 +131,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 url: "{% url 'admin.accountmgr.account_feature_flags.index' %}",
                             },
                         ]
+                    },
+                    {
+                        name: "操作审计",
+                        url: "{% url 'admin.audit.index' %}",
+                        children: [
+                            {
+                                name: "后台管理审计",
+                                url: "{% url 'admin.audit.index' %}"
+                            },
+                            {
+                                name: "应用操作审计",
+                                url: "{% url 'admin.audit.app' %}",
+                            },
+                        ]
                     }
                     {% endif %}
                 ]

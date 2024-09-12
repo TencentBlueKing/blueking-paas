@@ -24,6 +24,7 @@ from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.utils.procfile import generate_bash_command_with_tokens
 
 from .probes import ProbeSet
+from .proc_service import ProcService
 from .scaling_config import AutoscalingConfig
 
 
@@ -35,6 +36,7 @@ class Process(BaseModel):
     :param command: 进程启动命令
     :param args: 进程启动参数
     :param proc_command: 单行脚本命令, 与 command/args 二选一, 优先于 command/args, 用于设置 Procfile 文件中进程 command
+    :param services: 暴露进程网路服务的 service 列表
     :param target_port: 监听端口
     :param replicas: 进程副本数. `None` value means the replicas is not specified.
     :param res_quota_plan: 资源配额套餐名
@@ -48,6 +50,7 @@ class Process(BaseModel):
     args: Optional[List[str]] = Field(default_factory=list)
     proc_command: Optional[str] = None
 
+    services: Optional[List[ProcService]] = None
     target_port: Optional[int] = None
 
     replicas: Optional[int] = None

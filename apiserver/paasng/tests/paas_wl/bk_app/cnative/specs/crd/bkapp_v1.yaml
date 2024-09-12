@@ -784,6 +784,52 @@ spec:
                       description: ResQuotaPlan is the name of plan which defines
                         how much resources current process can consume.
                       type: string
+                    services:
+                      description: Services is the list of services for the process
+                      items:
+                        description: ProcService is a process service which used to
+                          expose network
+                        properties:
+                          exposedType:
+                            description: "The exposed type of the service. If not
+                              specified(or specified as null), the service can only
+                              be accessed within the cluster, not from outside. however,
+                              it is primarily informational here, the real control
+                              logic is in paas \"apiserver\". TODO implement control
+                              logic in operator? \n ExposedType can be one of the
+                              following: - {Name: ExposedTypeNameBkHttp} exposed by
+                              DomainGroupMapping"
+                            properties:
+                              name:
+                                description: The name of the exposed type.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          name:
+                            description: The name of the service.
+                            type: string
+                          port:
+                            description: The port that will be exposed by this service.
+                              If this is not specified, the value of the 'targetPort'
+                              field is used.
+                            format: int32
+                            type: integer
+                          protocol:
+                            default: TCP
+                            description: The protocol of the service. Default value
+                              is TCP if not specified.
+                            type: string
+                          targetPort:
+                            description: Number of the port to access on the pods(container)
+                              targeted by the service.
+                            format: int32
+                            type: integer
+                        required:
+                        - name
+                        - targetPort
+                        type: object
+                      type: array
                     targetPort:
                       description: The containerPort to expose server
                       format: int32
@@ -1868,6 +1914,53 @@ spec:
                       description: ResQuotaPlan is the name of plan which defines
                         how much resources current process can consume.
                       type: string
+                    services:
+                      description: Services is a list of ProcService which used to
+                        expose process network for access within or outside the cluster.
+                      items:
+                        description: ProcService is a process service which used to
+                          expose network
+                        properties:
+                          exposedType:
+                            description: "The exposed type of the service. If not
+                              specified(or specified as null), the service can only
+                              be accessed within the cluster, not from outside. however,
+                              it is primarily informational here, the real control
+                              logic is in paas \"apiserver\". TODO implement control
+                              logic in operator? \n ExposedType can be one of the
+                              following: - {Name: ExposedTypeNameBkHttp} exposed by
+                              DomainGroupMapping"
+                            properties:
+                              name:
+                                description: The name of the exposed type.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          name:
+                            description: The name of the service.
+                            type: string
+                          port:
+                            description: The port that will be exposed by this service.
+                              If this is not specified, the value of the 'targetPort'
+                              field is used.
+                            format: int32
+                            type: integer
+                          protocol:
+                            default: TCP
+                            description: The protocol of the service. Default value
+                              is TCP if not specified.
+                            type: string
+                          targetPort:
+                            description: Number of the port to access on the pods(container)
+                              targeted by the service.
+                            format: int32
+                            type: integer
+                        required:
+                        - name
+                        - targetPort
+                        type: object
+                      type: array
                     targetPort:
                       description: The containerPort to expose server
                       format: int32

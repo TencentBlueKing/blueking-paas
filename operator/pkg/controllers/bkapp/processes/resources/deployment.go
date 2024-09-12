@@ -193,9 +193,16 @@ func buildContainers(
 		Command:         kubeutil.ReplaceCommandEnvVariables(command),
 		Args:            kubeutil.ReplaceCommandEnvVariables(args),
 	}
-	if proc.TargetPort != 0 {
+
+	if len(proc.Services) > 0 {
+		container.Ports = make([]corev1.ContainerPort, 0)
+		for _, svc := range proc.Services {
+			container.Ports = append(container.Ports, corev1.ContainerPort{ContainerPort: svc.TargetPort})
+		}
+	} else if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
 	}
+
 	// 容器探针
 	if proc.Probes != nil {
 		container.LivenessProbe = proc.Probes.Liveness

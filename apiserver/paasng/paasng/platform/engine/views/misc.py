@@ -169,10 +169,24 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = QueryOperationsSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
+        environment = params.get("environment")
 
-        operations = ModuleEnvironmentOperations.objects.owned_by_module(
-            module, environment=params.get("environment")
-        ).order_by("-created")
+        # 如果没有指定 module，返回所有 module 的部署记录而不是默认 module
+        if module_name is None:
+            operations = (
+                ModuleEnvironmentOperations.objects.select_related("app_environment__module")
+                .filter(application__code=code)
+                .order_by("-created")
+            )
+            # Filter by environment if provided
+            if environment:
+                operations = operations.filter(app_environment__environment=environment)
+        else:
+            operations = (
+                ModuleEnvironmentOperations.objects.select_related("app_environment__module")
+                .owned_by_module(module, environment=params.get("environment"))
+                .order_by("-created")
+            )
 
         # Filter by operator if provided
         operator = params.get("operator")

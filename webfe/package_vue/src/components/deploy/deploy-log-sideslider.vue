@@ -10,7 +10,12 @@
       slot="header"
       class="deploy-header"
     >
-      {{ historySideslider.title }}
+      <div style="float: left;">
+        {{ historySideslider.title }}
+      </div>
+      <div style="float: right;">
+        <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+      </div>
     </div>
     <div
       slot="content"
@@ -96,6 +101,7 @@ export default {
         isShow: false,
       },
       errorTips: {},
+      logExportUrl: '',
     };
   },
 
@@ -124,7 +130,7 @@ export default {
       try {
         const res = await this.$store.dispatch('deploy/getDeployTimeline', {
           appCode: this.appCode,
-          moduleId: this.moduleId,
+          moduleId: this.moduleId || params.moduleName,
           env: params.environment,
           deployId: params.deployment_id,
         });
@@ -162,6 +168,7 @@ export default {
         return false;
       }
       this.isLogLoading = true;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.moduleName || this.moduleId}/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -241,12 +248,13 @@ export default {
 
       const operator = row.operator.username;
       const time = row.created;
+      const moduleName = row.moduleName;
       if (row.operation_type === 'offline') {
-        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        const title = `${moduleName}${this.$t(' 模块')}${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
         this.historySideslider.title = title;
         this.curDeployLog = row.logDetail;
       } else {
-        this.historySideslider.title = `${
+        this.historySideslider.title = `${moduleName}${this.$t(' 模块')}${
           row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')
         }${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
         this.getDeployTimeline(row);
@@ -272,6 +280,10 @@ export default {
       }
       this.historySideslider.isShow = true;
     },
+
+    handleExportLog() {
+      window.open(this.logExportUrl, '_blank')
+    }
   },
 };
 </script>

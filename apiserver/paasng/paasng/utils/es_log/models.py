@@ -117,6 +117,7 @@ class Logs(Generic[MLine]):
     total: int
     dsl: str
     scroll_id: Optional[str] = None
+    max_result_window: Optional[int] = None
 
 
 @define

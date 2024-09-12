@@ -23,6 +23,7 @@ from paasng.platform.bkapp_model.entities import (
     Probe,
     ProbeSet,
     Process,
+    ProcService,
     TCPSocketAction,
 )
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
@@ -43,6 +44,7 @@ class Test__sync_processes:
                     replicas=1,
                     command=["./start.sh"],
                     res_quota_plan="4C1G",
+                    target_port=30000,
                     probes=ProbeSet(
                         liveness=Probe(
                             http_get=HTTPGetAction(port="${PORT}", path="/healthz"),
@@ -52,8 +54,9 @@ class Test__sync_processes:
                             success_threshold=1,
                             failure_threshold=3,
                         ),
-                        readiness=Probe(tcp_socket=TCPSocketAction(port=5000)),
+                        readiness=Probe(tcp_socket=TCPSocketAction(port=30000)),
                     ),
+                    services=[ProcService(name="web", target_port=30000, exposed_type={"name": "bk/http"})],
                 ),
                 Process(
                     name="sleep",
@@ -76,11 +79,13 @@ class Test__sync_processes:
         assert specs.count() == 1
 
         spec = specs.first()
+        assert spec.port == 30000
         assert spec.probes.liveness.http_get.port == "${PORT}"
         assert spec.probes.liveness.initial_delay_seconds == 30
         assert spec.probes.liveness.period_seconds == 5
-        assert spec.probes.readiness.tcp_socket.port == 5000
+        assert spec.probes.readiness.tcp_socket.port == 30000
         assert spec.plan_name == "4C1G"
+        assert spec.services[0].exposed_type.name == "bk/http"
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="sleep")
         assert spec.proc_command == "sleep 100"
@@ -89,3 +94,4 @@ class Test__sync_processes:
         assert spec.scaling_config.max_replicas == 10
         assert spec.scaling_config.min_replicas == 2
         assert spec.plan_name == "4C2G"
+        assert spec.services is None

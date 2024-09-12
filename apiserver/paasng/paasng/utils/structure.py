@@ -35,5 +35,6 @@ def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool
     return register_core
 
 
-# paasng.utils.models.make_json_field 需要 pydantic_model 注册到 cattr
+# 使用 paasng.utils.models.make_json_field 创建的 JSON 模型字段，如果用的是 pydantic 的模型，
+# 需要将该模型通过装饰器注册，以便 cattr 模块能正常处理其序列化和反序列化。
 prepare_json_field = register

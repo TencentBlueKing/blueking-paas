@@ -258,7 +258,10 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
   getDeployHistory({}, { appCode, moduleId, pageParams }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    let url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    if (moduleId.length) {
+      url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    }
     return http.get(url, config);
   },
 
@@ -557,7 +560,7 @@ const actions = {
    * @param {Object} params 请求参数：appCode, moduleId
    */
   updateVolumeData({}, { appCode, moduleId, id, data }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}/`;
     return http.put(url, data, config);
   },
 

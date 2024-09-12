@@ -17,12 +17,15 @@
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from paas_wl.workloads.networking.ingress.models import AppDomainSharedCert
 from paas_wl.workloads.networking.ingress.serializers import AppDomainSharedCertSLZ, UpdateAppDomainSharedCertSLZ
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 
 class AppDomainSharedCertsViewSet(ModelViewSet):
@@ -39,8 +42,49 @@ class AppDomainSharedCertsViewSet(ModelViewSet):
     def update(self, request, name):
         """Update a shared certificate"""
         cert = get_object_or_404(AppDomainSharedCert, name=name)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data)
+
         serializer = UpdateAppDomainSharedCertSLZ(cert, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         # TODO: Find all appdomain which is using this certificate, refresh their secret resources
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SHARED_CERT,
+            attribute=name,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data),
+        )
         return Response(self.serializer_class(cert).data)
+
+    def create(self, request, *args, **kwargs):
+        """Create a shared certificate"""
+        serializer = AppDomainSharedCertSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SHARED_CERT,
+            attribute=serializer.data["name"],
+            data_after=DataDetail(type=DataType.RAW_DATA, data=serializer.data),
+        )
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a shared certificate"""
+        cert = self.get_object()
+        data_before = DataDetail(type=DataType.RAW_DATA, data=AppDomainSharedCertSLZ(cert).data)
+        cert.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SHARED_CERT,
+            attribute=cert.name,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

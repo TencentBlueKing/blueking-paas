@@ -172,14 +172,19 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
     def switch(self, request, code):
         """[API] 应用市场服务开关"""
+        slz = serializers.MarketConfigSwitchInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        enabled = slz.validated_data["enabled"]
         application = self.get_application()
-        if not AppPublishPreparer(application).all_matched:
+
+        # 如果是要关闭发布状态，则不检测是否满足条件
+        if enabled and not AppPublishPreparer(application).all_matched:
             raise error_codes.RELEASED_MARKET_CONDITION_NOT_MET
         # 更新该应用的市场配置的 `enabled` 状态
-        MarketConfig.objects.update_enabled(application, request.data["enabled"])
+        MarketConfig.objects.update_enabled(application, enabled)
 
         # 审计记录
-        operation = OperationEnum.RELEASE_TO_MARKET if request.data["enabled"] else OperationEnum.OFFLINE_MARKET
+        operation = OperationEnum.RELEASE_TO_MARKET if enabled else OperationEnum.OFFLINE_MARKET
         add_app_audit_record(
             app_code=application.code,
             user=request.user.pk,

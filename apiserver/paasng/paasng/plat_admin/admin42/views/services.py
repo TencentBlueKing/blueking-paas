@@ -37,11 +37,14 @@ from paasng.accessories.services.providers import (
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
     PlanWithPreCreatedInstanceSLZ,
     PreCreatedInstanceSLZ,
     ServiceInstanceBindInfoSLZ,
+    ServiceInstanceSLZ,
     ServiceObjSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -121,6 +124,24 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("当前环境不存在未分配的增强服务实例"))
 
         rel.provision()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.PROVISION_INSTANCE,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=ServiceInstanceBindInfoSLZ(
+                    environment=env,
+                    module=module.name,
+                    instance=rel.get_instance(),
+                    service=rel.get_service(),
+                    plan=rel.get_plan(),
+                ).data,
+            ),
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     @atomic
@@ -142,6 +163,21 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 
         if instance_rel.is_provisioned():
             instance_rel.recycle_resource()
+            add_admin_audit_record(
+                user=request.user.pk,
+                operation=OperationEnum.RECYCLE_RESOURCE,
+                target=OperationTarget.APP,
+                app_code=code,
+                module_name=module_name,
+                data_before=DataDetail(
+                    type=DataType.RAW_DATA,
+                    data={
+                        "instance": ServiceInstanceSLZ(instance_rel.get_instance()),
+                        "service": ServiceObjSLZ(instance_rel.get_service()),
+                        "plan": PlanObjSLZ(instance_rel.get_plan()),
+                    },
+                ),
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -179,6 +215,13 @@ class PlatformServicesManageViewSet(GenericViewSet):
         data = slz.validated_data
         # 只支持创建本地增强服务
         LocalServiceMgr().create(data)
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ADD_ON,
+            attribute=data["name"],
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
@@ -186,10 +229,19 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
     def destroy(self, request, pk):
         service = mixed_service_mgr.get_without_region(uuid=pk)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
         try:
             mixed_service_mgr.destroy(service)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADD_ON,
+            attribute=service.name,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, pk):
@@ -201,11 +253,29 @@ class PlatformServicesManageViewSet(GenericViewSet):
         slz = ServiceObjSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        data_before = ServiceObjSLZ(service).data
+        # specifications 字段无法序列化，同时 specifications 配置能在 config 字段中看到
+        del data_before["specifications"]
+        # logo 字段太长，前端比较时会导致浏览器 OOM
+        del data_before["logo"]
 
         try:
             mixed_service_mgr.update(service, data)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
+
+        service = mixed_service_mgr.get_without_region(uuid=pk)
+        data_after = ServiceObjSLZ(service).data
+        del data_after["specifications"]
+        del data_after["logo"]
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADD_ON,
+            attribute=service.name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -250,6 +320,13 @@ class PlatformPlanManageViewSet(GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name} - {data['name']}",
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
@@ -257,11 +334,23 @@ class PlatformPlanManageViewSet(GenericViewSet):
 
     def destroy(self, request, service_id, plan_id):
         service = mixed_service_mgr.get_without_region(uuid=service_id)
+        # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要删除的 plan
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
+        plan = next((plan for plan in plans if plan.uuid == plan_id), None)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.delete(service, plan_id)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, service_id, plan_id):
@@ -270,12 +359,26 @@ class PlatformPlanManageViewSet(GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get_without_region(uuid=service_id)
+        # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要更新的 plan
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
+        plan = next((plan for plan in plans if plan.uuid == plan_id), None)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
+        plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
+        plan = next((plan for plan in plans if plan.uuid == plan_id), None)
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADDON_PLAN,
+            attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=PlanObjSLZ(plan).data),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -20,6 +20,7 @@
 - Module initialization
 - Module deletion / recycle
 """
+
 import logging
 from collections import namedtuple
 from contextlib import contextmanager
@@ -40,8 +41,9 @@ from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.entities import ProcEnvOverlay, Process
-from paasng.platform.bkapp_model.entities_syncer import sync_env_overlay_by_proc, sync_processes
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -209,10 +211,7 @@ class ModuleInitializer:
             return False
 
         # Matches source origin type: IMAGE_REGISTRY or CNATIVE_IMAGE
-        if module_specs.runtime_type == RuntimeType.CUSTOM_IMAGE:
-            return False
-
-        return True
+        return module_specs.runtime_type != RuntimeType.CUSTOM_IMAGE
 
     def bind_default_services(self):
         """Bind default services after module creation"""
@@ -283,8 +282,9 @@ class ModuleInitializer:
                 name=proc_spec["name"],
                 command=proc_spec["command"],
                 args=proc_spec["args"],
-                port=proc_spec.get("port", None),
+                target_port=proc_spec.get("port", None),
                 probes=proc_spec.get("probes", None),
+                services=proc_spec.get("services", None),
             )
             for proc_spec in bkapp_spec["processes"]
         ]
@@ -294,8 +294,8 @@ class ModuleInitializer:
         for proc_spec in bkapp_spec["processes"]:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
-                    sync_env_overlay_by_proc(
-                        self.module, proc_spec["name"], ProcEnvOverlay(**{"env_name": env_name, **proc_env_overlay})
+                    ProcessSpecEnvOverlay.objects.save_by_module(
+                        self.module, proc_spec["name"], env_name, **proc_env_overlay
                     )
 
         # 导入 hook 配置

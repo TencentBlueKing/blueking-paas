@@ -38,3 +38,19 @@ class LogLineInfoBrokenError(Exception):
 
 class NoIndexError(Exception):
     """无可用 index"""
+
+
+class BkLogGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bk_log's
+    API Gateway resource. It's a wrapper class of API SDK's original exceptions
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class BkLogApiError(BkLogGatewayServiceError):
+    """When calling the bk_log api, bk_log returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """

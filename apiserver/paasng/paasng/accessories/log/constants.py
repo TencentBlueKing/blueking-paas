@@ -22,6 +22,10 @@ DEFAULT_LOG_CONFIG_PLACEHOLDER = "-"
 # 默认查询日志的分片大小
 DEFAULT_LOG_BATCH_SIZE = 200
 
+# ES 查询的最大窗口，可在 ES 中配置，但不建议调大，容易导致 ES oom
+# 日志平台最多也只返回 10,000 条数据，且不可修改
+MAX_RESULT_WINDOW = 10000
+
 
 class LogTimeChoices(str, StructuredEnum):
     """日志搜索-日期范围可选值"""

@@ -74,6 +74,19 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
+        request_body=serializers.APIGWPermissionBatchApplySLZ,
+        tags=["CloudAPI"],
+    )
+    def batch_apply(self, request, *args, **kwargs):
+        slz = serializers.APIGWPermissionBatchApplySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        app = self.get_application()
+        operation_type = OperationEnum.APPLY
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
+
+    @swagger_auto_schema(
         request_body=serializers.APIGWPermissionRenewSLZ,
         tags=["CloudAPI"],
     )

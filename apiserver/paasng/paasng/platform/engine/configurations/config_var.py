@@ -186,6 +186,10 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> Dict[str, str]
         "CODECC_URL": settings.BK_CODECC_URL,
         "TURBO_URL": settings.BK_TURBO_URL,
         "PIPELINE_URL": settings.BK_PIPELINE_URL,
+        "NODEMAN_URL": settings.BK_NODEMAN_URL,
+        "BCS_URL": settings.BK_BCS_URL,
+        "BSCP_URL": settings.BK_BSCP_URL,
+        "AUDIT_URL": settings.BK_AUDIT_URL,
         "SHARED_RES_URL": settings.BK_SHARED_RES_URL,
     }
     # 系统环境变量需要添加统一的前缀

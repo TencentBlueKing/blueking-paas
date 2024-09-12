@@ -274,6 +274,30 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEn
             prefix=config_vars_prefix,
         ),
         BuiltInEnvVarDetail(
+            key="NODEMAN_URL",
+            value=settings.BK_NODEMAN_URL,
+            description=_("蓝鲸节点管理平台地址"),
+            prefix=config_vars_prefix,
+        ),
+        BuiltInEnvVarDetail(
+            key="BCS_URL",
+            value=settings.BK_BCS_URL,
+            description=_("蓝鲸容器管理平台地址"),
+            prefix=config_vars_prefix,
+        ),
+        BuiltInEnvVarDetail(
+            key="BSCP_URL",
+            value=settings.BK_BSCP_URL,
+            description=_("蓝鲸服务配置中心地址"),
+            prefix=config_vars_prefix,
+        ),
+        BuiltInEnvVarDetail(
+            key="AUDIT_URL",
+            value=settings.BK_AUDIT_URL,
+            description=_("蓝鲸审计中心地址"),
+            prefix=config_vars_prefix,
+        ),
+        BuiltInEnvVarDetail(
             key="SHARED_RES_URL",
             value=settings.BK_SHARED_RES_URL,
             description=_("蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径"),

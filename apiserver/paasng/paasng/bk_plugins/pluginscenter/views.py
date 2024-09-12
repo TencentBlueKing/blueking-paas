@@ -88,7 +88,7 @@ class SchemaViewSet(ViewSet):
     def get_plugins_schema(self, request):
         """get plugin basic info schema for given PluginType"""
         schemas = []
-        for pd in PluginDefinition.objects.all():
+        for pd in PluginDefinition.objects.all().order_by("created"):
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
             basic_info = serializers.PluginBasicInfoDefinitionSLZ(basic_info_definition).data

@@ -20,6 +20,7 @@ from typing import Dict, List, Literal
 
 import cattr
 import semver
+from django.db.models import Case, IntegerField, Value, When
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -47,6 +48,8 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissi
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    is_itsm_ticket_closed,
+    submit_canary_release_ticket,
     submit_create_approval_ticket,
     submit_visible_range_ticket,
 )
@@ -71,6 +74,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import (
 )
 from paasng.bk_plugins.pluginscenter.thirdparty import instance as instance_api
 from paasng.bk_plugins.pluginscenter.thirdparty import market as market_api
+from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
@@ -86,7 +90,7 @@ class SchemaViewSet(ViewSet):
     def get_plugins_schema(self, request):
         """get plugin basic info schema for given PluginType"""
         schemas = []
-        for pd in PluginDefinition.objects.all():
+        for pd in PluginDefinition.objects.all().order_by("created"):
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
             basic_info = serializers.PluginBasicInfoDefinitionSLZ(basic_info_definition).data
@@ -186,7 +190,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
+    filter_backends = [PluginInstancePermissionFilter, SearchFilter]
     search_fields = ["id", "name_zh_cn", "name_en"]
     permission_classes = [
         IsAuthenticated,
@@ -208,6 +212,14 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         if pd__identifier_list := query_params.get("pd__identifier", []):
             queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
+
+        queryset = queryset.annotate(
+            is_archived=Case(
+                When(status="archived", then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by("is_archived", query_params.get("order_by"))
         return queryset
 
     @atomic
@@ -497,6 +509,14 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         return Response(data=serializers.MetricsSummarySLZ(summary).data)
 
+    def get_basic_info(self, request, pd_id, plugin_id):
+        """插件的基本信息"""
+        plugin = self.get_plugin_instance()
+        stage = plugin.pd.basic_info_definition.api.create.stage
+        client = BkDevopsClient(request.user.username, stage=stage)
+        data = client.get_codecc_plugin_basic_info(plugin_id)
+        return Response(data=data.dict())
+
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     queryset = OperationRecord.objects.all().order_by("-created")
@@ -540,8 +560,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
+        if gray_status_list := query_params.get("gray_status", []):
+            queryset = queryset.filter(gray_status__in=gray_status_list)
         if creator := query_params.get("creator"):
             queryset = queryset.filter(creator=creator)
+        if is_rolled_back := query_params.get("is_rolled_back"):
+            queryset = queryset.filter(is_rolled_back=is_rolled_back)
         return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):
@@ -574,14 +598,9 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        version_type = request.data["source_version_type"]
-        version_name = request.data["source_version_name"]
-        source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
-
         slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
-                "source_hash": source_hash,
                 "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type), "version", None),
             },
         )
@@ -590,9 +609,11 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
+            plugin=plugin, source_location=plugin.repository, creator=request.user.pk, **data
         )
-        if release_strategy:
+
+        release_definition = plugin.pd.get_release_revision_by_type(type)
+        if release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
             PluginReleaseStrategy.objects.create(release=release, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
@@ -683,6 +704,35 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
 
+    @atomic
+    def rollback_release(self, request, pd_id, plugin_id, release_id):
+        """回滚发布"""
+        plugin = self.get_plugin_instance()
+        release = self.get_queryset().get(pk=release_id)
+        # 如果版本已经回滚过，则不允许再回滚
+        if release.is_rolled_back:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("当前版本已回滚，不可再次回滚"))
+        if not release.is_latest:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("只允许最新版本回滚"))
+
+        release.is_rolled_back = True
+        release.gray_status = constants.GrayReleaseStatus.ROLLED_BACK
+        release.save()
+
+        api_call_success = release_api.rollback_release(plugin.pd, plugin, release, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 回滚版本
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.ROLLBACK,
+            subject=constants.SubjectTypes.VERSION,
+            specific=release.version,
+        )
+        return Response(data=self.get_serializer(release).data)
+
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
     def get_release_schema(self, request, pd_id, plugin_id):
         slz = serializers.PluginReleaseTypeSLZ(data=request.query_params)
@@ -693,12 +743,14 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
         release_definition = pd.get_release_revision_by_type(type)
-        if release_definition.revisionType == "master":
+        if release_definition.revisionType == constants.PluginRevisionType.MASTER:
             versions = [build_master_placeholder()]
-        elif release_definition.revisionType == "tag":
+        elif release_definition.revisionType == constants.PluginRevisionType.TAG:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=False, include_tag=True
             )
+        elif release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
+            versions = shim.get_tested_versions(plugin)
         else:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=True, include_tag=True
@@ -1229,7 +1281,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
     permission_classes = [
         IsAuthenticated,
         PluginCenterFeaturePermission,
-        plugin_action_permission_class([Actions.EDIT_PLUGIN]),
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
     ]
 
     def retrieve(self, request, pd_id, plugin_id):
@@ -1243,7 +1295,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
 
-        visible_range_obj, _created = PluginVisibleRange.objects.get_or_create(plugin=plugin)
+        visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
         if visible_range_obj.is_in_approval:
             raise error_codes.VISIBLE_RANGE_UPDATE_FAIELD.f(_("可见范围修改失败：正在审批中"))
 
@@ -1274,3 +1326,46 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
             subject=constants.SubjectTypes.VISIBLE_RANGE,
         )
         return Response(data=self.get_serializer(visible_range_obj).data)
+
+
+class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
+
+    def list(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 获取所有的灰度发布策略
+        release_strategy_list = release.release_strategies.all()
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy_list).data, many=True)
+
+    def update(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 版本发布流程已经结束，则不允许在添加发布策略
+        if release.status in constants.PluginReleaseStatus.terminated_status():
+            raise error_codes.RELEASE_COMPLETED
+
+        latest_release_strategy = plugin.all_versions.get(pk=release_id).latest_release_strategy
+        # 版本最近一条发布策略的审批流程未结束时，不允许添加发布策略
+        if latest_release_strategy.itsm_detail and not is_itsm_ticket_closed(latest_release_strategy.itsm_detail.sn):
+            raise error_codes.LAST_GRAY_RELEASE_NOT_APPROVED
+
+        slz = serializers.ReleaseStrategyCreateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+        # 更新灰度策略，同时发起审批流程
+        release_strategy = PluginReleaseStrategy.objects.create(release=release, **validated_data)
+        submit_canary_release_ticket(plugin.pd, plugin, release, request.user.username)
+
+        # 操作记录: 修改发布策略
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.RELEASE_STRATEGY,
+        )
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy).data)

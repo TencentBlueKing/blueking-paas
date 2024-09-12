@@ -95,7 +95,7 @@ def transform_exception(exc: Exception):
     :raise: APIError
     """
     if not isinstance(exc, ResponseError):
-        logger.exception("请求第三方系统接口时触发未知异常")
+        logger.exception("An unknown exception occurred while requesting a third-party API.")
         raise APIError(code="UnknownError", message="system error") from exc
 
     error_message = ""
@@ -118,6 +118,7 @@ def transform_exception(exc: Exception):
             error_code_num = int(error_code)
         except ValueError:
             error_code_string = error_code or error_code_string
+    logger.exception("Request to third-party API failed.")
     raise APIError(code=error_code_string, message=error_message + response_message, code_num=error_code_num) from exc
 
 

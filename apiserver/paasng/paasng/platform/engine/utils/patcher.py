@@ -33,6 +33,7 @@ class SourceCodePatcherWithDBDriver:
     """基于数据库记录驱动的源码 Patcher
 
     - 目的：基于 CNB 的应用后续启动进程时，必须使用 Procfile 文件，因此自动生成一份
+    - 仅当 Procfile 不存在时才会写入文件
     - 副作用（存疑？）：当普通应用经由 app_desc.yaml 解析并获取应用进程信息失败时，后续仍
     会尝试从 Procfile 文件读取进程信息，变成了一种“托底”逻辑。详情见 ApplicationBuilder
     中调用 get_processes 的部分。

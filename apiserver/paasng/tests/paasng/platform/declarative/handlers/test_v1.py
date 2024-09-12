@@ -28,7 +28,12 @@ from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ServiceSpec
 from paasng.platform.declarative.constants import AppDescPluginType
-from paasng.platform.declarative.handlers import SMartDescriptionHandler, get_desc_handler
+from paasng.platform.declarative.handlers import (
+    DefaultDeployDescHandler,
+    SMartDescriptionHandler,
+    deploy_desc_getter_v1,
+    get_desc_handler,
+)
 from paasng.platform.declarative.models import DeploymentDescription
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -95,7 +100,7 @@ class TestSMartDescriptionHandler:
                 "container": {"memory": memory},
             }
         )
-        SMartDescriptionHandler(app_desc).handle_deployment(bk_deployment)
+        DefaultDeployDescHandler(app_desc, None, deploy_desc_getter_v1).handle(bk_deployment)
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert desc_obj.spec.processes[0].res_quota_plan == expected_plan_name

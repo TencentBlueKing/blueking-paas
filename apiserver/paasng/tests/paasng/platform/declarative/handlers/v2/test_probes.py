@@ -23,8 +23,7 @@ import yaml
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProbeType
 from paas_wl.bk_app.processes.models import ProcessProbe
-from paasng.platform.declarative.handlers import AppDescriptionHandler, DescriptionHandler
-from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -95,12 +94,6 @@ def yaml_content_after_change():
     )
 
 
-def get_desc_handler(yaml_content: str) -> DescriptionHandler:
-    handler = _get_desc_handler(yaml.safe_load(yaml_content))
-    assert isinstance(handler, AppDescriptionHandler)
-    return handler
-
-
 class TestSaasProbes:
     def test_saas_probes(self, bk_deployment, yaml_content):
         """验证 saas 应用探针对象 ProcessProbe 成功创建"""
@@ -109,7 +102,7 @@ class TestSaasProbes:
         region = bk_deployment.app_environment.engine_app.region
         wlapp = WlApp.objects.create(name=name, region=region)
 
-        assert get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+        assert get_handler(yaml_content).handle(bk_deployment)
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(
             app=wlapp, process_type="web", probe_type=ProbeType.LIVENESS
         )
@@ -135,9 +128,9 @@ class TestSaasProbes:
         bk_deployment_full.app_environment.engine_app.name = name
         bk_deployment_full.app_environment.engine_app.region = region
 
-        assert get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+        assert get_handler(yaml_content).handle(bk_deployment)
         # 模拟重新部署过程
-        assert get_desc_handler(yaml_content_after_change).handle_deployment(bk_deployment)
+        assert get_handler(yaml_content_after_change).handle(bk_deployment)
         # liveness_probe 无变化
         liveness_probe: ProcessProbe = ProcessProbe.objects.get(
             app=wlapp, process_type="web", probe_type=ProbeType.LIVENESS
@@ -158,3 +151,7 @@ class TestSaasProbes:
 
         assert start_probe.probe_handler
         assert start_probe.probe_handler.tcp_socket.port == "${PORT}"
+
+
+def get_handler(yaml_content: str):
+    return get_deploy_desc_handler(yaml.safe_load(yaml_content))

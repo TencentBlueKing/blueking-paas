@@ -74,14 +74,14 @@ class TestProcessesField:
         controller = DeploymentDeclarativeController(bk_deployment)
         result = controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        assert result.loaded_processes["web"].replicas is None
+        assert result.processes["web"].replicas is None
 
     def test_proc_with_fixed_replicas(self, bk_deployment):
         json_data = {"language": "python", "processes": {"web": {"command": "start", "replicas": 3}}}
         controller = DeploymentDeclarativeController(bk_deployment)
         result = controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        assert result.loaded_processes["web"].replicas == 3
+        assert result.processes["web"].replicas == 3
 
 
 class TestEnvVariablesField:

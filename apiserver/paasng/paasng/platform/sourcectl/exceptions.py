@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Exceptions for sourcectl package"""
+
 from typing import TYPE_CHECKING, Optional
 
 from django.utils.translation import gettext as _
@@ -88,11 +89,19 @@ class ExceptionWithMessage(Exception):
 
 
 class GetProcfileError(ExceptionWithMessage):
-    """When a valid procfile can not be found in application directory"""
+    """When no valid Procfile can be found in application directory"""
+
+
+class GetProcfileFormatError(GetProcfileError):
+    """The Procfile exists but the content format is incorrect"""
 
 
 class GetAppYamlError(ExceptionWithMessage):
-    """When a valid app.yaml can not be found in application directory"""
+    """When no valid app.yaml can be found in application directory"""
+
+
+class GetAppYamlFormatError(GetAppYamlError):
+    """The app.yaml exists but the content format is incorrect"""
 
 
 class GetDockerIgnoreError(ExceptionWithMessage):

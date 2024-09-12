@@ -43,6 +43,11 @@ export default {
 </script>
 <style lang="scss" scoped>
 .render-member-list-wrapper {
+  margin-top: 12px;
+  font-size: 12px;
+  padding: 12px 12px 12px 36px;
+  background: #f5f7fa;
+  border-radius: 2px;
   color: #63656e;
   .content {
     .icon {
@@ -53,20 +58,21 @@ export default {
     }
     .member-name {
       margin-left: 10px;
-      font-size: 14px;
+      font-size: 12px;
       display: inline-block;
       vertical-align: middle;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
     }
     .folder-icon {
       width: 16px;
       vertical-align: middle;
     }
     .member-item {
-      height: 36px;
-      line-height: 36px;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
+      display: flex;
+      height: 32px;
+      line-height: 32px;
 
       .left-icon {
         display: inline-block;

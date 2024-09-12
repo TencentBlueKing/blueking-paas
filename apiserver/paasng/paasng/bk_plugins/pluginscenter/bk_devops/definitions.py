@@ -19,10 +19,10 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from paasng.utils.structure import register
+from paasng.utils.structure import prepare_json_field
 
 
-@register
+@prepare_json_field
 class Pipeline(BaseModel):
     """流水线对象
 
@@ -34,7 +34,7 @@ class Pipeline(BaseModel):
     pipelineId: str
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineBuild(BaseModel):
     """流水线构建对象
 
@@ -51,7 +51,7 @@ class PipelineBuild(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class TimeCost(BaseModel):
     """构建阶段耗时详情
 
@@ -69,7 +69,7 @@ class TimeCost(BaseModel):
     totalCost: int
 
 
-@register
+@prepare_json_field
 class BuildStageStatus(BaseModel):
     """构建阶段状态
 
@@ -89,7 +89,7 @@ class BuildStageStatus(BaseModel):
     showMsg: Optional[str]
 
 
-@register
+@prepare_json_field
 class PipelineBuildStatus(BaseModel):
     """流水线构建状态
 
@@ -116,7 +116,7 @@ class PipelineBuildStatus(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class AdditionalOptions(BaseModel):
     """流水线构建状态额外配置
 
@@ -129,7 +129,7 @@ class AdditionalOptions(BaseModel):
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineElementModel(BaseModel):
     """流水线元素模型
 
@@ -164,7 +164,7 @@ class PipelineElementModel(BaseModel):
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineContainerModel(BaseModel):
     """流水线容器模型
 
@@ -186,7 +186,7 @@ class PipelineContainerModel(BaseModel):
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineStageModel(BaseModel):
     """流水线阶段模型
 
@@ -211,7 +211,7 @@ class PipelineStageModel(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class PipelineModel(BaseModel):
     """流水线模型
 
@@ -227,7 +227,7 @@ class PipelineModel(BaseModel):
     timeCost: Optional[TimeCost]
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineBuildDetail(BaseModel):
     """流水线构建详情
 
@@ -255,7 +255,7 @@ class PipelineBuildDetail(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class PipelineLogLine(BaseModel):
     """流水线构建
 
@@ -279,7 +279,7 @@ class PipelineLogLine(BaseModel):
     executeCount: int
 
 
-@register
+@prepare_json_field
 class PipelineLogModel(BaseModel):
     """流水线构建日志
 
@@ -297,7 +297,7 @@ class PipelineLogModel(BaseModel):
     timeUsed: Optional[int]
 
 
-@register
+@prepare_json_field
 class CodeccPluginBasicInfo(BaseModel):
     """Codecc 工具插件基本信息
 

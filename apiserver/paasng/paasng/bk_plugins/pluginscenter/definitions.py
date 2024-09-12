@@ -21,14 +21,14 @@ from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from paasng.bk_plugins.pluginscenter import constants
-from paasng.utils.structure import register
+from paasng.utils.structure import prepare_json_field
 
 if TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models import PluginDefinition as PluginDefinitionModel
     from paasng.bk_plugins.pluginscenter.models import PluginRelease
 
 
-@register
+@prepare_json_field
 class UIComponent(BaseModel):
     """ui组件"""
 
@@ -36,14 +36,14 @@ class UIComponent(BaseModel):
     props: Dict = Field(default_factory=dict)
 
 
-@register
+@prepare_json_field
 class UIProps(BaseModel):
     """ui属性"""
 
     tips: str
 
 
-@register(exclude_none=True)
+@prepare_json_field(exclude_none=True)
 class FieldSchema(BaseModel):
     """字段定义"""
 
@@ -61,7 +61,7 @@ class FieldSchema(BaseModel):
     items: Optional[Dict] = Field(alias="items")
 
 
-@register
+@prepare_json_field
 class PluginBackendAPIResource(BaseModel):
     """插件后台操作接口"""
 
@@ -74,7 +74,7 @@ class PluginBackendAPIResource(BaseModel):
         frozen = True
 
 
-@register
+@prepare_json_field
 class PluginBackendAPI(BaseModel):
     create: Optional[PluginBackendAPIResource]
     read: Optional[PluginBackendAPIResource]
@@ -84,7 +84,7 @@ class PluginBackendAPI(BaseModel):
     rollback: Optional[PluginBackendAPIResource]
 
 
-@register
+@prepare_json_field
 class PluginReleaseAPI(BaseModel):
     """插件发布操作集"""
 
@@ -96,7 +96,7 @@ class PluginReleaseAPI(BaseModel):
     preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
-@register
+@prepare_json_field
 class PluginCodeTemplate(BaseModel):
     id: str = Field(description="模板id")
     name: str = Field(description="模板名称")
@@ -113,19 +113,19 @@ class PluginCodeTemplate(BaseModel):
         return source_dir
 
 
-@register
+@prepare_json_field
 class PluginoverviewPage(BaseModel):
     topUrl: Optional[str] = Field(default=None, description="概览页面顶部嵌入地址")
     bottomUrl: Optional[str] = Field(default=None, description="概览页面底部嵌入地址")
 
 
-@register
+@prepare_json_field
 class PluginFeature(BaseModel):
     name: str = Field(description="功能特性名称")
     value: bool = Field(default=False, description="功能特性开关")
 
 
-@register
+@prepare_json_field
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
@@ -155,7 +155,7 @@ class PluginBasicInfoDefinition(BaseModel):
     publisher_description: str = Field(description="基本信息页面-发布者的提示信息", default="")
 
 
-@register
+@prepare_json_field
 class PluginVisibleRangeLevel(BaseModel):
     """插件可见范围填写的字段"""
 
@@ -164,7 +164,7 @@ class PluginVisibleRangeLevel(BaseModel):
     type: Literal["department"]
 
 
-@register
+@prepare_json_field
 class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
@@ -173,7 +173,7 @@ class PluginVisibleRangeDefinition(BaseModel):
     api: Optional[PluginBackendAPI] = Field(description="可见范围 API")
 
 
-@register
+@prepare_json_field
 class PluginMarketInfoDefinition(BaseModel):
     """插件市场信息定义"""
 
@@ -194,7 +194,7 @@ class PluginMarketInfoDefinition(BaseModel):
     )
 
 
-@register
+@prepare_json_field
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
@@ -221,7 +221,7 @@ class ReleaseRevisionDefinition(BaseModel):
     )
 
 
-@register
+@prepare_json_field
 class ReleaseStageDefinition(BaseModel):
     """发布阶段定义"""
 
@@ -253,7 +253,7 @@ class ReleaseStageDefinition(BaseModel):
     link: Optional[str] = Field(description="online 步骤使用")
 
 
-@register
+@prepare_json_field
 class PluginConfigColumnDefinition(BaseModel):
     """插件配置-列信息定义"""
 
@@ -266,7 +266,7 @@ class PluginConfigColumnDefinition(BaseModel):
     unique: bool = Field(False, description="该列是否唯一(多列同时标记唯一时仅支持 unique_together)")
 
 
-@register
+@prepare_json_field
 class PluginConfigDefinition(BaseModel):
     """插件配置定义"""
 
@@ -277,7 +277,7 @@ class PluginConfigDefinition(BaseModel):
     columns: List[PluginConfigColumnDefinition] = Field(default_factory=list, min_items=1)
 
 
-@register
+@prepare_json_field
 class PluginInstanceSpec(BaseModel):
     """插件实例相关属性"""
 
@@ -287,7 +287,7 @@ class PluginInstanceSpec(BaseModel):
     configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 
-@register
+@prepare_json_field
 class ElasticSearchHost(BaseModel):
     """ES 配置"""
 
@@ -298,7 +298,7 @@ class ElasticSearchHost(BaseModel):
     use_ssl: bool = Field(False, alias="useSSL")
 
 
-@register
+@prepare_json_field
 class ElasticSearchParams(BaseModel):
     """ES 搜索相关配置"""
 
@@ -336,7 +336,7 @@ class BKLogConfig(BaseModel):
     bkLogApiStage: str = Field(default="prod", description="日志平台 API 的环境信息，默认为正式环境")
 
 
-@register
+@prepare_json_field
 class PluginLogConfig(BaseModel):
     """插件日志配置"""
 
@@ -350,7 +350,7 @@ class PluginLogConfig(BaseModel):
     json_: Optional[ElasticSearchParams] = Field(alias="json")
 
 
-@register
+@prepare_json_field
 class PluginCreateApproval(BaseModel):
     """创建插件审批配置"""
 
@@ -360,7 +360,7 @@ class PluginCreateApproval(BaseModel):
     itsmServiceName: str = Field(default="", description="审批流程 itsm 服务名称")
 
 
-@register
+@prepare_json_field
 class PluginDefinition(BaseModel):
     """插件模板定义"""
 

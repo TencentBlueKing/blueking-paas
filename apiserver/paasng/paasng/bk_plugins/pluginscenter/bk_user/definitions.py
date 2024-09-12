@@ -18,10 +18,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from paasng.utils.structure import register
+from paasng.utils.structure import prepare_json_field
 
 
-@register
+@prepare_json_field
 class DepartmentDetail(BaseModel):
     """组织架构的详情
 

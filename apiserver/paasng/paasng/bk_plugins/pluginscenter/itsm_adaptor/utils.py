@@ -137,7 +137,7 @@ def submit_canary_release_ticket(
     service_name = release_strategy.get_itsm_service_name()
     service_id = ApprovalService.objects.get(service_name=service_name).service_id
     # 灰度审批是由插件的管理员审批，需要单独添加审批字段
-    if service_name == ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL:
+    if release_strategy.strategy == ReleaseStrategy.GRAY:
         plugin_admins = members_api.fetch_role_members(plugin, PluginRole.ADMINISTRATOR)
         itsm_fields += [
             # 插件管理员

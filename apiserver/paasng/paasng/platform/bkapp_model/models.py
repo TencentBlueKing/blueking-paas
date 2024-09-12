@@ -321,23 +321,30 @@ def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
 MonitoringField = make_json_field("MonitoringField", Monitoring)
 
 
-class ObservabilityConfig(TimestampedModel):
-    module = models.OneToOneField("modules.Module", on_delete=models.CASCADE, db_constraint=False)
-    monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
-    last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
+class ObservabilityConfigManager(models.Manager):
+    """Custom manager for ObservabilityConfig"""
 
-    @classmethod
-    def upsert_by_module(cls, module: Module, monitoring: Optional[Monitoring] = None):
+    def upsert_by_module(self, module: Module, monitoring: Optional[Monitoring] = None):
         try:
-            obj = cls.objects.get(module=module)
-        except cls.DoesNotExist:
-            return cls.objects.create(module=module, monitoring=monitoring), True
+            obj = ObservabilityConfig.objects.get(module=module)
+        except ObservabilityConfig.DoesNotExist:
+            return ObservabilityConfig.objects.create(module=module, monitoring=monitoring), True
         else:
             last_monitoring = obj.monitoring
             obj.monitoring = monitoring
             obj.last_monitoring = last_monitoring
             obj.save(update_fields=["monitoring", "last_monitoring", "updated"])
             return obj, False
+
+
+class ObservabilityConfig(TimestampedModel):
+    module = models.OneToOneField(
+        "modules.Module", on_delete=models.CASCADE, related_name="observability", db_constraint=False
+    )
+    monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
+    last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
+
+    objects = ObservabilityConfigManager()
 
     @property
     def monitoring_metrics(self) -> List[Metric]:

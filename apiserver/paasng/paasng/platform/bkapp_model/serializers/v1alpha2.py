@@ -246,8 +246,8 @@ class DomainResolutionInputSLZ(serializers.Serializer):
 class MetricInputSLZ(serializers.Serializer):
     process = serializers.CharField(help_text="进程名称")
     serviceName = serializers.CharField(help_text="服务端口名称", source="service_name")
-    path = serializers.CharField(help_text="metric api 路径", default="/metrics")
-    params = serializers.DictField(help_text="metric api 参数", required=False, allow_null=True)
+    path = serializers.CharField(help_text="采集 metric 数据的 http url 路径", default="/metrics")
+    params = serializers.DictField(help_text="采集 metric 数据的 http url 路径参数", required=False, allow_null=True)
 
 
 class MonitoringInputSLZ(serializers.Serializer):

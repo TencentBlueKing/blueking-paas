@@ -31,7 +31,7 @@ from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
 from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from paasng.misc.monitoring.monitor.service_monitor.controller import make_controller
+from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
@@ -207,6 +207,6 @@ def ensure_bk_log_if_need(env: ModuleEnvironment):
 def sync_service_monitor(env: ModuleEnvironment):
     """如果集群支持且应用声明需要接入蓝鲸监控 metric, 则尝试下发 ServiceMonitor 配置"""
     try:
-        make_controller(env).sync()
+        make_svc_monitor_controller(env).sync()
     except Exception:
         logger.exception("An error occur when sync ServiceMonitor")

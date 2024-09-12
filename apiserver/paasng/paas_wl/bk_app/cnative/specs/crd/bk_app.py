@@ -153,7 +153,7 @@ class BkAppProcess(BaseModel):
     replicas: Optional[int] = 1
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
-    # deprecated targetPort, will be removed in the future
+    # FIXME: deprecated targetPort, will be removed in the future
     targetPort: Optional[int] = None
     resQuotaPlan: Optional[ResQuotaPlan] = None
     autoscaling: Optional[AutoscalingSpec] = None
@@ -335,12 +335,12 @@ class SvcDiscConfig(BaseModel):
 
 class Metric(BaseModel):
     """
-    Metric config
+    Metric config.
 
     :param process: The name of the process.
     :param serviceName: The name of process service.
-    :param path: The path of the metric api.
-    :param params: The params of the metric api.
+    :param path: http path from which to scrape for metrics.
+    :param params: http url parameters.
     """
 
     process: str

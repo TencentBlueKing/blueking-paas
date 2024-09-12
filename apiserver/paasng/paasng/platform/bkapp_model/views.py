@@ -142,9 +142,9 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         proc_specs = ModuleProcessSpec.objects.filter(module=module)
         image_repository, image_credential_name = get_image_info(module)
 
-        metric_map = {}
+        proc_metric_map = {}
         if observability := ObservabilityConfig.objects.filter(module=module).first():
-            metric_map = {m.process: m for m in observability.monitoring_metrics}
+            proc_metric_map = {m.process: m for m in observability.monitoring_metrics}
 
         proc_specs_data = []
         for proc_spec in proc_specs:
@@ -168,7 +168,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "services": proc_spec.services,
             }
 
-            if metric := metric_map.get(proc_spec.name):
+            if metric := proc_metric_map.get(proc_spec.name):
                 data["monitoring"] = {"metric": metric.dict()}
 
             proc_specs_data.append(data)
@@ -208,11 +208,11 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         module, proc_spec["name"], env_name, **proc_env_overlay
                     )
-            if metric := get_items(proc_spec, ["monitoring", "metric"]):
+            if metric := get_items(proc_spec, ["monitoring.metric"]):
                 metrics.append({"process": proc_spec["name"], **metric})
 
         monitoring = Monitoring(metrics=metrics) if metrics else None
-        ObservabilityConfig.upsert_by_module(module, monitoring)
+        ObservabilityConfig.objects.upsert_by_module(module, monitoring)
 
         return self.retrieve(request, code, module_name)
 

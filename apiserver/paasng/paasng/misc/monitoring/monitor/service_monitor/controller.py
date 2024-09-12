@@ -35,7 +35,7 @@ from paasng.platform.bkapp_model.models import ObservabilityConfig
 logger = logging.getLogger(__name__)
 
 
-def make_controller(env: ModuleEnvironment):
+def make_svc_monitor_controller(env: ModuleEnvironment):
     if not settings.ENABLE_BK_MONITOR:
         logger.warning("BKMonitor is not ready, skip apply ServiceMonitor")
         return NullController()
@@ -53,7 +53,7 @@ class ServiceMonitorController:
         """对比 ObservabilityConfig 中的 monitoring 和 last_monitoring, 将新增(或更新)的 metric 采集规则转换成
         ServiceMonitor 下发到集群中, 同时删除废弃的 ServiceMonitor"""
 
-        observability = ObservabilityConfig.objects.filter(module=self.module).first()
+        observability: ObservabilityConfig = self.module.observability
         if not observability:
             return
 
@@ -62,7 +62,7 @@ class ServiceMonitorController:
         for process in deleted_metric_processes:
             self._delete(process)
 
-        if not observability.metric_processes:
+        if not observability.monitoring or not observability.monitoring.metrics:
             return
 
         # 新增或更新 ServiceMonitor

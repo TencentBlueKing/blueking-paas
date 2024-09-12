@@ -144,8 +144,8 @@ class ProbeSetSLZ(serializers.Serializer):
 
 class MetricSLZ(serializers.Serializer):
     service_name = serializers.CharField(help_text="服务端口名称")
-    path = serializers.CharField(help_text="metric api 路径", default="/metrics")
-    params = serializers.DictField(help_text="metric api 参数", required=False, allow_null=True)
+    path = serializers.CharField(help_text="采集 metric 数据的 http url 路径", default="/metrics")
+    params = serializers.DictField(help_text="采集 metric 数据的 http url 路径参数", required=False, allow_null=True)
 
 
 class MonitoringSLZ(serializers.Serializer):

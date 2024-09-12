@@ -305,7 +305,7 @@ class ModuleInitializer:
                 metrics.append({"process": proc_spec["name"], **metric})
 
         monitoring = Monitoring(metrics=metrics) if metrics else None
-        ObservabilityConfig.upsert_by_module(self.module, monitoring)
+        ObservabilityConfig.objects.upsert_by_module(self.module, monitoring)
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):

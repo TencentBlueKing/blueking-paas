@@ -23,15 +23,20 @@ from . import constants
 
 @dataclass
 class Endpoint:
-    # 蓝鲸监控采集 metrics 的间隔
+    """
+    Metric Endpoint
+
+    :param interval: 蓝鲸监控采集 metric 的间隔
+    :param path: 采集 metric 数据的 url 路径
+    :param port: 采集 metric 数据的端口名
+    :param metric_relabelings: Metric 重标签配置, 由集群运维负责控制下发
+    :param params: 采集 metric 数据的 url 路径参数
+    """
+
     interval: str = constants.METRICS_INTERVAL
-    # SaaS 暴露 metrics 的路径
     path: str = constants.METRICS_PATH
-    # SaaS 暴露 metrics 的端口名
     port: str = constants.METRICS_PORT_NAME
-    # Metric 重标签配置, 由集群运维负责控制下发
     metric_relabelings: Optional[List[Dict]] = None
-    # Optional HTTP URL parameters
     params: Optional[Dict[str, str]] = None
 
 

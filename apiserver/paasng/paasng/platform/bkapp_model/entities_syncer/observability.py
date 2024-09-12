@@ -29,7 +29,7 @@ def sync_observability(module: Module, observability: Optional[Observability]) -
     ret = CommonSyncResult()
 
     monitoring = observability.monitoring if observability else None
-    _, created = ObservabilityConfig.upsert_by_module(module=module, monitoring=monitoring)
+    _, created = ObservabilityConfig.objects.upsert_by_module(module=module, monitoring=monitoring)
     ret.incr_by_created_flag(created)
 
     return ret

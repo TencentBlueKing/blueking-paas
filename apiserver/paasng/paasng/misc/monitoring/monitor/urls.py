@@ -20,7 +20,7 @@ from django.urls import path
 
 from . import views
 
-# TODO phalanx 方案已经下线, 删除废弃 url
+# FIXME: phalanx 方案已经下线, 删除废弃 url
 urlpatterns = [
     url(
         r"api/monitor/applications/(?P<code>[^/]+)/record/query/$",

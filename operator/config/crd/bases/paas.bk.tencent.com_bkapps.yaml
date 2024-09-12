@@ -259,6 +259,43 @@ spec:
                         type: array
                     type: object
                 type: object
+              observability:
+                description: Observability holds observability configurations, includes
+                  metrics config. However, it is primarily informational here, the
+                  real control logic is in paas "apiserver".
+                properties:
+                  monitoring:
+                    description: Monitoring is monitor config
+                    properties:
+                      metrics:
+                        items:
+                          description: Metric is monitor metric config for process
+                            services
+                          properties:
+                            params:
+                              additionalProperties:
+                                type: string
+                              description: Params is the params of metric api
+                              type: object
+                            path:
+                              description: Path is the path of metric api
+                              type: string
+                            process:
+                              description: Process is the name of process
+                              type: string
+                            serviceName:
+                              description: ServiceName is the name of process service
+                              type: string
+                          required:
+                          - path
+                          - process
+                          - serviceName
+                          type: object
+                        type: array
+                    required:
+                    - metrics
+                    type: object
+                type: object
               processes:
                 items:
                   description: Process defines the process of BkApp
@@ -1438,8 +1475,6 @@ spec:
                     required:
                     - metrics
                     type: object
-                required:
-                - monitoring
                 type: object
               processes:
                 items:

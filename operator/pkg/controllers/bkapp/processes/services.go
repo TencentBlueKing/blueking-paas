@@ -181,7 +181,7 @@ func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   bkapp.Namespace,
-			Labels:      labels.ServiceLabels(bkapp, process.Name),
+			Labels:      labels.Service(bkapp, process.Name),
 			Annotations: map[string]string{},
 		},
 		Spec: corev1.ServiceSpec{
@@ -203,7 +203,7 @@ func buildDefaultService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Proces
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   bkapp.Namespace,
-			Labels:      labels.ServiceLabels(bkapp, process.Name),
+			Labels:      labels.Service(bkapp, process.Name),
 			Annotations: map[string]string{},
 		},
 		Spec: corev1.ServiceSpec{

@@ -86,8 +86,8 @@ func MappingIngress(dgmapping *paasv1alpha1.DomainGroupMapping) map[string]strin
 	return labels
 }
 
-// ServiceLabels 为应用的不同进程生成关联 Service 的标签
-func ServiceLabels(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
+// Service 为应用的不同进程生成关联 Service 的 labels
+func Service(bkapp *paasv1alpha2.BkApp, process string) map[string]string {
 	labels := Deployment(bkapp, process)
 
 	// 为蓝鲸监控采集注入对应的 label

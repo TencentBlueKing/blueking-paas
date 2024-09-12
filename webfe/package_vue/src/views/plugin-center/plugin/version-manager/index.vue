@@ -470,7 +470,7 @@ export default {
     // Codecc 空状态
     isCodeccEmpty() {
       if (this.filterStatus.length) return false;
-      if (!this.versionList.length && this.curPluginInfo.has_test_version && this.isOfficialVersion) return true;
+      if (!this.versionList.length && this.isCodecc) return true;
       return false;
     },
     isCodecc() {

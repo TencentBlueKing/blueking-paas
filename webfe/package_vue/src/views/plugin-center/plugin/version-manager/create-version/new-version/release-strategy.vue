@@ -45,6 +45,7 @@
             >
               <bk-form-item :label="$t('蓝盾项目 ID')">
                 <bk-tag-input
+                  ref="tagInputRef"
                   v-model="releaseStrategy.bkci_project"
                   :placeholder="$t('请输入蓝盾项目 ID，多个 ID 以英文分号分隔，最多可输入 10 个 ID')"
                   :has-delete-icon="true"
@@ -52,8 +53,10 @@
                   :paste-fn="customCopyRules"
                   :clearable="!isDetailStep"
                   :tag-tpl="renderMemberTag"
-                  @blur="handleBlur"
                   ext-cls="projec-id-tag-cls"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
+                  @keydown.capture.native="handleKeyDown"
                 ></bk-tag-input>
               </bk-form-item>
               <bk-form-item :label="$t('组织')">
@@ -207,6 +210,7 @@ export default {
       ],
       organizationLevel: [],
       disableDeletionMapping: {},
+      focusLastTag: '',
       rules: {
         strategy: [
           {
@@ -355,6 +359,17 @@ export default {
       return h('div', { class: ['tag', { 'hide-delete-icon': this.disableDeletionMapping[node.id] }] }, [
         h('span', { class: ['text'], attrs: { tabIndex: 0 } }, node.id),
       ]);
+    },
+    handleKeyDown(event) {
+      // 已经灰度的项目id不能通过 backspace 键删除
+      if (event.key === 'Backspace' && this.disableDeletionMapping[this.focusLastTag]) {
+        this.$refs.tagInputRef.isCanRemoveTag = false;
+      }
+    },
+    handleFocus(values) {
+      if (values.length) {
+        this.focusLastTag = values[values.length - 1];
+      }
     },
     handleBlur(input) {
       if (input !== '') {

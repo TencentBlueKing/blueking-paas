@@ -73,7 +73,7 @@ export default {
   },
   computed: {
     releaseTips() {
-      return this.$t('灰度发布需由<em>工具管理员</em>进行审批；若选择了灰度组织范围，还需要由<em>工具发布者的组长</em>同时进行审批。');
+      return this.$t('灰度发布需由<em>工具管理员</em>进行审批；<span>若选择了灰度组织范围，还需要由<em>工具发布者的直属Leader</em>同时进行审批。</span>');
     },
   },
   created() {
@@ -192,6 +192,9 @@ export default {
     white-space: nowrap;
     /deep/ em {
       font-weight: 700;
+    }
+    /deep/ span {
+      color: #ea3636;
     }
   }
 }

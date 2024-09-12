@@ -136,7 +136,6 @@ class PipelineElementModel(BaseModel):
     :param type: Element 类型
     :param name: 任务名称
     :param elementId: 任务ID
-    :param elementEnable: 任务启用状态
     :param status: 任务状态
 
     :param errorType: 错误类型
@@ -148,7 +147,6 @@ class PipelineElementModel(BaseModel):
 
     type: str = Field(alias="@type")
     elementId: str = Field(alias="id")
-    elementEnable: bool
     name: str
 
     status: Optional[str]

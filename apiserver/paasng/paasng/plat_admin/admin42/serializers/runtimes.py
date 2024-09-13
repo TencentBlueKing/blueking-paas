@@ -65,6 +65,8 @@ class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
 
 
 class BuildPackBindInputSLZ(serializers.Serializer):
+    """用于给单个 Buildpack 绑定 slugbuilder 列表，需要传入 context["buildpack_type"] 用于验证 slugbuilder 类型"""
+
     slugbuilder_ids = serializers.ListField(child=serializers.CharField())
 
     def validate_slugbuilder_ids(self, slugbuilder_ids: List[str]) -> List[str]:

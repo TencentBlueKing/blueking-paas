@@ -93,7 +93,7 @@ buildpack_generator = RuntimeAdminViewGenerator(
 )
 
 BuildPackTemplateView = buildpack_generator.gen_template_view()
-BuildPackAPIViewSet = buildpack_generator.gen_model_view_set()
+LegacyBuildPackAPIViewSet = buildpack_generator.gen_model_view_set()
 
 slugbuilder_generator = RuntimeAdminViewGenerator(
     name="SlugBuilder管理",
@@ -139,7 +139,7 @@ SlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
 
 
 # ----------------------------------------------------- new -------------------------------------------------------
-class NewBuildPackManageView(GenericTemplateView):
+class BuildPackManageView(GenericTemplateView):
     name = "BuildPack 管理"
     template_name = "admin42/platformmgr/runtimes/buildpack_list.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -151,7 +151,7 @@ class NewBuildPackManageView(GenericTemplateView):
         return context
 
 
-class NewBuildPackAPIViewSet(GenericViewSet):
+class BuildPackAPIViewSet(GenericViewSet):
     """BuildPack 管理 API 接口"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]

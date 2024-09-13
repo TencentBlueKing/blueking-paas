@@ -1,0 +1,31 @@
+27a28,33
+> # -- Export Path variables from 000_apt.sh if exists --
+> APT_PROFILE_FILE=${APT_PROFILE_FILE:-"/layers/bk-buildpack-apt/profile/profile.d/000_apt.sh"}
+> if [[ -f $APT_PROFILE_FILE ]]; then
+>     source $APT_PROFILE_FILE
+> fi
+> 
+37a44,46
+> # -- Added by blueking builder-stack --
+> source ${ROOT_DIR}/hooks/setup-user-compile-hook
+> 
+212c221
+< elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]]; then
+---
+> elif [[ -n "${CACHED_PYTHON_VERSION:-}" ]] && [[ "${CACHED_PYTHON_VERSION}" == "${DEFAULT_PYTHON_VERSION}" ]]; then
+214c223
+<   echo "       To use a different version, see: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>   echo "       To use a different version, see: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+219c228
+<   echo "       To use a different version, see: https://devcenter.heroku.com/articles/python-runtimes"
+---
+>   echo "       To use a different version, see: https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/choose_python_version"
+241a251,253
+> # -- Added by blueking builder-stack --
+> source ${ROOT_DIR}/hooks/pre-install
+> 
+352a365,367
+> 
+> # -- Added by blueking builder-stack --
+> source ${ROOT_DIR}/hooks/post-install

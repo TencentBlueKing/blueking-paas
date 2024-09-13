@@ -1,0 +1,9 @@
+api = "0.4"
+
+[buildpack]
+  id = "bk-buildpack-go"
+  version = "v191"
+  name = "bk-buildpack-go"
+
+[[stacks]]
+id = "*"

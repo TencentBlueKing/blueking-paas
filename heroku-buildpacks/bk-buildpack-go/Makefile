@@ -1,0 +1,47 @@
+.DEFAULT_GOAL:=help
+ROOT ?= $(CURDIR)
+
+${ROOT}/output:
+	mkdir -p ${ROOT}/output
+
+
+##@ Build
+
+.PHONY: clean
+clean:  ## 清理产物
+	rm -rf ${ROOT}/output
+
+.PHONY: pack
+pack: ${ROOT}/output patch  ## 打包 buildpack
+	$(eval name ?= bk-buildpack-go-${version}.tar)
+	cd buildpack && tar cvhf ${ROOT}/output/${name} --exclude=test *
+	make unpatch
+
+
+##@ Test
+.PHONY: test
+test:  ## 单元测试 - 执行前需要先 patch
+	docker run --rm \
+			--network=host \
+			-v `pwd`:/data \
+			-w /data \
+			bats/bats:v1.4.1 \
+			/data/tests
+
+
+##@ Misc
+.PHONY: patch
+patch:
+	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	rsync -a --delete ./hooks buildpack/
+
+
+.PHONY: unpatch
+unpatch:
+	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	rm -r buildpack/hooks
+
+
+.PHONY: help
+help:  ## 打印帮助信息
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)

@@ -88,3 +88,7 @@ class HandleAppDescriptionError(Exception):
 
     def __str__(self):
         return self.reason
+
+
+class InitDeployDescHandlerError(Exception):
+    """Error when initialing the description handler for deployment."""

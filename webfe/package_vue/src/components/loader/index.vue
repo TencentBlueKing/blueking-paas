@@ -89,6 +89,7 @@ import ImageManageLoading from './loading/image-manage.vue';
 import ProcessServiceLoading from './loading/process-service.vue';
 import PluinVersionListLoading from './loading/pluin-version-list.vue';
 import PersistentStorageLoading from './loading/persistent-storage.vue';
+import VisibleRangeLoading from './loading/visible-range.vue';
 export default {
   components: {
     ByUserLoading,
@@ -154,6 +155,7 @@ export default {
     ProcessServiceLoading,
     PluinVersionListLoading,
     PersistentStorageLoading,
+    VisibleRangeLoading,
   },
   props: {
     isLoading: {

@@ -320,7 +320,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
                 "args": ["http.server"],
                 "port": 5000,
                 "services": [
-                    {"name": "web", "target_port": 5000, "port": 80, "exposed_type": {"name": "bk/http"}},
+                    {"name": "web", "target_port": "${PORT}", "port": 80, "exposed_type": {"name": "bk/http"}},
                     {"name": "backend", "target_port": 5001},
                 ],
             },
@@ -339,13 +339,19 @@ class TestModuleProcessSpecWithProcServicesViewSet:
 
         proc_specs = data["proc_specs"]
         assert proc_specs[0]["services"] == [
-            {"name": "web", "target_port": 5000, "port": 80, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
+            {
+                "name": "web",
+                "target_port": "${PORT}",
+                "port": 80,
+                "exposed_type": {"name": "bk/http"},
+                "protocol": "TCP",
+            },
             {"name": "backend", "target_port": 5001, "port": None, "exposed_type": None, "protocol": "TCP"},
         ]
         assert proc_specs[1]["services"] is None
 
         web_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
-        assert web_process_spec.services[0].target_port == 5000
+        assert web_process_spec.services[0].target_port == "${PORT}"
         assert web_process_spec.services[0].port == 80
         assert web_process_spec.services[0].exposed_type.name == "bk/http"
 

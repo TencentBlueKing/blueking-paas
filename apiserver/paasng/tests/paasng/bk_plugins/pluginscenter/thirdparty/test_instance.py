@@ -30,22 +30,22 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
     handler(pd, plugin, operator="nobody")
     assert thirdparty_client.call.called is True
     data = thirdparty_client.call.call_args.kwargs["data"]
+    data_keys = [
+        "id",
+        "name_zh_cn",
+        "name_en",
+        "template",
+        "extra_fields",
+        "repository",
+        "operator",
+        "logo_url",
+        "publisher",
+    ]
+    # 仅创建插件时有 visible_range 参数
+    if handler == instance.create_instance:
+        data_keys.append("visible_range")
     # 验证国际化字段存在
-    assert (
-        data.keys()
-        ^ {
-            "id",
-            "name_zh_cn",
-            "name_en",
-            "template",
-            "extra_fields",
-            "repository",
-            "operator",
-            "logo_url",
-            "publisher",
-        }
-        == set()
-    )
+    assert data.keys() ^ data_keys == set()
     assert data["template"] == {
         "id": "foo",
         "name": "bar",

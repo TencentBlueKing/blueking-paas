@@ -74,6 +74,19 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._post(request, apigw_url, operation_type, app)
 
     @swagger_auto_schema(
+        request_body=serializers.APIGWPermissionBatchApplySLZ,
+        tags=["CloudAPI"],
+    )
+    def batch_apply(self, request, *args, **kwargs):
+        slz = serializers.APIGWPermissionBatchApplySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        app = self.get_application()
+        operation_type = OperationEnum.APPLY
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
+
+    @swagger_auto_schema(
         request_body=serializers.APIGWPermissionRenewSLZ,
         tags=["CloudAPI"],
     )
@@ -238,6 +251,9 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             # 云 API 申请记录 ID，用于操作详情的展示
             record_id = get_items(result, ["data", "record_id"], "")
+            # 仅申请的时候才有 record_id，续期的时候没有
+            data_after = DataDetail(type=data_type, data=record_id) if record_id else None
+
             gateway_name = data.get("gateway_name", "")
             add_app_audit_record(
                 app_code=app.code,
@@ -246,9 +262,8 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 operation=operation_type,
                 target=OperationTarget.CLOUD_API,
                 attribute=gateway_name,
-                # 仅提交了申请记录，需要审批后才算操作成功
-                result_code=ResultCode.ONGOING,
-                data_after=DataDetail(type=data_type, data=record_id),
+                result_code=ResultCode.SUCCESS,
+                data_after=data_after,
             )
         except Exception:
             logger.exception("An exception occurred in the operation record of adding cloud API permissions")

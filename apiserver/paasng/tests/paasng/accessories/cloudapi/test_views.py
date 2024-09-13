@@ -112,6 +112,20 @@ class TestCloudAPIViewSet:
                 "/api/v1/apis/",
                 False,
             ),
+            # 批量申请 API
+            (
+                "/api/cloudapi/apps/test/apis/permissions/apply/",
+                "test",
+                "/api/v1/apis/permissions/apply/",
+                False,
+            ),
+            # 按单个网关申请 API
+            (
+                "/api/cloudapi/apps/test/apis/1/permissions/apply/",
+                "test",
+                "/api/v1/apis/1/permissions/apply/",
+                False,
+            ),
             (
                 "/api/apps/test/apis/",
                 "test",

@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Serializer for third-party api"""
+from typing import Optional
+
 from rest_framework import serializers
 
 from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRole
@@ -30,6 +32,13 @@ class PluginTemplateSLZ(serializers.Serializer):
     language = serializers.CharField()
     applicable_language = serializers.CharField(allow_null=True)
     repository = serializers.CharField()
+
+
+class PluginVVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")
 
 
 @i18n
@@ -47,6 +56,21 @@ class PluginRequestSLZ(serializers.Serializer):
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]
+
+
+@i18n
+class PluginRequestCreateSLZ(PluginRequestSLZ):
+    """创建插件的时候需要初始化可见范围，所以需要将可见范围一起同步"""
+
+    visible_range = serializers.SerializerMethodField()
+
+    def get_visible_range(self, obj) -> Optional[dict]:
+        if not hasattr(obj, "visible_range"):
+            return None
+        return {
+            "bkci_project": obj.visible_range.bkci_project,
+            "organization": obj.visible_range.organization,
+        }
 
 
 @i18n
@@ -94,6 +118,12 @@ class PluginReleaseStageSLZ(serializers.Serializer):
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="阶段状态")
 
 
+class PluginStrategySLZ(serializers.Serializer):
+    strategy = serializers.CharField(help_text="灰度策略")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目ID")
+    organization = serializers.JSONField(help_text="组织")
+
+
 class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     """插件版本创建回调的请求体格式"""
 
@@ -102,6 +132,8 @@ class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     operator = serializers.CharField(help_text="操作人")
     current_stage = PluginReleaseStageSLZ()
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="插件版本状态")
+    is_rolled_back = serializers.BooleanField(help_text="是否回滚")
+    latest_release_strategy = PluginStrategySLZ(allow_null=True, required=False)
 
 
 class DeployPluginRequestSLZ(serializers.Serializer):
@@ -156,3 +188,10 @@ class PluginBuildInfoSLZ(serializers.Serializer):
     version = serializers.CharField(help_text="版本号")
     version_with_underscores = serializers.CharField(help_text="将版本号中点(.)替换为下划线(_)")
     bk_username = serializers.CharField(help_text="操作人")
+
+
+class PluginVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")

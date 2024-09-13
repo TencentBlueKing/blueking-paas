@@ -5,9 +5,11 @@
       :key="routeChangeIndex"
       :stream-list="streamList"
       :process-list="processList"
-      :log-count="pagination.count"
+      :log-count="logsTotal"
       :loading="isChartLoading"
       :type="'customLog'"
+      :max-result="pagination.count"
+      :is-exceed-max-result-window="isExceedMaxResultWindow"
       @change="handleLogSearch"
       @date-change="handlePickSuccess"
       @reload="handleLogReload"
@@ -340,13 +342,10 @@ export default {
       tabActive: 'customLog',
       filterKeyword: '',
       contentHeight: 400,
-      tabChangeIndex: 0,
       renderIndex: 0,
       renderFilter: 0,
       routeChangeIndex: 0,
       isLoading: true,
-      tableMaxWidth: 700,
-      isShowDate: true,
       lastScrollId: '',
       initDateTimeRange: [initStartDate, initEndDate],
       pagination: {
@@ -402,6 +401,8 @@ export default {
         isAbnormal: false,
         keyword: '',
       },
+      isExceedMaxResultWindow: false,
+      logsTotal: 0,
     };
   },
   computed: {
@@ -768,9 +769,11 @@ export default {
           item.isToggled = false;
         });
 
+        // 是否超过最大范围
+        this.isExceedMaxResultWindow = res.total > res.max_result_window;
+        this.logsTotal = res.total;
         this.logList.splice(0, this.logList.length, ...data);
-
-        this.pagination.count = res.total;
+        this.pagination.count = this.isExceedMaxResultWindow ? res.max_result_window : res.total;
         this.pagination.current = page;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;

@@ -113,7 +113,6 @@ export default {
   },
   watch: {
     pluginInfo(newValue) {
-      console.log('newValue', newValue);
       this.init(newValue);
     },
   },

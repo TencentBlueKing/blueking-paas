@@ -61,6 +61,27 @@ class APIGWPermissionApplySLZ(serializers.Serializer):
     gateway_name = serializers.CharField(help_text="网关名称，用于记录操作记录")
 
 
+class GatewayResourceIDsSLZ(serializers.Serializer):
+    gateway_id = serializers.IntegerField(required=True, help_text="网关 ID")
+    resource_ids = serializers.ListField(
+        max_length=100,
+        child=serializers.IntegerField(),
+        allow_empty=True,
+        required=False,
+        help_text="如果不传则为网关维度申请",
+    )
+
+
+class APIGWPermissionBatchApplySLZ(serializers.Serializer):
+    """批量申请网关/ API 权限"""
+
+    reason = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
+    expire_days = serializers.ChoiceField(
+        choices=constants.PermissionApplyExpireDaysEnum.get_django_choices(),
+    )
+    gateway_resource_ids = serializers.ListField(child=GatewayResourceIDsSLZ(), max_length=100)
+
+
 class APIGWPermissionRenewSLZ(serializers.Serializer):
     resource_ids = serializers.ListField(
         child=serializers.IntegerField(),

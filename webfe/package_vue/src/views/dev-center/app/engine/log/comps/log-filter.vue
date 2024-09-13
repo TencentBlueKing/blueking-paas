@@ -1,5 +1,12 @@
 <template>
   <div class="ps-log-filter">
+    <!-- 数据查询超过最大查询数量展示警告 -->
+    <bk-alert
+      v-if="isExceedMaxResultWindow"
+      type="warning"
+      class="mb10"
+      :title="$t('每次查询最多返回 {n} 条日志。如需查看全部日志，请缩小查询时间范围。', { n: maxResult?.toLocaleString() })">
+    </bk-alert>
     <div class="header">
       <div>{{ $t('共') }} <strong>{{ logCount }}</strong> {{ $t('条日志') }}</div>
       <div class="reload-action">
@@ -233,6 +240,14 @@ export default {
     type: {
       type: String,
       default: '',
+    },
+    maxResult: {
+      type: Number,
+      default: 0,
+    },
+    isExceedMaxResultWindow: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

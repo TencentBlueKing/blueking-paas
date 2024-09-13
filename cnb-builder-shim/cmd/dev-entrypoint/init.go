@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pkg/errors"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -131,6 +134,24 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 	err = os.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0o755)
 	if err != nil {
 		return errors.Wrap(err, "failed to write order.toml")
+	}
+	return nil
+}
+
+// sourceInit: 根据配置初始化源码
+func sourceInit() error {
+	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.Source.SourceFetchMethod))
+	switch config.G.Source.SourceFetchMethod {
+	case config.BKREPO:
+		downloadUrl, err := url.Parse(config.G.Source.SourceGetUrl)
+		if err != nil {
+			return err
+		}
+		if err = fs.NewFetcher(logger).Fetch(downloadUrl.Path, config.G.Source.UploadDir); err != nil {
+			return err
+		}
+	case config.GIT:
+		return fmt.Errorf("TODO: clone git from revision")
 	}
 	return nil
 }

@@ -87,6 +87,19 @@ func Unzip(srcFilePath, distDir string) error {
 	return nil
 }
 
+// ExtractTarGz extracts the contents of a tar.gz file to a specified directory.
+//
+// srcFilePath is the path to the zip file.
+// distDir is the directory where the extracted files will be placed.
+// Returns an error if there was a problem extracting the zip file.
+func ExtractTarGz(srcFilePath, distDir string) error {
+	z := archiver.NewZip()
+	if err := z.Unarchive(srcFilePath, distDir); err != nil {
+		return errors.Wrap(err, "unzip error")
+	}
+	return nil
+}
+
 // Chownr changes the ownership of a file or directory and all its contents recursively.
 //
 // The function takes three parameters:

@@ -23,6 +23,7 @@ from django_dynamic_fixture import G
 from paas_wl.bk_app.monitoring.app_monitor.kres_entities import Endpoint, ServiceMonitor, ServiceSelector
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.misc.monitoring.monitor.service_monitor.controller import ServiceMonitorController
+from paasng.platform.bkapp_model.entities import Monitoring
 from paasng.platform.bkapp_model.models import ObservabilityConfig
 
 pytestmark = [
@@ -36,9 +37,9 @@ class TestServiceMonitorController:
         G(
             ObservabilityConfig,
             module=bk_stag_env.module,
-            monitoring={
-                "metrics": [{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
-            },
+            monitoring=Monitoring(
+                metrics=[{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
+            ),
         )
 
         with mock.patch(
@@ -60,10 +61,10 @@ class TestServiceMonitorController:
         G(
             ObservabilityConfig,
             module=bk_stag_env.module,
-            monitoring={
-                "metrics": [{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
-            },
-            last_monitoring={"metrics": [{"process": "backend", "service_name": "api", "path": "/api/metric"}]},
+            monitoring=Monitoring(
+                metrics=[{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
+            ),
+            last_monitoring=Monitoring(metrics=[{"process": "backend", "service_name": "api", "path": "/api/metric"}]),
         )
 
         with mock.patch(
@@ -98,10 +99,10 @@ class TestServiceMonitorController:
         G(
             ObservabilityConfig,
             module=bk_stag_env.module,
-            monitoring={
-                "metrics": [{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
-            },
-            last_monitoring={"metrics": [{"process": "web", "service_name": "metric", "path": "/api/metric"}]},
+            monitoring=Monitoring(
+                metrics=[{"process": "web", "service_name": "metric", "path": "/metric", "params": {"foo": "bar"}}]
+            ),
+            last_monitoring=Monitoring(metrics=[{"process": "web", "service_name": "metric", "path": "/api/metric"}]),
         )
 
         with mock.patch(

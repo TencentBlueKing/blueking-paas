@@ -145,7 +145,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         image_repository, image_credential_name = get_image_info(module)
 
         proc_metric_map = {}
-        if observability := ObservabilityConfig.objects.filter(module=module).first():
+        if observability := module.observability:
             proc_metric_map = {m.process: m for m in observability.monitoring_metrics}
 
         proc_specs_data = []
@@ -210,7 +210,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         module, proc_spec["name"], env_name, **proc_env_overlay
                     )
-            if metric := get_items(proc_spec, ["monitoring.metric"]):
+            if metric := get_items(proc_spec, "monitoring.metric"):
                 metrics.append({"process": proc_spec["name"], **metric})
 
         monitoring = Monitoring(metrics=metrics) if metrics else None

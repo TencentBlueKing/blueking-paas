@@ -208,7 +208,7 @@ class BuildPackAPIViewSet(GenericViewSet):
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
-            target=OperationTarget.BUILD_PACK,
+            target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
             data_before=data_before,
             data_after=DataDetail(
@@ -227,7 +227,7 @@ class BuildPackAPIViewSet(GenericViewSet):
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
-            target=OperationTarget.BUILD_PACK,
+            target=OperationTarget.BUILDPACK,
             attribute=slz.data["name"],
             data_after=DataDetail(
                 type=DataType.RAW_DATA,
@@ -251,7 +251,7 @@ class BuildPackAPIViewSet(GenericViewSet):
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
-            target=OperationTarget.BUILD_PACK,
+            target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
             data_before=data_before,
             data_after=DataDetail(
@@ -273,7 +273,7 @@ class BuildPackAPIViewSet(GenericViewSet):
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
-            target=OperationTarget.BUILD_PACK,
+            target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
             data_before=data_before,
         )

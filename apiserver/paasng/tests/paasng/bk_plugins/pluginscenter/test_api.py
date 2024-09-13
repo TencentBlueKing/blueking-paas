@@ -186,6 +186,9 @@ class TestPluginApi:
         ), mock.patch(
             "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.get_ticket_status",
             return_value={"ticket_url": "https://xxxx", "current_status": itsm_ticket_status},
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
+            return_value=["admin"],
         ):
             resp = api_client.post(
                 url,

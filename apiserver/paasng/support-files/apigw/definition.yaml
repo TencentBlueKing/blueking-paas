@@ -34,6 +34,7 @@ grant_permissions:
   - bk_app_code: bk_dataweb
   - bk_app_code: bk_bkdata
   - bk_app_code: bk_notice
+  - bk_app_code: bk_flow_engine
 
 strategies: []
 

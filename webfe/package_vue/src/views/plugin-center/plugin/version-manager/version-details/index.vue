@@ -138,7 +138,7 @@
               :loading="isApplyLoading"
               @click="handleSubmit"
             >
-              {{ $t(submitText) }}
+              {{ curStrategyType === 'full' ? $t('申请全量发布') : $t('申请扩大灰度范围') }}
             </bk-button>
             <bk-button
               :theme="'default'"
@@ -151,7 +151,7 @@
           <p
             class="release-tips"
             v-bk-overflow-tips
-            v-html="releaseTips"
+            v-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
           ></p>
         </template>
       </section>
@@ -196,7 +196,7 @@ export default {
         source_versions: [],
       },
       canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
-      submitText: '申请扩大灰度范围',
+      curStrategyType: '',
     };
   },
   computed: {
@@ -206,8 +206,11 @@ export default {
     versionId() {
       return this.$route.query.versionId;
     },
-    releaseTips() {
+    canaryReleaseTips() {
       return this.$t('灰度发布需由<em>工具管理员</em>进行审批；<span>若选择了灰度组织范围，还需要由<em>工具发布者的直属Leader</em>同时进行审批。</span>');
+    },
+    officialReleaseTips() {
+      return this.$t('正式发布需由<em>平台管理员</em>进行审批。');
     },
     // 审批失败要用 release 的 status 来判断
     releaseStatus() {
@@ -274,7 +277,7 @@ export default {
       // 只允许扩大灰度范围
       this.releaseStrategyMode = 'edit';
       this.isRequestGrayRelease = true;
-      this.submitText = type === 'full' ? '申请全量发布' : '申请扩大灰度范围';
+      this.curStrategyType = type;
       if (type === 'full') {
         // 全量
         this.versionData.latest_release_strategy.strategy = 'full';
@@ -418,7 +421,7 @@ export default {
     },
 
     handleStrategyChange(type) {
-      this.submitText = type === 'full' ? '申请全量发布' : '申请扩大灰度范围';
+      this.curStrategyType = type;
     },
   },
 };

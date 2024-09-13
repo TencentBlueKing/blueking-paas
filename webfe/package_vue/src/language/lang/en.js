@@ -2819,4 +2819,5 @@ export default {
   操作类型: 'Operation type',
   对象属性: 'Object attribute',
   执行中: 'Ongoing',
+  '正式发布需由<em>平台管理员</em>进行审批。': 'Formal release requires approval from the <em>platform administrator</em>.',
 };

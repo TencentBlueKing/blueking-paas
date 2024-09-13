@@ -28,7 +28,12 @@
       >
         <div slot="title">
           <i class="paasng-icon paasng-remind"></i>
-          {{ $t('审批未通过，请修改发布信息后重新申请') }}
+          <span v-if="approvalStatus === 'FINISHED'">
+            {{ $t('审批未通过，请修改发布信息后重新申请') }}
+          </span>
+          <span v-else>
+            {{ $t('单据{d}，请修改发布信息后重新申请', { d: versionData.latest_release_strategy?.ticket_info?.current_status_display }) }}
+          </span>
           <bk-button
             size="small"
             text

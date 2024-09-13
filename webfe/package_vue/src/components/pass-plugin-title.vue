@@ -18,7 +18,7 @@
                 class="commit-id"
                 @click="toCodeRepository"
               >
-                {{ versionData?.source_hash }}
+                {{ versionData?.source_hash?.slice(-6) || '--' }}
               </span>
             </div>
           </div>

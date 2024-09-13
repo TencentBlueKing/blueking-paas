@@ -20,8 +20,6 @@ package webserver
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"net/http"
 	"os"
 	"path"
@@ -34,7 +32,9 @@ import (
 	"github.com/go-logr/logr"
 
 	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 type envConfig struct {

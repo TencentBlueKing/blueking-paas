@@ -34,7 +34,7 @@ var _ = Describe("Test DeployManager", func() {
 	var m *DeployManager
 	var tmpAppDir string
 
-	testSrcFilePath := filepath.Join("testdata", "django-helloworld.zip")
+	testSrcFilePath := filepath.Join("testdata", "tmpDir", "django-helloworld")
 	oldAppDir := dc.DefaultAppDir
 
 	BeforeEach(func() {

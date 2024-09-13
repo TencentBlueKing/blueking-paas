@@ -73,16 +73,16 @@ type DeployManager struct {
 // It analyzes the source code and copies it to the application directory.
 //
 // Parameters:
-// - srcFilePath: The path of the source file to be deployed.
+// - srcFilePath: The tmp path of the source file to be deployed.
 //
 // Returns:
 // - *DeployResult: The deployment result.
 // - error: Any error that occurred during the deployment process.
-func (m *DeployManager) Deploy(srcFilePath string) (*DeployResult, error) {
+func (m *DeployManager) Deploy(tmpAppDir string) (*DeployResult, error) {
 	deployID := m.newDeployID()
 
 	// 分析源码并拷贝到应用目录
-	if err := m.analyzeAndSyncToAppDir(srcFilePath, dc.DefaultAppDir); err != nil {
+	if err := m.analyzeAndSyncToAppDir(tmpAppDir, dc.DefaultAppDir); err != nil {
 		return nil, err
 	}
 
@@ -134,26 +134,12 @@ func (m DeployManager) newDeployID() string {
 	return strings.Replace(uuidString, "-", "", -1)
 }
 
-func (m *DeployManager) analyzeAndSyncToAppDir(srcFilePath, appDir string) error {
-	tmpDir, err := os.MkdirTemp("", "source-*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// 1. 解压文件到临时目录
-	if err = utils.Unzip(srcFilePath, tmpDir); err != nil {
-		return err
-	}
-
-	fileName := filepath.Base(srcFilePath)
-	tmpAppDir := path.Join(tmpDir, strings.Split(fileName, ".")[0])
-
-	// 2. 通过对比新旧文件的变化, 确定哪些步骤需要执行
+func (m *DeployManager) analyzeAndSyncToAppDir(tmpAppDir, appDir string) error {
+	// 1. 通过对比新旧文件的变化, 确定哪些步骤需要执行
 	m.stepOpts = parseDeployStepOpts(appDir, tmpAppDir)
 
-	// 3. 将 tmpAppDir 中的文件拷贝到 appDir
-	if err = m.syncFiles(tmpAppDir, appDir); err != nil {
+	// 2. 将 tmpAppDir 中的文件拷贝到 appDir
+	if err := m.syncFiles(tmpAppDir, appDir); err != nil {
 		return err
 	}
 
@@ -233,7 +219,7 @@ var _ DeployServiceHandler = (*DeployManager)(nil)
 type FakeDeployManger struct{}
 
 // Deploy fake deploy for unit test
-func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
+func (m *FakeDeployManger) Deploy(tmpAppDir string) (*DeployResult, error) {
 	return &DeployResult{
 		DeployID: uuid.NewString(),
 		Status:   dc.ReloadProcessing,

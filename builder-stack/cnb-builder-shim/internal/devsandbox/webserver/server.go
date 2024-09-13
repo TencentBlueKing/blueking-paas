@@ -20,7 +20,10 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -110,20 +113,45 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // DeployHandler handles the deployment of a file to the web server.
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		file, err := c.FormFile("file")
+		var tmpAppDir string
+		// 创建临时文件夹
+		tmpDir, err := os.MkdirTemp("", "source-*")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
 			return
 		}
+		defer os.RemoveAll(tmpDir)
+		// 根据源码获取方式的不同，通过不同的方式将源码解压到临时目录
+		if config.G.Source.SourceFetchMethod == config.HTTP {
+			file, err := c.FormFile("file")
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
+				return
+			}
 
-		fileName := filepath.Base(file.Filename)
-		srcFilePath := path.Join(s.env.UploadDir, fileName)
-		if err = c.SaveUploadedFile(file, srcFilePath); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
-			return
+			fileName := filepath.Base(file.Filename)
+			srcFilePath := path.Join(s.env.UploadDir, fileName)
+			if err = c.SaveUploadedFile(file, srcFilePath); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
+				return
+			}
+			// 解压文件到临时目录
+			if err = utils.Unzip(srcFilePath, tmpDir); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+				return
+			}
+			tmpAppDir = path.Join(tmpDir, strings.Split(fileName, ".")[0])
+		} else if config.G.Source.SourceFetchMethod == config.BKREPO {
+			srcFilePath := path.Join(s.env.UploadDir, "tar")
+			// 解压文件到临时目录
+			if err = utils.ExtractTarGz(srcFilePath, tmpDir); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+				return
+			}
+			tmpAppDir = tmpDir
 		}
 
-		status, err := svc.Deploy(srcFilePath)
+		status, err := svc.Deploy(tmpAppDir)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
 			return

@@ -34,6 +34,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := sourceInit(); err != nil {
+		logger.Error(err, "Init Source Failed")
+		os.Exit(1)
+	}
 	runDevContainerServer()
 }
 

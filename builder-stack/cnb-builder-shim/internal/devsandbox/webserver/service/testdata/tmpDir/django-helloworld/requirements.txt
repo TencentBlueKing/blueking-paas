@@ -1,0 +1,2 @@
+# requirements.txt file
+Django==2.2.3

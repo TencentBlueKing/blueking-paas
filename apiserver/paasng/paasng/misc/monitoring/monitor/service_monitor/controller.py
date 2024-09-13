@@ -53,7 +53,7 @@ class ServiceMonitorController:
         """对比 ObservabilityConfig 中的 monitoring 和 last_monitoring, 将新增(或更新)的 metric 采集规则转换成
         ServiceMonitor 下发到集群中, 同时删除废弃的 ServiceMonitor"""
 
-        observability: ObservabilityConfig = self.module.observability
+        observability = ObservabilityConfig.objects.filter(module=self.module).first()
         if not observability:
             return
 

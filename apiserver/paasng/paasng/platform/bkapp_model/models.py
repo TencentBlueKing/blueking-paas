@@ -339,7 +339,7 @@ class ObservabilityConfigManager(models.Manager):
 
 class ObservabilityConfig(TimestampedModel):
     module = models.OneToOneField(
-        "modules.Module", on_delete=models.CASCADE, related_name="observability", db_constraint=False
+        "modules.Module", on_delete=models.CASCADE, null=True, related_name="observability", db_constraint=False
     )
     monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
     last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)

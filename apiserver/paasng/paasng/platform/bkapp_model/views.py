@@ -145,7 +145,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         image_repository, image_credential_name = get_image_info(module)
 
         proc_metric_map = {}
-        if observability := module.observability:
+        if observability := ObservabilityConfig.objects.filter(module=module).first():
             proc_metric_map = {m.process: m for m in observability.monitoring_metrics}
 
         proc_specs_data = []

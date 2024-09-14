@@ -323,7 +323,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         data_before = DataDetail(
             type=DataType.RAW_DATA,
-            data={"bound_buildpacks": [buildpack.name for buildpack in slugbuilder.buildpacks.all()]},
+            data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in slugbuilder.buildpacks.all()]},
         )
         slz = AppSlugBuilderBindInputSLZ(data=request.data, context={"slugbuilder_type": slugbuilder.type})
         slz.is_valid(raise_exception=True)
@@ -341,7 +341,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             data_before=data_before,
             data_after=DataDetail(
                 type=DataType.RAW_DATA,
-                data={"bound_buildpacks": [f"{buildpack.name}({buildpack.id})" for buildpack in buildpacks]},
+                data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in buildpacks]},
             ),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

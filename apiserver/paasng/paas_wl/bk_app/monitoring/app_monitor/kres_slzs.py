@@ -84,6 +84,7 @@ class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
         }
 
         if ep.params:
+            # params type is discussed in https://github.com/prometheus-operator/prometheus-operator/issues/2586
             ep_spec["params"] = {k: [v] for k, v in ep.params.items()}  # type: ignore
 
         return [ep_spec]

@@ -88,6 +88,7 @@ class OperationTarget(str, StructuredEnum):
     EGRESS_SPEC = EnumField("egress_spec", label=_("Egress 配置"))
     TEMPLATE = EnumField("template", label=_("模板"))
     BUILDPACK = EnumField("buildpack", label="Buildpack")
+    SLUGBUILDER = EnumField("slugbuilder", label="Slugbuilder")
 
 
 class OperationEnum(str, StructuredEnum):

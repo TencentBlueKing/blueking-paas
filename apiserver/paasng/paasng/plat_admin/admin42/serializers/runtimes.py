@@ -53,17 +53,6 @@ class BuildPackListOutputSLZ(serializers.ModelSerializer):
         exclude = ["modules", "environments"]
 
 
-class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
-    display_name = TranslatedCharField()
-    description = TranslatedCharField()
-    env_vars = serializers.JSONField(source="environments", help_text="环境变量")
-    labels = serializers.JSONField()
-
-    class Meta:
-        model = AppSlugBuilder
-        exclude = ["modules", "environments"]
-
-
 class BuildPackBindInputSLZ(serializers.Serializer):
     """用于给单个 Buildpack 绑定 slugbuilder 列表，需要传入 context["buildpack_type"] 用于验证 slugbuilder 类型"""
 
@@ -86,3 +75,63 @@ class BuildPackBindInputSLZ(serializers.Serializer):
             raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
 
         return slugbuilder_ids
+
+
+class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
+    region = serializers.ChoiceField(required=True, choices=RegionType.get_choices())
+    name = serializers.CharField(required=True, max_length=64)
+    type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
+    image = serializers.CharField(required=True, max_length=256)
+    tag = serializers.CharField(required=True, max_length=32)
+    env_vars = serializers.JSONField(required=False, default={}, source="environments", help_text="环境变量")
+    labels = serializers.JSONField(required=False, default={})
+    is_hidden = serializers.BooleanField(required=False, default=False)
+    is_default = serializers.BooleanField(required=False, default=False)
+
+    class Meta:
+        model = AppSlugBuilder
+        exclude = ["id", "created", "updated", "modules", "environments", "buildpacks"]
+
+    def validate_name(self, name: str) -> str:
+        if AppSlugBuilder.objects.filter(name=name).exists():
+            raise serializers.ValidationError("name already exists")
+        return name
+
+
+class AppSlugBuilderUpdateInputSLZ(AppSlugBuilderCreateInputSLZ):
+    def validate_name(self, name: str) -> str:
+        if AppSlugBuilder.objects.exclude(id=self.instance.id).filter(name=name).exists():
+            raise serializers.ValidationError("name already exists")
+        return name
+
+
+class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    env_vars = serializers.JSONField(source="environments", help_text="环境变量")
+    labels = serializers.JSONField()
+
+    class Meta:
+        model = AppSlugBuilder
+        exclude = ["modules", "environments"]
+
+
+class AppSlugBuilderBindInputSLZ(serializers.Serializer):
+    buildpack_ids = serializers.ListField(child=serializers.CharField())
+
+    def validate_buildpack_ids(self, buildpack_ids: List[str]) -> List[str]:
+        buildpack_types = {bp.type for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
+        if BuildPackType.TAR in buildpack_types and len(buildpack_types) > 1:
+            raise serializers.ValidationError("buildpack type must be same")
+
+        if not buildpack_types:
+            return buildpack_ids
+
+        buildpack_type = buildpack_types.pop()
+        # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
+        if (buildpack_type == BuildPackType.TAR and self.context["slugbuilder_type"] != AppImageType.LEGACY) or (
+            buildpack_type != BuildPackType.TAR and self.context["slugbuilder_type"] == AppImageType.LEGACY
+        ):
+            raise serializers.ValidationError(f"buildpack type ({buildpack_type}): does not match slugbuilder type")
+
+        return buildpack_ids

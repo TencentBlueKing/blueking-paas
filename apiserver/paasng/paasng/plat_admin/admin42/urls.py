@@ -195,21 +195,41 @@ urlpatterns = [
         runtimes.SlugBuilderTemplateView.as_view(),
         name="admin.runtime.slugbuilder.manage",
     ),
+    url(
+        "^platform/runtimes/slugbuilder/manage/$",
+        runtimes.SlugBuilderManageView.as_view(),
+        name="admin.runtimes.slugbuilder.manage",
+    ),
     # 平台管理-运行时管理-SlugBuilder管理 API
     url(
         r"^platform/runtime/slugbuilder/$",
-        runtimes.SlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
+        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
         name="admin.runtime.slugbuilder",
     ),
     url(
         r"^platform/runtime/slugbuilder/(?P<pk>[^/]+)/$",
-        runtimes.SlugBuilderAPIViewSet.as_view(dict(put="update", delete="destroy")),
+        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtime.slugbuilder.detail",
     ),
     url(
         r"^platform/runtime/slugbuilder/(?P<pk>[^/]+)/buildpacks",
-        runtimes.SlugBuilderAPIViewSet.as_view(dict(post="set_buildpacks")),
+        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(post="set_buildpacks")),
         name="admin.runtime.slugbuilder.detail.bind",
+    ),
+    url(
+        r"^platform/runtimes/slugbuilder/$",
+        runtimes.SlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
+        name="admin.runtimes.slugbuilder",
+    ),
+    url(
+        r"^platform/runtimes/slugbuilder/(?P<pk>[^/]+)/$",
+        runtimes.SlugBuilderAPIViewSet.as_view(dict(put="update", delete="destroy")),
+        name="admin.runtimes.slugbuilder.detail",
+    ),
+    url(
+        r"^platform/runtime/slugbuilder/(?P<pk>[^/]+)/bind/$",
+        runtimes.SlugBuilderAPIViewSet.as_view(dict(post="set_bound_buildpacks", get="get_bound_buildpacks")),
+        name="admin.runtimes.slugbuilder.detail.bind",
     ),
     # 平台管理-运行时管理-SlugRunner管理
     url(

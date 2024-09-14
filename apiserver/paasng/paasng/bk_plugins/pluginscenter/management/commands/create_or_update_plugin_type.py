@@ -118,8 +118,8 @@ class Command(BaseCommand):
             models.PluginVisibleRangeDefinition.objects.update_or_create(
                 pd=pd,
                 defaults={
-                    "description_zh_cn": pd_data.spec.visibleRange.description,
-                    "scope": pd_data.spec.visibleRange.scope,
+                    "api": pd_data.spec.visibleRange.api,
+                    "initial": pd_data.spec.visibleRange.initial,
                 },
             )
 

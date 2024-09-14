@@ -80,6 +80,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "DistributorsViewSet",
     "BkPluginTagsViewSet",
     "SchemaViewSet",
+    "BkPluginUserManageView",
     #
     # == Django views start
     #

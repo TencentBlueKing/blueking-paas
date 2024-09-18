@@ -47,7 +47,7 @@ class BKIAMApiError(BKIAMGatewayServiceError):
         """
         # 定义正则表达式模式，匹配用户信息和超限原因
         user_pattern = r"user (\w+)"
-        quota_pattern = r"quota error"
+        quota_pattern = r"can only have (\d+) groups"
 
         # 使用正则表达式查找匹配的用户信息
         user_match = re.search(user_pattern, message)
@@ -55,7 +55,8 @@ class BKIAMApiError(BKIAMGatewayServiceError):
 
         if user_match and quota_match:
             user = user_match.group(1)
-            return _(f"用户 {user} 在蓝鲸权限中心的角色数已经超出了 100 个的限制")
+            quota = quota_match.group(1)
+            return _(f"用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制")
         else:
             # 没匹配到则返回原始的错误信息
             return message

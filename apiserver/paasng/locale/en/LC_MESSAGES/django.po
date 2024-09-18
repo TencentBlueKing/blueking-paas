@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-18 19:42+0800\n"
+"POT-Creation-Date: 2024-09-18 19:55+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1633,9 +1633,8 @@ msgid "业务"
 msgstr ""
 
 #: paasng/infras/iam/exceptions.py:59
-#, python-brace-format
-msgid "用户 {user} 在蓝鲸权限中心的角色数已经超出了 100 个的限制"
-msgstr "The user {user} has exceeded the group quota of 100."
+msgid "用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制"
+msgstr "The user {user} has exceeded the group quota of {quota}."
 
 #: paasng/infras/iam/permissions/resources/application.py:41
 msgid "基础信息查看"

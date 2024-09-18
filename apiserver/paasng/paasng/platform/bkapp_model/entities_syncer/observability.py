@@ -15,32 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
-from . import constants
+from paasng.platform.bkapp_model.entities import Observability
+from paasng.platform.bkapp_model.models import ObservabilityConfig
+from paasng.platform.modules.models import Module
 
-
-@dataclass
-class Endpoint:
-    """
-    Metric Endpoint
-
-    :param interval: 蓝鲸监控采集 metric 的间隔
-    :param path: 采集 metric 数据的 url 路径
-    :param port: 采集 metric 数据的端口名
-    :param metric_relabelings: Metric 重标签配置, 由集群运维负责控制下发
-    :param params: 采集 metric 数据的 url 路径参数
-    """
-
-    interval: str = constants.METRICS_INTERVAL
-    path: str = constants.METRICS_PATH
-    port: str = constants.METRICS_PORT_NAME
-    metric_relabelings: Optional[List[Dict]] = None
-    params: Optional[Dict[str, str]] = None
+from .result import CommonSyncResult
 
 
-@dataclass
-class ServiceSelector:
-    # matchLabels 用于过滤蓝鲸监控 ServiceMonitor 监听的 Service
-    matchLabels: Dict[str, str]
+def sync_observability(module: Module, observability: Optional[Observability]) -> CommonSyncResult:
+    """Sync observability config to db model. only create or update the config, not delete"""
+    ret = CommonSyncResult()
+
+    monitoring = observability.monitoring if observability else None
+    _, created = ObservabilityConfig.objects.upsert_by_module(module=module, monitoring=monitoring)
+    ret.incr_by_created_flag(created)
+
+    return ret

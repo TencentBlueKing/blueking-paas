@@ -15,32 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from . import constants
+from pydantic import BaseModel
+
+from paasng.utils.structure import prepare_json_field
 
 
-@dataclass
-class Endpoint:
+class Metric(BaseModel):
+    """Metric is monitor metric config for process services
+
+    :param process: process name
+    :param service_name: name of the process service
+    :param path: path of the metric api
+    :param params: params of the metric api
     """
-    Metric Endpoint
 
-    :param interval: 蓝鲸监控采集 metric 的间隔
-    :param path: 采集 metric 数据的 url 路径
-    :param port: 采集 metric 数据的端口名
-    :param metric_relabelings: Metric 重标签配置, 由集群运维负责控制下发
-    :param params: 采集 metric 数据的 url 路径参数
-    """
-
-    interval: str = constants.METRICS_INTERVAL
-    path: str = constants.METRICS_PATH
-    port: str = constants.METRICS_PORT_NAME
-    metric_relabelings: Optional[List[Dict]] = None
+    process: str
+    service_name: str
+    path: str
     params: Optional[Dict[str, str]] = None
 
 
-@dataclass
-class ServiceSelector:
-    # matchLabels 用于过滤蓝鲸监控 ServiceMonitor 监听的 Service
-    matchLabels: Dict[str, str]
+@prepare_json_field
+class Monitoring(BaseModel):
+    metrics: Optional[List[Metric]] = None
+
+
+class Observability(BaseModel):
+    monitoring: Optional[Monitoring] = None

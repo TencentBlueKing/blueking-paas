@@ -14,33 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from dataclasses import dataclass
-from typing import Dict, List, Optional
-
-from . import constants
-
-
-@dataclass
-class Endpoint:
-    """
-    Metric Endpoint
-
-    :param interval: 蓝鲸监控采集 metric 的间隔
-    :param path: 采集 metric 数据的 url 路径
-    :param port: 采集 metric 数据的端口名
-    :param metric_relabelings: Metric 重标签配置, 由集群运维负责控制下发
-    :param params: 采集 metric 数据的 url 路径参数
-    """
-
-    interval: str = constants.METRICS_INTERVAL
-    path: str = constants.METRICS_PATH
-    port: str = constants.METRICS_PORT_NAME
-    metric_relabelings: Optional[List[Dict]] = None
-    params: Optional[Dict[str, str]] = None
-
-
-@dataclass
-class ServiceSelector:
-    # matchLabels 用于过滤蓝鲸监控 ServiceMonitor 监听的 Service
-    matchLabels: Dict[str, str]

@@ -156,6 +156,16 @@ class ProbeSetSLZ(serializers.Serializer):
     startup = ProbeSLZ(help_text="启动探针", required=False, allow_null=True)
 
 
+class MetricSLZ(serializers.Serializer):
+    service_name = serializers.CharField(help_text="服务端口名称")
+    path = serializers.CharField(help_text="采集 metric 数据的 http url 路径", default="/metrics")
+    params = serializers.DictField(help_text="采集 metric 数据的 http url 路径参数", required=False, allow_null=True)
+
+
+class MonitoringSLZ(serializers.Serializer):
+    metric = MetricSLZ(help_text="metric 配置", required=False, allow_null=True)
+
+
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
@@ -172,10 +182,11 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
         child=ProcServiceSLZ(), help_text="进程服务列表", allow_null=True, required=False
     )
     port = serializers.IntegerField(
-        help_text="容器端口", min_value=1, max_value=65535, allow_null=True, required=False
+        help_text="[deprecated] 容器端口", min_value=1, max_value=65535, allow_null=True, required=False
     )
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
+    monitoring = MonitoringSLZ(help_text="可观测性监控配置", required=False, allow_null=True)
 
     def validate_services(self, value):
         """check whether name, target_port or port are duplicated"""
@@ -204,6 +215,21 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
                 ports.add(port)
 
         return value
+
+    def validate(self, data):
+        data = super().validate(data)
+        self._validate_monitoring(data)
+        return data
+
+    def _validate_monitoring(self, data):
+        """check whether metric service_name match any service"""
+        metric = get_items(data, ["monitoring", "metric"])
+
+        if not metric:
+            return
+
+        if metric["service_name"] not in [svc.get("name") for svc in data.get("services") or []]:
+            raise ValidationError(f"metric service_name({metric['service_name']}) not match any service")
 
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):

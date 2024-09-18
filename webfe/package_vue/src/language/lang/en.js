@@ -2810,4 +2810,5 @@ export default {
   测试号: 'Test number',
   已终止: 'Terminated',
   '主版本号、次版本号、修正版本号': 'Major version number, minor version number, patch version number',
+  '当前有其他应用（{id}）正在迁移，需待迁移完成后才能开启新应用的迁移。': 'Another application ({id}) is currently being migrated. Please wait until the migration is complete before starting a new application migration.',
 };

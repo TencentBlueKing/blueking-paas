@@ -40,8 +40,7 @@ class BKIAMApiError(BKIAMGatewayServiceError):
         self.code = code
 
     def parse_quota_message(self, message: str) -> str:
-        """权限中心给多个用户添加用户组权限中，会因为其中一个用户的额度超限导致添加失败，希望能将错误信息语义化的展示出来。
-        权限中心未针对用户超限定义单独的错误码，超限的用户也只能从错误信息中提取。
+        """权限中心给多个用户添加用户组权限时，会因为其中一个用户的额度超限导致添加失败，权限中心未针对用户超限定义单独的错误码，超限的用户也只能从错误信息中提取。
 
         :param message: 原始报错信息，如：请求第三方 API 错误: request iam error! Request=[http_post /api/v1/web/group-members request_id=2bba2ee9651c4d28b2bc8f3075d68f93] Response[code=1901409, message=conflict:[Handler:checkSubjectGroupsQuota] subject {0 user BruceLee 4102444800 0001-01-01 00:00:00 +0000 UTC} can only have 100 groups in system bk_plugins.[current 100] => [Raw:Error] quota error] (REMOTE_REQUEST_ERROR)
         :return: 用户 BruceLee 在蓝鲸权限中心的角色数已经超出了 100 个的限制

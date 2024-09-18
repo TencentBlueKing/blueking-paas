@@ -283,7 +283,7 @@
                     },
                     envList: [],
                     // oldEnvRow 记录修改前环境变量的数据，用于取消操作恢复数据
-                    oldEnvRow: {},
+                    oldEnvRow: [],
                     regions: regions,
                     buildpack_types: buildpack_types,
                 }
@@ -469,13 +469,13 @@
                                 message: '变量值不能为空',
                             })
                         } else {
-                            row.isEdit = !row.isEdit;
+                            row.isEdit = false;
                             row.isAdd = false;
                         }
                     } else {
-                        // 深拷贝
-                        this.oldEnvRow = JSON.parse(JSON.stringify(row));
-                        row.isEdit = !row.isEdit;
+                        const index = this.envList.findIndex(item => item.key === row.key);
+                        this.oldEnvRow[index] = {...row};
+                        row.isEdit = true;
                     }
                 },
                 handleDeleteEnv: function (row) {
@@ -488,14 +488,17 @@
                     if (row.isAdd) {
                         this.handleDeleteEnv(row);
                     } else {
-                        row.isEdit = !row.isEdit;
                         const index = this.envList.findIndex(item => item.key === row.key);
-                        this.envList[index] = this.oldEnvRow;
+                        if (index !== -1) {
+                            row.key = this.oldEnvRow[index].key;
+                            row.value = this.oldEnvRow[index].value;
+                            row.isEdit = false;
+                        }
                     }
                 },
             },
             mounted: function () {
-                this.fetchBuildPackList()
+                this.fetchBuildPackList();
             },
         })
     })

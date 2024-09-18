@@ -17,6 +17,7 @@
 
 import random
 from datetime import datetime, timedelta
+from typing import Any, Dict
 from unittest import mock
 
 import pytest
@@ -40,6 +41,19 @@ def bk_monitor_space(bk_app):
     )
 
 
+@pytest.fixture()
+def mock_get_application(application_id: int) -> Dict[str, Any]:
+    if application_id:
+        return {
+            "id": application_id,
+            "type": "default",
+            "code": "test-app",
+            "name": "test app",
+            "logo_url": "http://logo.jpg",
+        }
+    return {}
+
+
 @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
 class TestListAlertsView:
     def test_list_alerts(self, api_client, bk_app, bk_monitor_space):
@@ -57,9 +71,9 @@ class TestListAlertsView:
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
 
-    def test_list_alerts_by_apps(self, api_client, bk_app, bk_monitor_space):
+    def test_list_alerts_with_count(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
-            "/api/monitor/applications/alerts/",
+            "/api/monitor/applications/alerts/count",
             data={
                 "start_time": (datetime.now() - timedelta(minutes=random.randint(1, 30))).strftime(
                     "%Y-%m-%d %H:%M:%S"

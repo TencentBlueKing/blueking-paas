@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import atexit
+import random
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -103,6 +104,39 @@ class TestQueryAlertsParams:
     def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
         result = query_params.to_dict()
         assert result["bk_biz_ids"] == [int(bk_monitor_space.iam_resource_id)]
+        if query_string := result.get("query_string"):
+            assert query_string == expected_query_string
+
+    @pytest.mark.parametrize(
+        ("query_params", "expected_query_string"),
+        [
+            (
+                AppQueryAlertsParams(bk_biz_ids=[random.randint(-5000000, -4000000)]),
+                None,
+            ),
+            (
+                AppQueryAlertsParams(environment="stag", bk_biz_ids=[random.randint(-5000000, -4000000)]),
+                "labels:(stag)",
+            ),
+            (
+                AppQueryAlertsParams(
+                    environment="stag", alert_code="high_cpu_usage", bk_biz_ids=[random.randint(-5000000, -4000000)]
+                ),
+                "labels:(stag AND high_cpu_usage)",
+            ),
+            (
+                AppQueryAlertsParams(alert_code="high_cpu_usage", bk_biz_ids=[random.randint(-5000000, -4000000)]),
+                "labels:(high_cpu_usage)",
+            ),
+            (
+                AppQueryAlertsParams(keyword=SEARCH_KEYWORD, bk_biz_ids=[random.randint(-5000000, -4000000)]),
+                f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
+            ),
+        ],
+    )
+    def test_to_dict_with_bk_biz_id(self, query_params, expected_query_string, bk_monitor_space):
+        result = query_params.to_dict()
+        assert result["bk_biz_ids"] == query_params.bk_biz_ids
         if query_string := result.get("query_string"):
             assert query_string == expected_query_string
 

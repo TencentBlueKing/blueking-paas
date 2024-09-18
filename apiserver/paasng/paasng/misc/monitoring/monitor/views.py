@@ -54,7 +54,7 @@ from .serializer import (
 )
 from .serializers import (
     AlarmStrategySLZ,
-    AlertListByAppsRespSLZ,
+    AlertListWithCountRespSLZ,
     AlertRuleSLZ,
     AlertSLZ,
     ListAlarmStrategiesSLZ,
@@ -271,42 +271,50 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer = AlertSLZ(alerts, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertListByAppsRespSLZ()})
-    def list_by_apps(self, request):
+    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertListWithCountRespSLZ()})
+    def list_alerts_with_count(self, request):
         """查询用户各应用告警及数量"""
-        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
-        serializer = ListAlertsSLZ(data=request.data, context={"app_code": app_codes})
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
+        if not app_codes:
+            return Response(AlertListWithCountRespSLZ({"count": 0, "alerts": None}).data)
+
+        bk_monitor_client = make_bk_monitor_client()
+        # 查询应用的监控空间
+        monitor_spaces = bk_monitor_client.query_space_biz_id(app_codes=app_codes)
+        bk_biz_ids = [space["bk_biz_id"] for space in monitor_spaces]
+        if not bk_biz_ids:
+            return Response(AlertListWithCountRespSLZ({"count": 0, "alerts": None}).data)
+
+        serializer = ListAlertsSLZ(data=request.data, context={"bk_biz_ids": bk_biz_ids})
         serializer.is_valid(raise_exception=True)
 
         try:
-            alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
+            alerts = bk_monitor_client.query_alerts(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
-            # 用户所有应用BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
-            return Response({"count": 0, "alerts": []})
+            # 用户所有应用 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
+            return Response(AlertListWithCountRespSLZ({"count": 0, "alerts": None}).data)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
         if not alerts:
-            return Response({"count": 0, "alerts": []})
+            return Response(AlertListWithCountRespSLZ({"count": 0, "alerts": None}).data)
 
-        grouped_alerts = defaultdict(list)
+        biz_grouped_alerts = defaultdict(list)
         for alert in alerts:
             bk_biz_id = alert["bk_biz_id"]
-            grouped_alerts[bk_biz_id].append(alert)
+            biz_grouped_alerts[bk_biz_id].append(alert)
 
-        monitor_spaces = make_bk_monitor_client().query_space_biz_id(app_codes=app_codes)
         bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
-
-        app_aggred_alerts = []
-        for bizid, app_alerts in grouped_alerts.items():
-            app_aggred_alerts.append(
+        app_grouped_alerts = []
+        for bizid, app_alerts in biz_grouped_alerts.items():
+            app_grouped_alerts.append(
                 {
-                    "application": bizid_app_map[bizid],
+                    "application_id": bizid_app_map[bizid],
                     "count": len(app_alerts),
                     "alerts": app_alerts,
                 }
             )
 
-        serializer = AlertListByAppsRespSLZ({"count": len(alerts), "alerts": app_aggred_alerts})
+        serializer = AlertListWithCountRespSLZ({"count": len(alerts), "alerts": app_grouped_alerts})
         return Response(serializer.data)
 
 

@@ -46,6 +46,7 @@ from paasng.plat_admin.admin42.serializers.runtimes import (
     BuildPackUpdateInputSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.engine.models.steps import StepMetaSet
 from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.platform.modules.helpers import SlugbuilderBinder
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -292,6 +293,9 @@ class SlugBuilderManageView(GenericTemplateView):
         context = super().get_context_data(**kwargs)
         context["regions"] = list(get_all_regions().keys())
         context["image_types"] = dict(AppImageType.get_choices())
+        context["step_meta_sets"] = [{"id": None, "name": "--"}] + [
+            {"id": sms.id, "name": str(sms)} for sms in StepMetaSet.objects.all()
+        ]
         return context
 
 

@@ -12,8 +12,9 @@
             {{ $t('基本信息-title') }}
             <div
               v-if="!appBaseInfoConfig.isEdit"
-              :class="['edit-container', { 'disabled': !isBasicInfoEditable }]"
-              @click="handleEditBaseInfo">
+              :class="['edit-container', { disabled: !isBasicInfoEditable }]"
+              @click="handleEditBaseInfo"
+            >
               <i class="paasng-icon paasng-edit-2 pl10" />
               {{ $t('编辑') }}
             </div>
@@ -32,14 +33,25 @@
           </div>
           <section class="main">
             <!-- 查看态 -->
-            <div class="view-mode" v-if="!appBaseInfoConfig.isEdit">
+            <div
+              class="view-mode"
+              v-if="!appBaseInfoConfig.isEdit"
+            >
               <section class="info-warpper">
                 <div class="row">
                   <div class="item">
                     <div class="label">{{ $t('应用名称') }}：</div>
-                    <div class="value" v-bk-overflow-tips>{{ localeAppInfo.name || '--' }}</div>
+                    <div
+                      class="value"
+                      v-bk-overflow-tips
+                    >
+                      {{ localeAppInfo.name || '--' }}
+                    </div>
                   </div>
-                  <div class="item" v-if="platformFeature.REGION_DISPLAY">
+                  <div
+                    class="item"
+                    v-if="platformFeature.REGION_DISPLAY"
+                  >
                     <div class="label">{{ $t('应用版本') }}：</div>
                     <div class="value">{{ curAppInfo.application.region_name || '--' }}</div>
                   </div>
@@ -54,22 +66,33 @@
               </div>
             </div>
             <!-- 编辑态 -->
-            <div class="edit-mode" v-else>
+            <div
+              class="edit-mode"
+              v-else
+            >
               <bk-form
                 :label-width="200"
                 :model="localeAppInfo"
                 form-type="vertical"
-                ref="formNameRef">
+                ref="formNameRef"
+              >
                 <bk-form-item
                   :label="$t('应用名称')"
                   :property="'name'"
                   :rules="rules.name"
                   :required="true"
-                  :error-display-type="'normal'">
+                  :error-display-type="'normal'"
+                >
                   <bk-input v-model="localeAppInfo.name"></bk-input>
                 </bk-form-item>
-                <bk-form-item :label="$t('应用版本')" v-if="platformFeature.REGION_DISPLAY">
-                  <bk-input disabled v-model="curAppInfo.application.region_name"></bk-input>
+                <bk-form-item
+                  :label="$t('应用版本')"
+                  v-if="platformFeature.REGION_DISPLAY"
+                >
+                  <bk-input
+                    disabled
+                    v-model="curAppInfo.application.region_name"
+                  ></bk-input>
                 </bk-form-item>
                 <bk-form-item label="LOGO">
                   <div :class="['logoupload-wrapper', { selected: curFileData.length }]">
@@ -92,17 +115,22 @@
                     ext-cls="mr8"
                     theme="primary"
                     :loading="appBaseInfoConfig.isLoading"
-                    @click.stop="handleSubmitBaseInfo">
+                    @click.stop="handleSubmitBaseInfo"
+                  >
                     {{ $t('提交') }}
                   </bk-button>
                   <bk-button
                     ext-cls="mr8"
                     theme="default"
                     :disabled="!curFileData.length"
-                    @click="handlePreview">{{ $t('预览') }}</bk-button>
+                    @click="handlePreview"
+                  >
+                    {{ $t('预览') }}
+                  </bk-button>
                   <bk-button
                     theme="default"
-                    @click="handlerBaseInfoCancel">
+                    @click="handlerBaseInfoCancel"
+                  >
                     {{ $t('取消') }}
                   </bk-button>
                 </bk-form-item>
@@ -113,7 +141,7 @@
 
         <!-- 应用描述文件 -->
         <div
-          v-if="curAppInfo.application.type !== 'cloud_native'"
+          v-if="isShowAppDescriptionFile"
           class="basic-info-item mt16 info-card-style"
         >
           <div class="desc-flex">
@@ -182,16 +210,20 @@
     >
       <div class="ps-form">
         <div class="spacing-x1">
-          {{ $t('请完整输入') }} <code>{{ curAppInfo.application.code }}</code> {{ $t('来确认删除应用！') }}
+          {{ $t('请完整输入') }}
+          <code>{{ curAppInfo.application.code }}</code>
+          {{ $t('来确认删除应用！') }}
         </div>
         <div class="ps-form-group">
           <input
             v-model="formRemoveConfirmCode"
             type="text"
             class="ps-form-control"
-          >
+          />
           <div class="mt10 f13">
-            {{ $t('注意：因为安全等原因，应用 ID 和名称在删除后') }} <strong> {{ $t('不会被释放') }} </strong> ，{{ $t('不能继续创建同名应用') }}
+            {{ $t('注意：因为安全等原因，应用 ID 和名称在删除后') }}
+            <strong>{{ $t('不会被释放') }}</strong>
+            ，{{ $t('不能继续创建同名应用') }}
           </div>
         </div>
       </div>
@@ -218,9 +250,13 @@
     <bk-dialog
       v-model="previewDialogConfig.visible"
       ext-cls="base-info-preview-dialog-cls"
-      theme="primary">
+      theme="primary"
+    >
       <div class="content">
-        <img id="dislog-preview-image" :src="previewImageRrl" />
+        <img
+          id="dislog-preview-image"
+          :src="previewImageRrl"
+        />
         <h3 class="title">{{ localeAppInfo.name }}</h3>
       </div>
     </bk-dialog>
@@ -317,6 +353,10 @@ export default {
     previewImageRrl() {
       return this.curFileData[0]?.url;
     },
+    // 是否展示应用描述文件
+    isShowAppDescriptionFile() {
+      return !['engineless_app', 'cloud_native'].includes(this.curAppInfo.application.type);
+    },
   },
   watch: {
     curAppInfo(value) {
@@ -360,7 +400,6 @@ export default {
       this.initAppMarketInfo();
       this.formRemoveConfirmCode = '';
     },
-
 
     // 应用名称校验
     handleSaveCheck() {
@@ -548,390 +587,390 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .mt16 {
-      margin-top: 16px;
-    }
-    .desc-flex{
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        padding-bottom: 5px;
-        .title{
-            color: #313238;
-            font-size: 14px;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 0px !important;
-        }
-    }
-    .basic-info-item {
-        &:first-child {
-          margin-top: 8px;
-        }
-        .title {
-            display: flex;
-            align-items: flex-end;
-            color: #313238;
-            font-size: 14px;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 4px;
-            .edit-container {
-              font-size: 12px;
-              color: #3A84FF;
-              cursor: pointer;
+.mt16 {
+  margin-top: 16px;
+}
+.desc-flex {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-bottom: 5px;
+  .title {
+    color: #313238;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 0px !important;
+  }
+}
+.basic-info-item {
+  &:first-child {
+    margin-top: 8px;
+  }
+  .title {
+    display: flex;
+    align-items: flex-end;
+    color: #313238;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 4px;
+    .edit-container {
+      font-size: 12px;
+      color: #3a84ff;
+      cursor: pointer;
 
-              &.disabled {
-                color: #c4c6cc;
-                cursor: not-allowed;
-              }
-            }
+      &.disabled {
+        color: #c4c6cc;
+        cursor: not-allowed;
+      }
+    }
+  }
+  .info {
+    color: #979ba5;
+    font-size: 12px;
+  }
+  .content {
+    margin-top: 20px;
+    border: 1px solid #dcdee5;
+    border-radius: 2px;
+    .pre-release-wrapper,
+    .production-wrapper {
+      display: inline-block;
+      position: relative;
+      width: 430px;
+      border: 1px solid #dcdee5;
+      border-radius: 2px;
+      vertical-align: top;
+      &.has-left {
+        left: 12px;
+      }
+      .header {
+        height: 41px;
+        line-height: 41px;
+        border-bottom: 1px solid #dcdee5;
+        background: #fafbfd;
+        .header-title {
+          margin-left: 20px;
+          color: #63656e;
+          font-weight: bold;
+          float: left;
         }
-        .info {
+        .switcher-wrapper {
+          margin-right: 20px;
+          float: right;
+          .date-tip {
+            margin-right: 5px;
+            line-height: 1;
             color: #979ba5;
             font-size: 12px;
+          }
         }
-        .content {
-            margin-top: 20px;
-            border: 1px solid #dcdee5;
-            border-radius: 2px;
-            .pre-release-wrapper,
-            .production-wrapper {
-                display: inline-block;
-                position: relative;
-                width: 430px;
-                border: 1px solid #dcdee5;
-                border-radius: 2px;
-                vertical-align: top;
-                &.has-left {
-                    left: 12px;
-                }
-                .header {
-                    height: 41px;
-                    line-height: 41px;
-                    border-bottom: 1px solid #dcdee5;
-                    background: #fafbfd;
-                    .header-title {
-                        margin-left: 20px;
-                        color: #63656e;
-                        font-weight: bold;
-                        float: left;
-                    }
-                    .switcher-wrapper {
-                        margin-right: 20px;
-                        float: right;
-                        .date-tip {
-                            margin-right: 5px;
-                            line-height: 1;
-                            color: #979ba5;
-                            font-size: 12px;
-                        }
-                    }
-                }
-                .ip-content {
-                    padding: 14px 24px 14px 14px;
-                    height: 138px;
-                    overflow-x: hidden;
-                    overflow-y: auto;
-                    .ip-item {
-                        display: inline-block;
-                        margin-left: 10px;
-                        vertical-align: middle;
-                    }
-                    .no-ip {
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        text-align: center;
-                        font-size: 12px;
-                        color: #63656e;
-                        p:nth-child(2) {
-                            margin-top: 2px;
-                        }
-                    }
-                }
-            }
-            .ip-tips {
-                margin-top: 7px;
-                color: #63656e;
-                font-size: 12px;
-                i {
-                    color: #ff9c01;
-                }
-            }
+      }
+      .ip-content {
+        padding: 14px 24px 14px 14px;
+        height: 138px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        .ip-item {
+          display: inline-block;
+          margin-left: 10px;
+          vertical-align: middle;
         }
-    }
-
-    .app-main-container {
-        padding: 0 30px 0 30px;
-    }
-
-    .accept-vcode {
-        position: relative;
-        top: -6px;
-        margin-top: 15px;
-        padding: 20px;
-        background: #fff;
-        box-shadow: 0 2px 4px #eee;
-        border: 1px solid #eaeeee;
-        color: #666;
-        z-index: 1600;
-
-        .bk-loading2 {
-            display: inline-block;
+        .no-ip {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          text-align: center;
+          font-size: 12px;
+          color: #63656e;
+          p:nth-child(2) {
+            margin-top: 2px;
+          }
         }
-
-        b {
-            color: #333;
-        }
-
-        p {
-            line-height: 30px;
-            padding-bottom: 10px;
-        }
-
-        .password-text {
-            padding: 0 10px;
-            margin-right: 10px;
-            width: 204px;
-            height: 34px;
-            line-height: 34px;
-            border-radius: 2px 0 0 2px;
-            border: solid 1px #e1e6e7;
-            font-size: 14px;
-            transition: all .5s;
-        }
-
-        .password-text:focus {
-            outline: none;
-            border-color: #e1e6e7;
-            box-shadow: 0 2px 4px #eee;
-        }
-
-        .password-wait {
-            background: #ccc;
-            color: #fff;
-            display: inline-block;
-        }
-
-        .password-submit,
-        .password-reset {
-            margin: 10px 10px 0 0;
-            width: 90px;
-            height: 34px;
-            line-height: 34px;
-            border: solid 1px #3A84FF;
-            font-size: 14px;
-            font-weight: normal;
-        }
-
-        .password-reset {
-            color: #ccc;
-            background: #fff;
-            border: solid 1px #ccc;
-        }
-
-        .password-reset:hover {
-            background: #ccc;
-            color: #fff;
-        }
-
-        .get-password:after {
-            content: "";
-            position: absolute;
-            top: -10px;
-            left: 147px;
-            width: 16px;
-            height: 10px;
-            background: url(/static/images/user-icon2.png) no-repeat;
-        }
-
-        .immediately {
-            margin-left: 10px;
-            width: 90px;
-            height: 36px;
-            line-height: 36px;
-            color: #fff;
-            text-align: center;
-            background: #3A84FF;
-            font-weight: bold;
-            border-radius: 2px;
-            transition: all .5s;
-        }
-
-        .immediately:hover {
-            background: #4e93d9
-        }
-
-        .immediately img {
-            position: relative;
-            top: 10px;
-            margin-right: 5px;
-            vertical-align: top;
-        }
-    }
-
-    .action-box {
-        z-index: 11 !important;
-    }
-
-    h2.basic-information {
-      box-shadow: 0 3px 4px 0 #0000000a;
-    }
-
-    .info-card-style {
-      .title {
-        font-weight: 700;
-        font-size: 14px;
-        color: #313238;
       }
     }
-    .main {
-      .view-mode {
+    .ip-tips {
+      margin-top: 7px;
+      color: #63656e;
+      font-size: 12px;
+      i {
+        color: #ff9c01;
+      }
+    }
+  }
+}
+
+.app-main-container {
+  padding: 0 30px 0 30px;
+}
+
+.accept-vcode {
+  position: relative;
+  top: -6px;
+  margin-top: 15px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 2px 4px #eee;
+  border: 1px solid #eaeeee;
+  color: #666;
+  z-index: 1600;
+
+  .bk-loading2 {
+    display: inline-block;
+  }
+
+  b {
+    color: #333;
+  }
+
+  p {
+    line-height: 30px;
+    padding-bottom: 10px;
+  }
+
+  .password-text {
+    padding: 0 10px;
+    margin-right: 10px;
+    width: 204px;
+    height: 34px;
+    line-height: 34px;
+    border-radius: 2px 0 0 2px;
+    border: solid 1px #e1e6e7;
+    font-size: 14px;
+    transition: all 0.5s;
+  }
+
+  .password-text:focus {
+    outline: none;
+    border-color: #e1e6e7;
+    box-shadow: 0 2px 4px #eee;
+  }
+
+  .password-wait {
+    background: #ccc;
+    color: #fff;
+    display: inline-block;
+  }
+
+  .password-submit,
+  .password-reset {
+    margin: 10px 10px 0 0;
+    width: 90px;
+    height: 34px;
+    line-height: 34px;
+    border: solid 1px #3a84ff;
+    font-size: 14px;
+    font-weight: normal;
+  }
+
+  .password-reset {
+    color: #ccc;
+    background: #fff;
+    border: solid 1px #ccc;
+  }
+
+  .password-reset:hover {
+    background: #ccc;
+    color: #fff;
+  }
+
+  .get-password:after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 147px;
+    width: 16px;
+    height: 10px;
+    background: url(/static/images/user-icon2.png) no-repeat;
+  }
+
+  .immediately {
+    margin-left: 10px;
+    width: 90px;
+    height: 36px;
+    line-height: 36px;
+    color: #fff;
+    text-align: center;
+    background: #3a84ff;
+    font-weight: bold;
+    border-radius: 2px;
+    transition: all 0.5s;
+  }
+
+  .immediately:hover {
+    background: #4e93d9;
+  }
+
+  .immediately img {
+    position: relative;
+    top: 10px;
+    margin-right: 5px;
+    vertical-align: top;
+  }
+}
+
+.action-box {
+  z-index: 11 !important;
+}
+
+h2.basic-information {
+  box-shadow: 0 3px 4px 0 #0000000a;
+}
+
+.info-card-style {
+  .title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #313238;
+  }
+}
+.main {
+  .view-mode {
+    display: flex;
+    justify-content: space-between;
+    .info-warpper {
+      margin-top: 16px;
+      flex: 1;
+      .row {
         display: flex;
-        justify-content: space-between;
-        .info-warpper {
-          margin-top: 16px;
-          flex: 1;
-          .row {
-            display: flex;
-            .value {
-              width: 150px;
-            }
-          }
-        }
-        .item {
-          display: flex;
-          align-items: center;
-          height: 40px;
-          line-height: 40px;
-          font-size: 14px;
-          color: #63656E;
-          .label {
-            width: 130px;
-            text-align: right;
-          }
-          .value {
-            color: #313238;
-            text-wrap: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-        }
-        .logo-wrapper {
-          flex-shrink: 0;
-          margin-right: 78px;
-          width: 96px;
-          height: 96px;
-          img {
-            width: 100%;
-            height: 100%;
-          }
-        }
-      }
-
-      .edit-mode {
-        font-size: 12px;
-        width: 630px;
-        margin-top: 16px;
-        .logoupload-wrapper {
-          display: flex;
-          align-items: center;
-          &.selected {
-            .app-logo-upload-cls /deep/ .file-wrapper .picture-btn {
-              background: #fff;
-            }
-          }
-          .app-logo-upload-cls {
-            /deep/ .file-wrapper {
-              width: 96px;
-              height: 96px;
-              padding-top: 0px;
-              .picture-btn {
-                background: #fafbfd;
-              }
-              .upload-btn {
-                width: 96px;
-                height: 96px;
-                display: flex;
-                align-items: center;
-                flex-direction: column;
-                justify-content: center;
-              }
-            }
-          }
-          .tip {
-            margin-left: 12px;
-            color: #979BA5;
-          }
+        .value {
+          width: 150px;
         }
       }
     }
-    .base-info-form-btn button {
-      width: 88px;
-    }
-    .logoupload-cls .preview-image-cls #preview-image {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      left: 0;
-      top: 0;
-      z-index: 5;
-    }
-    .delete-app-wrapper {
-      p {
-        color: #63656E;
-        font-size: 12px;
-        margin-left: 13px;
-        i {
-          font-size: 14px;
-          color: #FFB848;
-        }
-      }
+    .item {
       display: flex;
       align-items: center;
+      height: 40px;
+      line-height: 40px;
+      font-size: 14px;
+      color: #63656e;
+      .label {
+        width: 130px;
+        text-align: right;
+      }
+      .value {
+        color: #313238;
+        text-wrap: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
+    .logo-wrapper {
+      flex-shrink: 0;
+      margin-right: 78px;
+      width: 96px;
+      height: 96px;
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+
+  .edit-mode {
+    font-size: 12px;
+    width: 630px;
+    margin-top: 16px;
+    .logoupload-wrapper {
+      display: flex;
+      align-items: center;
+      &.selected {
+        .app-logo-upload-cls /deep/ .file-wrapper .picture-btn {
+          background: #fff;
+        }
+      }
+      .app-logo-upload-cls {
+        /deep/ .file-wrapper {
+          width: 96px;
+          height: 96px;
+          padding-top: 0px;
+          .picture-btn {
+            background: #fafbfd;
+          }
+          .upload-btn {
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+          }
+        }
+      }
+      .tip {
+        margin-left: 12px;
+        color: #979ba5;
+      }
+    }
+  }
+}
+.base-info-form-btn button {
+  width: 88px;
+}
+.logoupload-cls .preview-image-cls #preview-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: 5;
+}
+.delete-app-wrapper {
+  p {
+    color: #63656e;
+    font-size: 12px;
+    margin-left: 13px;
+    i {
+      font-size: 14px;
+      color: #ffb848;
+    }
+  }
+  display: flex;
+  align-items: center;
+}
 </style>
 <style lang="scss">
-    @import '~@/assets/css/mixins/ellipsis.scss';
-    .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
-        height: 32px;
-        line-height: 32px;
-        font-size: 12px;
+@import '~@/assets/css/mixins/ellipsis.scss';
+.plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-name {
+  height: 32px;
+  line-height: 32px;
+  font-size: 12px;
+}
+.plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-angle {
+  top: 4px;
+}
+.paas-info-app-name-cls.plugin-name .bk-form-input {
+  padding-right: 130px !important;
+  @include ellipsis;
+}
+.base-info-preview-dialog-cls {
+  .bk-dialog-footer {
+    display: none;
+  }
+  .bk-dialog-body {
+    padding: 0;
+  }
+  .content {
+    display: flex;
+    align-items: center;
+    background: #182132;
+    margin: 0 24px 24px;
+    padding-left: 12px;
+    height: 45px;
+    #dislog-preview-image {
+      height: 32px;
+      width: 32px;
     }
-    .plugin-type-scope .info-special-form.bk-form.bk-inline-form .bk-select .bk-select-angle {
-        top: 4px;
+    .title {
+      font-family: MicrosoftYaHei;
+      margin-left: 8px;
+      font-size: 14px;
+      font-weight: 400;
+      color: #eaebf0;
     }
-    .paas-info-app-name-cls.plugin-name .bk-form-input {
-        padding-right: 130px !important;
-        @include ellipsis;
-    }
-    .base-info-preview-dialog-cls {
-      .bk-dialog-footer {
-        display: none;
-      }
-      .bk-dialog-body {
-        padding: 0;
-      }
-      .content {
-        display: flex;
-        align-items: center;
-        background: #182132;
-        margin: 0 24px 24px;
-        padding-left: 12px;
-        height: 45px;
-        #dislog-preview-image {
-          height: 32px;
-          width: 32px;
-        }
-        .title {
-          font-family: MicrosoftYaHei;
-          margin-left: 8px;
-          font-size: 14px;
-          font-weight: 400;
-          color: #EAEBF0;
-        }
-      }
-    }
+  }
+}
 </style>

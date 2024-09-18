@@ -31,9 +31,11 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -135,8 +137,16 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class ApplicationListViewSet(viewsets.ViewSet):
     """View class for application lists."""
+
+    pagination_class = CustomPagination
 
     @swagger_auto_schema(query_serializer=slzs.ApplicationListDetailedSLZ)
     def list_detailed(self, request):
@@ -350,53 +360,30 @@ class ApplicationListViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["应用列表"],
         operation_description="获取应用评估详情列表",
-        query_serializer=slzs.ApplicationEvaluationListQuerySLZ,
+        manual_parameters=[
+            openapi.Parameter("page", openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
+            openapi.Parameter("page_size", openapi.IN_QUERY, description="Items per page", type=openapi.TYPE_INTEGER),
+        ],
         responses={200: slzs.ApplicationEvaluationListResultSLZ()},
     )
     def list_evaluation(self, request):
-        """获取应用评估详情"""
-        serializer = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        params = serializer.validated_data
-        page = params.get("page", 1)
-        page_size = params.get("page_size", 10)
-
-        app_codes = UserApplicationFilter(request.user).filter(order_by=["name"]).values_list("code", flat=True)
-        count = len(app_codes)
-        app_codes = app_codes[(page - 1) * page_size : page * page_size]
-
+        """获取应用评估详情列表"""
         latest_collected_at = None
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at
 
-        applications = []
-        for report in AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app"):
-            applications.append(
-                {
-                    "code": report.app.code,
-                    "name": report.app.name,
-                    "type": report.app.type,
-                    "is_plugin_app": report.app.is_plugin_app,
-                    "logo_url": report.app.get_logo_url(),
-                    "cpu_limits": report.cpu_limits,
-                    "mem_limits": report.mem_limits,
-                    "cpu_usage_avg": report.cpu_usage_avg,
-                    "mem_usage_avg": report.mem_usage_avg,
-                    "pv": report.pv,
-                    "uv": report.uv,
-                    "latest_operated_at": report.latest_operated_at,
-                    "issue_type": report.issue_type,
-                }
-            )
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
+        paginator = self.pagination_class()
+        paginated_reports = paginator.paginate_queryset(reports, request)
 
-        resp_data = {
-            "page": page,
-            "page_size": page_size,
-            "count": count,
-            "collected_at": latest_collected_at,
-            "applications": applications,
-        }
-        return Response(data=slzs.ApplicationEvaluationListResultSLZ(resp_data).data)
+        applications = slzs.ApplicationEvaluationSLZ(paginated_reports, many=True).data
+        return paginator.get_paginated_response(
+            {
+                "collected_at": latest_collected_at,
+                "applications": applications,
+            }
+        )
 
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

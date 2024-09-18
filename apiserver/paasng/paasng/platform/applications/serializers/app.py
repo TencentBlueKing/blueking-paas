@@ -18,7 +18,6 @@
 from typing import Dict, Optional
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
 from django.db.transaction import atomic
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
@@ -33,6 +32,7 @@ from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.evaluation.constants import OperationIssueType
+from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
@@ -187,17 +187,12 @@ class IdleApplicationListOutputSLZ(serializers.Serializer):
     applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
-class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
-    page = serializers.IntegerField(help_text="页码， 从1开始", default=1, validators=[MinValueValidator(1)])
-    page_size = serializers.IntegerField(help_text="页长", default=10, validators=[MinValueValidator(1)])
-
-
 class ApplicationEvaluationSLZ(serializers.Serializer):
-    code = serializers.CharField(help_text="应用 Code")
-    name = serializers.CharField(help_text="应用名称")
-    type = serializers.CharField(help_text="应用类型")
-    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
-    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
+    code = serializers.CharField(source="app.code", help_text="应用 Code")
+    name = serializers.CharField(source="app.name", help_text="应用名称")
+    type = serializers.CharField(source="app.type", help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(source="app.is_plugin_app", help_text="是否为插件应用")
+    logo_url = serializers.CharField(source="app.get_logo_url", help_text="应用 Logo 访问地址")
     cpu_limits = serializers.IntegerField(help_text="CPU 配额")
     mem_limits = serializers.IntegerField(help_text="内存配额")
     cpu_usage_avg = serializers.FloatField(help_text="CPU使用率(7d)")
@@ -207,11 +202,21 @@ class ApplicationEvaluationSLZ(serializers.Serializer):
     latest_operated_at = serializers.DateTimeField(help_text="最近操作时间")
     issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="问题类型")
 
+    class Meta:
+        model = AppOperationReport
+        fields = [
+            "cpu_limits",
+            "mem_limits",
+            "cpu_usage_avg",
+            "mem_usage_avg",
+            "pv",
+            "uv",
+            "latest_operated_at",
+            "issue_type",
+        ]
+
 
 class ApplicationEvaluationListResultSLZ(serializers.Serializer):
-    page = serializers.IntegerField(help_text="页码， 从1开始")
-    page_size = serializers.IntegerField(help_text="页长")
-    count = serializers.IntegerField(help_text="总数")
     collected_at = serializers.DateTimeField(help_text="采集时间")
     applications = serializers.ListField(help_text="应用列表", child=ApplicationEvaluationSLZ())
 

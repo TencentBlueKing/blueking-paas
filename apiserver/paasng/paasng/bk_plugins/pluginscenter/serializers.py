@@ -257,7 +257,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
     complete_time = serializers.ReadOnlyField()
     report_url = serializers.SerializerMethodField(read_only=True)
-    gray_report_url = serializers.SerializerMethodField(read_only=True)
+    release_result_url = serializers.SerializerMethodField(read_only=True)
     latest_release_strategy = PluginReleaseStrategySLZ()
     display_status = serializers.CharField(source="gray_status", read_only=True)
 
@@ -271,10 +271,10 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
             )
         return None
 
-    def get_gray_report_url(self, instance) -> Optional[str]:
+    def get_release_result_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
-        if release_definition.grayReportFormat:
-            return release_definition.grayReportFormat.format(
+        if release_definition.releaseResultFormat:
+            return release_definition.releaseResultFormat.format(
                 plugin_id=instance.plugin.id,
                 version_id=instance.version,
                 source_version_name=instance.source_version_name,

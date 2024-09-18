@@ -211,7 +211,7 @@ class ReleaseRevisionDefinition(BaseModel):
         "disallow_releasing_source_version(不允许选择正在发布的代码分支)"
     )
     reportFormat: Optional[str] = Field(description="发布报告地址格式, 留空则不展示")
-    grayReportFormat: Optional[str] = Field(description="灰度发布报告地址格式, 留空则不展示")
+    releaseResultFormat: Optional[str] = Field(description="发布结果地址格式, 留空则不展示")
     docs: Optional[str] = Field(description="代码版本校验失败的指引文档")
     versionNo: Literal["automatic", "revision", "commit-hash", "self-fill", "branch-timestamp"] = Field(
         description="版本号生成规则"

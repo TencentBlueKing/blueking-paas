@@ -274,7 +274,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     def get_gray_report_url(self, instance) -> Optional[str]:
         release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
         if release_definition.grayReportFormat:
-            return release_definition.reportFormat.format(
+            return release_definition.grayReportFormat.format(
                 plugin_id=instance.plugin.id,
                 version_id=instance.version,
                 source_version_name=instance.source_version_name,

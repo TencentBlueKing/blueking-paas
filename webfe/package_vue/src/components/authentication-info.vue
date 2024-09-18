@@ -55,22 +55,24 @@
           </bk-table-column>
           <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" min-width="315">
             <template slot-scope="props">
-              <span>
-                {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
-              </span>
-              <span
-                v-if="isView(props.row.bk_app_secret) && (!isViewMode || !isDefault(props.row.bk_app_secret))"
-                v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
-                class="paasng-icon paasng-eye-slash icon-color"
-                style="cursor: pointer"
-                @click="getSecretDetail(props.row)"
-              />
-              <span
-                v-else
-                class="paasng-icon paasng-general-copy icon-color copy"
-                style="cursor: pointer"
-                v-copy="appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret"
-              />
+              <div class="flex-row">
+                <span>
+                  {{ appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret }}&nbsp;
+                </span>
+                <span
+                  v-if="isView(props.row.bk_app_secret) && (!isViewMode || !isDefault(props.row.bk_app_secret))"
+                  v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
+                  class="paasng-icon paasng-eye-slash icon-color"
+                  style="cursor: pointer"
+                  @click="getSecretDetail(props.row)"
+                />
+                <span
+                  v-else
+                  class="paasng-icon paasng-general-copy icon-color copy"
+                  style="cursor: pointer"
+                  v-copy="appSecret && isDefault(props.row.bk_app_secret) ? appSecret : props.row.bk_app_secret"
+                />
+              </div>
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('创建时间')" prop="created_at"></bk-table-column>

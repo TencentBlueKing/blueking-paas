@@ -24,7 +24,8 @@ from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
-from paasng.platform.applications.serializers import ApplicationSLZ4Record
+from paasng.platform.applications.models import Application
+from paasng.platform.applications.serializers import ApplicationSLZWithLogo
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
@@ -72,11 +73,19 @@ class ListAlertsSLZ(serializers.Serializer):
 
     def to_internal_value(self, data) -> QueryAlertsParams:
         data = super().to_internal_value(data)
-        return QueryAlertsParams(app_code=self.context["app_code"], **data)
+        params = QueryAlertsParams(**data)
+        if self.context.get("app_code"):
+            params.app_code = self.context.get("app_code")
+        if self.context.get("bk_biz_ids"):
+            params.bk_biz_ids = self.context.get("bk_biz_ids")
+        return params
 
     def validate(self, data: QueryAlertsParams):
         if data.start_time > data.end_time:
             raise serializers.ValidationError("end_time must be greater than start_time")
+
+        if not data.app_code and not data.bk_biz_ids:
+            raise serializers.ValidationError("at least one of app_code or bk_biz_ids is required")
 
         return data
 
@@ -122,15 +131,26 @@ class AlertSLZ(serializers.Serializer):
         return None
 
 
-class AlertListByAppsSLZ(serializers.Serializer):
-    applcation = ApplicationSLZ4Record(read_only=True)
+class AlertListWithCountSLZ(serializers.Serializer):
+    application_id = serializers.IntegerField(write_only=True, help_text="应用 ID")
+    application = serializers.SerializerMethodField(help_text="应用基础信息")
     count = serializers.IntegerField(help_text="应用告警数")
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
 
+    def get_application(self, obj):
+        application_id = obj.get("application_id")
+        if application_id is not None:
+            try:
+                application = Application.objects.get(id=application_id)
+                return ApplicationSLZWithLogo(application).data
+            except Application.DoesNotExist:
+                return None
+        return None
 
-class AlertListByAppsRespSLZ(serializers.Serializer):
-    count = serializers.IntegerField(help_text="告警总数")
-    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListByAppsSLZ())
+
+class AlertListWithCountRespSLZ(serializers.Serializer):
+    count = serializers.IntegerField(help_text="用户告警总数")
+    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListWithCountSLZ())
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

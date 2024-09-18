@@ -168,7 +168,7 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp["message"])
         return resp.get("data", {}).get("alerts", [])
 
-    def query_space_biz_id(self, app_codes: List) -> List:
+    def query_space_biz_id(self, app_codes: List[str]) -> List[Dict]:
         """查询应用的蓝鲸监控空间在权限中心的资源 id
 
         :param app_codes: 查询监控空间资源 id 的应用 id

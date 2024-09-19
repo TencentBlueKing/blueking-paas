@@ -163,8 +163,7 @@
       <div slot="header" class="detail-header-wrapper">
         {{ $t('操作详情') }}
         <span class="tips">
-          {{ sidesliderTitle.tips }}
-          <span class="tag">{{ sidesliderTitle.tag }}</span>
+          {{ sidesliderTitleTips }}
         </span>
       </div>
       <diff
@@ -183,8 +182,7 @@
       <div slot="header" class="detail-header-wrapper">
         {{ $t('操作详情') }}
         <span class="tips">
-          {{ sidesliderTitle.tips }}
-          <span class="tag">{{ sidesliderTitle.tag }}</span>
+          {{ sidesliderTitleTips }}
         </span>
       </div>
       <div
@@ -252,10 +250,7 @@ export default {
       },
       filterParams: {},
       dateParams: {},
-      sidesliderTitle: {
-        tips: '',
-        tag: '',
-      },
+      sidesliderTitleTips: '',
       datePickerOption: {
         // 小于今天的日期不能选
         disabledDate(date) {
@@ -285,6 +280,12 @@ export default {
     },
     resultCodeFilters() {
       return this.formatTableFilters(APP_RESULT_CODE, 'translation');
+    },
+  },
+  watch: {
+    $route() {
+      this.isLoading = true;
+      this.getRecords();
     },
   },
   created() {
@@ -338,9 +339,7 @@ export default {
     },
     // 查看详情
     viewDetails(row) {
-      const target = this.isEnglish ? row.target : APP_OPERATION_TARGET[row.target];
-      this.sidesliderTitle.tips = `- ${target}(${row.attribute || '-'})`;
-      this.sidesliderTitle.tag = this.isEnglish ? row.operation : APP_OPERATION[row.operation];
+      this.sidesliderTitleTips = row.operate;
       if (['bkapp_revision', 'raw_data'].includes(row.detail_type)) {
         // diff raw_data-直接使用接口数据，bkapp_revision-拿取id通过接口获取）
         this.handleOpenDiff(row);

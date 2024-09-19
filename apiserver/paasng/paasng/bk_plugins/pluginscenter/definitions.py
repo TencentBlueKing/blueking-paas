@@ -162,6 +162,7 @@ class PluginVisibleRangeLevel(BaseModel):
     name: str
     id: str
     type: Literal["department"]
+    tof_id: Optional[str]
 
 
 @prepare_json_field

@@ -266,6 +266,10 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
     def upsert(self, request, code):
         application = self.get_application()
+        svc_disc = SvcDiscConfig.objects.filter(application_id=application.id).first()
+        data_before = None
+        if svc_disc:
+            data_before = DataDetail(type=DataType.RAW_DATA, data=SvcDiscConfigSLZ(svc_disc).data)
 
         slz = SvcDiscConfigSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -285,6 +289,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.SERVICE_DISCOVERY,
+            data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(data, status=status.HTTP_200_OK)
@@ -303,6 +308,10 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
     @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
     def upsert(self, request, code):
         application = self.get_application()
+        domain_resolution = DomainResolution.objects.filter(application_id=application.id).first()
+        data_before = None
+        if domain_resolution:
+            data_before = DataDetail(type=DataType.RAW_DATA, data=DomainResolutionSLZ(domain_resolution).data)
 
         slz = DomainResolutionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -329,6 +338,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.DOMAIN_RESOLUTION,
+            data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(data, status=status.HTTP_200_OK)

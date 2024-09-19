@@ -31,7 +31,6 @@ from paasng.platform.applications.models import Application, UserMarkedApplicati
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.evaluation.models import AppOperationReport
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
@@ -187,24 +186,21 @@ class IdleApplicationListOutputSLZ(serializers.Serializer):
     applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
-class ApplicationEvaluationSLZ(serializers.Serializer):
+class ApplicationEvaluationSLZ(serializers.ModelSerializer):
     code = serializers.CharField(source="app.code", help_text="应用 Code")
     name = serializers.CharField(source="app.name", help_text="应用名称")
     type = serializers.CharField(source="app.type", help_text="应用类型")
     is_plugin_app = serializers.BooleanField(source="app.is_plugin_app", help_text="是否为插件应用")
     logo_url = serializers.CharField(source="app.get_logo_url", help_text="应用 Logo 访问地址")
-    cpu_limits = serializers.IntegerField(help_text="CPU 配额")
-    mem_limits = serializers.IntegerField(help_text="内存配额")
-    cpu_usage_avg = serializers.FloatField(help_text="CPU使用率(7d)")
-    mem_usage_avg = serializers.FloatField(help_text="内存使用率(7d)")
-    pv = serializers.IntegerField(help_text="PV(30d)")
-    uv = serializers.IntegerField(help_text="UV(30d)")
-    latest_operated_at = serializers.DateTimeField(help_text="最近操作时间")
-    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="问题类型")
 
     class Meta:
         model = AppOperationReport
         fields = [
+            "code",
+            "name",
+            "type",
+            "is_plugin_app",
+            "logo_url",
             "cpu_limits",
             "mem_limits",
             "cpu_usage_avg",

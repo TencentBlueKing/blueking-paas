@@ -128,6 +128,12 @@
             >
               {{ row.version || '--' }}
             </span>
+            <span
+              v-if="row.source_version_type === 'tested_version' && isOfficialVersion && row.id === rollbacks[0]?.id"
+              style="color: #c4c6cc;"
+            >
+              ({{ $t('已回滚') }})
+            </span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -211,6 +217,15 @@
                 {{ $t('详情') }}
               </bk-button>
               <bk-button
+                v-if="row.report_url"
+                theme="primary"
+                text
+                class="mr10"
+                @click="toReportPage(row, 'gray')"
+              >
+                {{ $t('灰度报告') }}
+              </bk-button>
+              <bk-button
                 v-if="canTerminateStatus.includes(row.gray_status)"
                 theme="primary"
                 text
@@ -275,7 +290,7 @@
                 v-if="row.report_url"
                 theme="primary"
                 text
-                @click="toTestReportPage(row)"
+                @click="toReportPage(row, 'test')"
               >
                 {{ $t('测试报告') }}
               </bk-button>
@@ -832,8 +847,11 @@ export default {
     },
 
     // 测试报告
-    toTestReportPage(row) {
-      const url = `${row.report_url}?currentVersion=${row.version}`;
+    toReportPage(row, type) {
+      let url = `${row.report_url}?currentVersion=${row.version}`;
+      if (type === 'gray') {
+        url += '&stage=3';
+      }
       this.$router.push({
         name: 'pluginTestReport',
         params: {
@@ -841,7 +859,7 @@ export default {
           id: this.pluginId,
         },
         query: {
-          type: 'test',
+          type: type === 'gray' ? 'prod' : 'test',
           url,
         },
       });

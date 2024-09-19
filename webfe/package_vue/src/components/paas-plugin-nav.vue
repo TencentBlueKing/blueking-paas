@@ -82,6 +82,7 @@ export default {
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',
+        'pluginFalsePositiveList',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -202,6 +203,7 @@ export default {
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',
+        'pluginFalsePositiveList',
       ];
 
       this.navTree.forEach((nav) => {

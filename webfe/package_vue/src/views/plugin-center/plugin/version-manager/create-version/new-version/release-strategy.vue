@@ -80,7 +80,8 @@
                   style="margin-top: 2px"
                   slot="tip"
                 >
-                  {{ $t('最小范围可以选择中心') }}
+                  {{ $t('最小范围可以选择中心。') }}
+                  <span v-html="organizationTips" class="t2"></span>
                 </p>
               </bk-form-item>
             </bk-form>
@@ -245,6 +246,9 @@ export default {
     },
     isDetailStep() {
       return this.step === 'release';
+    },
+    organizationTips() {
+      return this.$t('若选择了按照组织灰度，还需要由<em>工具发布者的直属Leader</em>进行审批。');
     },
   },
   watch: {
@@ -442,6 +446,12 @@ export default {
       }
       .from-tip {
         color: #979ba5;
+        .t2 {
+          color: #ea3636;
+          /deep/ em {
+            font-weight: 700;
+          }
+        }
       }
       .projec-id-tag-cls {
         /deep/ .tag-list .key-node {

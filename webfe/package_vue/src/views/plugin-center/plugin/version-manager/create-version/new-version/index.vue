@@ -12,6 +12,7 @@
       <release-strategy
         v-bind="$attrs"
         ref="releaseStrategy"
+        @strategy-change="handleStrategyChange"
       />
     </div>
     <section class="version-tools">
@@ -22,7 +23,7 @@
           :loading="isSubmitLoading"
           @click="handleSubmit"
         >
-          {{ $t('申请灰度发布') }}
+          {{ curStrategyType === 'full' ? $t('申请全量发布') : $t('申请灰度发布') }}
         </bk-button>
         <bk-button
           :theme="'default'"
@@ -35,7 +36,7 @@
       <p
         class="release-tips"
         v-bk-overflow-tips
-        v-html="releaseTips"
+        v-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
       ></p>
     </section>
   </div>
@@ -69,11 +70,15 @@ export default {
         bkci_project: [],
         organization: [],
       },
+      curStrategyType: '',
     };
   },
   computed: {
-    releaseTips() {
+    canaryReleaseTips() {
       return this.$t('灰度发布需由<em>工具管理员</em>进行审批；<span>若选择了灰度组织范围，还需要由<em>工具发布者的直属Leader</em>同时进行审批。</span>');
+    },
+    officialReleaseTips() {
+      return this.$t('正式发布需由<em>平台管理员</em>进行审批。');
     },
   },
   created() {
@@ -157,6 +162,9 @@ export default {
         name: 'pluginVersionManager',
         query: { type },
       });
+    },
+    handleStrategyChange(type) {
+      this.curStrategyType = type;
     },
   },
 };

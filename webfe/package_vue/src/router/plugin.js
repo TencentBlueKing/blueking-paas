@@ -21,6 +21,10 @@ const pluginSummary = () => import(/* webpackChunkName: 'plugin-sumary' */'@/vie
   window.showDeployTip(error);
 });
 
+const pluginFalsePositiveList = () => import(/* webpackChunkName: 'plugin-sumary' */'@/views/plugin-center/plugin/summary/false-positive-list.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const pluginVersionManager = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -133,6 +137,16 @@ export const pluginRouter = [
         meta: {
           pathName: i18n.t('概览'),
           capture403Error: false,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/false-positive-list',
+        component: pluginFalsePositiveList,
+        name: 'pluginFalsePositiveList',
+        meta: {
+          pathName: i18n.t('误报列表'),
+          capture403Error: false,
+          supportBack: true,
         },
       },
       {

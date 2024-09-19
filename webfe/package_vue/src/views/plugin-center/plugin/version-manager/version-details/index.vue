@@ -88,7 +88,7 @@
         @strategy-change="handleStrategyChange"
       />
       <!-- 发布结果 -->
-      <release-result :url="versionData.report_url" />
+      <release-result :url="versionData.release_result_url" />
       <section
         class="version-tools"
         v-if="!isFullReleaseSuccessful"

@@ -744,7 +744,8 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("概览"),
                 "matchRouters": [
                     "appSummaryEmpty",
-                    "pluginSummary"
+                    "pluginSummary",
+                    "pluginFalsePositiveList"
                 ],
                 "iconfontName": "overview",
                 "supportModule": true,

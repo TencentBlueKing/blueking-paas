@@ -1,11 +1,11 @@
 <template>
-  <div class="plugin-test-report">
-    <paas-plugin-title :back-fn="goBack" />
+  <div class="plugin-false-positive-list">
+    <paas-plugin-title />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="roles-loading"
       :offset-top="20"
-      class="app-container overview-middle test-container"
+      class="app-container overview-middle ignored-container"
     >
       <section class="iframe-container">
         <iframe
@@ -33,7 +33,7 @@ export default {
   },
   computed: {
     iframeUrl() {
-      return this.$route.query.url;
+      return '';
     },
   },
   mounted() {
@@ -41,25 +41,15 @@ export default {
       this.isLoading = false;
     }, 1000);
   },
-  methods: {
-    goBack() {
-      this.$router.push({
-        name: 'pluginVersionManager',
-        query: {
-          type: this.$route.query?.type || 'test',
-        },
-      });
-    },
-  },
 };
 </script>
 
 <style lang="scss" scoped>
-.test-container {
+.plugin-false-positive-list {
   height: 100%;
-}
-.plugin-test-report {
-  height: 100%;
+  .ignored-container {
+    height: 100%;
+  }
   .iframe-container {
     width: 100%;
     height: 100%;

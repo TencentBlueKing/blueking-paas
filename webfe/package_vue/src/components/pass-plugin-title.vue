@@ -88,6 +88,9 @@ export default {
       type: Boolean,
       default: false,
     },
+    backFn: {
+      type: Function,
+    },
   },
   data() {
     return {
@@ -112,6 +115,10 @@ export default {
   },
   methods: {
     goBack() {
+      if (this.backFn) {
+        this.backFn();
+        return;
+      }
       const type = this.$route.query.type || 'prod';
       if (this.versionData?.version || type === 'test') {
         bus.$emit('stop-deploy', true);

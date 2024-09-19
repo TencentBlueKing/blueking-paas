@@ -2823,4 +2823,5 @@ export default {
   '蓝盾项目 ID 和 组织至少填写一个': 'At least one of the Blueking CI Project ID or organization must be filled in',
   '若选择了按照组织灰度，还需要由<em>工具发布者的直属Leader</em>进行审批。': 'If gray release according to the organization is selected, it also requires approval from the <em>tool publishers immediate leader</em>.',
   '单据{d}，请修改发布信息后重新申请': 'Document {d}, please modify the release information and reapply',
+  灰度报告: 'Gray report',
 };

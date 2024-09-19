@@ -35,7 +35,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -137,16 +137,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-
 class ApplicationListViewSet(viewsets.ViewSet):
     """View class for application lists."""
-
-    pagination_class = CustomPagination
 
     @swagger_auto_schema(query_serializer=slzs.ApplicationListDetailedSLZ)
     def list_detailed(self, request):
@@ -361,8 +353,8 @@ class ApplicationListViewSet(viewsets.ViewSet):
         tags=["应用列表"],
         operation_description="获取应用评估详情列表",
         manual_parameters=[
-            openapi.Parameter("page", openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
-            openapi.Parameter("page_size", openapi.IN_QUERY, description="Items per page", type=openapi.TYPE_INTEGER),
+            openapi.Parameter("limit", openapi.IN_QUERY, description="数量", type=openapi.TYPE_INTEGER),
+            openapi.Parameter("offset", openapi.IN_QUERY, description="偏移量", type=openapi.TYPE_INTEGER),
         ],
         responses={200: slzs.ApplicationEvaluationListResultSLZ()},
     )
@@ -374,7 +366,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
-        paginator = self.pagination_class()
+        paginator = LimitOffsetPagination()
         paginated_reports = paginator.paginate_queryset(reports, request)
 
         applications = slzs.ApplicationEvaluationSLZ(paginated_reports, many=True).data

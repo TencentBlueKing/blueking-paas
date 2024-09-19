@@ -17,9 +17,11 @@
 
 import random
 from typing import Dict, List
+from unittest.mock import Mock
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
+from paasng.platform.applications.models import Application
 from tests.utils.helpers import generate_random_string
 
 
@@ -81,8 +83,20 @@ def get_fake_alarm_strategies() -> Dict:
     }
 
 
-def get_fake_space_biz_id(app_codes: List) -> List:
-    return [{"application": 1, "bk_biz_id": -5000000}]
+def get_fake_space_biz_id(app_codes: List[str]) -> List[Dict]:
+    mock_application = Mock(spec=Application)
+    mock_application.id = 1
+    mock_application.type = "default"
+    mock_application.code = "testapp"
+    mock_application.name = "Test Application"
+    mock_application.get_logo_url.return_value = "http://logo.jpg"
+
+    return [
+        {
+            "application": mock_application,
+            "bk_biz_id": -5000000,
+        }
+    ]
 
 
 class StubBKMonitorClient(BkMonitorClient):

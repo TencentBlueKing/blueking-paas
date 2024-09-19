@@ -24,7 +24,6 @@ from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
-from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import ApplicationSLZWithLogo
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
@@ -132,20 +131,9 @@ class AlertSLZ(serializers.Serializer):
 
 
 class AlertListWithCountSLZ(serializers.Serializer):
-    application_id = serializers.IntegerField(write_only=True, help_text="应用 ID")
-    application = serializers.SerializerMethodField(help_text="应用基础信息")
+    application = ApplicationSLZWithLogo(read_only=True)
     count = serializers.IntegerField(help_text="应用告警数")
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
-
-    def get_application(self, obj):
-        application_id = obj.get("application_id")
-        if application_id is not None:
-            try:
-                application = Application.objects.get(id=application_id)
-                return ApplicationSLZWithLogo(application).data
-            except Application.DoesNotExist:
-                return None
-        return None
 
 
 class AlertListWithCountRespSLZ(serializers.Serializer):

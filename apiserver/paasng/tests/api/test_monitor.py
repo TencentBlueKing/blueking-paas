@@ -17,7 +17,6 @@
 
 import random
 from datetime import datetime, timedelta
-from typing import Any, Dict
 from unittest import mock
 
 import pytest
@@ -39,19 +38,6 @@ def bk_monitor_space(bk_app):
         space_name="蓝鲸应用-test",
         extra_info={"test": "test"},
     )
-
-
-@pytest.fixture()
-def mock_get_application(application_id: int) -> Dict[str, Any]:
-    if application_id:
-        return {
-            "id": application_id,
-            "type": "default",
-            "code": "test-app",
-            "name": "test app",
-            "logo_url": "http://logo.jpg",
-        }
-    return {}
 
 
 @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
@@ -84,6 +70,7 @@ class TestListAlertsView:
         assert resp.data["count"] == 3
         assert len(resp.data["alerts"]) == 1
         assert resp.data["alerts"][0]["count"] == 3
+        assert resp.data["alerts"][0]["application"]["id"] == "1"
 
 
 class TestAlarmStrategiesView:

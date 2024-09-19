@@ -73,7 +73,7 @@ def build_service_monitor(monitor: AppMetricsMonitor) -> ServiceMonitor:
         ),
         selector=ServiceSelector(
             matchLabels={
-                # Note: 与蓝鲸监控协商新增的 label
+                # 蓝鲸监控根据该 label 识别应用
                 "monitoring.bk.tencent.com/bk_app_code": metadata.paas_app_code,
             }
         ),

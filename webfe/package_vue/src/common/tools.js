@@ -599,3 +599,21 @@ export function downloadTxt(content, fileName) {
   URL.revokeObjectURL(link.href);
   document.body.removeChild(link);
 }
+
+
+/**
+ * 将数据转为对应的层级路径
+ * @param {data} Arrar 层级数据
+ */
+export function buildPath(data) {
+  const path = [];
+
+  // 按顺序遍历数组，将每个节点的名称添加到路径中
+  data.reverse().forEach((node) => {
+    const name = node.find(([key]) => key === 'name')[1];
+    path.push(name);
+  });
+
+  // 返回由斜杠分隔的路径
+  return path.join('/');
+}

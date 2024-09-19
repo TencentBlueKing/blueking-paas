@@ -15,17 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import io
 from textwrap import dedent
 
 import pytest
+import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import AppDescriptionHandler
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import (
     _flatten_envs,
     generate_wl_builtin_env_vars,
@@ -76,7 +76,7 @@ class TestGetEnvVariables:
             (
                 dedent(
                     """
-                    version: 1
+                    spec_version: 2
                     module:
                         env_variables:
                             - key: FOO_DESC
@@ -89,7 +89,7 @@ class TestGetEnvVariables:
             (
                 dedent(
                     """
-                    version: 1
+                    spec_version: 2
                     module:
                         env_variables:
                             - key: FOO
@@ -102,7 +102,7 @@ class TestGetEnvVariables:
             (
                 dedent(
                     """
-                    version: 1
+                    spec_version: 2
                     module:
                         env_variables:
                             - key: FOO_DESC
@@ -117,10 +117,9 @@ class TestGetEnvVariables:
         ],
     )
     def test_part_declarative(self, bk_module, bk_stag_env, bk_app, bk_deployment, yaml_content, ctx):
-        fp = io.StringIO(yaml_content)
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
         with ctx as expected:
-            AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+            get_deploy_desc_handler(yaml.safe_load(yaml_content)).handle(bk_deployment)
             env_vars = get_env_variables(bk_stag_env)
             for key, value in expected.items():
                 assert key in env_vars
@@ -130,7 +129,7 @@ class TestGetEnvVariables:
     def test_part_saas_services(self, bk_stag_env, bk_deployment):
         yaml_content = dedent(
             """
-            version: 1
+            spec_version: 2
             module:
                 svc_discovery:
                     bk_saas:
@@ -140,8 +139,7 @@ class TestGetEnvVariables:
                 language: python
             """
         )
-        fp = io.StringIO(yaml_content)
-        AppDescriptionHandler.from_file(fp).handle_deployment(bk_deployment)
+        get_deploy_desc_handler(yaml.safe_load(yaml_content)).handle(bk_deployment)
         env_vars = get_env_variables(bk_stag_env)
         assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" in env_vars
 

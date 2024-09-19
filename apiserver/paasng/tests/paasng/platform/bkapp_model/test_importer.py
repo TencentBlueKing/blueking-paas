@@ -20,11 +20,12 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model.constants import ResQuotaPlan, ScalingPolicy
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer import import_manifest
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, SvcDiscConfig
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, SvcDiscConfig
 from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.utils.camel_converter import dict_to_camel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -272,3 +273,34 @@ class TestSvcDiscConfig:
             SvcDiscEntryBkSaaS(bk_app_code="bar", module_name="default"),
             SvcDiscEntryBkSaaS(bk_app_code="bar", module_name="opps"),
         ]
+
+
+class TestObservability:
+    @pytest.fixture()
+    def manifest(self, base_manifest):
+        base_manifest["spec"]["processes"][0]["services"] = [{"name": "metric", "targetPort": "8080"}]
+        return base_manifest
+
+    def test_normal(self, bk_module, manifest):
+        metric = {"process": "web", "service_name": "metric", "path": "/metrics", "params": {"foo": "bar"}}
+        manifest["spec"]["observability"] = {
+            "monitoring": {"metrics": [dict_to_camel(metric)]},
+        }
+        import_manifest(bk_module, manifest)
+
+        observability = ObservabilityConfig.objects.get(module=bk_module)
+        assert observability.monitoring.metrics == [Metric(**metric)]
+
+    def test_with_no_monitoring(self, bk_module, base_manifest):
+        import_manifest(bk_module, base_manifest)
+        observability = ObservabilityConfig.objects.get(module=bk_module)
+        assert observability.monitoring is None
+
+    def test_invalid_spec(self, bk_module, manifest):
+        manifest["spec"]["observability"] = {
+            "monitoring": {"metrics": [{"process": "celery", "serviceName": "metric", "path": "/metrics"}]},
+        }
+
+        with pytest.raises(ManifestImportError) as e:
+            import_manifest(bk_module, manifest)
+        assert "not match any process" in str(e)

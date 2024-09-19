@@ -27,6 +27,8 @@ from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     HostAlias,
+    Metric,
+    Monitoring,
     ProbeSet,
     ProcService,
     SvcDiscEntryBkSaaS,
@@ -73,7 +75,7 @@ class ModuleProcessSpec(TimestampedModel):
     )
     command: Optional[List[str]] = models.JSONField(help_text="容器执行命令", default=None, null=True)
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
-    port = models.IntegerField(help_text="容器端口", null=True)
+    port = models.IntegerField(help_text="[deprecated] 容器端口", null=True)
     services: Optional[List[ProcService]] = ProcServicesField(help_text="进程服务列表", default=None, null=True)
 
     # Global settings
@@ -314,3 +316,55 @@ def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     return BkSaaSEnvVariableFactory(
         [SvcDiscEntryBkSaaS(bk_app_code=item.bk_app_code, module_name=item.module_name) for item in svc_disc.bk_saas]
     ).make()
+
+
+MonitoringField = make_json_field("MonitoringField", Monitoring)
+
+
+class ObservabilityConfigManager(models.Manager):
+    """Custom manager for ObservabilityConfig"""
+
+    def upsert_by_module(self, module: Module, monitoring: Optional[Monitoring] = None):
+        try:
+            obj = ObservabilityConfig.objects.get(module=module)
+        except ObservabilityConfig.DoesNotExist:
+            return ObservabilityConfig.objects.create(module=module, monitoring=monitoring), True
+        else:
+            last_monitoring = obj.monitoring
+            obj.monitoring = monitoring
+            obj.last_monitoring = last_monitoring
+            obj.save(update_fields=["monitoring", "last_monitoring", "updated"])
+            return obj, False
+
+
+class ObservabilityConfig(TimestampedModel):
+    module = models.OneToOneField(
+        "modules.Module", on_delete=models.CASCADE, null=True, related_name="observability", db_constraint=False
+    )
+    monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
+    last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
+
+    objects = ObservabilityConfigManager()
+
+    @property
+    def monitoring_metrics(self) -> List[Metric]:
+        """当前监控 metric 列表"""
+        if self.monitoring:
+            return self.monitoring.metrics or []
+        return []
+
+    @property
+    def metric_processes(self) -> List[str]:
+        """当前监控 metric 的进程名列表"""
+        if not self.monitoring or not self.monitoring.metrics:
+            return []
+
+        return [metric.process for metric in self.monitoring.metrics]
+
+    @property
+    def last_metric_processes(self) -> List[str]:
+        """最近一次监控 metric 的进程名列表"""
+        if not self.last_monitoring or not self.last_monitoring.metrics:
+            return []
+
+        return [metric.process for metric in self.last_monitoring.metrics]

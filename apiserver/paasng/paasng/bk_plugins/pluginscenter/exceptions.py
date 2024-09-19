@@ -40,6 +40,7 @@ class ErrorCodes:
     NOT_SUPPORT_REACTIVATE = ErrorCode(_("插件不支持重新上架"))
     CANNOT_ARCHIVED = ErrorCode(_("下架失败"))
     CANNOT_REACTIVATE = ErrorCode(_("重新上架失败"))
+    CANNOT_ROLLBACK_RELEASE = ErrorCode(_("无法回滚该版本"))
 
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("插件应该至少拥有一个管理员"))
@@ -59,6 +60,10 @@ class ErrorCodes:
 
     # 可见范围修改失败
     VISIBLE_RANGE_UPDATE_FAIELD = ErrorCode(_("可见范围修改失败"))
+
+    # 灰度发布相关
+    RELEASE_COMPLETED = ErrorCode(_("版本发布已结束"))
+    LAST_GRAY_RELEASE_NOT_APPROVED = ErrorCode(_("上一次灰度发布还未审批完成"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

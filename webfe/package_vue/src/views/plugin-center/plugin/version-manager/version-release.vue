@@ -19,6 +19,7 @@
             :name="isOfficialVersion ? $t('发布') : $t('测试')"
             :no-shadow="true"
             :version-data="curRelease"
+            :status-map="PLUGIN_TEST_VERSION_STATUS"
           />
           <!-- 结束发布流程禁用终止发布 -->
           <span
@@ -112,7 +113,7 @@ import itsmStage from './release-stages/itsm';
 import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
-import { PLUGIN_VERSION_MAP, PLUGIN_VERSION_STATUS } from '@/common/constants';
+import { PLUGIN_VERSION_MAP, PLUGIN_VERSION_STATUS, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 import versionSteps from './version-steps/index.vue';
 
 export default {
@@ -157,6 +158,7 @@ export default {
       excludeCardStyleList: ['deploy', 'itsm', 'test'],
       isWebPolling: true,
       messageStatus: '',
+      PLUGIN_TEST_VERSION_STATUS,
     };
   },
   computed: {

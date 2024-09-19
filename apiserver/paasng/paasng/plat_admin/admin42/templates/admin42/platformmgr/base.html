@@ -49,7 +49,7 @@
         {
             name: '运行时管理',
             icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.buildpack.list' %}",
+            url: "{% url 'admin.runtime.buildpack.manage' %}",
             children: [
                 {
                     name: 'BuildPack管理',
@@ -62,6 +62,17 @@
                 {
                     name: 'SlugRunner管理',
                     url: '{% url "admin.runtime.slugrunner.manage" %}'
+                },
+            ]
+        },
+        {
+            name: '运行时管理 (新)',
+            icon: 'icon-tree-module-shape',
+            url: "{% url 'admin.runtimes.buildpack.manage' %}",
+            children: [
+                {
+                    name: 'BuildPack 管理',
+                    url: '{% url "admin.runtimes.buildpack.manage" %}'
                 },
             ]
         },

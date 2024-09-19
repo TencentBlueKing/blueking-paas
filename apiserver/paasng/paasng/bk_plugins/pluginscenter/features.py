@@ -37,6 +37,7 @@ class PluginFeatureFlag(FeatureFlag):  # type: ignore
     MARKET_INFO = FeatureFlagField(label="市场信息", default=True)
     PUBLISHER_INFO = FeatureFlagField(label="发布者", default=False)
     LOWER_REPO_NAME = FeatureFlagField(label="代码仓库名称转为小写字母", default=False)
+    VISIBLE_RANGE_MANAGE = FeatureFlagField(label="可见范围导航", default=False)
 
 
 class FeatureFlagsManagerBase:

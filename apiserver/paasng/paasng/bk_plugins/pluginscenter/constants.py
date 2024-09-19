@@ -59,7 +59,7 @@ class ReleaseStageInvokeMethod(str, StructuredEnum):
     PIPELINE = EnumField("pipeline", label="流水线")
     SUBPAGE = EnumField("subpage", label="子页面")
     ITSM = EnumField("itsm", label="itsm 审批流程")
-    CANARY_WIHT_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
+    CANARY_WITH_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
     BUILTIN = EnumField("builtin", label="内置功能(完善市场信息market, 灰度grayScale, 上线online)")
 
 
@@ -146,6 +146,7 @@ class ActionTypes(str, StructuredEnum):
     DELETE = EnumField("delete", label=_("删除"))
     ARCHIVE = EnumField("archive", label=_("下架"))
     REACTIVATE = EnumField("reactivate", label=_("重新上架"))
+    ROLLBACK = EnumField("rollback", label=_("回滚"))
 
 
 class SubjectTypes(str, StructuredEnum):
@@ -160,6 +161,7 @@ class SubjectTypes(str, StructuredEnum):
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
     PUBLISHER = EnumField("publisher", label=_("发布者"))
+    RELEASE_STRATEGY = EnumField("release_strategy", label=_("发布策略"))
 
 
 class PluginReleaseType(str, StructuredEnum):
@@ -169,7 +171,7 @@ class PluginReleaseType(str, StructuredEnum):
     TEST = EnumField("test", label=_("测试发布"))
 
 
-class PluginReleaseStrategy(str, StructuredEnum):
+class ReleaseStrategy(str, StructuredEnum):
     """插件发布策略"""
 
     GRAY = EnumField("gray", label=_("灰度发布"))
@@ -181,3 +183,25 @@ class StatusPollingMethod(str, StructuredEnum):
 
     API = EnumField("api", label=_("后台 API 轮询"))
     FRONTEND = EnumField("frontend", label=_("前端轮询，如通过 Iframe message 通信等"))
+
+
+class PluginRevisionType(str, StructuredEnum):
+    """代码版本类型"""
+
+    ALL = EnumField("all", label=_("不限制"))
+    MASTER = EnumField("master", label=_("仅可选择主分支发布"))
+    TAG = EnumField("tag", label=_("Tag 发布"))
+    TESTED_VERSION = EnumField("tested_version", label=_("已经测试通过的版本"))
+
+
+class GrayReleaseStatus(str, StructuredEnum):
+    """插件灰度发布展示的状态，提供给前端展示的字段不需要国际化标记"""
+
+    GRAY_APPROVAL_IN_PROGRESS = EnumField("gray_approval_in_progress", label="灰度发布审批中")
+    IN_GRAY = EnumField("in_gray", label="灰度中")
+    GRAY_APPROVAL_FAILED = EnumField("gray_approval_failed", label="灰度审批失败")
+    FULL_APPROVAL_IN_PROGRESS = EnumField("full_approval_in_progress", label="全量发布审批中")
+    FULLY_RELEASED = EnumField("fully_released", label="已全量发布")
+    FULL_APPROVAL_FAILED = EnumField("full_approval_failed", label="全量发布审批失败")
+    ROLLED_BACK = EnumField("rolled_back", label="已回滚")
+    INTERRUPTED = EnumField("interrupted", label="已终止")

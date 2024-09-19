@@ -42,6 +42,24 @@ from paasng.utils.camel_converter import dict_to_camel
                 ]
             },
         ),
+        (
+            {
+                "monitoring": {
+                    "metrics": [
+                        {"process": "web1", "service_name": "metric"},
+                        {"process": "web2", "service_name": "metric"},
+                    ]
+                }
+            },
+            {
+                "monitoring": {
+                    "metrics": [
+                        {"process": "web1", "serviceName": "metric"},
+                        {"process": "web2", "serviceName": "metric"},
+                    ]
+                }
+            },
+        ),
     ],
 )
 def test_dict_to_camel(snake_case_dict, camel_case_dict):

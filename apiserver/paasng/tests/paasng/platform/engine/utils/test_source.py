@@ -22,27 +22,23 @@ from unittest import mock
 import cattr
 import pytest
 import yaml
-from django.conf import settings
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paasng.platform.declarative.constants import CELERY_BEAT_PROCESS, CELERY_PROCESS, WEB_PROCESS
+from paasng.platform.declarative.constants import WEB_PROCESS
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.engine.exceptions import DeployShouldAbortError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.utils.output import ConsoleStream
 from paasng.platform.engine.utils.source import (
     TypeProcesses,
     check_source_package,
     download_source_to_dir,
-    get_app_description_handler,
-    get_processes,
+    get_source_dir,
     get_source_package_path,
 )
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.sourcectl.exceptions import DoesNotExistsOnServer
-from paasng.platform.sourcectl.models import SourcePackage
+from paasng.platform.sourcectl.exceptions import GetAppYamlError
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -53,227 +49,6 @@ def cast_to_processes(obj: Dict[str, Dict[str, Any]]) -> TypeProcesses:
 
 
 EXPECTED_WEB_PROCESS = WEB_PROCESS
-
-
-@pytest.mark.usefixtures("_init_tmpls")
-class TestGetProcesses:
-    """Test get_procfile()"""
-
-    @pytest.mark.parametrize(
-        ("file_content", "error_pattern"),
-        [
-            (ValueError("trivial value error"), "Can not read Procfile file from repository"),
-            ("invalid#$type: gunicorn\n", "pattern"),
-            ("{}: gunicorn\n".format("p" * 13), "longer than"),
-            ("WEB: gunicorn wsgi -w 4\nworker: celery", "pattern"),
-        ],
-    )
-    def test_invalid_procfile_cases(self, file_content, error_pattern, bk_module_full, bk_deployment_full):
-        def fake_read_file(key, version):
-            if "Procfile" in key:
-                if isinstance(file_content, Exception):
-                    raise file_content
-                return file_content
-            raise DoesNotExistsOnServer
-
-        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
-            mocked_read_file.side_effect = fake_read_file
-            with pytest.raises(DeployShouldAbortError) as exc_info:
-                get_processes(deployment=bk_deployment_full)
-
-            assert error_pattern in str(exc_info)
-
-    def test_valid_procfile_cases(self, bk_module_full, bk_deployment_full):
-        def fake_read_file(key, version):
-            if "Procfile" in key:
-                return "web: gunicorn wsgi -w 4\nworker: celery"
-            raise DoesNotExistsOnServer
-
-        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
-            mocked_read_file.side_effect = fake_read_file
-            processes = get_processes(bk_deployment_full)
-            assert processes == cast_to_processes(
-                {
-                    "web": {"name": "web", "command": "gunicorn wsgi -w 4"},
-                    "worker": {"name": "worker", "command": "celery"},
-                }
-            )
-
-    @pytest.mark.parametrize(
-        ("extra_info", "expected"),
-        [
-            (
-                {},
-                cast_to_processes({"web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1}}),
-            ),
-            (
-                {"is_use_celery": True},
-                cast_to_processes(
-                    {
-                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
-                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
-                    }
-                ),
-            ),
-            (
-                {"is_use_celery": True, "is_use_celery_beat": True},
-                cast_to_processes(
-                    {
-                        "web": {"name": "web", "command": EXPECTED_WEB_PROCESS, "replicas": 1},
-                        "celery": {"name": "celery", "command": CELERY_PROCESS, "replicas": 1},
-                        "beat": {"name": "beat", "command": CELERY_BEAT_PROCESS, "replicas": 1},
-                    }
-                ),
-            ),
-        ],
-    )
-    def test_v1_app_desc_cases(self, extra_info, expected, bk_app_full, bk_module_full, bk_deployment_full):
-        app_desc = {
-            "app_code": bk_app_full.code,
-            "app_name": bk_app_full.name,
-            "author": "blueking",
-            "introduction": "blueking app",
-            "is_use_celery": False,
-            "version": "0.0.1",
-            "env": [],
-            **extra_info,
-        }
-        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
-        assert processes == expected
-
-    @pytest.mark.parametrize(
-        ("processes_desc", "expected"),
-        [
-            (
-                {"web": {"command": "start web"}},
-                cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": None}}),
-            ),
-            (
-                {"web": {"command": "start web", "replicas": 1}},
-                cast_to_processes({"web": {"name": "web", "command": "start web", "replicas": 1}}),
-            ),
-            (
-                {
-                    "web": {"command": "start web", "replicas": 5, "plan": "4C2G5R"},
-                    "celery": {"command": "start celery", "replicas": 5},
-                },
-                cast_to_processes(
-                    {
-                        "web": {"name": "web", "command": "start web", "replicas": 5, "plan": "4C2G"},
-                        "celery": {"name": "celery", "command": "start celery", "replicas": 5},
-                    }
-                ),
-            ),
-        ],
-    )
-    def test_v2_app_desc_cases(self, processes_desc, expected, bk_app_full, bk_module_full, bk_deployment_full):
-        app_desc = {
-            "spec_version": 2,
-            "region": settings.DEFAULT_REGION_NAME,
-            "bk_app_code": bk_app_full.code,
-            "bk_app_name": bk_app_full.name,
-            "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-            "module": {"is_default": True, "processes": processes_desc, "language": "python"},
-        }
-        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
-        assert processes == expected
-
-    def test_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
-        """s-mart case: 当处理 app_desc 后, 从源码包读取进程包含进程启动命令、方案、副本数等信息"""
-        bk_module_full.source_origin = SourceOrigin.S_MART
-        bk_module_full.save()
-
-        G(
-            SourcePackage,
-            module=bk_module_full,
-            version=bk_deployment_full.version_info.revision,
-            meta_info={
-                "spec_version": 2,
-                "region": settings.DEFAULT_REGION_NAME,
-                "bk_app_code": bk_app_full.code,
-                "bk_app_name": bk_app_full.name,
-                "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {
-                    "is_default": True,
-                    "processes": {"web": {"command": "start web", "plan": "default", "replicas": 5}},
-                    "language": "python",
-                },
-            },
-        )
-
-        handler = get_app_description_handler(
-            module=bk_module_full, operator=bk_module_full.owner, version_info=bk_deployment_full.version_info
-        )
-        assert handler is not None
-        perform_result = handler.handle_deployment(bk_deployment_full)
-
-        processes = get_processes(deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes)
-        assert processes == cast_to_processes(
-            {"web": {"name": "web", "command": "start web", "plan": "default", "replicas": 5}}
-        )
-
-    def test_get_from_metadata_in_package(self, bk_app_full, bk_module_full, bk_deployment_full):
-        """lesscode case: 当未处理 app_desc 时, 从源码包读取进程仅包含进程启动命令信息"""
-        bk_module_full.source_origin = SourceOrigin.S_MART
-        bk_module_full.save()
-
-        G(
-            SourcePackage,
-            module=bk_module_full,
-            version=bk_deployment_full.version_info.revision,
-            meta_info={
-                "spec_version": 2,
-                "region": settings.DEFAULT_REGION_NAME,
-                "bk_app_code": bk_app_full.code,
-                "bk_app_name": bk_app_full.name,
-                "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-                "module": {
-                    "is_default": True,
-                    "processes": {"web": {"command": "start web", "plan": "default"}},
-                    "language": "python",
-                },
-            },
-        )
-
-        processes = get_processes(deployment=bk_deployment_full)
-        assert processes == cast_to_processes({"web": {"name": "web", "command": "start web"}})
-
-    def test_both_app_description_and_procfile(self, bk_app_full, bk_module_full, bk_deployment_full):
-        """应用描述文件和 Procfile 同时定义, 以 Procfile 为准"""
-        app_desc = {
-            "spec_version": 2,
-            "region": settings.DEFAULT_REGION_NAME,
-            "bk_app_code": bk_app_full.code,
-            "bk_app_name": bk_app_full.name,
-            "market": {"introduction": "应用简介", "display_options": {"open_mode": "desktop"}},
-            "module": {
-                "is_default": True,
-                "processes": {"web": {"command": "gunicorn wsgi -w 4"}},
-                "language": "python",
-            },
-        }
-        perform_result = get_desc_handler(app_desc).handle_deployment(bk_deployment_full)
-
-        def fake_read_file(key, version):
-            if "Procfile" in key:
-                return "web: gunicorn wsgi -w 4\nworker: celery"
-            raise DoesNotExistsOnServer
-
-        with mock.patch("paasng.platform.sourcectl.type_specs.SvnRepoController.read_file") as mocked_read_file:
-            mocked_read_file.side_effect = fake_read_file
-
-            processes = get_processes(
-                deployment=bk_deployment_full, proc_data_from_desc=perform_result.loaded_processes
-            )
-
-        assert processes == cast_to_processes(
-            {
-                "web": {"name": "web", "command": "gunicorn wsgi -w 4"},
-                "worker": {"name": "worker", "command": "celery"},
-            }
-        )
 
 
 class TestGetSourcePackagePath:
@@ -412,3 +187,32 @@ class TestCheckSourcePackage:
 
             out, err = capsys.readouterr()
             assert out
+
+
+class Test__get_source_dir:
+    # A dummy version instance
+    version_info = VersionInfo(revision="rev", version_type="tag", version_name="foo")
+
+    def test_s_mart_desc_found(self, bk_module):
+        bk_module.source_origin = SourceOrigin.S_MART
+        bk_module.save()
+
+        with mock.patch(
+            "paasng.platform.engine.configurations.source_file.PackageMetaDataReader.get_app_desc",
+            return_value={"spec_version": 2, "module": {"language": "python", "source_dir": "src"}},
+        ):
+            source_dir = get_source_dir(bk_module, "admin", self.version_info)
+
+        assert source_dir == "src"
+
+    def test_s_mart_desc_not_found(self, bk_module):
+        bk_module.source_origin = SourceOrigin.S_MART
+        bk_module.save()
+
+        with mock.patch(
+            "paasng.platform.engine.configurations.source_file.PackageMetaDataReader.get_app_desc",
+            side_effect=GetAppYamlError("Not found"),
+        ):
+            source_dir = get_source_dir(bk_module, "admin", self.version_info)
+
+        assert source_dir == ""

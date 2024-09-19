@@ -85,6 +85,11 @@ type AppSpec struct {
 	// count and environment variables.
 	// +optional
 	EnvOverlay *AppEnvOverlay `json:"envOverlay,omitempty"`
+
+	// Observability holds observability configurations, includes metrics config.
+	// However, it is primarily informational here, the real control logic is in paas "apiserver".
+	// +optional
+	Observability *paasv1alpha2.Observability `json:"observability,omitempty"`
 }
 
 // GetWebProcess will find the web process in Spec.Processes

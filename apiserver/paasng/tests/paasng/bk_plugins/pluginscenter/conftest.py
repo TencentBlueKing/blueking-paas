@@ -24,7 +24,12 @@ from django.conf import settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.bk_plugins.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod, PluginRole
+from paasng.bk_plugins.pluginscenter.constants import (
+    MarketInfoStorageType,
+    PluginReleaseMethod,
+    PluginRevisionType,
+    PluginRole,
+)
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
@@ -37,6 +42,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfoDefinition,
     PluginRelease,
     PluginReleaseStage,
+    PluginReleaseStrategy,
     PluginVisibleRangeDefinition,
 )
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
@@ -63,7 +69,6 @@ def pd():
                 "create": make_api_resource("create-release"),
                 "update": make_api_resource("update-release-{ version_id }"),
             },
-            "gradualReleaseStrategy": ["bkciProject", "organization"],
         },
         release_stages=[
             {"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"},
@@ -144,8 +149,7 @@ def pd():
     pd.visible_range_definition = G(
         PluginVisibleRangeDefinition,
         pd=pd,
-        description_zh_cn="仅可见范围内的组织、用户可在研发商店查看并使用该插件",
-        scope=["organization", "bkciProject"],
+        initial=[{"name": "总公司", "id": "1", "type": "department"}],
     )
 
     pd.config_definition = G(
@@ -241,6 +245,14 @@ def visible_range_approval_service():
 
 
 @pytest.fixture()
+def gray_release_approval_service():
+    svc: ApprovalService = G(
+        ApprovalService, service_name=ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL.value, service_id=4
+    )
+    return svc
+
+
+@pytest.fixture()
 def thirdparty_client():
     with mock.patch("paasng.bk_plugins.pluginscenter.thirdparty.utils.DynamicClient") as cls:
         yield cls().with_group().with_bkapi_authorization().with_i18n_hook().group
@@ -285,3 +297,28 @@ def itsm_test_stage(release):
         release=release, invoke_method="itsm", stage_id="test_approval", release__type="test"
     ).first()
     return stage
+
+
+@pytest.fixture()
+def release_strategy(plugin, bk_user):
+    plugin.pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
+    plugin.pd.save()
+    release: PluginRelease = G(
+        PluginRelease,
+        plugin=plugin,
+        source_location=plugin.repository,
+        type="prod",
+        source_version_type="tested_version",
+        source_version_name="test-master",
+        version="0.0.1",
+        comment="",
+        creator=bk_user,
+    )
+    release.initial_stage_set()
+    release_strategy = PluginReleaseStrategy.objects.create(
+        release=release,
+        strategy="gray",
+        bkci_project=["test1", "test2"],
+        organization=[{"display_name": "admin", "type": "user", "id": 1, "name": "admin"}],
+    )
+    return release_strategy

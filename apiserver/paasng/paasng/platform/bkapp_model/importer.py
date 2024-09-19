@@ -28,6 +28,7 @@ from paasng.platform.bkapp_model.entities_syncer import (
     sync_env_vars,
     sync_hooks,
     sync_mounts,
+    sync_observability,
     sync_proc_env_overlays,
     sync_processes,
     sync_svc_discovery,
@@ -102,6 +103,8 @@ def import_bkapp_spec_entity(
         sync_svc_discovery(module, svc_discovery)
     if domain_resolution := spec_entity.domain_resolution:
         sync_domain_resolution(module, domain_resolution)
+
+    sync_observability(module, spec_entity.observability)
 
     # Finish the import if no overlay data is found and reset flag is False
     if not reset_overlays_when_absent and not any((overlay_replicas, overlay_res_quotas, overlay_autoscaling)):

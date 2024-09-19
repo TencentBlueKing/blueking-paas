@@ -67,6 +67,14 @@ class Group(OperationGroup):
         path="/v4/apigw-app/projects/{projectId}/logs/last_line_num",
     )
 
+    # 获取 Codecc 工具基本信息
+    app_codecc_bkplugins_get_basic_info = bind_property(
+        Operation,
+        name="app_codecc_bkplugins_get_basic_info",
+        method="GET",
+        path="/v2/apigw-app/codecc/bkplugins/get/basicInfo/{pluginId}",
+    )
+
 
 class Client(APIGatewayClient):
     """devops

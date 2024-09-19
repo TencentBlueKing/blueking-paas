@@ -334,7 +334,7 @@ class ApplicationSLZ4Record(serializers.ModelSerializer):
         fields = ["id", "type", "code", "name", "logo_url", "config_info"]
 
 
-class ApplicationSLZWithLogo(serializers.Serializer):
+class ApplicationSLZWithLogo(serializers.ModelSerializer):
     """用于带Logo URL的简化应用列表"""
 
     name = TranslatedCharField()

@@ -173,7 +173,11 @@ class BkMonitorClient:
 
         :param app_codes: 查询监控空间资源 id 的应用 id
         """
-        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes)
+        monitor_spaces = (
+            BKMonitorSpaceModel.objects.filter(application__code__in=app_codes)
+            .select_related("application")
+            .only("application", "bk_biz_id")
+        )
         return [{"application": space.application, "bk_biz_id": space.iam_resource_id} for space in monitor_spaces]
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:

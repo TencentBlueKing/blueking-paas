@@ -305,6 +305,9 @@ class MarketConfigSLZ(serializers.ModelSerializer):
 
     def get_market_address(self, instance: MarketConfig) -> Optional[str]:
         entrance = MarketAvailableAddressHelper(instance).access_entrance
+        # 如果为自定义地址，不验证是否是该模块的自定义地址，否则会导致切换主模块后地址不显示
+        if not entrance and instance.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN.value:
+            return instance.custom_domain_url
         return entrance.address if entrance is not None else None
 
     def update(self, instance: MarketConfig, validated_data: Dict):

@@ -736,6 +736,17 @@ export const PAAS_STATIC_CONFIG = {
                     "name": "docuManagement"
                 },
                 "children": []
+            },
+            {
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "operationRecord"
+                },
+                "children": []
             }
         ],
         "pluginList": [
@@ -999,6 +1010,17 @@ export const PAAS_STATIC_CONFIG = {
                 "supportModule": false,
                 "destRoute": {
                     "name": "docuManagement"
+                },
+                "children": []
+            },
+            {
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "operationRecord"
                 },
                 "children": []
             }

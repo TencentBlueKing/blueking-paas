@@ -59,7 +59,9 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
             queryset = queryset.filter(operation=operation)
         if access_type := query_params.get("access_type"):
             queryset = queryset.filter(access_type=access_type)
-        if result_code := query_params.get("result_code"):
+        # result_code 的可选值包含 0，需要进行显式检查
+        if "result_code" in query_params:
+            result_code = query_params["result_code"]
             queryset = queryset.filter(result_code=result_code)
         if module_name := query_params.get("module_name"):
             queryset = queryset.filter(module_name=module_name)

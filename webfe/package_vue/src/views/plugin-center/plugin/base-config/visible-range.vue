@@ -56,7 +56,7 @@
               :error-display-type="'normal'"
               :rules="rules.projectIds"
             >
-              <bk-input v-model="formData.projectIds" :placeholder="$t('请输入蓝盾项目 Project ID，并用英文分号分隔')"></bk-input>
+              <bk-input v-model="formData.projectIds" :placeholder="$t('请输入蓝盾项目 ID，并用英文分号分隔')"></bk-input>
             </bk-form-item>
             <bk-form-item
               :label="$t('组织')"

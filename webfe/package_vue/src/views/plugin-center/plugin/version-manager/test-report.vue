@@ -1,6 +1,6 @@
 <template>
   <div class="plugin-test-report">
-    <paas-plugin-title />
+    <paas-plugin-title :back-fn="goBack" />
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="roles-loading"
@@ -40,6 +40,16 @@ export default {
     setTimeout(() => {
       this.isLoading = false;
     }, 1000);
+  },
+  methods: {
+    goBack() {
+      this.$router.push({
+        name: 'pluginVersionManager',
+        query: {
+          type: this.$route.query?.type || 'test',
+        },
+      });
+    },
   },
 };
 </script>

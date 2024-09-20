@@ -277,14 +277,21 @@
                     {{ appItem.is_active ? $t('进行中') : $t('未启动') }}
                   </td>
                   <td class="center">
-                    <button
+                    <span
                       v-if="!appItem.is_active"
-                      class="ps-btn ps-btn-primary"
-                      :disabled="migrationState === 'ON_MIGRATION' || migrationState === 'ON_ROLLBACK' || migrationState === 'ON_CONFIRMING' || migrationState === 'DONE_MIGRATION' "
-                      @click="makeMigration(appItem)"
+                      v-bk-tooltips="{
+                        content: $t('当前有其他应用（{id}）正在迁移，需待迁移完成后才能开启新应用的迁移。', { id: currentApp.code }),
+                        disabled: !isMigrateButtonDisabled
+                      }"
                     >
-                      <span> {{ $t('迁移到') }} </span> {{ $t('新版开发者中心') }}
-                    </button>
+                      <button
+                        class="ps-btn ps-btn-primary"
+                        :disabled="isMigrateButtonDisabled"
+                        @click="makeMigration(appItem)"
+                      >
+                        <span> {{ $t('迁移到') }} </span> {{ $t('新版开发者中心') }}
+                      </button>
+                    </span>
                     <button
                       v-else
                       class="ps-btn ps-btn-primary"
@@ -646,7 +653,7 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>
 import FallbackImage from '@/components/ui/fallback-image';
 import defaultLogo from '../../../../static/images/default_logo.png';
 
@@ -709,6 +716,9 @@ export default {
   computed: {
     formRemoveValidated() {
       return this.currentMigrationId.toString() === this.formRemoveConfirmId.toString();
+    },
+    isMigrateButtonDisabled() {
+      return ['ON_MIGRATION', 'ON_ROLLBACK', 'ON_CONFIRMING', 'DONE_MIGRATION'].includes(this.migrationState);
     },
   },
   created() {
@@ -782,39 +792,34 @@ export default {
       this.loading = true;
       this.loadAppList();
     },
-    loadAppList(type) {
+    loadAppList() {
       // TODO 更新应用列表的数据
       const url = `${BACKEND_URL}/api/mgrlegacy/applications/?result_type=all`;
       this.$http.get(url).then((response) => {
         this.loading = false;
-        const resData = response;
-        this.todoAppList = _.filter(resData.data, item => item.category === 'todoMigrate');
-        this.doneAppList = _.filter(resData.data, item => item.category === 'doneMigrate');
-        this.cannotAppList = _.filter(resData.data, item => item.category === 'cannotMigrate');
+        const results = response.data || [];
+        this.todoAppList = results.filter(item => item.category === 'todoMigrate');
+        this.doneAppList = results.filter(item => item.category === 'doneMigrate');
+        this.cannotAppList = results.filter(item => item.category === 'cannotMigrate');
 
         // 加载正在活跃操作
-        for (let i = 0; i < this.todoAppList.length; i++) {
-          if (this.todoAppList[i].is_active) {
-            const migrationProcessId = this.todoAppList[i].latest_migration_id;
-            if (migrationProcessId === undefined) {
-              continue;
-            }
-            if (this.currentMigrationID !== migrationProcessId) {
-              this.currentApp = this.todoAppList[i];
+        const activeApp = this.todoAppList.find(app => app.is_active && app.latest_migration_id !== undefined);
+        if (activeApp && this.currentMigrationID !== activeApp.latest_migration_id) {
+          this.currentApp = activeApp;
+          this.currentMigrationId = activeApp.code;
+          this.currentMigrationID = activeApp.latest_migration_id;
 
-              this.currentMigrationId = this.todoAppList[i].code;
-
-              this.currentMigrationID = migrationProcessId;
-              // this.migrationState = "ON_MIGRATION"
-              if (this.migrationState === 'ON_ROLLBACK') {
-                this.migrateType = this.$t('回滚');
-              }
-              this.processTitle = this.$t('应用[{name}] 正在进行{type}...', { name: this.currentApp.name, type: this.migrateType });
-              this.pollMigration();
-              this.fetchMigrationFlag();
-              break;
-            }
+          if (this.migrationState === 'ON_ROLLBACK') {
+            this.migrateType = this.$t('回滚');
           }
+
+          this.processTitle = this.$t('应用[{name}] 正在进行{type}...', {
+            name: this.currentApp.name,
+            type: this.migrateType,
+          });
+
+          this.pollMigration();
+          this.fetchMigrationFlag();
         }
       });
     },
@@ -841,7 +846,7 @@ export default {
 
       this.currentMigrationId = appItem.code;
 
-      this.currentApp = _.find(this.todoAppList, item => item.legacy_app_id === this.currentLegacyAppID);
+      this.currentApp = this.todoAppList.find(item => item.legacy_app_id === this.currentLegacyAppID);
       this.currentMigrationID = this.currentApp.latest_migration_id;
       this.migrationState = this.currentApp.tag;
       this.pollMigration();
@@ -984,7 +989,7 @@ export default {
       this.currentMigrationId = appItem.code;
 
       this.currentLegacyAppID = appItem.legacy_app_id;
-      this.currentApp = _.find(this.todoAppList, item => item.legacy_app_id === this.currentLegacyAppID);
+      this.currentApp = this.todoAppList.find(item => item.legacy_app_id === this.currentLegacyAppID);
 
       this.confirmDialog.visiable = true;
     },
@@ -1026,7 +1031,7 @@ export default {
       }
       const migrationProcessID = appItem.latest_migration_id;
       // 加载当前app
-      this.currentApp = _.find(this.doneAppList, item => item.latest_migration_id === migrationProcessID);
+      this.currentApp = this.doneAppList.find(item => item.latest_migration_id === migrationProcessID);
       const self = this;
       this.$bkInfo({
         title: this.$t('确认要回滚至旧版本？'),

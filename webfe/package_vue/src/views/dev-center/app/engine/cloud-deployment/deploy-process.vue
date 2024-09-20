@@ -97,13 +97,7 @@
                     </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                    <a
-                      target="_blank"
-                      :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
-                    >
-                      {{ $t('帮助：如何构建镜像') }}
-                    </a>
+                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
                   </p>
                 </bk-form-item>
 

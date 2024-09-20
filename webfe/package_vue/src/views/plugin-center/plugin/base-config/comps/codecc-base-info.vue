@@ -22,7 +22,12 @@
       >
         <div class="label">{{ key }}</div>
         <div :class="['value', { num: value === 'checkerNum' }]">
-          {{ basicInfo[value] || '--' }}
+          <a
+            v-if="value === 'checkerNum'"
+            href="javascript:void(0);"
+            @click="handleToConfig"
+          >{{ basicInfo[value] || '--' }}</a>
+          <span v-else>{{ basicInfo[value] || '--' }}</span>
           <span class="tag ml15" v-if="tags[value]">{{ tags[value] }}</span>
         </div>
       </li>

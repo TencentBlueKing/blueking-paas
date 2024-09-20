@@ -90,6 +90,7 @@ export default {
           'monitorAlarm', // 监控告警
           'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
+          'operationRecord', // 操作记录
         ],
 
         developer: [
@@ -103,6 +104,7 @@ export default {
           'monitorAlarm', // 监控告警
           'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
+          'operationRecord', // 操作记录
         ],
 
         operator: [
@@ -113,6 +115,7 @@ export default {
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
           'docuManagement', // 文档管理
+          'operationRecord', // 操作记录
         ],
       },
     };

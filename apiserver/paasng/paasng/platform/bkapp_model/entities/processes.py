@@ -36,8 +36,8 @@ class Process(BaseModel):
     :param command: 进程启动命令
     :param args: 进程启动参数
     :param proc_command: 单行脚本命令, 与 command/args 二选一, 优先于 command/args, 用于设置 Procfile 文件中进程 command
-    :param services: 暴露进程网络服务的 service 列表
-    :param target_port: 监听端口
+    :param services: 暴露进程网路服务的 service 列表
+    :param target_port: [deprecated] 监听端口. 由 services[].target_port 替代
     :param replicas: 进程副本数. `None` value means the replicas is not specified.
     :param res_quota_plan: 资源配额套餐名
     :param autoscaling: 自动扩缩容配置

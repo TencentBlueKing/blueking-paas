@@ -440,6 +440,9 @@ export default {
         this.$router.push({
           name: 'pluginVersionEditor',
           params: { pluginTypeId: data.pd_id, id: data.id },
+          query: {
+            type: 'prod',
+          },
         });
       }
     },

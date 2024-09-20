@@ -36,13 +36,14 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ObservabilityConfig,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -57,6 +58,7 @@ from paasng.platform.bkapp_model.serializers import (
 )
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import AppEnvName
+from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -142,8 +144,15 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         proc_specs = ModuleProcessSpec.objects.filter(module=module)
         image_repository, image_credential_name = get_image_info(module)
 
-        proc_specs_data = [
-            {
+        try:
+            observability = module.observability
+            proc_metric_map = {m.process: m for m in observability.monitoring_metrics}
+        except ObservabilityConfig.DoesNotExist:
+            proc_metric_map = {}
+
+        proc_specs_data = []
+        for proc_spec in proc_specs:
+            data = {
                 "name": proc_spec.name,
                 "image": image_repository,
                 "image_credential_name": image_credential_name,
@@ -162,8 +171,11 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "probes": proc_spec.probes or {},
                 "services": proc_spec.services,
             }
-            for proc_spec in proc_specs
-        ]
+
+            if metric := proc_metric_map.get(proc_spec.name):
+                data["monitoring"] = {"metric": metric.dict()}
+
+            proc_specs_data.append(data)
         return Response(
             ModuleProcessSpecsOutputSLZ(
                 {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs_data}
@@ -191,13 +203,20 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ]
 
         sync_processes(module, processes)
-        # 更新环境覆盖
+
+        # 更新环境覆盖&更新可观测功能配置
+        metrics = []
         for proc_spec in proc_specs:
             if env_overlay := proc_spec.get("env_overlay"):
                 for env_name, proc_env_overlay in env_overlay.items():
                     ProcessSpecEnvOverlay.objects.save_by_module(
                         module, proc_spec["name"], env_name, **proc_env_overlay
                     )
+            if metric := get_items(proc_spec, "monitoring.metric"):
+                metrics.append({"process": proc_spec["name"], **metric})
+
+        monitoring = Monitoring(metrics=metrics) if metrics else None
+        ObservabilityConfig.objects.upsert_by_module(module, monitoring)
 
         return self.retrieve(request, code, module_name)
 
@@ -247,6 +266,10 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
     def upsert(self, request, code):
         application = self.get_application()
+        svc_disc = SvcDiscConfig.objects.filter(application_id=application.id).first()
+        data_before = None
+        if svc_disc:
+            data_before = DataDetail(type=DataType.RAW_DATA, data=SvcDiscConfigSLZ(svc_disc).data)
 
         slz = SvcDiscConfigSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -266,6 +289,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.SERVICE_DISCOVERY,
+            data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(data, status=status.HTTP_200_OK)
@@ -284,6 +308,10 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
     @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
     def upsert(self, request, code):
         application = self.get_application()
+        domain_resolution = DomainResolution.objects.filter(application_id=application.id).first()
+        data_before = None
+        if domain_resolution:
+            data_before = DataDetail(type=DataType.RAW_DATA, data=DomainResolutionSLZ(domain_resolution).data)
 
         slz = DomainResolutionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -310,6 +338,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.DOMAIN_RESOLUTION,
+            data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(data, status=status.HTTP_200_OK)

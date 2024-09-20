@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from kubernetes.dynamic import ResourceInstance
 
@@ -33,16 +33,24 @@ class ServiceMonitorDeserializer(AppEntityDeserializer["ServiceMonitor"]):
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ServiceMonitor":
         spec = kube_data.to_dict()["spec"]
-        endpoint = spec["endpoints"][0]
+        ep_spec = spec["endpoints"][0]
+
+        endpoint = Endpoint(
+            interval=ep_spec["interval"],
+            path=ep_spec["path"],
+            port=ep_spec["port"],
+            metric_relabelings=ep_spec["metricRelabelings"],
+        )
+
+        if params := ep_spec.get("params"):
+            # params is Dict[str, List[str]] type.
+            # see https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint
+            endpoint.params = {k: v[0] for k, v in params.items()}
+
         return self.entity_type(
             app=app,
             name=kube_data["metadata"]["name"],
-            endpoint=Endpoint(
-                interval=endpoint["interval"],
-                path=endpoint["path"],
-                port=endpoint["port"],
-                metric_relabelings=endpoint["metricRelabelings"],
-            ),
+            endpoint=endpoint,
             selector=ServiceSelector(matchLabels=spec["selector"]["matchLabels"]),
             match_namespaces=spec["namespaceSelector"]["matchNames"],
         )
@@ -52,7 +60,7 @@ class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
     api_version = "monitoring.coreos.com/v1"
 
     def serialize(self, obj: "ServiceMonitor", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-        endpoint = obj.endpoint
+        """serialize to ServiceMonitor described in https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md"""
         return {
             "apiVersion": self.get_apiversion(),
             "kind": "ServiceMonitor",
@@ -61,14 +69,22 @@ class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
             },
             "spec": {
                 "namespaceSelector": {"matchNames": obj.match_namespaces},
-                "endpoints": [
-                    {
-                        "interval": endpoint.interval,
-                        "path": endpoint.path,
-                        "port": endpoint.port,
-                        "metricRelabelings": endpoint.metric_relabelings,
-                    }
-                ],
+                "endpoints": self._construct_endpoints_spec(obj.endpoint),
                 "selector": {"matchLabels": obj.selector.matchLabels},
             },
         }
+
+    def _construct_endpoints_spec(self, ep: Endpoint) -> List[Dict]:
+        """construct endpoints spec, see https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint"""
+        ep_spec = {
+            "interval": ep.interval,
+            "path": ep.path,
+            "port": ep.port,
+            "metricRelabelings": ep.metric_relabelings,
+        }
+
+        if ep.params:
+            # params type is discussed in https://github.com/prometheus-operator/prometheus-operator/issues/2586
+            ep_spec["params"] = {k: [v] for k, v in ep.params.items()}  # type: ignore
+
+        return [ep_spec]

@@ -27,22 +27,7 @@ from paasng.platform.bkapp_model.constants import (
     ResQuotaPlan,
     ScalingPolicy,
 )
-from paasng.platform.bkapp_model.entities import (
-    Addon,
-    AppBuildConfig,
-    AutoscalingOverlay,
-    DomainResolution,
-    EnvVar,
-    EnvVarOverlay,
-    Hooks,
-    Mount,
-    MountOverlay,
-    Process,
-    ReplicasOverlay,
-    ResQuotaOverlay,
-    SvcDiscConfig,
-    v1alpha2,
-)
+from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
@@ -58,17 +43,11 @@ class BaseEnvVarFields(serializers.Serializer):
 
 
 class EnvVarInputSLZ(BaseEnvVarFields):
-    def to_internal_value(self, data) -> EnvVar:
-        d = super().to_internal_value(data)
-        return EnvVar(**d)
+    """EnvVarInputSLZ validate the items in the `env` field."""
 
 
 class EnvVarOverlayInputSLZ(BaseEnvVarFields):
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
-
-    def to_internal_value(self, data) -> EnvVarOverlay:
-        d = super().to_internal_value(data)
-        return EnvVarOverlay(**d)
 
 
 class AddonSpecInputSLZ(serializers.Serializer):
@@ -84,10 +63,6 @@ class AddonInputSLZ(serializers.Serializer):
     name = serializers.CharField(required=True)
     specs = serializers.ListField(child=AddonSpecInputSLZ(), default=None)
     sharedFromModule = serializers.CharField(default=None, source="shared_from_module")
-
-    def to_internal_value(self, data) -> Addon:
-        d = super().to_internal_value(data)
-        return Addon(**d)
 
 
 class BaseMountFields(serializers.Serializer):
@@ -105,45 +80,29 @@ class BaseMountFields(serializers.Serializer):
 
 
 class MountInputSLZ(BaseMountFields):
-    """Validate the `mounts` field's item."""
-
-    def to_internal_value(self, data) -> Mount:
-        d = super().to_internal_value(data)
-        return Mount(**d)
+    """MountInputSLZ validate the items in the `mounts` field."""
 
 
 class MountOverlayInputSLZ(BaseMountFields):
-    """Validate the `mounts` field in envOverlay."""
+    """MountOverlayInputSLZ validate the items in the `envOverlay.mounts` field."""
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
 
-    def to_internal_value(self, data) -> MountOverlay:
-        d = super().to_internal_value(data)
-        return MountOverlay(**d)
-
 
 class ReplicasOverlayInputSLZ(serializers.Serializer):
-    """Validate the `replicas` field in envOverlay."""
+    """ReplicasOverlayInputSLZ validate the items in the `envOverlay.replicas` field."""
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
     count = serializers.IntegerField()
 
-    def to_internal_value(self, data) -> ReplicasOverlay:
-        d = super().to_internal_value(data)
-        return ReplicasOverlay(**d)
-
 
 class ResQuotaOverlayInputSLZ(serializers.Serializer):
-    """Validate the `resQuotas` field in envOverlay"""
+    """ResQuotaOverlayInputSLZ validate the items in the `envOverlay.resQuotas` field."""
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
     plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
-
-    def to_internal_value(self, data) -> ResQuotaOverlay:
-        d = super().to_internal_value(data)
-        return ResQuotaOverlay(**d)
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -159,10 +118,6 @@ class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-
-    def to_internal_value(self, data) -> AutoscalingOverlay:
-        d = super().to_internal_value(data)
-        return AutoscalingOverlay(**d)
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
@@ -191,10 +146,6 @@ class BuildInputSLZ(serializers.Serializer):
     imageCredentialsName = serializers.CharField(
         allow_null=True, default=None, allow_blank=True, source="image_credentials_name"
     )
-
-    def to_internal_value(self, data) -> AppBuildConfig:
-        d = super().to_internal_value(data)
-        return AppBuildConfig(**d)
 
 
 class HTTPGetActionInputSLZ(serializers.Serializer):
@@ -263,7 +214,12 @@ class ProcessInputSLZ(serializers.Serializer):
         choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
     )
     targetPort = serializers.IntegerField(
-        min_value=1, max_value=65535, allow_null=True, default=None, source="target_port"
+        min_value=1,
+        max_value=65535,
+        allow_null=True,
+        default=None,
+        source="target_port",
+        help_text="[deprecated] 容器端口",
     )
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
@@ -283,10 +239,6 @@ class HooksInputSLZ(serializers.Serializer):
 
     preRelease = HookInputSLZ(allow_null=True, default=None, source="pre_release")
 
-    def to_internal_value(self, data) -> Hooks:
-        d = super().to_internal_value(data)
-        return Hooks(**d)
-
 
 class BkSaaSInputSLZ(serializers.Serializer):
     """Validate the `bkSaaS` field."""
@@ -296,13 +248,9 @@ class BkSaaSInputSLZ(serializers.Serializer):
 
 
 class ServiceDiscoveryInputSLZ(serializers.Serializer):
-    """Validate the `serviceDiscovery` field."""
+    """ServiceDiscoveryInputSLZ"""
 
     bkSaaS = serializers.ListField(child=BkSaaSInputSLZ(), required=False, allow_empty=True, source="bk_saas")
-
-    def to_internal_value(self, data) -> SvcDiscConfig:
-        d = super().to_internal_value(data)
-        return SvcDiscConfig(**d)
 
 
 class HostAliasSLZ(serializers.Serializer):
@@ -314,9 +262,20 @@ class DomainResolutionInputSLZ(serializers.Serializer):
     nameservers = serializers.ListField(child=serializers.IPAddressField(), required=False)
     hostAliases = serializers.ListField(child=HostAliasSLZ(), required=False, source="host_aliases")
 
-    def to_internal_value(self, data) -> DomainResolution:
-        d = super().to_internal_value(data)
-        return DomainResolution(**d)
+
+class MetricInputSLZ(serializers.Serializer):
+    process = serializers.CharField(help_text="进程名称")
+    serviceName = serializers.CharField(help_text="服务端口名称", source="service_name")
+    path = serializers.CharField(help_text="采集 metric 数据的 http url 路径", default="/metrics")
+    params = serializers.DictField(help_text="采集 metric 数据的 http url 路径参数", required=False, allow_null=True)
+
+
+class MonitoringInputSLZ(serializers.Serializer):
+    metrics = serializers.ListSerializer(child=MetricInputSLZ(), required=False, allow_null=True)
+
+
+class ObservabilityInputSLZ(serializers.Serializer):
+    monitoring = MonitoringInputSLZ(required=False, allow_null=True)
 
 
 class BkAppSpecInputSLZ(serializers.Serializer):
@@ -331,6 +290,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     envOverlay = EnvOverlayInputSLZ(required=False, source="env_overlay")
     svcDiscovery = ServiceDiscoveryInputSLZ(required=False, source="svc_discovery")
     domainResolution = DomainResolutionInputSLZ(required=False, source="domain_resolution")
+    observability = ObservabilityInputSLZ(required=False)
 
     def to_internal_value(self, data) -> v1alpha2.BkAppSpec:
         d = super().to_internal_value(data)
@@ -338,6 +298,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
 
     def validate(self, data: v1alpha2.BkAppSpec):
         self._validate_proc_services(data.processes)
+        self._validate_observability(data)
         return data
 
     def _validate_proc_services(self, processes: List[Process]):
@@ -374,3 +335,27 @@ class BkAppSpecInputSLZ(serializers.Serializer):
                     if exposed_type.name in exposed_types:
                         raise ValidationError(f"duplicate exposedType: {exposed_type.name}")
                     exposed_types.add(exposed_type.name)
+
+    def _validate_observability(self, data: v1alpha2.BkAppSpec):
+        """validate observability config by rules as below:
+        - check whether metric match any process and its services
+        """
+        if not data.observability or not data.observability.monitoring:
+            return
+
+        metrics = data.observability.monitoring.metrics
+        if not metrics:
+            return
+
+        process_map = {proc.name: proc for proc in data.processes}
+
+        for metric in metrics:
+            process = process_map.get(metric.process)
+
+            if not process:
+                raise ValidationError(f"metric process({metric.process}) not match any process")
+
+            if metric.service_name not in [svc.name for svc in process.services or []]:
+                raise ValidationError(
+                    f"metric serviceName({metric.service_name}) not match any service in process({metric.process})"
+                )

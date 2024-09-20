@@ -31,6 +31,7 @@ from .domain_resolution import sync_domain_resolution
 from .env_vars import sync_env_vars
 from .hooks import sync_hooks
 from .mounts import sync_mounts
+from .observability import sync_observability
 from .proc_env_overlays import sync_proc_env_overlays
 from .processes import sync_processes
 from .svc_discovery import sync_svc_discovery
@@ -45,4 +46,5 @@ __all__ = [
     "sync_mounts",
     "sync_processes",
     "sync_svc_discovery",
+    "sync_observability",
 ]

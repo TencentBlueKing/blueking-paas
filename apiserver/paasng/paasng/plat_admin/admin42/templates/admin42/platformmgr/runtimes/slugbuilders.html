@@ -147,8 +147,8 @@
                     <bk-col :span="16">
                         <bk-form-item label="构建步骤集">
                             <bk-input v-model="stepMetaSet" :readonly="true" v-if="dialog.type === 'detail'" placeholder="--"></bk-input>
-                            <bk-select v-model="dialog.form.step_meta_set" v-else>
-                                <bk-option v-for="step_meta_set in step_meta_sets" :key="step_meta_set.id" :id="step_meta_set.id" :name="step_meta_set.name"></bk-option>
+                            <bk-select  placeholder="--" v-model="dialog.form.step_meta_set" v-else>
+                                <bk-option v-for="(name, key) in step_meta_sets" :key="key" :id="key" :name="name"></bk-option>
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
@@ -325,15 +325,6 @@
 
     const step_meta_sets = {{ step_meta_sets | to_json }}
 
-    const getStepMetaSetName = function (id) {
-        for (let i = 0; i < step_meta_sets.length; i++) {
-            if (step_meta_sets[i].id === id) {
-                return step_meta_sets[i].name;
-            }
-        }
-        return undefined;
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
             el: "#slugbuilder-list",
@@ -387,7 +378,7 @@
                     this.dialog.row = row;
                     this.dialog.form = {...row};
                     this.dialog.type = 'detail';
-                    this.stepMetaSet = getStepMetaSetName(row.step_meta_set);
+                    this.stepMetaSet = step_meta_sets[row.step_meta_set];
                     this.envList = this.jsonToList(this.dialog.form.env_vars || {});
                     this.labelList = this.jsonToList(this.dialog.form.labels || {});
                     this.$nextTick(() => {

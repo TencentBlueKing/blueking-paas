@@ -145,7 +145,7 @@ SlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
 # ----------------------------------------------------- new -------------------------------------------------------
 class BuildPackManageView(GenericTemplateView):
     name = "BuildPack 管理"
-    template_name = "admin42/platformmgr/runtimes/buildpack_list.html"
+    template_name = "admin42/platformmgr/runtimes/buildpacks.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -286,16 +286,14 @@ class BuildPackAPIViewSet(GenericViewSet):
 
 class SlugBuilderManageView(GenericTemplateView):
     name = "SlugBuilder 管理"
-    template_name = "admin42/platformmgr/runtimes/slugbuilder_list.html"
+    template_name = "admin42/platformmgr/runtimes/slugbuilders.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["regions"] = list(get_all_regions().keys())
         context["image_types"] = dict(AppImageType.get_choices())
-        context["step_meta_sets"] = [{"id": None, "name": "--"}] + [
-            {"id": sms.id, "name": str(sms)} for sms in StepMetaSet.objects.all()
-        ]
+        context["step_meta_sets"] = {sms.id: str(sms) for sms in StepMetaSet.objects.all()}
         return context
 
 
@@ -352,8 +350,8 @@ class SlugBuilderAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugBuilder 列表"""
-        slz = AppSlugBuilderListOutputSLZ(AppSlugBuilder.objects.order_by("region"), many=True)
-        return Response(data=slz.data)
+        slugbuilders = AppSlugBuilder.objects.order_by("region")
+        return Response(AppSlugBuilderListOutputSLZ(slugbuilders, many=True).data)
 
     def create(self, request):
         """创建 SlugBuilder"""

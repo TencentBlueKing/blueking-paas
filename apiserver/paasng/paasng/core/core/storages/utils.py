@@ -32,7 +32,7 @@ from typing_extensions import Protocol
 logger = logging.getLogger()
 
 
-def make_sa_conn_string(config_dict, driver_type="mysqldb"):
+def make_sa_conn_string(config_dict, driver_type="pymysql"):
     """Convert a django db dict to sqlalchemy string"""
     return "mysql+%(driver_type)s://%(user)s:%(password)s@%(host)s:%(port)s/%(db)s?charset=utf8" % {
         "driver_type": driver_type,
@@ -145,7 +145,7 @@ class SADBManager:
     def _create_engine(db_config) -> Engine:
         echo = logger.level == logging.DEBUG
         try:
-            dbstr = make_sa_conn_string(db_config, driver_type="mysqldb")
+            dbstr = make_sa_conn_string(db_config, driver_type="pymysql")
             pool_options = db_config.get("POOL_OPTIONS") or DEFAULT_POOL_OPTIONS
             return create_engine(dbstr, echo=echo, **pool_options)
         except Exception as e:

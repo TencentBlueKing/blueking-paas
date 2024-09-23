@@ -21,7 +21,6 @@ from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, ListModel
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
@@ -57,7 +56,7 @@ class SourceTypeSpecManageView(GenericTemplateView):
 
         kwargs.update(
             {
-                "bk_docs_url_prefix": get_bk_doc_url_prefix(),
+                "paas_doc_url_prefix": settings.PAAS_DOCS_URL_PREFIX,
                 "bk_paas_url": settings.BKPAAS_URL,
                 "spec_cls_choices": {
                     f"paasng.platform.sourcectl.type_specs.{spec_cls}": spec_cls for spec_cls in available_spec_cls

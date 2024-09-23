@@ -145,7 +145,7 @@ export const PLATFORM_CONFIG = {
     // 文档
     DOC: {
         // 产品文档，导航右上角展示的文档总入口
-        PRODUCT_DOC: BK_DOCS_URL_PREFIX + '/markdown/PaaS/UserGuide/Overview/README.md',
+        PRODUCT_DOC: PAAS_DOCS_URL_PREFIX + '/UserGuide/Overview/README.md',
 
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
@@ -154,7 +154,7 @@ export const PLATFORM_CONFIG = {
         API_HELP: BK_APIGW_DOC_URL,
 
         // Python 开发框架（blueapps）- 框架文档
-        PYTHON_FRAMEWORK: BK_DOCS_URL_PREFIX + '/markdown/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md',
+        PYTHON_FRAMEWORK: PAAS_DOCS_URL_PREFIX + '/DevelopTools/SaaSGuide/DevBasics/README.md',
 
         // Go 开发框架- 快速开始
         GO_START: DOCS_URL_PREFIX + '/quickstart/golang/golang_preparations',
@@ -279,7 +279,7 @@ export const PLATFORM_CONFIG = {
         BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
         
         // 代码库 OAuth 授权配置指引
-        OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
+        OATUH_CONFIG_GUIDE: PAAS_DOCS_URL_PREFIX + '/UserGuide/ProductFeatures/SystemManagement/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
         // 构建阶段钩子
         BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
@@ -287,8 +287,12 @@ export const PLATFORM_CONFIG = {
         // 蓝盾流水线构建
         BK_CI_PIPELINE_BUILD: DOCS_URL_PREFIX + '/topics/paas/bk_ci_pipeline_build',
 
-        // 部署维护
-        DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
+        // 日志高级功能介绍
+        LOG_ADVANCED_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/log_advance.md',
+        // 监控功能介绍
+        MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
+        // APM 增强服务功能介绍
+        APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
     },
 
     CONFIG: {
@@ -557,7 +561,7 @@ export const PAAS_STATIC_CONFIG = {
                 "list": [
                     {
                         "title": staticI18n.$t("如何使用蓝鲸开发框架？"),
-                        "url": BK_DOCS_URL_PREFIX + "/markdown/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md",
+                        "url": PAAS_DOCS_URL_PREFIX + "/DevelopTools/SaaSGuide/DevBasics/README.md",
                         "info": staticI18n.$t("集成登录鉴权、安全防护、权限控制等基础模块，更有后台任务、云API调用等样例供您参考")
                     },
                     {

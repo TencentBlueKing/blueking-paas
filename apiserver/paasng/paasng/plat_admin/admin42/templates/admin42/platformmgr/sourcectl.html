@@ -204,7 +204,7 @@
 
 {% block main_script %}
 <script>
-const bkDocsUrlPrefix = "{{ bk_docs_url_prefix }}"
+const bkDocsUrlPrefix = "{{ paas_doc_url_prefix }}"
 const bkPaaSUrl = "{{ bk_paas_url }}"
 const specClsChoices = {{ spec_cls_choices | to_json }}
 
@@ -380,10 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.dialog.form.redirect_uri = bkPaaSUrl + "/backend/api/oauth/complete/github"
                     this.dialog.form.token_base_url = "https://github.com/login/oauth/access_token"
                     this.dialog.form.oauth_display_info_zh_cn = {
-                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/github_oauth"
+                        "auth_docs": bkDocsUrlPrefix + "/BaseGuide/topics/paas/github_oauth"
                     }
                     this.dialog.form.oauth_display_info_en = {
-                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/github_oauth"
+                        "auth_docs": bkDocsUrlPrefix + "/BaseGuide/topics/paas/github_oauth"
                     }
                 } else if (kind === "gitee") {
                     this.dialog.form.name = "gitee"
@@ -399,10 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.dialog.form.redirect_uri = bkPaaSUrl + "/backend/api/oauth/complete/gitee"
                     this.dialog.form.token_base_url = "https://gitee.com/oauth/token"
                     this.dialog.form.oauth_display_info_zh_cn = {
-                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/gitee_oauth"
+                        "auth_docs": bkDocsUrlPrefix + "/BaseGuide/topics/paas/gitee_oauth"
                     }
                     this.dialog.form.oauth_display_info_en = {
-                        "auth_docs": bkDocsUrlPrefix + "/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/gitee_oauth"
+                        "auth_docs": bkDocsUrlPrefix + "/BaseGuide/topics/paas/gitee_oauth"
                     }
                 }
             },

@@ -21,7 +21,7 @@ to the current version of the project delivered to anyone in the future.
 """
 import logging
 
-import MySQLdb
+import pymysql
 
 from paasng.accessories.services.utils import gen_unique_id, generate_password
 
@@ -56,11 +56,11 @@ class MySQLProvider(BaseProvider):
         self.auth_ip_list = config["auth_ip_list"]
 
     def _get_connection(self):
-        connection = MySQLdb.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        connection = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
         return connection
 
     def _get_app_connection(self, host, port, user, password):
-        connection = MySQLdb.connect(host=host, port=port, user=user, password=password)
+        connection = pymysql.connect(host=host, port=port, user=user, password=password)
         return connection
 
     def _change_auth_ips(self, connection, ip_list, database_name, database_user, database_password, auth_type):

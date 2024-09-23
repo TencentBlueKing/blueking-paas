@@ -16,12 +16,11 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
-
-from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
 
 from .constants import DeployFailurePatternType
 from .tags import get_default_tagset, get_dynamic_tag
@@ -89,7 +88,7 @@ class DocumentaryLink(models.Model):
 
     @property
     def format_location(self) -> str:
-        return self.location.format(doc_url_prefix=get_bk_doc_url_prefix())
+        return self.location.format(paas_doc_url_prefix=settings.PAAS_DOCS_URL_PREFIX)
 
 
 class DeployFailurePattern(models.Model):

@@ -4,7 +4,7 @@
             title_en: "Guide to building a local Python development environment",
             short_description_zh_cn: '',
             short_description_en: '',
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/quickstart/python/python_setup_dev',
+            location: '{paas_doc_url_prefix}/BaseGuide/quickstart/python/python_setup_dev',
             affinity_tags: '["app-pl:python","plat-panel:app_created"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -13,7 +13,7 @@
             title_en: How to deploy the BlueKing app",
             short_description_zh_cn: '',
             short_description_en: '',
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/deploy_intro',
+            location: '{paas_doc_url_prefix}/BaseGuide/topics/paas/deploy_intro',
             affinity_tags: '["plat-panel:app_created"]', anti_affinity_tags: '[]', priority: 1,
             created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -22,7 +22,7 @@
             title_en: "Introduction to app process concepts and how to use",
             short_description_zh_cn: "关于应用进程的简单介绍，内容包含 Procfile",
             short_description_en: "A brief description of the app process, including the Procfile",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/process_procfile#section',
+            location: '{paas_doc_url_prefix}/BaseGuide/topics/paas/process_procfile#section',
             affinity_tags: '["plat-panel:app_deployment","plat-panel:app_processes", "deploy_phase:prepare"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -31,7 +31,7 @@
             title_en: "Guidelines for process communication in app",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: "{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/entry_proc_services#进程间如何通信",
+            location: "{paas_doc_url_prefix}/BaseGuide/topics/paas/entry_proc_services#进程间如何通信",
             affinity_tags: '["plat-panel:app_deployment","plat-panel:app_processes"]',
             anti_affinity_tags: '[]', priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -40,7 +40,7 @@
             title_en: "Example: How to add a celery backend task to a Python app",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: "{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/process_procfile#什么是procfile",
+            location: "{paas_doc_url_prefix}/BaseGuide/topics/paas/process_procfile#什么是procfile",
             affinity_tags: '["app-pl:python","plat-panel:app_deployment","plat-panel:app_processes", "deploy_phase:prepare"]',
             anti_affinity_tags: '[]', priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -49,7 +49,7 @@
             title_en: "Quick start: developing apps in Go",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/quickstart/golang/golang_preparations',
+            location: '{paas_doc_url_prefix}/BaseGuide/quickstart/golang/golang_preparations',
             affinity_tags: '["app-pl:go","plat-panel:app_deployment","plat-panel:app_created"]',
             anti_affinity_tags: '[]', priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -58,7 +58,7 @@
             title_en: "Fix Procfile related errors",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#修复%20Procfile%20报错（fix-procfile）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#修复%20Procfile%20报错（fix-procfile）',
             affinity_tags: '["deploy-failure:fix-procfile"]', anti_affinity_tags: '[]', priority: 1,
             created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -67,7 +67,7 @@
             title_en: "Fix Python MySQL installation error",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#修复%20python%20mysql%20模块安装时报错（fix-pkg-install-mysql-python）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#修复%20python%20mysql%20模块安装时报错（fix-pkg-install-mysql-python）',
             affinity_tags: '["deploy-failure:fix-pkg-install-mysql-python"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -76,7 +76,7 @@
             title_en: "App cannot start building",
             short_description_zh_cn: '',
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#应用无法开始构建（fix-unable-select-buildpack）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#应用无法开始构建（fix-unable-select-buildpack）',
             affinity_tags: '["deploy-failure:fix-unable-select-buildpack"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -85,7 +85,7 @@
             title_en: "Fix collectstatic phase error",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#修复 collectstatic 阶段报错（fix-py-collect-static）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#修复 collectstatic 阶段报错（fix-py-collect-static）',
             affinity_tags: '["deploy-failure:fix-py-collect-static"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -94,7 +94,7 @@
             title_en: "Fix Python app runtime errors",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#修复 Python 应用 runtime 报错问题（fix-py-runtime-error）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#修复 Python 应用 runtime 报错问题（fix-py-runtime-error）',
             affinity_tags: '["deploy-failure:fix-py-runtime-error"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -103,7 +103,7 @@
             title_en: "Fixing deployment taking too long",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#部署发布阶段耗时过长（fix-release-polling-timeout）',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#部署发布阶段耗时过长（fix-release-polling-timeout）',
             affinity_tags: '["deploy-failure:fix-release-polling-timeout"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-08-20 11:08:51+00:00' }
 - model: smart_advisor.documentarylink
@@ -112,7 +112,7 @@
             title_en: "Python cannot install packages with . in the package name",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#Python 无法安装带.的包',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#Python 无法安装带.的包',
             affinity_tags: '["deploy-failure:fix-python-package-with-dot"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-09-23 04:09:18+00:00' }
 - model: smart_advisor.documentarylink
@@ -121,7 +121,7 @@
             title_en: "How to use the pre-release command",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/release_hooks',
+            location: '{paas_doc_url_prefix}/BaseGuide/topics/paas/release_hooks',
             affinity_tags: '["deploy_phase:build"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-09-23 04:09:18+00:00' }
 - model: smart_advisor.documentarylink
@@ -130,7 +130,7 @@
             title_en: "Configure BlueKing app access entry",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/topics/paas/app_entry_intro',
+            location: '{paas_doc_url_prefix}/BaseGuide/topics/paas/app_entry_intro',
             affinity_tags: '["deploy_phase:release"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2020-09-23 04:09:18+00:00' }
 - model: smart_advisor.documentarylink
@@ -139,7 +139,7 @@
             title_en: "Python installs dependencies with missing setuptools_rust module",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/deploy#Python 安装依赖时提示缺少 setuptools_rust 模块',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/deploy#Python 安装依赖时提示缺少 setuptools_rust 模块',
             affinity_tags: '["deploy-failure:fix-pip-setuptools-rust"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2021-06-01 04:09:18+00:00' }
 - model: smart_advisor.documentarylink
@@ -148,7 +148,7 @@
             title_en: "npm install dependencies prompted no matching version found",
             short_description_zh_cn: "",
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/frame_node#npm安装依赖包提示找不到匹配的版本',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/frame_node#npm安装依赖包提示找不到匹配的版本',
             affinity_tags: '["deploy-failure:fix-npm-no-match-version"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2021-06-01 04:09:18+00:00' }
 - model: smart_advisor.documentarylink
@@ -157,7 +157,7 @@
             title_en: "Why are some processes unable to use WebConsole?",
             short_description_zh_cn: '因应用"环境配置"未满足要求，控制台功能无法启动，请参考文档，修改应用配置后重试。',
             short_description_en: "",
-            location: '{doc_url_prefix}/markdown/PaaS/DevelopTools/BaseGuide/faq/platform#为什么有的进程无法使用访问控制台功能',
+            location: '{paas_doc_url_prefix}/BaseGuide/faq/platform#为什么有的进程无法使用访问控制台功能',
             affinity_tags: '["app-feature:web-console"]', anti_affinity_tags: '[]',
             priority: 1, created: !!timestamp '2021-08-31 00:00:00+00:00' }
 - model: smart_advisor.deployfailurepattern

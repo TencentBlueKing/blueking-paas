@@ -18,6 +18,7 @@
       v-if="isShowRelease"
       ref="nowStageRef"
       :loading="processLoading"
+      :release-list="releaseList"
       :data="processList"
       style="margin-top: 8px;"
       :environment="environment"
@@ -45,6 +46,10 @@ export default {
       default: () => [],
     },
     buildList: {
+      type: Array,
+      default: () => [],
+    },
+    releaseList: {
       type: Array,
       default: () => [],
     },

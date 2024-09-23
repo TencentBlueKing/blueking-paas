@@ -187,6 +187,7 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
             target=OperationTarget.PLAT_USER,
+            attribute=user.username,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)),
         )

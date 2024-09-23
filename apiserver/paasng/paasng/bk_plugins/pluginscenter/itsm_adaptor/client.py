@@ -220,12 +220,16 @@ class ItsmClient:
         # 返回单据详情
         return resp.get("data", {})
 
-    def withdraw_ticket(self, sn: str, action_type: str, operator: str) -> bool:
-        """撤销单据"""
+    def withdraw_ticket(self, sn: str, submitter: str) -> bool:
+        """撤销单据
+
+        @param sn: 单据号
+        @param submitter: 提单人，仅提单人可以撤销单据
+        """
         data = {
             "sn": sn,
-            # 单据处理人，必须在处理人范围内
-            "operator": operator,
+            # 处理人必须是单据的提单人
+            "operator": submitter,
             "action_type": "WITHDRAW",
             "action_message": "applicant withdraw ticket",
         }

@@ -322,6 +322,10 @@ const docuManagement = () => import(/* webpackChunkName: 'docu-management' */'@/
   window.showDeployTip(error);
 });
 
+const operationRecord = () => import(/* webpackChunkName: 'docu-management' */'@/views/dev-center/app/operation-record').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // 云原生部署管理
 const cloudAppDeployManage = () => import(/* webpackChunkName: 'cloud-deploy-manage' */'@/views/dev-center/app/engine/cloud-deploy-manage/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -952,6 +956,11 @@ const router = new Router({
           path: ':id/doc_mgt',
           component: docuManagement,
           name: 'docuManagement',
+        },
+        {
+          path: ':id/operation-record',
+          component: operationRecord,
+          name: 'operationRecord',
         },
       ],
     },

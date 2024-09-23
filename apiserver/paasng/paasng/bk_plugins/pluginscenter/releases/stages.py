@@ -29,7 +29,10 @@ from paasng.bk_plugins.pluginscenter.bk_devops.client import PipelineController
 from paasng.bk_plugins.pluginscenter.bk_devops.constants import PipelineBuildStatus
 from paasng.bk_plugins.pluginscenter.definitions import ReleaseStageDefinition, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    get_ticket_status,
+    submit_online_approval_ticket,
+)
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
 from paasng.bk_plugins.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
 from paasng.bk_plugins.pluginscenter.sourcectl import get_plugin_repo_accessor

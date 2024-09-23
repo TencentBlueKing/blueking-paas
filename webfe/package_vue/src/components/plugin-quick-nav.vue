@@ -172,8 +172,8 @@ export default {
       const parmas = this.getTarget(data.id, data.pd_id);
       this.hideSelectData();
       this.$router.push(parmas);
-      // 如果当前为插件版本、测试阶段，返回概览页
-      if (this.$route.name === 'pluginVersionRelease') {
+      // 如果当前为插件版本、测试阶段/测试报告，返回概览页
+      if (['pluginVersionRelease', 'pluginTestReport'].includes(this.$route.name)) {
         this.$router.replace({
           name: 'pluginSummary',
           query: {

@@ -165,6 +165,8 @@ export default {
           'observabilityConfig',
           // 网络配置
           'networkConfig',
+          // 操作记录
+          'operationRecord',
         ],
         developer: [
           // 迁移信息
@@ -225,6 +227,8 @@ export default {
           'observabilityConfig',
           // 网络配置
           'networkConfig',
+          // 操作记录
+          'operationRecord',
         ],
         operator: [
           // 权限管理
@@ -237,6 +241,8 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 操作记录
+          'operationRecord',
         ],
       },
     };

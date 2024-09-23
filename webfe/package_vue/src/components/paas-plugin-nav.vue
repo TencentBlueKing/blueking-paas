@@ -68,6 +68,7 @@ const PLUGIN_NAV_MAP = {
   PROCESS_MANAGE: 'pluginProcess',
   STRUCTURE_LOG: 'pluginLog',
   CONFIGURATION_MANAGE: 'pluginDeployEnv',
+  VISIBLE_RANGE_MANAGE: 'pluginVisibleRange',
 };
 
 export default {
@@ -77,9 +78,11 @@ export default {
       allowedRouterName: [
         'pluginVersionRelease',
         'pluginVersionEditor',
+        'pluginReleaseDetails',
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',
+        'pluginFalsePositiveList',
       ],
       allNavItems: [],
       region: 'ieod',
@@ -138,12 +141,25 @@ export default {
         this.navTree = await this.initNavByRegion(appNav.pluginList);
         // 根据接口返回开关控制是否显示当前菜单项
         if (hideNavMap.length) {
-          this.navTree = this.navTree.filter(nav => !hideNavMap.includes(nav.name));
+          this.navTree = this.filterMenu(this.navTree, hideNavMap);
         }
         await this.initRouterPermission();
       }
 
       await this.selectRouterByName(this.curRouteName);
+    },
+
+    // 根据接口返回开关控制是否显示当前菜单项
+    filterMenu(tree, hideNav) {
+      return tree.filter((item) => {
+        const nameToCheck = item.destRoute?.name || item.name;
+        if (hideNav.includes(nameToCheck)) return false;
+        // 如果有 children，递归过滤 children
+        if (item.children?.length) {
+          item.children = this.filterMenu(item.children, hideNav);
+        }
+        return true;
+      });
     },
 
     /**
@@ -183,9 +199,11 @@ export default {
       this.allowedRouterName = [
         'pluginVersionRelease',
         'pluginVersionEditor',
+        'pluginReleaseDetails',
         'pluginTestReport',
         'marketInfoEdit',
         'moreInfoEdit',
+        'pluginFalsePositiveList',
       ];
 
       this.navTree.forEach((nav) => {

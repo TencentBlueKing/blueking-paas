@@ -21,8 +21,7 @@ import pytest
 import yaml
 
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.declarative.handlers import CNativeAppDescriptionHandler, DescriptionHandler
-from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -96,16 +95,10 @@ def yaml_content_after_change():
     )
 
 
-def get_desc_handler(yaml_content: str) -> DescriptionHandler:
-    handler = _get_desc_handler(yaml.safe_load(yaml_content))
-    assert isinstance(handler, CNativeAppDescriptionHandler)
-    return handler
-
-
 class TestSaasProbes:
     def test_saas_probes(self, bk_module, bk_deployment, yaml_content):
         """验证 saas 应用探针对象 ProcessProbe 成功创建"""
-        get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+        get_handler(yaml_content).handle(bk_deployment)
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
 
@@ -124,12 +117,16 @@ class TestSaasProbes:
         new_deployment.app_environment.engine_app.name = name
         new_deployment.app_environment.engine_app.region = region
 
-        get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+        get_handler(yaml_content).handle(bk_deployment)
         # 模拟重新部署过程
-        get_desc_handler(yaml_content_after_change).handle_deployment(new_deployment)
+        get_handler(yaml_content_after_change).handle(new_deployment)
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
 
         assert spec.probes.liveness.exec.command == ["cat", "/tmp/healthy"]
         assert not spec.probes.readiness
         assert spec.probes.startup.tcp_socket.port == "${PORT}"
+
+
+def get_handler(yaml_content: str):
+    return get_deploy_desc_handler(yaml.safe_load(yaml_content))

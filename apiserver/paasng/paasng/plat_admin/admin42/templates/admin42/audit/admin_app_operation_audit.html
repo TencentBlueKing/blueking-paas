@@ -263,9 +263,11 @@
                             this.detailData.target = getTargetType(res.target);
                             this.detailData.environment = getEnvType(res.environment);
                             if (res.data_before) {
+                                res.data_before.data = this.sortObjectKeys(res.data_before.data);
                                 this.detailData.data_before = JSON.stringify(res.data_before.data, null, 4);
                             }
                             if (res.data_after) {
+                                res.data_after.data = this.sortObjectKeys(res.data_after.data);
                                 this.detailData.data_after = JSON.stringify(res.data_after.data, null, 4);
                             }
                         });
@@ -278,6 +280,18 @@
                         el.hide = true;
                         this.detailVisible = true;
                     }
+                },
+                sortObjectKeys: function(obj) {
+                    if (Array.isArray(obj)) {
+                        return obj.map(this.sortObjectKeys);
+                    } else if (obj !== null && typeof obj === 'object') {
+                        const sortedObj = {};
+                        Object.keys(obj).sort().forEach(key => {
+                            sortedObj[key] = this.sortObjectKeys(obj[key]);
+                        });
+                        return sortedObj;
+                    }
+                    return obj;
                 },
                 getResultType,
                 getAccessType,

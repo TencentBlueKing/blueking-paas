@@ -52,6 +52,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
+from moby_distribution.registry.utils import parse_image
 
 from .utils import (
     get_database_conf,
@@ -822,6 +823,10 @@ BK_CI_URL = settings.get("BK_CI_URL", "")
 BK_CODECC_URL = settings.get("BK_CODECC_URL", "")
 BK_TURBO_URL = settings.get("BK_TURBO_URL", "")
 BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
+BK_NODEMAN_URL = settings.get("BK_NODEMAN_URL", "")
+BK_BCS_URL = settings.get("BK_BCS_URL", "")
+BK_BSCP_URL = settings.get("BK_BSCP_URL", "")
+BK_AUDIT_URL = settings.get("BK_AUDIT_URL", "")
 # 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
 BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
@@ -1254,9 +1259,9 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking
 # S-Mart 基础镜像信息
 _SMART_TAG_SUFFIX = "smart"
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f'{settings.get("APP_IMAGE", "").partition(":")[-1]}-{_SMART_TAG_SUFFIX}'
+SMART_IMAGE_TAG = f'{parse_image(settings.get("APP_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
 SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f'{settings.get("HEROKU_RUNNER_IMAGE", "").partition(":")[-1]}-{_SMART_TAG_SUFFIX}'
+SMART_CNB_IMAGE_TAG = f'{parse_image(settings.get("HEROKU_RUNNER_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

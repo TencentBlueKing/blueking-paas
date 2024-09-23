@@ -1049,3 +1049,21 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-diff-4:before {
 	content: "\e270";
 }
+.paasng-cronjob:before {
+	content: "\e280";
+}
+.paasng-ing:before {
+	content: "\e283";
+}
+.paasng-deploy-5:before {
+	content: "\e282";
+}
+.paasng-job:before {
+	content: "\e284";
+}
+.paasng-svc:before {
+	content: "\e281";
+}
+.paasng-caozuojilu:before {
+	content: "\e285";
+}

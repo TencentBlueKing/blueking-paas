@@ -42,66 +42,18 @@
         <div
           class="process-container"
         >
-          <div
-            class="btn-container flex-row align-items-baseline"
-            :class="[isPageEdit ? '' : 'justify-content-between']"
-          >
-            <div class="bk-button-group bk-button-group-cls">
-              <bk-button
-                v-for="(panel, index) in panels"
-                :key="index"
-                :class="[processNameActive === panel.name ? 'is-selected' : '', 'mb10']"
-                @click="handleBtnGroupClick(panel.name, index)"
-              >
-                {{ panel.name }}
-                <i
-                  v-if="processNameActive === panel.name && panel.name !== 'web' && isPageEdit"
-                  class="paasng-icon paasng-edit-2 pl5 pr10"
-                  ref="tooltipsHtml"
-                  @click="handleProcessNameEdit(panel.name, index)"
-                  v-bk-tooltips="$t('编辑')"
-                />
-
-                <bk-popconfirm
-                  :content="$t('确认删除该进程')"
-                  width="288"
-                  style="display: inline-block"
-                  class="item-close-icon"
-                  trigger="click"
-                  @confirm="handleDelete(panel.name, index)"
-                >
-                  <i
-                    v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-                    class="paasng-icon paasng-icon-close"
-                    v-bk-tooltips="$t('删除')"
-                  />
-                </bk-popconfirm>
-              </bk-button>
-            </div>
-            <span
-              v-if="isPageEdit"
-              class="pl10"
-            >
-              <bk-button
-                text
-                theme="primary"
-                @click="handleProcessNameEdit('')"
-              >
-                <i class="paasng-icon paasng-plus-thick add-icon" />
-                {{ $t('新增进程') }}
-              </bk-button>
-            </span>
-            <!-- <bk-button
-          v-if="!isPageEdit"
-          class="fr"
-          theme="primary"
-          title="编辑"
-          :outline="true"
-          @click="handleEditClick"
-        >
-          {{ $t('编辑') }}
-        </bk-button> -->
-          </div>
+          <section>
+            <process-service
+              :data="panels"
+              :active="processNameActive"
+              :active-data="formData"
+              :mode="isPageEdit ? 'edit' : 'view'"
+              @add="handleProcessNameEdit"
+              @edit="handleProcessNameEdit"
+              @delete="handleDelete"
+              @change="handleBtnGroupClick"
+            />
+          </section>
           <div
             class="form-deploy"
             v-if="isPageEdit"
@@ -145,13 +97,7 @@
                     </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                    <a
-                      target="_blank"
-                      :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
-                    >
-                      {{ $t('帮助：如何构建镜像') }}
-                    </a>
+                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
                   </p>
                 </bk-form-item>
 
@@ -230,27 +176,47 @@
                     {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
                   </p>
                 </bk-form-item>
-
+                <!-- 进程服务编辑态 -->
                 <bk-form-item
-                  :label="$t('容器端口')"
+                  :label="$t('进程服务')"
                   :label-width="labelWidth"
-                  :property="'port'"
                 >
-                  <bk-input
-                    v-model="formData.port"
-                    style="width: 500px"
-                    :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
-                  />
-                  <i
-                    v-show="isTargetPortErrTips"
-                    v-bk-tooltips.top-end="targetPortErrTips"
-                    class="bk-icon icon-exclamation-circle-shape tooltips-icon"
-                    tabindex="0"
-                    style="right: 8px"
-                  />
-                  <p class="whole-item-tips">
-                    {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
-                  </p>
+                  <div class="prcess-servie-item">
+                    <!-- 主入口，不能关闭进程服务 -->
+                    <bk-switcher
+                      v-bk-tooltips="{ content: $t('取消访问入口后，才可以关闭进程服务'), disabled: !isCurProcessMainEntry }"
+                      v-model="serviceProcess[formData.name]"
+                      theme="primary"
+                      :disabled="isCurProcessMainEntry"
+                      @change="toggleServiceProcess"
+                    ></bk-switcher>
+                    <span class="tips">
+                      <i class="paasng-icon paasng-info-line" />
+                      {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                      <a
+                        target="_blank"
+                        :href="GLOBAL.DOC.PROCESS_SERVICE"
+                      >{{ $t('进程服务说明') }}</a>
+                    </span>
+                  </div>
+                </bk-form-item>
+                <!-- 开启进程服务，展示端口映射 -->
+                <bk-form-item
+                  v-if="serviceProcess[formData.name]"
+                  :label="$t('端口映射')"
+                  :label-width="labelWidth"
+                >
+                  <div class="port-mapping-wrapper">
+                    <port-map-table
+                      :name="formData.name"
+                      :services="formData.services"
+                      :main-entry-data="curProcessMainEntryData"
+                      :address="moduleAccessAddress"
+                      @change-service="handleChangeService"
+                      @delete-service="handleDeleteService"
+                      @change-access-entry="changeMainEntry"
+                    />
+                  </div>
                 </bk-form-item>
                 <bk-form-item :label-width="70">
                   <bk-button
@@ -270,20 +236,6 @@
                   v-if="ifopen"
                   :label="$t('配置环境')"
                   :label-width="labelWidth"
-                >
-                  <!-- <bk-radio-group v-model="envName">
-                <bk-radio-button
-                  class="radio-cls"
-                  v-for="(item, index) in envsData"
-                  :key="index"
-                  :value="item.value">
-                  {{ item.label }}
-                </bk-radio-button>
-              </bk-radio-group> -->
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
                   ext-cls="env-form-item-cls"
                 >
                   <div class="env-name">{{ $t('预发布环境') }}</div>
@@ -458,12 +410,6 @@
                       </section>
                     </bk-form>
                   </div>
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
-                  ext-cls="env-form-item-cls"
-                >
                   <div class="env-name">{{ $t('生产环境') }}</div>
                   <div class="env-container">
                     <bk-form
@@ -692,8 +638,30 @@
                   --
                 </span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('容器端口')}：`">
-                <span class="form-text">{{ formData.port || '--' }}</span>
+              <!-- 进程服务查看态 -->
+              <bk-form-item :label="`${$t('进程服务')}：`">
+                <div class="view-process-service">
+                  <span :class="['servie-tag', { enable: formData.services?.length }]">
+                    {{ formData.services?.length ? $t('已启用') : $t('未启用') }}
+                  </span>
+                  <span class="tips">
+                    <i class="paasng-icon paasng-info-line" />
+                    {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                    <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.PROCESS_SERVICE"
+                    >{{ $t('进程服务说明') }}</a>
+                  </span>
+                </div>
+              </bk-form-item>
+              <bk-form-item :label="`${$t('端口映射')}：`" v-if="formData.services?.length">
+                <div class="port-mapping-wrapper">
+                  <port-map-table
+                    :services="formData.services"
+                    :address="moduleAccessAddress"
+                    :mode="'view'"
+                  />
+                </div>
               </bk-form-item>
               <bk-form-item :label-width="55">
                 <bk-button
@@ -800,43 +768,66 @@
             </bk-button>
           </div>
         </div>
-
-        <bk-dialog
-          v-model="processDialog.visiable"
-          width="320"
-          :theme="'primary'"
-          :header-position="'left'"
-          :mask-close="false"
-          :title="processDialog.title"
-          :loading="processDialog.loading"
-          @confirm="handleConfirm"
-          @cancel="handleDialogCancel"
-        >
-          <bk-form
-            ref="formDialog"
-            :model="processDialog"
-            :label-width="0"
-          >
-            <bk-form-item
-              :required="true"
-              :property="'name'"
-              :rules="rules.processName"
-              :error-display-type="'normal'"
-            >
-              <bk-input
-                class="path-input-cls"
-                v-model="processDialog.name"
-                :placeholder="$t('请输入进程名称')"
-                @enter="handleConfirm"
-              ></bk-input>
-            </bk-form-item>
-          </bk-form>
-        </bk-dialog>
       </paas-content-loader>
+
+      <!-- 分割线 -->
+      <div class="dividing-line"></div>
 
       <!-- 钩子命令-创建应用、模块不展示 -->
       <deploy-hook v-if="!isCreate" />
     </template>
+
+    <!-- 新增/编辑进程 -->
+    <bk-dialog
+      v-model="processDialog.visiable"
+      width="480"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :title="isEditPopup ? $t('编辑进程') : $t('新增进程')"
+      :loading="processDialog.loading"
+      ext-cls="prcess-dialog-cls"
+      @confirm="handleConfirm"
+      @cancel="handleDialogCancel"
+    >
+      <bk-form
+        ref="formDialog"
+        :model="processDialog"
+        form-type="vertical"
+      >
+        <bk-form-item :label="$t('新增类型')" v-if="!isEditPopup">
+          <div class="process-type-item">
+            <bk-radio :checked="true">
+              {{ $t('进程') }}
+            </bk-radio>
+            <p class="tips">{{ $t('适合长时间运行的进程，可暴露外部或内部流量') }}</p>
+          </div>
+        </bk-form-item>
+        <bk-form-item
+          :required="true"
+          :property="'name'"
+          :label="$t('进程名称')"
+          :rules="rules.processName"
+          :error-display-type="'normal'"
+        >
+          <bk-input
+            class="path-input-cls"
+            v-model="processDialog.name"
+            @enter="handleConfirm"
+          ></bk-input>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
+
+    <!-- 访问地址变更弹窗 -->
+    <entry-change-dialog
+      v-model="entryDialog.visible"
+      ref="entryChangeDialog"
+      :config="entryDialog"
+      :address="moduleAccessAddress"
+      @confirm="saveAppProcessInfo"
+    />
+
     <!-- 指南 -->
     <user-guide ref="userGuideRef" />
   </div>
@@ -850,6 +841,9 @@ import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import probe from './comps/probe/index.vue';
+import processService from './comps/process-config/process-service.vue';
+import portMapTable from './comps/process-config/port-map-table.vue';
+import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
 
 export default {
   components: {
@@ -857,6 +851,9 @@ export default {
     quotaPopver,
     deployHook,
     probe,
+    processService,
+    portMapTable,
+    entryChangeDialog,
   },
   props: {
     moduleId: {
@@ -891,6 +888,7 @@ export default {
         args: [],
         port: 5000,
         env_overlay: ENV_OVERLAY,
+        services: [],
       },
       formDataBackUp: {
         name: 'web',
@@ -900,6 +898,7 @@ export default {
         args: [],
         port: 5000,
         env_overlay: ENV_OVERLAY,
+        services: [],
       },
       bkappAnnotations: {},
       allowCreate: true,
@@ -1036,14 +1035,6 @@ export default {
             message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
             trigger: 'blur',
           },
-          {
-            validator: (v) => {
-              const panelName = this.panels.map(e => e.name);
-              return !panelName.includes(v);
-            },
-            message: `${this.$t('不允许添加同名进程')}`,
-            trigger: 'blur',
-          },
         ],
       },
       imageCredential: '',
@@ -1059,9 +1050,8 @@ export default {
       processDialog: {
         loading: false,
         visiable: false,
-        title: this.$t('进程名称'),
         name: '',
-        index: '',
+        index: null,
       },
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
@@ -1076,6 +1066,17 @@ export default {
       allQuotaList: [],
       stagQuotaData: {},
       prodQuotaData: {},
+      isEditPopup: false,
+      serviceProcess: {},
+      moduleAccessAddress: '',
+      // 访问地址变更
+      entryDialog: {
+        visible: false,
+        entryData: null,
+        type: '',
+      },
+      // 初始访问入口
+      initEntryData: null,
     };
   },
   computed: {
@@ -1107,12 +1108,21 @@ export default {
     isShowPage() {
       return !this.isCustomImage && !this.isCreate;
     },
+    isCurProcessMainEntry() {
+      return this.isMainEntry(this.formData.services);
+    },
+    curProcessMainEntryData() {
+      return this.panels.find(v => this.isMainEntry(v.services));
+    },
   },
   watch: {
     formData: {
       handler() {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
+        if (!this.serviceProcess[this.formData.name]) {
+          this.$set(this.serviceProcess, this.formData.name, !!this.formData.services?.length);
+        }
       },
       deep: true,
     },
@@ -1145,6 +1155,14 @@ export default {
   async created() {
     if (this.isCreate) {
       if (!this.processData.length) {
+        // 默认为访问入口
+        this.formData.services = [{
+          exposed_type: { name: 'bk/http' },
+          name: 'http',
+          protocol: 'TCP',
+          port: 80,
+          target_port: 5000,
+        }];
         this.processData.push(this.formData);
         this.processDataBackUp = cloneDeep(this.processData);
         this.panels = cloneDeep(this.processData);
@@ -1163,6 +1181,7 @@ export default {
     }
     // 获取资源配额数据
     await this.getQuotaPlans();
+    this.getEntryList();
   },
   methods: {
     async init() {
@@ -1172,7 +1191,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        this.processData = this.setProcessData(res.proc_specs);
+        this.processData = this.formatData(res.proc_specs);
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
         if (this.allowMultipleImage) {
           this.getImageCredentialList();
@@ -1180,6 +1199,7 @@ export default {
         this.processDataBackUp = cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          this.processNameActive = this.processData[this.btnIndex].name;
           // 传入的镜像仓库示例
           if (this.imageUrl) {
             this.formData.image = this.imageUrl;
@@ -1189,6 +1209,9 @@ export default {
           }
           this.panels = cloneDeep(this.processData);
         }
+        this.$nextTick(() => {
+          this.initEntryData = this.getEntryNames();
+        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1198,30 +1221,22 @@ export default {
         this.isLoading = false;
       }
     },
-    // 将web放在第一个位置
-    setProcessData(processList = []) {
+    // 数据初始化
+    formatData(processList = []) {
       // 无进程，默认添加 web 进程
       if (!processList.length) {
         processList.push(this.formData);
+        this.processNameActive = this.formData.name;
       };
 
-      // 是否存在web进程
-      const webProcess = processList.find(v => v.name === 'web');
-      if (webProcess) {
-        let processItem = {};
-        for (let i = 0; i < processList.length; i++) {
-          if (processList[i].name === 'web') {
-            processItem = processList[i];
-            processList.splice(i, 1);
-            break;
-          }
-        }
-        // 将web进程设置为第一项
-        processList.unshift(processItem);
-      } else {
-        // 没有 web 进程 默认为当前进程列表第一项
-        this.processNameActive = processList[0].name;
-      }
+      const firstProcess = processList[0];
+      this.$set(this.serviceProcess, firstProcess.name, !!firstProcess.services?.length);
+
+      // 数据格式统一
+      processList = processList.map(item => ({
+        ...item,
+        services: Array.isArray(item.services) ? item.services : [],
+      }));
 
       return processList;
     },
@@ -1293,12 +1308,11 @@ export default {
     },
 
     // 按扭组点击
-    handleBtnGroupClick(v, i) {
+    handleBtnGroupClick(name, i) {
       // 选中的进程信息
       this.formData = this.processData[i];
-      this.processNameActive = v;
+      this.processNameActive = name;
       this.btnIndex = i;
-      // tag-input 输入切换问题
       // eslint-disable-next-line no-plusplus
       this.tagInputIndex++;
     },
@@ -1339,18 +1353,10 @@ export default {
       this.processDialog.loading = true;
       try {
         await this.$refs.formDialog.validate(); // 校验进程名
-        this.processNameActive = this.processDialog.name; // 选中当前点击tab
-        if (this.processDialog.index) { // 编辑进程名
-          this.panels.forEach((e, i) => {
-            if (i === this.processDialog.index) {
-              e.name = this.processDialog.name;
-            }
-          });
-          this.processData[this.btnIndex].name = this.processDialog.name;
+        if (this.processDialog.index !== -1) { // 编辑进程名
+          this.processData[this.processDialog.index].name = this.processDialog.name;
         } else {
           // 新增进程
-          this.panels.push({ name: this.processDialog.name });
-          this.btnIndex = this.panels.length - 1;
           // this.allowMultipleImage 共享image、image_credential_name
           if (!this.allowMultipleImage) {
             this.formDataBackUp.image = this.formData.image;
@@ -1359,15 +1365,17 @@ export default {
           this.formData = cloneDeep(this.formDataBackUp);
           this.formData.name = this.processDialog.name;
           this.processData.push(this.formData);
+          this.btnIndex = this.panels.length - 1;
+          this.processNameActive = this.processDialog.name;
         }
         this.processDialog.visiable = false;
+        this.panels = cloneDeep(this.processData);
       } catch (error) {
         console.log('error', error);
       } finally {
         this.processDialog.loading = false;
       }
     },
-
     // 弹窗取消
     handleDialogCancel() {
       this.processDialog.visiable = false;
@@ -1377,19 +1385,39 @@ export default {
     // 页面取消
     handleCancel() {
       this.processData = cloneDeep(this.processDataBackUp);
-      this.formData = this.processData[0];
       this.panels = cloneDeep(this.processData);
-      this.processNameActive = 'web';
-      this.btnIndex = 0;
+      this.formData = this.processData[this.btnIndex];
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
 
     // 编辑进程名称
-    handleProcessNameEdit(processName, i = '') {
+    handleProcessNameEdit(processName, i = -1) {
+      this.isEditPopup = !!processName;
+      this.updatedProcessNameValidator(this.isEditPopup);
+      this.processDialog.name = this.isEditPopup ? processName : '';
+      this.processDialog.index = i; // 如果为-1， 这代表是新增
       this.processDialog.visiable = true;
-      this.processDialog.name = processName;
-      this.processDialog.index = i; // 如果为空 这代表是新增
+    },
+
+    updatedProcessNameValidator(flag) {
+      this.$refs.formDialog.clearError();
+      if (flag) {
+        if (this.rules.processName?.length === 3) {
+          this.rules.processName.pop();
+        }
+      } else {
+        if (this.rules.processName?.length === 2) {
+          this.rules.processName.push({
+            validator: (v) => {
+              const panelName = this.panels.map(e => e.name);
+              return !panelName.includes(v);
+            },
+            message: `${this.$t('不允许添加同名进程')}`,
+            trigger: 'blur',
+          });
+        }
+      }
     },
 
     // 删除某个进程
@@ -1398,8 +1426,9 @@ export default {
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
       this.panels = cloneDeep(this.processData);
-
-      this.processNameActive = 'web';
+      this.processNameActive = this.processData[0].name;
+      // 删除
+      delete this.serviceProcess[processName];
       this.btnIndex = 0;
     },
 
@@ -1464,17 +1493,33 @@ export default {
     async handleSave() {
       const isValidationSuccessful = await this.handleValidate();
       if (!isValidationSuccessful) return;
-      // 探针数据校验
       // 创建应用或创建模块返回值
       if (this.isCreate) {
         return [...this.processData];
       }
+      const saveEntryData = this.getEntryNames();
+      // 判断是否变更访问地址
+      if (!this.isAccessEntryPointChanged(this.initEntryData, saveEntryData)) {
+        // 变更访问入口
+        this.entryDialog.visible = true;
+        this.entryDialog.entryData = saveEntryData;
+        this.entryDialog.type = saveEntryData === null ? 'cancel' : 'change';
+      } else {
+        this.saveAppProcessInfo();
+      }
+    },
+
+    // 保存进程配置信息
+    async saveAppProcessInfo() {
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          params: [...this.processData],
+          params: {
+            proc_specs: [...this.processData],
+          },
         });
+        this.$refs.entryChangeDialog?.handleAfterLeave();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('保存成功！'),
@@ -1507,13 +1552,118 @@ export default {
     changeProbeFormData(config) {
       this.formData.probes[config.key] = config.data;
     },
+    // 判断是否为主入口
+    isMainEntry(services) {
+      if (!services?.length) return false;
+      return services.some(service => service.exposed_type?.name === 'bk/http');
+    },
+    // 启停进程
+    toggleServiceProcess(falg) {
+      if (falg) {
+        if (!this.formData.services?.length) {
+          this.formData.services.push({
+            name: 'http',
+            protocol: 'TCP',
+            port: 80,
+            target_port: 5000,
+          });
+        }
+      } else {
+        this.$set(this.formData, 'services', []);
+      }
+      this.panels = cloneDeep(this.processData);
+    },
+    // 更新进程服务
+    handleChangeService(data) {
+      delete data.service.id;
+      delete data.service.isEdit;
+      if (data.type === 'edit') {
+        // 更新
+        this.formData.services.splice(data.editIndex, 1, data.service);
+      } else {
+        this.formData.services.push(data.service);
+      }
+    },
+    handleDeleteService(name) {
+      const index = this.formData.services.findIndex(v => v.name === name);
+      this.formData.services.splice(index, 1);
+    },
+    // 切换主入口
+    changeMainEntry(data) {
+      const oldMainEntryName = this.curProcessMainEntryData?.name;
+      const servieName = data.type === 'set' ? data.row.name : '';
+      this.setProcessMainEntry(oldMainEntryName, data.name, servieName);
+      this.panels = cloneDeep(this.processData);
+    },
+    // 设置主入口数据
+    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName) {
+      const newExposedType = { name: 'bk/http' }; // 主入口默认值
+
+      // 找到当前旧的主入口进程并将其 services 中的 exposed_type 设置为 null
+      if (oldMainEntryName) {
+        this.processData.forEach((process) => {
+          if (process.name === oldMainEntryName) {
+            process.services?.forEach((service) => {
+              if (service.exposed_type?.name) {
+                service.exposed_type = null;
+              }
+            });
+          }
+        });
+      }
+
+      // 取消访问入口无需，设置新的入口
+      if (!servieName) return;
+
+      // 找到新的主入口进程并将其 services 中的 exposed_type 设置为 newExposedType
+      this.processData.forEach((process) => {
+        if (process.name === newMainEntryName) {
+          process.services?.forEach((service) => {
+            if (service.name === servieName) {
+              this.$set(service, 'exposed_type', newExposedType);
+            }
+          });
+        }
+      });
+    },
+    getEntryNames() {
+      if (!this.curProcessMainEntryData) return null;
+      const entry = this.curProcessMainEntryData?.services?.find(v => v.exposed_type?.name === 'bk/http');
+      return {
+        processName: this.curProcessMainEntryData.name,
+        servieName: entry.name,
+      };
+    },
+    // 是否变更访问入口
+    isAccessEntryPointChanged(entry1, entry2) {
+      if (entry1 === null && entry2 === null) return true;
+      if (entry1 === null || entry2 === null) return false;
+      return entry1.servieName === entry2.servieName && entry1.processName === entry2.processName;
+    },
+    // 访问地址列表数据
+    async getEntryList() {
+      try {
+        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+          appCode: this.appCode,
+        });
+        const module = res.find(module => module.name === this.curModuleId);
+        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type !== 'custom')?.address?.url || '';
+      } catch (e) {
+        this.moduleAccessAddress = '';
+      }
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 .process-container {
   border-top: none;
-  padding-bottom: 20px;
+  .port-mapping-wrapper {
+    margin-right: 56px;
+  }
+  .service-explain {
+    padding: 0;
+  }
 }
 .ml24 {
   margin-left: 24px;
@@ -1607,13 +1757,26 @@ export default {
       display: flex;
     }
   }
-
   .form-pre {
     border-top: 1px solid #dcdee5;
   }
-
   .form-pre-command.bk-form.bk-inline-form .bk-form-input {
     height: 32px !important;
+  }
+  .prcess-servie-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #63656E;
+    .bk-switcher {
+      flex-shrink: 0;
+    }
+    .tips i {
+      font-size: 14px;
+      margin-left: 24px;
+      margin-right: 1px;
+      color: #979BA5;
+    }
   }
 }
 .btn-container {
@@ -1641,6 +1804,32 @@ export default {
   }
   .process-tag-cls .bk-tag:first-child {
     margin-left: 0px;
+  }
+  .view-process-service {
+    .servie-tag {
+      display: inline-block;
+      height: 22px;
+      line-height: 22px;
+      padding: 0 8px;
+      font-size: 12px;
+      color: #63656E;
+      background: #F0F1F5;
+      border-radius: 2px;
+      &.enable {
+        color: #14A568;
+        background: #E4FAF0;
+      }
+    }
+    .tips {
+      color: #63656E;
+      font-size: 12px;
+      margin-left: 16px;
+      i {
+        font-size: 14px;
+        margin-right: 1px;
+        color: #979BA5;
+      }
+    }
   }
 }
 .env-name {
@@ -1713,12 +1902,34 @@ export default {
     padding-left: 10px;
   }
 }
-
 .more-config-item .bk-form-content {
   margin-left: 55px !important;
 }
-
 .form-style-cls {
   background-color: #fff;
+}
+.process-type-item {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  background: #E1ECFF;
+  border: 1px solid #3A84FF;
+  border-radius: 2px;
+  padding: 0 12px;
+  .tips {
+    flex: 1;
+    padding-left: 16px;
+    font-size: 12px;
+    color: #979BA5;
+    line-height: 20px;
+  }
+}
+/deep/ .prcess-dialog-cls .bk-dialog .bk-dialog-header {
+  padding-bottom: 5px;
+}
+.dividing-line {
+  height: 1px;
+  margin: 24px;
+  background: #EAEBF0;
 }
 </style>

@@ -23,7 +23,11 @@ from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, Plugi
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.views import PluginCallBackApiViewSet
-from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail, PluginVisibleRange
+from paasng.bk_plugins.pluginscenter.models.instances import (
+    ItsmDetail,
+    PluginRelease,
+    PluginVisibleRange,
+)
 
 pytestmark = pytest.mark.django_db
 PluginCallBackApiViewSet.authentication_classes = []  # type: ignore
@@ -151,6 +155,90 @@ class TestPluginApi:
         if status_code == 200:
             assert resp.json()["is_in_approval"] is True
 
+    @pytest.mark.parametrize(
+        (
+            "itsm_ticket_status",
+            "status_code",
+        ),
+        [
+            ("RUNNING", 400),
+            ("FINISHED", 200),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_upadate_release_strategy(
+        self,
+        api_client,
+        pd,
+        plugin,
+        release_strategy,
+        itsm_ticket_status,
+        status_code,
+        iam_policy_client,
+        gray_release_approval_service,
+    ):
+        release_strategy.itsm_detail = ItsmDetail(fields=[], sn="222", ticket_url="http://222")
+        release_strategy.save()
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release_strategy.release.id}/strategy/"
+        with mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.create_ticket",
+            return_value=ItsmDetail(fields=[], sn="1111", ticket_url="http://1111"),
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.get_ticket_status",
+            return_value={"ticket_url": "https://xxxx", "current_status": itsm_ticket_status},
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
+            return_value=["admin"],
+        ):
+            resp = api_client.post(
+                url,
+                data={
+                    "strategy": "gray",
+                    "bkci_project": ["1111", "22222"],
+                    "organization": [
+                        {"id": 1, "type": "user", "name": "admin", "display_name": "admin"},
+                        {
+                            "id": 3,
+                            "type": "department",
+                            "name": "xxxx部门",
+                            "display_name": "xxxx部门",
+                        },
+                    ],
+                },
+            )
+        assert resp.status_code == status_code
+
+    @pytest.mark.parametrize(
+        (
+            "release_status",
+            "status_code",
+        ),
+        [
+            (PluginReleaseStatus.SUCCESSFUL.value, 200),
+            (PluginReleaseStatus.FAILED.value, 400),
+            (PluginReleaseStatus.PENDING.value, 400),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_bk_user")
+    def test_rollback_release(
+        self,
+        api_client,
+        pd,
+        plugin,
+        release,
+        release_status,
+        status_code,
+        iam_policy_client,
+    ):
+        # 更新版本的状态，只有发布成功的版本才能回滚
+        release.status = release_status
+        release.save()
+        url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release.id}/rollback/"
+        resp = api_client.post(url)
+        assert resp.status_code == status_code
+        if status_code == 200:
+            assert resp.json()["is_rolled_back"] is True
+
 
 class TestSysApis:
     @pytest.mark.parametrize(
@@ -258,3 +346,37 @@ class TestSysApis:
         else:
             assert visible_range_obj.bkci_project != new_bkci_project
             assert visible_range_obj.organization != new_organization
+
+    @pytest.mark.parametrize(
+        ("strategy", "current_status", "approve_result", "release_status"),
+        [
+            # 全量发布： 单据结束、审批结果为不同意， 则版本发布失败
+            ("full", ItsmTicketStatus.FINISHED.value, False, "failed"),
+            # 全量发布： 单据结束、审批结果为不同意， 则版本发布成功
+            ("full", ItsmTicketStatus.FINISHED.value, True, "successful"),
+            # 灰度发布： 单据结束、审批结果为不同意， 版本状态为发布中
+            ("gray", ItsmTicketStatus.FINISHED.value, False, "failed"),
+            # 灰度发布： 单据结束、审批结果为不同意， 版本状态为发布中
+            ("gray", ItsmTicketStatus.FINISHED.value, True, "pending"),
+        ],
+    )
+    def test_itsm_canry_release_callback(
+        self, api_client, pd, plugin, release_strategy, current_status, approve_result, strategy, release_status
+    ):
+        release_strategy.strategy = strategy
+        release_strategy.save()
+        callback_url = (
+            "/open/api/itsm/bkplugins/"
+            + f"{pd.identifier}/plugins/{plugin.id}/releases/{release_strategy.release.id}/strategy/{release_strategy.id}/"
+        )
+
+        callback_data = CALLBACK_DATA
+        callback_data["current_status"] = current_status
+        callback_data["approve_result"] = approve_result
+        resp_data = api_client.post(callback_url, callback_data).json()
+
+        assert resp_data["code"] == 0
+        assert resp_data["result"] is True
+
+        release = PluginRelease.objects.get(id=release_strategy.release.id)
+        assert release.status == release_status

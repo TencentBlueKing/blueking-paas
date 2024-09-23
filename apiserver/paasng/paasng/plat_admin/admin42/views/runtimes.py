@@ -188,7 +188,7 @@ class BuildPackAPIViewSet(GenericViewSet):
     def set_bound_builders(self, request, pk):
         """设置被哪些 SlugBuilder 绑定"""
         buildpack = AppBuildPack.objects.get(pk=pk)
-        slz = BuildPackBindInputSLZ(data=request.data)
+        slz = BuildPackBindInputSLZ(data=request.data, context={"buildpack_type": buildpack.type})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         slugbuilders = AppSlugBuilder.objects.filter(id__in=data["slugbuilder_ids"])
@@ -329,7 +329,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             type=DataType.RAW_DATA,
             data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in slugbuilder.buildpacks.all()]},
         )
-        slz = AppSlugBuilderBindInputSLZ(data=request.data)
+        slz = AppSlugBuilderBindInputSLZ(data=request.data, context={"slugbuilder_type": slugbuilder.type})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 

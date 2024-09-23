@@ -497,6 +497,7 @@
                         let url = this.bindDialog.url;
                         await this.$http.post(url, {
                             buildpack_ids: this.bindDialog.selectedBuildpacks.map(item => item.id),
+                            slugbuilder_type: this.bindDialog.row.type,
                         });
                         this.bindDialog.visible = false;
                         this.$bkMessage({

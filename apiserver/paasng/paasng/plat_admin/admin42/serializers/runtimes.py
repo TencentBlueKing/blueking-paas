@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import List
+from typing import Dict
 
 from rest_framework import serializers
 
@@ -54,18 +54,18 @@ class BuildPackListOutputSLZ(serializers.ModelSerializer):
 
 
 class BuildPackBindInputSLZ(serializers.Serializer):
-    """用于给单个 Buildpack 绑定 slugbuilder 列表，需要传入 context["buildpack_type"] 用于验证 slugbuilder 类型"""
+    """用于给单个 Buildpack 绑定 slugbuilder 列表"""
 
     slugbuilder_ids = serializers.ListField(child=serializers.CharField())
+    buildpack_type = serializers.ChoiceField(required=True, choices=BuildPackType.get_choices())
 
-    def validate_slugbuilder_ids(self, slugbuilder_ids: List[str]) -> List[str]:
-        builder_types = {sb.type for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
-
+    def validate(self, data: Dict) -> Dict:
+        builder_types = {sb.type for sb in AppSlugBuilder.objects.filter(id__in=data["slugbuilder_ids"])}
         if len(builder_types) > 1:
             raise serializers.ValidationError("slugbuilder type must be same")
 
         if not builder_types:
-            return slugbuilder_ids
+            return data
 
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
         builder_buildpack_type_map = {
@@ -75,10 +75,10 @@ class BuildPackBindInputSLZ(serializers.Serializer):
             BuildPackType.OCI_EMBEDDED: AppImageType.CNB,
         }
         builder_type = builder_types.pop()
-        if builder_type != builder_buildpack_type_map[self.context["buildpack_type"]]:
+        if builder_type != builder_buildpack_type_map[data["buildpack_type"]]:
             raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
 
-        return slugbuilder_ids
+        return data
 
 
 class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
@@ -121,17 +121,18 @@ class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
 
 
 class AppSlugBuilderBindInputSLZ(serializers.Serializer):
-    """用于给 slugbuilder 绑定 buildpack 列表，需要传入 context["slugbuilder_type"] 用于验证 buildpack 类型"""
+    """用于给 slugbuilder 绑定 buildpack 列表"""
 
     buildpack_ids = serializers.ListField(child=serializers.CharField())
+    slugbuilder_type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
 
-    def validate_buildpack_ids(self, buildpack_ids: List[str]) -> List[str]:
-        buildpack_types = {bp.type for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
+    def validate(self, data: Dict) -> Dict:
+        buildpack_types = {bp.type for bp in AppBuildPack.objects.filter(id__in=data["buildpack_ids"])}
         if BuildPackType.TAR in buildpack_types and len(buildpack_types) > 1:
             raise serializers.ValidationError("buildpack of oci type and tar appear at the same time")
 
         if not buildpack_types:
-            return buildpack_ids
+            return data
 
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
         builder_buildpack_type_map = {
@@ -141,7 +142,7 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
             BuildPackType.OCI_EMBEDDED: AppImageType.CNB,
         }
         buildpack_type = buildpack_types.pop()
-        if self.context["slugbuilder_type"] != builder_buildpack_type_map[buildpack_type]:
+        if data["slugbuilder_type"] != builder_buildpack_type_map[buildpack_type]:
             raise serializers.ValidationError(f"buildpack type ({buildpack_type}): does not match slugbuilder type")
 
-        return buildpack_ids
+        return data

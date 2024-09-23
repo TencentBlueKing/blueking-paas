@@ -306,11 +306,13 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         """获取绑定和可绑定的 BuildPack 列表"""
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         bound_buildpacks = slugbuilder.buildpacks.all()
-        unbound_buildpacks = AppBuildPack.objects.exclude(id__in=bound_buildpacks)
-        if slugbuilder.type == AppImageType.LEGACY:
-            unbound_buildpacks = unbound_buildpacks.filter(type=BuildPackType.TAR)
-        else:
-            unbound_buildpacks = unbound_buildpacks.exclude(type=BuildPackType.TAR)
+        buildpack_builder_type_map = {
+            AppImageType.LEGACY: [BuildPackType.TAR],
+            AppImageType.CNB: [BuildPackType.OCI_IMAGE, BuildPackType.OCI_EMBEDDED, BuildPackType.OCI_FILE],
+        }
+        unbound_buildpacks = AppBuildPack.objects.filter(
+            type__in=buildpack_builder_type_map[slugbuilder.type]
+        ).exclude(id__in=bound_buildpacks)
 
         return Response(
             {

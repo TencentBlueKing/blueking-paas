@@ -287,8 +287,12 @@ export const PLATFORM_CONFIG = {
         // 蓝盾流水线构建
         BK_CI_PIPELINE_BUILD: DOCS_URL_PREFIX + '/topics/paas/bk_ci_pipeline_build',
 
-        // 部署维护
-        DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
+        // 日志高级功能介绍
+        LOG_ADVANCED_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/log_advance.md',
+        // 监控功能介绍
+        MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
+        // APM 增强服务功能介绍
+        APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
     },
 
     CONFIG: {

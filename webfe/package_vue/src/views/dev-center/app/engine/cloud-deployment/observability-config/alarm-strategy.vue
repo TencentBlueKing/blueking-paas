@@ -255,7 +255,7 @@ export default {
     },
     // 了解更多
     gotoMore() {
-      window.open(this.GLOBAL.DOC.DEPLOYMENT_MAINTENANCE, '_blank');
+      window.open(this.GLOBAL.DOC.MONITORING_FEATURE_DOC, '_blank');
     },
   },
 };

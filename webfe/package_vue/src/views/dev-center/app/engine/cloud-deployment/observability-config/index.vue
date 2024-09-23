@@ -540,7 +540,7 @@ export default {
 
     // 了解更多
     gotoMore() {
-      window.open(this.GLOBAL.DOC.DEPLOYMENT_MAINTENANCE, '_blank');
+      window.open(this.GLOBAL.DOC.LOG_ADVANCED_FEATURE_DOC, '_blank');
     },
   },
 };

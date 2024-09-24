@@ -117,15 +117,10 @@
         <bk-table-column
           :label="$t('版本')"
           prop="version"
-          :show-overflow-tooltip="true"
+          show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <span
-              v-bk-tooltips="row.version"
-              :class="{ 'version-num': row.version }"
-            >
-              {{ row.version || '--' }}
-            </span>
+            {{ row.version || '--' }}
             <span
               v-if="row.source_version_type === 'tested_version' && isOfficialVersion && row.id === rollbacks[0]?.id"
               style="color: #c4c6cc;"
@@ -894,10 +889,6 @@ export default {
   margin-top: 22px;
   background: #fff;
 
-  .version-num {
-    color: #3a84ff;
-    font-weight: 700;
-  }
   .status-text {
     margin-left: 5px;
   }

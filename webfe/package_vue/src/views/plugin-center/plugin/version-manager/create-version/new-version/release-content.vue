@@ -208,6 +208,9 @@ export default {
     versionId() {
       return this.$route.query.versionId;
     },
+    releaseVersionId() {
+      return this.$route.query.releaseVersion;
+    },
   },
   watch: {
     scheme: {
@@ -251,6 +254,9 @@ export default {
         this.releaseContent.comment = data.source_versions[0]?.message || '';
       } else {
         this.releaseContent.source_versions = '';
+      }
+      if (this.releaseVersionId) {
+        this.releaseContent.source_versions = this.releaseVersionId;
       }
       const versionMapping = {
         revision: data.source_versions[0]?.name || '',

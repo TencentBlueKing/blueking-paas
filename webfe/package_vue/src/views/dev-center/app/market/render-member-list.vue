@@ -1,5 +1,5 @@
 <template>
-  <div class="render-member-list-wrapper">
+  <div :class="['render-member-list-wrapper', { 'default-style': !customStyles }]">
     <div class="content">
       <div
         v-for="(item, index) in data"
@@ -38,11 +38,22 @@ export default {
       type: String,
       default: 'user',
     },
+    customStyles: {
+      type: String,
+      default: false,
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 .render-member-list-wrapper {
+  &.default-style {
+    margin-top: 12px;
+    padding: 12px 12px 12px 36px;
+    background: #f5f7fa;
+    border-radius: 2px;
+  }
+  font-size: 12px;
   color: #63656e;
   .content {
     .icon {

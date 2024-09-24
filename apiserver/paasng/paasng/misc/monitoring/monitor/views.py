@@ -296,6 +296,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
+
         if not alerts:
             return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
 

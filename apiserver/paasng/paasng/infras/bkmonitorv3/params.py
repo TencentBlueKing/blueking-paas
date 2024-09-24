@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Union
 
 from attrs import define
 
-from paasng.infras.bkmonitorv3.exceptions import BkMonitorSpaceDoesNotExist
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorSpaceDoesNotExist
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 
 
@@ -36,9 +36,10 @@ class QueryAlertsParams:
     """
     查询告警的参数
 
-    :param app_code: 应用 code
     :param start_time: 发生时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
     :param end_time: 结束时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
+    :param app_code: 应用 code. 可选
+    :param bk_biz_ids: 监控空间资源 id 列表. 可选
     :param environment: 应用部署环境. 可选
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
@@ -59,17 +60,18 @@ class QueryAlertsParams:
         d = {
             "start_time": int(self.start_time.timestamp()),
             "end_time": int(self.end_time.timestamp()),
-            "bk_biz_ids": [],
             "page": 1,
             "page_size": 500,
             # 按照 ID 降序
             "ordering": ["-id"],
         }
 
-        if self.bk_biz_ids:
+        if self.bk_biz_ids and not self.app_code:
             d["bk_biz_ids"] = [int(id) for id in self.bk_biz_ids]
-        elif self.app_code:
+        elif self.app_code and not self.bk_biz_ids:
             d["bk_biz_ids"] = [int(get_bk_biz_id(self.app_code))]
+        else:
+            raise BkMonitorApiError(message="params must have one of app_code or bk_biz_ids, not both")
 
         if self.status:
             d["status"] = [self.status]

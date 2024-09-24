@@ -83,8 +83,8 @@ class ListAlertsSLZ(serializers.Serializer):
         if data.start_time > data.end_time:
             raise serializers.ValidationError("end_time must be greater than start_time")
 
-        if not data.app_code and not data.bk_biz_ids:
-            raise serializers.ValidationError("at least one of app_code or bk_biz_ids is required")
+        if (not data.app_code and not data.bk_biz_ids) or (data.app_code and data.bk_biz_ids):
+            raise serializers.ValidationError("one of app_code or bk_biz_ids is required, not both")
 
         return data
 

@@ -232,16 +232,10 @@ export const PLATFORM_CONFIG = {
         BKUI_WITH_PYTHON: DOCS_URL_PREFIX + '/topics/bkui/with-python',
 
         // APIGW API调用指引
-        // APIGW_USER_API: BK_APIGW_DOC_URL + '/guide/use-api.html',
-        APIGW_USER_API: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/use-api/use-apigw-api.md',
+        APIGW_USER_API: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
-        // APIGW QUICK_START
-        // APIGW_QUICK_START: BK_APIGW_DOC_URL + '/guide/quickstart.html',
-        APIGW_QUICK_START: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/quickstart/create-api-with-http-backend.md',
-
-        // APIGW FAQ
-        // APIGW_FAQ: BK_APIGW_DOC_URL + '/guide/faq.html',
-        APIGW_FAQ: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/faq/use-apigw-api.md',
+        // APIGW API 网关接入指引
+        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/Connect/connect-gateway.md',
 
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 

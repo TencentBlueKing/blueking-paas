@@ -1228,13 +1228,16 @@ BKDOC_URL = settings.get("BKDOC_URL", "http://localhost:8080")
 # 文档应用的应用ID
 BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 
-# 蓝鲸官网文档中心地址
-BK_DOCS_URL_PREFIX = settings.get(
-    "BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs/markdown/PaaS/DevelopTools/BaseGuide"
-)
+BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
+
+# PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+BK_PAAS_DOCS_VER = settings.get("BK_PAAS_DOCS_VER", "1.5")
+
+# PaaS 产品文档前缀，蓝鲸文档中心最新的方案需要各个产品自己添加语言、版本号
+PAAS_DOCS_URL_PREFIX = f"{BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/{BK_PAAS_DOCS_VER}"
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq")
+PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{PAAS_DOCS_URL_PREFIX}/BaseGuide/faq")
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get("SUPPORT_LIVE_AGENT", False)

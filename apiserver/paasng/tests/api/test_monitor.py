@@ -57,9 +57,9 @@ class TestListAlertsView:
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
 
-    def test_list_alerts_with_count(self, api_client, bk_app, bk_monitor_space):
+    def test_list_alerts_by_user(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
-            "/api/monitor/applications/alerts/count",
+            "/api/monitor/user/alerts/",
             data={
                 "start_time": (datetime.now() - timedelta(minutes=random.randint(1, 30))).strftime(
                     "%Y-%m-%d %H:%M:%S"

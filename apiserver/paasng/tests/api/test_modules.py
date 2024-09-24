@@ -21,6 +21,8 @@ from unittest import mock
 import pytest
 from django.conf import settings
 
+from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
@@ -30,7 +32,11 @@ from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
-from tests.utils.helpers import create_pending_wl_apps, generate_random_string, initialize_module
+from tests.utils.helpers import (
+    create_pending_wl_apps,
+    generate_random_string,
+    initialize_module,
+)
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -361,13 +367,35 @@ class TestModuleDeletion:
 class TestDefaultModuleSwitch:
     """Test set as default API"""
 
-    def test_switch_default_module(self, api_client, bk_app, bk_module, bk_user):
+    def test_switch_default_module(self, api_client, bk_app, bk_module, bk_prod_env, bk_user):
         another_module = Module.objects.create(
             application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
         )
         initialize_module(another_module)
         create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
-        MarketConfig.objects.get_or_create_by_app(bk_app)
+
+        # 创建自定义域名
+        Domain.objects.create(
+            name="foo-custom.example.com",
+            path_prefix="/subpath/",
+            module_id=bk_module.id,
+            environment_id=bk_prod_env.id,
+        )
+        # 创建市场配置
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
+
+        # 切换域名为自定义域名
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": "http://foo-custom.example.com/subpath/",
+                "type": 4,
+            },
+        )
+        market_config.refresh_from_db()
+        assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
 
         response = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{another_module.name}/set_default/",
@@ -378,3 +406,9 @@ class TestDefaultModuleSwitch:
         # 切换主模块后， market config 内的模块信息应当会通过 signal 更新
         assert bk_app.market_config.source_module == another_module
         assert bk_app.default_module == another_module
+
+        # 测试切换后地址是否正常显示
+        url = f"/api/market/applications/{bk_app.code}/config/"
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert response.json()["custom_domain_url"] == "http://foo-custom.example.com/subpath/"

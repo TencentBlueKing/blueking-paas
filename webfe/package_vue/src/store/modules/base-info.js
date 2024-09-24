@@ -131,6 +131,14 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/audit/records/?${json2Query(params)}`;
     return http.get(url);
   },
+
+  /**
+   * 获取应用仪表板信息
+   */
+  getAppDashboardInfo({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/dashboard_info/`;
+    return http.get(url, {});
+  },
 };
 
 export default {

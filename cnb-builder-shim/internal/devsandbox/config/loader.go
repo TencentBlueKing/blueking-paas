@@ -10,20 +10,20 @@ func init() {
 	// 设置全局变量
 	G = cfg
 }
-func loadSourceConfigFromEnv() (SourceConfig, error) {
+func loadSourceConfigFromEnv() (SourceCodeConfig, error) {
 	sourceFetchMethod := utils.EnvOrDefault("SOURCE_FETCH_METHOD", HTTP)
 	sourceGetUrl := utils.EnvOrDefault("SOURCE_GET_URL", "")
 	gitRevision := utils.EnvOrDefault("GIT_REVISION", "")
-	uploadDir := utils.EnvOrDefault("UPLOAD_DIR", "/cnb/devsandbox/src")
+	workspace := utils.EnvOrDefault("WORKSPACE", "/cnb/devsandbox/src")
 
-	return SourceConfig{SourceFetchMethod: sourceFetchMethod, SourceGetUrl: sourceGetUrl, GitRevision: gitRevision, UploadDir: uploadDir}, nil
+	return SourceCodeConfig{SourceFetchMethod: sourceFetchMethod, SourceGetUrl: sourceGetUrl, GitRevision: gitRevision, Workspace: workspace}, nil
 }
 
 func loadConfigFromEnv() (*Config, error) {
-	sourceConfig, err := loadSourceConfigFromEnv()
+	sourceCodeConfig, err := loadSourceConfigFromEnv()
 	if err != nil {
 		return nil, err
 	}
 
-	return &Config{Source: sourceConfig}, nil
+	return &Config{SourceCode: sourceCodeConfig}, nil
 }

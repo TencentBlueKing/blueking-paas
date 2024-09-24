@@ -95,7 +95,7 @@ func Unzip(srcFilePath, distDir string) error {
 func ExtractTarGz(srcFilePath, distDir string) error {
 	z := archiver.NewZip()
 	if err := z.Unarchive(srcFilePath, distDir); err != nil {
-		return errors.Wrap(err, "unzip error")
+		return errors.Wrap(err, "extract tar.gz error")
 	}
 	return nil
 }

@@ -7,21 +7,21 @@ const (
 	GIT    = "GIT"
 )
 
-// SourceConfig 源码配置
-type SourceConfig struct {
+// SourceCodeConfig 源码配置
+type SourceCodeConfig struct {
 	// 源码获取方式
 	SourceFetchMethod string
 	// 源码地址
 	SourceGetUrl string
 	// Git 仓库版本
 	GitRevision string
-	// 上传路径
-	UploadDir string
+	// 工作目录
+	Workspace string
 }
 
-// Config  构建配置
+// Config  全局配置
 type Config struct {
 	// 源码配置
-	Source SourceConfig
+	SourceCode SourceCodeConfig
 	// ...
 }

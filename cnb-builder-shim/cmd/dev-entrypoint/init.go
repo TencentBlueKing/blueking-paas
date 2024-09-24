@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -138,20 +139,70 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 	return nil
 }
 
-// sourceInit: 根据配置初始化源码
-func sourceInit() error {
-	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.Source.SourceFetchMethod))
-	switch config.G.Source.SourceFetchMethod {
+// preFetchSourceCode: 根据配置初始化源码
+func preFetchSourceCode() error {
+	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.SourceCode.SourceFetchMethod))
+	// TODO: 源码初始化不同的方式抽象成一个接口
+	workspace := config.G.SourceCode.Workspace
+	fetchSourceCode, err := ensureWorkspace(workspace)
+	if err != nil {
+		return err
+	}
+	// 源码已经下载到工作目录，无需初始化
+	if !fetchSourceCode {
+		return nil
+	}
+	switch config.G.SourceCode.SourceFetchMethod {
 	case config.BKREPO:
-		downloadUrl, err := url.Parse(config.G.Source.SourceGetUrl)
+		downloadUrl, err := url.Parse(config.G.SourceCode.SourceGetUrl)
 		if err != nil {
 			return err
 		}
-		if err = fs.NewFetcher(logger).Fetch(downloadUrl.Path, config.G.Source.UploadDir); err != nil {
+		// 创建临时文件夹存放源码压缩包
+		tmpDir, err := os.MkdirTemp("", "source-packages-*")
+		if err != nil {
+			return errors.Wrap(err, "create tmp dir")
+		}
+		defer os.RemoveAll(tmpDir)
+
+		// 下载源码压缩包
+		if err = fs.NewFetcher(logger).Fetch(downloadUrl.Path, tmpDir); err != nil {
+			return errors.Wrap(err, "download source code")
+		}
+		// 解压源码至工作目录
+		srcFilePath := path.Join(tmpDir, "tar")
+		if err = utils.ExtractTarGz(srcFilePath, workspace); err != nil {
 			return err
 		}
 	case config.GIT:
 		return fmt.Errorf("TODO: clone git from revision")
 	}
 	return nil
+}
+
+// ensureWorkspace 确保 workspace 文件夹存在，如果里面有文件则表示不需要预加载源码
+func ensureWorkspace(workspace string) (bool, error) {
+	// 检查文件夹是否存在
+	if _, err := os.Stat(workspace); os.IsNotExist(err) {
+		// 文件夹不存在，创建文件夹
+		logger.Info("creat workspace directory")
+		if err := os.MkdirAll(workspace, 0750); err != nil {
+			return false, errors.Wrap(err, "create workspace directory")
+		}
+		return true, nil
+	}
+
+	// 文件夹存在，检查文件夹里面是否有文件
+	files, err := os.ReadDir(workspace)
+	if err != nil {
+		return false, errors.Wrap(err, "read workspace directory")
+	}
+
+	if len(files) > 0 {
+		// 文件夹不为空，返回 nil
+		return false, nil
+	}
+
+	// 文件夹为空
+	return true, nil
 }

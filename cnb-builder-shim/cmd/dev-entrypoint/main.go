@@ -34,8 +34,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := sourceInit(); err != nil {
-		logger.Error(err, "Init Source Failed")
+	if err := preFetchSourceCode(); err != nil {
+		logger.Error(err, "PreFetch Source Code Failed")
 		os.Exit(1)
 	}
 

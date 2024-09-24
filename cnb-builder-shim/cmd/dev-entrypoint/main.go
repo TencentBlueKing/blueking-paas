@@ -34,6 +34,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := preFetchSourceCode(); err != nil {
+		logger.Error(err, "PreFetch Source Code Failed")
+		os.Exit(1)
+	}
+
 	runDevContainerServer()
 }
 

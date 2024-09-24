@@ -20,7 +20,10 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -70,6 +73,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 
 	mgr := service.NewDeployManager()
 	r.POST("/deploys", DeployHandler(s, mgr))
+	r.POST("/deploys_without_file", DeployWithoutFileHandler(s, mgr))
 	r.GET("/deploys/:deployID/results", ResultHandler(mgr))
 
 	return s, nil
@@ -110,6 +114,20 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // DeployHandler handles the deployment of a file to the web server.
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 在其他模式下，不允许使用该接口
+		if config.G.SourceCode.SourceFetchMethod != config.HTTP {
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.SourceFetchMethod)})
+			return
+		}
+		var tmpAppDir string
+		// 创建临时文件夹
+		tmpDir, err := os.MkdirTemp("", "source-*")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
+			return
+		}
+		defer os.RemoveAll(tmpDir)
+
 		file, err := c.FormFile("file")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
@@ -122,8 +140,40 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
 			return
 		}
+		// 解压文件到临时目录
+		if err = utils.Unzip(srcFilePath, tmpDir); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+			return
+		}
+		tmpAppDir = path.Join(tmpDir, strings.Split(fileName, ".")[0])
 
-		status, err := svc.Deploy(srcFilePath)
+		status, err := svc.Deploy(tmpAppDir)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
+			return
+		}
+
+		select {
+		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
+			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
+		default:
+			c.JSON(
+				http.StatusTooManyRequests,
+				gin.H{"message": "app is deploying, please wait for a while and try again."},
+			)
+		}
+	}
+}
+
+// DeployWithoutFileHandler handles the deployment without file.
+func DeployWithoutFileHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if config.G.SourceCode.SourceFetchMethod == config.HTTP {
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.SourceFetchMethod)})
+			return
+		}
+
+		status, err := svc.Deploy(config.G.SourceCode.Workspace)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
 			return

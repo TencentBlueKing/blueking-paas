@@ -311,9 +311,9 @@ class CodeccPluginBasicInfo(BaseModel):
     :param description: 工具描述
     """
 
-    name: str
-    displayName: str
-    checkerNum: int
+    name: Optional[str] = None
+    displayName: Optional[str] = None
+    checkerNum: Optional[int] = None
     devLanguage: Optional[str] = None
     toolCnTypes: Optional[List[str]] = []
     langList: Optional[List[str]] = []

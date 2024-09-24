@@ -54,4 +54,8 @@ urlpatterns = [
         "api/monitor/applications/<slug:code>/alarm_strategies/",
         views.ListAlarmStrategiesView.as_view({"post": "list"}),
     ),
+    path(
+        "api/monitor/applications/<slug:code>/dashboard_info/",
+        views.GetDashboardInfoView.as_view({"get": "get"}),
+    ),
 ]

@@ -30,8 +30,10 @@ var BK_PAAS_VERSION = process.env.BK_PAAS_VERSION || ''
 var BK_MAX_PACKAGE_SIZE = process.env.BK_MAX_PACKAGE_SIZE || ''
 var BK_SHARED_RES_URL = process.env.BK_SHARED_RES_URL || ''
 var BK_PAAS_DOCS_VER = process.env.BK_PAAS_DOCS_VER || ''
+var BK_APIGW_DOCS_VER = process.env.BK_APIGW_DOCS_VER || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
 var PAAS_DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/${BK_PAAS_DOCS_VER}` // PaaS 产品文档前缀
 var DOCS_URL_PREFIX = `${PAAS_DOCS_URL_PREFIX}/BaseGuide` // 开发者资料库前缀
+var PAAS_DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/ZH/APIGateway/${BK_APIGW_DOCS_VER}` // API 网关文档前缀
 var USERS_URL = `${BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fs_list_users/` // 人员选择器接口地址，可选填

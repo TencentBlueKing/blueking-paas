@@ -237,9 +237,6 @@ export const PLATFORM_CONFIG = {
         // APIGW QUICK_START
         APIGW_QUICK_START: BK_APIGW_DOC_URL + '/guide/quickstart.html',
 
-        // APIGW API调用指引
-        APIGW_FAQ: BK_APIGW_DOC_URL + '/guide/faq.html',
-
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 
         // Python 开发规范

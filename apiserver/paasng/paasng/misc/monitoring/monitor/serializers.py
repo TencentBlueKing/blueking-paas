@@ -130,15 +130,15 @@ class AlertSLZ(serializers.Serializer):
         return None
 
 
-class AlertListWithCountSLZ(serializers.Serializer):
+class AlertListByUserSLZ(serializers.Serializer):
     application = ApplicationSLZWithLogo(read_only=True)
     count = serializers.IntegerField(help_text="应用告警数")
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
 
 
-class AlertListWithCountRespSLZ(serializers.Serializer):
+class AlertListByUserRespSLZ(serializers.Serializer):
     count = serializers.IntegerField(help_text="用户告警总数")
-    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListWithCountSLZ())
+    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListByUserSLZ())
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

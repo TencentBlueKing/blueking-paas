@@ -171,12 +171,10 @@ class BkMonitorClient:
     def query_space_biz_id(self, app_codes: List[str]) -> List[Dict]:
         """查询应用的蓝鲸监控空间在权限中心的资源 id
 
-        :param app_codes: 查询监控空间资源 id 的应用 id
+        :param app_codes: 查询监控空间的应用 id
         """
-        monitor_spaces = (
-            BKMonitorSpaceModel.objects.filter(application__code__in=app_codes)
-            .select_related("application")
-            .only("application", "bk_biz_id")
+        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes).select_related(
+            "application"
         )
         return [{"application": space.application, "bk_biz_id": space.iam_resource_id} for space in monitor_spaces]
 

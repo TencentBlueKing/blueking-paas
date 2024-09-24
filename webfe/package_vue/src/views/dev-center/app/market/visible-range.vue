@@ -34,10 +34,12 @@
           <render-member-list
             v-if="departments.length > 0"
             type="department"
+            :custom-styles="true"
             :data="departments"
           />
           <render-member-list
             v-if="users.length > 0"
+            :custom-styles="true"
             :data="users"
           />
         </div>

@@ -61,22 +61,11 @@ class BuildPackBindInputSLZ(serializers.Serializer):
     def validate_slugbuilder_ids(self, slugbuilder_ids: List[str]) -> List[str]:
         builder_types = {sb.type for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
 
-        if len(builder_types) > 1:
-            raise serializers.ValidationError("slugbuilder type must be same")
-
-        if not builder_types:
-            return slugbuilder_ids
-
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
-        buildpack_builder_type_map = {
-            BuildPackType.TAR: AppImageType.LEGACY,
-            BuildPackType.OCI_IMAGE: AppImageType.CNB,
-            BuildPackType.OCI_FILE: AppImageType.CNB,
-            BuildPackType.OCI_EMBEDDED: AppImageType.CNB,
-        }
-        builder_type = builder_types.pop()
-        if builder_type != buildpack_builder_type_map[self.context["buildpack_type"]]:
-            raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
+        buildpack_builder_type_map = BuildPackType.get_buildpack_builder_type_map()
+        for builder_type in builder_types:
+            if builder_type != buildpack_builder_type_map[self.context["buildpack_type"]]:
+                raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
 
         return slugbuilder_ids
 
@@ -127,21 +116,13 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
 
     def validate_buildpack_ids(self, buildpack_ids: List[str]) -> List[str]:
         buildpack_types = {bp.type for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
-        if BuildPackType.TAR in buildpack_types and len(buildpack_types) > 1:
-            raise serializers.ValidationError("buildpack of oci type and tar appear at the same time")
-
-        if not buildpack_types:
-            return buildpack_ids
 
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
-        buildpack_builder_type_map = {
-            BuildPackType.TAR: AppImageType.LEGACY,
-            BuildPackType.OCI_IMAGE: AppImageType.CNB,
-            BuildPackType.OCI_FILE: AppImageType.CNB,
-            BuildPackType.OCI_EMBEDDED: AppImageType.CNB,
-        }
-        buildpack_type = buildpack_types.pop()
-        if self.context["slugbuilder_type"] != buildpack_builder_type_map[buildpack_type]:
-            raise serializers.ValidationError(f"buildpack type ({buildpack_type}): does not match slugbuilder type")
+        buildpack_builder_type_map = BuildPackType.get_buildpack_builder_type_map()
+        for buildpack_type in buildpack_types:
+            if self.context["slugbuilder_type"] != buildpack_builder_type_map[buildpack_type]:
+                raise serializers.ValidationError(
+                    f"buildpack type ({buildpack_type}): does not match slugbuilder type"
+                )
 
         return buildpack_ids

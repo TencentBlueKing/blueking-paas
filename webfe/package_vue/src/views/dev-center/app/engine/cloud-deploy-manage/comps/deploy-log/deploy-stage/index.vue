@@ -8,6 +8,21 @@
         :abnormal-count="abnormalCount"
       />
     </label>
+
+    <section class="content-wrapper" v-if="releaseList.length">
+      <section
+        ref="content"
+        class="log-content"
+      >
+        <pre
+          v-for="(item, index) in releaseList"
+          :key="index"
+          class="log-item"
+          v-html="item"
+        />
+      </section>
+    </section>
+
     <section
       v-bkloading="{ isLoading: loading, color: '#2a2b2f' }"
       class="content"
@@ -48,6 +63,10 @@ export default {
     title: {
       type: String,
       default: '',
+    },
+    releaseList: {
+      type: Array,
+      default: () => [],
     },
     data: {
       type: Array,
@@ -117,6 +136,44 @@ export default {
             margin-bottom: 8px;
             font-size: 14px;
             color: #979ba5;
+        }
+        .content-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 60px;
+            background: #2a2b2f;
+            border-radius: 2px;
+            .screen-wrapper {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                cursor: pointer;
+                i {
+                    font-size: 16px;
+                    color: #63656e;
+                }
+            }
+        }
+        .log-content {
+            padding: 15px 20px;
+            width: 100%;
+            max-height: 500px;
+            overflow-y: auto;
+            &::-webkit-scrollbar {
+                width: 4px;
+                background-color: lighten(transparent, 80%);
+            }
+            &::-webkit-scrollbar-thumb {
+                height: 5px;
+                border-radius: 2px;
+                background-color: #63656e;
+            }
+            .log-item {
+                line-height: 20px;
+                font-size: 12px;
+                color: #c4c6cc;
+                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
+            }
         }
         .content {
             width: 100%;

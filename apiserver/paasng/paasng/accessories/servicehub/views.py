@@ -228,6 +228,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
         module = application.get_module(module_name)
+        service = self.get_service(service_id, application)
 
         # Check if application was protected
         raise_if_protected(application, ProtectedRes.SERVICES_MODIFICATIONS)
@@ -252,7 +253,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.MANAGE_ADDONS_SERVICES,
             operation=OperationEnum.DISABLE,
             target=OperationTarget.ADD_ON,
-            attribute=module_attachment.service.name,
+            attribute=service.name,
             module_name=module_name,
             data_before=DataDetail(type=DataType.RAW_DATA, data=module_attachment.service.config),
         )

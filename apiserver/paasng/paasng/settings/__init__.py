@@ -46,6 +46,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pymysql
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
@@ -83,6 +84,10 @@ settings = LazySettings(
 )
 
 _notset = object()
+
+pymysql.install_as_MySQLdb()
+# Patch version info to forcely pass Django client check
+setattr(pymysql, "version_info", (1, 4, 2, "final", 0))
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥
@@ -823,6 +828,10 @@ BK_CI_URL = settings.get("BK_CI_URL", "")
 BK_CODECC_URL = settings.get("BK_CODECC_URL", "")
 BK_TURBO_URL = settings.get("BK_TURBO_URL", "")
 BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
+BK_NODEMAN_URL = settings.get("BK_NODEMAN_URL", "")
+BK_BCS_URL = settings.get("BK_BCS_URL", "")
+BK_BSCP_URL = settings.get("BK_BSCP_URL", "")
+BK_AUDIT_URL = settings.get("BK_AUDIT_URL", "")
 # 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
 BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 

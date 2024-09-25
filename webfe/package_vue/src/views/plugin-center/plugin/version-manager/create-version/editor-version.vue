@@ -1,196 +1,194 @@
 <template lang="html">
-  <div class="container biz-create-success">
-    <paas-plugin-title :name="isOfficialVersion ? $t('新建版本') : $t('新建测试')" />
-    <paas-content-loader
-      :is-loading="isLoading"
-      placeholder="plugin-new-version-loading"
-      class="app-container middle"
-    >
-      <div class="new-version">
-        <div class="summary-box status">
-          <div class="wrapper default-box">
-            <template v-if="curVersion.current_release">
-              <div class="fl mr25">{{ $t('当前版本：') }} {{ curVersion.current_release.version || '--' }}</div>
-              <div class="fl mr25">
-                {{ $t('代码分支：') }} {{ curVersion.current_release.source_version_name || '--' }}
-              </div>
-              <div class="fl mr25">{{ $t('CommitID：') }} {{ curVersion.current_release.source_hash || '--' }}</div>
-              <div class="fl">
-                {{ $t('由') }} {{ curVersion.current_release.creator || '--' }} {{ $t(' 于 ') }}
-                {{ curVersion.current_release.created }} {{ $t('发布') }}
-              </div>
-            </template>
-            <div class="fl mr25" v-else>{{ $t('暂无已发布成功的版本') }}</div>
-          </div>
-        </div>
-
-        <!-- 表单 -->
-        <div class="form-box">
-          <bk-form
-            ref="versionForm"
-            class="create-version-form-cls"
-            :label-width="120"
-            :model="curVersion"
-            :rules="rules"
-          >
-            <bk-form-item
-              :label="$t('代码仓库')"
-              class="code-warehouse"
-            >
-              <bk-input
-                v-model="curVersion.repository"
-                :placeholder="$t('仓库地址')"
-                readonly
-              />
-              <div class="icon-wrapper">
-                <a
-                  :href="curVersion.repository"
-                  target="_blank"
-                  style="color: #979ba5"
-                >
-                  <i class="paasng-icon paasng-jump-link icon-cls-link mr5" />
-                </a>
-                <i
-                  v-copy="curVersion.repository"
-                  class="paasng-icon paasng-general-copy icon-cls-copy"
-                />
-              </div>
-            </bk-form-item>
-            <bk-form-item
-              :label="curVersionData.version_type === 'tag' ? $t('代码 Tag') : $t('代码分支')"
-              :required="true"
-              :property="'source_versions'"
-            >
-              <div class="source-versions-wrapper">
-                <bk-select
-                  v-model="curVersion.source_versions"
-                  :disabled="false"
-                  ext-cls="select-custom-cls"
-                  :placeholder="codeBranchPlaceholder"
-                  searchable
-                  :loading="isBranchLoading"
-                  @change="handleSourceVersionChange"
-                >
-                  <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
-                  <bk-option
-                    v-for="option in sourceVersions"
-                    :id="option.name"
-                    :key="option.name"
-                    :name="option.name"
-                    :disabled="isOptionDisabled(option)"
-                    v-bk-tooltips="{
-                      content: $t('当前分支正在测试中，请先终止测试才能新建版本'),
-                      disabled: isOfficialVersion || !isOptionDisabled(option)
-                    }"
-                  />
-                  <div
-                    v-if="curVersionData.version_type === 'tag'"
-                    slot="extension"
-                    style="cursor: pointer;text-align: center"
-                    @click="handleAddTag"
-                  >
-                    <i class="bk-icon icon-plus-circle mr5" />
-                    {{ $t('新建 Tag') }}
-                  </div>
-                </bk-select>
-                <span v-bk-tooltips="{ content: $t('暂无可对比的代码版本'), disabled: curVersion.current_release }">
-                  <bk-button
-                    class="code-differences"
-                    :theme="'default'"
-                    type="submit"
-                    :disabled="!curVersion.current_release"
-                    @click="handleShowCommits">
-                    <i class="paasng-icon paasng-diff-4"></i>
-                    {{ $t('代码差异') }}
-                  </bk-button>
-                </span>
-              </div>
-              <div
-                class="ribbon"
-                :style="{ 'right': -offset + 'px' }"
-              >
-                <bk-button :text="true" :title="$t('刷新')" class="mr15" @click="getNewVersionFormat('refresh')">
-                  {{ $t('刷新') }}
-                </bk-button>
-              </div>
-            </bk-form-item>
-            <bk-form-item
-              v-if="curVersion.version_no === 'automatic'"
-              :label="$t('版本类型')"
-              :required="true"
-              :property="'version'"
-              :error-display-type="'normal'"
-            >
-              <bk-radio-group
-                v-model="curVersion.version"
-                @change="changeVersionType"
-              >
-                <bk-radio
-                  v-bk-tooltips.top="$t('非兼容式升级时使用')"
-                  :value="curVersion.semver_choices.major"
-                >
-                  <span v-dashed="12">{{ $t('重大版本') }}</span>
-                </bk-radio>
-                <bk-radio
-                  v-bk-tooltips.top="$t('兼容式功能更新时使用')"
-                  :value="curVersion.semver_choices.minor"
-                >
-                  <span v-dashed="12">{{ $t('次版本') }}</span>
-                </bk-radio>
-                <bk-radio
-                  v-bk-tooltips.top="$t('兼容式问题修正时使用')"
-                  :value="curVersion.semver_choices.patch"
-                >
-                  <span v-dashed="12">{{ $t('修正版本') }}</span>
-                </bk-radio>
-              </bk-radio-group>
-            </bk-form-item>
-            <bk-form-item
-              :label="isOfficialVersion ? $t('版本号') : $t('测试号')"
-              :required="true"
-              :property="'version'"
-            >
-              <bk-input
-                v-model="curVersion.version"
-                :placeholder="isOfficialVersion ? $t('版本号') : $t('测试号')"
-                :disabled="curVersion.version_no !== 'self-fill'"
-              />
-            </bk-form-item>
-            <bk-form-item label="CommitID">
-              {{ commitId }}
-            </bk-form-item>
-            <bk-form-item
-              :label="$t('版本日志-label')"
-              :required="true"
-              :property="'comment'"
-            >
-              <bk-input
-                v-model="curVersion.comment"
-                :rows="5"
-                type="textarea"
-                :spellcheck="false"
-              />
-            </bk-form-item>
-            <bk-form-item label="">
-              <div
-                v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isReleaseDisabled }"
-                style="display: inline-block"
-              >
-                <!-- 测试无需限制 -->
-                <bk-button
-                  theme="primary"
-                  :loading="isSubmitLoading"
-                  :disabled="isReleaseDisabled"
-                  @click="submitVersionForm"
-                >
-                  {{ isOfficialVersion ? $t('提交并发布') : $t('提交并开始测试') }}
-                </bk-button>
-              </div>
-            </bk-form-item>
-          </bk-form>
+  <div class="biz-create-success">
+    <!-- 旧版ui -->
+    <div class="new-version">
+      <div class="summary-box status">
+        <div class="wrapper default-box">
+          <template v-if="curVersion.current_release">
+            <div class="fl mr25">{{ $t('当前版本：') }} {{ curVersion.current_release.version || '--' }}</div>
+            <div class="fl mr25">
+              {{ $t('代码分支：') }} {{ curVersion.current_release.source_version_name || '--' }}
+            </div>
+            <div class="fl mr25">{{ $t('CommitID：') }} {{ curVersion.current_release.source_hash || '--' }}</div>
+            <div class="fl">
+              {{ $t('由') }} {{ curVersion.current_release.creator || '--' }} {{ $t(' 于 ') }}
+              {{ curVersion.current_release.created }} {{ $t('发布') }}
+            </div>
+          </template>
+          <div class="fl mr25" v-else>{{ $t('暂无已发布成功的版本') }}</div>
         </div>
       </div>
-    </paas-content-loader>
+
+      <!-- 表单 -->
+      <div class="form-box">
+        <bk-form
+          ref="versionForm"
+          class="create-version-form-cls"
+          :label-width="120"
+          :model="curVersion"
+          :rules="rules"
+        >
+          <bk-form-item
+            :label="$t('代码仓库')"
+            class="code-warehouse"
+          >
+            <bk-input
+              v-model="curVersion.repository"
+              :placeholder="$t('仓库地址')"
+              readonly
+            />
+            <div class="icon-wrapper">
+              <a
+                :href="curVersion.repository"
+                target="_blank"
+                style="color: #979ba5"
+              >
+                <i class="paasng-icon paasng-jump-link icon-cls-link mr5" />
+              </a>
+              <i
+                v-copy="curVersion.repository"
+                class="paasng-icon paasng-general-copy icon-cls-copy"
+              />
+            </div>
+          </bk-form-item>
+          <bk-form-item
+            :label="curVersionData.version_type === 'tag' ? $t('代码 Tag') : $t('代码分支')"
+            :required="true"
+            :property="'source_versions'"
+            :error-display-type="'normal'"
+          >
+            <div class="source-versions-wrapper">
+              <bk-select
+                v-model="curVersion.source_versions"
+                :disabled="false"
+                ext-cls="select-custom-cls"
+                :placeholder="codeBranchPlaceholder"
+                searchable
+                :loading="loading"
+                @change="handleSourceVersionChange"
+              >
+                <!-- curVersionData.allow_duplicate_source_version为false，不能选择released_source_versions中的值 -->
+                <bk-option
+                  v-for="option in sourceVersions"
+                  :id="option.name"
+                  :key="option.name"
+                  :name="option.name"
+                  :disabled="isOptionDisabled(option)"
+                  v-bk-tooltips="{
+                    content: $t('当前分支正在测试中，请先终止测试才能新建版本'),
+                    disabled: isOfficialVersion || !isOptionDisabled(option)
+                  }"
+                />
+                <div
+                  v-if="curVersionData.version_type === 'tag'"
+                  slot="extension"
+                  style="cursor: pointer;text-align: center"
+                  @click="handleAddTag"
+                >
+                  <i class="bk-icon icon-plus-circle mr5" />
+                  {{ $t('新建 Tag') }}
+                </div>
+              </bk-select>
+              <span v-bk-tooltips="{ content: $t('暂无可对比的代码版本'), disabled: curVersion.current_release }">
+                <bk-button
+                  class="code-differences"
+                  :theme="'default'"
+                  type="submit"
+                  :disabled="!curVersion.current_release"
+                  @click="handleShowCommits">
+                  <i class="paasng-icon paasng-diff-4"></i>
+                  {{ $t('代码差异') }}
+                </bk-button>
+              </span>
+            </div>
+            <div
+              class="ribbon"
+              :style="{ 'right': -offset + 'px' }"
+            >
+              <bk-button :text="true" :title="$t('刷新')" class="mr15" @click="refresh">
+                {{ $t('刷新') }}
+              </bk-button>
+            </div>
+          </bk-form-item>
+          <bk-form-item
+            v-if="curVersion.version_no === 'automatic'"
+            :label="$t('版本类型')"
+            :required="true"
+            :property="'version'"
+            :error-display-type="'normal'"
+          >
+            <bk-radio-group
+              v-model="curVersion.version"
+              @change="changeVersionType"
+            >
+              <!-- 示例 -->
+              <bk-radio
+                v-bk-tooltips.top="$t('非兼容式升级时使用')"
+                :value="curVersion.semver_choices.major"
+              >
+                <span v-dashed="12">{{ $t('重大版本') }}</span>
+              </bk-radio>
+              <bk-radio
+                v-bk-tooltips.top="$t('兼容式功能更新时使用')"
+                :value="curVersion.semver_choices.minor"
+              >
+                <span v-dashed="12">{{ $t('次版本') }}</span>
+              </bk-radio>
+              <bk-radio
+                v-bk-tooltips.top="$t('兼容式问题修正时使用')"
+                :value="curVersion.semver_choices.patch"
+              >
+                <span v-dashed="12">{{ $t('修正版本') }}</span>
+              </bk-radio>
+            </bk-radio-group>
+          </bk-form-item>
+          <bk-form-item
+            :label="isOfficialVersion ? $t('版本号') : $t('测试号')"
+            :required="true"
+            :property="'version'"
+            :error-display-type="'normal'"
+          >
+            <bk-input
+              v-model="curVersion.version"
+              :placeholder="isOfficialVersion ? $t('版本号') : $t('测试号')"
+              :disabled="curVersion.version_no !== 'self-fill'"
+            />
+          </bk-form-item>
+          <bk-form-item label="CommitID">
+            {{ commitId }}
+          </bk-form-item>
+          <bk-form-item
+            :label="$t('版本日志-label')"
+            :required="true"
+            :property="'comment'"
+            :error-display-type="'normal'"
+          >
+            <bk-input
+              v-model="curVersion.comment"
+              :rows="5"
+              type="textarea"
+              :spellcheck="false"
+            />
+          </bk-form-item>
+          <bk-form-item label="">
+            <div
+              v-bk-tooltips.top="{ content: $t('已有发布任务进行中'), disabled: !isReleaseDisabled }"
+              style="display: inline-block"
+            >
+              <!-- 测试无需限制 -->
+              <bk-button
+                theme="primary"
+                :loading="isSubmitLoading"
+                :disabled="isReleaseDisabled"
+                @click="submitVersionForm"
+              >
+                {{ isOfficialVersion ? $t('提交并发布') : $t('提交并开始测试') }}
+              </bk-button>
+            </div>
+          </bk-form-item>
+        </bk-form>
+      </div>
+    </div>
 
     <!-- 详情 -->
     <bk-sideslider
@@ -255,20 +253,25 @@
   </div>
 </template>
 
-<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import paasPluginTitle from '@/components/pass-plugin-title';
+<script>
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import { formatTime } from '@/common/tools';
 import dayjs from 'dayjs';
 
 export default {
-  components: {
-    paasPluginTitle,
-  },
   mixins: [pluginBaseMixin],
+  props: {
+    scheme: {
+      type: Object,
+      default: () => {},
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
-      isLoading: false,
-      isBranchLoading: false,
       versionDetail: {
         isShow: false,
       },
@@ -362,70 +365,51 @@ export default {
         }
       }
     },
+    loading(newVal) {
+      if (!newVal) {
+        this.$nextTick(() => {
+          this.offset = document.querySelector('.ribbon')?.offsetWidth + 10 || 138;
+        });
+      }
+    },
   },
   created() {
     this.init();
   },
   methods: {
     init() {
-      this.getNewVersionFormat();
+      this.formatScheme(this.scheme);
       this.curVersion.repository = this.curPluginInfo.repository;
     },
 
-    // 获取新建版本表单格式
-    async getNewVersionFormat(type) {
-      type === 'refresh' ? this.isBranchLoading = true : this.isLoading = true;
-      const data = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        type: this.versionType,
-      };
-      try {
-        const res = await this.$store.dispatch('plugin/getNewVersionFormat', data);
-        this.sourceVersions = res.source_versions;
-        // 刷新操作，只重新获取代码分支
-        if (type === 'refresh') {
-          return;
-        }
-        this.curVersionData = res;
-        this.curVersion.doc = res.doc;
-        this.curVersion.current_release = res.current_release;
-        // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
-        this.curVersion.semver_choices = res.semver_choices;
-        // source_versions 会存在 [] 情况
-        if (res.revision_policy === null) {
-          this.curVersion.source_versions = res.source_versions[0]?.name || '';
-          this.curVersion.comment = res.source_versions[0]?.message || '';
-        } else {
-          this.curVersion.source_versions = '';
-        }
-        if (res.version_no === 'revision') {
-          // 与代码版本一致(revision)
-          this.curVersion.version = res.source_versions[0]?.name || '';
-        } else if (res.version_no === 'commit-hash') {
-          // 提交哈希一致(commit-hash)
-          this.curVersion.version = res.source_versions[0]?.revision || '';
-        } else if (res.version_no === 'automatic') {
-          // 自动生成(automatic), 版本类型用户自行选择
-          this.curVersion.version = '';
-        } else if (res.version_no === 'self-fill') {
-          // 用户自助填写(self-fill)
-          this.curVersion.version = '';
-        }
-        this.curVersion.version_no = res.version_no;
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.isLoading = false;
-        this.isBranchLoading = false;
-
-        this.$nextTick(() => {
-          this.offset = document.querySelector('.ribbon')?.offsetWidth + 10 || 138;
-        });
+    // 处理 scheme
+    formatScheme(res) {
+      this.curVersionData = res;
+      this.curVersion.doc = res.doc;
+      this.sourceVersions = res.source_versions;
+      this.curVersion.current_release = res.current_release;
+      // version_no 版本号生成规则, 自动生成(automatic),与代码版本一致(revision),与提交哈希一致(commit-hash),用户自助填写(self-fill)
+      this.curVersion.semver_choices = res.semver_choices;
+      const firstSourceVersion = res.source_versions[0] || {};
+      // source_versions 会存在 [] 情况
+      if (res.revision_policy === null) {
+        this.curVersion.source_versions = firstSourceVersion?.name || '';
+        this.curVersion.comment = firstSourceVersion?.message || '';
+      } else {
+        this.curVersion.source_versions = '';
       }
+      // 版本号映射
+      const versionMapping = {
+        revision: firstSourceVersion.name || '', // 与代码版本一致(revision)
+        'commit-hash': firstSourceVersion.revision || '', // 提交哈希一致(commit-hash)
+        automatic: '', // 自动生成(automatic), 版本类型用户自行选择
+        'self-fill': '', // 用户自助填写(self-fill)
+      };
+      this.curVersion.version = versionMapping[res.version_no] || '';
+      this.curVersion.version_no = res.version_no;
+    },
+    refresh() {
+      this.$emit('refresh');
     },
 
     submitVersionForm() {
@@ -436,24 +420,13 @@ export default {
       });
     },
 
-    bkInfoRander() {
-      const h = this.$createElement;
-      const typeLabel = this.curVersionData.version_type === 'tag' ? this.$t('代码 Tag') : this.$t('代码分支');
-      return h('div', {
-        class: 'version-info-wrapper',
-      }, [
-        h('div', {}, `${typeLabel}：${this.curVersion.source_versions || '--'}`),
-        h('div', {}, `${this.$t('代码更新时间：')}${this.formatTime(this.curVersionData.source_versions[0]?.last_update) || '--'}`),
-        h('div', {}, `Commit Message: ${this.curVersionData.source_versions[0]?.message || '--'}`),
-      ]);
-    },
-
     // 新建版本并发布
     async createVersion() {
       this.isSubmitLoading = true;
       // 当前选中分支的数据
       const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
 
+      // 数据
       const data = {
         source_version_type: versionData[0].type,
         source_version_name: versionData[0].name,
@@ -476,6 +449,7 @@ export default {
         pluginId: this.pluginId,
         data,
       };
+
       try {
         const res = await this.$store.dispatch('plugin/createVersion', params);
         this.$bkMessage({
@@ -578,7 +552,6 @@ export default {
 
 <style lang="scss" scoped>
 .new-version {
-  margin-top: 24px;
   padding: 24px;
   background: #fff;
   box-shadow: 0 2px 4px 0 #1919290d;

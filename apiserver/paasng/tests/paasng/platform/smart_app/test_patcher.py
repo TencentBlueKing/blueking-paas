@@ -23,7 +23,6 @@ import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 
 from paasng.platform.declarative import constants
-from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.patcher import SourceCodePatcher
@@ -67,7 +66,7 @@ class TestSourcePackagePatcher:
         patcher = SourceCodePatcher(
             module=bk_module_full,
             source_dir=LocalFSPath(tmp_path),
-            desc_handler=get_desc_handler(stat.meta_info),
+            desc_data=stat.meta_info,
             relative_path=stat.relative_path,
         )
         with mock.patch.object(patcher, "get_user_source_dir", return_value=user_source_dir):

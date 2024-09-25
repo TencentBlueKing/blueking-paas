@@ -39,6 +39,7 @@ from paasng.platform.bkapp_model.manifest import (
     EnvVarsManifestConstructor,
     HooksManifestConstructor,
     MountsManifestConstructor,
+    ObservabilityManifestConstructor,
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
@@ -48,6 +49,7 @@ from paasng.platform.bkapp_model.manifest import (
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ObservabilityConfig,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -440,6 +442,27 @@ class TestDomainResolutionManifestConstructor:
                 )
             ],
         )
+
+
+class TestObservabilityManifestConstructor:
+    def test_normal(self, bk_app, bk_module, blank_resource):
+        G(
+            ObservabilityConfig,
+            module=bk_module,
+            monitoring={
+                "metrics": [{"process": "web", "service_name": "metric", "path": "/metrics", "params": {"foo": "bar"}}]
+            },
+        )
+        ObservabilityManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.observability == crd.Observability(
+            monitoring=crd.Monitoring(
+                metrics=[crd.Metric(process="web", serviceName="metric", path="/metrics", params={"foo": "bar"})]
+            )
+        )
+
+    def test_with_no_observability(self, bk_app, bk_module, blank_resource):
+        ObservabilityManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.observability is None
 
 
 def test_get_manifest(bk_module):

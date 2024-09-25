@@ -73,7 +73,7 @@ class MarketSLZ(serializers.Serializer):
             attrs["tag_id"] = tag.pk
 
         # 未指定有效英文简介时, 使用中文简介
-        if not attrs["introduction_en"]:
+        if not attrs.get("introduction_en"):
             attrs["introduction_en"] = attrs["introduction_zh_cn"]
 
         return MarketDesc(**attrs)

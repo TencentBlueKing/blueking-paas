@@ -97,13 +97,7 @@
                     </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                    <a
-                      target="_blank"
-                      :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
-                    >
-                      {{ $t('帮助：如何构建镜像') }}
-                    </a>
+                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
                   </p>
                 </bk-form-item>
 
@@ -196,7 +190,7 @@
                       :disabled="isCurProcessMainEntry"
                       @change="toggleServiceProcess"
                     ></bk-switcher>
-                    <span class="tips">
+                    <span class="item-tips">
                       <i class="paasng-icon paasng-info-line" />
                       {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
                       <a
@@ -238,11 +232,23 @@
                     />
                   </bk-button>
                 </bk-form-item>
+                <!-- Metric 采集 - 编辑态 -->
+                <metric
+                  v-if="ifopen"
+                  :key="btnIndex"
+                  ref="metric"
+                  :is-edit="isPageEdit"
+                  :data="formData"
+                  :dashboard-url="dashboardUrl"
+                  @updated-data="handleUpdateMetric"
+                  @toggle-metric="toggleMetric"
+                  @enable-service="toggleServiceProcess(true)"
+                />
                 <bk-form-item
                   v-if="ifopen"
-                  :label="$t('配置环境')"
-                  :label-width="labelWidth"
+                  :label="$t('资源配置')"
                   ext-cls="env-form-item-cls"
+                  :label-width="labelWidth"
                 >
                   <div class="env-name">{{ $t('预发布环境') }}</div>
                   <div class="env-container">
@@ -598,7 +604,7 @@
             class="form-detail mt20"
             v-else
           >
-            <bk-form :model="formData" :label-width="viewLabelWidth">
+            <bk-form :model="formData" :label-width="labelWidth">
               <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
               <bk-form-item
                 v-if="!allowMultipleImage"
@@ -647,10 +653,10 @@
               <!-- 进程服务查看态 -->
               <bk-form-item :label="`${$t('进程服务')}：`">
                 <div class="view-process-service">
-                  <span :class="['servie-tag', { enable: formData.services?.length }]">
+                  <span :class="['tag', { enable: formData.services?.length }]">
                     {{ formData.services?.length ? $t('已启用') : $t('未启用') }}
                   </span>
-                  <span class="tips">
+                  <span class="item-tips">
                     <i class="paasng-icon paasng-info-line" />
                     {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
                     <a
@@ -683,11 +689,25 @@
                   />
                 </bk-button>
               </bk-form-item>
+              <!-- Metric 采集 - 查看 -->
+              <bk-form-item :label="`Metric ${$t('采集')}：`" v-if="ifopen">
+                <span :class="['tag', { enable: formData.monitoring }]">
+                  {{ formData.monitoring ? $t('已启用') : $t('未启用') }}
+                </span>
+                <span class="item-tips">
+                  <i class="paasng-icon paasng-info-line" />
+                  <span v-html="metricTipsHtml"></span>
+                </span>
+                <metric-view-mode
+                  v-if="formData.monitoring"
+                  :data="formData.monitoring ?? {}"
+                />
+              </bk-form-item>
               <section
                 :class="['mt20', 'extra-config-cls', { 'view-status': !isPageEdit }]"
                 v-if="ifopen"
               >
-                <bk-form-item :label="`${$t('配置环境')}：`">
+                <bk-form-item :label="`${$t('资源配置')}：`">
                   <div class="flex-row env-detail">
                     <div
                       v-for="item in envsData"
@@ -730,7 +750,7 @@
                           </bk-form-item>
                         </section>
                         <section v-else>
-                          <bk-form-item :label="$t('副本数量：')">
+                          <bk-form-item :label="`${$t('副本数量')}：`">
                             <span class="form-text">
                               {{ formData.env_overlay[item.value].target_replicas || '--' }}
                             </span>
@@ -847,6 +867,8 @@ import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import probe from './comps/probe/index.vue';
+import metric from './comps/metric/index.vue';
+import metricViewMode from './comps/metric/view-mode.vue';
 import processService from './comps/process-config/process-service.vue';
 import portMapTable from './comps/process-config/port-map-table.vue';
 import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
@@ -857,6 +879,8 @@ export default {
     quotaPopver,
     deployHook,
     probe,
+    metric,
+    metricViewMode,
     processService,
     portMapTable,
     entryChangeDialog,
@@ -912,6 +936,7 @@ export default {
       processData: [],
       processDataBackUp: [],
       isLoading: false,
+      dashboardUrl: '',
       rules: {
         image: [
           {
@@ -1108,9 +1133,6 @@ export default {
     labelWidth() {
       return this.localLanguage === 'en' ? 190 : 150;
     },
-    viewLabelWidth() {
-      return this.localLanguage === 'en' ? 190 : 150;
-    },
     isShowPage() {
       return !this.isCustomImage && !this.isCreate;
     },
@@ -1119,6 +1141,11 @@ export default {
     },
     curProcessMainEntryData() {
       return this.panels.find(v => this.isMainEntry(v.services));
+    },
+    // metric tips
+    metricTipsHtml() {
+      const monitoringDashboard = `<a href="${this.dashboardUrl}" target="_blank">${this.$t('蓝鲸监控仪表盘')}</a>`;
+      return this.$t('配置 Metric 采集后，您可以在 {s} 功能中进行配置并查看您的仪表盘。', { s: monitoringDashboard });
     },
   },
   watch: {
@@ -1188,6 +1215,7 @@ export default {
     // 获取资源配额数据
     await this.getQuotaPlans();
     this.getEntryList();
+    this.getAppDashboardInfo();
   },
   methods: {
     async init() {
@@ -1340,7 +1368,7 @@ export default {
         await this.$refs?.formDeploy?.validate();
         return true;
       } catch (error) {
-        console.log('error', error);
+        console.error('error', error);
         return false;
       }
     },
@@ -1377,7 +1405,7 @@ export default {
         this.processDialog.visiable = false;
         this.panels = cloneDeep(this.processData);
       } catch (error) {
-        console.log('error', error);
+        console.error('error', error);
       } finally {
         this.processDialog.loading = false;
       }
@@ -1481,6 +1509,14 @@ export default {
       }
     },
 
+    // 滚动至报错位置
+    scrollToErrorPosition() {
+      const element = this.$refs.metric.$el;
+      if (element) {
+        element?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      }
+    },
+
     // 处理校验
     async handleValidate() {
       try {
@@ -1488,11 +1524,31 @@ export default {
         await this.$refs?.formProdEnv?.validate();
         await this.$refs?.formDeploy?.validate();
         await this.$refs?.formProbe?.probeValidate();
+        await this.$refs?.metric?.metricValidate();
         return true;
       } catch (e) {
         console.error(e);
+        if (['service_name', 'path'].includes(e.field)) {
+          // 当前metric未校验通过，将页面滚动到错误信息位置
+          this.scrollToErrorPosition();
+        }
         return false;
       }
+    },
+
+    // Metric 参数转换
+    transformMonitoring(data) {
+      data.forEach((item) => {
+        if (item.monitoring && Array.isArray(item.monitoring.metric?.params)) {
+          const paramsArray = item.monitoring.metric.params;
+          const paramsObject = {};
+          paramsArray.forEach((param) => {
+            paramsObject[param.key] = param.value;
+          });
+          item.monitoring.metric.params = paramsObject;
+        }
+      });
+      return data;
     },
 
     // 保存
@@ -1504,6 +1560,8 @@ export default {
         return [...this.processData];
       }
       const saveEntryData = this.getEntryNames();
+      // Metric参数处理
+      this.processData = this.transformMonitoring(this.processData);
       // 判断是否变更访问地址
       if (!this.isAccessEntryPointChanged(this.initEntryData, saveEntryData)) {
         // 变更访问入口
@@ -1658,6 +1716,31 @@ export default {
         this.moduleAccessAddress = '';
       }
     },
+    // 启停metric
+    toggleMetric(data) {
+      if (data === null) {
+        this.$set(this.formData, 'monitoring', null);
+        return;
+      }
+      this.formData.monitoring = {};
+      this.$set(this.formData.monitoring, 'metric', data);
+    },
+    // 同步metric数据
+    handleUpdateMetric(config) {
+      const index = this.processData.findIndex(v => v.name === config.name);
+      this.$set(this.processData[index].monitoring.metric, config.key, config.value);
+    },
+    // 获取仪表盘链接
+    async getAppDashboardInfo() {
+      try {
+        const res = await this.$store.dispatch('baseInfo/getAppDashboardInfo', {
+          appCode: this.appCode,
+        });
+        this.dashboardUrl = res.dashboard_url || '';
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
@@ -1669,6 +1752,19 @@ export default {
   }
   .service-explain {
     padding: 0;
+  }
+  .item-tips {
+    color: #63656E;
+    font-size: 12px;
+    margin-left: 16px;
+    i {
+      font-size: 14px;
+      color: #979BA5;
+      transform: translateY(0px);
+    }
+    span {
+      margin-left: 3px;
+    }
   }
 }
 .ml24 {
@@ -1777,12 +1873,6 @@ export default {
     .bk-switcher {
       flex-shrink: 0;
     }
-    .tips i {
-      font-size: 14px;
-      margin-left: 24px;
-      margin-right: 1px;
-      color: #979BA5;
-    }
   }
 }
 .btn-container {
@@ -1811,30 +1901,18 @@ export default {
   .process-tag-cls .bk-tag:first-child {
     margin-left: 0px;
   }
-  .view-process-service {
-    .servie-tag {
-      display: inline-block;
-      height: 22px;
-      line-height: 22px;
-      padding: 0 8px;
-      font-size: 12px;
-      color: #63656E;
-      background: #F0F1F5;
-      border-radius: 2px;
-      &.enable {
-        color: #14A568;
-        background: #E4FAF0;
-      }
-    }
-    .tips {
-      color: #63656E;
-      font-size: 12px;
-      margin-left: 16px;
-      i {
-        font-size: 14px;
-        margin-right: 1px;
-        color: #979BA5;
-      }
+  .tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: #63656E;
+    background: #F0F1F5;
+    border-radius: 2px;
+    &.enable {
+      color: #14A568;
+      background: #E4FAF0;
     }
   }
 }
@@ -1866,6 +1944,11 @@ export default {
 .view-status {
   .env-panel {
     width: 420px;
+    /deep/ .env-item {
+      .bk-form-item .bk-label  {
+        padding-right: 0;
+      }
+    }
   }
 }
 .env-form-item-cls {

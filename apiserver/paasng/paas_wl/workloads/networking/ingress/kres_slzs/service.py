@@ -41,8 +41,11 @@ class ProcessServiceSerializer(AppEntitySerializer["ProcessService"]):
         return {
             "name": service.name,
             # Note: 与蓝鲸监控协商新增的 label
+            # bk_app_code 用于过滤应用
             "monitoring.bk.tencent.com/bk_app_code": metadata.paas_app_code,
+            # module_name 用于平台过滤模块
             "monitoring.bk.tencent.com/module_name": metadata.module_name,
+            # environment 用于平台过滤运行环境
             "monitoring.bk.tencent.com/environment": metadata.environment,
             PROCESS_NAME_KEY: service.process_type,
         }

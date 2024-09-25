@@ -18,6 +18,7 @@
 import base64
 import json
 from textwrap import dedent
+from typing import Dict, Tuple
 from unittest import mock
 
 import cattr
@@ -26,15 +27,11 @@ import yaml
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import (
-    AppDescriptionHandler,
-    CNativeAppDescriptionHandler,
-    SMartDescriptionHandler,
-    get_desc_handler,
-)
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.models.module import Module
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -95,21 +92,22 @@ def yaml_v3_normal() -> str:
     )
 
 
-class Test__get_desc_handler:
+class Test__get_deploy_desc_handler:
     """Test cases for `get_desc_handler()` function"""
 
     @pytest.mark.parametrize(
-        ("yaml_fixture_name", "expected_type"),
+        ("yaml_fixture_name", "expected_name"),
         [
-            ("yaml_v1_normal", SMartDescriptionHandler),
-            ("yaml_v2_normal", AppDescriptionHandler),
-            ("yaml_v3_normal", CNativeAppDescriptionHandler),
+            ("yaml_v1_normal", "deploy_desc_getter_v1"),
+            ("yaml_v2_normal", "deploy_desc_getter_v2"),
+            ("yaml_v3_normal", "deploy_desc_getter_v3"),
         ],
     )
-    def test_v1(self, yaml_fixture_name, expected_type, request):
+    def test_desc_getter_name(self, yaml_fixture_name, expected_name, request):
         _yaml_content = request.getfixturevalue(yaml_fixture_name)
-        handler = get_desc_handler(yaml.safe_load(_yaml_content))
-        assert isinstance(handler, expected_type)
+        handler = get_deploy_desc_handler(yaml.safe_load(_yaml_content))
+        assert hasattr(handler, "desc_getter")
+        assert handler.desc_getter.__name__ == expected_name
 
 
 class TestAppDescriptionHandler:
@@ -125,9 +123,9 @@ class TestAppDescriptionHandler:
         """Handle a normal YAML content."""
 
         with mock.patch(
-            "paasng.platform.declarative.handlers.DeploymentDeclarativeController.update_bkmonitor"
+            "paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"
         ) as update_bkmonitor:
-            get_desc_handler(yaml.safe_load(yaml_v2_normal)).handle_deployment(bk_deployment)
+            get_deploy_desc_handler(yaml.safe_load(yaml_v2_normal)).handle(bk_deployment)
 
             assert get_preset_env_variables(bk_deployment.app_environment) == {"FOO": "1"}
             assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == {
@@ -156,6 +154,56 @@ class TestAppDescriptionHandler:
             assert update_bkmonitor.called
             assert cattr.unstructure(update_bkmonitor.call_args[0][0]) == {"port": 80, "target_port": 80}
 
+    def test_desc_and_procfile_same(self, bk_module, bk_deployment):
+        content = dedent(
+            """
+            spec_version: 2
+            module:
+                language: python
+                processes:
+                    web:
+                      command: python manage.py runserver
+                      replicas: 3
+            """
+        )
+        handler = get_deploy_desc_handler(yaml.safe_load(content), procfile_data={"web": "python manage.py runserver"})
+        handler.handle(bk_deployment)
+
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("python manage.py runserver", 3)}
+        assert len(bk_deployment.get_processes()) == 1
+
+    def test_desc_and_procfile_different(self, bk_module, bk_deployment):
+        content = dedent(
+            """
+            spec_version: 2
+            module:
+                language: python
+                processes:
+                    web:
+                      command: python manage.py runserver
+                      replicas: 3
+            """
+        )
+        handler = get_deploy_desc_handler(
+            yaml.safe_load(content), procfile_data={"web": "gunicorn app", "worker": "celery"}
+        )
+        handler.handle(bk_deployment)
+
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
+
+    def test_procfile_only(self, bk_module, bk_deployment):
+        handler = get_deploy_desc_handler(None, procfile_data={"web": "gunicorn app", "worker": "celery"})
+        handler.handle(bk_deployment)
+
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
+
+    def test_invalid_desc_and_valid_procfile(self, bk_module, bk_deployment):
+        handler = get_deploy_desc_handler(
+            {"not": "valid yaml"}, procfile_data={"web": "gunicorn app", "worker": "celery"}
+        )
+        with pytest.raises(DescriptionValidationError):
+            _ = handler.handle(bk_deployment)
+
     def test_with_modules_found(self, bk_deployment, bk_module):
         _yaml_content = dedent(
             f"""\
@@ -165,7 +213,7 @@ class TestAppDescriptionHandler:
                     language: python
         """
         )
-        get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+        get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_modules_not_found(self, bk_deployment):
         _yaml_content = dedent(
@@ -177,7 +225,7 @@ class TestAppDescriptionHandler:
         """
         )
         with pytest.raises(DescriptionValidationError, match="未找到.*当前已配置"):
-            get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+            get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_modules_not_found_fallback_to_module(self, bk_deployment):
         _yaml_content = dedent(
@@ -190,7 +238,7 @@ class TestAppDescriptionHandler:
                 language: python
         """
         )
-        get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+        get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_module(self, bk_deployment):
         _yaml_content = dedent(
@@ -200,7 +248,7 @@ class TestAppDescriptionHandler:
                 language: python
         """
         )
-        get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+        get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
 
     def test_with_module_and_modules_missing(self, bk_deployment):
         _yaml_content = dedent(
@@ -210,4 +258,19 @@ class TestAppDescriptionHandler:
         """
         )
         with pytest.raises(DescriptionValidationError, match="配置内容不能为空"):
-            get_desc_handler(yaml.safe_load(_yaml_content)).handle_deployment(bk_deployment)
+            get_deploy_desc_handler(yaml.safe_load(_yaml_content)).handle(bk_deployment)
+
+
+def query_proc_dict(module: Module, deployment: Deployment) -> Dict[str, Tuple[str, int]]:
+    """A helper function that queries process specs for comparison. It get the data form
+    both the module and deployment objects.
+    """
+    proc_dict = {}
+    for p in ModuleProcessSpec.objects.filter(module=module):
+        proc_dict[p.name] = (p.proc_command, p.target_replicas)
+
+    # Get the data from the deployment object and assert the two data are the same.
+    proc_dict_d = {p.name: (p.command, p.replicas or 1) for p in deployment.get_processes()}
+    if proc_dict != proc_dict_d:
+        raise ValueError("The processes in module and deployment are not the same.")
+    return proc_dict

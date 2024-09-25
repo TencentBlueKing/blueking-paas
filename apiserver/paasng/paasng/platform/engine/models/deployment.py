@@ -292,6 +292,7 @@ class Deployment(OperationVersionBase):
         return hooks
 
     def get_processes(self) -> List[ProcessTmpl]:
+        """获取本次部署所使用的进程配置列表。"""
         if self.processes:
             return list(self.processes.values())
         # 兼容旧字段 procfile

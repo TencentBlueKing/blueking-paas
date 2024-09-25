@@ -33,6 +33,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -116,6 +117,8 @@ class PluginInstance(UuidAuditedModel):
             overview_page.topUrl = overview_page.topUrl.format(plugin_id=self.id)
         if overview_page.bottomUrl:
             overview_page.bottomUrl = overview_page.bottomUrl.format(plugin_id=self.id)
+        if overview_page.ignoredUrl:
+            overview_page.ignoredUrl = overview_page.ignoredUrl.format(plugin_id=self.id)
         return overview_page
 
     @property
@@ -250,6 +253,12 @@ class PluginRelease(AuditedModel):
     status = models.CharField(default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
+    is_rolled_back = models.BooleanField(default=False, help_text="是否已回滚")
+    # 灰度状态需要根据 itsm 审批单据的状态来确定，为避免每次查询灰度状态的时候都调用 itsm API，记录到 DB 中，在 itsm 回调时更新灰度状态
+    # 同时，也方便前端根据”灰度状态“过滤发布版本
+    gray_status = models.CharField(
+        verbose_name="灰度发布状态", max_length=32, default=constants.GrayReleaseStatus.IN_GRAY
+    )
 
     creator = BkUserField()
 
@@ -291,6 +300,24 @@ class PluginRelease(AuditedModel):
         self.stages_shortcut = stages_shortcut[::-1]
         self.status = constants.PluginReleaseStatus.PENDING
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
+
+    @property
+    def latest_release_strategy(self) -> Optional["PluginReleaseStrategy"]:
+        if self.release_strategies.exists():
+            return self.release_strategies.latest("created")
+        return None
+
+    @property
+    def is_latest(self) -> bool:
+        """判断版本是否为当前最新发布成功的版本"""
+        latest_release = (
+            PluginRelease.objects.filter(
+                plugin=self.plugin, type=self.type, status=constants.PluginReleaseStatus.SUCCESSFUL
+            )
+            .order_by("-created")
+            .first()
+        )
+        return self == latest_release
 
 
 class PluginReleaseStage(AuditedModel):
@@ -350,10 +377,10 @@ class PluginReleaseStrategy(AuditedModel):
     """插件版本的发布策略"""
 
     release = models.ForeignKey(
-        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
+        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategies"
     )
     strategy = models.CharField(
-        verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
+        verbose_name="发布策略", max_length=32, choices=constants.ReleaseStrategy.get_choices()
     )
     bkci_project = models.JSONField(
         verbose_name="蓝盾项目ID", blank=True, null=True, help_text="格式：['1111', '222222']"
@@ -374,6 +401,30 @@ class PluginReleaseStrategy(AuditedModel):
     #     }
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+
+    def get_itsm_service_name(self):
+        """根据发布策略的设置获取对应的 ITSM 审批流程"""
+        if self.strategy == constants.ReleaseStrategy.FULL:
+            return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
+
+        if self.organization:
+            return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
+        return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
+
+    @cached_property
+    def itsm_detail_fields(self) -> Optional[dict]:
+        if not self.itsm_detail:
+            return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用版本的创建者
+        release_creator = self.release.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", release_creator)
+        return release_creator
 
 
 class ApprovalService(UuidAuditedModel):
@@ -397,14 +448,16 @@ class PluginConfig(AuditedModel):
 class PluginVisibleRange(AuditedModel):
     """插件可见范围"""
 
-    plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    plugin = models.OneToOneField(
+        PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range"
+    )
     bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
     @cached_property
-    def itsm_detail_fields(self):
+    def itsm_detail_fields(self) -> Optional[dict]:
         if not self.itsm_detail:
             return None
         return {item["key"]: item["value"] for item in self.itsm_detail.fields}
@@ -420,6 +473,26 @@ class PluginVisibleRange(AuditedModel):
         if self.itsm_detail_fields:
             return self.itsm_detail_fields.get("origin_organization")
         return None
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用插件的创建者
+        plugin_creator = self.plugin.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", plugin_creator)
+        return plugin_creator
+
+    @classmethod
+    def get_or_initialize_with_default(cls, plugin: "PluginInstance") -> "PluginVisibleRange":
+        try:
+            return cls.objects.get(plugin=plugin)
+        except PluginVisibleRange.DoesNotExist:
+            if hasattr(plugin.pd, "visible_range_definition"):
+                defaults = {"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)}
+            else:
+                defaults = {}
+        visible_range_obj, _created = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
+        return visible_range_obj
 
 
 class OperationRecord(AuditedModel):

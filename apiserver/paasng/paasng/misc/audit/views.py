@@ -14,8 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,6 +26,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.serializers import (
+    AppOperationRecordFilterSlZ,
     AppOperationRecordSLZ,
     QueryRecentOperationsSLZ,
     RecordForRecentAppSLZ,
@@ -37,7 +39,6 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
     """
     应用的操作审计记录
     list: 单应用的操作记录
-    - [测试地址](/api/bkapps/applications/awesome-app/audit/records/)
     - 接口返回的顺序为按操作时间逆序
     - 返回记录条数通过limit设置，默认值5
     """
@@ -46,6 +47,36 @@ class ApplicationAuditRecordViewSet(mixins.ListModelMixin, viewsets.GenericViewS
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
     queryset = AppOperationRecord.objects.all()
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        slz = AppOperationRecordFilterSlZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        if target := query_params.get("target"):
+            queryset = queryset.filter(target=target)
+        if operation := query_params.get("operation"):
+            queryset = queryset.filter(operation=operation)
+        if access_type := query_params.get("access_type"):
+            queryset = queryset.filter(access_type=access_type)
+        # result_code 的可选值包含 0，需要进行显式检查
+        if "result_code" in query_params:
+            result_code = query_params["result_code"]
+            queryset = queryset.filter(result_code=result_code)
+        if module_name := query_params.get("module_name"):
+            queryset = queryset.filter(module_name=module_name)
+        if environment := query_params.get("environment"):
+            queryset = queryset.filter(environment=environment)
+        if start_time := query_params.get("start_time"):
+            queryset = queryset.filter(created__gte=start_time)
+        if end_time := query_params.get("end_time"):
+            queryset = queryset.filter(created__lte=end_time)
+        if operator := query_params.get("operator"):
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator)
+            queryset = queryset.filter(user=operator)
+        return queryset
+
+    @swagger_auto_schema(tags=["操作记录"], query_serializer=AppOperationRecordFilterSlZ)
     def list(self, request, *args, **kwargs):
         application = self.get_application()
         self.queryset = self.queryset.filter(app_code=application.code).order_by("-created")

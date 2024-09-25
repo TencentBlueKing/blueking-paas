@@ -273,9 +273,6 @@ export const PLATFORM_CONFIG = {
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
 
-        // 帮助：如何构建镜像
-        BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
-
         // 代码库 OAuth 授权配置指引
         OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
@@ -739,6 +736,17 @@ export const PAAS_STATIC_CONFIG = {
                     "name": "docuManagement"
                 },
                 "children": []
+            },
+            {
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "operationRecord"
+                },
+                "children": []
             }
         ],
         "pluginList": [
@@ -747,7 +755,8 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("概览"),
                 "matchRouters": [
                     "appSummaryEmpty",
-                    "pluginSummary"
+                    "pluginSummary",
+                    "pluginFalsePositiveList"
                 ],
                 "iconfontName": "overview",
                 "supportModule": true,
@@ -831,6 +840,12 @@ export const PAAS_STATIC_CONFIG = {
                             "marketInfoEdit",
                             "moreInfoEdit"
                         ]
+                    },
+                    {
+                        "name": staticI18n.$t("可见范围"),
+                        "destRoute": {
+                          "name": "pluginVisibleRange"
+                        }
                     },
                     {
                         "name": staticI18n.$t("成员管理"),
@@ -995,6 +1010,17 @@ export const PAAS_STATIC_CONFIG = {
                 "supportModule": false,
                 "destRoute": {
                     "name": "docuManagement"
+                },
+                "children": []
+            },
+            {
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
+                "supportModule": false,
+                "destRoute": {
+                  "name": "operationRecord"
                 },
                 "children": []
             }

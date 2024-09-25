@@ -30,7 +30,7 @@
             </bk-select>
             <bk-input
               v-model="keyword"
-              :placeholder="$t('用户或组织')"
+              :placeholder="$t(placeholder)"
               maxlength="64"
               :clearable="true"
               style="position: relative; left: -1px;"
@@ -78,21 +78,43 @@
         <div class="right">
           <div class="header">
             <div class="has-selected"> {{ $t('已选择') }} <template v-if="isShowSelectedText">
-              <span class="organization-count">{{ hasSelectedDepartments.length }}</span> {{ $t('个组织') }}，
-              <span class="user-count">{{ hasSelectedUsers.length }}</span> {{ $t('个用户') }}
+              <span class="organization-count">
+                {{ hasSelectedDepartments.length }}
+              </span> {{ $t('个组织') }}<span v-if="isUsingDefaultRule">，</span>
+              <template v-if="isUsingDefaultRule">
+                <span class="user-count">{{ hasSelectedUsers.length }}</span> {{ $t('个用户') }}
+              </template>
             </template>
               <template v-else>
                 <span class="user-count">0</span>
               </template>
             </div>
-            <bk-button theme="primary" text :disabled="!isShowSelectedText" @click="handleDeleteAll"> {{ $t('清空') }} </bk-button>
+            <!-- 是否允许清空 -->
+            <bk-button
+              theme="primary"
+              text
+              :disabled="clearable || !isShowSelectedText"
+              @click="handleDeleteAll">
+              {{ $t('清空') }}
+            </bk-button>
           </div>
           <div class="content">
             <div class="organization-content" v-if="isDepartSelectedEmpty">
               <div class="organization-item" v-for="item in hasSelectedDepartments" :key="item.id">
                 <img class="folder-icon" src="./images/file-close.svg" alt="">
                 <span class="organization-name" :title="item.name">{{ item.name }}</span>
-                <img class="delete-depart-icon" src="./images/delete-fill.svg" alt="" @click="handleDelete(item, 'organization')">
+                <!-- 禁用删除icon -->
+                <i
+                  v-if="organizeDisableIconFn(item.id)"
+                  class="paasng-icon paasng-plus-circle-shape disabled-del"
+                  v-bk-tooltips="$t('扩大灰度范围不允许删除已经灰度过的组织')"
+                />
+                <img
+                  v-else
+                  class="delete-depart-icon"
+                  src="./images/delete-fill.svg"
+                  @click="handleDelete(item, 'organization')"
+                />
               </div>
             </div>
             <div class="user-content" v-if="isUserSelectedEmpty">
@@ -181,6 +203,29 @@ export default {
       type: Boolean,
       default: false,
     },
+    placeholder: {
+      type: String,
+      default: '用户或组织',
+    },
+    range: {
+      type: String,
+      default: 'all',
+    },
+    departmentsType: {
+      type: String,
+      default: 'all',
+    },
+    departmentsFn: {
+      type: Function,
+    },
+    clearable: {
+      type: Boolean,
+      default: false,
+    },
+    organizeDisableIconFn: {
+      type: Function,
+      default: () => false,
+    },
   },
   data() {
     return {
@@ -212,6 +257,8 @@ export default {
       ],
       searchConditionValue: 'fuzzy',
       isConfirmLoading: false,
+      userApi: '',
+      departmentApi: '',
     };
   },
   computed: {
@@ -250,6 +297,12 @@ export default {
         height: '383px',
       };
     },
+    isUsingDefaultRule() {
+      return this.range === 'all';
+    },
+    isForAllDepartments() {
+      return this.departmentsType === 'all';
+    },
   },
   watch: {
     show: {
@@ -283,9 +336,8 @@ export default {
     },
     apiHost: {
       handler(value) {
-        this.userApi = `${value}/api/c/compapi/v2/usermanage/fe_list_department_profiles/`;
+        this.userApi = `${value}/api/c/compapi/v2/usermanage/fs_list_users/`;
         this.departmentApi = `${value}/api/c/compapi/v2/usermanage/fe_list_departments/`;
-        this.userSearchApi = `${value}/api/c/compapi/v2/usermanage/fe_list_users/`;
       },
       immediate: true,
     },
@@ -303,16 +355,17 @@ export default {
         this.focusItemIndex = len - 1;
       }
     },
-
+    // 用户
     fetchUser(params = {}) {
       return request.getData(this.userApi, params);
     },
+    // 组织
     fetchDepartment(params = {}) {
       return request.getData(this.departmentApi, params);
     },
-
+    // 搜索用户
     fetchSearchUser(params = {}) {
-      return request.getData(this.userSearchApi, params);
+      return request.getData(this.userApi, params);
     },
 
     async fetchCategories(isTreeLoading = false, isDialogLoading = false) {
@@ -326,7 +379,8 @@ export default {
       };
       try {
         const res = await this.fetchDepartment(params);
-        const categories = [...res];
+        // 默认为所有部门，特殊情况为指定部门
+        const categories = this.isForAllDepartments ? [...res] : this.departmentsFn(res);
         categories.forEach((item) => {
           item.visiable = true;
           item.showRadio = true;
@@ -449,9 +503,16 @@ export default {
       }
 
       try {
-        const res = await Promise.all([this.fetchDepartment(requestDepartParams), this.fetchSearchUser(requestUserParams)]);
-        const departments = unique(res[0], 'id');
-        const users = unique(res[1], 'id');
+        // 组织
+        const fetchList = [this.fetchDepartment(requestDepartParams)];
+        if (this.isUsingDefaultRule) { // 用户
+          fetchList.push(this.fetchSearchUser(requestUserParams));
+        }
+        const res = await Promise.all(fetchList);
+        // 默认搜索所有部门，特殊情况过滤其他部门
+        const filterResult = this.isForAllDepartments ? res : this.departmentsFn(res[0], 'search');
+        const departments = unique(filterResult[0], 'id');
+        const users = unique(filterResult[1], 'id');
         departments.forEach((depart) => {
           depart.showRadio = true;
           depart.type = 'department';
@@ -504,11 +565,16 @@ export default {
       };
       const requestUserParams = {
         ...params,
-        lookup_value: payload.id,
+        extra_lookups: payload.id,
       };
 
       try {
-        const res = await Promise.all([this.fetchDepartment(requestDepartParams), this.fetchUser(requestUserParams)]);
+        // 组织
+        const fetchList = [this.fetchDepartment(requestDepartParams)];
+        if (this.isUsingDefaultRule) { // 用户
+          fetchList.push(this.fetchUser(requestUserParams));
+        }
+        const res = await Promise.all(fetchList);
         const categories = unique(res[0], 'id');
         const members = unique(res[1], 'id');
         const curIndex = this.treeList.findIndex(item => item.id === payload.id);
@@ -670,6 +736,8 @@ export default {
           name: item.name,
           id: item.id,
           type: 'department',
+          // 兼容插件
+          ...(this.departmentsType === 'tc' && { tof_id: item.extras?.code || '' }),
         });
       });
       if (!this.customClose) {

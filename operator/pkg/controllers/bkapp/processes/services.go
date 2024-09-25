@@ -160,8 +160,6 @@ func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2
 	}
 
 	name := names.Service(bkapp, process.Name)
-	svcLabels := labels.Deployment(bkapp, process.Name)
-	selector := labels.PodSelector(bkapp, process.Name)
 
 	ports := []corev1.ServicePort{}
 	for _, procSvc := range process.Services {
@@ -183,12 +181,12 @@ func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   bkapp.Namespace,
-			Labels:      svcLabels,
+			Labels:      labels.Service(bkapp, process.Name),
 			Annotations: map[string]string{},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:    ports,
-			Selector: selector,
+			Selector: labels.PodSelector(bkapp, process.Name),
 		},
 	}
 }
@@ -196,8 +194,6 @@ func buildServiceByProcServices(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2
 // buildDefaultService build default service for bkapp which not enable proc services feature
 func buildDefaultService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Process) *corev1.Service {
 	name := names.Service(bkapp, process.Name)
-	svcLabels := labels.Deployment(bkapp, process.Name)
-	selector := labels.PodSelector(bkapp, process.Name)
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -207,7 +203,7 @@ func buildDefaultService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Proces
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   bkapp.Namespace,
-			Labels:      svcLabels,
+			Labels:      labels.Service(bkapp, process.Name),
 			Annotations: map[string]string{},
 		},
 		Spec: corev1.ServiceSpec{
@@ -219,7 +215,7 @@ func buildDefaultService(bkapp *paasv1alpha2.BkApp, process *paasv1alpha2.Proces
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Selector: selector,
+			Selector: labels.PodSelector(bkapp, process.Name),
 		},
 	}
 }

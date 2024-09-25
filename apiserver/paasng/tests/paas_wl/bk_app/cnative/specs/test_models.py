@@ -64,6 +64,7 @@ class TestCreateAppResource:
                 "domainResolution": None,
                 "svcDiscovery": None,
                 "configuration": {"env": []},
+                "observability": None,
             },
             "status": {
                 "conditions": [],

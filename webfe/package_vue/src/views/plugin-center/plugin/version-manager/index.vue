@@ -75,8 +75,27 @@
         </section>
       </div>
 
+      <section v-if="isCodeccEmpty">
+        <bk-exception class="exception-wrap-cls" type="empty" scene="part">
+          <div class="exception-wrapper">
+            <p class="title">{{ $t('暂无版本发布') }}</p>
+            <p class="tips">{{ $t('请先完成对默认分支的测试') }}</p>
+            <bk-button
+              :text="true"
+              title="primary"
+              size="small"
+              @click="handlerChangeRouter('test')"
+            >
+              {{ $t('前往测试') }}
+            </bk-button>
+          </div>
+        </bk-exception>
+      </section>
+
       <bk-table
+        v-else
         ref="versionTable"
+        :key="curVersionType"
         v-bkloading="{ isLoading: isTableLoading }"
         class="pugin-version-list"
         :data="versionList"
@@ -98,16 +117,15 @@
         <bk-table-column
           :label="$t('版本')"
           prop="version"
-          :show-overflow-tooltip="true"
+          show-overflow-tooltip
         >
           <template slot-scope="{ row }">
+            {{ row.version || '--' }}
             <span
-              v-bk-tooltips="row.version"
-              :class="{ 'version-num': row.version }"
-              style="cursor: pointer"
-              @click="handleDetail(row)"
+              v-if="row.source_version_type === 'tested_version' && isOfficialVersion && row.id === rollbacks[0]?.id"
+              style="color: #c4c6cc;"
             >
-              {{ row.version || '--' }}
+              ({{ $t('已回滚') }})
             </span>
           </template>
         </bk-table-column>
@@ -126,12 +144,13 @@
           :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
-            <span>{{ row.source_hash || '--' }}</span>
+            <span v-bk-tooltips="row.comment" class="tips-dashed">{{ row.source_hash.slice(0, 8) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('创建人')"
           prop="creator"
+          show-overflow-tooltip
         >
           <template slot-scope="{ row }">
             <span>{{ row.creator || '--' }}</span>
@@ -140,12 +159,37 @@
         <bk-table-column
           :label="$t('创建时间')"
           prop="created"
+          show-overflow-tooltip
         >
           <template slot-scope="{ row }">
             <span>{{ row.created || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
+          :label="$t('完成时间')"
+          prop="complete_time"
+          show-overflow-tooltip
+        >
+          <template slot-scope="{ row }">
+            <span>{{ row.complete_time ? formatDate(row.complete_time) : '--' }}</span>
+          </template>
+        </bk-table-column>
+        <!-- Codecc -->
+        <bk-table-column
+          v-if="isCodecc"
+          :label="$t('发布状态')"
+          prop="status"
+          column-key="status"
+          :filters="codeccStatusFilters"
+          :filter-multiple="true"
+        >
+          <template slot-scope="{ row }">
+            <div :class="['dot', row.gray_status]" />
+            <span class="status-text">{{ $t(CODECC_RELEASE_STATUS[row.gray_status]) || '--' }}</span>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          v-else
           :label="$t('状态')"
           prop="status"
           column-key="status"
@@ -158,172 +202,116 @@
               v-else
               :class="['dot', row.status]"
             />
-            <span>{{ $t(curVersionStatus[row.status]) || '--' }}</span>
+            <span class="status-text">{{ $t(curVersionStatus[row.status]) || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
           :width="localLanguage === 'en' ? 320 : 240"
         >
-          <template slot-scope="{ row }">
-            <template v-if="isOfficialVersion">
+          <div slot-scope="{ row }">
+            <!-- Codecc 灰度审批详情 -->
+            <template v-if="row.source_version_type === 'tested_version' && isOfficialVersion">
               <bk-button
                 theme="primary"
                 text
                 class="mr10"
-                @click="handleDetail(row)"
+                @click="handleCodeccReleaseDetails(row)"
               >
                 {{ $t('详情') }}
               </bk-button>
               <bk-button
+                v-if="row.report_url"
+                theme="primary"
+                text
+                class="mr10"
+                @click="toReportPage(row, 'gray')"
+              >
+                {{ $t('灰度报告') }}
+              </bk-button>
+              <bk-button
+                v-if="canTerminateStatus.includes(row.gray_status)"
+                theme="primary"
+                text
+                class="mr10"
+                @click="handleCodeccCancelReleases(row)"
+              >
+                {{ $t('终止发布') }}
+              </bk-button>
+              <!-- is_rolled_back = true 表示已回滚 -->
+              <span
+                v-if="row.id === rollbacks[0]?.id"
+                v-bk-tooltips="{ content: $t('当前版本已回滚，不可再次回滚'), disabled: !row.is_rolled_back }"
+              >
+                <bk-button
+                  theme="primary"
+                  text
+                  :disabled="row.is_rolled_back"
+                  @click="showRollbackPopup(row)"
+                >
+                  {{ $t('回滚版本') }}
+                </bk-button>
+              </span>
+            </template>
+            <template v-else>
+              <span v-if="isOfficialVersion">
+                <bk-button
+                  theme="primary"
+                  text
+                  class="mr10"
+                  @click="handleRelease(row)"
+                >
+                  {{ $t('发布进度') }}
+                </bk-button>
+              </span>
+              <bk-button
+                v-else
                 theme="primary"
                 text
                 class="mr10"
                 @click="handleRelease(row)"
               >
-                {{ $t('发布进度') }}
+                {{ $t('详情') }}
+              </bk-button>
+              <bk-button
+                v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
+                theme="primary"
+                class="mr10"
+                text
+                @click="handleRelease(row, 'reset')"
+              >
+                {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
+              </bk-button>
+              <bk-button
+                v-if="row.report_url"
+                theme="primary"
+                text
+                @click="toReportPage(row, 'test')"
+              >
+                {{ $t('测试报告') }}
+              </bk-button>
+              <!-- codecc & 测试记录测试成功 -->
+              <bk-button
+                v-if="showToRelease(row)"
+                theme="primary"
+                class="ml10"
+                text
+                @click="handleCreateVersion('prod', row.version)"
+              >
+                {{ $t('去发布') }}
               </bk-button>
             </template>
-            <bk-button
-              v-else
-              theme="primary"
-              text
-              class="mr10"
-              @click="handleRelease(row)"
-            >
-              {{ $t('详情') }}
-            </bk-button>
-            <bk-button
-              v-if="(row.retryable && row.status === 'interrupted') || row.status === 'failed'"
-              theme="primary"
-              class="mr10"
-              text
-              @click="handleRelease(row, 'reset')"
-            >
-              {{ isOfficialVersion ? $t('重新发布') : $t('重新测试') }}
-            </bk-button>
-            <bk-button
-              v-if="row.report_url"
-              theme="primary"
-              text
-              @click="toTestReportPage(row)"
-            >
-              {{ $t('测试报告') }}
-            </bk-button>
-          </template>
+          </div>
         </bk-table-column>
       </bk-table>
     </paas-content-loader>
-
-    <!-- 详情 -->
-    <bk-sideslider
-      :is-show.sync="versionDetailConfig.isShow"
-      :quick-close="true"
-      :width="640"
-    >
-      <div slot="header">
-        {{ $t('版本详情') }}
-      </div>
-      <div
-        slot="content"
-        v-bkloading="{ isLoading: versionDetailLoading, opacity: 1 }"
-        class="p20"
-      >
-        <ul :class="['detail-wrapper', { en: localLanguage === 'en' }]">
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('版本号') }}
-            </div>
-            <div class="content">
-              <span class="tag">{{ $t('正式') }}</span>
-              {{ versionDetail.version }}
-            </div>
-          </li>
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('代码库') }}
-            </div>
-            <div class="content">
-              <a
-                :href="versionDetail.source_location"
-                class="active"
-                target="_blank"
-              >
-                {{ versionDetail.source_location }}
-              </a>
-            </div>
-          </li>
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('代码分支') }}
-            </div>
-            <div class="content">
-              {{ versionDetail.source_version_name }}
-            </div>
-          </li>
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('版本号类型') }}
-            </div>
-            <div class="content">
-              {{ $t(versionNumberType[versionDetail.semver_type]) || '--' }}
-            </div>
-          </li>
-          <li class="item-info h-auto">
-            <div class="describe">
-              {{ $t('版本日志-label') }}
-            </div>
-            <div class="content version-log">
-              <p>{{ versionDetail.comment }}</p>
-            </div>
-          </li>
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('发布状态') }}
-            </div>
-            <div class="content">
-              <div class="status-wrapper">
-                <round-loading v-if="versionDetail.status === 'pending' || versionDetail.status === 'initial'" />
-                <div
-                  v-else
-                  :class="['dot', versionDetail.status]"
-                />
-                <span
-                  v-bk-tooltips="$t(curVersionStatus[versionDetail.status])"
-                  class="pl5"
-                >
-                  {{ $t(curVersionStatus[versionDetail.status]) || '--' }}
-                </span>
-                <template v-if="versionDetail.status === 'failed'">
-                  （{{ $t('部署失败，查看') }}
-                  <span
-                    class="active"
-                    @click="handleRelease(versionDetail)"
-                  >
-                    {{ $t('详情') }}
-                  </span>
-                  ）
-                </template>
-              </div>
-            </div>
-          </li>
-          <li class="item-info">
-            <div class="describe">
-              {{ $t('发布完成时间') }}
-            </div>
-            <div class="content">
-              {{ versionDetail.complete_time ? formatDate(versionDetail.complete_time) : '--' }}
-            </div>
-          </li>
-        </ul>
-      </div>
-    </bk-sideslider>
   </div>
 </template>
 
-<script>import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+<script>
+import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import versionManageTitle from './comps/version-manage-title.vue';
-import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
+import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS, CODECC_RELEASE_STATUS } from '@/common/constants';
 import { formatDate } from '@/common/tools';
 import { clearFilter } from '@/common/utils';
 import auth from '@/auth';
@@ -338,17 +326,12 @@ export default {
       isLoading: true,
       keyword: '',
       versionList: [],
-      versionDetail: {},
       isTableLoading: false,
       pagination: {
         current: 1,
         count: 0,
         limit: 10,
       },
-      versionDetailConfig: {
-        isShow: false,
-      },
-      versionDetailLoading: true,
       versionNumberType: VERSION_NUMBER_TYPE,
       filterCreator: '',
       filterStatus: [],
@@ -367,18 +350,17 @@ export default {
       accessDisabledTips: '',
       curVersionType: 'test',
       user: {},
+      CODECC_RELEASE_STATUS,
+      rollbacks: [],
+      canTerminateStatus: ['gray_approval_in_progress', 'full_approval_in_progress', 'in_gray'],
     };
   },
   computed: {
     statusFilters() {
-      const statusList = [];
-      for (const key in this.curVersionStatus) {
-        statusList.push({
-          value: key,
-          text: this.$t(this.curVersionStatus[key]),
-        });
-      }
-      return statusList;
+      return this.formatStatusFilters(this.curVersionStatus);
+    },
+    codeccStatusFilters() {
+      return this.formatStatusFilters(CODECC_RELEASE_STATUS);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -396,6 +378,15 @@ export default {
     // 当前版本状态
     curVersionStatus() {
       return this.isOfficialVersion ? PLUGIN_VERSION_STATUS : PLUGIN_TEST_VERSION_STATUS;
+    },
+    // Codecc 空状态
+    isCodeccEmpty() {
+      if (this.filterStatus.length) return false;
+      if (!this.versionList.length && this.isCodecc) return true;
+      return false;
+    },
+    isCodecc() {
+      return this.curPluginInfo.has_test_version && this.isOfficialVersion;
     },
   },
   watch: {
@@ -429,6 +420,10 @@ export default {
         this.curVersionType = this.$route.query.type || 'test';
       }
       this.getVersionList();
+      this.getReleasedVersion();
+      if (this.isCodecc) {
+        this.getRollbackVersion();
+      }
       // 获取当前用户信息
       if (this.curVersionType === 'test' && !this.curUserInfo.username) {
         this.getCurrentUser();
@@ -451,6 +446,18 @@ export default {
       this.getVersionList(newPage);
     },
 
+    // 格式化当前插件状态
+    formatStatusFilters(data) {
+      const statusList = [];
+      for (const key in data) {
+        statusList.push({
+          value: key,
+          text: this.$t(data[key]),
+        });
+      }
+      return statusList;
+    },
+
     formatPageParams(page) {
       const curPage = page || this.pagination.current;
       const params = {
@@ -467,22 +474,42 @@ export default {
       return params;
     },
 
+    // 格式化状态
     formatStatusParams() {
-      // 状态
       let statusParams = '';
       if (this.filterStatus.length) {
+        const key = this.isCodecc ? 'gray_status' : 'status';
         let paramsText = '';
         this.filterStatus.forEach((item) => {
           // 选择发布中直接传递 status=pending&status=inital
           if (item === 'pending') {
-            paramsText += 'status=pending&status=initial&';
+            paramsText += `${key}=pending&${key}=initial&`;
           } else {
-            paramsText += `status=${item}&`;
+            paramsText += `${key}=${item}&`;
           }
         });
         statusParams = paramsText.substring(0, paramsText.length - 1);
       }
       return statusParams;
+    },
+
+    // 获取指定状态版本，判断是否有版本正在灰度或者发布中
+    async getReleasedVersion() {
+      if (!this.isOfficialVersion) return;
+      try {
+        const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+          data: {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+          },
+          pageParams: { type: 'prod' },
+          statusParams: 'status=pending&status=initial',
+        });
+        // 当前是否已有任务进行中
+        this.curIsPending = !!res.results.length;
+      } catch (e) {
+        console.error(e);
+      }
     },
 
     // 获取版本列表
@@ -502,8 +529,6 @@ export default {
         });
         this.versionList = res.results;
         this.pagination.count = res.count;
-        // 当前是否已有任务进行中
-        this.curIsPending = this.versionList.find(item => item.status === 'pending');
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -520,34 +545,41 @@ export default {
       }
     },
 
+    // 获取回滚版本
+    async getRollbackVersion() {
+      try {
+        const res = await this.$store.dispatch('plugin/getVersionsManagerList', {
+          data: {
+            pdId: this.pdId,
+            pluginId: this.pluginId,
+          },
+          pageParams: {
+            order_by: '-created',
+            limit: 2,
+            offset: 0,
+            status: 'successful',
+            is_rolled_back: false,
+            type: this.curVersionType,
+          },
+        });
+        const { results } = res;
+        // 不符合回滚条件
+        if (results.length < 2) return;
+        this.rollbacks = results;
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     // 获取当前用户信息
     getCurrentUser() {
       auth.requestCurrentUser().then((user) => {
         this.user = user;
         this.$store.commit('updataUserInfo', user);
       });
-    },
-
-    // 获取版本详情
-    async getReleaseDetail(curData) {
-      const data = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-        releaseId: curData.id,
-      };
-      try {
-        const res = await this.$store.dispatch('plugin/getReleaseDetail', data);
-        this.versionDetail = res;
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        setTimeout(() => {
-          this.versionDetailLoading = false;
-        }, 300);
-      }
     },
 
     handleFilterChange(filters) {
@@ -560,7 +592,7 @@ export default {
       }
     },
 
-    handleCreateVersion(type) {
+    handleCreateVersion(type, version) {
       // 正式版 / 测试版
       this.$router.push({
         name: 'pluginVersionEditor',
@@ -569,8 +601,9 @@ export default {
           id: this.pluginId,
         },
         query: {
-          isPending: this.curIsPending,
+          isPending: !!this.curIsPending,
           type,
+          releaseVersion: version,
         },
       });
     },
@@ -579,12 +612,6 @@ export default {
     handleSearch() {
       this.pagination.count = 0;
       this.getVersionList();
-    },
-
-    handleDetail(row) {
-      this.versionDetailConfig.isShow = true;
-      this.versionDetailLoading = true;
-      this.getReleaseDetail(row);
     },
 
     // 发布
@@ -690,8 +717,11 @@ export default {
     },
 
     // 测试报告
-    toTestReportPage(row) {
-      const url = `${row.report_url}?currentVersion=${row.version}`;
+    toReportPage(row, type) {
+      let url = `${row.report_url}?currentVersion=${row.version}`;
+      if (type === 'gray') {
+        url += '&stage=3';
+      }
       this.$router.push({
         name: 'pluginTestReport',
         params: {
@@ -699,10 +729,133 @@ export default {
           id: this.pluginId,
         },
         query: {
-          type: 'test',
+          type: type === 'gray' ? 'prod' : 'test',
           url,
         },
       });
+    },
+
+    // Codecc 版本发布详情
+    handleCodeccReleaseDetails(row) {
+      this.$router.push({
+        name: 'pluginReleaseDetails',
+        params: {
+          pluginTypeId: this.pdId,
+          id: this.pluginId,
+        },
+        query: {
+          versionId: row.id,
+        },
+      });
+    },
+
+    // 回滚
+    showRollbackPopup(row) {
+      if (!this.rollbacks.length) return;
+      const h = this.$createElement;
+      const rollback = this.rollbacks[1];
+      const location = row.source_location.replace(/\.git$/, '');
+
+      this.$bkInfo({
+        type: 'warning',
+        title: this.$t('确认回滚至上一版本？'),
+        subHeader: h('div', [
+          this.createVersionInfo(
+            this.$t('当前版本'),
+            row.version,
+            row.source_hash.slice(0, 8),
+            `${location}/commit/${row.source_hash}`,
+          ),
+          this.createVersionInfo(
+            this.$t('回滚至版本'),
+            rollback.version,
+            rollback.source_hash.slice(0, 8),
+            `${location}/commit/${rollback.source_hash}`,
+          ),
+        ]),
+        okText: this.$t('回滚'),
+        confirmFn: () => {
+          this.handleRollbackVersion(row.id);
+        },
+      });
+    },
+
+    createVersionInfo(label, version, hash, url) {
+      const h = this.$createElement;
+      const fn = () => {
+        window.open(url, '_blank');
+      };
+      return h('p', [
+        h('span', `${label}：`),
+        h('span', [
+          h('span', { style: { color: '#313238' } }, version),
+          h(
+            'span', {
+              class: ['ml8'],
+              style: { color: '#3A84FF', cursor: 'pointer' },
+              on: {
+                click: fn,
+              },
+            },
+            hash,
+          ),
+        ]),
+      ]);
+    },
+
+    // 回滚版本
+    async handleRollbackVersion(id) {
+      try {
+        await this.$store.dispatch('plugin/versionRollback', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: id,
+        });
+        this.getVersionList();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 终止发布弹窗
+    handleCodeccCancelReleases(row) {
+      this.$bkInfo({
+        title: `${this.$t('确认终止发布版本')}${row.source_version_name} ？`,
+        width: 540,
+        maskClose: true,
+        confirmLoading: true,
+        confirmFn: async () => {
+          try {
+            await this.$store.dispatch('plugin/codeccCancelReleases', {
+              pdId: this.pdId,
+              pluginId: this.pluginId,
+              releaseId: row.id,
+            });
+            this.$bkMessage({
+              theme: 'success',
+              message: this.$t('已终止当前的发布版本'),
+            });
+            this.getVersionList();
+            this.getReleasedVersion();
+          } catch (e) {
+            this.$bkMessage({
+              theme: 'error',
+              message: e.detail || e.message || this.$t('接口异常'),
+            });
+          } finally {
+            return true;
+          }
+        },
+      });
+    },
+
+    // 是否展示去发布
+    showToRelease(row) {
+      // 测试成功并且分支为 master，展示去发布快捷入口
+      return this.curPluginInfo.has_test_version && !this.isOfficialVersion && row.status === 'successful' && row.source_version_name === 'master';
     },
   },
 };
@@ -736,9 +889,11 @@ export default {
   margin-top: 22px;
   background: #fff;
 
-  .version-num {
-    color: #3a84ff;
-    font-weight: 700;
+  .status-text {
+    margin-left: 5px;
+  }
+  .tips-dashed {
+    border-bottom: 1px dashed;
   }
 }
 
@@ -748,21 +903,33 @@ export default {
   border-radius: 50%;
   display: inline-block;
   margin-right: 3px;
-}
-// .successful {
-//     background: #E5F6EA;
-//     border: 1px solid #3FC06D;
-// }
 
-.successful {
+  &.successful,
+  &.fully_released {
   background: #e5f6ea;
   border: 1px solid #3fc06d;
-}
+  }
 
-.failed,
-.interrupted {
-  background: #ffe6e6;
-  border: 1px solid #ea3636;
+  &.failed,
+  &.interrupted,
+  &.full_approval_failed,
+  &.gray_approval_failed {
+    background: #ffe6e6;
+    border: 1px solid #ea3636;
+  }
+  &.full_approval_in_progress,
+  &.gray_approval_in_progress {
+    background: #FFE8C3;
+    border: 1px solid #FF9C01;
+  }
+  &.in_gray {
+    background: #E1ECFF;
+    border: 1px solid #699DF4;
+  }
+  &.rolled_back {
+    background: #F0F1F5;
+    border: 1px solid #DCDEE5;
+  }
 }
 
 .tag {
@@ -785,80 +952,6 @@ export default {
   }
 }
 
-.detail-wrapper {
-  border: 1px solid #dfe0e5;
-  &.en {
-    .item-info .describe {
-      width: 150px;
-    }
-  }
-  .item-info {
-    display: flex;
-    min-height: 40px;
-    border-top: 1px solid #dfe0e5;
-
-    &:first-child {
-      border-top: none;
-    }
-
-    .describe,
-    .content {
-      display: flex;
-      align-items: center;
-    }
-
-    .version-log {
-      display: block;
-    }
-
-    .describe {
-      flex-shrink: 0;
-      flex-direction: row-reverse;
-      width: 130px;
-      text-align: right;
-      padding-right: 16px;
-      font-size: 12px;
-      color: #979ba5;
-      line-height: normal;
-      background: #fafbfd;
-    }
-    .content {
-      width: 454px;
-      flex-wrap: wrap;
-      line-height: 1.5;
-      word-break: break-all;
-      flex: 1;
-      font-size: 12px;
-      color: #63656e;
-      padding: 10px 0 10px 16px;
-      border-left: 1px solid #f0f1f5;
-    }
-    .status-wrapper {
-      display: flex;
-      align-items: center;
-    }
-    .active {
-      color: #3a84ff;
-      cursor: pointer;
-    }
-    .tag {
-      display: inline-block;
-      padding: 0 3px;
-      font-size: 12px;
-      height: 16px;
-      line-height: 16px;
-      background: #64baa1;
-      border-radius: 2px;
-      color: #fff;
-      margin-right: 5px;
-    }
-  }
-
-  .h-auto {
-    height: auto;
-    line-height: 22px;
-  }
-}
 .empty-tips {
   margin-top: 5px;
   color: #979ba5;
@@ -879,6 +972,25 @@ export default {
     margin: 0 auto !important;
     padding-top: 16px !important;
   }
+  .exception-wrap-cls {
+    margin-top: 100px;
+    /deep/ .bk-exception-img.part-img .exception-image {
+      height: 180px;
+    }
+    .exception-wrapper {
+      .title {
+        font-size: 24px;
+        color: #63656E;
+        margin-bottom: 16px;
+      }
+      .tips {
+        font-size: 14px;
+        color: #979BA5;
+        margin-bottom: 8px;
+      }
+    }
+  }
+
 }
 </style>
 

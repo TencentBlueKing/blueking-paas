@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-02 17:35+0800\n"
+"POT-Creation-Date: 2024-09-18 19:55+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -94,7 +94,7 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/models/mount.py:39
 #: paas_wl/bk_app/cnative/specs/models/mount.py:58
 #: paas_wl/bk_app/cnative/specs/models/mount.py:79
-#: paasng/platform/bkapp_model/models.py:174
+#: paasng/platform/bkapp_model/models.py:176
 #: paasng/platform/engine/models/preset_envvars.py:32
 msgid "环境名称"
 msgstr "Env Name"
@@ -530,8 +530,8 @@ msgstr "Verification code error"
 msgid "密钥已被禁用，不能设置为内置密钥"
 msgstr "A disabled secret cannot be set as a built-in secret"
 
-#: paasng/accessories/log/client.py:171 paasng/accessories/log/client.py:275
-#: paasng/bk_plugins/pluginscenter/log/client.py:181
+#: paasng/accessories/log/client.py:173 paasng/accessories/log/client.py:281
+#: paasng/bk_plugins/pluginscenter/log/client.py:188
 msgid "No mappings available, maybe index does not exist or no logs at all"
 msgstr "No mappings available, maybe index does not exist or no logs at all"
 
@@ -572,7 +572,12 @@ msgstr ""
 msgid "是否启用"
 msgstr ""
 
-#: paasng/accessories/log/serializers.py:180
+#: paasng/accessories/log/serializers.py:157
+#, python-brace-format
+msgid "最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"
+msgstr ""
+
+#: paasng/accessories/log/serializers.py:192
 msgid "日志采集路径必须是绝对路径"
 msgstr "Log collection path must be an absolute path"
 
@@ -594,14 +599,21 @@ msgstr " Logging  failed, please try again later"
 msgid "日志平台接口返回异常<{message}>, 请稍后重试"
 msgstr " Logging  failed, please try again later"
 
-#: paasng/accessories/log/views/logs.py:225
-#: paasng/accessories/log/views/logs.py:271
+#: paasng/accessories/log/views/logs.py:227
+#: paasng/accessories/log/views/logs.py:277
 msgid "日志查询失败，请稍后再试。"
 msgstr " Logging  failed, please try again later."
 
-#: paasng/accessories/log/views/logs.py:266
+#: paasng/accessories/log/views/logs.py:270
 msgid "日志查询快照失效, 请刷新后重试。"
 msgstr "The  Logging  snapshot has failed, please refresh and try again."
+
+#: paasng/accessories/log/views/logs.py:317
+#: paasng/bk_plugins/pluginscenter/views.py:1177
+#, fuzzy
+#| msgid "日志查询失败，请稍后再试。"
+msgid "聚合时间直方图失败，请稍后再试。"
+msgstr " Logging  failed, please try again later."
 
 #: paasng/accessories/paas_analysis/services.py:70
 msgid "目前仅支持以 default 命名的自定义站点"
@@ -728,21 +740,21 @@ msgstr ""
 msgid "当前配置规格不可用"
 msgstr ""
 
-#: paasng/accessories/servicehub/views.py:637
+#: paasng/accessories/servicehub/views.py:638
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"
 msgstr "Module {ref_module_name} does not exist"
 
-#: paasng/accessories/servicehub/views.py:645
+#: paasng/accessories/servicehub/views.py:646
 msgid "未知错误"
 msgstr "Unknown error"
 
-#: paasng/accessories/servicehub/views.py:648
+#: paasng/accessories/servicehub/views.py:649
 #, python-brace-format
 msgid "模块 {ref_module_name} 无法被共享"
 msgstr "Module {ref_module_name} cannot be shared"
 
-#: paasng/accessories/servicehub/views.py:651
+#: paasng/accessories/servicehub/views.py:652
 msgid "不能重复共享"
 msgstr "Cannot be shared repeatedly"
 
@@ -786,7 +798,7 @@ msgid "创建"
 msgstr "Create "
 
 #: paasng/bk_plugins/pluginscenter/constants.py:142
-#: paasng/misc/audit/constants.py:94
+#: paasng/misc/audit/constants.py:96
 msgid "新建"
 msgstr "Create"
 
@@ -799,17 +811,17 @@ msgid "终止发布"
 msgstr "Unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
-#: paasng/misc/audit/constants.py:96
+#: paasng/misc/audit/constants.py:98
 msgid "修改"
 msgstr "Modify"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:146
-#: paasng/misc/audit/constants.py:95
+#: paasng/misc/audit/constants.py:97
 msgid "删除"
 msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
-#: paasng/misc/audit/constants.py:113
+#: paasng/misc/audit/constants.py:115
 msgid "下架"
 msgstr "archive"
 
@@ -817,70 +829,94 @@ msgstr "archive"
 msgid "重新上架"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:154
+#: paasng/bk_plugins/pluginscenter/constants.py:149
+msgid "回滚"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:155
 msgid "插件"
 msgstr "Plugin"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:155
+#: paasng/bk_plugins/pluginscenter/constants.py:156
 msgid "测试版本"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:156
+#: paasng/bk_plugins/pluginscenter/constants.py:157
 msgid "版本"
 msgstr "Version"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:157
+#: paasng/bk_plugins/pluginscenter/constants.py:158
 #, fuzzy
 #| msgid "同步应用基本信息"
 msgid "基本信息"
 msgstr "Basic information about the Sync APP"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:158
+#: paasng/bk_plugins/pluginscenter/constants.py:159
 msgid "logo"
 msgstr "logo"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:159
+#: paasng/bk_plugins/pluginscenter/constants.py:160
 #, fuzzy
 #| msgid "同步应用市场信息"
 msgid "市场信息"
 msgstr "Synchronise Market information"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:160
+#: paasng/bk_plugins/pluginscenter/constants.py:161
 msgid "配置信息"
 msgstr "config info"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:161
+#: paasng/bk_plugins/pluginscenter/constants.py:162
 msgid "可见范围"
 msgstr "visible range"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:162
+#: paasng/bk_plugins/pluginscenter/constants.py:163
 #, fuzzy
 #| msgid "预发布"
 msgid "发布者"
 msgstr "stag env"
 
-#: paasng/bk_plugins/pluginscenter/constants.py:168
+#: paasng/bk_plugins/pluginscenter/constants.py:164
+msgid "发布策略"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:170
 msgid "正式发布"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:169
+#: paasng/bk_plugins/pluginscenter/constants.py:171
 msgid "测试发布"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:175
+#: paasng/bk_plugins/pluginscenter/constants.py:177
 msgid "灰度发布"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:176
+#: paasng/bk_plugins/pluginscenter/constants.py:178
 msgid "全量发布"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:182
+#: paasng/bk_plugins/pluginscenter/constants.py:184
 msgid "后台 API 轮询"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/constants.py:183
+#: paasng/bk_plugins/pluginscenter/constants.py:185
 msgid "前端轮询，如通过 Iframe message 通信等"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:191
+msgid "不限制"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:192
+msgid "仅可选择主分支发布"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:193
+msgid "Tag 发布"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/constants.py:194
+msgid "已经测试通过的版本"
 msgstr ""
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:23
@@ -929,7 +965,7 @@ msgid "无法停止发布"
 msgstr "Can't stop publish"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:34
-#: paasng/bk_plugins/pluginscenter/views.py:668
+#: paasng/bk_plugins/pluginscenter/views.py:691
 msgid "插件不支持终止发布操作"
 msgstr "Plugin does not support abort publish operation"
 
@@ -970,47 +1006,71 @@ msgstr "Archive Failed"
 msgid "重新上架失败"
 msgstr "Republish failed"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:45
+#: paasng/bk_plugins/pluginscenter/exceptions.py:43
+msgid "无法回滚该版本"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/exceptions.py:46
 msgid "插件应该至少拥有一个管理员"
 msgstr "The plugin should have at least one administrator"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:46
+#: paasng/bk_plugins/pluginscenter/exceptions.py:47
 msgid "添加插件成员失败"
 msgstr "Failed to add plugin member"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:47
+#: paasng/bk_plugins/pluginscenter/exceptions.py:48
 msgid "修改插件成员角色失败"
 msgstr "Failed to modify plugin member role"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:49
+#: paasng/bk_plugins/pluginscenter/exceptions.py:50
 msgid "不允许删除"
 msgstr "Not allowed to delete"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:50
+#: paasng/bk_plugins/pluginscenter/exceptions.py:51
 msgid "插件已下架, 无法进行该操作"
 msgstr "The plug-in has been removed, and this operation cannot be performed"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:52
+#: paasng/bk_plugins/pluginscenter/exceptions.py:53
 msgid "添加/删除仓库成员异常, 请稍后重试"
 msgstr "Add/delete repository member exception, please try again later"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:54
+#: paasng/bk_plugins/pluginscenter/exceptions.py:55
 msgid "查询代码仓库概览数据异常"
 msgstr "Query code warehouse overview data exception"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:56
+#: paasng/bk_plugins/pluginscenter/exceptions.py:57
 #, fuzzy
 #| msgid "日志查询失败，请稍后重试"
 msgid "日志系统异常, 请稍后重试"
 msgstr " Logging  failed, please try again later"
 
+#: paasng/bk_plugins/pluginscenter/exceptions.py:58
+#: paasng/utils/error_codes.py:81
+msgid "查询日志失败"
+msgstr "Query log failure"
+
 #: paasng/bk_plugins/pluginscenter/exceptions.py:59
+#: paasng/utils/error_codes.py:82
+msgid "查询日志失败，请检查查询条件"
+msgstr "Query log failed, please check the query criteria"
+
+#: paasng/bk_plugins/pluginscenter/exceptions.py:62
 #, fuzzy
 #| msgid "可见范围"
 msgid "可见范围修改失败"
 msgstr "visible range"
 
-#: paasng/bk_plugins/pluginscenter/exceptions.py:71
+#: paasng/bk_plugins/pluginscenter/exceptions.py:65
+#, fuzzy
+#| msgid "版本发布"
+msgid "版本发布已结束"
+msgstr "version release"
+
+#: paasng/bk_plugins/pluginscenter/exceptions.py:66
+msgid "上一次灰度发布还未审批完成"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/exceptions.py:78
 #: paasng/utils/error_codes.py:198
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
@@ -1029,23 +1089,23 @@ msgid "编辑插件信息"
 msgstr "Edit plugin info"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:50
-msgid "删除插件"
-msgstr "archive plugin"
+msgid "可见范围管理"
+msgstr "visibility range manage"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:51
+msgid "插件配置管理"
+msgstr "ConfManage"
+
+#: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:52
 #: paasng/infras/iam/permissions/resources/application.py:47
 msgid "成员管理"
 msgstr "Member management"
 
-#: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:52
-msgid "可见范围管理"
-msgstr "visibility range manage"
-
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:53
-msgid "插件配置管理"
-msgstr "ConfManage"
+msgid "删除插件"
+msgstr "archive plugin"
 
-#: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:77
+#: paasng/bk_plugins/pluginscenter/iam_adaptor/constants.py:79
 msgid "蓝鲸插件"
 msgstr "BK plugin"
 
@@ -1097,160 +1157,176 @@ msgstr "Plugin Creation Approval Process"
 msgid "插件可见范围修改审批流程"
 msgstr "Plugin Creation Approval Process"
 
-#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:33
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:29
+msgid "Codecc 全量发布审批流程"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:31
+msgid "Codecc 灰度发布审批流程"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:34
+msgid "Codecc 按组织灰度发布审批流程"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:41
 msgid "处理中"
 msgstr "RUNNING"
 
-#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:34
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:42
 msgid "被挂起"
 msgstr "SUSPENDED"
 
-#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:35
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:43
 msgid "已结束"
 msgstr "FINISHED"
 
-#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:37
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:45
 msgid "被终止"
 msgstr "TERMINATED"
 
-#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:39
+#: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:47
 msgid "被撤销"
 msgstr "REVOKED"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:43
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:47
 msgid "同步版本信息失败, 不能新建版本"
 msgstr "Failed to sync version information, cannot create new version"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:53
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:60
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:123
-#: tests/paasng/bk_plugins/pluginscenter/test_integration.py:152
+#: tests/paasng/bk_plugins/pluginscenter/test_integration.py:216
 msgid "当前阶段未执行成功, 不允许进入下一阶段"
 msgstr ""
 "The current stage has not been executed successfully, and it is not allowed "
 "to enter the next stage"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:57
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:64
 msgid "不存在下一阶段"
 msgstr "no next stage"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:60
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:67
 msgid "下一阶段已被执行, 不能重复触发已执行的阶段"
 msgstr ""
 "The next stage has already been executed, and the executed stage cannot be "
 "triggered repeatedly"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:75
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:82
 msgid "如需发布请创建新的版本"
 msgstr "To publish please create a new version"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:87
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:94
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:168
 msgid "当前阶段已被执行, 不能重复触发已执行的阶段"
 msgstr ""
 "The current phase has been executed, and the executed phase cannot be "
 "triggered repeatedly"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:93
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:100
 msgid "当前步骤前置命令执行异常"
 msgstr "Abnormal execution of the pre-command for the current step"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:119
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:126
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:193
 msgid "当前发布流程已结束"
 msgstr "The current publishing process has ended"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:123
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:158
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:130
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:165
 msgid "当前插件类型不支持重置历史版本, 如需发布请创建新的版本"
 msgstr ""
 "The current plug-in type does not support resetting the historical version, "
 "please create a new version if you need to publish"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:131
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:138
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:204
 msgid "请先撤回审批单据, 再返回上一步"
 msgstr ""
 "Please withdraw the approval document before returning to the previous step"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:136
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:143
 msgid "请等待部署完成, 再返回上一步"
 msgstr ""
 "Please wait for the deployment to complete before returning to the previous "
 "step"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:155
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:162
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:232
 msgid "状态异常: {}"
 msgstr "Abnormal state: {}"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:166
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:173
 msgid "当前状态({})不支持取消发布"
 msgstr "The current state ({}) does not support unpublishing"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:173
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:180
 msgid "请到 ITSM 撤回审批单据"
 msgstr "Please go to ITSM to withdraw the approval slip"
 
-#: paasng/bk_plugins/pluginscenter/releases/executor.py:174
+#: paasng/bk_plugins/pluginscenter/releases/executor.py:195
 #: tests/paasng/bk_plugins/pluginscenter/release/test_executor.py:256
 msgid "用户主动终止发布"
 msgstr "User voluntarily terminates publishing"
 
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:71
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:97
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:256
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:273
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:318
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:74
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:100
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:259
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:276
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:321
 msgid "当前步骤状态异常"
 msgstr "Current step status is abnormal"
 
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:148
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:151
 msgid "当前阶段并非部署阶段"
 msgstr "The current phase is not a deployment phase"
 
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:246
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:251
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:249
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:254
 msgid "构建失败"
 msgstr "Build failed"
 
-#: paasng/bk_plugins/pluginscenter/releases/stages.py:416
+#: paasng/bk_plugins/pluginscenter/releases/stages.py:419
 msgid "插件已发布成功"
 msgstr "The plugin has been published successfully"
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:77
+#: paasng/bk_plugins/pluginscenter/serializers.py:81
 msgid "context `pd` is required"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:104
+#: paasng/bk_plugins/pluginscenter/serializers.py:108
 #, fuzzy
 #| msgid "{} 为 {} 的应用已存在"
 msgid "{} 为 {} 的插件已存在"
 msgstr "{} for {} already exists"
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:107
+#: paasng/bk_plugins/pluginscenter/serializers.py:111
 msgid "attrs `{}` is required"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:461
+#: paasng/bk_plugins/pluginscenter/serializers.py:501
 #, python-brace-format
 msgid "版本号不符合，下一个 {label} 版本是 {revision}"
 msgstr "Revision numbers do not match, next {label} revision is {revision}"
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:487
+#: paasng/bk_plugins/pluginscenter/serializers.py:525
+msgid "使用测试版本发布时必须传参数: release_id"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/serializers.py:537
 msgid "版本号必须与代码分支一致"
 msgstr "The version number must match the code branch"
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:490
+#: paasng/bk_plugins/pluginscenter/serializers.py:539
 msgid "版本号必须与提交哈希一致"
 msgstr "The version number must match the commit hash"
 
-#: paasng/bk_plugins/pluginscenter/serializers.py:493
+#: paasng/bk_plugins/pluginscenter/serializers.py:543
 #, fuzzy
 #| msgid "版本号必须与代码分支一致"
 msgid "版本号必须以代码分支开头"
 msgstr "The version number must match the code branch"
 
-#: paasng/bk_plugins/pluginscenter/shim.py:111
+#: paasng/bk_plugins/pluginscenter/shim.py:144
 msgid "同名仓库已存在"
 msgstr "A repository with the same name already exists"
 
@@ -1264,35 +1340,67 @@ msgstr "Tc_git interface request timeout"
 msgid "工蜂接口请求异常"
 msgstr "Tc_git interface request exception"
 
-#: paasng/bk_plugins/pluginscenter/views.py:411
+#: paasng/bk_plugins/pluginscenter/views.py:425
 #, fuzzy
 #| msgid "插件已下架, 无法进行该操作"
 msgid "插件已下架，不能再执行下架操作"
 msgstr "The plug-in has been removed, and this operation cannot be performed"
 
-#: paasng/bk_plugins/pluginscenter/views.py:437
+#: paasng/bk_plugins/pluginscenter/views.py:451
 msgid "插件未下架，不能重新上架"
 msgstr "Plugin not unlisted, cannot be relisted."
 
-#: paasng/bk_plugins/pluginscenter/views.py:772
+#: paasng/bk_plugins/pluginscenter/views.py:714
+msgid "当前版本已回滚，不可再次回滚"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/views.py:716
+msgid "只允许最新版本回滚"
+msgstr ""
+
+#: paasng/bk_plugins/pluginscenter/views.py:826
 msgid "仅支持重试当前阶段"
 msgstr "Only supports retrying the current phase"
 
-#: paasng/bk_plugins/pluginscenter/views.py:790
+#: paasng/bk_plugins/pluginscenter/views.py:844
 #, fuzzy
 #| msgid "仅支持重试当前阶段"
 msgid "仅支持更新当前阶段状态"
 msgstr "Only supports retrying the current phase"
 
-#: paasng/bk_plugins/pluginscenter/views.py:904
+#: paasng/bk_plugins/pluginscenter/views.py:958
 msgid "用户 {} 已存在"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/views.py:932
+#: paasng/bk_plugins/pluginscenter/views.py:986
 msgid "插件成员 {} 不存在"
 msgstr ""
 
-#: paasng/bk_plugins/pluginscenter/views.py:1206
+#: paasng/bk_plugins/pluginscenter/views.py:1066
+#, fuzzy
+#| msgid "日志查询失败，请稍后再试。"
+msgid "查询标准输出日志失败，请稍后再试。"
+msgstr " Logging  failed, please try again later."
+
+#: paasng/bk_plugins/pluginscenter/views.py:1104
+#, fuzzy
+#| msgid "日志查询失败，请稍后再试。"
+msgid "查询结构化日志失败，请稍后再试。"
+msgstr " Logging  failed, please try again later."
+
+#: paasng/bk_plugins/pluginscenter/views.py:1140
+#, fuzzy
+#| msgid "日志查询失败，请稍后再试。"
+msgid "查询访问日志失败，请稍后再试。"
+msgstr " Logging  failed, please try again later."
+
+#: paasng/bk_plugins/pluginscenter/views.py:1216
+#, fuzzy
+#| msgid "日志查询失败，请稍后再试。"
+msgid "统计日志的字段失败，请稍后再试。"
+msgstr " Logging  failed, please try again later."
+
+#: paasng/bk_plugins/pluginscenter/views.py:1300
 msgid "可见范围修改失败：正在审批中"
 msgstr ""
 
@@ -1524,6 +1632,10 @@ msgstr "BK APP ID"
 msgid "业务"
 msgstr ""
 
+#: paasng/infras/iam/exceptions.py:59
+msgid "用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制"
+msgstr "The user {user} has exceeded the group quota of {quota}."
+
 #: paasng/infras/iam/permissions/resources/application.py:41
 msgid "基础信息查看"
 msgstr ""
@@ -1642,212 +1754,212 @@ msgid "进程"
 msgstr "process"
 
 #: paasng/misc/audit/constants.py:63
-msgid "用户限制"
-msgstr "access control"
-
-#: paasng/misc/audit/constants.py:64
-msgid "云 API 权限"
-msgstr "API permissions"
-
-#: paasng/misc/audit/constants.py:65
-msgid "密钥"
-msgstr "secret"
-
-#: paasng/misc/audit/constants.py:66
 msgid "环境变量"
 msgstr "environment variables"
 
-#: paasng/misc/audit/constants.py:67
+#: paasng/misc/audit/constants.py:64
 msgid "增强服务"
 msgstr "Add-ons"
 
-#: paasng/misc/audit/constants.py:68
-#, fuzzy
-#| msgid "普通集群"
-msgid "集群"
-msgstr "Standard cluster"
+#: paasng/misc/audit/constants.py:65
+msgid "云 API 权限"
+msgstr "API permissions"
 
-#: paasng/misc/audit/constants.py:69
-msgid "应用资源方案"
-msgstr "Process Spec Plan"
+#: paasng/misc/audit/constants.py:66
+msgid "密钥"
+msgstr "secret"
 
-#: paasng/misc/audit/constants.py:70
-msgid "插件分类"
-msgstr "Plugin Tag"
-
-#: paasng/misc/audit/constants.py:71
-msgid "插件使用方"
-msgstr "Plugin Distributor"
-
-#: paasng/misc/audit/constants.py:72
-msgid "文档"
-msgstr "Document"
-
-#: paasng/misc/audit/constants.py:73
-#, fuzzy
-#| msgid "失败提示"
-msgid "部署失败提示"
-msgstr "Failure Tip"
-
-#: paasng/misc/audit/constants.py:74
-msgid "代码库配置"
-msgstr "Source Type Setting"
-
-#: paasng/misc/audit/constants.py:75
-msgid "共享证书"
-msgstr "Shared Cert"
-
-#: paasng/misc/audit/constants.py:76
-#, fuzzy
-#| msgid "增强服务"
-msgid "增强服务方案"
-msgstr "Add-ons Plan"
-
-#: paasng/misc/audit/constants.py:77
-msgid "平台用户"
-msgstr "Platform User"
-
-#: paasng/misc/audit/constants.py:78
-#, fuzzy
-#| msgid "修改特性标记"
-msgid "特性标记"
-msgstr "Feature Flag"
-
-#: paasng/misc/audit/constants.py:79
-#, fuzzy
-#| msgid "创建 Egress 配置"
-msgid "Egress 配置"
-msgstr "Egress Setting"
-
-#: paasng/misc/audit/constants.py:80
+#: paasng/misc/audit/constants.py:67
 #, fuzzy
 #| msgid "组件 API 访问地址"
 msgid "访问地址"
 msgstr "Access URL"
 
-#: paasng/misc/audit/constants.py:81
+#: paasng/misc/audit/constants.py:68
 #, fuzzy
 #| msgid "删除应用"
 msgid "应用成员"
 msgstr "APP Member"
 
-#: paasng/misc/audit/constants.py:82
-#, fuzzy
-#| msgid "模块"
-msgid "模板"
-msgstr "Module"
-
-#: paasng/misc/audit/constants.py:83 paasng/platform/modules/serializers.py:368
+#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:368
 msgid "构建配置"
 msgstr "Build Configuration"
 
-#: paasng/misc/audit/constants.py:84
+#: paasng/misc/audit/constants.py:70
 #, fuzzy
 #| msgid "挂载卷名称"
 msgid "挂载卷"
 msgstr "Volume Name"
 
-#: paasng/misc/audit/constants.py:85
+#: paasng/misc/audit/constants.py:71
 msgid "服务发现"
 msgstr "Service Discovery"
 
-#: paasng/misc/audit/constants.py:86
+#: paasng/misc/audit/constants.py:72
 msgid "域名解析"
 msgstr "Domain Resolution"
 
-#: paasng/misc/audit/constants.py:87
+#: paasng/misc/audit/constants.py:73
 msgid "部署限制"
 msgstr "Deploy Restriction"
 
-#: paasng/misc/audit/constants.py:88
+#: paasng/misc/audit/constants.py:74
 #, fuzzy
 #| msgid "绑定出口 IP "
 msgid "出口 IP"
 msgstr "EXIT IP "
 
-#: paasng/misc/audit/constants.py:98 paasng/misc/operations/constant.py:57
+#: paasng/misc/audit/constants.py:75
+msgid "用户限制"
+msgstr "access control"
+
+#: paasng/misc/audit/constants.py:77
+#, fuzzy
+#| msgid "普通集群"
+msgid "集群"
+msgstr "Standard cluster"
+
+#: paasng/misc/audit/constants.py:78
+msgid "应用资源方案"
+msgstr "Process Spec Plan"
+
+#: paasng/misc/audit/constants.py:79
+msgid "插件分类"
+msgstr "Plugin Tag"
+
+#: paasng/misc/audit/constants.py:80
+msgid "插件使用方"
+msgstr "Plugin Distributor"
+
+#: paasng/misc/audit/constants.py:81
+msgid "文档"
+msgstr "Document"
+
+#: paasng/misc/audit/constants.py:82
+#, fuzzy
+#| msgid "失败提示"
+msgid "部署失败提示"
+msgstr "Failure Tip"
+
+#: paasng/misc/audit/constants.py:83
+msgid "代码库配置"
+msgstr "Source Type Setting"
+
+#: paasng/misc/audit/constants.py:84
+msgid "共享证书"
+msgstr "Shared Cert"
+
+#: paasng/misc/audit/constants.py:85
+#, fuzzy
+#| msgid "增强服务"
+msgid "增强服务方案"
+msgstr "Add-ons Plan"
+
+#: paasng/misc/audit/constants.py:86
+msgid "平台用户"
+msgstr "Platform User"
+
+#: paasng/misc/audit/constants.py:87
+#, fuzzy
+#| msgid "修改特性标记"
+msgid "特性标记"
+msgstr "Feature Flag"
+
+#: paasng/misc/audit/constants.py:88
+#, fuzzy
+#| msgid "创建 Egress 配置"
+msgid "Egress 配置"
+msgstr "Egress Setting"
+
+#: paasng/misc/audit/constants.py:89
+#, fuzzy
+#| msgid "模块"
+msgid "模板"
+msgstr "Module"
+
+#: paasng/misc/audit/constants.py:100 paasng/misc/operations/constant.py:57
 msgid "创建应用"
 msgstr "create APP"
 
-#: paasng/misc/audit/constants.py:99
+#: paasng/misc/audit/constants.py:101
 msgid "发布到应用市场"
 msgstr " publish to APP market"
 
-#: paasng/misc/audit/constants.py:100 paasng/misc/operations/constant.py:64
+#: paasng/misc/audit/constants.py:102 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
 msgstr "remove from the APP market"
 
-#: paasng/misc/audit/constants.py:101 paasng/misc/operations/constant.py:61
+#: paasng/misc/audit/constants.py:103 paasng/misc/operations/constant.py:61
 msgid "完善应用市场配置"
 msgstr "improve market configuration"
 
-#: paasng/misc/audit/constants.py:102
+#: paasng/misc/audit/constants.py:104
 msgid "修改应用市场访问地址"
 msgstr "modify market url"
 
-#: paasng/misc/audit/constants.py:103
+#: paasng/misc/audit/constants.py:105
 msgid "修改基本信息"
 msgstr "modify basic information"
 
-#: paasng/misc/audit/constants.py:105
+#: paasng/misc/audit/constants.py:107
 msgid "启动"
 msgstr "start"
 
-#: paasng/misc/audit/constants.py:106
+#: paasng/misc/audit/constants.py:108
 msgid "停止"
 msgstr "stop"
 
-#: paasng/misc/audit/constants.py:107
+#: paasng/misc/audit/constants.py:109
 msgid "扩缩容"
 msgstr "scale"
 
-#: paasng/misc/audit/constants.py:108
+#: paasng/misc/audit/constants.py:110
 msgid "启用"
 msgstr "enable"
 
-#: paasng/misc/audit/constants.py:109
+#: paasng/misc/audit/constants.py:111
 msgid "停用"
 msgstr "disable"
 
-#: paasng/misc/audit/constants.py:110
+#: paasng/misc/audit/constants.py:112
 msgid "申请"
 msgstr "apply"
 
-#: paasng/misc/audit/constants.py:111
+#: paasng/misc/audit/constants.py:113
 msgid "续期"
 msgstr "renew"
 
-#: paasng/misc/audit/constants.py:112
+#: paasng/misc/audit/constants.py:114
 msgid "部署"
 msgstr "Deploy"
 
-#: paasng/misc/audit/constants.py:114
+#: paasng/misc/audit/constants.py:117
 msgid "切换资源方案"
 msgstr "switch process plan"
 
-#: paasng/misc/audit/constants.py:116
+#: paasng/misc/audit/constants.py:118
 msgid "修改用户特性"
 msgstr "modify user feature flag"
 
-#: paasng/misc/audit/constants.py:117
+#: paasng/misc/audit/constants.py:119
 msgid "切换默认集群"
 msgstr "switch default cluster"
 
-#: paasng/misc/audit/constants.py:118
+#: paasng/misc/audit/constants.py:120
 msgid "切换绑定集群"
 msgstr "switch binding cluster"
 
-#: paasng/misc/audit/constants.py:119
+#: paasng/misc/audit/constants.py:121
 msgid "日志采集管理"
 msgstr "log config manage"
 
-#: paasng/misc/audit/constants.py:120
+#: paasng/misc/audit/constants.py:122
 #, fuzzy
 #| msgid "增强服务"
 msgid "分配增强服务实例"
 msgstr "provision add-ons instance"
 
-#: paasng/misc/audit/constants.py:121
+#: paasng/misc/audit/constants.py:123
 #, fuzzy
 #| msgid "增强服务"
 msgid "回收增强服务实例"
@@ -2384,31 +2496,31 @@ msgstr "Prod Env"
 msgid "应用市场"
 msgstr " Market "
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:130
+#: paasng/platform/bkapp_model/serializers/serializers.py:144
 msgid "至多设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:132
+#: paasng/platform/bkapp_model/serializers/serializers.py:146
 msgid "至少设置一个探活配置"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:264
+#: paasng/platform/bkapp_model/serializers/serializers.py:304
 msgid "应用{}不存在"
 msgstr "The application {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:269
+#: paasng/platform/bkapp_model/serializers/serializers.py:309
 msgid "模块{}不存在"
 msgstr "The module {} cannot be found."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:287
+#: paasng/platform/bkapp_model/serializers/serializers.py:327
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:306
+#: paasng/platform/bkapp_model/serializers/serializers.py:346
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:312
+#: paasng/platform/bkapp_model/serializers/serializers.py:352
 msgid "BkApp 配置信息"
 msgstr "config info"
 
@@ -2454,19 +2566,19 @@ msgstr "An APP must have a default module"
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
 
-#: paasng/platform/declarative/handlers.py:190
-#: paasng/platform/declarative/handlers.py:192
+#: paasng/platform/declarative/handlers.py:171
+#: paasng/platform/declarative/handlers.py:173
 msgid "内容不能为空"
 msgstr "content cannot be empty"
 
-#: paasng/platform/declarative/handlers.py:270
-#: paasng/platform/declarative/handlers.py:299
+#: paasng/platform/declarative/handlers.py:338
+#: paasng/platform/declarative/handlers.py:367
 #, fuzzy
 #| msgid "内容不能为空"
 msgid "模块配置内容不能为空"
 msgstr "content cannot be empty"
 
-#: paasng/platform/declarative/handlers.py:291
+#: paasng/platform/declarative/handlers.py:359
 msgid "未找到 {} 模块的配置，当前已配置模块为 {}"
 msgstr ""
 
@@ -2475,7 +2587,7 @@ msgid "通过描述文件定义的应用不支持该操作"
 msgstr ""
 "This operation is not supported by the APP defined by the description file"
 
-#: paasng/platform/declarative/serializers.py:138
+#: paasng/platform/declarative/serializers.py:139
 msgid ""
 "格式错误，只能以 \"BKAPP_\" 开头，由大写字母、数字与下划线组成，长度不超过 "
 "50。"
@@ -2698,36 +2810,42 @@ msgstr "Ongoing archive tasks exist"
 msgid "The Pre-release command is not configured, skip the Pre-release phase."
 msgstr ""
 
-#: paasng/platform/engine/deploy/building.py:140
+#: paasng/platform/engine/deploy/building.py:133
 #, python-brace-format
 msgid ""
 "The source directory '{source_dir}' is not a legal directory,please check "
 "repository to confirm."
 msgstr ""
 
-#: paasng/platform/engine/deploy/building.py:170
-#: paasng/platform/engine/deploy/image_release.py:210
+#: paasng/platform/engine/deploy/building.py:162
+#: paasng/platform/engine/deploy/image_release.py:191
+#, fuzzy
+#| msgid "应用描述文件校验失败：{exception}"
+msgid "处理应用描述文件失败：{}"
+msgstr "APP description file verification failed: {exception}"
+
+#: paasng/platform/engine/deploy/building.py:164
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "应用描述文件解析异常: {}"
 msgstr "Analyzing APP Description File Exceptions"
 
-#: paasng/platform/engine/deploy/building.py:177
-#: paasng/platform/engine/deploy/image_release.py:216
+#: paasng/platform/engine/deploy/building.py:167
+#: paasng/platform/engine/deploy/image_release.py:194
 msgid "处理应用描述文件时出现异常, 请检查应用描述文件"
 msgstr ""
 "An exception occurred while processing the app description file, please "
 "Check APP description file "
 
-#: paasng/platform/engine/deploy/building.py:240
+#: paasng/platform/engine/deploy/building.py:208
 #, python-brace-format
 msgid ""
 "The predefined Add-ons {unbound_service_names} in the initial template are "
 "not enabled, please check if they need to be enabled"
 msgstr ""
 
-#: paasng/platform/engine/deploy/building.py:340
-#: paasng/platform/engine/deploy/building.py:450
+#: paasng/platform/engine/deploy/building.py:296
+#: paasng/platform/engine/deploy/building.py:394
 msgid "发布时自动构建"
 msgstr "Automatically build when deploying"
 
@@ -2845,16 +2963,7 @@ msgstr ""
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
 
-#: paasng/platform/engine/utils/source.py:158
-msgid ""
-"Warning: Process definition conflict, will use the one defined in `Procfile`"
-msgstr ""
-
-#: paasng/platform/engine/utils/source.py:162
-msgid "Missing process definition"
-msgstr ""
-
-#: paasng/platform/engine/utils/source.py:246
+#: paasng/platform/engine/utils/source.py:254
 #, python-brace-format
 msgid ""
 "WARNING: 应用源码包体积过大（>{warning_threshold}MB），将严重影响部署性能，请"
@@ -3197,31 +3306,31 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:349
-#: paasng/platform/modules/manager.py:387
+#: paasng/platform/modules/manager.py:358
+#: paasng/platform/modules/manager.py:396
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:352
-#: paasng/platform/modules/manager.py:423
+#: paasng/platform/modules/manager.py:361
+#: paasng/platform/modules/manager.py:432
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:357
-#: paasng/platform/modules/manager.py:413
-#: paasng/platform/modules/manager.py:417
+#: paasng/platform/modules/manager.py:366
+#: paasng/platform/modules/manager.py:422
+#: paasng/platform/modules/manager.py:426
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:393
+#: paasng/platform/modules/manager.py:402
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:420
+#: paasng/platform/modules/manager.py:429
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:427
+#: paasng/platform/modules/manager.py:436
 #, fuzzy
 #| msgid "代码初始化过程失败，请稍候再试"
 msgid "初始化应用模型失败, 请稍候再试"
@@ -3444,7 +3553,7 @@ msgstr ""
 "GitLab API does not support branches whose names contain '.', please modify "
 "the branch name"
 
-#: paasng/platform/sourcectl/exceptions.py:69
+#: paasng/platform/sourcectl/exceptions.py:70
 #, python-brace-format
 msgid "访问 Git<{fullname}> 项目异常"
 msgstr "Access to Git<{fullname}> project error"
@@ -3688,28 +3797,28 @@ msgstr "Already under review, please do not repeat your APP"
 msgid "提交申请成功"
 msgstr "Submitted successfully"
 
-#: paasng/settings/__init__.py:834
+#: paasng/settings/__init__.py:835
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing old permission center URL, recommended to switch to BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:838
+#: paasng/settings/__init__.py:839
 msgid "蓝鲸权限中心的应用ID"
 msgstr "BlueKing permission center APP ID"
 
-#: paasng/settings/__init__.py:842
+#: paasng/settings/__init__.py:843
 msgid "蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing permission center intranet access URL, recommended to switch to "
 "BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:844
+#: paasng/settings/__init__.py:845
 msgid "蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL"
 msgstr ""
 "BlueKing configuration platform access URL, recommended to switch to "
 "BKPAAS_CC_URL"
 
-#: paasng/settings/__init__.py:845
+#: paasng/settings/__init__.py:846
 msgid "蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL"
 msgstr ""
 "BlueKing job platform access URL, recommended to switch to BKPAAS_JOB_URL"
@@ -3899,14 +4008,6 @@ msgstr "Object Storage Service Exception"
 #: paasng/utils/error_codes.py:79
 msgid "绑定运行时失败"
 msgstr ""
-
-#: paasng/utils/error_codes.py:81
-msgid "查询日志失败"
-msgstr "Query log failure"
-
-#: paasng/utils/error_codes.py:82
-msgid "查询日志失败，请检查查询条件"
-msgstr "Query log failed, please check the query criteria"
 
 #: paasng/utils/error_codes.py:83
 msgid "日志平台-「自定义上报」配置不存在"
@@ -4170,8 +4271,8 @@ msgstr ""
 msgid "参数格式错误"
 msgstr "Parameter format error"
 
-#: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:90
-#: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:102
+#: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:98
+#: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:110
 msgid "This value does not match the required pattern."
 msgstr ""
 

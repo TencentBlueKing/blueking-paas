@@ -22,6 +22,7 @@
 
 import Vue from 'vue';
 import http from '@/api';
+import { json2Query } from '@/common/tools';
 
 // store
 const state = {
@@ -119,6 +120,23 @@ const actions = {
    */
   getIdleAppList() {
     const url = `${BACKEND_URL}/api/bkapps/applications/lists/idle/`;
+    return http.get(url, {});
+  },
+
+  /**
+   * 获取应用操作记录
+   * @param {String} appCode 应用id
+   */
+  getRecords({}, { appCode, params }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/audit/records/?${json2Query(params)}`;
+    return http.get(url);
+  },
+
+  /**
+   * 获取应用仪表板信息
+   */
+  getAppDashboardInfo({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/dashboard_info/`;
     return http.get(url, {});
   },
 };

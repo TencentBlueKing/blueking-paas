@@ -17,11 +17,11 @@
 
 import copy
 import logging
-from typing import Dict, Literal, Optional, TextIO
+from typing import Callable, Dict, Literal, Optional, TextIO
 
 import yaml
 from django.utils.translation import gettext as _
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypeAlias
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
@@ -31,12 +31,21 @@ from paasng.platform.declarative.application.resources import ApplicationDesc, g
 from paasng.platform.declarative.application.validations import v2 as app_spec_v2
 from paasng.platform.declarative.application.validations import v3 as app_spec_v3
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController, PerformResult
+from paasng.platform.declarative.deployment.controller import (
+    DeployHandleResult,
+    DeploymentDeclarativeController,
+    handle_procfile_procs,
+)
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.deployment.validations import v2 as deploy_spec_v2
 from paasng.platform.declarative.deployment.validations import v3 as deploy_spec_v3
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.serializers import SMartV1DescriptionSLZ, UniConfigSLZ, validate_desc
+from paasng.platform.declarative.serializers import (
+    SMartV1DescriptionSLZ,
+    UniConfigSLZ,
+    validate_desc,
+    validate_procfile_procs,
+)
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 
@@ -44,6 +53,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
+    """Get the handler for handling description data, it handle the app
+    level logics, see `get_deploy_desc_handler` for deployment level handler.
+
+    :param json_data: The description data in dict format.
+    """
     spec_version = detect_spec_version(json_data)
     # TODO 删除 SMartDescriptionHandler 分支. VER_1 存量版本基本不再支持
     if spec_version == AppSpecVersion.VER_1:
@@ -65,19 +79,11 @@ class DescriptionHandler(Protocol):
     @property
     def app_desc(self) -> ApplicationDesc: ...
 
-    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc: ...
-
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
         :param user: User to perform actions as
         :param source_origin: 源码来源
-        """
-
-    def handle_deployment(self, deployment: Deployment) -> PerformResult:
-        """Handle a YAML config file for a deployment
-
-        :param deployment: The related deployment object
         """
 
 
@@ -89,7 +95,6 @@ class CNativeAppDescriptionHandler:
         return cls(yaml.safe_load(fp))
 
     def __init__(self, json_data: Dict):
-        """The app_desc.yml json data"""
         self.json_data = json_data
 
     @property
@@ -114,11 +119,6 @@ class CNativeAppDescriptionHandler:
         )
         return app_desc
 
-    def get_deploy_desc(self, module_name: Optional[str]) -> DeploymentDesc:
-        desc_data = _find_module_desc_data(self.json_data, module_name, "list")
-        desc = validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
-        return desc
-
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
@@ -126,14 +126,6 @@ class CNativeAppDescriptionHandler:
         """
         controller = AppDeclarativeController(user, source_origin)
         return controller.perform_action(self.app_desc)
-
-    def handle_deployment(self, deployment: Deployment) -> PerformResult:
-        """Handle a YAML config file for a deployment
-
-        :param deployment: The related deployment object
-        """
-        controller = DeploymentDeclarativeController(deployment)
-        return controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
 
 
 class AppDescriptionHandler:
@@ -144,7 +136,6 @@ class AppDescriptionHandler:
         return cls(yaml.safe_load(fp))
 
     def __init__(self, json_data: Dict):
-        """The app_desc.yml json data"""
         self.json_data = json_data
 
     @property
@@ -170,16 +161,6 @@ class AppDescriptionHandler:
         )
         return app_desc
 
-    def get_deploy_desc(self, module_name: Optional[str] = None) -> DeploymentDesc:
-        """Get the deployment description object by module name.
-
-        :param module_name: The name of module.
-        :raise DescriptionValidationError: If no info can be found using the given module.
-        """
-        desc_data = _find_module_desc_data(self.json_data, module_name, "dict")
-        desc = validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data)
-        return desc
-
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
@@ -193,16 +174,6 @@ class AppDescriptionHandler:
 
         controller = AppDeclarativeController(user, source_origin)
         return controller.perform_action(self.app_desc)
-
-    def handle_deployment(self, deployment: Deployment) -> PerformResult:
-        """Handle a YAML config file for a deployment
-
-        :param deployment: The related deployment object
-        """
-        validate_desc(UniConfigSLZ, self.json_data)
-
-        controller = DeploymentDeclarativeController(deployment)
-        return controller.perform_action(self.get_deploy_desc(deployment.app_environment.module.name))
 
 
 class SMartDescriptionHandler:
@@ -226,12 +197,6 @@ class SMartDescriptionHandler:
         app_desc, _ = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
         return app_desc
 
-    def get_deploy_desc(self, module_name: Optional[str] = None) -> DeploymentDesc:
-        instance = get_application(self.json_data, "app_code")
-        # S-mart application always perform a full update by using partial=False
-        _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
-        return deploy_desc
-
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a app config
 
@@ -240,13 +205,116 @@ class SMartDescriptionHandler:
         controller = AppDeclarativeController(user)
         return controller.perform_action(self.app_desc)
 
-    def handle_deployment(self, deployment: Deployment) -> PerformResult:
-        """Handle a deployment config
 
-        :param deployment: The related deployment object
+###
+# Deploy related functions
+###
+
+
+def get_deploy_desc_handler(
+    desc_data: Optional[Dict] = None, procfile_data: Optional[Dict] = None
+) -> "DeployDescHandler":
+    """Get the handler for handling description data when performing new deployment.
+
+    :param desc_data: The description data in dict format, optional
+    :param procfile_data: The "Procfile" data in dict format, format: {<proc_type>: <command>}
+    """
+    if not (desc_data or procfile_data):
+        raise ValueError("json_data and procfile_data can't be both None")
+
+    if not desc_data:
+        # Only procfile data is provided, use the handler to handle processes data only
+        assert procfile_data
+        return ProcfileOnlyDeployDescHandler(procfile_data)
+    return DefaultDeployDescHandler(desc_data, procfile_data, get_desc_getter_func(desc_data))
+
+
+def get_deploy_desc_by_module(desc_data: Dict, module_name: str) -> DeploymentDesc:
+    """Get the deploy desc object by module name
+
+    :param desc_data: The description data in dict format, may contains multiple modules
+    :param module_name: The module name
+    """
+    return get_desc_getter_func(desc_data)(desc_data, module_name)
+
+
+class DeployDescHandler(Protocol):
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
+        """Handle a deployment object.
+
+        :param deployment: The deployment object
         """
-        controller = DeploymentDeclarativeController(deployment)
-        return controller.perform_action(self.get_deploy_desc(None))
+        ...
+
+
+# A simple function type that get the deploy description object from the json data.
+DescGetterFunc: TypeAlias = Callable[[Dict, str], DeploymentDesc]
+
+
+def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
+    """Get the description getter function by current desc data."""
+    spec_version = detect_spec_version(desc_data)
+    # TODO: 删除此分支，VER_1 存量版本基本不再支持
+    if spec_version == AppSpecVersion.VER_1:
+        return deploy_desc_getter_v1
+    elif spec_version == AppSpecVersion.VER_2:
+        return deploy_desc_getter_v2
+    else:
+        return deploy_desc_getter_v3
+
+
+class DefaultDeployDescHandler:
+    """The default handler for handling deployment description data.
+
+    :param json_data: The description data in dict format
+    :param procfile_data: The Procfile data in dict format, can be none
+    :param desc_getter: The function to get the deployment desc object
+    """
+
+    def __init__(self, json_data: Dict, procfile_data: Optional[Dict], desc_getter: DescGetterFunc):
+        self.json_data = json_data
+        self.procfile_data = procfile_data
+        self.desc_getter = desc_getter
+
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
+        desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
+        procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None
+        return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
+
+
+class ProcfileOnlyDeployDescHandler:
+    """The handler for handling the procfile data only.
+
+    :param procfile_data: The Procfile data in dict format
+    """
+
+    def __init__(self, procfile_data: Dict):
+        self.procfile_data = procfile_data
+
+    def handle(self, deployment: Deployment) -> DeployHandleResult:
+        procfile_procs = validate_procfile_procs(self.procfile_data)
+        return handle_procfile_procs(deployment, procfile_procs)
+
+
+def deploy_desc_getter_v1(json_data: Dict, module_name: str) -> DeploymentDesc:
+    """Get the deployment desc object, spec ver 1."""
+    instance = get_application(json_data, "app_code")
+    # S-mart application always perform a full update by using partial=False
+    _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, json_data, instance, partial=False)
+    return deploy_desc
+
+
+def deploy_desc_getter_v2(json_data: Dict, module_name: str) -> DeploymentDesc:
+    """Get the deployment desc object, spec ver 2."""
+    validate_desc(UniConfigSLZ, json_data)
+    desc_data = _find_module_desc_data(json_data, module_name, "dict")
+    return validate_desc(deploy_spec_v2.DeploymentDescSLZ, desc_data)
+
+
+def deploy_desc_getter_v3(json_data: Dict, module_name: str) -> DeploymentDesc:
+    """Get the deployment desc object, spec ver 3."""
+    desc_data = _find_module_desc_data(json_data, module_name, "list")
+    return validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
 
 
 def _find_module_desc_data(

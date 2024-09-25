@@ -20,6 +20,7 @@ from django.urls import path
 
 from . import views
 
+# FIXME: phalanx 方案已经下线, 删除废弃 url
 urlpatterns = [
     url(
         r"api/monitor/applications/(?P<code>[^/]+)/record/query/$",
@@ -53,5 +54,9 @@ urlpatterns = [
     path(
         "api/monitor/applications/<slug:code>/alarm_strategies/",
         views.ListAlarmStrategiesView.as_view({"post": "list"}),
+    ),
+    path(
+        "api/monitor/applications/<slug:code>/dashboard_info/",
+        views.GetDashboardInfoView.as_view({"get": "get"}),
     ),
 ]

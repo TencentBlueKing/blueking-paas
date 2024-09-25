@@ -18,6 +18,7 @@
 from collections import defaultdict
 from typing import Text
 
+from django.conf import settings
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -30,6 +31,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
@@ -341,3 +343,18 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
 
         serializer = AlarmStrategySLZ(alarm_strategies)
         return Response(serializer.data)
+
+
+class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def get(self, request, code):
+        """获取监控仪表盘地址等信息"""
+        app = self.get_application()
+
+        try:
+            bk_biz_id = BKMonitorSpace.objects.get(application=app).iam_resource_id
+        except BKMonitorSpace.DoesNotExist:
+            return Response({"dashboard_url": settings.BK_MONITORV3_URL})
+        else:
+            return Response({"dashboard_url": f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}#/grafana/home"})

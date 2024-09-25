@@ -18,17 +18,17 @@
                 class="commit-id"
                 @click="toCodeRepository"
               >
-                {{ versionData?.source_hash }}
+                {{ versionData?.source_hash?.slice(-6) || '--' }}
               </span>
             </div>
           </div>
           <div class="status-wrapper">
-            <round-loading v-if="versionData.status === 'pending' || versionData.status === 'initial'" />
+            <round-loading v-if="!isCodecc && ['pending', 'initial'].includes(versionData.status)" />
             <div
               v-else
-              :class="['dot', versionData.status]"
+              :class="['dot', versionData[statusKey]]"
             />
-            <span class="pl5">{{ PLUGIN_TEST_VERSION_STATUS[versionData.status] }}</span>
+            <span class="pl5">{{ $t(statusMap[versionData[statusKey]]) }}</span>
           </div>
         </template>
         <a
@@ -41,12 +41,15 @@
           {{ $t('插件文档') }}
         </a>
       </div>
+      <span v-if="tips" class="tips">{{ tips }}</span>
+    </div>
+    <div class="right-tool flex-row align-items-center">
+      <slot name="right"></slot>
     </div>
   </div>
 </template>
 <script>
 import { bus } from '@/common/bus';
-import { PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 
 export default {
   props: {
@@ -74,12 +77,30 @@ export default {
       type: String,
       default: '',
     },
+    tips: {
+      type: String,
+      default: '',
+    },
+    statusMap: {
+      type: Object,
+    },
+    isCodecc: {
+      type: Boolean,
+      default: false,
+    },
+    backFn: {
+      type: Function,
+    },
   },
   data() {
     return {
       showBackIcon: false,
-      PLUGIN_TEST_VERSION_STATUS,
     };
+  },
+  computed: {
+    statusKey() {
+      return this.isCodecc ? 'display_status' : 'status';
+    },
   },
   watch: {
     $route: {
@@ -94,6 +115,10 @@ export default {
   },
   methods: {
     goBack() {
+      if (this.backFn) {
+        this.backFn();
+        return;
+      }
       const type = this.$route.query.type || 'prod';
       if (this.versionData?.version || type === 'test') {
         bus.$emit('stop-deploy', true);
@@ -116,6 +141,8 @@ export default {
 </script>
 <style lang="scss" scoped>
 .plugin-top-title {
+  display: flex;
+  justify-content: space-between;
   i {
     transform: translateY(0px);
   }
@@ -138,6 +165,7 @@ export default {
     }
   }
   .title-container {
+    flex: 1;
     .title {
       display: flex;
       align-items: center;
@@ -188,14 +216,30 @@ export default {
         display: inline-block;
         margin-right: 3px;
       }
-      .successful {
+      .successful,
+      .fully_released {
         background: #e5f6ea;
         border: 1px solid #3fc06d;
       }
       .failed,
-      .interrupted {
+      .interrupted,
+      .full_approval_failed,
+      .gray_approval_failed {
         background: #ffe6e6;
         border: 1px solid #ea3636;
+      }
+      .full_approval_in_progress,
+      .gray_approval_in_progress {
+        background: #FFE8C3;
+        border: 1px solid #FF9C01;
+      }
+      .in_gray {
+        background: #E1ECFF;
+        border: 1px solid #699DF4;
+      }
+      .rolled_back {
+        background: #F0F1F5;
+        border: 1px solid #DCDEE5;
       }
     }
     .icon-cls-back {
@@ -203,6 +247,11 @@ export default {
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;
+    }
+    .tips {
+      margin-left: 16px;
+      font-size: 12px;
+      color: #979BA5;
     }
   }
 }

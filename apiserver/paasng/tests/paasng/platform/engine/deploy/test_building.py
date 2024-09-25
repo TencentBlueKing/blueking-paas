@@ -23,6 +23,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 from paas_wl.core.resource import generate_bkapp_name
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
 from paasng.platform.engine.handlers import attach_all_phases
@@ -44,7 +45,7 @@ class TestNormalApp:
         with mock.patch(
             "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_app_desc"
         ) as mocked_get_app_yaml:
-            mocked_get_app_yaml.side_effect = GetAppYamlError("")
+            mocked_get_app_yaml.side_effect = GetAppYamlError("unknown")
             yield
 
     def test_failed_when_parsing_processes(self, builder_class, bk_deployment_full):
@@ -60,14 +61,14 @@ class TestNormalApp:
 
             deployment = Deployment.objects.get(pk=bk_deployment_full.id)
             assert deployment.status == JobStatus.FAILED.value
-            assert deployment.err_detail == "Procfile error: Invalid Procfile format"
+            assert "[Procfile] Invalid Procfile format" in deployment.err_detail
 
             assert mocked_stream().write_title.called
             assert mocked_stream().write_title.call_args[0][0] == "正在解析应用进程信息"
             assert mocked_stream().write_message.called
             assert (
                 mocked_stream().write_message.call_args[0][0]
-                == "步骤 [解析应用进程信息] 出错了，原因：Procfile error: Invalid Procfile format。"
+                == "步骤 [解析应用进程信息] 出错了，原因：处理应用描述文件失败：[app_desc] unknown; [Procfile] Invalid Procfile format。"
             )
 
     def test_failed_when_upload_source(self, builder_class, bk_deployment_full):
@@ -156,9 +157,11 @@ class TestCloudNative:
         )
 
     def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
+        # Replace the deploy desc handler to skip the metadata reading action
+        desc_handler = get_deploy_desc_handler(None, {"web": "gunicorn"})
         with mock.patch(
-            "paasng.platform.engine.utils.source.get_metadata_reader",
-        ), mock.patch.object(builder_class, "handle_app_description"), mock.patch(
+            "paasng.platform.engine.deploy.building.get_deploy_desc_handler_by_version", return_value=desc_handler
+        ), mock.patch(
             "paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)
         ), mock.patch("paasng.platform.engine.deploy.building.BuildProcessPoller") as mocked_poller, mock.patch(
             "paasng.platform.engine.utils.output.RedisChannelStream"

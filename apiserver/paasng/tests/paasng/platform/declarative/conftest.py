@@ -23,10 +23,10 @@ from tests.utils.mocks.cluster import cluster_ingress_config
 
 
 @pytest.fixture(autouse=True)
-def _setup_mocks(mock_wl_services_in_creation):
+def _setup_mocks():
     """Setup mocks for current testing module
 
-    - Mock wl_app creation which depends on `workloads` module
+    - Mock cluster ingress config with fixed domains
     - Mock ProcessManager which depends on `workloads` module
     """
     with cluster_ingress_config(

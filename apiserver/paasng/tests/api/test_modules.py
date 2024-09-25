@@ -367,12 +367,33 @@ class TestModuleDeletion:
 class TestDefaultModuleSwitch:
     """Test set as default API"""
 
-    def test_switch_default_module(self, api_client, bk_app, bk_module, bk_prod_env, bk_user):
+    @staticmethod
+    def init_another_module(bk_app, bk_user):
         another_module = Module.objects.create(
             application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
         )
         initialize_module(another_module)
         create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
+        return another_module
+
+    def test_source_module(self, api_client, bk_app, bk_module, bk_user):
+        another_module = self.init_another_module(bk_app, bk_user)
+        MarketConfig.objects.get_or_create_by_app(bk_app)
+
+        # 切换主模块
+        response = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{another_module.name}/set_default/",
+            format="json",
+        )
+
+        assert response.status_code == 200
+        bk_app.refresh_from_db()
+        # 切换主模块后， market config 内的模块信息应当会通过 signal 更新
+        assert bk_app.market_config.source_module == another_module
+        assert bk_app.default_module == another_module
+
+    def test_with_custom_domain(self, api_client, bk_app, bk_module, bk_prod_env, bk_user):
+        another_module = self.init_another_module(bk_app, bk_user)
 
         # 创建自定义域名
         Domain.objects.create(
@@ -397,15 +418,12 @@ class TestDefaultModuleSwitch:
         market_config.refresh_from_db()
         assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
 
+        # 切换主模块
         response = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{another_module.name}/set_default/",
             format="json",
         )
         assert response.status_code == 200
-        bk_app.refresh_from_db()
-        # 切换主模块后， market config 内的模块信息应当会通过 signal 更新
-        assert bk_app.market_config.source_module == another_module
-        assert bk_app.default_module == another_module
 
         # 测试切换后地址是否正常显示
         url = f"/api/market/applications/{bk_app.code}/config/"

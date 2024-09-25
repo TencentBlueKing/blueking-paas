@@ -117,6 +117,7 @@ class PluginCodeTemplate(BaseModel):
 class PluginoverviewPage(BaseModel):
     topUrl: Optional[str] = Field(default=None, description="概览页面顶部嵌入地址")
     bottomUrl: Optional[str] = Field(default=None, description="概览页面底部嵌入地址")
+    ignoredUrl: Optional[str] = Field(default=None, description="Codecc 概览页面误报列表地址")
 
 
 @prepare_json_field
@@ -162,6 +163,7 @@ class PluginVisibleRangeLevel(BaseModel):
     name: str
     id: str
     type: Literal["department"]
+    tof_id: Optional[str]
 
 
 @prepare_json_field

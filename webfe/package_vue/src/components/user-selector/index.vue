@@ -257,6 +257,8 @@ export default {
       ],
       searchConditionValue: 'fuzzy',
       isConfirmLoading: false,
+      userApi: '',
+      departmentApi: '',
     };
   },
   computed: {
@@ -334,9 +336,8 @@ export default {
     },
     apiHost: {
       handler(value) {
-        this.userApi = `${value}/api/c/compapi/v2/usermanage/fe_list_department_profiles/`;
+        this.userApi = `${value}/api/c/compapi/v2/usermanage/fs_list_users/`;
         this.departmentApi = `${value}/api/c/compapi/v2/usermanage/fe_list_departments/`;
-        this.userSearchApi = `${value}/api/c/compapi/v2/usermanage/fe_list_users/`;
       },
       immediate: true,
     },
@@ -364,7 +365,7 @@ export default {
     },
     // 搜索用户
     fetchSearchUser(params = {}) {
-      return request.getData(this.userSearchApi, params);
+      return request.getData(this.userApi, params);
     },
 
     async fetchCategories(isTreeLoading = false, isDialogLoading = false) {
@@ -564,7 +565,7 @@ export default {
       };
       const requestUserParams = {
         ...params,
-        lookup_value: payload.id,
+        extra_lookups: payload.id,
       };
 
       try {

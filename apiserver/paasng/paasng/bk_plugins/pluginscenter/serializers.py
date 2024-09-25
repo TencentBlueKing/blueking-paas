@@ -296,6 +296,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 class overviewPageSLZ(serializers.Serializer):
     top_url = serializers.CharField(default=None, source="topUrl")
     bottom_url = serializers.CharField(default=None, source="bottomUrl")
+    ignored_url = serializers.CharField(default=None, source="ignoredUrl")
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):

@@ -32,8 +32,11 @@ export default {
     };
   },
   computed: {
+    curPluginInfo() {
+      return this.$store.state.plugin.curPluginInfo;
+    },
     iframeUrl() {
-      return '';
+      return this.curPluginInfo.overview_page?.ignored_url;
     },
   },
   mounted() {

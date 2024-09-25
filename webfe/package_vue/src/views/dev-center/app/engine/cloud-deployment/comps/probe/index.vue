@@ -1,5 +1,5 @@
 <template>
-  <div class="probe-container">
+  <div :class="['probe-container', { 'view': !isEdit }]">
     <!-- 编辑态 -->
     <div class="probe-options" v-if="isEdit">
       <div :class="['label-title', { en: localLanguage === 'en' }]">
@@ -178,7 +178,10 @@ export default {
 
 <style lang="scss" scoped>
 .probe-container {
-  margin-top: 22px;
+  margin-top: 24px;
+  &.view {
+    margin-bottom: 24px;
+  }
   .probe-options {
     display: flex;
   }

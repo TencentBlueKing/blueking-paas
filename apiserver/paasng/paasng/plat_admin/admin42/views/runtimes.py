@@ -293,7 +293,7 @@ class SlugBuilderManageView(GenericTemplateView):
         context = super().get_context_data(**kwargs)
         context["regions"] = list(get_all_regions().keys())
         context["image_types"] = dict(AppImageType.get_choices())
-        context["step_meta_sets"] = {sms.id: str(sms) for sms in StepMetaSet.objects.all()}
+        context["step_meta_sets"] = {st.id: str(st) for st in StepMetaSet.objects.all()}
         return context
 
 
@@ -306,12 +306,12 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         """获取绑定和可绑定的 BuildPack 列表"""
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         bound_buildpacks = slugbuilder.buildpacks.all()
-        buildpack_builder_type_map = {
+        builder_buildpack_type_map = {
             AppImageType.LEGACY: [BuildPackType.TAR],
             AppImageType.CNB: [BuildPackType.OCI_IMAGE, BuildPackType.OCI_EMBEDDED, BuildPackType.OCI_FILE],
         }
         unbound_buildpacks = AppBuildPack.objects.filter(
-            type__in=buildpack_builder_type_map[slugbuilder.type]
+            type__in=builder_buildpack_type_map[slugbuilder.type]
         ).exclude(id__in=bound_buildpacks)
 
         return Response(

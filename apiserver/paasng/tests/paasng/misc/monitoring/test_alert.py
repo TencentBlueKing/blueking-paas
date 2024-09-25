@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import atexit
-import random
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -25,7 +24,6 @@ import pytest
 from filelock import FileLock
 
 from paasng.infras.bkmonitorv3.constants import SpaceType
-from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from tests.utils.helpers import create_app, generate_random_string
@@ -54,12 +52,8 @@ def clear_filelock():
 
 
 AppQueryAlertsParams = partial(
-    QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()
-)
-
-AppQueryAlertsParamsWithBizIds = partial(
-    QueryAlertsParams,
-    bk_biz_ids=[random.randint(-5000000, -4000000)],
+    QueryAlertsParams.create_by_app_codes,
+    app_codes=[FAKE_APP_CODE],
     start_time=datetime.now(),
     end_time=datetime.now(),
 )
@@ -84,84 +78,37 @@ def bk_monitor_space():
 
 
 class TestQueryAlertsParams:
+    @pytest.mark.django_db()
     @pytest.mark.parametrize(
-        ("query_params", "expected_query_string"),
+        ("create_query_params", "expected_query_string"),
         [
             (
-                AppQueryAlertsParams(),
+                lambda: AppQueryAlertsParams(),
                 None,
             ),
             (
-                AppQueryAlertsParams(environment="stag"),
+                lambda: AppQueryAlertsParams(environment="stag"),
                 "labels:(stag)",
             ),
             (
-                AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
                 "labels:(stag AND high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(alert_code="high_cpu_usage"),
                 "labels:(high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
+                lambda: AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
                 f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
             ),
         ],
     )
-    def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
-        result = query_params.to_dict()
+    def test_to_dict(self, create_query_params, expected_query_string, bk_monitor_space):
+        result = create_query_params().to_dict()
         assert result["bk_biz_ids"] == [int(bk_monitor_space.iam_resource_id)]
         if query_string := result.get("query_string"):
             assert query_string == expected_query_string
-
-    @pytest.mark.parametrize(
-        ("query_params", "expected_query_string"),
-        [
-            (
-                AppQueryAlertsParamsWithBizIds(),
-                None,
-            ),
-            (
-                AppQueryAlertsParamsWithBizIds(environment="stag"),
-                "labels:(stag)",
-            ),
-            (
-                AppQueryAlertsParamsWithBizIds(environment="stag", alert_code="high_cpu_usage"),
-                "labels:(stag AND high_cpu_usage)",
-            ),
-            (
-                AppQueryAlertsParamsWithBizIds(alert_code="high_cpu_usage"),
-                "labels:(high_cpu_usage)",
-            ),
-            (
-                AppQueryAlertsParamsWithBizIds(keyword=SEARCH_KEYWORD),
-                f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
-            ),
-        ],
-    )
-    def test_to_dict_with_bk_biz_id(self, query_params, expected_query_string, bk_monitor_space):
-        result = query_params.to_dict()
-        assert result["bk_biz_ids"] == query_params.bk_biz_ids
-        if query_string := result.get("query_string"):
-            assert query_string == expected_query_string
-
-    @pytest.mark.parametrize(
-        ("query_params"),
-        [
-            partial(QueryAlertsParams, start_time=datetime.now(), end_time=datetime.now())(),
-            partial(
-                QueryAlertsParams,
-                app_code=FAKE_APP_CODE,
-                bk_biz_ids=[random.randint(-5000000, -4000000)],
-                start_time=datetime.now(),
-                end_time=datetime.now(),
-            )(),
-        ],
-    )
-    def test_to_dict_exception(self, query_params):
-        with pytest.raises(BkMonitorApiError, match="params must have one of app_code or bk_biz_ids, not both"):
-            query_params.to_dict()
 
 
 class TestQueryAlarmStrategiesParams:

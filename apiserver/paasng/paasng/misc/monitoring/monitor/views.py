@@ -30,6 +30,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
+from paasng.infras.bkmonitorv3.params import QueryAlertsParams
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
@@ -257,14 +258,15 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertSLZ(many=True)})
     def list(self, request, code):
         """查询告警"""
-        serializer = ListAlertsSLZ(data=request.data, context={"app_code": code})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": [code]})
         serializer.is_valid(raise_exception=True)
+        query_params: QueryAlertsParams = serializer.validated_data
+        if not query_params.bk_biz_ids:
+            # 应用的BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
+            return Response(AlertSLZ().data)
 
         try:
-            alerts = make_bk_monitor_client().query_alerts(serializer.validated_data)
-        except BkMonitorSpaceDoesNotExist:
-            # BkMonitorSpace 不存在（应用未部署）时，返回空列表
-            return Response([])
+            alerts = make_bk_monitor_client().query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
@@ -278,33 +280,34 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         if not app_codes:
             return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
 
-        bk_monitor_client = make_bk_monitor_client()
-        # 查询应用的监控空间
-        monitor_spaces = bk_monitor_client.query_space_biz_id(app_codes=app_codes)
-        bk_biz_ids = [space["bk_biz_id"] for space in monitor_spaces]
-        if not bk_biz_ids:
-            return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
-        bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
-
-        serializer = ListAlertsSLZ(data=request.data, context={"bk_biz_ids": bk_biz_ids})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": [app_codes]})
         serializer.is_valid(raise_exception=True)
-
-        try:
-            alerts = bk_monitor_client.query_alerts(serializer.validated_data)
-        except BkMonitorSpaceDoesNotExist:
-            # 用户所有应用 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
+        query_params: QueryAlertsParams = serializer.validated_data
+        if not query_params.bk_biz_ids:
+            # 应用的BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
+
+        # 查询告警
+        bk_monitor_client = make_bk_monitor_client()
+        try:
+            alerts = bk_monitor_client.query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
         if not alerts:
             return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
 
+        # 告警按biz_id归类
         biz_grouped_alerts = defaultdict(list)
         for alert in alerts:
             bk_biz_id = alert["bk_biz_id"]
             biz_grouped_alerts[bk_biz_id].append(alert)
 
+        # 查询应用的监控空间, 生成bk_biz_id对应application的dict
+        monitor_spaces = bk_monitor_client.query_space_biz_id(app_codes=app_codes)
+        bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
+
+        # 告警按应用归类
         app_grouped_alerts = []
         for bizid, app_alerts in biz_grouped_alerts.items():
             app_grouped_alerts.append(

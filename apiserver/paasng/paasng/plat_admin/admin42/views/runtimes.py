@@ -40,6 +40,9 @@ from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugBuilderCreateInputSLZ,
     AppSlugBuilderListOutputSLZ,
     AppSlugBuilderUpdateInputSLZ,
+    AppSlugRunnerCreateInputSLZ,
+    AppSlugRunnerListOutputSLZ,
+    AppSlugRunnerUpdateInputSLZ,
     BuildPackBindInputSLZ,
     BuildPackCreateInputSLZ,
     BuildPackListOutputSLZ,
@@ -139,7 +142,7 @@ slugrunner_generator = RuntimeAdminViewGenerator(
 )
 
 SlugRunnerTemplateView = slugrunner_generator.gen_template_view()
-SlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
+LegacySlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
 
 
 # ----------------------------------------------------- new -------------------------------------------------------
@@ -409,6 +412,89 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             operation=OperationEnum.DELETE,
             target=OperationTarget.SLUGBUILDER,
             attribute=slugbuilder.name,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AppSlugRunnerManageView(GenericTemplateView):
+    name = "SlugRunner 管理"
+    template_name = "admin42/platformmgr/runtimes/slugrunners.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["regions"] = list(get_all_regions().keys())
+        context["image_types"] = dict(AppImageType.get_choices())
+        return context
+
+
+class SlugRunnerAPIViewSet(GenericViewSet):
+    """SlugRunner 管理 API 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list(self, request):
+        """获取 SlugRunner 列表"""
+        slugrunners = AppSlugRunner.objects.order_by("region")
+        return Response(AppSlugRunnerListOutputSLZ(slugrunners, many=True).data)
+
+    def create(self, request):
+        """创建 SlugRunner"""
+        slz = AppSlugRunnerCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slz.data["name"],
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk):
+        """更新 SlugRunner"""
+        slugrunner = AppSlugRunner.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+        )
+        slz = AppSlugRunnerUpdateInputSLZ(slugrunner, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slugrunner.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, pk):
+        """删除 SlugRunner"""
+        slugrunner = AppSlugRunner.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+        )
+        slugrunner.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slugrunner.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

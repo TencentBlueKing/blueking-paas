@@ -28,6 +28,7 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -376,6 +377,27 @@ class ApplicationListViewSet(viewsets.ViewSet):
                 "applications": applications,
             }
         )
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取应用评估结果数量",
+        responses={200: slzs.ApplicationEvaluationIssueCountResultSLZ()},
+    )
+    def list_evaluation_issue_count(self, request):
+        """获取应用评估结果数量"""
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
+
+        issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
+
+        data = {"collected_at": latest_collected_at, "issues_count": issue_type_counts}
+
+        serializer = slzs.ApplicationEvaluationIssueCountResultSLZ(data)
+        return Response(serializer.data)
 
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

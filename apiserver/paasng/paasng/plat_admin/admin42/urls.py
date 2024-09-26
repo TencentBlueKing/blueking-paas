@@ -242,7 +242,7 @@ urlpatterns = [
         runtimes.AppSlugRunnerManageView.as_view(),
         name="admin.runtimes.slugrunner.manage",
     ),
-    # 平台管理-运行时管理-SlugRunner 管理API
+    # 平台管理-运行时管理-SlugRunner 管理 API
     url(
         r"^platform/runtime/slugrunner/$",
         runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),

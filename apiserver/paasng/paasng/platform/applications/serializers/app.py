@@ -214,7 +214,8 @@ class ApplicationEvaluationIssueCountSLZ(serializers.Serializer):
 
 class ApplicationEvaluationIssueCountResultSLZ(serializers.Serializer):
     collected_at = serializers.DateTimeField(help_text="采集时间")
-    issues_count = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用数量")
+    issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
 
 
 class EnvironmentDeployInfoSLZ(serializers.Serializer):

@@ -32,7 +32,6 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
@@ -353,10 +352,6 @@ class ApplicationListViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["应用列表"],
         operation_description="获取应用评估详情列表",
-        manual_parameters=[
-            openapi.Parameter("limit", openapi.IN_QUERY, description="数量", type=openapi.TYPE_INTEGER),
-            openapi.Parameter("offset", openapi.IN_QUERY, description="偏移量", type=openapi.TYPE_INTEGER),
-        ],
         responses={200: slzs.ApplicationEvaluationListResultSLZ()},
     )
     def list_evaluation(self, request):
@@ -367,6 +362,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
+
         paginator = LimitOffsetPagination()
         paginated_reports = paginator.paginate_queryset(reports, request)
 
@@ -392,9 +388,10 @@ class ApplicationListViewSet(viewsets.ViewSet):
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
 
+        total = reports.count()
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
 
-        data = {"collected_at": latest_collected_at, "issues_count": issue_type_counts}
+        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
         serializer = slzs.ApplicationEvaluationIssueCountResultSLZ(data)
         return Response(serializer.data)

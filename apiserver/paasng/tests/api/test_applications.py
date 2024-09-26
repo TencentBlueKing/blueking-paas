@@ -747,9 +747,11 @@ class TestListEvaluation:
 
         assert response.status_code == status.HTTP_200_OK
         assert "collected_at" in response.data
-        assert "issues_count" in response.data
-        assert len(response.data["issues_count"]) == 2
+        assert "issue_type_counts" in response.data
+        assert "total" in response.data
+        assert response.data["total"] == 2
+        assert len(response.data["issue_type_counts"]) == 2
 
-        for issue in response.data["issues_count"]:
-            if issue["issue_type"] == "None" or issue["issue_type"] == "Idle":
-                assert issue["count"] == 1
+        for issue in response.data["issue_type_counts"]:
+            assert issue["issue_type"] in ["None", "Idle"]
+            assert issue["count"] == 1

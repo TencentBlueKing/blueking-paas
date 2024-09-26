@@ -15,9 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Controller for declarative applications
-"""
-
+"""Controller for declarative applications"""
 
 import logging
 from typing import Dict, List, Optional
@@ -26,6 +24,7 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.shim import get_application_cluster
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
@@ -158,6 +157,13 @@ class AppDeclarativeController:
     def sync_modules(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Sync modules to database"""
         region = get_region(application.region)
+
+        # Get the cluster name used by the existing default module, if the module exists
+        if application.modules.exists():
+            cluster_name = get_application_cluster(application).name
+        else:
+            cluster_name = None
+
         for module_name, module_desc in modules_desc.items():
             if application.modules.filter(name=module_name).exists():
                 # 重新设置主模块
@@ -182,7 +188,7 @@ class AppDeclarativeController:
             )
             # Initialize module
             try:
-                initialize_smart_module(module)
+                initialize_smart_module(module, cluster_name=cluster_name)
             except ModuleInitializationError as e:
                 raise ControllerError(str(e))
 

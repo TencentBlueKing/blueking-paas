@@ -152,7 +152,7 @@ urlpatterns = [
         smart_advisor.DeployFailurePatternManageViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.smart_advisor.deploy_failure_tips.detail",
     ),
-    # 平台管理-运行时管理-BuildPack管理
+    # 平台管理-运行时管理-BuildPack 管理
     url(
         r"^platform/runtime/buildpack/manage/$",
         runtimes.BuildPackTemplateView.as_view(),
@@ -163,7 +163,7 @@ urlpatterns = [
         runtimes.BuildPackManageView.as_view(),
         name="admin.runtimes.buildpack.manage",
     ),
-    # 平台管理-运行时管理-BuildPack管理 API
+    # 平台管理-运行时管理-BuildPack 管理 API
     url(
         r"^platform/runtime/buildpack/$",
         runtimes.LegacyBuildPackAPIViewSet.as_view(dict(post="create", get="list")),
@@ -189,7 +189,7 @@ urlpatterns = [
         runtimes.BuildPackAPIViewSet.as_view(dict(post="set_bound_builders", get="get_bound_builders")),
         name="admin.runtimes.buildpack.detail.bind",
     ),
-    # 平台管理-运行时管理-SlugBuilder管理
+    # 平台管理-运行时管理-SlugBuilder 管理
     url(
         r"^platform/runtime/slugbuilder/manage/$",
         runtimes.SlugBuilderTemplateView.as_view(),
@@ -200,7 +200,7 @@ urlpatterns = [
         runtimes.SlugBuilderManageView.as_view(),
         name="admin.runtimes.slugbuilder.manage",
     ),
-    # 平台管理-运行时管理-SlugBuilder管理 API
+    # 平台管理-运行时管理-SlugBuilder 管理 API
     url(
         r"^platform/runtime/slugbuilder/$",
         runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
@@ -231,7 +231,7 @@ urlpatterns = [
         runtimes.SlugBuilderAPIViewSet.as_view(dict(post="set_bound_buildpacks", get="get_bound_buildpacks")),
         name="admin.runtimes.slugbuilder.detail.bind",
     ),
-    # 平台管理-运行时管理-SlugRunner管理
+    # 平台管理-运行时管理-SlugRunner 管理
     url(
         r"^platform/runtime/slugrunner/manage$",
         runtimes.SlugRunnerTemplateView.as_view(),
@@ -242,7 +242,7 @@ urlpatterns = [
         runtimes.AppSlugRunnerManageView.as_view(),
         name="admin.runtimes.slugrunner.manage",
     ),
-    # 平台管理-运行时管理-SlugRunner管理API
+    # 平台管理-运行时管理-SlugRunner 管理API
     url(
         r"^platform/runtime/slugrunner/$",
         runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),

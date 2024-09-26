@@ -436,8 +436,8 @@ class SlugRunnerAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugRunner 列表"""
-        slz = AppSlugRunnerListOutputSLZ(AppSlugRunner.objects.order_by("region"), many=True)
-        return Response(data=slz.data)
+        slugrunners = AppSlugRunner.objects.order_by("region")
+        return Response(AppSlugRunnerListOutputSLZ(slugrunners, many=True).data)
 
     def create(self, request):
         """创建 SlugRunner"""

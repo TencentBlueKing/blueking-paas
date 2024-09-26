@@ -35,6 +35,7 @@ from paasng.infras.iam.constants import (
     IAMErrorCodes,
 )
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationRole
 
 logger = logging.getLogger(__name__)
@@ -75,9 +76,7 @@ class BKIAMClient:
             "members": [init_member] if init_member else [],
             # 创建分级管理员时，仅授权开发者中心的权限
             "authorization_scopes": [
-                utils.get_paas_authorization_scopes(
-                    app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
-                )
+                utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)
             ],
             # 可授权的人员范围为公司任意人
             "subject_scopes": [
@@ -419,6 +418,32 @@ class BKIAMClient:
                 )
                 raise BKIAMApiError(resp["message"], resp["code"])
 
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
+        """
+        回收指定用户组的指定 action 权限
+
+        :param user_group_id: 用户组 ID
+        :param actions: 要回收的 action 列表
+        """
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
+        data = {"actions": [{"id": action} for action in actions]}
+
+        try:
+            resp = self.client.v2_management_groups_policies_revoke_by_action(
+                path_params=path_params,
+                data=data,
+            )
+        except APIGatewayResponseError as e:
+            raise BKIAMGatewayServiceError(f"revoke user groups policies error, detail: {e}")
+
+        if resp.get("code") != 0:
+            logger.exception(
+                "revoke user groups policies error, message:{} \n user_group_id: {}, data: {}".format(
+                    resp["message"], user_group_id, data
+                )
+            )
+            raise BKIAMApiError(resp["message"], resp["code"])
+
     def update_grade_managers_with_bksaas_space(
         self, grade_manager_id: str, app_code: str, app_name: str, bk_space_id: str
     ):
@@ -436,9 +461,7 @@ class BKIAMClient:
             "description": utils.gen_grade_manager_desc(app_code),
             # 除创建时初始化的开发者中心权限外，新增监控平台、日志平台最小空间权限
             "authorization_scopes": [
-                utils.get_paas_authorization_scopes(
-                    app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
-                )
+                utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)
             ]
             + utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name, include_system=True)
             + utils.get_bk_log_authorization_scope_list(bk_space_id, app_name, include_system=True),

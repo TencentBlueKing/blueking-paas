@@ -133,6 +133,14 @@ class Group(OperationGroup):
         path="/api/v2/open/management/systems/{system_id}/groups/{group_id}/policies/",
     )
 
+    # 用户组按操作回收授权
+    v2_management_groups_policies_revoke_by_action = bind_property(
+        Operation,
+        name="v2_management_groups_policies_revoke_by_action",
+        method="DELETE",
+        path="/api/v2/open/management/systems/{system_id}/groups/{group_id}/actions/-/policies/",
+    )
+
 
 class Client(APIGatewayClient):
     """蓝鲸权限中心提供的 OpenAPI"""

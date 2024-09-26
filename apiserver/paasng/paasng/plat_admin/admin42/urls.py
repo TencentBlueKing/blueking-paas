@@ -237,16 +237,31 @@ urlpatterns = [
         runtimes.SlugRunnerTemplateView.as_view(),
         name="admin.runtime.slugrunner.manage",
     ),
-    # 平台管理-运行时管理-BuildPack管理 API
+    url(
+        r"^platform/runtimes/slugrunner/manage$",
+        runtimes.AppSlugRunnerManageView.as_view(),
+        name="admin.runtimes.slugrunner.manage",
+    ),
+    # 平台管理-运行时管理-SlugRunner管理API
     url(
         r"^platform/runtime/slugrunner/$",
-        runtimes.SlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),
+        runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),
         name="admin.runtime.slugrunner",
     ),
     url(
         r"^platform/runtime/slugrunner/(?P<pk>[^/]+)/$",
-        runtimes.SlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
+        runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtime.slugrunner.detail",
+    ),
+    url(
+        r"^platform/runtimes/slugrunner/$",
+        runtimes.SlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),
+        name="admin.runtimes.slugrunner",
+    ),
+    url(
+        r"^platform/runtimes/slugrunner/(?P<pk>[^/]+)/$",
+        runtimes.SlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
+        name="admin.runtimes.slugrunner.detail",
     ),
     # 平台管理-集群管理页
     url(r"^platform/clusters/manage/$", clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),

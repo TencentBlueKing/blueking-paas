@@ -20,7 +20,7 @@ from rest_framework import serializers
 
 from paasng.core.region.states import RegionType
 from paasng.platform.modules.constants import AppImageType, BuildPackType
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
@@ -126,3 +126,42 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
                 )
 
         return buildpack_ids
+
+
+class AppSlugRunnerListOutputSLZ(serializers.ModelSerializer):
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    env_vars = serializers.JSONField(source="environments", help_text="环境变量")
+    labels = serializers.JSONField()
+
+    class Meta:
+        model = AppSlugRunner
+        exclude = ["modules", "environments"]
+
+
+class AppSlugRunnerCreateInputSLZ(serializers.ModelSerializer):
+    region = serializers.ChoiceField(required=True, choices=RegionType.get_choices())
+    name = serializers.CharField(required=True, max_length=64)
+    type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
+    image = serializers.CharField(required=True, max_length=256)
+    tag = serializers.CharField(required=True, max_length=32)
+    env_vars = serializers.JSONField(required=False, default={}, source="environments", help_text="环境变量")
+    labels = serializers.JSONField(required=False, default={})
+    is_hidden = serializers.BooleanField(required=False, default=False)
+    is_default = serializers.BooleanField(required=False, default=False)
+
+    class Meta:
+        model = AppSlugRunner
+        exclude = ["modules", "id", "created", "updated", "environments"]
+
+    def validate_name(self, name: str) -> str:
+        if AppSlugBuilder.objects.filter(name=name).exists():
+            raise serializers.ValidationError("name already exists")
+        return name
+
+
+class AppSlugRunnerUpdateInputSLZ(AppSlugRunnerCreateInputSLZ):
+    def validate_name(self, name: str) -> str:
+        if AppSlugBuilder.objects.exclude(id=self.instance.id).filter(name=name).exists():
+            raise serializers.ValidationError("name already exists")
+        return name

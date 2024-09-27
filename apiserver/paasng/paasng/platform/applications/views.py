@@ -386,7 +386,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             latest_collected_at = collect_task.start_at
 
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
-        reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         total = reports.count()
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))

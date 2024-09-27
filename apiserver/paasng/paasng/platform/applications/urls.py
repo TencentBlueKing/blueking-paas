@@ -84,7 +84,7 @@ urlpatterns = [
         name="api.applications.lists.evaluation",
     ),
     url(
-        r"^api/bkapps/applications/lists/evaluation/issue_count$",
+        r"^api/bkapps/applications/lists/evaluation/issue_count/$",
         views.ApplicationListViewSet.as_view({"get": "list_evaluation_issue_count"}),
         name="api.applications.lists.evaluation.issue_count",
     ),

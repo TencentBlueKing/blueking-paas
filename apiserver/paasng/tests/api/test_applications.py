@@ -625,19 +625,18 @@ class TestListEvaluation:
     @pytest.fixture()
     def create_evaluation_reports(self, bk_user):
         """
-        fixture 创建测试应用评估数据
+        创建应用评估详情测试数据
         """
-        # Create a collection task with current time
         collection_task = AppOperationReportCollectionTask.objects.create(start_at=datetime.now())
 
         app1 = create_app(owner_username=bk_user.username)
         report1 = AppOperationReport.objects.create(
-            cpu_requests=4,
+            cpu_requests=4000,
             mem_requests=8192,
-            cpu_limits=8,
+            cpu_limits=8000,
             mem_limits=16384,
-            cpu_usage_avg=3.5,
-            mem_usage_avg=8192.0,
+            cpu_usage_avg=0.003,
+            mem_usage_avg=0.8,
             res_summary={"cpu": "1000", "mem": "2048"},
             pv=300,
             uv=150,
@@ -646,24 +645,24 @@ class TestListEvaluation:
             latest_operated_at=timezone.now() - timedelta(days=2),
             latest_operator="operator",
             latest_operation="Deployment",
-            issue_type="None",
+            issue_type="none",
             collected_at=timezone.now(),
             app_id=app1.id,
-            administrators={"admins": ["admin1", "admin2"]},
-            deploy_summary={"deploys": ["deploy1", "deploy2"]},
-            developers={"developers": ["dev1", "dev2"]},
-            evaluate_result={"result": "success"},
+            administrators=[],
+            deploy_summary={},
+            developers=["dev1", "dev2"],
+            evaluate_result={"issue_type": "none"},
             visit_summary={"visits": 1000},
         )
 
         app2 = create_app(owner_username=bk_user.username)  # 创建另一个独立的 App 实例
         report2 = AppOperationReport.objects.create(
-            cpu_requests=6,
+            cpu_requests=6000,
             mem_requests=12288,
-            cpu_limits=12,
+            cpu_limits=12000,
             mem_limits=24576,
-            cpu_usage_avg=4.2,
-            mem_usage_avg=10240.0,
+            cpu_usage_avg=0.004,
+            mem_usage_avg=0.1,
             res_summary={"cpu": "3000", "mem": "4096"},
             pv=500,
             uv=200,
@@ -672,13 +671,13 @@ class TestListEvaluation:
             latest_operated_at=timezone.now() - timedelta(days=4),
             latest_operator="operator",
             latest_operation="Scaling",
-            issue_type="Idle",
+            issue_type="idle",
             collected_at=timezone.now(),
             app_id=app2.id,
-            administrators={"admins": ["admin3", "admin4"]},
-            deploy_summary={"deploys": ["deploy3", "deploy4"]},
-            developers={"developers": ["dev3", "dev4"]},
-            evaluate_result={"result": "success"},
+            administrators=[],
+            deploy_summary={},
+            developers=["dev3", "dev4"],
+            evaluate_result={"issue_type": "idle"},
             visit_summary={"visits": 1500},
         )
 
@@ -686,7 +685,7 @@ class TestListEvaluation:
 
     def test_list_evaluation_success(self, create_evaluation_reports, api_client):
         """
-        测试list应用评估详情列表接口
+        测试应用评估详情列表
         """
         url = reverse("api.applications.lists.evaluation")
         params = {"limit": 2, "offset": 0}
@@ -740,7 +739,7 @@ class TestListEvaluation:
 
     def test_issue_count(self, create_evaluation_reports, api_client):
         """
-        测试应用评估结果数量接口
+        测试获取应用评估结果数量
         """
         url = reverse("api.applications.lists.evaluation.issue_count")
         response = api_client.get(url, format="json")
@@ -753,5 +752,5 @@ class TestListEvaluation:
         assert len(response.data["issue_type_counts"]) == 2
 
         for issue in response.data["issue_type_counts"]:
-            assert issue["issue_type"] in ["None", "Idle"]
+            assert issue["issue_type"] in ["none", "idle"]
             assert issue["count"] == 1

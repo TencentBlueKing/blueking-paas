@@ -134,7 +134,7 @@ def get_paas_authorization_scopes(
     """
     scopes = {
         "system": settings.IAM_PAAS_V3_SYSTEM_ID,
-        "actions": [{"id": action} for action in get_app_actions_by_role(ApplicationRole.ADMINISTRATOR)],
+        "actions": [{"id": action} for action in get_app_actions_by_role(role)],
         "resources": [
             {
                 "system": settings.IAM_PAAS_V3_SYSTEM_ID,

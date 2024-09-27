@@ -280,14 +280,14 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         """查询用户各应用告警及数量"""
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         if not app_codes:
-            return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
+            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
 
-        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": [app_codes]})
+        serializer = ListAlertsSLZ(data=request.data, context={"app_codes": app_codes})
         serializer.is_valid(raise_exception=True)
         query_params: QueryAlertsParams = serializer.validated_data
         if not query_params.bk_biz_ids:
-            # 应用的BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
-            return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
+            # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
+            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
 
         # 查询告警
         bk_monitor_client = make_bk_monitor_client()
@@ -297,30 +297,25 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
         if not alerts:
-            return Response(AlertListByUserRespSLZ({"count": 0, "alerts": None}).data)
+            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
 
-        # 告警按biz_id归类
+        # 告警按 bk_biz_id 归类
         biz_grouped_alerts = defaultdict(list)
         for alert in alerts:
             bk_biz_id = alert["bk_biz_id"]
             biz_grouped_alerts[bk_biz_id].append(alert)
 
-        # 查询应用的监控空间, 生成bk_biz_id对应application的dict
+        # 查询应用的监控空间, 生成 bk_biz_id 对应 application 的 dict
         monitor_spaces = bk_monitor_client.query_space_biz_id(app_codes=app_codes)
         bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
 
         # 告警按应用归类
-        app_grouped_alerts = []
-        for bizid, app_alerts in biz_grouped_alerts.items():
-            app_grouped_alerts.append(
-                {
-                    "application": bizid_app_map[bizid],
-                    "count": len(app_alerts),
-                    "alerts": app_alerts,
-                }
-            )
+        app_grouped_alerts = [
+            {"application": bizid_app_map[bizid], "alerts": app_alerts}
+            for bizid, app_alerts in biz_grouped_alerts.items()
+        ]
 
-        serializer = AlertListByUserRespSLZ({"count": len(alerts), "alerts": app_grouped_alerts})
+        serializer = AlertListByUserRespSLZ({"alerts": app_grouped_alerts})
         return Response(serializer.data)
 
 

@@ -119,6 +119,7 @@ class QueryAlertsParams:
         :param keyword: 关键字. 可选
         :return: QueryAlertsParams 实例
         """
+        # 获取 app code 对应的监控 biz id. 如果没有对应的 BKMonitorSpace，会被忽略
         monitor_spaces = BKMonitorSpace.objects.filter(application__code__in=app_codes)
         bk_biz_ids = [space.iam_resource_id for space in monitor_spaces]
         return cls(

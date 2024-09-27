@@ -24,7 +24,7 @@ from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
-from paasng.platform.applications.serializers import ApplicationSLZWithLogo
+from paasng.platform.applications.serializers import ApplicationWithLogoMinimalSLZ
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
@@ -124,14 +124,20 @@ class AlertSLZ(serializers.Serializer):
 
 
 class AlertListByUserSLZ(serializers.Serializer):
-    application = ApplicationSLZWithLogo(read_only=True)
-    count = serializers.IntegerField(help_text="应用告警数")
+    application = ApplicationWithLogoMinimalSLZ(read_only=True)
+    count = serializers.SerializerMethodField(help_text="应用告警数")
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
+
+    def get_count(self, obj):
+        return len(obj["alerts"])
 
 
 class AlertListByUserRespSLZ(serializers.Serializer):
-    count = serializers.IntegerField(help_text="用户告警总数")
+    total = serializers.SerializerMethodField(help_text="用户告警总数")
     alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListByUserSLZ())
+
+    def get_total(self, obj):
+        return sum(len(alert["alerts"]) for alert in obj["alerts"])
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

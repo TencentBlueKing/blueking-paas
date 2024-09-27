@@ -10,7 +10,21 @@
       >
         <i class="bk-icon icon-info"></i>
         {{ $t('CodeCC 工具信息展示的是最新的测试版本，如需修改') }}&nbsp;
-        <span class="link" @click="handleToConfig">{{ $t('可前往 tool.json 和 checkers.json') }}</span>
+        {{ $t('可前往') }}&nbsp;
+        <bk-button
+          :text="true"
+          title="primary"
+          size="small"
+          @click="handleToConfig('tool.json')">
+          tool.json
+        </bk-button>&nbsp;{{ $t('和') }}&nbsp;
+        <bk-button
+          :text="true"
+          title="primary"
+          size="small"
+          @click="handleToConfig('checkers.json')">
+          checkers.json
+        </bk-button>
         &nbsp;{{ $t('修改后重新测试') }}
       </div>
     </bk-alert>
@@ -25,7 +39,7 @@
           <a
             v-if="value === 'checkerNum'"
             href="javascript:void(0);"
-            @click="handleToConfig"
+            @click="handleToConfig('checkers.json')"
           >{{ basicInfo[value] || '--' }}</a>
           <span v-else>{{ basicInfo[value] || '--' }}</span>
           <span class="tag ml15" v-if="tags[value]">{{ tags[value] }}</span>
@@ -76,9 +90,9 @@ export default {
     this.getCodeccBasicInfo();
   },
   methods: {
-    handleToConfig() {
+    handleToConfig(suffix) {
       const { repository } = this.curPluginInfo;
-      const url = repository.replace(/\.git$/, '/blob/master/tool.json');
+      const url = repository.replace(/\.git$/, `/blob/master/${suffix}`);
       window.open(url, '_blank');
     },
     async getCodeccBasicInfo() {
@@ -164,9 +178,8 @@ export default {
     display: flex;
     align-items: center;
     font-size: 12px;
-    .link {
-      color: #3a84ff;
-      cursor: pointer;
+    /deep/ .bk-button-text.bk-button-small {
+      padding: 0;
     }
   }
 }

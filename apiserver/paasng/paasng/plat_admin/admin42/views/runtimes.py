@@ -36,13 +36,20 @@ from paasng.plat_admin.admin42.serializers.runtime import (
     SlugBuilderBindRequest,
 )
 from paasng.plat_admin.admin42.serializers.runtimes import (
+    AppSlugBuilderBindInputSLZ,
+    AppSlugBuilderCreateInputSLZ,
     AppSlugBuilderListOutputSLZ,
+    AppSlugBuilderUpdateInputSLZ,
+    AppSlugRunnerCreateInputSLZ,
+    AppSlugRunnerListOutputSLZ,
+    AppSlugRunnerUpdateInputSLZ,
     BuildPackBindInputSLZ,
     BuildPackCreateInputSLZ,
     BuildPackListOutputSLZ,
     BuildPackUpdateInputSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.platform.engine.models.steps import StepMetaSet
 from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.platform.modules.helpers import SlugbuilderBinder
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -112,7 +119,7 @@ class SlugBuilderTemplateView(slugbuilder_generator.gen_template_view()):  # typ
         return kwargs
 
 
-class SlugBuilderAPIViewSet(slugbuilder_generator.gen_model_view_set()):  # type: ignore
+class LegacySlugBuilderAPIViewSet(slugbuilder_generator.gen_model_view_set()):  # type: ignore
     @transaction.atomic
     def set_buildpacks(self, request, *args, **kwargs):
         slz = SlugBuilderBindRequest(data=request.data)
@@ -135,13 +142,13 @@ slugrunner_generator = RuntimeAdminViewGenerator(
 )
 
 SlugRunnerTemplateView = slugrunner_generator.gen_template_view()
-SlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
+LegacySlugRunnerAPIViewSet = slugrunner_generator.gen_model_view_set()
 
 
 # ----------------------------------------------------- new -------------------------------------------------------
 class BuildPackManageView(GenericTemplateView):
     name = "BuildPack 管理"
-    template_name = "admin42/platformmgr/runtimes/buildpack_list.html"
+    template_name = "admin42/platformmgr/runtimes/buildpacks.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -275,6 +282,219 @@ class BuildPackAPIViewSet(GenericViewSet):
             operation=OperationEnum.DELETE,
             target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SlugBuilderManageView(GenericTemplateView):
+    name = "SlugBuilder 管理"
+    template_name = "admin42/platformmgr/runtimes/slugbuilders.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["regions"] = list(get_all_regions().keys())
+        context["image_types"] = dict(AppImageType.get_choices())
+        context["step_meta_sets"] = {st.id: str(st) for st in StepMetaSet.objects.all()}
+        return context
+
+
+class SlugBuilderAPIViewSet(GenericViewSet):
+    """SlugBuilder 管理 API 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_bound_buildpacks(self, request, pk):
+        """获取绑定和可绑定的 BuildPack 列表"""
+        slugbuilder = AppSlugBuilder.objects.get(pk=pk)
+        bound_buildpacks = slugbuilder.buildpacks.all()
+        builder_buildpack_type_map = AppImageType.get_builder_buildpack_type_map()
+        unbound_buildpacks = AppBuildPack.objects.filter(
+            type__in=builder_buildpack_type_map[slugbuilder.type]
+        ).exclude(id__in=bound_buildpacks)
+
+        return Response(
+            {
+                "bound_buildpacks": BuildPackListOutputSLZ(bound_buildpacks, many=True).data,
+                "unbound_buildpacks": BuildPackListOutputSLZ(unbound_buildpacks, many=True).data,
+            }
+        )
+
+    @transaction.atomic
+    def set_bound_buildpacks(self, request, pk):
+        """设置绑定 BuildPack 列表"""
+        slugbuilder = AppSlugBuilder.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in slugbuilder.buildpacks.all()]},
+        )
+        slz = AppSlugBuilderBindInputSLZ(data=request.data, context={"slugbuilder_type": slugbuilder.type})
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        buildpacks = AppBuildPack.objects.filter(id__in=data["buildpack_ids"])
+        binder = SlugbuilderBinder(slugbuilder=slugbuilder)
+        binder.set_buildpacks(buildpacks)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SLUGBUILDER,
+            attribute=slugbuilder.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in buildpacks]},
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def list(self, request):
+        """获取 SlugBuilder 列表"""
+        slugbuilders = AppSlugBuilder.objects.order_by("region")
+        return Response(AppSlugBuilderListOutputSLZ(slugbuilders, many=True).data)
+
+    def create(self, request):
+        """创建 SlugBuilder"""
+        slz = AppSlugBuilderCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SLUGBUILDER,
+            attribute=slz.data["name"],
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk):
+        """更新 SlugBuilder"""
+        slugbuilder = AppSlugBuilder.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugBuilderUpdateInputSLZ(slugbuilder).data,
+        )
+
+        slz = AppSlugBuilderUpdateInputSLZ(slugbuilder, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SLUGBUILDER,
+            attribute=slugbuilder.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, pk):
+        """删除 SlugBuilder"""
+        slugbuilder = AppSlugBuilder.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugBuilderListOutputSLZ(slugbuilder).data,
+        )
+        slugbuilder.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SLUGBUILDER,
+            attribute=slugbuilder.name,
+            data_before=data_before,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AppSlugRunnerManageView(GenericTemplateView):
+    name = "SlugRunner 管理"
+    template_name = "admin42/platformmgr/runtimes/slugrunners.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["regions"] = list(get_all_regions().keys())
+        context["image_types"] = dict(AppImageType.get_choices())
+        return context
+
+
+class SlugRunnerAPIViewSet(GenericViewSet):
+    """SlugRunner 管理 API 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list(self, request):
+        """获取 SlugRunner 列表"""
+        slugrunners = AppSlugRunner.objects.order_by("region")
+        return Response(AppSlugRunnerListOutputSLZ(slugrunners, many=True).data)
+
+    def create(self, request):
+        """创建 SlugRunner"""
+        slz = AppSlugRunnerCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slz.data["name"],
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=slz.data,
+            ),
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk):
+        """更新 SlugRunner"""
+        slugrunner = AppSlugRunner.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+        )
+        slz = AppSlugRunnerUpdateInputSLZ(slugrunner, data=request.data)
+        slz.is_valid(raise_exception=True)
+        slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slugrunner.name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+            ),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, pk):
+        """删除 SlugRunner"""
+        slugrunner = AppSlugRunner.objects.get(pk=pk)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AppSlugRunnerListOutputSLZ(slugrunner).data,
+        )
+        slugrunner.delete()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SLUGRUNNER,
+            attribute=slugrunner.name,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

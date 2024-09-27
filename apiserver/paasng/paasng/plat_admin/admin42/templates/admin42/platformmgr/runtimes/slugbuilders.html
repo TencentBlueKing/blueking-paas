@@ -1,0 +1,684 @@
+{% extends "admin42/platformmgr/base.html" %}
+
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li><a href="{% url 'admin.front_page' %}">首页</a></li>
+    <li><a href="{% url 'admin.runtimes.buildpack.manage' %}">运行时管理 (新)</a></li>
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}
+
+{% block main_content %}
+<div id="slugbuilder-list" class="p20">
+    <bk-alert class="mb20" title="Slugbuilder 是 Buildpack 的有序组合，负责将一个应用从源代码构建成应用镜像。"></bk-alert>
+
+    <bk-button theme="primary" class="mb20" @click="handleCreate">
+        新建
+    </bk-button>
+
+    <!--  数据列表  -->
+    <bk-table :data="data">
+        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="镜像类型" prop="type"></bk-table-column>
+        <bk-table-column label="可用区域" prop="region"></bk-table-column>
+        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" width="350"></bk-table-column>
+        <bk-table-column label="标签" prop="tag"></bk-table-column>
+        <bk-table-column label="更新时间" prop="updated"></bk-table-column>
+        <bk-table-column label="是否隐藏" width="80">
+            <template slot-scope="props">
+                <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否默认" width="80">
+            <template slot-scope="props">
+                <span>$[ props.row.is_default ? '✅' : '❌' ] </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="200">
+            <template slot-scope="props">
+                <bk-button class="mr5" theme="primary" text @click="showDetailDialog(props.row)">详情</bk-button>
+                <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button class="mr5" theme="primary" text @click="handleBind(props.row)">修改绑定</bk-button>
+                <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
+            </template>
+        </bk-table-column>
+    </bk-table>
+
+    <!--  修改绑定弹窗  -->
+    <bk-dialog v-model="bindDialog.visible" width="900" theme="primary" :mask-close="false" header-position="left" :confirm-fn="submitBindDialog" :title="bindDialog.title">
+        <div class="draggable-wrapper">
+            <div class="draggable-box">
+                <div class="draggable-box-header"> 未绑定的 BuildPack (共$[ bindDialog.unselectedBuildpacks.length ]条)</div>
+                <div class="beauty-scrollbar">
+                    <draggable :list="bindDialog.unselectedBuildpacks" group="buildpack" style="min-height: 320px;">
+                        <div
+                            class="draggable-content"
+                            v-for="(element, index) in bindDialog.unselectedBuildpacks"
+                            :class="bindDialog.row.buildpacks.indexOf(element.id) === -1?'':'draggable-content-remove'"
+                            :key="element.id"
+                        >
+                            <span v-bk-tooltips="`${element.name} (${element.display_name}) (${element.region})`">
+                                $[ element.name ]($[element.display_name])
+                            </span>
+                        </div>
+                        <template slot="footer" key="footer">
+                            <div v-if="bindDialog.unselectedBuildpacks.length === 0" style="min-height: 0px;"></div>
+                        </template>
+                    </draggable>
+                </div>
+            </div>
+            <div class="transfer-icon"></div>
+            <div class="draggable-box">
+                <div class="draggable-box-header"> 已绑定的 BuildPack (共$[ bindDialog.selectedBuildpacks.length ]条)</div>
+                <div class="beauty-scrollbar">
+                    <draggable :list="bindDialog.selectedBuildpacks" group="buildpack" style="min-height: 320px;">
+                        <div
+                            class="draggable-content"
+                            v-for="(element, index) in bindDialog.selectedBuildpacks"
+                            :class="bindDialog.row.buildpacks.indexOf(element.id) !== -1?'':'draggable-content-new'"
+                            :key="element.id"
+                        >
+                            <span v-bk-tooltips="`${element.name} (${element.display_name}) (${element.region})`">
+                                $[ element.name ]($[element.display_name])
+                            </span>
+                        </div>
+                        <template slot="footer" key="footer">
+                            <div v-if="bindDialog.selectedBuildpacks.length === 0" style="min-height: 0px;"></div>
+                        </template>
+                    </draggable>
+                </div>
+            </div>
+        </div>
+    </bk-dialog>
+
+    <!--  详情/创建/修改弹窗  -->
+    <bk-dialog
+        header-position="left"
+        v-model="dialog.visible"
+        theme="primary" width="1100"
+        :confirm-fn="submitDialog"
+        @cancel="cancelDialog"
+        :mask-close="false"
+    >
+        <div slot="header" v-if="dialog.type === 'detail'">SlugBuilder 详情</div>
+        <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] SlugBuilder</div>
+        <bk-form ref="form">
+            <bk-container flex :col="32">
+
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="名称" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.name" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="是否默认">
+                            <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type === 'detail'"></bk-switcher>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="是否隐藏">
+                            <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="8">
+                        <bk-form-item label="镜像类型" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
+                            <bk-select v-model="dialog.form.type" v-else>
+                                <bk-option v-for="type in image_types" :key="type" :id="type" :name="type"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="可用区域" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.region" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
+                            <bk-select v-model="dialog.form.region" v-else>
+                                <bk-option v-for="region in regions" :key="region" :id="region" :name="region"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="构建步骤集">
+                            <bk-input v-model="stepMetaSet" :readonly="true" v-if="dialog.type === 'detail'" placeholder="--"></bk-input>
+                            <bk-select  placeholder="--" v-model="dialog.form.step_meta_set" v-else>
+                                <bk-option v-for="(name, key) in step_meta_sets" :key="key" :id="key" :name="name"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="镜像" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.image" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="标签" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.tag" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="展示名称 / 中文">
+                            <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="展示名称 / 英文">
+                            <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="描述 / 中文">
+                            <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="描述 / 英文">
+                            <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="32">
+                        <bk-form-item label="环境变量"></bk-form-item>
+                    </bk-col>
+                </bk-row>
+                <bk-row>
+                    <bk-col :span="2"></bk-col>
+                    <bk-table :data="envList" style="width: 967px">
+                        <template slot="empty">
+                            <div class="empty-text">暂无数据</div>
+                        </template>
+                        <!-- 新建环境变量 -->
+                        <template slot="append" v-if="dialog.type!=='detail'">
+                            <div class="add-wrapper">
+                                <span class="add-single-variable">
+                                    <bk-link theme="primary" icon="bk-icon icon-plus" @click="handleAddSingleVariable(envList)">添加环境变量</bk-link>
+                                </span>
+                            </div>
+                        </template>
+
+                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                            <template slot-scope="props">
+                                <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
+                                <span v-else>$[ props.row.key ]</span>
+                            </template>
+                        </bk-table-column>
+
+                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                            <template slot-scope="props">
+                                <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
+                                <span v-else>$[ props.row.value ]</span>
+                            </template>
+                        </bk-table-column>
+
+                        <bk-table-column label="操作" v-if="dialog.type!=='detail'" width="100px">
+                            <template slot-scope="props">
+                                <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, envList, oldEnvList)"
+                                           v-if="props.row.isEdit">保存
+                                </bk-button>
+                                <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, envList, oldEnvList)" v-else>
+                                    编辑
+                                </bk-button>
+                                <bk-button class="mr5" theme="primary" text @click="handleCancelVar(props.row, envList, oldEnvList)"
+                                           v-if="props.row.isEdit">取消
+                                </bk-button>
+                                <bk-button class="mr5" theme="danger" text @click="handleDeleteVar(props.row, envList)" v-else>
+                                    删除
+                                </bk-button>
+                            </template>
+                        </bk-table-column>
+
+                    </bk-table>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="32">
+                        <bk-form-item label="镜像标记"></bk-form-item>
+                    </bk-col>
+                </bk-row>
+                <bk-row>
+                    <bk-col :span="2"></bk-col>
+                    <bk-table :data="labelList" style="width: 967px">
+                        <template slot="empty">
+                            <div class="empty-text">暂无数据</div>
+                        </template>
+                        <!-- 新建镜像标记 -->
+                        <template slot="append" v-if="dialog.type!=='detail'">
+                            <div class="add-wrapper">
+                                <span class="add-single-variable">
+                                    <bk-link theme="primary" icon="bk-icon icon-plus" @click="handleAddSingleVariable(labelList)">添加镜像标记</bk-link>
+                                </span>
+                            </div>
+                        </template>
+
+                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                            <template slot-scope="props">
+                                <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
+                                <span v-else>$[ props.row.key ]</span>
+                            </template>
+                        </bk-table-column>
+
+                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                            <template slot-scope="props">
+                                <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
+                                <span v-else>$[ props.row.value ]</span>
+                            </template>
+                        </bk-table-column>
+
+                        <bk-table-column label="操作" v-if="dialog.type!=='detail'" width="100px">
+                            <template slot-scope="props">
+                                <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, labelList, oldLabelList)"
+                                           v-if="props.row.isEdit">保存
+                                </bk-button>
+                                <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, labelList, oldLabelList)" v-else>
+                                    编辑
+                                </bk-button>
+                                <bk-button class="mr5" theme="primary" text @click="handleCancelVar(props.row, labelList, oldLabelList)"
+                                           v-if="props.row.isEdit">取消
+                                </bk-button>
+                                <bk-button class="mr5" theme="danger" text @click="handleDeleteVar(props.row, labelList)" v-else>
+                                    删除
+                                </bk-button>
+                            </template>
+                        </bk-table-column>
+
+                    </bk-table>
+                </bk-row>
+            </bk-container>
+        </bk-form>
+    </bk-dialog>
+</div>
+{% endblock %}
+
+{% block main_script %}
+<script>
+    const URLRouter = {
+        create: decodeURI("{% url 'admin.runtimes.slugbuilder' %}"),
+        list: decodeURI("{% url 'admin.runtimes.slugbuilder' %}"),
+        detail: decodeURI("{% url 'admin.runtimes.slugbuilder.detail' '${id}' %}"),
+        bind: decodeURI("{% url 'admin.runtimes.slugbuilder.detail.bind' '${id}' %}"),
+    }
+
+    const regions = {{ regions | to_json }}
+
+    const image_types = {{ image_types | to_json }}
+
+    const step_meta_sets = {{ step_meta_sets | to_json }}
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#slugbuilder-list",
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    data: [],
+                    dialog: {
+                        visible: false,
+                        type: '',
+                        form: {
+                            key: '',
+                            value: '',
+                            description: '',
+                        },
+                        row: undefined
+                    },
+                    bindDialog: {
+                        visible: false,
+                        title: '',
+                        unselectedBuildpacks: [],
+                        selectedBuildpacks: [],
+                        url: '',
+                        row: {
+                            buildpacks: [],
+                        }
+                    },
+                    envList: [],
+                    labelList: [],
+                    stepMetaSet: '',
+                    // oldEnvList, oldLabelList 记录修改前的数据，用于取消操作恢复数据
+                    oldEnvList: [],
+                    oldLabelList: [],
+                    regions: regions,
+                    image_types: image_types,
+                    step_meta_sets: step_meta_sets,
+                }
+            },
+            methods: {
+                fetchSlugBuilderList: async function () {
+                    const el = this.$bkLoading({title: '加载中'});
+                    try {
+                        await this.$http.get(URLRouter.list).then(res => {
+                            this.data = res;
+                        })
+                    } finally {
+                        el.hide = true;
+                    }
+                },
+                showDetailDialog: async function (row) {
+                    this.dialog.row = row;
+                    this.dialog.form = {...row};
+                    this.dialog.type = 'detail';
+                    this.stepMetaSet = step_meta_sets[row.step_meta_set];
+                    this.envList = this.jsonToList(this.dialog.form.env_vars || {});
+                    this.labelList = this.jsonToList(this.dialog.form.labels || {});
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true
+                },
+                cancelDialog: function () {
+                    this.dialog.visible = false
+                },
+                submitDialog: async function () {
+                    if (this.dialog.type === 'detail') {
+                        this.cancelDialog();
+                        return;
+                    }
+                    this.dialog.form.env_vars = this.ListToJson(this.envList);
+                    this.dialog.form.labels = this.ListToJson(this.labelList);
+                    const url = this.dialog.type === 'create' ? URLRouter.create : this.fillUrlTemplate(URLRouter.detail, {row: this.dialog.row});
+                    let success = true;
+                    const method = this.dialog.type === 'create' ? 'post' : 'put';
+                    try {
+                        await this.$http[method](url, this.dialog.form);
+                    } catch (e) {
+                        success = false;
+                        if (e.response.status === 400) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            })
+                        }
+                    }
+                    if (success) {
+                        this.cancelDialog();
+                        await this.fetchSlugBuilderList();
+                    }
+                },
+                handleCreate: function () {
+                    this.dialog.type = "create";
+                    this.dialog.row = undefined;
+                    this.dialog.form = {
+                        key: '',
+                        value: '',
+                        description: '',
+                    };
+                    this.envList = [];
+                    this.labelList = [];
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true;
+                },
+                handleEdit: function (row) {
+                    this.dialog.type = "edit";
+                    this.dialog.row = row;
+                    this.dialog.form = {...row};
+                    this.envList = this.jsonToList(this.dialog.form.env_vars || {});
+                    this.labelList = this.jsonToList(this.dialog.form.labels || {});
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true;
+                },
+                handleDelete: function (row) {
+                    this.$bkInfo({
+                        title: `确定要删除 ${row.name}？`,
+                        confirmLoading: true,
+                        theme: 'danger',
+                        confirmFn: async () => {
+                            try {
+                                await this.deleteRow(row)
+                                this.$bkMessage({
+                                    theme: 'success',
+                                    message: '删除成功',
+                                });
+                            } catch (e) {
+                                this.$bkMessage({
+                                    theme: 'error',
+                                    message: e.response.data.detail,
+                                });
+                            }
+                        }
+                    })
+                },
+                deleteRow: async function (row) {
+                    const url = this.fillUrlTemplate(URLRouter.detail, {row});
+                    await this.$http.delete(url);
+
+                    const index = this.data.findIndex(item => item.id === row.id);
+                    if (index !== -1) {
+                        this.data.splice(index, 1);
+                    }
+                },
+                handleBind: async function (row) {
+                    try {
+                        let url = this.fillUrlTemplate(URLRouter.bind, {row});
+                        await this.$http.get(url).then(res => {
+                            this.bindDialog.selectedBuildpacks = res.bound_buildpacks;
+                            this.bindDialog.unselectedBuildpacks = res.unbound_buildpacks;
+                        });
+                        this.bindDialog.url = url;
+                        this.bindDialog.title = `${row.name} 绑定详情`;
+                        this.bindDialog.row = row;
+                        this.bindDialog.visible = true;
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                submitBindDialog: async function () {
+                    try {
+                        let url = this.bindDialog.url;
+                        await this.$http.post(url, {
+                            buildpack_ids: this.bindDialog.selectedBuildpacks.map(item => item.id),
+                        });
+                        this.bindDialog.visible = false;
+                        this.$bkMessage({
+                            theme: 'success',
+                            message: '修改绑定成功',
+                        });
+                        await this.fetchSlugBuilderList()
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                fillUrlTemplate: function (url_template, {row}) {
+                    if (!row) {
+                        row = {}
+                    }
+                    return url_template.replace("${id}", row.id)
+                },
+                jsonToList: function (json) {
+                    let list = [];
+                    for (let key in json) {
+                        if (json.hasOwnProperty(key)) {
+                            list.push({key: key, value: json[key], isEdit: false, isAdd: false});
+                        }
+                    }
+                    return list;
+                },
+                ListToJson: function (list) {
+                    let json = {};
+                    list.forEach(item => {
+                        json[item.key] = item.value;
+                    });
+                    return json;
+                },
+                // 单独新增一个环境变量
+                handleAddSingleVariable: function (varList) {
+                    varList.push({key: '', value: '', isEdit: true, isAdd: true});
+                },
+                handleEditVar: function (row, varList, oldList) {
+                    if (row.isEdit) {
+                        if (row.key === '') {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '变量名不能为空',
+                            })
+                        } else if (row.value === '') {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '变量值不能为空',
+                            })
+                        } else {
+                            row.isEdit = !row.isEdit;
+                            row.isAdd = false;
+                        }
+                    } else {
+                        const index = varList.findIndex(item => item.key === row.key);
+                        oldList[index] = {...row};
+                        row.isEdit = !row.isEdit;
+                    }
+                },
+                handleDeleteVar: function (row, varList) {
+                    const index = varList.findIndex(item => item.key === row.key);
+                    if (index !== -1) {
+                        varList.splice(index, 1);
+                    }
+                },
+                handleCancelVar: function (row, varList, oldList) {
+                    if (row.isAdd) {
+                        this.handleDeleteVar(row, varList);
+                    } else {
+                        const index = varList.findIndex(item => item.key === row.key);
+                        if (index !== -1) {
+                            row.key = oldList[index].key;
+                            row.value = oldList[index].value;
+                            row.isEdit = false;
+                        }
+                    }
+                },
+            },
+            mounted: function () {
+                this.fetchSlugBuilderList();
+            },
+        })
+    })
+</script>
+<style>
+    .bk-grid-row + .bk-grid-row {
+        margin-top: 20px;
+    }
+
+    .add-wrapper {
+        height: 42px;
+
+        .add-single-variable {
+            display: inline-block;
+            height: 42px;
+            line-height: 42px;
+            padding: 0 15px;
+            color: #3a84ff;
+            cursor: pointer;
+        }
+    }
+
+    .transfer-icon {
+        width: 30px;
+        height: 30px;
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;
+    }
+
+    .draggable-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .draggable-box {
+        border: 1px solid #dcdee5;
+        width: 400px;
+        height: 360px;
+    }
+
+    .draggable-box-header {
+        background-color: #fafbfd;
+        height: 38px;
+        line-height: 38px;
+        font-size: 12px;
+        line-height: 40px; padding: 0 20px; border-bottom: 1px solid #dcdee5;
+    }
+
+    .draggable-content {
+        white-space: nowrap;
+        display: inline-block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        width: 100%;
+        padding: 0px 20px;
+        cursor: pointer;
+        line-height: 40px;
+    }
+
+    .draggable-content:hover {
+        background-color: #eef6fe;
+        color: #3a84ff;
+    }
+
+    .draggable-content-new {
+        background-color: #94f5a4;
+        color: #3a84ff;
+    }
+
+    .draggable-content-new:hover {
+        background-color: #45e35f;
+        color: #3a84ff;
+    }
+
+    .draggable-content-remove {
+        background-color: #fd9c9c;
+        color: #3a84ff;
+    }
+
+    .draggable-content-remove:hover {
+        background-color: #ff5656;
+        color: #3a84ff;
+    }
+
+    .beauty-scrollbar::-webkit-scrollbar {
+        overflow: scroll;
+        width: 4px;
+        background-color: hsla(0,0%,80%,0);
+    }
+
+    .beauty-scrollbar::-webkit-scrollbar-thumb {
+        overflow: scroll;
+        height: 5px;
+        border-radius: 2px;
+        background-color: #e6e9ea;
+    }
+
+    .empty-text {
+        font-size: 14px;
+    }
+</style>
+{% endblock %}

@@ -117,6 +117,8 @@ class PluginInstance(UuidAuditedModel):
             overview_page.topUrl = overview_page.topUrl.format(plugin_id=self.id)
         if overview_page.bottomUrl:
             overview_page.bottomUrl = overview_page.bottomUrl.format(plugin_id=self.id)
+        if overview_page.ignoredUrl:
+            overview_page.ignoredUrl = overview_page.ignoredUrl.format(plugin_id=self.id)
         return overview_page
 
     @property

@@ -104,11 +104,11 @@ class BKAppInstrumentor(BaseInstrumentor):
         CeleryInstrumentor().instrument()
 
         if getattr(settings, "OTEL_INSTRUMENT_DB_API", False):
-            import MySQLdb
+            import pymysql
 
             dbapi.wrap_connect(
                 __name__,
-                MySQLdb,
+                pymysql.connect,
                 "connect",
                 "mysql",
                 {"database": "db", "port": "port", "host": "host", "user": "user"},

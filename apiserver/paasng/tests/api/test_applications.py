@@ -705,37 +705,38 @@ class TestListEvaluation:
         assert isinstance(results["applications"], list)
         assert len(results["applications"]) == 2
 
+        # 结果 app 顺序是数据库表 id 倒序
         app_data1 = results["applications"][0]
-        report1 = create_evaluation_reports["reports"][0]
-
-        assert app_data1["code"] == report1.app.code
-        assert app_data1["name"] == report1.app.name
-        assert app_data1["type"] == report1.app.type
-        assert app_data1["is_plugin_app"] == report1.app.is_plugin_app
-        assert app_data1["logo_url"] == report1.app.get_logo_url()
-        assert app_data1["cpu_limits"] == report1.cpu_limits
-        assert app_data1["mem_limits"] == report1.mem_limits
-        assert app_data1["cpu_usage_avg"] == report1.cpu_usage_avg
-        assert app_data1["mem_usage_avg"] == report1.mem_usage_avg
-        assert app_data1["pv"] == report1.pv
-        assert app_data1["uv"] == report1.uv
-        assert app_data1["issue_type"] == report1.issue_type
-
-        app_data2 = results["applications"][1]
         report2 = create_evaluation_reports["reports"][1]
 
-        assert app_data2["code"] == report2.app.code
-        assert app_data2["name"] == report2.app.name
-        assert app_data2["type"] == report2.app.type
-        assert app_data2["is_plugin_app"] == report2.app.is_plugin_app
-        assert app_data2["logo_url"] == report2.app.get_logo_url()
-        assert app_data2["cpu_limits"] == report2.cpu_limits
-        assert app_data2["mem_limits"] == report2.mem_limits
-        assert app_data2["cpu_usage_avg"] == report2.cpu_usage_avg
-        assert app_data2["mem_usage_avg"] == report2.mem_usage_avg
-        assert app_data2["pv"] == report2.pv
-        assert app_data2["uv"] == report2.uv
-        assert app_data2["issue_type"] == report2.issue_type
+        assert app_data1["code"] == report2.app.code
+        assert app_data1["name"] == report2.app.name
+        assert app_data1["type"] == report2.app.type
+        assert app_data1["is_plugin_app"] == report2.app.is_plugin_app
+        assert app_data1["logo_url"] == report2.app.get_logo_url()
+        assert app_data1["cpu_limits"] == report2.cpu_limits
+        assert app_data1["mem_limits"] == report2.mem_limits
+        assert app_data1["cpu_usage_avg"] == report2.cpu_usage_avg
+        assert app_data1["mem_usage_avg"] == report2.mem_usage_avg
+        assert app_data1["pv"] == report2.pv
+        assert app_data1["uv"] == report2.uv
+        assert app_data1["issue_type"] == report2.issue_type
+
+        app_data2 = results["applications"][1]
+        report1 = create_evaluation_reports["reports"][0]
+
+        assert app_data2["code"] == report1.app.code
+        assert app_data2["name"] == report1.app.name
+        assert app_data2["type"] == report1.app.type
+        assert app_data2["is_plugin_app"] == report1.app.is_plugin_app
+        assert app_data2["logo_url"] == report1.app.get_logo_url()
+        assert app_data2["cpu_limits"] == report1.cpu_limits
+        assert app_data2["mem_limits"] == report1.mem_limits
+        assert app_data2["cpu_usage_avg"] == report1.cpu_usage_avg
+        assert app_data2["mem_usage_avg"] == report1.mem_usage_avg
+        assert app_data2["pv"] == report1.pv
+        assert app_data2["uv"] == report1.uv
+        assert app_data2["issue_type"] == report1.issue_type
 
     def test_issue_count(self, create_evaluation_reports, api_client):
         """

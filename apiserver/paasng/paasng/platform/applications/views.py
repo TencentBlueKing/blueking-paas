@@ -361,7 +361,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             latest_collected_at = collect_task.start_at
 
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
-        reports = AppOperationReport.objects.filter(app__code__in=app_codes).select_related("app")
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes).order_by("-id").select_related("app")
 
         paginator = LimitOffsetPagination()
         paginated_reports = paginator.paginate_queryset(reports, request)

@@ -264,8 +264,8 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
         query_params: QueryAlertsParams = serializer.validated_data
         if not query_params.bk_biz_ids:
-            # 应用的BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
-            return Response(AlertSLZ().data)
+            # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
+            return Response([])
 
         try:
             alerts = make_bk_monitor_client().query_alerts(query_params)

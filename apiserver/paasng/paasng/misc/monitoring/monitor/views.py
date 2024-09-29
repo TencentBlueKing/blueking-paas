@@ -310,12 +310,11 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         bizid_app_map = {space["bk_biz_id"]: space["application"] for space in monitor_spaces}
 
         # 告警按应用归类
-        app_grouped_alerts = [
-            {"application": bizid_app_map[bizid], "alerts": app_alerts}
-            for bizid, app_alerts in biz_grouped_alerts.items()
+        app_alerts = [
+            {"application": bizid_app_map[bizid], "alerts": alerts} for bizid, alerts in biz_grouped_alerts.items()
         ]
 
-        serializer = AlertListByUserRespSLZ({"alerts": app_grouped_alerts})
+        serializer = AlertListByUserRespSLZ({"alerts": app_alerts})
         return Response(serializer.data)
 
 

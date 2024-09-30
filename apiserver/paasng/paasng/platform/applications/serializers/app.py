@@ -194,12 +194,25 @@ class ApplicationEvaluationSLZ(serializers.Serializer):
     logo_url = serializers.CharField(source="app.get_logo_url", help_text="应用 Logo 访问地址")
     cpu_limits = serializers.IntegerField(help_text="CPU 配额")
     mem_limits = serializers.IntegerField(help_text="内存配额")
-    cpu_usage_avg = serializers.FloatField(help_text="CPU使用率(7d)")
+    cpu_usage_avg = serializers.FloatField(help_text="CPU 使用率(7d)")
     mem_usage_avg = serializers.FloatField(help_text="内存使用率(7d)")
     pv = serializers.IntegerField(help_text="PV(30d)")
     uv = serializers.IntegerField(help_text="UV(30d)")
     latest_operated_at = serializers.DateTimeField(help_text="最近操作时间")
-    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="问题类型")
+    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="应用状态")
+
+
+class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
+    issue_type = serializers.ChoiceField(
+        choices=OperationIssueType.get_choices(), help_text="应用状态", required=False, allow_null=True
+    )
+    order = serializers.CharField(help_text="排序", default="id")
+
+    def validate_order(self, value):
+        allowed_orders = ["cpu_usage_avg", "-cpu_usage_avg", "pv", "-pv", "uv", "-uv", "id", "-id"]
+        if value not in allowed_orders:
+            raise serializers.ValidationError(f"排序字段必须是 {', '.join(allowed_orders)} 之一")
+        return value
 
 
 class ApplicationEvaluationListResultSLZ(serializers.Serializer):

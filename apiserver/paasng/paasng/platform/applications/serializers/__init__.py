@@ -17,6 +17,7 @@
 
 from .app import (
     ApplicationEvaluationIssueCountResultSLZ,
+    ApplicationEvaluationListQuerySLZ,
     ApplicationEvaluationListResultSLZ,
     ApplicationEvaluationSLZ,
     ApplicationFeatureFlagSLZ,
@@ -86,6 +87,7 @@ __all__ = [
     "IdleModuleEnvSLZ",
     "IdleApplicationListOutputSLZ",
     "ApplicationEvaluationSLZ",
+    "ApplicationEvaluationListQuerySLZ",
     "ApplicationEvaluationListResultSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",

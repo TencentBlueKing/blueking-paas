@@ -683,12 +683,12 @@ class TestListEvaluation:
 
         return {"collection_task": collection_task, "reports": [report1, report2]}
 
-    def test_list_evaluation_success(self, create_evaluation_reports, api_client):
+    def test_list_evaluation(self, create_evaluation_reports, api_client):
         """
         测试应用评估详情列表
         """
         url = reverse("api.applications.lists.evaluation")
-        params = {"limit": 2, "offset": 0}
+        params = {"limit": 2, "offset": 0, "order": "-id"}
         response = api_client.get(url, params, format="json")
 
         assert response.status_code == status.HTTP_200_OK
@@ -705,7 +705,6 @@ class TestListEvaluation:
         assert isinstance(results["applications"], list)
         assert len(results["applications"]) == 2
 
-        # 结果 app 顺序是数据库表 id 倒序
         app_data1 = results["applications"][0]
         report2 = create_evaluation_reports["reports"][1]
 
@@ -737,6 +736,44 @@ class TestListEvaluation:
         assert app_data2["pv"] == report1.pv
         assert app_data2["uv"] == report1.uv
         assert app_data2["issue_type"] == report1.issue_type
+
+    def test_list_evaluation_idle(self, create_evaluation_reports, api_client):
+        """
+        测试应用评估详情列表
+        """
+        url = reverse("api.applications.lists.evaluation")
+        params = {"limit": 2, "offset": 0, "order": "pv", "issue_type": "idle"}
+        response = api_client.get(url, params, format="json")
+
+        assert response.status_code == status.HTTP_200_OK
+
+        response_data = response.json()
+
+        assert "count" in response_data
+        assert response_data["count"] == 1
+
+        assert "results" in response_data
+        results = response_data["results"]
+
+        assert "applications" in results
+        assert isinstance(results["applications"], list)
+        assert len(results["applications"]) == 1
+
+        app_data1 = results["applications"][0]
+        report2 = create_evaluation_reports["reports"][1]
+
+        assert app_data1["code"] == report2.app.code
+        assert app_data1["name"] == report2.app.name
+        assert app_data1["type"] == report2.app.type
+        assert app_data1["is_plugin_app"] == report2.app.is_plugin_app
+        assert app_data1["logo_url"] == report2.app.get_logo_url()
+        assert app_data1["cpu_limits"] == report2.cpu_limits
+        assert app_data1["mem_limits"] == report2.mem_limits
+        assert app_data1["cpu_usage_avg"] == report2.cpu_usage_avg
+        assert app_data1["mem_usage_avg"] == report2.mem_usage_avg
+        assert app_data1["pv"] == report2.pv
+        assert app_data1["uv"] == report2.uv
+        assert app_data1["issue_type"] == report2.issue_type
 
     def test_issue_count(self, create_evaluation_reports, api_client):
         """

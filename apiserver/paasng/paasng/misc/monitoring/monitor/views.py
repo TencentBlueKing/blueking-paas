@@ -302,7 +302,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         # 告警按 bk_biz_id 归类
         biz_grouped_alerts = defaultdict(list)
         for alert in alerts:
-            bk_biz_id = alert["bk_biz_id"]
+            bk_biz_id = str(alert["bk_biz_id"])
             biz_grouped_alerts[bk_biz_id].append(alert)
 
         # 查询应用的监控空间, 生成 bk_biz_id 对应 application 的 dict

@@ -57,7 +57,7 @@ from .serializer import (
 )
 from .serializers import (
     AlarmStrategySLZ,
-    AlertListByUserRespSLZ,
+    AlertListByUserSLZ,
     AlertRuleSLZ,
     AlertSLZ,
     ListAlarmStrategiesSLZ,
@@ -275,19 +275,19 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
         serializer = AlertSLZ(alerts, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertListByUserRespSLZ()})
+    @swagger_auto_schema(request_body=ListAlertsSLZ, responses={200: AlertListByUserSLZ()})
     def list_alerts_by_user(self, request):
         """查询用户各应用告警及数量"""
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         if not app_codes:
-            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
+            return Response([])
 
         serializer = ListAlertsSLZ(data=request.data, context={"app_codes": app_codes})
         serializer.is_valid(raise_exception=True)
         query_params: QueryAlertsParams = serializer.validated_data
         if not query_params.bk_biz_ids:
             # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
-            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
+            return Response([])
 
         # 查询告警
         bk_monitor_client = make_bk_monitor_client()
@@ -297,7 +297,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
         if not alerts:
-            return Response(AlertListByUserRespSLZ({"alerts": None}).data)
+            return Response([])
 
         # 告警按 bk_biz_id 归类
         biz_grouped_alerts = defaultdict(list)
@@ -314,7 +314,7 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             {"application": bizid_app_map[bizid], "alerts": alerts} for bizid, alerts in biz_grouped_alerts.items()
         ]
 
-        serializer = AlertListByUserRespSLZ({"alerts": app_alerts})
+        serializer = AlertListByUserSLZ(app_alerts, many=True)
         return Response(serializer.data)
 
 

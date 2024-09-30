@@ -124,7 +124,7 @@ class AlertSLZ(serializers.Serializer):
 
 
 class AlertListByUserSLZ(serializers.Serializer):
-    application = ApplicationWithLogoMinimalSLZ(read_only=True)
+    application = ApplicationWithLogoMinimalSLZ(help_text="应用基础信息", read_only=True)
     alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
     count = serializers.SerializerMethodField(help_text="应用告警数")
     slow_query_count = serializers.SerializerMethodField(help_text="应用慢查询数")
@@ -134,14 +134,6 @@ class AlertListByUserSLZ(serializers.Serializer):
 
     def get_slow_query_count(self, obj):
         return sum(1 for alert in (obj.get("alerts") or []) if "慢查询" in alert.get("alert_name", ""))
-
-
-class AlertListByUserRespSLZ(serializers.Serializer):
-    total = serializers.SerializerMethodField(help_text="用户告警总数")
-    alerts = serializers.ListSerializer(help_text="各个应用的告警", child=AlertListByUserSLZ())
-
-    def get_total(self, obj):
-        return sum(len(alert.get("alerts", [])) for alert in (obj.get("alerts") or []))
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

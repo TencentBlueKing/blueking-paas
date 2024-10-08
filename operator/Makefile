@@ -68,7 +68,7 @@ manifests: controller-gen ## 生成 WebhookConfiguration，ClusterRole，CustomR
 	# 备注：output:none 将会丢弃其他的输出，适用于仅特定配置如 crd，webhook 需要更新的情况。
 	# 如果需要增加更新其他部分的 manifests 文件，请在 output:none 前追加对应参数。
 	# 参考： https://book.kubebuilder.io/reference/controller-gen.html#output-rules
-	$(CONTROLLER_GEN) crd webhook paths="./..." rbac:roleName=manager-role "crd:crdVersions=v1" output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:rbac:artifacts:config=config/rbac output:none
+	$(CONTROLLER_GEN) paths="./..." crd:crdVersions=v1 webhook rbac:roleName=manager-role output:crd:artifacts:config=config/crd/bases output:webhook:artifacts:config=config/webhook output:rbac:artifacts:config=config/rbac output:none
 
 .PHONY: generate
 generate: controller-gen ## 生成 DeepCopy，DeepCopyInto，DeepCopyObject 代码实现（Go）
@@ -170,7 +170,7 @@ HELMIFY ?= $(LOCALBIN)/helmify
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.9.0
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
 GOCILINT_VERSION ?= v1.53.3
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"

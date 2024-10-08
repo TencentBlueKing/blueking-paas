@@ -21,6 +21,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -320,11 +321,11 @@ func (r *HookReconciler) cleanupFinishedHooks(
 	}
 
 	// 按照创建时间排序，清理掉最早的几个
-	slices.SortFunc(pods, func(x, y corev1.Pod) bool {
+	slices.SortFunc(pods, func(x, y corev1.Pod) int {
 		if x.CreationTimestamp.Equal(&y.CreationTimestamp) {
-			return x.Name < y.Name
+			return strings.Compare(x.Name, y.Name)
 		}
-		return x.CreationTimestamp.Before(&y.CreationTimestamp)
+		return lo.Ternary(x.CreationTimestamp.Before(&y.CreationTimestamp), -1, 1)
 	})
 
 	for i := 0; i < numToDelete; i++ {

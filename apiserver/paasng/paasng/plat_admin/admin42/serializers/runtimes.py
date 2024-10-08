@@ -71,7 +71,9 @@ class BuildPackBindInputSLZ(serializers.Serializer):
 
         # 检测 region 是否匹配
         builder_regions = {sb.region for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
-        if builder_regions and builder_regions != {self.context["buildpack_region"]}:
+        if len(builder_regions) > 1:
+            raise serializers.ValidationError("slugbuilder region must be same")
+        if len(builder_regions) == 1 and builder_regions.pop() != self.context["buildpack_region"]:
             raise serializers.ValidationError("slugbuilder region does not match buildpack region")
 
         return slugbuilder_ids
@@ -136,7 +138,9 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
 
         # 检测 region 是否匹配
         buildpack_regions = {bp.region for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
-        if buildpack_regions and buildpack_regions != {self.context["slugbuilder_region"]}:
+        if len(buildpack_regions) > 1:
+            raise serializers.ValidationError("buildpack region must be same")
+        if len(buildpack_regions) == 1 and buildpack_regions.pop() != self.context["slugbuilder_region"]:
             raise serializers.ValidationError("buildpack region does not match slugbuilder region")
 
         return buildpack_ids

@@ -12,7 +12,7 @@
 
 {% block main_content %}
 <div id="slugrunner-list" class="p20">
-    <bk-alert class="mb20" title="Slugrunner 用于提供运行环境。"></bk-alert>
+    <bk-alert class="mb20" title="Slugrunner 是应用运行阶段的基础环境，用于承载构建阶段的产物，组成可以最终运行的容器镜像。"></bk-alert>
 
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
@@ -20,14 +20,12 @@
 
     <!--  数据列表  -->
     <bk-table :data="data">
-        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250"></bk-table-column>
+        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200"></bk-table-column>
         <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="镜像类型" prop="type"></bk-table-column>
         <bk-table-column label="可用区域" prop="region"></bk-table-column>
-        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" width="350"></bk-table-column>
-        <bk-table-column label="标签" prop="tag"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated"></bk-table-column>
+        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350" :formatter="addTag"></bk-table-column>
         <bk-table-column label="是否隐藏" width="80">
             <template slot-scope="props">
                 <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
@@ -54,7 +52,8 @@
         theme="primary" width="1100"
         :confirm-fn="submitDialog"
         @cancel="cancelDialog"
-        :mask-close="false"
+        :mask-close="dialog.type === 'detail'"
+        :show-footer="dialog.type !== 'detail'"
     >
         <div slot="header" v-if="dialog.type === 'detail'">Slugrunner 详情</div>
         <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] Slugrunner</div>
@@ -486,6 +485,9 @@
                             row.isEdit = false;
                         }
                     }
+                },
+                addTag: function (row, column, cellValue, index) {
+                    return cellValue + ':' + row.tag;
                 },
             },
             mounted: function () {

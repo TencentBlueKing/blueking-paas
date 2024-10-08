@@ -20,14 +20,13 @@
 
     <!--  数据列表  -->
     <bk-table :data="data">
-        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250"></bk-table-column>
+        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200"></bk-table-column>
         <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="引用类型" prop="type"></bk-table-column>
         <bk-table-column label="可用区域" prop="region"></bk-table-column>
         <bk-table-column label="编程语言" prop="language"></bk-table-column>
         <bk-table-column label="版本" prop="version"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated"></bk-table-column>
         <bk-table-column label="是否隐藏">
             <template slot-scope="props">
                 <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
@@ -97,7 +96,8 @@
         theme="primary" width="1000"
         :confirm-fn="submitDialog"
         @cancel="cancelDialog"
-        :mask-close="false"
+        :mask-close="dialog.type === 'detail'"
+        :show-footer="dialog.type !== 'detail'"
     >
         <div slot="header" v-if="dialog.type === 'detail'">BuildPack 详情</div>
         <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] BuildPack</div>
@@ -581,6 +581,11 @@
     .draggable-content-remove:hover {
         background-color: #ff5656;
         color: #3a84ff;
+    }
+
+    .beauty-scrollbar {
+        height: 340px;
+        overflow: scroll;
     }
 
     .beauty-scrollbar::-webkit-scrollbar {

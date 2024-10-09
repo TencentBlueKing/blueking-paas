@@ -357,11 +357,10 @@ class ApplicationListViewSet(viewsets.ViewSet):
     )
     def list_evaluation(self, request):
         """获取应用评估详情列表"""
-        query_serializer = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
-        query_serializer.is_valid(raise_exception=True)
+        slz = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
 
-        issue_type = query_serializer.validated_data.get("issue_type")
-        order = query_serializer.validated_data.get("order", "id")
+        params = slz.validated_data
 
         latest_collected_at = None
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
@@ -369,10 +368,16 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
 
-        reports = AppOperationReport.objects.filter(app__code__in=app_codes)
-        if issue_type:
+        reports = (
+            AppOperationReport.objects.filter(
+                app__code__in=app_codes,
+            )
+            .order_by(params["order"])
+            .select_related("app")
+        )
+
+        if issue_type := params.get("issue_type"):
             reports = reports.filter(issue_type=issue_type)
-        reports = reports.order_by(order).select_related("app")
 
         paginator = LimitOffsetPagination()
         paginated_reports = paginator.paginate_queryset(reports, request)
@@ -388,7 +393,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["应用列表"],
         operation_description="获取应用评估各状态数量",
-        responses={200: slzs.ApplicationEvaluationIssueCountResultSLZ()},
+        responses={200: slzs.ApplicationEvaluationIssueCountListResultSLZ()},
     )
     def list_evaluation_issue_count(self, request):
         """获取应用评估各状态数量"""
@@ -404,7 +409,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
-        serializer = slzs.ApplicationEvaluationIssueCountResultSLZ(data)
+        serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
         return Response(serializer.data)
 
 

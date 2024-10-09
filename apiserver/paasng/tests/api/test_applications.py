@@ -17,6 +17,7 @@
 
 import logging
 from datetime import datetime, timedelta
+from typing import List
 from unittest import mock
 
 import pytest
@@ -24,7 +25,6 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
-from rest_framework import status
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
@@ -36,6 +36,7 @@ from paasng.platform.applications.handlers import post_create_application, turn_
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.evaluation.constants import BatchTaskStatus
 from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig
@@ -623,12 +624,24 @@ class TestCreateCloudNativeApp:
 
 class TestListEvaluation:
     @pytest.fixture()
-    def create_evaluation_reports(self, bk_user):
+    def latest_collection_task(self) -> AppOperationReportCollectionTask:
+        """
+        创建采集任务测试数据
+        """
+        return AppOperationReportCollectionTask.objects.create(
+            total_count=10,
+            succeed_count=8,
+            failed_count=2,
+            failed_app_codes=["app1", "app2"],
+            status=BatchTaskStatus.RUNNING,
+            start_at=datetime.now(),
+        )
+
+    @pytest.fixture()
+    def init_app_operation_reports(self, bk_user) -> List[AppOperationReport]:
         """
         创建应用评估详情测试数据
         """
-        collection_task = AppOperationReportCollectionTask.objects.create(start_at=datetime.now())
-
         app1 = create_app(owner_username=bk_user.username)
         report1 = AppOperationReport.objects.create(
             cpu_requests=4000,
@@ -655,7 +668,8 @@ class TestListEvaluation:
             visit_summary={"visits": 1000},
         )
 
-        app2 = create_app(owner_username=bk_user.username)  # 创建另一个独立的 App 实例
+        # 创建另一个独立的 App 实例
+        app2 = create_app(owner_username=bk_user.username)
         report2 = AppOperationReport.objects.create(
             cpu_requests=6000,
             mem_requests=12288,
@@ -681,32 +695,27 @@ class TestListEvaluation:
             visit_summary={"visits": 1500},
         )
 
-        return {"collection_task": collection_task, "reports": [report1, report2]}
+        return [report1, report2]
 
-    def test_list_evaluation(self, create_evaluation_reports, api_client):
+    def test_list_evaluation(self, api_client, latest_collection_task, init_app_operation_reports):
         """
         测试应用评估详情列表
         """
-        url = reverse("api.applications.lists.evaluation")
         params = {"limit": 2, "offset": 0, "order": "-id"}
-        response = api_client.get(url, params, format="json")
-
-        assert response.status_code == status.HTTP_200_OK
+        response = api_client.get(reverse("api.applications.lists.evaluation"), params)
 
         response_data = response.json()
 
-        assert "count" in response_data
         assert response_data["count"] == 2
 
-        assert "results" in response_data
         results = response_data["results"]
 
-        assert "applications" in results
-        assert isinstance(results["applications"], list)
+        collected_at = datetime.fromisoformat(results["collected_at"].replace("Z", "+00:00"))
+        assert collected_at == latest_collection_task.start_at
         assert len(results["applications"]) == 2
 
         app_data1 = results["applications"][0]
-        report2 = create_evaluation_reports["reports"][1]
+        report2 = init_app_operation_reports[1]
 
         assert app_data1["code"] == report2.app.code
         assert app_data1["name"] == report2.app.name
@@ -722,7 +731,7 @@ class TestListEvaluation:
         assert app_data1["issue_type"] == report2.issue_type
 
         app_data2 = results["applications"][1]
-        report1 = create_evaluation_reports["reports"][0]
+        report1 = init_app_operation_reports[0]
 
         assert app_data2["code"] == report1.app.code
         assert app_data2["name"] == report1.app.name
@@ -737,30 +746,23 @@ class TestListEvaluation:
         assert app_data2["uv"] == report1.uv
         assert app_data2["issue_type"] == report1.issue_type
 
-    def test_list_evaluation_idle(self, create_evaluation_reports, api_client):
+    def test_list_evaluation_idle(self, api_client, latest_collection_task, init_app_operation_reports):
         """
         测试应用评估详情列表
         """
-        url = reverse("api.applications.lists.evaluation")
         params = {"limit": 2, "offset": 0, "order": "pv", "issue_type": "idle"}
-        response = api_client.get(url, params, format="json")
-
-        assert response.status_code == status.HTTP_200_OK
+        response = api_client.get(reverse("api.applications.lists.evaluation"), params)
 
         response_data = response.json()
 
-        assert "count" in response_data
         assert response_data["count"] == 1
 
-        assert "results" in response_data
         results = response_data["results"]
 
-        assert "applications" in results
-        assert isinstance(results["applications"], list)
         assert len(results["applications"]) == 1
 
         app_data1 = results["applications"][0]
-        report2 = create_evaluation_reports["reports"][1]
+        report2 = init_app_operation_reports[1]
 
         assert app_data1["code"] == report2.app.code
         assert app_data1["name"] == report2.app.name
@@ -775,17 +777,12 @@ class TestListEvaluation:
         assert app_data1["uv"] == report2.uv
         assert app_data1["issue_type"] == report2.issue_type
 
-    def test_issue_count(self, create_evaluation_reports, api_client):
+    def test_issue_count(self, api_client, latest_collection_task, init_app_operation_reports):
         """
         测试获取应用评估结果数量
         """
-        url = reverse("api.applications.lists.evaluation.issue_count")
-        response = api_client.get(url, format="json")
+        response = api_client.get(reverse("api.applications.lists.evaluation.issue_count"))
 
-        assert response.status_code == status.HTTP_200_OK
-        assert "collected_at" in response.data
-        assert "issue_type_counts" in response.data
-        assert "total" in response.data
         assert response.data["total"] == 2
         assert len(response.data["issue_type_counts"]) == 2
 

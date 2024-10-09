@@ -360,7 +360,6 @@ class ApplicationListViewSet(viewsets.ViewSet):
         query_serializer = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
-        # 默认排序 id 升序
         issue_type = query_serializer.validated_data.get("issue_type")
         order = query_serializer.validated_data.get("order", "id")
 
@@ -388,11 +387,11 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(
         tags=["应用列表"],
-        operation_description="获取应用评估结果数量",
+        operation_description="获取应用评估各状态数量",
         responses={200: slzs.ApplicationEvaluationIssueCountResultSLZ()},
     )
     def list_evaluation_issue_count(self, request):
-        """获取应用评估结果数量"""
+        """获取应用评估各状态数量"""
         latest_collected_at = None
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at

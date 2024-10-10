@@ -286,7 +286,10 @@ export const PLATFORM_CONFIG = {
         DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
 
         // 插件-工具框架
-        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883'
+        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883',
+
+        // 令牌使用指引
+        ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token'
     },
 
     CONFIG: {

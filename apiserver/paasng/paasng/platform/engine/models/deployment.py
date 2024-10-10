@@ -18,7 +18,7 @@
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import cattr
 from attrs import define
@@ -26,12 +26,14 @@ from django.db import models
 from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet, ProcService
 from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import HookList, HookListField
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
@@ -47,9 +49,12 @@ class DeploymentQuerySet(models.QuerySet):
         """Get all deploys under an env"""
         return self.filter(app_environment=env)
 
-    def owned_by_module(self, module, environment=None):
+    def owned_by_module(self, module: Module, environment: Union[AppEnvironment, None] = None):
         """Return deployments owned by module"""
-        envs = module.get_envs(environment=environment)
+        envs = module.get_envs()
+        if environment:
+            envs = envs.filter(environment=environment)
+
         return self.filter(app_environment__in=envs)
 
     def latest_succeeded(self):

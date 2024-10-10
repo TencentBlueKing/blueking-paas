@@ -93,9 +93,13 @@ def update_step_by_line(line: str, pattern_maps: Dict, phase: "DeployPhase"):
     """
     for job_status, pattern_map in pattern_maps.items():
         for pattern, step_name in pattern_map.items():
-            match = re.compile(pattern).findall(line)
-            # 未能匹配上任何预设匹配集
-            if not match:
+            # When the line is too long(>10k), the pattern matching will take too long
+            # complete. To improve the performance, we only try to find the pattern in
+            # the first 1k characters.
+            #
+            # This won't affect the matching result because most patterns only occur
+            # at the beginning of the line.
+            if not re.compile(pattern).search(line[:1024]):
                 continue
 
             try:

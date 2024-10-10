@@ -308,6 +308,29 @@ class PluginRelease(AuditedModel):
         return None
 
     @property
+    def is_release_strategy_organization_changed(self) -> bool:
+        """检查发布策略的组织是否变更"""
+
+        # 如果没有最新的发布策略，返回 True
+        latest_release_strategy = self.latest_release_strategy
+        if not latest_release_strategy:
+            return True
+
+        # 找到倒数第二的发布策略
+        try:
+            second_release_strategy = self.release_strategies.exclude(id=latest_release_strategy.id).latest("created")
+        except self.release_strategies.model.DoesNotExist:
+            # 如果找不到倒数第二个策略，返回 True
+            return True
+
+        # 获取两个发布策略的组织 ID 集合
+        latest_org_ids = {s.id for s in latest_release_strategy.organization}
+        second_org_ids = {s.id for s in second_release_strategy.organization}
+
+        # 前后两个组织的 ID 不完全相等
+        return latest_org_ids != second_org_ids
+
+    @property
     def is_latest(self) -> bool:
         """判断版本是否为当前最新发布成功的版本"""
         latest_release = (
@@ -403,12 +426,13 @@ class PluginReleaseStrategy(AuditedModel):
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
-    def get_itsm_service_name(self):
+    def get_itsm_service_name(self, is_release_strategy_organization_changed: bool) -> str:
         """根据发布策略的设置获取对应的 ITSM 审批流程"""
         if self.strategy == constants.ReleaseStrategy.FULL:
             return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
 
-        if self.organization:
+        # 灰度范围包括了组织且组织信息变更了，则需要上级审批
+        if self.organization and is_release_strategy_organization_changed:
             return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
         return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 

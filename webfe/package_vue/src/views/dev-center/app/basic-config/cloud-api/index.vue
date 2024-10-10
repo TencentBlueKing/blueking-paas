@@ -84,7 +84,7 @@
       v-model="createTokenCofig.visible"
       theme="primary"
       :mask-close="false"
-      width="640"
+      width="680"
       @after-leave="handleCancel"
     >
       <div class="header-wrapper" slot="header">
@@ -109,6 +109,12 @@
           <div slot="title" class="alert-wrapper">
             <i class="paasng-icon paasng-remind error" />
             {{ $t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。') }}
+            <a
+              target="_blank"
+              :href="GLOBAL.DOC.ACCESS_TOKEN_USAGE_GUIDE"
+            >
+              {{ $t('使用指引') }}
+            </a>
           </div>
         </bk-alert>
         <div class="content">

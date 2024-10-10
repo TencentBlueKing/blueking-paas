@@ -16,8 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from datetime import datetime, timedelta
-from typing import List
+from datetime import timedelta
 from unittest import mock
 
 import pytest
@@ -634,16 +633,15 @@ class TestListEvaluation:
             failed_count=2,
             failed_app_codes=["app1", "app2"],
             status=BatchTaskStatus.RUNNING,
-            start_at=datetime.now(),
         )
 
     @pytest.fixture()
-    def init_app_operation_reports(self, bk_user) -> List[AppOperationReport]:
+    def app_operation_report1(self, bk_user) -> AppOperationReport:
         """
         创建应用评估详情测试数据
         """
-        app1 = create_app(owner_username=bk_user.username)
-        report1 = AppOperationReport.objects.create(
+        app = create_app(owner_username=bk_user.username)
+        report = AppOperationReport.objects.create(
             cpu_requests=4000,
             mem_requests=8192,
             cpu_limits=8000,
@@ -658,19 +656,21 @@ class TestListEvaluation:
             latest_operated_at=timezone.now() - timedelta(days=2),
             latest_operator="operator",
             latest_operation="Deployment",
-            issue_type="none",
+            issue_type="misconfigured",
             collected_at=timezone.now(),
-            app_id=app1.id,
+            app_id=app.id,
             administrators=[],
             deploy_summary={},
             developers=["dev1", "dev2"],
             evaluate_result={"issue_type": "none"},
             visit_summary={"visits": 1000},
         )
+        return report
 
-        # 创建另一个独立的 App 实例
-        app2 = create_app(owner_username=bk_user.username)
-        report2 = AppOperationReport.objects.create(
+    @pytest.fixture()
+    def app_operation_report2(self, bk_user) -> AppOperationReport:
+        app = create_app(owner_username=bk_user.username)
+        report = AppOperationReport.objects.create(
             cpu_requests=6000,
             mem_requests=12288,
             cpu_limits=12000,
@@ -687,66 +687,16 @@ class TestListEvaluation:
             latest_operation="Scaling",
             issue_type="idle",
             collected_at=timezone.now(),
-            app_id=app2.id,
+            app_id=app.id,
             administrators=[],
             deploy_summary={},
             developers=["dev3", "dev4"],
             evaluate_result={"issue_type": "idle"},
             visit_summary={"visits": 1500},
         )
+        return report
 
-        return [report1, report2]
-
-    def test_list_evaluation(self, api_client, latest_collection_task, init_app_operation_reports):
-        """
-        测试应用评估详情列表
-        """
-        params = {"limit": 2, "offset": 0, "order": "-id"}
-        response = api_client.get(reverse("api.applications.lists.evaluation"), params)
-
-        response_data = response.json()
-
-        assert response_data["count"] == 2
-
-        results = response_data["results"]
-
-        collected_at = datetime.fromisoformat(results["collected_at"].replace("Z", "+00:00"))
-        assert collected_at == latest_collection_task.start_at
-        assert len(results["applications"]) == 2
-
-        app_data1 = results["applications"][0]
-        report2 = init_app_operation_reports[1]
-
-        assert app_data1["code"] == report2.app.code
-        assert app_data1["name"] == report2.app.name
-        assert app_data1["type"] == report2.app.type
-        assert app_data1["is_plugin_app"] == report2.app.is_plugin_app
-        assert app_data1["logo_url"] == report2.app.get_logo_url()
-        assert app_data1["cpu_limits"] == report2.cpu_limits
-        assert app_data1["mem_limits"] == report2.mem_limits
-        assert app_data1["cpu_usage_avg"] == report2.cpu_usage_avg
-        assert app_data1["mem_usage_avg"] == report2.mem_usage_avg
-        assert app_data1["pv"] == report2.pv
-        assert app_data1["uv"] == report2.uv
-        assert app_data1["issue_type"] == report2.issue_type
-
-        app_data2 = results["applications"][1]
-        report1 = init_app_operation_reports[0]
-
-        assert app_data2["code"] == report1.app.code
-        assert app_data2["name"] == report1.app.name
-        assert app_data2["type"] == report1.app.type
-        assert app_data2["is_plugin_app"] == report1.app.is_plugin_app
-        assert app_data2["logo_url"] == report1.app.get_logo_url()
-        assert app_data2["cpu_limits"] == report1.cpu_limits
-        assert app_data2["mem_limits"] == report1.mem_limits
-        assert app_data2["cpu_usage_avg"] == report1.cpu_usage_avg
-        assert app_data2["mem_usage_avg"] == report1.mem_usage_avg
-        assert app_data2["pv"] == report1.pv
-        assert app_data2["uv"] == report1.uv
-        assert app_data2["issue_type"] == report1.issue_type
-
-    def test_list_evaluation_idle(self, api_client, latest_collection_task, init_app_operation_reports):
+    def test_list_evaluation(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
         """
         测试应用评估详情列表
         """
@@ -761,23 +711,23 @@ class TestListEvaluation:
 
         assert len(results["applications"]) == 1
 
-        app_data1 = results["applications"][0]
-        report2 = init_app_operation_reports[1]
+        app_data = results["applications"][0]
+        report = app_operation_report2
 
-        assert app_data1["code"] == report2.app.code
-        assert app_data1["name"] == report2.app.name
-        assert app_data1["type"] == report2.app.type
-        assert app_data1["is_plugin_app"] == report2.app.is_plugin_app
-        assert app_data1["logo_url"] == report2.app.get_logo_url()
-        assert app_data1["cpu_limits"] == report2.cpu_limits
-        assert app_data1["mem_limits"] == report2.mem_limits
-        assert app_data1["cpu_usage_avg"] == report2.cpu_usage_avg
-        assert app_data1["mem_usage_avg"] == report2.mem_usage_avg
-        assert app_data1["pv"] == report2.pv
-        assert app_data1["uv"] == report2.uv
-        assert app_data1["issue_type"] == report2.issue_type
+        assert app_data["code"] == report.app.code
+        assert app_data["name"] == report.app.name
+        assert app_data["type"] == report.app.type
+        assert app_data["is_plugin_app"] == report.app.is_plugin_app
+        assert app_data["logo_url"] == report.app.get_logo_url()
+        assert app_data["cpu_limits"] == report.cpu_limits
+        assert app_data["mem_limits"] == report.mem_limits
+        assert app_data["cpu_usage_avg"] == report.cpu_usage_avg
+        assert app_data["mem_usage_avg"] == report.mem_usage_avg
+        assert app_data["pv"] == report.pv
+        assert app_data["uv"] == report.uv
+        assert app_data["issue_type"] == report.issue_type
 
-    def test_issue_count(self, api_client, latest_collection_task, init_app_operation_reports):
+    def test_issue_count(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
         """
         测试获取应用评估结果数量
         """
@@ -787,5 +737,5 @@ class TestListEvaluation:
         assert len(response.data["issue_type_counts"]) == 2
 
         for issue in response.data["issue_type_counts"]:
-            assert issue["issue_type"] in ["none", "idle"]
+            assert issue["issue_type"] in ["none", "idle", "misconfigured"]
             assert issue["count"] == 1

@@ -99,7 +99,8 @@ def update_step_by_line(line: str, pattern_maps: Dict, phase: "DeployPhase"):
             #
             # This won't affect the matching result because most patterns only occur
             # at the beginning of the line.
-            if not re.compile(pattern).search(line[:1024]):
+            p = re.compile(pattern, flags=re.IGNORECASE)
+            if not p.search(line[:1024]):
                 continue
 
             try:

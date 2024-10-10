@@ -308,29 +308,6 @@ class PluginRelease(AuditedModel):
         return None
 
     @property
-    def is_release_strategy_organization_changed(self) -> bool:
-        """检查发布策略的组织是否变更"""
-
-        # 如果没有最新的发布策略，返回 True
-        latest_release_strategy = self.latest_release_strategy
-        if not latest_release_strategy:
-            return True
-
-        # 找到倒数第二的发布策略
-        try:
-            second_release_strategy = self.release_strategies.exclude(id=latest_release_strategy.id).latest("created")
-        except self.release_strategies.model.DoesNotExist:
-            # 如果找不到倒数第二个策略，返回 True
-            return True
-
-        # 获取两个发布策略的组织 ID 集合
-        latest_org_ids = {s["id"] for s in latest_release_strategy.organization}
-        second_org_ids = {s["id"] for s in second_release_strategy.organization}
-
-        # 前后两个组织的 ID 不完全相等
-        return latest_org_ids != second_org_ids
-
-    @property
     def is_latest(self) -> bool:
         """判断版本是否为当前最新发布成功的版本"""
         latest_release = (
@@ -543,3 +520,26 @@ class OperationRecord(AuditedModel):
         if self.specific:
             return f"{username} {action_text} {self.specific} {subject_text}"
         return f"{username} {action_text}{subject_text}"
+
+
+def is_release_strategy_organization_changed(release: PluginRelease) -> bool:
+    """检查发布策略的组织是否变更"""
+
+    # 如果没有最新的发布策略，返回 True
+    latest_release_strategy = release.latest_release_strategy
+    if not latest_release_strategy:
+        return True
+
+    # 找到倒数第二的发布策略
+    try:
+        second_release_strategy = release.release_strategies.exclude(id=latest_release_strategy.id).latest("created")
+    except release.release_strategies.model.DoesNotExist:
+        # 如果找不到倒数第二个策略，返回 True
+        return True
+
+    # 获取两个发布策略的组织 ID 集合
+    latest_org_ids = {s["id"] for s in latest_release_strategy.organization}
+    second_org_ids = {s["id"] for s in second_release_strategy.organization}
+
+    # 前后两个组织的 ID 不完全相等
+    return latest_org_ids != second_org_ids

@@ -295,10 +295,7 @@ export default {
   },
   methods: {
     async init() {
-      const ininRequest = [this.getMarketInfo()];
-      if (!this.isCodecc) {
-        ininRequest.push(this.getPluginBaseInfo());
-      }
+      const ininRequest = [this.getMarketInfo(), this.getPluginBaseInfo()];
       await Promise.all(ininRequest);
       if (this.pluginFeatureFlags.PLUGIN_DISTRIBUTER) {
         this.getPluginAll();

@@ -54,18 +54,27 @@ class BuildPackListOutputSLZ(serializers.ModelSerializer):
 
 
 class BuildPackBindInputSLZ(serializers.Serializer):
-    """用于给单个 Buildpack 绑定 slugbuilder 列表，需要传入 context["buildpack_type"] 用于验证 slugbuilder 类型"""
+    """用于给单个 Buildpack 绑定 slugbuilder 列表
+    需要传入 context["buildpack_type"] 和 context["buildpack_region"] 用于验证 slugbuilder 类型
+    """
 
     slugbuilder_ids = serializers.ListField(child=serializers.CharField())
 
     def validate_slugbuilder_ids(self, slugbuilder_ids: List[str]) -> List[str]:
         builder_types = {sb.type for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
 
-        # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
+        # 检测 type 是否匹配
         buildpack_builder_type_map = BuildPackType.get_buildpack_builder_type_map()
         for builder_type in builder_types:
             if builder_type != buildpack_builder_type_map[self.context["buildpack_type"]]:
                 raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
+
+        # 检测 region 是否匹配
+        builder_regions = {sb.region for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
+        if len(builder_regions) > 1:
+            raise serializers.ValidationError("slugbuilder region must be same")
+        if len(builder_regions) == 1 and builder_regions.pop() != self.context["buildpack_region"]:
+            raise serializers.ValidationError("slugbuilder region does not match buildpack region")
 
         return slugbuilder_ids
 
@@ -110,20 +119,29 @@ class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
 
 
 class AppSlugBuilderBindInputSLZ(serializers.Serializer):
-    """用于给 slugbuilder 绑定 buildpack 列表，需要传入 context["slugbuilder_type"] 用于验证 buildpack 类型"""
+    """用于给 slugbuilder 绑定 buildpack 列表
+    需要传入 context["slugbuilder_type"] 和 context["slugbuilder_region"] 用于验证 buildpack 类型
+    """
 
     buildpack_ids = serializers.ListField(child=serializers.CharField())
 
     def validate_buildpack_ids(self, buildpack_ids: List[str]) -> List[str]:
         buildpack_types = {bp.type for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
 
-        # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
+        # 检测 type 是否匹配
         buildpack_builder_type_map = BuildPackType.get_buildpack_builder_type_map()
         for buildpack_type in buildpack_types:
             if self.context["slugbuilder_type"] != buildpack_builder_type_map[buildpack_type]:
                 raise serializers.ValidationError(
                     f"buildpack type ({buildpack_type}): does not match slugbuilder type"
                 )
+
+        # 检测 region 是否匹配
+        buildpack_regions = {bp.region for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
+        if len(buildpack_regions) > 1:
+            raise serializers.ValidationError("buildpack region must be same")
+        if len(buildpack_regions) == 1 and buildpack_regions.pop() != self.context["slugbuilder_region"]:
+            raise serializers.ValidationError("buildpack region does not match slugbuilder region")
 
         return buildpack_ids
 

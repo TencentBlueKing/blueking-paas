@@ -12,7 +12,7 @@
 
 {% block main_content %}
 <div id="slugbuilder-list" class="p20">
-    <bk-alert class="mb20" title="Slugbuilder 是 Buildpack 的有序组合，负责将一个应用从源代码构建成应用镜像。"></bk-alert>
+    <bk-alert class="mb20" title="Slugbuilder 是镜像构建阶段的基础环境，通过顺序执行多个 buildpack 以将应用源代码构建为镜像层。"></bk-alert>
 
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         新建
@@ -20,14 +20,12 @@
 
     <!--  数据列表  -->
     <bk-table :data="data">
-        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true"></bk-table-column>
+        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250"></bk-table-column>
+        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200"></bk-table-column>
         <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
         <bk-table-column label="镜像类型" prop="type"></bk-table-column>
         <bk-table-column label="可用区域" prop="region"></bk-table-column>
-        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" width="350"></bk-table-column>
-        <bk-table-column label="标签" prop="tag"></bk-table-column>
-        <bk-table-column label="更新时间" prop="updated"></bk-table-column>
+        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350" :formatter="addTag"></bk-table-column>
         <bk-table-column label="是否隐藏" width="80">
             <template slot-scope="props">
                 <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
@@ -102,7 +100,8 @@
         theme="primary" width="1100"
         :confirm-fn="submitDialog"
         @cancel="cancelDialog"
-        :mask-close="false"
+        :mask-close="dialog.type === 'detail'"
+        :show-footer="dialog.type !== 'detail'"
     >
         <div slot="header" v-if="dialog.type === 'detail'">SlugBuilder 详情</div>
         <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] SlugBuilder</div>
@@ -577,6 +576,9 @@
                         }
                     }
                 },
+                addTag: function (row, column, cellValue, index) {
+                    return cellValue + ':' + row.tag;
+                },
             },
             mounted: function () {
                 this.fetchSlugBuilderList();
@@ -662,6 +664,11 @@
     .draggable-content-remove:hover {
         background-color: #ff5656;
         color: #3a84ff;
+    }
+
+    .beauty-scrollbar {
+        height: 340px;
+        overflow: scroll;
     }
 
     .beauty-scrollbar::-webkit-scrollbar {

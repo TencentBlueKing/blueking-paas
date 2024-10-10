@@ -2832,4 +2832,5 @@ export default {
   蓝鲸监控仪表盘: 'BlueKing Monitoring Dashboard',
   采集: 'Collection',
   参数: 'Parameter',
+  使用指引: 'Usage guide',
 };

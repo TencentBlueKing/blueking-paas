@@ -67,9 +67,8 @@
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_default ? '✅' : '❌' ] </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="操作" width="150">
+        <bk-table-column label="操作" width="80">
             <template slot-scope="props">
-                <bk-button class="mr5" theme="primary" text @click="showDetailDialog(props.row)">详情</bk-button>
                 <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
                 <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
             </template>

@@ -69,16 +69,26 @@ class Command(BaseCommand):
         app_code_name_map = dict(apps.values_list("code", "name"))
         groups = ApplicationUserGroup.objects.filter(app_code__in=app_code_name_map.keys(), role=role)
 
+        total = groups.count()
+        regrant_failed_app_codes = set()
+
         iam_client = BKIAMClient()
-        for group in groups:
+        for idx, group in enumerate(groups, start=1):
             print(
                 f"regrant app code {group.app_code} role {ApplicationRole(role).name} "
-                + f"iam user group: {group.user_group_id}"
+                + f"iam user group: {group.user_group_id} ({idx}/{total})"
             )
-            # 先回收用户组所有权限，再重新授权
-            iam_client.revoke_user_group_policies(group.user_group_id, list(AppAction.get_values()))
-            iam_client.grant_user_group_policies(
-                group.app_code,
-                app_code_name_map[group.app_code],
-                [{"id": group.user_group_id, "role": group.role}],
-            )
+            try:
+                # 先回收用户组所有权限，再重新授权
+                iam_client.revoke_user_group_policies(group.user_group_id, list(AppAction.get_values()))
+                iam_client.grant_user_group_policies(
+                    group.app_code,
+                    app_code_name_map[group.app_code],
+                    [{"id": group.user_group_id, "role": group.role}],
+                )
+            except Exception as e:
+                print(f"regrant app code {group.app_code} role {ApplicationRole(role).name} iam user group error: {e}")
+                regrant_failed_app_codes.add(group.app_code)
+
+        if regrant_failed_app_codes:
+            print(f"regrant failed app codes: {regrant_failed_app_codes}")

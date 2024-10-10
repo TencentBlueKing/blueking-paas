@@ -59,9 +59,9 @@ export const APP_ROLE_NAMES = {
 };
 
 export const DEFAULR_LANG_NAME = {
-  Python: 'Python开发框架',
-  Go: 'Golang开发框架',
-  NodeJS: 'NodeJS开发框架',
+  Python: 'Python 开发框架',
+  Go: 'Go 开发框架',
+  NodeJS: 'NodeJS 开发框架',
 };
 
 export const PLUGIN_STATUS = {

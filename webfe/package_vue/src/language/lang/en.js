@@ -2806,7 +2806,6 @@ export default {
   '审批未通过，请修改发布信息后重新申请': 'Approval not passed, please modify the release information and reapply',
   '请输入蓝盾项目 ID，多个 ID 以英文分号分隔，最多可输入 10 个 ID': 'Please enter the Blueking CI Project ID(s). Multiple IDs should be separated by semicolons, with a maximum of 10 IDs.',
   '灰度发布需由<em>工具管理员</em>进行审批。': 'Gray release requires approval from the <em>tool administrator</em>.',
-  '灰度发布需由<em>工具管理员</em>进行审批；<span>若选择了灰度组织范围，还需要由<em>工具发布者的直属Leader</em>同时进行审批。</span>': 'Gray release requires approval from the <em>tool administrator</em>; <span>if a gray organization range is selected, approval from the <em>tool publishers immediate leader</em> is also required.</span>',
   已终止当前的发布版本: 'The current release version has been terminated',
   扩大灰度范围不允许删除已经灰度过的组织: 'Expanding the gray range does not allow deleting organizations that have already been grayed out',
   测试号: 'Test number',

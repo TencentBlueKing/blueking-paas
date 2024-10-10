@@ -14,34 +14,73 @@
 <div id="slugrunner-list" class="p20">
     <bk-alert class="mb20" title="Slugrunner 是应用运行阶段的基础环境，用于承载构建阶段的产物，组成可以最终运行的容器镜像。"></bk-alert>
 
-    <bk-button theme="primary" class="mb20" @click="handleCreate">
+    <bk-button theme="primary" class="create-button" @click="handleCreate">
         新建
     </bk-button>
 
+    <bk-radio-group v-model="curRegionActive" @change="switchRegion" class="filter-wrapper">
+        <bk-radio-button
+            v-for="item in regionList"
+            :value="item.key"
+            class="filter-item"
+        >
+            $[ item.text ]
+        </bk-radio-button>
+    </bk-radio-group>
+
     <!--  数据列表  -->
-    <bk-table :data="data">
-        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250"></bk-table-column>
-        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200"></bk-table-column>
-        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="镜像类型" prop="type"></bk-table-column>
-        <bk-table-column label="可用区域" prop="region"></bk-table-column>
-        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350" :formatter="addTag"></bk-table-column>
-        <bk-table-column label="是否隐藏" width="80">
+    <bk-table :data="data" :size="setting.size">
+        <bk-table-column label="名称" prop="name" min-width="250">
             <template slot-scope="props">
-                <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
+                <span class="name" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="showDetailDialog(props.row)">$[ props.row.name ]</span>
+                <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"
+                         v-if="setting.selectedFields.find(item => item.id === 'description') !== undefined">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.description ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="镜像类型" prop="type" :filters="typeFilters" :filter-multiple="true" :filter-method="filterMethod" width="100">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.type ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="可用区域" prop="region">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.region ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="320">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.image + ':' + props.row.tag ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否显示" width="80">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_hidden ? '否' : '是' ] </span>
             </template>
         </bk-table-column>
         <bk-table-column label="是否默认" width="80">
             <template slot-scope="props">
-                <span>$[ props.row.is_default ? '✅' : '❌' ] </span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_default ? '✅' : '❌' ] </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="操作" width="200">
+        <bk-table-column label="操作" width="80">
             <template slot-scope="props">
-                <bk-button class="mr5" theme="primary" text @click="showDetailDialog(props.row)">详情</bk-button>
                 <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
                 <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
             </template>
+        </bk-table-column>
+        <bk-table-column type="setting" :tippy-options="{ zIndex: 3000 }">
+            <bk-table-setting-content
+                :fields="setting.fields"
+                :selected="setting.selectedFields"
+                :max="setting.max"
+                :size="setting.size"
+                @setting-change="handleSettingChange">
+            </bk-table-setting-content>
         </bk-table-column>
     </bk-table>
 
@@ -265,6 +304,41 @@
 
     const image_types = {{ image_types | to_json }}
 
+    let typeFilters = []
+    for (let type in image_types) {
+        typeFilters.push({
+            text: type,
+            value: type,
+        });
+    }
+
+    const settingFields = [
+        {
+            id: 'name',
+            label: '名称',
+            disabled: true,
+        },
+        {
+            id: 'type',
+            label: '镜像类型',
+            disabled: true,
+        },
+        {
+            id: 'region',
+            label: '可用区域',
+            disabled: true,
+        },
+        {
+            id: 'image',
+            label: '镜像',
+            disabled: true,
+        },
+        {
+            id: 'description',
+            label: '描述',
+        }
+    ]
+
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
             el: "#slugrunner-list",
@@ -289,15 +363,39 @@
                     oldLabelList: [],
                     regions: regions,
                     image_types: image_types,
+                    regionList: [],
+                    curRegionActive: 'all',
+                    setting: {
+                        max: 3,
+                        fields: settingFields,
+                        selectedFields: settingFields,
+                        size: 'medium'
+                    },
+                    typeFilters: typeFilters,
                 }
             },
             methods: {
                 fetchSlugrunnerList: async function () {
                     const el = this.$bkLoading({title: '加载中'});
                     try {
-                        await this.$http.get(URLRouter.list).then(res => {
+                        let url = URLRouter.list;
+                        if (this.curRegionActive !== 'all') {
+                            url += '?region=' + this.curRegionActive;
+                        }
+                        await this.$http.get(url).then(res => {
                             this.data = res;
+                            this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
+                            for (let i = 0; i < regions.length; i++) {
+                                this.regionList.push({"key": regions[i], "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`});
+                            }
                         })
+                    } catch (e) {
+                        if (e.response.status === 400) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            })
+                        }
                     } finally {
                         el.hide = true;
                     }
@@ -401,25 +499,6 @@
                         this.data.splice(index, 1);
                     }
                 },
-                submitBindDialog: async function () {
-                    try {
-                        let url = this.bindDialog.url;
-                        await this.$http.post(url, {
-                            buildpack_ids: this.bindDialog.selectedBuildpacks.map(item => item.id),
-                        });
-                        this.bindDialog.visible = false;
-                        this.$bkMessage({
-                            theme: 'success',
-                            message: '修改绑定成功',
-                        });
-                        await this.fetchSlugrunnerList()
-                    } catch (e) {
-                        this.$bkMessage({
-                            theme: 'error',
-                            message: e.response.data.detail,
-                        });
-                    }
-                },
                 fillUrlTemplate: function (url_template, {row}) {
                     if (!row) {
                         row = {}
@@ -486,9 +565,19 @@
                         }
                     }
                 },
-                addTag: function (row, column, cellValue, index) {
-                    return cellValue + ':' + row.tag;
+                switchRegion: function(region) {
+                    this.expandRowKeys = [];
+                    this.curRegionActive = region;
+                    this.fetchSlugBuilderList();
                 },
+                handleSettingChange ({ fields, size }) {
+                    this.setting.size = size;
+                    this.setting.selectedFields = fields;
+                },
+                filterMethod (value, row, column) {
+                    const property = column.property
+                    return row[property] === value
+                }
             },
             mounted: function () {
                 this.fetchSlugrunnerList();
@@ -499,6 +588,38 @@
 <style>
     .bk-grid-row + .bk-grid-row {
         margin-top: 20px;
+    }
+
+    .display_name {
+        display: flex;
+    }
+
+    .name {
+        display: flex;
+        font-weight: 700;
+        color: #3A84FF;
+        cursor: pointer;
+    }
+
+    .create-button {
+        display: flex;
+        float: left;
+        margin-bottom: 20px;
+    }
+
+    .filter-wrapper {
+        display: flex;
+        float: left;
+        margin-left: 10px;
+        width: auto;
+
+        .filter-item {
+            font-weight: normal;
+        }
+    }
+
+    .off-shelf {
+        color: #c4c6cc;
     }
 
     .add-wrapper {
@@ -512,6 +633,10 @@
             color: #3a84ff;
             cursor: pointer;
         }
+    }
+
+    .bk-checkbox-text {
+        font-weight: normal;
     }
 
     .empty-text {

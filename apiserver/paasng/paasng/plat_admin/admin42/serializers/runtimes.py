@@ -43,10 +43,15 @@ class BuildPackUpdateInputSLZ(BuildPackCreateInputSLZ):
     pass
 
 
+class BuildPackListInputSLZ(serializers.Serializer):
+    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
+
+
 class BuildPackListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
     env_vars = serializers.JSONField(source="environments", help_text="环境变量")
+    slugbuilders = serializers.PrimaryKeyRelatedField(many=True, read_only=True, help_text="已绑定 slugbuilder id列表")
 
     class Meta:
         model = AppBuildPack
@@ -107,11 +112,16 @@ class AppSlugBuilderUpdateInputSLZ(AppSlugBuilderCreateInputSLZ):
         return name
 
 
+class AppSlugBuilderListInputSLZ(serializers.Serializer):
+    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
+
+
 class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
     env_vars = serializers.JSONField(source="environments", help_text="环境变量")
     labels = serializers.JSONField()
+    buildpacks = serializers.PrimaryKeyRelatedField(many=True, read_only=True, help_text="已绑定 buildpack id 列表")
 
     class Meta:
         model = AppSlugBuilder
@@ -144,6 +154,10 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
             raise serializers.ValidationError("buildpack region does not match slugbuilder region")
 
         return buildpack_ids
+
+
+class AppSlugRunnerListInputSLZ(serializers.Serializer):
+    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
 
 
 class AppSlugRunnerListOutputSLZ(serializers.ModelSerializer):

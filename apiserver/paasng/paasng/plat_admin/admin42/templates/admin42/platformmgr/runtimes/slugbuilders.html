@@ -14,35 +14,117 @@
 <div id="slugbuilder-list" class="p20">
     <bk-alert class="mb20" title="Slugbuilder 是镜像构建阶段的基础环境，通过顺序执行多个 buildpack 以将应用源代码构建为镜像层。"></bk-alert>
 
-    <bk-button theme="primary" class="mb20" @click="handleCreate">
+    <bk-button theme="primary" class="create-button" @click="handleCreate">
         新建
     </bk-button>
 
+    <bk-radio-group v-model="curRegionActive" @change="switchRegion" class="filter-wrapper">
+        <bk-radio-button
+            v-for="item in regionList"
+            :value="item.key"
+            class="filter-item"
+        >
+            $[ item.text ]
+        </bk-radio-button>
+    </bk-radio-group>
+
     <!--  数据列表  -->
-    <bk-table :data="data">
-        <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250"></bk-table-column>
-        <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200"></bk-table-column>
-        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"></bk-table-column>
-        <bk-table-column label="镜像类型" prop="type"></bk-table-column>
-        <bk-table-column label="可用区域" prop="region"></bk-table-column>
-        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350" :formatter="addTag"></bk-table-column>
-        <bk-table-column label="是否隐藏" width="80">
+    <bk-table :data="data" :size="setting.size" :row-key="rowKey" :expand-row-keys="expandRowKeys">
+        <bk-table-column type="expand" width="0">
             <template slot-scope="props">
-                <span>$[ props.row.is_hidden ? '✅' : '❌' ] </span>
+                <bk-table :data="props.row.allBuilders" :outer-border="false" ext-cls="child-table-cls">
+                    <bk-table-column label="是否绑定" width="80">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.is_bound ? '是' : '否' ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.name ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.display_name ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="描述" prop="description" show-overflow-tooltip="true">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.description ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="语言" prop="language">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.language ]</span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="版本" prop="version">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.version ]</span>
+                        </template>
+                    </bk-table-column>
+                </bk-table>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="名称" prop="name" min-width="250">
+            <template slot-scope="props">
+                <span class="name" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="showDetailDialog(props.row)">$[ props.row.name ]</span>
+                <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="Buildpack 绑定情况" width="140">
+            <template slot-scope="props">
+                <span class="bind-info" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="handleExpandRow(props.row)">已绑定 $[props.row.buildpacks.length] 个
+                    <bk-icon class="paasng-icon" :type="expandRowKeys.includes(props.row.id) ? 'angle-double-up' : 'angle-double-down'"></bk-icon>
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"
+                         v-if="setting.selectedFields.find(item => item.id === 'description') !== undefined">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.description ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="镜像类型" prop="type" :filters="typeFilters" :filter-multiple="true" :filter-method="filterMethod" width="100">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.type ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="可用区域" prop="region">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.region ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="200">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.image + ':' + props.row.tag ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否显示" width="80">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_hidden ? '否' : '是' ] </span>
             </template>
         </bk-table-column>
         <bk-table-column label="是否默认" width="80">
             <template slot-scope="props">
-                <span>$[ props.row.is_default ? '✅' : '❌' ] </span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_default ? '✅' : '❌' ] </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="操作" width="200">
+        <bk-table-column label="操作" width="150">
             <template slot-scope="props">
-                <bk-button class="mr5" theme="primary" text @click="showDetailDialog(props.row)">详情</bk-button>
                 <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
                 <bk-button class="mr5" theme="primary" text @click="handleBind(props.row)">修改绑定</bk-button>
                 <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
             </template>
+        </bk-table-column>
+        <bk-table-column type="setting" :tippy-options="{ zIndex: 3000 }">
+            <bk-table-setting-content
+                :fields="setting.fields"
+                :selected="setting.selectedFields"
+                :max="setting.max"
+                :size="setting.size"
+                @setting-change="handleSettingChange">
+            </bk-table-setting-content>
         </bk-table-column>
     </bk-table>
 
@@ -59,7 +141,7 @@
                             :class="bindDialog.row.buildpacks.indexOf(element.id) === -1?'':'draggable-content-remove'"
                             :key="element.id"
                         >
-                            <span v-bk-tooltips="`${element.name} (${element.display_name}) (${element.region})`">
+                            <span v-bk-tooltips="`${element.name} (${element.display_name})`">
                                 $[ element.name ]($[element.display_name])
                             </span>
                         </div>
@@ -80,7 +162,7 @@
                             :class="bindDialog.row.buildpacks.indexOf(element.id) !== -1?'':'draggable-content-new'"
                             :key="element.id"
                         >
-                            <span v-bk-tooltips="`${element.name} (${element.display_name}) (${element.region})`">
+                            <span v-bk-tooltips="`${element.name} (${element.display_name})`">
                                 $[ element.name ]($[element.display_name])
                             </span>
                         </div>
@@ -322,7 +404,42 @@
 
     const image_types = {{ image_types | to_json }}
 
+    let typeFilters = []
+    for (let type in image_types) {
+        typeFilters.push({
+            text: type,
+            value: type,
+        });
+    }
+
     const step_meta_sets = {{ step_meta_sets | to_json }}
+
+    const settingFields = [
+        {
+            id: 'name',
+            label: '名称',
+            disabled: true,
+        },
+        {
+            id: 'type',
+            label: '镜像类型',
+            disabled: true,
+        },
+        {
+            id: 'region',
+            label: '可用区域',
+            disabled: true,
+        },
+        {
+            id: 'image',
+            label: '镜像',
+            disabled: true,
+        },
+        {
+            id: 'description',
+            label: '描述',
+        }
+    ]
 
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
@@ -360,15 +477,40 @@
                     regions: regions,
                     image_types: image_types,
                     step_meta_sets: step_meta_sets,
+                    expandRowKeys: [],
+                    regionList: [],
+                    curRegionActive: 'all',
+                    setting: {
+                        max: 3,
+                        fields: settingFields,
+                        selectedFields: settingFields.slice(0, 4),
+                        size: 'medium'
+                    },
+                    typeFilters: typeFilters,
                 }
             },
             methods: {
                 fetchSlugBuilderList: async function () {
                     const el = this.$bkLoading({title: '加载中'});
                     try {
-                        await this.$http.get(URLRouter.list).then(res => {
+                        let url = URLRouter.list;
+                        if (this.curRegionActive !== 'all') {
+                            url += '?region=' + this.curRegionActive;
+                        }
+                        await this.$http.get(url).then(res => {
                             this.data = res;
+                            this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
+                            for (let i = 0; i < regions.length; i++) {
+                                this.regionList.push({"key": regions[i], "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`});
+                            }
                         })
+                    } catch (e) {
+                        if (e.response.status === 400) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            })
+                        }
                     } finally {
                         el.hide = true;
                     }
@@ -502,7 +644,7 @@
                             theme: 'success',
                             message: '修改绑定成功',
                         });
-                        await this.fetchSlugBuilderList()
+                        this.handleExpandRow(this.bindDialog.row, true);
                     } catch (e) {
                         this.$bkMessage({
                             theme: 'error',
@@ -576,9 +718,46 @@
                         }
                     }
                 },
-                addTag: function (row, column, cellValue, index) {
-                    return cellValue + ':' + row.tag;
+                rowKey: function (row) {
+                    return row.id;
                 },
+                handleExpandRow: function (row, is_refresh=false) {
+                    if (this.expandRowKeys.includes(row.id) && !is_refresh) {
+                        this.expandRowKeys.splice(this.expandRowKeys.indexOf(row.id), 1);
+                        return;
+                    }
+                    let url = this.fillUrlTemplate(URLRouter.bind, {row});
+                    try {
+                        this.$http.get(url).then(res => {
+                            row.allBuilders = [];
+                            for (let item of res.bound_buildpacks) {
+                                row.allBuilders.push({...item, is_bound: true});
+                            }
+                            for (let item of res.unbound_buildpacks) {
+                                row.allBuilders.push({...item, is_bound: false});
+                            }
+                            this.expandRowKeys.push(row.id);
+                        });
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                switchRegion: function(region) {
+                    this.expandRowKeys = [];
+                    this.curRegionActive = region;
+                    this.fetchSlugBuilderList();
+                },
+                handleSettingChange ({ fields, size }) {
+                    this.setting.size = size;
+                    this.setting.selectedFields = fields;
+                },
+                filterMethod (value, row, column) {
+                    const property = column.property
+                    return row[property] === value
+                }
             },
             mounted: function () {
                 this.fetchSlugBuilderList();
@@ -589,6 +768,70 @@
 <style>
     .bk-grid-row + .bk-grid-row {
         margin-top: 20px;
+    }
+
+    .display_name {
+        display: flex;
+    }
+
+    .name {
+        display: flex;
+        font-weight: 700;
+        color: #3A84FF;
+        cursor: pointer;
+    }
+
+    .bind-info {
+        display: inline-block;
+        padding: 5px 5px 5px 0px;
+        user-select: none;
+        color: #3A84FF;
+        cursor: pointer;
+    }
+
+    .create-button {
+        display: flex;
+        float: left;
+        margin-bottom: 20px;
+    }
+
+    .filter-wrapper {
+        display: flex;
+        float: left;
+        margin-left: 10px;
+        width: auto;
+
+        .filter-item {
+            font-weight: normal;
+        }
+    }
+
+    .child-table-cls {
+        .bk-table-header-wrapper thead tr th {
+            background: #FFF !important;
+        }
+
+        .bk-table-body-wrapper table tbody > tr {
+            height: 42px !important;
+            cursor: default;
+
+            td {
+                height: 42px;
+            }
+        }
+
+        .link {
+            cursor: pointer;
+            color: #3A84FF;
+        }
+    }
+
+    .paasng-icon {
+        margin-right: 5px;
+    }
+
+    .off-shelf {
+        color: #c4c6cc;
     }
 
     .add-wrapper {
@@ -625,9 +868,10 @@
     .draggable-box-header {
         background-color: #fafbfd;
         height: 38px;
-        line-height: 38px;
         font-size: 12px;
-        line-height: 40px; padding: 0 20px; border-bottom: 1px solid #dcdee5;
+        line-height: 40px;
+        padding: 0 20px;
+        border-bottom: 1px solid #dcdee5;
     }
 
     .draggable-content {

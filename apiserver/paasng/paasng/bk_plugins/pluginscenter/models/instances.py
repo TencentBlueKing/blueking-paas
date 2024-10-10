@@ -324,8 +324,8 @@ class PluginRelease(AuditedModel):
             return True
 
         # 获取两个发布策略的组织 ID 集合
-        latest_org_ids = {s.id for s in latest_release_strategy.organization}
-        second_org_ids = {s.id for s in second_release_strategy.organization}
+        latest_org_ids = {s["id"] for s in latest_release_strategy.organization}
+        second_org_ids = {s["id"] for s in second_release_strategy.organization}
 
         # 前后两个组织的 ID 不完全相等
         return latest_org_ids != second_org_ids
@@ -426,13 +426,13 @@ class PluginReleaseStrategy(AuditedModel):
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
 
-    def get_itsm_service_name(self, is_release_strategy_organization_changed: bool) -> str:
+    def get_itsm_service_name(self, is_organization_changed: bool) -> str:
         """根据发布策略的设置获取对应的 ITSM 审批流程"""
         if self.strategy == constants.ReleaseStrategy.FULL:
             return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
 
         # 灰度范围包括了组织且组织信息变更了，则需要上级审批
-        if self.organization and is_release_strategy_organization_changed:
+        if self.organization and is_organization_changed:
             return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
         return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
 

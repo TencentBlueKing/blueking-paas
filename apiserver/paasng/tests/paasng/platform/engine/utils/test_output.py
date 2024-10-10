@@ -32,8 +32,8 @@ def test_sanitize_message_removing():
 
 
 def test_sanitize_message_truncating():
-    message = "c" * 2048
-    assert 1024 < len(sanitize_message(message)) < 1100
+    message = "c" * 10240
+    assert 4096 < len(sanitize_message(message)) < 4196
 
 
 class TestConsoleStream:

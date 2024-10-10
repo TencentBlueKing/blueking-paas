@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -708,24 +708,32 @@ class TestListEvaluation:
         assert response_data["count"] == 1
 
         results = response_data["results"]
-
         assert len(results["applications"]) == 1
+
+        collected_at = datetime.fromisoformat(results["collected_at"].replace("Z", "+00:00"))
+        assert collected_at == latest_collection_task.start_at
 
         app_data = results["applications"][0]
         report = app_operation_report2
+        expected_app_data = {
+            "code": report.app.code,
+            "name": report.app.name,
+            "type": report.app.type,
+            "is_plugin_app": report.app.is_plugin_app,
+            "logo_url": report.app.get_logo_url(),
+            "cpu_limits": report.cpu_limits,
+            "mem_limits": report.mem_limits,
+            "cpu_usage_avg": report.cpu_usage_avg,
+            "mem_usage_avg": report.mem_usage_avg,
+            "pv": report.pv,
+            "uv": report.uv,
+            "issue_type": report.issue_type,
+            "latest_operated_at": report.latest_operated_at.astimezone(timezone.get_current_timezone()).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+        }
 
-        assert app_data["code"] == report.app.code
-        assert app_data["name"] == report.app.name
-        assert app_data["type"] == report.app.type
-        assert app_data["is_plugin_app"] == report.app.is_plugin_app
-        assert app_data["logo_url"] == report.app.get_logo_url()
-        assert app_data["cpu_limits"] == report.cpu_limits
-        assert app_data["mem_limits"] == report.mem_limits
-        assert app_data["cpu_usage_avg"] == report.cpu_usage_avg
-        assert app_data["mem_usage_avg"] == report.mem_usage_avg
-        assert app_data["pv"] == report.pv
-        assert app_data["uv"] == report.uv
-        assert app_data["issue_type"] == report.issue_type
+        assert app_data == expected_app_data
 
     def test_issue_count(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
         """

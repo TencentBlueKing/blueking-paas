@@ -121,19 +121,17 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     return []
 
 
-def get_paas_authorization_scopes(
-    app_code: str, app_name: str, role: ApplicationRole, include_system: bool = False
-) -> dict:
+def get_paas_authorization_scopes(app_code: str, app_name: str, role: ApplicationRole) -> dict:
     """
     应用在开发者中心的授权信息
 
+    :param app_code: 应用编码
+    :param app_name: 应用名称
     :param role: 用户的角色，开发者中心的权限要根据角色做区分
-    :param include_system: 创建、更新分级管理员时的授权范围中需要包含系统ID(system);
-                           给用户组授权时系统信息在路径参数中，授权范围中不需要包含系统信息
     """
     scopes = {
         "system": settings.IAM_PAAS_V3_SYSTEM_ID,
-        "actions": [{"id": action} for action in get_app_actions_by_role(ApplicationRole.ADMINISTRATOR)],
+        "actions": [{"id": action} for action in get_app_actions_by_role(role)],
         "resources": [
             {
                 "system": settings.IAM_PAAS_V3_SYSTEM_ID,
@@ -151,8 +149,6 @@ def get_paas_authorization_scopes(
             }
         ],
     }
-    if include_system:
-        scopes["system"] = settings.IAM_PAAS_V3_SYSTEM_ID
     return scopes
 
 

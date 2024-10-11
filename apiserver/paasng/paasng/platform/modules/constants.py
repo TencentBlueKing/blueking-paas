@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from enum import Enum, IntEnum
-from typing import List
+from typing import Dict, List
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
@@ -92,7 +92,23 @@ class BuildPackType(str, StructuredEnum):
     OCI_IMAGE = EnumField("oci-image", label="oci-image")
     OCI_FILE = EnumField("oci-file", label="oci-file")
 
+    @classmethod
+    def get_buildpack_builder_type_map(cls) -> Dict["BuildPackType", "AppImageType"]:
+        return {
+            cls.TAR: AppImageType.LEGACY,
+            cls.OCI_IMAGE: AppImageType.CNB,
+            cls.OCI_FILE: AppImageType.CNB,
+            cls.OCI_EMBEDDED: AppImageType.CNB,
+        }
+
 
 class AppImageType(str, StructuredEnum):
     LEGACY = EnumField("legacy", label="legacy")
     CNB = EnumField("cnb", label="cnb")
+
+    @classmethod
+    def get_builder_buildpack_type_map(cls) -> Dict["AppImageType", List["BuildPackType"]]:
+        return {
+            cls.LEGACY: [BuildPackType.TAR],
+            cls.CNB: [BuildPackType.OCI_IMAGE, BuildPackType.OCI_EMBEDDED, BuildPackType.OCI_FILE],
+        }

@@ -46,6 +46,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pymysql
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
@@ -83,6 +84,10 @@ settings = LazySettings(
 )
 
 _notset = object()
+
+pymysql.install_as_MySQLdb()
+# Patch version info to forcely pass Django client check
+setattr(pymysql, "version_info", (1, 4, 2, "final", 0))
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥
@@ -563,7 +568,7 @@ CORS_ORIGIN_ALLOW_ALL = settings.get("CORS_ORIGIN_ALLOW_ALL", False)
 # 默认允许通过通过跨域请求传递 Cookie，默认允许
 CORS_ALLOW_CREDENTIALS = True
 
-# == Celery 相关配置
+# ============================ Celery 相关配置 ============================
 
 CELERY_BROKER_URL = settings.get("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = settings.get("CELERY_RESULT_BACKEND", REDIS_URL)
@@ -572,7 +577,7 @@ if settings.get("CELERY_BROKER_HEARTBEAT", _notset) != _notset:
     CELERY_BROKER_HEARTBEAT = settings.get("CELERY_BROKER_HEARTBEAT")
 
 # Celery 格式 / 时区相关配置
-CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Shanghai"

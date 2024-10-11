@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -438,9 +439,9 @@ class BuildProcessPoller(DeployPoller):
             # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
             if coordinator.status_polling_timeout:
                 logger.warning(
-                    "[deploy_id=%s, build_process_id=%s] polling build status timeout, regarding as failed by PaaS",
-                    self.params["deployment_id"],
+                    "Polling status of build process [%s] timed out, consider it failed, deployment: %s",
                     self.params["build_process_id"],
+                    self.params["deployment_id"],
                 )
                 build_status = BuildStatus.FAILED
                 status = PollingStatus.DONE
@@ -448,7 +449,13 @@ class BuildProcessPoller(DeployPoller):
                 coordinator.update_polling_time()
 
         result = {"build_id": build_id, "build_status": build_status}
-        logger.info("[%s] got build status [%s][%s]", self.params["deployment_id"], build_id, build_status)
+        logger.info(
+            'The status of build process [%s] is "%s", deployment: %s, build_id: %s',
+            self.params["build_process_id"],
+            build_status,
+            self.params["deployment_id"],
+            build_id,
+        )
         return PollingResult(status=status, data=result)
 
     def update_steps(self, deployment: Deployment, build_proc: BuildProcess):
@@ -459,12 +466,19 @@ class BuildProcessPoller(DeployPoller):
             JobStatus.PENDING: phase.get_started_pattern_map(),
             JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
         }
-        logger.info("[%s] start updating steps by log lines", self.params["deployment_id"])
+        started_at = time.time()
+        logger.info("Update deployment steps by log lines, deployment: %s", self.params["deployment_id"])
 
         # TODO: Use a flag value to indicate the progress of the scanning of the log,
         # so that we won't need to scan the log from the beginning every time.
         for line in build_proc.output_stream.lines.all().values_list("line", flat=True):
             update_step_by_line(line, pattern_maps, phase)
+
+        logger.info(
+            "Finished updating deployment steps, deployment: %s, cost: %s",
+            self.params["deployment_id"],
+            time.time() - started_at,
+        )
 
 
 class BuildProcessResultHandler(CallbackHandler):

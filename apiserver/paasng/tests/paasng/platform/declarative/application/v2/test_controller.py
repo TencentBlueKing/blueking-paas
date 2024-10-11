@@ -112,6 +112,7 @@ class TestAppDeclarativeControllerCreation:
             (["r1"], None, True),
         ],
     )
+    @pytest.mark.usefixtures("mock_wl_services_in_creation")
     def test_region_perm_check(self, bk_user, random_name, profile_regions, region, is_success):
         with configure_regions(["r1", "r2"]):
             # Update user enabled regions

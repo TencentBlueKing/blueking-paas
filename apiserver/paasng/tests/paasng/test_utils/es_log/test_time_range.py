@@ -107,8 +107,6 @@ class TestSmartTimeRange:
                 1549814400000,
                 1549900800999,
             ),
-            # arrow.get(1549814400) -> datetime.daatetime(2019, 02, 10, 16)
-            # arrow.get(1549900800) -> datetime.daatetime(2019, 02, 11, 16)
             (
                 arrow.get(1549814400).datetime,
                 arrow.get(1549900800).datetime,

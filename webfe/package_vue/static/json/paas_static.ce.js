@@ -291,6 +291,8 @@ export const PLATFORM_CONFIG = {
         MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
         // APM 增强服务功能介绍
         APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
+        // 令牌使用指引
+        ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token'
     },
 
     CONFIG: {

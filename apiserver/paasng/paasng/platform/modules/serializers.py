@@ -486,7 +486,7 @@ class ModuleDeployConfigSLZ(ModuleDeployProcfileSLZ):
 
 
 class ModuleTemplateUrlRefreshResultSLZ(serializers.Serializer):
-    """Serialiazer for module template download address refresh result"""
+    """Serializer for refresh module template download url result"""
 
     dest_type = serializers.CharField(help_text="存储类型", required=False)
     downloadable_address = serializers.CharField(help_text="下载地址", required=False)

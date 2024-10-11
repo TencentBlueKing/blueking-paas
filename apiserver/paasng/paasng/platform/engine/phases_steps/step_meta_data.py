@@ -92,7 +92,7 @@ INITIALIZE_BUILD_ENV = StepMetaData(
     display_name_zh_cn="初始化构建环境",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Step setup begin", "Setup Build Environ"],
-    finished_patterns=[r"\s+Step setup done", r"\s+Starting builder..."],
+    finished_patterns=[r"\sStep setup done", r"\sStarting builder..."],
 )
 
 DETECT_BUILDPACK = StepMetaData(
@@ -101,7 +101,7 @@ DETECT_BUILDPACK = StepMetaData(
     display_name_zh_cn="检测构建工具",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Step detect begin", "Detecting Buildpacks..."],
-    finished_patterns=[r"\s+Step detect done", r"\s+Step Detect done"],
+    finished_patterns=[r"\sStep detect done"],
 )
 
 ANALYZE_BUILD = StepMetaData(
@@ -110,7 +110,7 @@ ANALYZE_BUILD = StepMetaData(
     display_name_zh_cn="分析构建方案",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Step analysis begin", "Analyzing optimization plan"],
-    finished_patterns=[r"\s+Step analysis done", r"\s+Step Analyze done"],
+    finished_patterns=[r"\sStep analysis done", r"\sStep Analyze done"],
 )
 
 CALL_PRE_COMPILE = StepMetaData(
@@ -135,7 +135,7 @@ BUILD_APP = StepMetaData(
     display_name_zh_cn="构建应用",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Compiling app...", "-----> Step build begin", "Building application..."],
-    finished_patterns=["-----> Discovering process types", r"\s+Step build done", r"\s+Step Build done"],
+    finished_patterns=["-----> Discovering process types", r"\sStep build done"],
 )
 
 GENERATE_BUILD_RESULT = StepMetaData(
@@ -144,7 +144,7 @@ GENERATE_BUILD_RESULT = StepMetaData(
     display_name_zh_cn="生成构建结果",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Step export begin"],
-    finished_patterns=[r"\s+Step export done"],
+    finished_patterns=[r"\sStep export done"],
 )
 
 CLEAN_BUILD_ENV = StepMetaData(
@@ -153,7 +153,7 @@ CLEAN_BUILD_ENV = StepMetaData(
     display_name_zh_cn="清理构建环境",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["-----> Step finish begin"],
-    finished_patterns=[r"\s+Step finish done"],
+    finished_patterns=[r"\sStep finish done"],
 )
 
 DOWNLOAD_CODE = StepMetaData(
@@ -207,7 +207,7 @@ UPLOAD_IMAGE = StepMetaData(
     display_name_zh_cn="上传镜像",
     phase=DeployPhaseTypes.BUILD.value,
     started_patterns=["Exporting image..."],
-    finished_patterns=[r"\s+Step Export done"],
+    finished_patterns=[r"\sStep Export done"],
 )
 
 DOWNLOAD_DOCKER_BUILD_CTX = StepMetaData(

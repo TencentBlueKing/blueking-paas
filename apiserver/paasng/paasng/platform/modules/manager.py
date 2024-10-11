@@ -201,7 +201,7 @@ class ModuleInitializer:
         return {"code": result.error}
 
     def refresh_downloadable_app_template_url(self) -> Dict:
-        """Refresh presigned downloadable app module template source code"""
+        """Refresh a downloadable URL for templated app source code"""
         if not self._should_initialize_vcs():
             return {}
 
@@ -361,7 +361,7 @@ def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
 
 
 def refresh_downloadable_app_template_url(module) -> Dict:
-    """Refresh presigned downloadable app module template source code"""
+    """Refresh a downloadable URL for templated app source code"""
     module_initializer = ModuleInitializer(module)
     module_spec = ModuleSpecs(module)
     if module_spec.has_vcs:

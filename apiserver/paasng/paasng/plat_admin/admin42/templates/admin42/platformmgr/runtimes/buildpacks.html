@@ -439,6 +439,15 @@
                         await this.$http.get(url).then(res => {
                             this.data = res;
                         });
+                        if (this.curRegionActive === 'all') {
+                            this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
+                            for (let i = 0; i < regions.length; i++) {
+                                this.regionList.push({
+                                    "key": regions[i],
+                                    "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`
+                                });
+                            }
+                        }
                     } catch (e) {
                         if (e.response.status === 400) {
                             this.$bkMessage({
@@ -486,10 +495,7 @@
                     }
                     if (success) {
                         this.cancelDialog();
-                        if (this.dialog.type === 'create') {
-                            this.modifyRegionCount(this.dialog.form.region, 1);
-                        }
-                        await this.fetchBuildPackList();
+                        this.switchRegion("all");
                     }
                 },
                 handleCreate: function () {
@@ -542,12 +548,7 @@
                 deleteRow: async function (row) {
                     const url = this.fillUrlTemplate(URLRouter.detail, {row});
                     await this.$http.delete(url);
-
-                    this.modifyRegionCount(row.region, -1);
-                    const index = this.data.findIndex(item => item.id === row.id);
-                    if (index !== -1) {
-                        this.data.splice(index, 1);
-                    }
+                    this.switchRegion("all");
                 },
                 handleBind: async function (row) {
                     try {
@@ -684,19 +685,6 @@
                     this.curRegionActive = region;
                     this.fetchBuildPackList();
                 },
-                modifyRegionCount: function (region, delta) {
-                    // 更新当前 region 数量
-                    let text = this.regionList.find(item => item.key === region).text;
-                    // 找到字符串中的数字并修改
-                    let newCount = parseInt(text.match(/\d+/)[0]) + delta;
-                    text = text.replace(/\d+/, newCount);
-                    this.regionList.find(item => item.key === region).text = text;
-                    // 更新全部数量
-                    text = this.regionList.find(item => item.key === "all").text;
-                    newCount = parseInt(text.match(/\d+/)[0]) + delta;
-                    text = text.replace(/\d+/, newCount);
-                    this.regionList.find(item => item.key === "all").text = text;
-                },
                 handleSettingChange ({ fields, size }) {
                     this.setting.size = size;
                     this.setting.selectedFields = fields;
@@ -708,13 +696,6 @@
             },
             mounted: async function () {
                 await this.fetchBuildPackList();
-                this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
-                for (let i = 0; i < regions.length; i++) {
-                    this.regionList.push({
-                        "key": regions[i],
-                        "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`
-                    });
-                }
             },
         })
     })

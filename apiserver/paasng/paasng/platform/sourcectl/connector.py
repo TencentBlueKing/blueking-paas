@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Repo connectors for applications
-"""
+"""Repo connectors for applications"""
+
 import abc
 import logging
 from dataclasses import dataclass, field
@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Type
 from urllib.parse import urljoin
 
+from blue_krill.storages.blobstore.exceptions import ObjectAlreadyExists
+from blue_krill.storages.blobstore.s3 import S3Store
 from django.conf import settings
 from django.db.models import Model
 
@@ -363,3 +365,31 @@ def generate_downloadable_app_template(module: Module, context: Optional[Dict[st
             logger.exception("unable to render app source template %s", module.source_init_template)
             raise
         return sync_procedure.run(str(source_path))
+
+
+def generate_downloadable_app_template_url(module: Module) -> Dict:
+    """Generate a downloadable URL for templated app source code
+
+    :param module: a Module object
+    """
+    application = module.application
+    key = f"app-template-instances/{application.region}/{application.code}-{module.name}.tar.gz"
+    blob_store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
+    downloadable_address_expires_in = 3600 * 4
+
+    try:
+        S3Store.check_key_exists_in_bucket(
+            client=blob_store.get_client(),
+            bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE,
+            key=key,
+        )
+    except ObjectAlreadyExists:
+        # object alreay exists in blob store, create a new presigned URL
+        url = blob_store.generate_presigned_url(key=key, expires_in=downloadable_address_expires_in)
+        return {
+            "dest_type": blob_store.STORE_TYPE,
+            "downloadable_address": url,
+            "downloadable_address_expires_in": downloadable_address_expires_in,
+        }
+
+    return {}

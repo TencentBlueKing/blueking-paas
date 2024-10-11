@@ -483,3 +483,11 @@ class ModuleDeployConfigSLZ(ModuleDeployProcfileSLZ):
     """模块部署配置-序列化器"""
 
     hooks = ModuleDeployHookSLZ(many=True)
+
+
+class ModuleTemplateUrlRefreshResultSLZ(serializers.Serializer):
+    """Serialiazer for module template download address refresh result"""
+
+    dest_type = serializers.CharField(help_text="存储类型", required=False)
+    downloadable_address = serializers.CharField(help_text="下载地址", required=False)
+    downloadable_address_expires_in = serializers.IntegerField(help_text="下载地址有效时间", required=False)

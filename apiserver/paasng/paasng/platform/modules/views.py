@@ -62,7 +62,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view, refresh_downloadable_app_template_url
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -78,6 +78,7 @@ from paasng.platform.modules.serializers import (
     ModuleRuntimeOverviewSLZ,
     ModuleRuntimeSLZ,
     ModuleSLZ,
+    ModuleTemplateUrlRefreshResultSLZ,
 )
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.templates.constants import TemplateType
@@ -316,6 +317,16 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
             status=status.HTTP_201_CREATED,
         )
+
+    @app_action_required(AppAction.MANAGE_MODULE)
+    @swagger_auto_schema(response_serializer=ModuleTemplateUrlRefreshResultSLZ)
+    def refresh_module_template_url(self, request, code, module_name):
+        """生成应用模块代码模板下载链接"""
+        module = self.get_module_via_path()
+        result = refresh_downloadable_app_template_url(module)
+
+        serilizer = ModuleTemplateUrlRefreshResultSLZ(result)
+        return Response(serilizer.data)
 
     def _ensure_allow_create_module(self, application: Application):
         """检查当前应用是否允许继续创建模块"""

@@ -58,7 +58,7 @@ from paasng.platform.modules.helpers import (
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.sourcectl.connector import get_repo_connector
+from paasng.platform.sourcectl.connector import generate_downloadable_app_template_url, get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.exceptions import TmplRegionNotSupported
@@ -199,6 +199,17 @@ class ModuleInitializer:
         if result.is_success():
             return {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
         return {"code": result.error}
+
+    def refresh_downloadable_app_template_url(self) -> Dict:
+        """Refresh presigned downloadable app module template source code"""
+        if not self._should_initialize_vcs():
+            return {}
+
+        # Only run syncing procedure when `source_init_template` is valid
+        if not Template.objects.filter(name=self.module.source_init_template, type=TemplateType.NORMAL).exists():
+            return {}
+
+        return generate_downloadable_app_template_url(self.module)
 
     def _should_initialize_vcs(self) -> bool:
         """Check if current module should run source template initializing procedure"""
@@ -347,6 +358,15 @@ def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
         return initialize_module(*args, **kwargs)
     except ModuleInitializationError as e:
         raise error_codes.CANNOT_CREATE_APP.f(str(e))
+
+
+def refresh_downloadable_app_template_url(module) -> Dict:
+    """Refresh presigned downloadable app module template source code"""
+    module_initializer = ModuleInitializer(module)
+    module_spec = ModuleSpecs(module)
+    if module_spec.has_vcs:
+        result = module_initializer.refresh_downloadable_app_template_url()
+    return result
 
 
 def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):

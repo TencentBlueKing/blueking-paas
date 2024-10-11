@@ -207,7 +207,6 @@ export default {
       linkMap: {
         gateway: this.GLOBAL.DOC.APIGW_QUICK_START,
         API: this.GLOBAL.DOC.APIGW_USER_API,
-        FAQ: this.GLOBAL.DOC.APIGW_FAQ,
       },
       panels: [
         { name: 'gatewayApi', label: this.$t('网关API') },

@@ -50,7 +50,9 @@ export default async function (vm) {
   };
 
   try {
-    const config = await getPlatformConfig(url, defaults);
+    const config = window.BK_SHARED_RES_URL
+      ? await getPlatformConfig(url, defaults)
+      : await getPlatformConfig(defaults);
     applyPlatformConfig(config);
   } catch (error) {
     applyPlatformConfig(defaults);

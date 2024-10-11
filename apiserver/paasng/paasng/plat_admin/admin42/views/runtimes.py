@@ -38,13 +38,16 @@ from paasng.plat_admin.admin42.serializers.runtime import (
 from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugBuilderBindInputSLZ,
     AppSlugBuilderCreateInputSLZ,
+    AppSlugBuilderListInputSLZ,
     AppSlugBuilderListOutputSLZ,
     AppSlugBuilderUpdateInputSLZ,
     AppSlugRunnerCreateInputSLZ,
+    AppSlugRunnerListInputSLZ,
     AppSlugRunnerListOutputSLZ,
     AppSlugRunnerUpdateInputSLZ,
     BuildPackBindInputSLZ,
     BuildPackCreateInputSLZ,
+    BuildPackListInputSLZ,
     BuildPackListOutputSLZ,
     BuildPackUpdateInputSLZ,
 )
@@ -165,7 +168,11 @@ class BuildPackAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取所有 BuildPack 列表和详细信息"""
-        buildpacks = AppBuildPack.objects.order_by("region", "is_hidden", "type", "language")
+        slz = BuildPackListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        buildpacks = AppBuildPack.objects.order_by("is_hidden", "region", "type", "language")
+        if region := slz.validated_data["region"]:
+            buildpacks = buildpacks.filter(region=region)
         return Response(BuildPackListOutputSLZ(buildpacks, many=True).data)
 
     def get_bound_builders(self, request, pk):
@@ -358,7 +365,11 @@ class SlugBuilderAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugBuilder 列表"""
-        slugbuilders = AppSlugBuilder.objects.order_by("region", "is_hidden", "type")
+        slz = AppSlugBuilderListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        slugbuilders = AppSlugBuilder.objects.order_by("is_hidden", "region", "type")
+        if region := slz.validated_data["region"]:
+            slugbuilders = slugbuilders.filter(region=region)
         return Response(AppSlugBuilderListOutputSLZ(slugbuilders, many=True).data)
 
     def create(self, request):
@@ -442,7 +453,11 @@ class SlugRunnerAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugRunner 列表"""
-        slugrunners = AppSlugRunner.objects.order_by("region", "is_hidden", "type")
+        slz = AppSlugRunnerListInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        slugrunners = AppSlugRunner.objects.order_by("is_hidden", "region", "type")
+        if region := slz.validated_data["region"]:
+            slugrunners = slugrunners.filter(region=region)
         return Response(AppSlugRunnerListOutputSLZ(slugrunners, many=True).data)
 
     def create(self, request):

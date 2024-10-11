@@ -27,46 +27,41 @@ Before calling the interface, please get your access_token first. For specific g
 #### Normal Return
 ```json
 {
-    "processes":[
-        {
-            "web":{
-                "command":"gunicorn go.wsgi -b :$PORT --log-file -",
-                "replicas":[
-                    {
-                        "status":"Running"
-                    }
-                ]
-            }
-        }
-    ],
-    "exposed_link":{
-        "url":"http://apps.example.com/stag--appid/"
-    },
-    "deployment":{
-        "id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
-        "status":"successful",
-        "operator":{
-            "username":"admin",
-            "id":"0226c9f39893459abac3eb"
+    "is_offlined": false,
+    "deployment": {
+        "id": "114392d8-9e77-4011-83a9-41f1737e2466",
+        "status": "successful",
+        "operator": {
+            "id": "0335cce79c92",
+            "username": "admin",
+            "provider_type": 3,
+            "avatar": ""
         },
-        "created":"2017-06-14 11:22:06",
-        "environment":"stag",
-        "deployment_id":"66e5d4fe-89d3-45bd-aa93-4d213815cc42",
-        "repo":{
-            "url":"svn://svn.example.com:80/apps/ngdemo/trunk/__apps/go-appid/trunk",
-            "comment":"",
-            "type":"trunk",
-            "name":"trunk",
-            "revision":"183362"
+        "created": "2024-08-16 10:07:33",
+        "start_time": "2024-08-16 10:07:33",
+        "complete_time": "2024-08-16 10:08:07",
+        "finished_status": "release",
+        "build_int_requested_at": null,
+        "release_int_requested_at": null,
+        "has_requested_int": false,
+        "bkapp_revision_id": 247,
+        "deployment_id": "114392d8-9e77-4011-83a9-41f1737e2466",
+        "environment": "prod",
+        "repo": {
+            "source_type": null,
+            "type": "tag",
+            "name": "1.5.5",
+            "url": "docker.example.com/bkpaas/docker/example/default:1.5.5",
+            "revision": "1.5.5",
+            "comment": ""
         }
     },
-    "feature_flag":{
-        "release_to_wx_qiye": True/False
+    "offline": null,
+    "exposed_link": {
+        "url": "http://apps.example.com/"
     },
-    "module_mobile_config_enabled": True/False,
-    "mobile_config": {
-        "is_enabled": True/False,
-        "access_domain": "https://balabala"
+    "default_access_entrance": {
+        "url": "http://apps.example.com/"
     }
 }
 ```
@@ -81,53 +76,10 @@ Before calling the interface, please get your access_token first. For specific g
 
 ### Response Result Parameter Description
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| processes | list | Yes | Process information |
-| exposed_link | dict | Yes | Access address information |
-| deployment | dict | Yes | Deployment information |
-| feature_flag | dict | Yes | Release flag information |
-| module_mobile_config_enabled | bool | Yes | Whether the mobile function is enabled |
-| mobile_config | dict | Yes | Mobile configuration information |
-
-processes
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| web | dict | Yes | Process information |
-
-web
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| command | string | Yes | Process command |
-| replicas | list | Yes | Process details |
-
-replicas
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| status | string | Yes | Process status |
-
-exposed_link
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| url | string | Yes | Access address |
-
-deployment
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| id | string | Yes | Deployment ID |
-| status | string | Yes | Deployment status |
-| operator | dict | Yes | Deployment initiator information |
-| created | string | Yes | Creation time |
-| environment | string | Yes | Environment name |
-| deployment_id | string | Yes | Deployment ID |
-| repo | dict | Yes | Repository information |
-
-repo
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| url | string | Yes | Repository URL |
-| comment | string | Yes | Comment |
-| type | string | Yes | Repository type |
-| name | string | Yes | Repository name |
-| revision | string | Yes | Repository revision |
-
+| Field | Type |  Description |
+| ----- | ---- |  ----------- |
+| is_offlined | boolean | Whether the module is offline in this environment |
+| deployment | object | Deployment record |
+| offline | object | Offline record |
+| exposed_link | object | Access address |
+| default_access_entrance | object | Default access address |

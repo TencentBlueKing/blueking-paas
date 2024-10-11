@@ -1,5 +1,5 @@
 ### Description
-Query resumable offline operations
+Query resumable offline operations. Resumable offline operation means stuck offline operation. 
 
 ### Request Parameters
 
@@ -26,6 +26,8 @@ Before calling the interface, please obtain your access_token first. For specifi
 
 
 ### Response Result Example
+#### Success Response
+When there are resumable offline operation
 ```json
 {
   "result": {
@@ -53,26 +55,31 @@ Before calling the interface, please obtain your access_token first. For specifi
 }
 ```
 
+when there are no resumable offline operation
+```json
+{}
+```
+
 ### Response Result Parameter Description
 
-| Field |   Type |  Required | Description |
-| ------ | ------ | ------ | ------ |
-| id | string | Yes | UUID |
-| status | string | Yes | Offline status, optional values: successful, failed, pending |
-| operator | string | Yes | Operator |
-| created | string | Yes | Created |
-| log | string | Yes | Offline log |
-| err_detail | string | Yes | Offline exception reason |
-| offline_operation_id | string | Yes | Offline operation ID |
-| environment | string | Yes | Environment name |
-| repo | object | Yes | Repository information |
+| Field |   Type | Description |
+| ------ | ------ | ------ | 
+| id | string | UUID |
+| status | string | Offline status, optional values: successful, failed, pending |
+| operator | object | Operator |
+| created | string | Created |
+| log | string | Offline log |
+| err_detail | string | Offline exception reason |
+| offline_operation_id | string | Offline operation ID |
+| environment | string | Environment name |
+| repo | object | Repository information |
 
 repo
-| Field |   Type |  Required | Description |
-| ------ | ------ | ------ | ------ |
-| source_type | string | Yes | Source type |
-| type | string | Yes | Type |
-| name | string | Yes | Name |
-| url | string | Yes | URL |
-| revision | string | Yes | Revision |
-| comment | string | Yes | Comment |
+| Field |   Type | Description |
+| ------ | ------ | ------ |
+| source_type | string | Source type |
+| type | string | Type |
+| name | string | Name |
+| url | string | URL |
+| revision | string | Revision |
+| comment | string | Comment |

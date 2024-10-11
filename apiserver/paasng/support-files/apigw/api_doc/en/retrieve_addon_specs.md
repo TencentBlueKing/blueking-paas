@@ -15,12 +15,14 @@ Retrieve the specification combinations of enhanced services
 None.
 
 ### Request Example
-```
+```bash
 curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure https://bkapi.example.com/api/bkpaas3/prod/system/bkapps/applications/appid1/modules/default/services/946ee404-df67-4013-a92f-9cc116ff50dc/specs/
 ```
 
-### Response Example
-```
+### Response
+#### Success Response
+If the specifications are configured
+```json
 {
     "results": {
         "version": "5.7",
@@ -29,10 +31,18 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 }
 ```
 
+If the specifications are not configured
+```json
+{
+    "results": {
+    }
+}
+```
+
 ### Response Parameters Description
 
-| Field             | Type   | Required | Description      |
-| ----------------- | ------ | -------- | ---------------- |
-| results           | dict   | Yes      | Returned data    |
-| results.version   | string | Yes      | Version information |
-| results.app_zone  | string | Yes      | Application area |
+| Field             | Type   | Description      |
+| ----------------- | ------ | ---------------- |
+| results           | dict   | Returned data    |
+| results.version   | string | Version information |
+| results.app_zone  | string | Application area |

@@ -2,7 +2,7 @@
 
 [tool.poetry]
 authors = ["blueking <blueking@tencent.com>"]
-description = "blueking PaaS platform"
+description = "Tencent Blueking PaaS Platform"
 name = "apiserver"
 version = "0.0.1"
 

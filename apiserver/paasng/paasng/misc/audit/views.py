@@ -98,17 +98,17 @@ class LatestApplicationsViewSet(APIView):
         # 可设置在应用列表中不展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(is_plugin_app=True)
+        application_ids = list(applications.values_list("id", flat=True))
 
-        queryset = AppLatestOperationRecord.objects.filter(application__in=applications)
+        queryset = AppLatestOperationRecord.objects.filter(application__id__in=application_ids)
         if operator:
             operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             queryset = queryset.filter(operation__user=operator)
 
-        records_queryset = (
-            queryset.select_related("operation").order_by("-latest_operated_at").only("operation")[:limit]
-        )
-
-        return records_queryset
+        latest_operated_objs = queryset.select_related("operation").order_by("-latest_operated_at")[:limit]
+        # 每个应用的最近操作记录
+        latest_records = [obj.operation for obj in latest_operated_objs]
+        return latest_records
 
     @swagger_auto_schema(
         tags=["操作记录"],
@@ -120,7 +120,6 @@ class LatestApplicationsViewSet(APIView):
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
 
-        records_queryset = self.get_queryset(params["limit"], params.get("operator", ""))
-        records = [record.operation for record in records_queryset]
-        data = {"results": RecordForRecentAppSLZ(records, many=True).data}
+        records_queryset = self.get_queryset(params["limit"], params.get("operator"))
+        data = {"results": RecordForRecentAppSLZ(records_queryset, many=True).data}
         return Response(data)

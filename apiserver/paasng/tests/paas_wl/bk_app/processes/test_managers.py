@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
@@ -28,7 +29,7 @@ from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.generation.version import get_mapper_version
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.utils.basic import get_client_by_app
-from tests.paas_wl.infras.resources.base.test_kres import construct_foo_pod
+from tests.paas_wl.infras.resources.base.test_kres import ResourceInstance, construct_foo_pod
 from tests.paas_wl.utils.basic import make_container_status
 from tests.paas_wl.utils.wl_app import create_wl_release
 
@@ -65,38 +66,28 @@ def v2_mapper(process):
     return get_mapper_version(target="v2")
 
 
+@pytest.fixture()
+def pod_body(wl_app, process_manager, process, v2_mapper):
+    """Create a instance pod body."""
+    pod_name = v2_mapper.proc_resources(process=process).pod_name
+    serializer = process_manager._make_serializer(wl_app)
+    return {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {"labels": v2_mapper.proc_resources(process=process).labels, "name": pod_name},
+        "spec": serializer._construct_pod_body_specs(process),  # type: ignore
+    }
+
+
 class TestProcInstManager:
     """Test cases for ProcInst"""
 
     @pytest.fixture()
-    def pod(self, wl_app, release, client, process_manager, process, v2_mapper):
-        pod_name = v2_mapper.proc_resources(process=process).pod_name
-        serializer = process_manager._make_serializer(wl_app)
-        pod_body = {
-            "apiVersion": "v1",
-            "kind": "Pod",
-            "metadata": {"labels": v2_mapper.proc_resources(process=process).labels, "name": pod_name},
-            "spec": serializer._construct_pod_body_specs(process),  # type: ignore
-        }
-        pod, _ = KPod(client).create_or_update(name=pod_name, namespace=process.app.namespace, body=pod_body)
-        return pod
-
-    @pytest.fixture()
-    def _terminated_pod(self, pod, client):
-        new_status = {
-            "status": {
-                "phase": "Running",
-                "containerStatuses": [
-                    make_container_status(
-                        {"terminated": {"reason": "", "exitCode": 1}},
-                        {"terminated": {"reason": "test exit", "exitCode": 137}},
-                    )
-                ],
-            }
-        }
-        KPod(client).patch(
-            name=pod.metadata.name, namespace=pod.metadata.namespace, body=new_status, subresource="status"
+    def pod(self, client, process, pod_body):
+        pod, _ = KPod(client).create_or_update(
+            name=pod_body["metadata"]["name"], namespace=process.app.namespace, body=pod_body
         )
+        return pod
 
     def test_query_instances(self, wl_app, pod):
         # Query process instances
@@ -106,14 +97,6 @@ class TestProcInstManager:
         assert insts[0].state == "Pending"
         assert insts[0].rich_status == "Pending"
         assert insts[0].envs
-
-    @pytest.mark.usefixtures("_terminated_pod")
-    def test_query_instances_terminated(self, wl_app):
-        inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
-        assert inst.state == "Failed"
-        assert inst.rich_status == "Terminated"
-        assert inst.terminated_info["exit_code"] == 137
-        assert inst.terminated_info["reason"] == "test exit"
 
     def test_query_instances_without_process_id_label(self, client, wl_app, pod):
         # Delete `process_id` label to simulate resources created by legacy engine versions
@@ -181,6 +164,34 @@ class TestProcInstManager:
         rv = resources.get_resource_version()
         assert isinstance(rv, str)
         assert rv != ""
+
+
+class TestProcInstManagerTerminated:
+    """Test listing terminated instances, the case uses mock data because terminating
+    a pod in test environment using real kubernetes cluster produces unstable result.
+    """
+
+    def test_list(self, wl_app, pod_body):
+        # Make a terminated pod body
+        pod_body["status"] = {
+            "phase": "Failed",
+            "containerStatuses": [
+                make_container_status(
+                    state={"terminated": {"reason": "Terminated", "exitCode": 1}},
+                    last_state={"terminated": {"reason": "test exit", "exitCode": 137}},
+                )
+            ],
+        }
+
+        # Using mock to simulate terminated pod
+        pods = SimpleNamespace(metadata=None, items=[ResourceInstance(None, pod_body)])
+        with mock.patch("paas_wl.infras.resources.base.kres.BatchOperations.list", return_value=pods):
+            inst = instance_kmodel.list_by_process_type(wl_app, "web")[0]
+
+        assert inst.state == "Failed"
+        assert inst.rich_status == "Terminated"
+        assert inst.terminated_info["exit_code"] == 137
+        assert inst.terminated_info["reason"] == "test exit"
 
 
 class TestProcSpecsManager:

@@ -205,7 +205,7 @@ class ModuleInitializer:
         if not self._should_initialize_vcs():
             return {}
 
-        # Only run syncing procedure when `source_init_template` is valid
+        # Only refresh download URL when `source_init_template` is valid
         if not Template.objects.filter(name=self.module.source_init_template, type=TemplateType.NORMAL).exists():
             return {}
 

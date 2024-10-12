@@ -212,7 +212,7 @@ export default {
       return this.$route.query.versionId;
     },
     canaryReleaseTips() {
-      return this.$t('灰度发布需由<em>工具管理员</em>进行审批；<span>若选择了灰度组织范围，还需要由<em>工具发布者的直属Leader</em>同时进行审批。</span>');
+      return this.$t('灰度发布需由<em>工具管理员</em>进行审批。');
     },
     officialReleaseTips() {
       return this.$t('正式发布需由<em>平台管理员</em>进行审批。');

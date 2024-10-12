@@ -38,7 +38,7 @@ curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk
 ```
 
 ### 返回结果示例
-```
+```json
 {
     "module": {
         "id": "d3a06af5-3d70-4e56-8380-44ec3d41dded",

@@ -602,6 +602,8 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # BK_DOC_APP_ID: ''
 ## 蓝鲸官网文档中心地址
 # BK_DOCS_URL_PREFIX: https://bk.tencent.com/docs
+## PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+# BK_PAAS_DOCS_VER: 1.5
 
 ## 平台 FAQ 地址
 # PLATFORM_FAQ_URL: http://localhost:8080

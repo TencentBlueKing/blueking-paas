@@ -37,6 +37,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginRelease,
     PluginVisibleRange,
 )
+from paasng.bk_plugins.pluginscenter.models.instances import is_release_strategy_organization_changed
 
 if typing.TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
@@ -58,7 +59,7 @@ def submit_create_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
 
     # 组装提单数据,包含插件的基本信息
     basic_fields = _get_basic_fields(pd, plugin)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]创建审批"}]
+    title_fields = [{"key": "title", "value": f"插件[{plugin.name}]创建审批"}]
     fields = basic_fields + title_fields
 
     # 提交 itsm 申请单据
@@ -80,7 +81,7 @@ def submit_online_approval_ticket(pd: PluginDefinition, plugin: PluginInstance, 
     # 组装提单数据,包含插件的基本信息和版本信息
     basic_fields = _get_basic_fields(pd, plugin)
     advanced_fields = _get_advanced_fields(pd, plugin, version)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]上线审批"}]
+    title_fields = [{"key": "title", "value": f"插件[{plugin.name}]上线审批"}]
     fields = basic_fields + advanced_fields + title_fields
 
     # 查询上线审批服务ID
@@ -131,11 +132,12 @@ def submit_canary_release_ticket(
 
     # 组装提单数据,包含插件的基本信息和灰度发布信息
     basic_fields = _get_basic_fields(pd, plugin)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]灰度发布审批"}]
+    title_fields = [{"key": "title", "value": f"插件[{plugin.name}]灰度发布审批"}]
     itsm_fields = basic_fields + title_fields + canary_fields
 
-    service_name = release_strategy.get_itsm_service_name()
+    service_name = release_strategy.get_itsm_service_name(is_release_strategy_organization_changed(version))
     service_id = ApprovalService.objects.get(service_name=service_name).service_id
+
     # 灰度审批是由插件的管理员审批，需要单独添加审批字段
     if release_strategy.strategy == ReleaseStrategy.GRAY:
         plugin_admins = members_api.fetch_role_members(plugin, PluginRole.ADMINISTRATOR)
@@ -196,7 +198,7 @@ def submit_visible_range_ticket(
 
     # 组装提单数据,包含插件的基本信息、可见范围修改前的值，修改后的值
     basic_fields = _get_basic_fields(pd, plugin)
-    title_fields = [{"key": "title", "value": f"插件[{plugin.id}]可见范围修改审批"}]
+    title_fields = [{"key": "title", "value": f"插件[{plugin.name}]可见范围修改审批"}]
     fields = basic_fields + title_fields + visible_range_fields
 
     # 提交 itsm 申请单据

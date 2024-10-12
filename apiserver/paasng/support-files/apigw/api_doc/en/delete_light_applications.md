@@ -1,6 +1,8 @@
 ### Description
 
-Delete lightweight applications, for management-side APP use only.
+Delete lightweight applications.
+
+Note: By default, only Standard Operation (app ID: bk_sops) is allowed to call the APIs related to light apps, if you need to call them, please contact the platform administrator to add permissions.
 
 ### Request Parameters
 
@@ -11,7 +13,7 @@ None.
 
 | Parameter Name | Parameter Type | Required | Parameter Description |
 | -------------- | -------------- | -------- | --------------------- |
-| app_code       | string         | Yes      | Lightweight APP Code  |
+| light_app_code | string         | Yes      | Lightweight APP Code  |
 
 ### Request Example
 ```
@@ -28,6 +30,21 @@ curl -X DELETE -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secre
     "count": 1
   },
   "result": true
+}
+```
+
+
+#### Exception Response
+```
+{
+    "bk_error_msg": {
+        "light_app_code": [
+            "该字段是必填项。"
+        ]
+    },
+    "bk_error_code": "1301100",
+    "data": null,
+    "result": false
 }
 ```
 

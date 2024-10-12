@@ -29,83 +29,184 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
 ### 返回结果示例
 ```json
 {
-    "count": 2,
-    "next": "http://bkpaas.example.com/backend/api/bkapps/applications/lists/detailed?limit=12&amp;offset=12",
+    "count": 62,
+    "next": "http://bkpaas.example.com/backend/api/bkapps/applications/lists/detailed?limit=12&offset=12",
     "previous": null,
+    "extra_data": {
+        "default_app_count": 7,
+        "engineless_app_count": 13,
+        "cloud_native_app_count": 42,
+        "my_app_count": 1,
+        "all_app_count": 62
+    },
     "results": [
         {
             "application": {
-                "id": "130bd72a-dbf5-419c-8357-9ed914341234",
-                "region_name": "内部版",
-                "logo_url": "http://example.com/app-logo/blueking_app_default.png",
-                "deploy_status": true,
+                "id": "c2166d3e-355b-41aa-9478-e731e3828f41",
+                "name": "aaa",
+                "region_name": "默认版",
+                "logo_url": "http://bkpaas.example.com/static/images/default_logo.png",
+                "config_info": {
+                    "engine_enabled": true,
+                    "can_create_extra_modules": true,
+                    "confirm_required_when_publish": false,
+                    "market_published": false
+                },
+                "modules": [
+                    {
+                        "id": "7c733d25-a3af-47ce-9527-98ea49efbf97",
+                        "repo": {
+                            "source_type": "",
+                            "type": "",
+                            "trunk_url": null,
+                            "repo_url": null,
+                            "source_dir": "",
+                            "repo_fullname": null,
+                            "diff_feature": {},
+                            "linked_to_internal_svn": false,
+                            "display_name": ""
+                        },
+                        "repo_auth_info": {},
+                        "web_config": {
+                            "templated_source_enabled": false,
+                            "runtime_type": "buildpack",
+                            "build_method": "buildpack",
+                            "artifact_type": "image"
+                        },
+                        "template_display_name": "蓝鲸应用前端开发框架",
+                        "source_origin": 2,
+                        "clusters": {
+                            "prod": {
+                                "name": "default-main",
+                                "type": "normal",
+                                "is_default": true,
+                                "bcs_cluster_id": "BCS-K8S-00000",
+                                "support_bcs_metrics": false,
+                                "ingress_config": {
+                                    "sub_path_domains": [
+                                        {
+                                            "name": "apps.example.com",
+                                            "reserved": false,
+                                            "https_enabled": false
+                                        }
+                                    ],
+                                    "app_root_domains": [
+                                        {
+                                            "name": "apps.example.com",
+                                            "reserved": false,
+                                            "https_enabled": false
+                                        }
+                                    ],
+                                    "frontend_ingress_ip": "",
+                                    "default_ingress_domain_tmpl": "%s.apps.example.com",
+                                    "port_map": {
+                                        "http": 80,
+                                        "https": 443
+                                    }
+                                },
+                                "feature_flags": {
+                                    "ENABLE_EGRESS_IP": true,
+                                    "ENABLE_MOUNT_LOG_TO_HOST": true,
+                                    "INGRESS_USE_REGEX": true,
+                                    "ENABLE_BK_MONITOR": true,
+                                    "ENABLE_BK_LOG_COLLECTOR": true,
+                                    "ENABLE_AUTOSCALING": false,
+                                    "ENABLE_BCS_EGRESS": false
+                                }
+                            },
+                            "stag": {
+                                "name": "default-main",
+                                "type": "normal",
+                                "is_default": true,
+                                "bcs_cluster_id": "BCS-K8S-00000",
+                                "support_bcs_metrics": false,
+                                "ingress_config": {
+                                    "sub_path_domains": [
+                                        {
+                                            "name": "apps.example.com",
+                                            "reserved": false,
+                                            "https_enabled": false
+                                        }
+                                    ],
+                                    "app_root_domains": [
+                                        {
+                                            "name": "apps.example.com",
+                                            "reserved": false,
+                                            "https_enabled": false
+                                        }
+                                    ],
+                                    "frontend_ingress_ip": "",
+                                    "default_ingress_domain_tmpl": "%s.apps.example.com",
+                                    "port_map": {
+                                        "http": 80,
+                                        "https": 443
+                                    }
+                                },
+                                "feature_flags": {
+                                    "ENABLE_EGRESS_IP": true,
+                                    "ENABLE_MOUNT_LOG_TO_HOST": true,
+                                    "INGRESS_USE_REGEX": true,
+                                    "ENABLE_BK_MONITOR": true,
+                                    "ENABLE_BK_LOG_COLLECTOR": true,
+                                    "ENABLE_AUTOSCALING": false,
+                                    "ENABLE_BCS_EGRESS": false
+                                }
+                            }
+                        },
+                        "region": "default",
+                        "created": "2024-07-10 17:17:36",
+                        "updated": "2024-07-10 17:17:36",
+                        "owner": "0335cce79c92",
+                        "name": "default",
+                        "is_default": true,
+                        "language": "NodeJS",
+                        "source_init_template": "nodejs_bk_magic_vue_spa",
+                        "exposed_url_type": 1,
+                        "user_preferred_root_domain": null,
+                        "last_deployed_date": null,
+                        "creator": "0335cce79c92",
+                        "application": "c2166d3e-355b-41aa-9478-e731e3828f41"
+                    }
+                ],
                 "deploy_info": {
-                    "stag": {
-                        "url": "http://apps.example.com/ieod-bkapp-aaaa-stag/",
-                        "deployed": true
-                    },
                     "prod": {
-                        "url": "http://apps.example.com/ieod-bkapp-aaaa-prod/",
-                        "deployed": true
+                        "deployed": false,
+                        "url": null
+                    },
+                    "stag": {
+                        "deployed": false,
+                        "url": null
                     }
                 },
-                "region": "ieod",
-                "created": "2018-04-25 12:08:54",
-                "updated": "2018-06-19 16:54:37",
-                "owner": "0236c4ff908f528b",
-                "code": "verylongnameaaaa",
-                "name": "我就是v3t",
-                "language": "Go",
-                "source_init_template": "go_gin_hello_world",
-                "source_type": "bk_svn",
-                "source_repo_id": 432,
-                "app_type": "backend",
+                "region": "default",
+                "created": "2024-07-10 17:17:36",
+                "updated": "2024-07-10 17:17:36",
+                "owner": "0335cce79c92",
+                "code": "aaa",
+                "name_en": "aaa",
+                "type": "cloud_native",
+                "is_smart_app": false,
+                "is_scene_app": false,
+                "is_plugin_app": false,
+                "language": "NodeJS",
+                "creator": "0335cce79c92",
                 "is_active": true,
-                "last_deployed_date": null,
-                "creator": "0236c4ff908f528b",
-                "is_deleted": false
+                "is_deleted": false,
+                "last_deployed_date": null
             },
             "product": null,
-            "marked": true
+            "marked": false,
+            "market_config": {
+                "source_tp_url": ""
+            },
+            "migration_status": {
+                "status": "no_need_migration",
+                "error_msg": ""
+            }
         },
-        {
-            "application": {
-                "id": "d403880b-6c46-4edf-b1a0-24363b61234",
-                "region_name": "混合云版",
-                "logo_url": "http://example.com/app-logo/blueking_app_default.png",
-                "deploy_status": true,
-                "deploy_info": {
-                    "stag": {
-                        "url": "http://apps.example.com/clouds-bkapp-appid-stag/",
-                        "deployed": true
-                    },
-                    "prod": {
-                        "url": null,
-                        "deployed": false
-                    }
-                },
-                "region": "clouds",
-                "created": "2018-04-10 16:34:36",
-                "updated": "2018-04-10 16:34:36",
-                "owner": "0236c4ff908f528b",
-                "code": "appid8",
-                "name": "测试8",
-                "language": "Python",
-                "source_init_template": "dj18_hello_world",
-                "source_type": "bk_svn",
-                "source_repo_id": 425,
-                "app_type": "backend",
-                "is_active": true,
-                "last_deployed_date": null,
-                "creator": "0236c4ff908f528b",
-                "is_deleted": false
-            },
-            "product": null,
-            "marked": false
-        }
+        # ... and more applications
 	]
 }
-
 ```
 
 ### 返回结果参数说明
@@ -115,53 +216,94 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
 | count | number | 总数 |
 | next | string | 下一页地址 |
 | previous | string | 上一页地址 |
-| results | array | 结果列表，包含应用信息 |
+| results | array | 结果列表，包含应用信息 |'
+| extra_data |  object  | 额外信息 |
 
-results 内部字段说明：
+.extra_data 内部字段说明：
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| default_app_count  | number | 普通应用数量 |
+| engineless_app_count  | number | 外链应用数量|       
+| cloud_native_app_count  | number | 云原生应用数量 |    
+| my_app_count   | number |  我创建的应用数量  |
+| all_app_count  | number | 应用总数   |
+
+.results 内部字段说明：
 
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
 | application | object | 蓝鲸应用信息 |
 | product | object | 应用市场应用信息 |
 | marked | boolean | 是否关注 |
+| market_config | object | 市场配置  |
+| migration_status | object | 迁移状态  |
 
-application 内部字段说明：
+.results.application 内部字段说明：
 
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
 | id | string | 应用 UUID |
 | region | string | 应用区域 |
 | region_name | string | region 对应的中文名称 |
-| source_type | string | 应用源码托管类型 |
-| source_repo_id | string | 应用源码托管 id |
 | is_active | boolean | 应用是否活跃 |
+| is_deleted | boolean | 应用是否被删除 |
+| config_info | object | 配置信息 |
+| modules | object | 模块 |
 | last_deployed_date | boolean | 应用最近部署时间 |
+| owner | string | 所属人 |
 | code | string | 应用 Code |
 | name | string | 应用名称 |
+| name_en | string | 英文应用名称 |
 | logo_url | string | 应用 Logo 地址 |
+| type | string | 应用类型 |
+| is_smart_app | boolean | 是否为 S-mart 应用 |
+| is_scene_app | boolean | 是否为场景应用 |
+| is_plugin_app | boolean | 是否为插件应用 |
 | language | string | 应用使用的编程语言 |
-| source_init_template | string | 应用初始化时使用的模板名称 |
 | created | string | 应用创建时间 |
 | updated | string | 应用修改时间 |
 | deploy_info | object | 部署信息 |
 
-deploy_info 内部字段说明：
+.results.application.config_info 内部字段说明：
 
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
-| stag | object | 阶段信息 |
+| engine_enabled | boolean | 是否开启了应用引擎 |
+| can_create_extra_modules | boolean | 是否能新增模块 |
+| confirm_required_when_publish | boolean | 发布到市场时是否需要二次确认 |
+| market_published | boolean | 是否已发布到市场 |
+
+.results.application.deploy_info 内部字段说明：
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| stag | object | 预发布信息 |
 | prod | object | 生产信息 |
 
-stag 和 prod 内部字段说明：
+.results.application.deploy_info.stag 和 prod 内部字段说明：
 
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
 | deployed | bool | 是否部署 |
 | url | string | 访问链接 |
 
-product 内部字段说明：
+.results.application.product 内部字段说明：
 
 | 字段 |   类型 | 描述 |
 | ------ | ------ | ------ |
 | name | string | 应用 UUID |
 | logo | string | 应用的 logo 地址 |
+
+.results.application.market_config 内部字段说明：
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| source_tp_url | string | 源模板URL |
+
+.results.application.migration_status 内部字段说明：
+
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| status | string | 状态 |
+| error_msg | string | 错误信息 |

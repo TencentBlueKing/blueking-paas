@@ -146,7 +146,7 @@ export const PLATFORM_CONFIG = {
     // 文档
     DOC: {
         // 产品文档，导航右上角展示的文档总入口
-        PRODUCT_DOC: BK_DOCS_URL_PREFIX + '/markdown/PaaS/UserGuide/Overview/README.md',
+        PRODUCT_DOC: PAAS_DOCS_URL_PREFIX + '/UserGuide/Overview/README.md',
 
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
@@ -233,16 +233,10 @@ export const PLATFORM_CONFIG = {
         BKUI_WITH_PYTHON: DOCS_URL_PREFIX + '/topics/bkui/with-python',
 
         // APIGW API调用指引
-        // APIGW_USER_API: BK_APIGW_DOC_URL + '/guide/use-api.html',
-        APIGW_USER_API: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/use-api/use-apigw-api.md',
+        APIGW_USER_API: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
-        // APIGW QUICK_START
-        // APIGW_QUICK_START: BK_APIGW_DOC_URL + '/guide/quickstart.html',
-        APIGW_QUICK_START: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/quickstart/create-api-with-http-backend.md',
-
-        // APIGW FAQ
-        // APIGW_FAQ: BK_APIGW_DOC_URL + '/guide/faq.html',
-        APIGW_FAQ: BK_DOCS_URL_PREFIX + '/markdown/APIGateway/apigateway/faq/use-apigw-api.md',
+        // APIGW API 网关接入指引
+        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/Connect/connect-gateway.md',
 
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 
@@ -277,7 +271,7 @@ export const PLATFORM_CONFIG = {
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
         
         // 代码库 OAuth 授权配置指引
-        OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
+        OATUH_CONFIG_GUIDE: PAAS_DOCS_URL_PREFIX + '/UserGuide/ProductFeatures/SystemManagement/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
         // 构建阶段钩子
         BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
@@ -289,7 +283,16 @@ export const PLATFORM_CONFIG = {
         DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
 
         // 插件-工具框架
-        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883'
+        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883',
+
+        // 日志高级功能介绍
+        LOG_ADVANCED_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/log_advance.md',
+        // 监控功能介绍
+        MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
+        // APM 增强服务功能介绍
+        APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
+        // 令牌使用指引
+        ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token'
     },
 
     CONFIG: {
@@ -558,7 +561,7 @@ export const PAAS_STATIC_CONFIG = {
                 "list": [
                     {
                         "title": staticI18n.$t("如何使用蓝鲸开发框架？"),
-                        "url": DOCS_URL_PREFIX + "/topics/company_tencent/python_framework_usage",
+                        "url": PAAS_DOCS_URL_PREFIX + "/DevelopTools/SaaSGuide/DevBasics/README.md",
                         "info": staticI18n.$t("集成登录鉴权、安全防护、权限控制等基础模块，更有后台任务、云API调用等样例供您参考")
                     },
                     {

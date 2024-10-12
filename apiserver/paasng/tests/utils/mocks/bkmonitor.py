@@ -17,9 +17,11 @@
 
 import random
 from typing import Dict, List
+from unittest.mock import Mock
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
+from paasng.platform.applications.models import Application
 from tests.utils.helpers import generate_random_string
 
 
@@ -27,8 +29,8 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             "id": generate_random_string(6),
-            "bk_biz_id": random.randint(-5000000, -4000000),
-            "alert_name": generate_random_string(6),
+            "bk_biz_id": -4000000,
+            "alert_name": generate_random_string(6) + "慢查询",
             "status": random.choice(["ABNORMAL", "CLOSED", "RECOVERED"]),
             "description": generate_random_string(),
             "begin_time": start_time,
@@ -81,12 +83,31 @@ def get_fake_alarm_strategies() -> Dict:
     }
 
 
+def get_fake_space_biz_id(app_codes: List[str]) -> List[Dict]:
+    mock_application = Mock(spec=Application)
+    mock_application.id = 1
+    mock_application.type = "default"
+    mock_application.code = "testapp"
+    mock_application.name = "Test Application"
+    mock_application.get_logo_url.return_value = "http://logo.jpg"
+
+    return [
+        {
+            "application": mock_application,
+            "bk_biz_id": "-4000000",
+        }
+    ]
+
+
 class StubBKMonitorClient(BkMonitorClient):
     """蓝鲸监控提供的API，仅供单元测试使用"""
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         query_data = query_params.to_dict()
         return get_fake_alerts(query_data["start_time"], query_data["end_time"])
+
+    def query_space_biz_id(self, app_codes: List) -> List:
+        return get_fake_space_biz_id(app_codes)
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         query_params.to_dict()

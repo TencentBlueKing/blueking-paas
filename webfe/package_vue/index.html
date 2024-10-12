@@ -17,11 +17,16 @@
       var BK_LESSCODE_URL = '<%= process.env.BK_LESSCODE_URL %>' || ''
       var BK_PAAS2_URL = '<%= process.env.BK_PAAS2_URL %>' || ''
       var BK_DOCS_URL_PREFIX = '<%= process.env.BK_DOCS_URL_PREFIX %>' || ''
+      var BK_PAAS_DOCS_VER = '<%= process.env.BK_PAAS_DOCS_VER %>' || ''
+      var BK_APIGW_DOCS_VER = '<%= process.env.BK_APIGW_DOCS_VER %>' || ''
       var BK_APIGW_URL = '<%= process.env.BK_APIGW_URL %>' || ''
       var BK_APIGW_DOC_URL = '<%= process.env.BK_APIGW_DOC_URL %>' || ''
       var BK_COMPONENT_API_URL = '<%= process.env.BK_COMPONENT_API_URL %>' || ''
       var BK_ANALYSIS_JS = '<%= process.env.BK_ANALYSIS_JS %>' || ''
-      var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/PaaS/DevelopTools/BaseGuide`
+  
+      var PAAS_DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>`
+      var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>/BaseGuide`
+      var APIGW_DOCS_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/APIGateway/<%= process.env.BK_APIGW_DOCS_VER %>`
       var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || ''
       var BK_PAAS_VERSION = '<%= process.env.BK_PAAS_VERSION %>' || ''
       var BK_SHARED_RES_URL = '<%= process.env.BK_SHARED_RES_URL %>' || ''

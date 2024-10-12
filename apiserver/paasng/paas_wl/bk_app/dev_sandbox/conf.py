@@ -21,7 +21,7 @@ from django.conf import settings
 
 from .entities import IngressPathBackend, ServicePortPair
 
-_ingress_service_conf = [
+_dev_sandbox_ingress_service_conf = [
     # dev sandbox 中 devserver 的路径与端口映射
     {
         "path_prefix": "/devserver/",
@@ -30,21 +30,46 @@ _ingress_service_conf = [
         "target_port": settings.DEV_SANDBOX_DEVSERVER_PORT,
     },
     # dev sandbox 中 saas 应用的路径与端口映射
-    {"path_prefix": "/", "service_port_name": "app", "port": 80, "target_port": settings.CONTAINER_PORT},
+    {"path_prefix": "/app/", "service_port_name": "app", "port": 80, "target_port": settings.CONTAINER_PORT},
 ]
-
 
 DEV_SANDBOX_SVC_PORT_PAIRS: List[ServicePortPair] = [
     ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
-    for conf in _ingress_service_conf
+    for conf in _dev_sandbox_ingress_service_conf
+]
+
+_code_editor_ingress_service_conf = [
+    # code editor 的路径与端口映射
+    {
+        "path_prefix": "/code-editor/",
+        "service_port_name": "code-editor",
+        "port": 10251,
+        "target_port": settings.CODE_EDITOR_PORT,
+    },
+]
+
+CODE_SVC_PORT_PAIRS: List[ServicePortPair] = [
+    ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
+    for conf in _code_editor_ingress_service_conf
 ]
 
 
-def get_ingress_path_backends(service_name: str) -> List[IngressPathBackend]:
+def get_ingress_path_backends(service_name: str, username: str = "") -> List[IngressPathBackend]:
     """get ingress path backends from _ingress_service_conf with service_name"""
+    _ingress_service_conf = _dev_sandbox_ingress_service_conf + _code_editor_ingress_service_conf
+    if not username:
+        return [
+            IngressPathBackend(
+                path_prefix=conf["path_prefix"],
+                service_name=service_name,
+                service_port_name=conf["service_port_name"],
+            )
+            for conf in _ingress_service_conf
+        ]
+
     return [
         IngressPathBackend(
-            path_prefix=conf["path_prefix"],
+            path_prefix=f"/user/{username}{conf['path_prefix']}",
             service_name=service_name,
             service_port_name=conf["service_port_name"],
         )

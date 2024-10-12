@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import List
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.conf import CODE_SVC_PORT_PAIRS, DEV_SANDBOX_SVC_PORT_PAIRS
 from paas_wl.bk_app.dev_sandbox.entities import ServicePortPair
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
 from paas_wl.infras.resources.base import kres
@@ -36,7 +36,7 @@ class DevSandboxService(AppEntity):
         deserializer = DevSandboxServiceDeserializer
 
     def __post_init__(self):
-        self.ports: List[ServicePortPair] = DEV_SANDBOX_SVC_PORT_PAIRS
+        self.ports: List[ServicePortPair] = DEV_SANDBOX_SVC_PORT_PAIRS + CODE_SVC_PORT_PAIRS
 
     @classmethod
     def create(cls, dev_wl_app: WlApp) -> "DevSandboxService":

@@ -17,9 +17,10 @@
 
 import pytest
 
-from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator
-from paas_wl.bk_app.dev_sandbox.entities import Resources, ResourceSpec, Runtime
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
+from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator, _UserDevWlAppCreator
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, ResourceSpec, Runtime, SourceCodeConfig
+from paas_wl.bk_app.dev_sandbox.kres_entities import CodeEditor, DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.infras.cluster.models import Cluster
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
@@ -58,6 +59,52 @@ def dev_sandbox_entity(dev_wl_app, dev_runtime):
 
 
 @pytest.fixture()
+def user_dev_wl_app(bk_app, module_name, bk_user):
+    return _UserDevWlAppCreator(bk_app, module_name, bk_user.username).create()
+
+
+@pytest.fixture()
+def source_configured_dev_sandbox_entity(user_dev_wl_app, dev_runtime):
+    source_code_config = SourceCodeConfig(
+        pvc_claim_name="test-pvc",
+        workspace="/cnb/devsandbox/src",
+        source_fetch_url="http://example.com",
+        source_fetch_method=SourceCodeFetchMethod.BK_REPO,
+    )
+    dev_sandbox_entity = DevSandbox.create(
+        user_dev_wl_app,
+        dev_runtime,
+        resources=Resources(
+            limits=ResourceSpec(cpu="4", memory="2Gi"),
+            requests=ResourceSpec(cpu="200m", memory="512Mi"),
+        ),
+        source_code_config=source_code_config,
+    )
+    dev_sandbox_entity.construct_envs()
+    return dev_sandbox_entity
+
+
+@pytest.fixture()
+def code_editor_entity(user_dev_wl_app, dev_runtime):
+    config = CodeEditorConfig(
+        pvc_claim_name="test-pvc",
+        start_dir="/home/coder/project",
+        password="test-password",
+    )
+    code_editor_entity = CodeEditor.create(
+        user_dev_wl_app,
+        dev_runtime,
+        config=config,
+        resources=Resources(
+            limits=ResourceSpec(cpu="4", memory="2Gi"),
+            requests=ResourceSpec(cpu="200m", memory="512Mi"),
+        ),
+    )
+    code_editor_entity.construct_envs()
+    return code_editor_entity
+
+
+@pytest.fixture()
 def dev_sandbox_service_entity(dev_wl_app):
     return DevSandboxService.create(dev_wl_app)
 
@@ -65,3 +112,8 @@ def dev_sandbox_service_entity(dev_wl_app):
 @pytest.fixture()
 def dev_sandbox_ingress_entity(bk_app, dev_wl_app, module_name):
     return DevSandboxIngress.create(dev_wl_app, bk_app.code)
+
+
+@pytest.fixture()
+def user_dev_sandbox_ingress_entity(bk_app, dev_wl_app, module_name, bk_user):
+    return DevSandboxIngress.create(dev_wl_app, bk_app.code, bk_user.username)

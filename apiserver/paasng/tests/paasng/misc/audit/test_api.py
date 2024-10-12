@@ -52,12 +52,14 @@ class TestAuditAPI:
         add_app_audit_record(
             app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
         )
-        bk_user2 = create_user(generate_random_string(6))
-        bk_app2 = create_app(owner_username=bk_user2.username)
+
+        # 创建另一条操作记录，应用属于 bk_user, 但操作人是 test_user
+        bk_app2 = create_app(owner_username=bk_user.username)
+        test_user = create_user(generate_random_string(6))
         add_app_audit_record(
             app_code=bk_app2.code,
             action_id="",
-            user=bk_user2,
+            user=test_user,
             operation="disable",
             target="addon",
             attribute="mysql",
@@ -66,7 +68,6 @@ class TestAuditAPI:
         url = "/api/bkapps/applications/lists/latest/"
         params = {"limit": 5, "operator": bk_user.username}
         resp = api_client.get(url, params)
-        resp = api_client.get(url)
         assert resp.status_code == 200
         data = resp.json()["results"]
         # 仅返回操作人的应用最新一条操作记录

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Sourcectl type specifications"""
+
 import logging
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
@@ -227,7 +228,7 @@ class SourceTypes:
             type_specs = cls(**conf["attrs"])
             self.data[type_specs.name] = type_specs
 
-            register_new_sourcectl_type(type_specs.name, type_specs.make_feature_flag_field())
+            register_new_sourcectl_type(type_specs.make_feature_flag_field())
 
         self.initialized = True
 

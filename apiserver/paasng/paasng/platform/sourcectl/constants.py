@@ -35,7 +35,7 @@ class BasicSourceType(str, StructuredEnum):
     PACKAGE = "package"
 
 
-def register_new_sourcectl_type(name: str, feature_flag: FeatureFlagField):
+def register_new_sourcectl_type(feature_flag: FeatureFlagField):
     """暴露给 TE 版本的注册 SourcectlType 的方法
 
     :param name: 源码类型名称

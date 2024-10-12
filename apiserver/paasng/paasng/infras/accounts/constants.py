@@ -90,13 +90,16 @@ class AccountFeatureFlag(ChoicesEnum):
         return flags.copy()
 
     @classmethod
-    def register_ext_feature_flag(cls, feature_flag: FeatureFlagField):
+    def register_ext_feature_flag(cls, feature_flag: FeatureFlagField) -> None:
         """注册额外的用户特性到枚举类中"""
         name, label, default = feature_flag.name, feature_flag.label, feature_flag.default
+        # 已经注册过的，需要跳过
+        if getattr(cls, name, None):
+            return
+
         extend_enum(cls, name, name)
         cls._choices_labels.value.append((name, label))
         cls._defaults[name] = default  # type: ignore
-        return name
 
 
 class FunctionType(ChoicesEnum):

@@ -17,6 +17,8 @@
 import pytest
 
 from paasng.misc.audit.service import add_app_audit_record
+from tests.conftest import create_app, generate_random_string
+from tests.utils.auth import create_user
 
 pytestmark = pytest.mark.django_db
 
@@ -44,3 +46,31 @@ class TestAuditAPI:
         assert len(data) == 1
         assert data[0]["operation"] == "disable"
         assert data[0]["application"]["code"] == bk_app.code
+
+    def test_latest_apps_filter_by_operator(self, api_client, bk_user, bk_app):
+        """最近操作的应用列表"""
+        add_app_audit_record(
+            app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
+        )
+        bk_user2 = create_user(generate_random_string(6))
+        bk_app2 = create_app(owner_username=bk_user2.username)
+        add_app_audit_record(
+            app_code=bk_app2.code,
+            action_id="",
+            user=bk_user2,
+            operation="disable",
+            target="addon",
+            attribute="mysql",
+        )
+
+        url = "/api/bkapps/applications/lists/latest/"
+        params = {"limit": 5, "operator": bk_user.username}
+        resp = api_client.get(url, params)
+        resp = api_client.get(url)
+        assert resp.status_code == 200
+        data = resp.json()["results"]
+        # 仅返回操作人的应用最新一条操作记录
+        assert len(data) == 1
+        assert data[0]["operation"] == "enable"
+        assert data[0]["application"]["code"] == bk_app.code
+        assert data[0]["operator"] == bk_user.username

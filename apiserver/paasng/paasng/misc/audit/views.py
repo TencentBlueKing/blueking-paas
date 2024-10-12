@@ -93,26 +93,34 @@ class LatestApplicationsViewSet(APIView):
     - 如果需要调整返回的应用数，通过limit参数指定（后台限制最大10个）, 如http://paas.bking.com/api/bkapps/applications/latest/?limit=5
     """
 
-    def get_queryset(self, limit: int):
+    def get_queryset(self, limit: int, operator: str = ""):
         applications = UserApplicationFilter(self.request.user).filter()
         # 可设置在应用列表中不展示插件应用
         if not settings.DISPLAY_BK_PLUGIN_APPS:
             applications = applications.exclude(is_plugin_app=True)
-        application_ids = list(applications.values_list("id", flat=True))
 
-        latest_operated_objs = (
-            AppLatestOperationRecord.objects.filter(application__id__in=application_ids)
-            .select_related("operation")
-            .order_by("-latest_operated_at")[:limit]
+        queryset = AppLatestOperationRecord.objects.filter(application__in=applications)
+        if operator:
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator)
+            queryset = queryset.filter(operation__user=operator)
+
+        records_queryset = (
+            queryset.select_related("operation").order_by("-latest_operated_at").only("operation")[:limit]
         )
-        # 每个应用的最近操作记录
-        latest_records = [obj.operation for obj in latest_operated_objs]
-        return latest_records
 
+        return records_queryset
+
+    @swagger_auto_schema(
+        tags=["操作记录"],
+        operation_description="获取最近操作记录",
+        query_serializer=QueryRecentOperationsSLZ,
+    )
     def get(self, request, *args, **kwargs):
         serializer = QueryRecentOperationsSLZ(data=request.GET)
         serializer.is_valid(raise_exception=True)
+        params = serializer.validated_data
 
-        records_queryset = self.get_queryset(serializer.data["limit"])
-        data = {"results": RecordForRecentAppSLZ(records_queryset, many=True).data}
+        records_queryset = self.get_queryset(params["limit"], params.get("operator", ""))
+        records = [record.operation for record in records_queryset]
+        data = {"results": RecordForRecentAppSLZ(records, many=True).data}
         return Response(data)

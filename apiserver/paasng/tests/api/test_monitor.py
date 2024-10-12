@@ -32,16 +32,16 @@ pytestmark = pytest.mark.django_db
 def bk_monitor_space(bk_app):
     return BKMonitorSpace.objects.create(
         application=bk_app,
-        id=40000,
-        space_type_id=SpaceType.SAAS,
+        id=4000000,
+        space_type_id=SpaceType.BKCC,
         space_id="100",
         space_name="蓝鲸应用-test",
         extra_info={"test": "test"},
     )
 
 
+@mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
 class TestListAlertsView:
-    @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
     def test_list_alerts(self, api_client, bk_app, bk_monitor_space):
         resp = api_client.post(
             f"/api/monitor/applications/{bk_app.code}/alerts/",
@@ -56,6 +56,22 @@ class TestListAlertsView:
         assert resp.data[0]["status"] in ["ABNORMAL", "CLOSED", "RECOVERED"]
         assert resp.data[0]["env"] in ["stag", "prod"]
         assert len(resp.data[0]["receivers"]) == 2
+
+    def test_list_alerts_by_user(self, api_client, bk_app, bk_monitor_space):
+        resp = api_client.post(
+            "/api/monitor/user/alerts/",
+            data={
+                "start_time": (datetime.now() - timedelta(minutes=random.randint(1, 30))).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                "end_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
+        assert len(resp.data) == 1
+        assert resp.data[0]["count"] == 3
+        assert resp.data[0]["slow_query_count"] == 3
+        assert len(resp.data[0]["alerts"]) == 3
+        assert resp.data[0]["application"]["id"] == "1"
 
 
 class TestAlarmStrategiesView:

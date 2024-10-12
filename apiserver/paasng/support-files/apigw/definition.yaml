@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.3.0
-  title: "Enable app permission verification for all APIs."
-  comment: "Enable app permission verification for all APIs."
+  version: 1.3.2
+  title: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
+  comment: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
 
 
 stage:

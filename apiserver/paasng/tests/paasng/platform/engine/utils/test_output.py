@@ -19,17 +19,21 @@ from unittest import mock
 
 import pytest
 
-from paasng.platform.engine.utils.output import ConsoleStream, ModelStream, RedisWithModelStream
+from paasng.platform.engine.utils.output import ConsoleStream, RedisWithModelStream, sanitize_message
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestModelStream:
-    def test_cleanup_message(self):
-        message_list = ["error\x1b[1G error\x1b[1G", "normal, normal", "\x1b [1G", "中文"]
-        output_list = ["error error", "normal, normal", "\x1b [1G", "中文"]
-        for s, ret in zip(message_list, output_list):
-            assert ModelStream.cleanup_message(s) == ret
+def test_sanitize_message_removing():
+    message_list = ["error\x1b[1G error\x1b[1G", "normal, normal", "\x1b [1G", "中文"]
+    output_list = ["error error", "normal, normal", "\x1b [1G", "中文"]
+    for s, ret in zip(message_list, output_list):
+        assert sanitize_message(s) == ret
+
+
+def test_sanitize_message_truncating():
+    message = "c" * 10240
+    assert 4096 < len(sanitize_message(message)) < 4196
 
 
 class TestConsoleStream:

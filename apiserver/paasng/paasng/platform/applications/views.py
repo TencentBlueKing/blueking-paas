@@ -28,12 +28,14 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -346,6 +348,68 @@ class ApplicationListViewSet(viewsets.ViewSet):
                 )
 
         return slzs.IdleModuleEnvSLZ(idle_module_envs, many=True).data
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取应用评估详情列表",
+        query_serializer=slzs.ApplicationEvaluationListQuerySLZ,
+        responses={200: slzs.ApplicationEvaluationListResultSLZ()},
+    )
+    def list_evaluation(self, request):
+        """获取应用评估详情列表"""
+        slz = slzs.ApplicationEvaluationListQuerySLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
+        params = slz.validated_data
+
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
+
+        reports = (
+            AppOperationReport.objects.filter(
+                app__code__in=app_codes,
+            )
+            .order_by(params["order"])
+            .select_related("app")
+        )
+
+        if issue_type := params.get("issue_type"):
+            reports = reports.filter(issue_type=issue_type)
+
+        paginator = LimitOffsetPagination()
+        paginated_reports = paginator.paginate_queryset(reports, request)
+
+        applications = slzs.ApplicationEvaluationSLZ(paginated_reports, many=True).data
+        return paginator.get_paginated_response(
+            {
+                "collected_at": latest_collected_at,
+                "applications": applications,
+            }
+        )
+
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取应用评估各状态数量",
+        responses={200: slzs.ApplicationEvaluationIssueCountListResultSLZ()},
+    )
+    def list_evaluation_issue_count(self, request):
+        """获取应用评估各状态数量"""
+        latest_collected_at = None
+        if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            latest_collected_at = collect_task.start_at
+
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
+        reports = AppOperationReport.objects.filter(app__code__in=app_codes)
+
+        issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
+
+        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": len(app_codes)}
+
+        serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
+        return Response(serializer.data)
 
 
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

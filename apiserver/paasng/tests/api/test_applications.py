@@ -16,11 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
@@ -33,6 +35,8 @@ from paasng.platform.applications.handlers import post_create_application, turn_
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.evaluation.constants import BatchTaskStatus
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
@@ -40,7 +44,7 @@ from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, S
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
-from tests.utils.helpers import configure_regions, generate_random_string
+from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -615,3 +619,131 @@ class TestCreateCloudNativeApp:
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         application = Application.objects.get(code=f"uta-{random_suffix}")
         assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
+
+
+class TestListEvaluation:
+    @pytest.fixture()
+    def latest_collection_task(self) -> AppOperationReportCollectionTask:
+        """
+        创建采集任务测试数据
+        """
+        return AppOperationReportCollectionTask.objects.create(
+            total_count=10,
+            succeed_count=8,
+            failed_count=2,
+            failed_app_codes=["app1", "app2"],
+            status=BatchTaskStatus.RUNNING,
+        )
+
+    @pytest.fixture()
+    def app_operation_report1(self, bk_user) -> AppOperationReport:
+        """
+        创建应用评估详情测试数据
+        """
+        app = create_app(owner_username=bk_user.username)
+        report = AppOperationReport.objects.create(
+            cpu_requests=4000,
+            mem_requests=8192,
+            cpu_limits=8000,
+            mem_limits=16384,
+            cpu_usage_avg=0.003,
+            mem_usage_avg=0.8,
+            res_summary={"cpu": "1000", "mem": "2048"},
+            pv=300,
+            uv=150,
+            latest_deployed_at=timezone.now() - timedelta(days=1),
+            latest_deployer="deployer",
+            latest_operated_at=timezone.now() - timedelta(days=2),
+            latest_operator="operator",
+            latest_operation="Deployment",
+            issue_type="misconfigured",
+            collected_at=timezone.now(),
+            app_id=app.id,
+            administrators=[],
+            deploy_summary={},
+            developers=["dev1", "dev2"],
+            evaluate_result={"issue_type": "none"},
+            visit_summary={"visits": 1000},
+        )
+        return report
+
+    @pytest.fixture()
+    def app_operation_report2(self, bk_user) -> AppOperationReport:
+        app = create_app(owner_username=bk_user.username)
+        report = AppOperationReport.objects.create(
+            cpu_requests=6000,
+            mem_requests=12288,
+            cpu_limits=12000,
+            mem_limits=24576,
+            cpu_usage_avg=0.004,
+            mem_usage_avg=0.1,
+            res_summary={"cpu": "3000", "mem": "4096"},
+            pv=500,
+            uv=200,
+            latest_deployed_at=timezone.now() - timedelta(days=3),
+            latest_deployer="deployer",
+            latest_operated_at=timezone.now() - timedelta(days=4),
+            latest_operator="operator",
+            latest_operation="Scaling",
+            issue_type="idle",
+            collected_at=timezone.now(),
+            app_id=app.id,
+            administrators=[],
+            deploy_summary={},
+            developers=["dev3", "dev4"],
+            evaluate_result={"issue_type": "idle"},
+            visit_summary={"visits": 1500},
+        )
+        return report
+
+    def test_list_evaluation(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
+        """
+        测试应用评估详情列表
+        """
+        params = {"limit": 2, "offset": 0, "order": "pv", "issue_type": "idle"}
+        response = api_client.get(reverse("api.applications.lists.evaluation"), params)
+
+        response_data = response.json()
+
+        assert response_data["count"] == 1
+
+        results = response_data["results"]
+        assert len(results["applications"]) == 1
+
+        collected_at = datetime.fromisoformat(results["collected_at"].replace("Z", "+00:00"))
+        assert collected_at == latest_collection_task.start_at
+
+        app_data = results["applications"][0]
+        report = app_operation_report2
+        expected_app_data = {
+            "code": report.app.code,
+            "name": report.app.name,
+            "type": report.app.type,
+            "is_plugin_app": report.app.is_plugin_app,
+            "logo_url": report.app.get_logo_url(),
+            "cpu_limits": report.cpu_limits,
+            "mem_limits": report.mem_limits,
+            "cpu_usage_avg": report.cpu_usage_avg,
+            "mem_usage_avg": report.mem_usage_avg,
+            "pv": report.pv,
+            "uv": report.uv,
+            "issue_type": report.issue_type,
+            "latest_operated_at": report.latest_operated_at.astimezone(timezone.get_current_timezone()).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+        }
+
+        assert app_data == expected_app_data
+
+    def test_issue_count(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
+        """
+        测试获取应用评估结果数量
+        """
+        response = api_client.get(reverse("api.applications.lists.evaluation.issue_count"))
+
+        assert response.data["total"] == 2
+        assert len(response.data["issue_type_counts"]) == 2
+
+        for issue in response.data["issue_type_counts"]:
+            assert issue["issue_type"] in ["none", "idle", "misconfigured"]
+            assert issue["count"] == 1

@@ -30,6 +30,7 @@ from paasng.infras.bkmonitorv3.exceptions import (
     BkMonitorGatewayServiceError,
     BkMonitorSpaceDoesNotExist,
 )
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace as BKMonitorSpaceModel
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 
 logger = logging.getLogger(__name__)
@@ -38,26 +39,19 @@ logger = logging.getLogger(__name__)
 class BkMonitorBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def metadata_get_space_detail(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_get_space_detail(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_create_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_create_space(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_update_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_update_space(self, *args, **kwargs) -> Dict: ...
 
-    def search_alert(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alert(self, *args, **kwargs) -> Dict: ...
 
-    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict: ...
 
-    def promql_query(self, *args, **kwargs) -> Dict:
-        ...
+    def promql_query(self, *args, **kwargs) -> Dict: ...
 
-    def as_code_import_config(self, *args, **kwargs) -> Dict:
-        ...
+    def as_code_import_config(self, *args, **kwargs) -> Dict: ...
 
 
 class BKMonitorSpaceManager:
@@ -174,6 +168,16 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp["message"])
         return resp.get("data", {}).get("alerts", [])
 
+    def query_space_biz_id(self, app_codes: List[str]) -> List[Dict]:
+        """查询应用的蓝鲸监控空间在权限中心的资源 id
+
+        :param app_codes: 查询监控空间的应用 id
+        """
+        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes).select_related(
+            "application"
+        )
+        return [{"application": space.application, "bk_biz_id": space.iam_resource_id} for space in monitor_spaces]
+
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略
 
@@ -189,9 +193,9 @@ class BkMonitorClient:
         if not resp.get("result"):
             raise BkMonitorApiError(resp["message"])
         data = resp.get("data", {})
-        data[
-            "strategy_config_link"
-        ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        data["strategy_config_link"] = (
+            f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        )
         return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:

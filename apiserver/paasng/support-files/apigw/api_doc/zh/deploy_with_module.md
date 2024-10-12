@@ -15,11 +15,11 @@ App 部署接口，用于部署应用到指定环境。
 
 | 参数名称      | 参数类型 | 必须 | 参数说明                                       |
 | ------------- | -------- | ---- | ---------------------------------------------- |
-| url           | string   | 是   | 部署源码路径(包含trunk)                        |
 | revision      | string   | 是   | 源码仓库版本号                                 |
 | version_name  | string   | 是   | branch 或 tag 的名称                           |
 | version_type  | string   | 是   | 对于 svn，支持传 trunk / tag； 对于 git，支持传 branch |
 
+确保revision，version_name，version_type可以在对应仓库查到
 
 ### 请求示例
 
@@ -29,7 +29,7 @@ App 部署接口，用于部署应用到指定环境。
 #### gitlab
 
 ```bash
-curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{AppCode}/modules/default/envs/{env:stag/prod}/deployments/ -d '{"url": "http://git.example.com/xxxx.git", "revision": "commit的sha值", "version_type": "branch", "version_name": "master"}' -H 'Content-Type: application/json'
+curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7413rKSr3"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{AppCode}/modules/default/envs/{env:stag/prod}/deployments/ -d '{"revision": "Source code repository version number", "version_type": "Branch or tag name", "version_name": "For svn, supports passing trunk / tag; for git, supports passing branch"}' -H 'Content-Type: application/json'
 ```
 
 ### 返回结果示例
@@ -39,6 +39,7 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "RLjqb3t0VQ5v2ZuT0rXhz7
 	"deployment_id": "22d0e9c8-9cfc-45a5-b5a8-718137c515db"
 }
 ```
+
 
 ### 返回结果参数说明
 

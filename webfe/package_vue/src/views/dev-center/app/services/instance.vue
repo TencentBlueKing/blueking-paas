@@ -829,7 +829,7 @@ export default {
     },
 
     gotoMore() {
-      window.open(this.GLOBAL.DOC.DEPLOYMENT_MAINTENANCE, '_blank');
+      window.open(this.GLOBAL.DOC.APM_FEATURE_DOC, '_blank');
     },
   },
 };

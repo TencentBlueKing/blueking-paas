@@ -57,6 +57,7 @@ class AppOperationRecordFilterSlZ(serializers.Serializer):
 
 class QueryRecentOperationsSLZ(serializers.Serializer):
     limit = serializers.IntegerField(default=4, max_value=10, help_text="条目数")
+    operator = serializers.CharField(required=False, help_text="操作人")
 
 
 class RecordForRecentAppSLZ(AppOperationRecordSLZ):

@@ -27,8 +27,6 @@ USER root
 
 RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git
 
-RUN mkdir ~/.pip &&  printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
-
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 

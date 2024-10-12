@@ -44,7 +44,7 @@ urlpatterns = [
     ),
     url(
         r"^api/bkapps/cloud-native/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/template/url/$",
-        views.ModuleViewSet.as_view({"get": "refresh_module_tempalte_url"}),
+        views.ModuleViewSet.as_view({"get": "refresh_module_template_url"}),
         name="module.template.url.refresh",
     ),
     # BuildPack Runtime(Deprecated: using ModuleBuildConfigViewSet)

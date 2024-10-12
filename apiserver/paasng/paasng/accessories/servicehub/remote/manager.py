@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The universal services module, handles both services from database and remote REST API
-"""
+"""The universal services module, handles both services from database and remote REST API"""
+
 import json
 import logging
 import uuid
@@ -124,7 +124,7 @@ class RemotePlanObj(PlanObj):
 @dataclass
 class RemoteServiceObj(ServiceObj):
     plans: List[RemotePlanObj] = field(default_factory=list)
-    meta_info: MetaInfo = DEFAULT_META_INFO
+    meta_info: MetaInfo = field(default_factory=lambda: MetaInfo(version=None))
 
     _data = None
     category_id = None

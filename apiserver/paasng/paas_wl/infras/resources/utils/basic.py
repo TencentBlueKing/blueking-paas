@@ -15,10 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Basic utils for scheduler
-"""
+"""Basic utils for scheduler"""
+
 import logging
-from collections import Callable, OrderedDict
+from collections import OrderedDict
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from paas_wl.bk_app.applications.models import WlApp

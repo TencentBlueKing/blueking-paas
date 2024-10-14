@@ -18,12 +18,11 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
-
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class HealthPhase(str, StructuredEnum):
+class HealthPhase(StrEnum):
     HEALTHY = EnumField("Healthy")
     PROGRESSING = EnumField("Progressing")
     UNHEALTHY = EnumField("Unhealthy")

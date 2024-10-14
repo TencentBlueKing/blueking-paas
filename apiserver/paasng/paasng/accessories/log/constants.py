@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, StrEnum
 
 # 如果日志配置是所有进程通用的, process_type 填充为 "-"
 DEFAULT_LOG_CONFIG_PLACEHOLDER = "-"
@@ -27,7 +27,7 @@ DEFAULT_LOG_BATCH_SIZE = 200
 MAX_RESULT_WINDOW = 10000
 
 
-class LogTimeChoices(str, StructuredEnum):
+class LogTimeChoices(StrEnum):
     """日志搜索-日期范围可选值"""
 
     FIVE_MINUTES = EnumField("5m", label="5分钟")
@@ -41,7 +41,7 @@ class LogTimeChoices(str, StructuredEnum):
     CUSTOMIZED = EnumField("customized", label="自定义")
 
 
-class LogType(str, StructuredEnum):
+class LogType(StrEnum):
     """
     日志类型
     """
@@ -51,7 +51,7 @@ class LogType(str, StructuredEnum):
     INGRESS = EnumField("INGRESS", label="接入层日志")
 
 
-class LogCollectorType(str, StructuredEnum):
+class LogCollectorType(StrEnum):
     """日志采集器类型"""
 
     BK_LOG = EnumField("BK_LOG", label="蓝鲸日志平台采集器")

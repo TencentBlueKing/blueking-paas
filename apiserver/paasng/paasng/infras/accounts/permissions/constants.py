@@ -15,11 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.enum import EnumField, StrEnum
 
-class SiteAction(str, StructuredEnum):
+
+class SiteAction(StrEnum):
     """蓝鲸 PaaS 平台全局功能相关权限"""
 
     VISIT_SITE = EnumField("visit_site", label=_("平台页面查看"))

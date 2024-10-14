@@ -17,12 +17,11 @@
 
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
-
 from paasng.platform.engine.constants import JobStatus
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class BuildStatus(str, StructuredEnum):
+class BuildStatus(StrEnum):
     SUCCESSFUL = EnumField("successful", "成功")
     FAILED = EnumField("failed", "失败")
     PENDING = EnumField("pending", "等待")
@@ -34,7 +33,7 @@ class BuildStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class CommandStatus(str, StructuredEnum):
+class CommandStatus(StrEnum):
     SCHEDULED = EnumField("scheduled", label="已调度")
     SUCCESSFUL = EnumField("successful", "成功")
     FAILED = EnumField("failed", "失败")
@@ -55,7 +54,7 @@ class CommandStatus(str, StructuredEnum):
         return JobStatus(self.value)
 
 
-class CommandType(str, StructuredEnum):
+class CommandType(StrEnum):
     PRE_RELEASE_HOOK = EnumField("pre-release-hook", label="发布前置指令")
 
     def get_step_name(self):
@@ -77,7 +76,7 @@ def make_enum_choices(obj):
     return [(member.value, name) for name, member in obj.__members__.items()]
 
 
-class PodPhase(str, StructuredEnum):
+class PodPhase(StrEnum):
     SUCCEEDED = EnumField("Succeeded", "成功")
     FAILED = EnumField("Failed", "失败")
     RUNNING = EnumField("Running", "运行中")

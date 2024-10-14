@@ -15,11 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.enum import EnumField, StrEnum
 
-class TemplateType(str, StructuredEnum):
+
+class TemplateType(StrEnum):
     """模板类型"""
 
     NORMAL = EnumField("normal", _("普通应用"))

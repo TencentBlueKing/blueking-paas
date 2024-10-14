@@ -14,20 +14,20 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from blue_krill.data_types.enum import EnumField, FeatureFlagField, StructuredEnum
+from blue_krill.data_types.enum import FeatureFlagField
 
 from paasng.infras.accounts.constants import AccountFeatureFlag
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class DiffFeatureType(str, StructuredEnum):
+class DiffFeatureType(StrEnum):
     """代码对比类型"""
 
     INTERNAL = "internal"
     EXTERNAL = "external"
 
 
-class BasicSourceType(str, StructuredEnum):
+class BasicSourceType(StrEnum):
     """基础源码类型"""
 
     GIT = "git"
@@ -44,7 +44,7 @@ def register_new_sourcectl_type(feature_flag: FeatureFlagField):
     AccountFeatureFlag.register_ext_feature_flag(feature_flag)
 
 
-class VersionType(str, StructuredEnum):
+class VersionType(StrEnum):
     """版本类型. 对应 VersionInfo.version_type"""
 
     TAG = EnumField("tag", label="用于 Git 仓库、云原生镜像应用、旧镜像应用、镜像模式的 S-Mart 应用")

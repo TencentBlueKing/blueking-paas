@@ -15,21 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""BlobStore client
-"""
+"""BlobStore client"""
+
 import logging
 from typing import Optional
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from blue_krill.storages.blobstore.base import BlobStore
 from blue_krill.storages.blobstore.bkrepo import BKGenericRepo
 from blue_krill.storages.blobstore.s3 import S3Store
 from django.conf import settings
 
+from paasng.utils.enum import EnumField, StrEnum
+
 logger = logging.getLogger(__name__)
 
 
-class StoreType(str, StructuredEnum):
+class StoreType(StrEnum):
     S3 = EnumField("s3")
     BKREPO = EnumField("bkrepo")
 

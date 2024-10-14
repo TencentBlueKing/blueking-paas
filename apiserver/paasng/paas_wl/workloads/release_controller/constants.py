@@ -15,17 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class RuntimeType(str, StructuredEnum):
+class RuntimeType(StrEnum):
     BUILDPACK = EnumField("buildpack", label="Runtime for buildpack")
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
     BK_SMART = EnumField("bk-smart", label="Runtime for buildpack, but build as image")
     DOCKERFILE = EnumField("dockerfile", label="Runtime for dockerfile")
 
 
-class ImagePullPolicy(str, StructuredEnum):
+class ImagePullPolicy(StrEnum):
     ALWAYS = EnumField("Always")
     IF_NOT_PRESENT = EnumField("IfNotPresent")
     NEVER = EnumField("Never")

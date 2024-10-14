@@ -16,13 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Process events related functions"""
+
 import logging
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import Any, Dict, Iterator, List, Tuple
 
 from paas_wl.bk_app.processes.processes import PlainInstance, PlainProcess
 from paasng.platform.engine.processes.utils import diff_list
+from paasng.utils.enum import IntEnum
 
 logger = logging.getLogger(__name__)
 

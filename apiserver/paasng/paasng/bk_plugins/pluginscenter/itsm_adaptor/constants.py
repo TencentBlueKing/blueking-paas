@@ -15,11 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.enum import EnumField, StrEnum
 
-class ApprovalServiceName(str, StructuredEnum):
+
+class ApprovalServiceName(StrEnum):
     """审批流程服务名"""
 
     CREATE_APPROVAL = EnumField("create_approval", label=_("插件上线审批"))
@@ -35,7 +36,7 @@ class ApprovalServiceName(str, StructuredEnum):
     )
 
 
-class ItsmTicketStatus(str, StructuredEnum):
+class ItsmTicketStatus(StrEnum):
     """ITSM 流程状态"""
 
     RUNNING = EnumField("RUNNING", label=_("处理中"))

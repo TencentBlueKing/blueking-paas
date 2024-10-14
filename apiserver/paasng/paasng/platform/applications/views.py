@@ -366,7 +366,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at
 
-        app_codes = UserApplicationFilter(request.user).filter(include_inactive=True).values_list("code", flat=True)
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
 
         reports = (
             AppOperationReport.objects.filter(
@@ -401,12 +401,13 @@ class ApplicationListViewSet(viewsets.ViewSet):
         if collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
             latest_collected_at = collect_task.start_at
 
-        app_codes = UserApplicationFilter(request.user).filter(include_inactive=True).values_list("code", flat=True)
+        app_codes = UserApplicationFilter(request.user).filter().values_list("code", flat=True)
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
+        total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
 
-        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": len(app_codes)}
+        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
         serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
         return Response(serializer.data)

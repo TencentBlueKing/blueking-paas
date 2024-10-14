@@ -21,11 +21,12 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
-	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -320,11 +321,11 @@ func (r *HookReconciler) cleanupFinishedHooks(
 	}
 
 	// 按照创建时间排序，清理掉最早的几个
-	slices.SortFunc(pods, func(x, y corev1.Pod) bool {
+	slices.SortFunc(pods, func(x, y corev1.Pod) int {
 		if x.CreationTimestamp.Equal(&y.CreationTimestamp) {
-			return x.Name < y.Name
+			return strings.Compare(x.Name, y.Name)
 		}
-		return x.CreationTimestamp.Before(&y.CreationTimestamp)
+		return lo.Ternary(x.CreationTimestamp.Before(&y.CreationTimestamp), -1, 1)
 	})
 
 	for i := 0; i < numToDelete; i++ {

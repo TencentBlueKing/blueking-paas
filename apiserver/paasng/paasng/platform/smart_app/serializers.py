@@ -62,8 +62,3 @@ class DiffItemSLZ(serializers.Serializer):
 
 class DescriptionDiffResultSLZ(serializers.Serializer):
     services = serializers.ListField(child=DiffItemSLZ())
-
-
-# TODO: 前端重构后未再使用 `diffs` 字段展示差异, 是否可以移除相关实现？
-class PackageStashResponseWithDiffSLZ(PackageStashResponseSLZ):
-    diffs = serializers.DictField(child=DescriptionDiffResultSLZ())

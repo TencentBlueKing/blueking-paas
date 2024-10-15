@@ -18,7 +18,7 @@
 # Q: 为什么需要这个包，而不是之前直接从 blue_krill 引入的方式？
 # A: Python 3.11 中改变了枚举类的一些行为，且 blue_krill 不好做兼容，因此先由 apiserver 自行处理：
 #    https://github.com/python/cpython/issues/100458
-#
+#    https://github.com/TencentBlueKing/bkpaas-python-sdk/issues/190
 
 # Q: 为什么这里 import EnumField 且忽略 F401
 # A: 统一枚举 import 入口，避免业务逻辑中需要从 utils.enum & blue_krill 中分别导入

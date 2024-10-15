@@ -93,6 +93,10 @@ class AccountFeatureFlag(ChoicesEnum):
     def register_ext_feature_flag(cls, feature_flag: FeatureFlagField) -> None:
         """注册额外的用户特性到枚举类中"""
         name, label, default = feature_flag.name, feature_flag.label, feature_flag.default
+        # 无名的不允许注册
+        if not name:
+            raise ValueError("feature flag's name can not be empty.")
+
         # 已经注册过的，需要跳过
         if getattr(cls, name, None):
             return

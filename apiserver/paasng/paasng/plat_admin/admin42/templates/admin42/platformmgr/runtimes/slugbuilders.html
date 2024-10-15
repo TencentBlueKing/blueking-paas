@@ -66,7 +66,7 @@
                 </bk-table>
             </template>
         </bk-table-column>
-        <bk-table-column label="名称" prop="name" min-width="250">
+        <bk-table-column label="名称" prop="name" min-width="200">
             <template slot-scope="props">
                 <span class="name" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="showDetailDialog(props.row)">$[ props.row.name ]</span>
                 <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
@@ -100,12 +100,12 @@
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.image + ':' + props.row.tag ]</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="是否显示" width="80">
+        <bk-table-column label="是否显示" prop="is_hidden" width="100" :filters="isHiddenFilters" :filter-multiple="false" :filter-method="filterMethod">
             <template slot-scope="props">
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_hidden ? '否' : '是' ] </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="是否默认" width="80">
+        <bk-table-column label="是否默认" prop="is_default" width="100" :filters="isDefaultFilters" :filter-multiple="false" :filter-method="filterMethod">
             <template slot-scope="props">
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_default ? '✅' : '❌' ] </span>
             </template>
@@ -487,6 +487,26 @@
                         size: 'medium'
                     },
                     typeFilters: typeFilters,
+                    isHiddenFilters: [
+                        {
+                            text: '是',
+                            value: false,
+                        },
+                        {
+                            text: '否',
+                            value: true,
+                        }
+                    ],
+                    isDefaultFilters: [
+                        {
+                            text: '是',
+                            value: true,
+                        },
+                        {
+                            text: '否',
+                            value: false,
+                        },
+                    ],
                 }
             },
             methods: {
@@ -499,11 +519,16 @@
                         }
                         await this.$http.get(url).then(res => {
                             this.data = res;
+                        })
+                        if (this.curRegionActive === 'all') {
                             this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
                             for (let i = 0; i < regions.length; i++) {
-                                this.regionList.push({"key": regions[i], "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`});
+                                this.regionList.push({
+                                    "key": regions[i],
+                                    "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`
+                                });
                             }
-                        })
+                        }
                     } catch (e) {
                         if (e.response.status === 400) {
                             this.$bkMessage({
@@ -554,7 +579,7 @@
                     }
                     if (success) {
                         this.cancelDialog();
-                        await this.fetchSlugBuilderList();
+                        this.switchRegion("all");
                     }
                 },
                 handleCreate: function () {
@@ -609,11 +634,7 @@
                 deleteRow: async function (row) {
                     const url = this.fillUrlTemplate(URLRouter.detail, {row});
                     await this.$http.delete(url);
-
-                    const index = this.data.findIndex(item => item.id === row.id);
-                    if (index !== -1) {
-                        this.data.splice(index, 1);
-                    }
+                    this.switchRegion("all");
                 },
                 handleBind: async function (row) {
                     try {
@@ -759,8 +780,8 @@
                     return row[property] === value
                 }
             },
-            mounted: function () {
-                this.fetchSlugBuilderList();
+            mounted: async function () {
+                await this.fetchSlugBuilderList();
             },
         })
     })
@@ -926,6 +947,10 @@
         height: 5px;
         border-radius: 2px;
         background-color: #e6e9ea;
+    }
+
+    .bk-checkbox-text {
+        font-weight: normal;
     }
 
     .empty-text {

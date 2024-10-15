@@ -16,8 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from itertools import chain, product
-from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union, cast
+from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
 
 from django.core.files.base import ContentFile
 from django.utils.functional import Promise
@@ -25,7 +24,6 @@ from django.utils.translation import gettext as _
 from pydantic import BaseModel, Field
 
 from paasng.accessories.publish.market.constant import OpenMode
-from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.basic import AllowOmittedModel
@@ -37,7 +35,6 @@ from paasng.platform.declarative.constants import (
     OmittedType,
 )
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.modules.models import Module
 
 M = TypeVar("M")
 logger = logging.getLogger(__name__)
@@ -130,77 +127,3 @@ class ApplicationDesc(BaseModel):
             if plugin["type"] == plugin_type:
                 return plugin
         return None
-
-
-class ApplicationDescDiffDog:
-    """deprecated: TODO: 前端重构后未再使用 `diffs` 字段展示差异, 是否可以移除相关实现？"""
-
-    def __init__(self, application: Application, desc: ApplicationDesc):
-        self.application = application
-        self.desc = desc
-
-    def diff(self) -> Dict[str, ModuleDiffResult]:
-        diffs = {}
-        for module in self.application.modules.all():
-            try:
-                diffs[module.name] = self._diff_module(module)
-            except ValueError:
-                logger.warning("Module<%s> of the application<%s> is removed.", module.name, self.application.code)
-
-        # 生成未创建的模块的差异
-        for module_name, module_desc in self.desc.modules.items():
-            if module_name not in diffs:
-                diffs[module_name] = ModuleDiffResult(
-                    services=self._diff_services(
-                        current_services=set(), expected_services={item.name for item in module_desc.services}
-                    )
-                )
-        return diffs
-
-    def _diff_module(self, module: "Module") -> ModuleDiffResult:
-        """对比模块与模块定义之间的差异
-
-        :param module: 需要与 ModuleSpec 做对比的模块
-        :return: DescDiffResult
-        :raise ValueError: 如果提供的模块未在 ApplicationDesc 中定义, 那么将抛出 ValueError 异常.
-        """
-        if module.name not in self.desc.modules:
-            raise ValueError(f"Module<{module.name}> not found!")
-
-        current_services = {service.name for service in mixed_service_mgr.list_binded(module)}  # type: ignore
-        expected_services = {item.name for item in self.desc.modules[module.name].services}
-
-        return ModuleDiffResult(services=self._diff_services(current_services, expected_services))
-
-    def _diff_services(self, current_services: Set[str], expected_services: Set[str]) -> List[DiffItem]:
-        """根据支持的增强服务列表, 目前的增强服务列表, 期望的增强服务列表计算差异
-
-        :param current_services: 目前已绑定的增强服务名称集合
-        :param expected_services: 期望绑定的增强服务名称集合
-        :return:
-        """
-        supported_services = list(mixed_service_mgr.list_by_region(self.application.region))
-        supported_services = cast(List[ServiceObj], supported_services)
-        not_modified_services = sorted(current_services & expected_services)
-        added_services = sorted(expected_services - current_services)
-        deleted_services = sorted(current_services - expected_services)
-
-        def make_service_spec(service: str) -> ServiceSpec:
-            spec = ServiceSpec(name=service)
-            try:
-                spec.display_name = next(item.display_name for item in supported_services if item.name == spec.name)
-            except StopIteration:
-                spec.display_name = spec.name
-            return spec
-
-        return [
-            DiffItem(
-                resource=make_service_spec(service=service),
-                diff_type=diff_type,
-            )
-            for service, diff_type in chain(
-                product(deleted_services, [DiffType.DELETED]),
-                product(not_modified_services, [DiffType.NOT_MODIFIED]),
-                product(added_services, [DiffType.ADDED]),
-            )
-        ]

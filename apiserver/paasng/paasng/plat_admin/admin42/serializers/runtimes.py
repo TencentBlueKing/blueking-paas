@@ -187,13 +187,13 @@ class AppSlugRunnerCreateInputSLZ(serializers.ModelSerializer):
         exclude = ["modules", "id", "created", "updated", "environments"]
 
     def validate_name(self, name: str) -> str:
-        if AppSlugBuilder.objects.filter(name=name).exists():
+        if AppSlugRunner.objects.filter(name=name).exists():
             raise serializers.ValidationError("name already exists")
         return name
 
 
 class AppSlugRunnerUpdateInputSLZ(AppSlugRunnerCreateInputSLZ):
     def validate_name(self, name: str) -> str:
-        if AppSlugBuilder.objects.exclude(id=self.instance.id).filter(name=name).exists():
+        if AppSlugRunner.objects.exclude(id=self.instance.id).filter(name=name).exists():
             raise serializers.ValidationError("name already exists")
         return name

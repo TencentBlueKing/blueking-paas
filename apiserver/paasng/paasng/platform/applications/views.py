@@ -405,8 +405,9 @@ class ApplicationListViewSet(viewsets.ViewSet):
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
+        total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
 
-        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": len(app_codes)}
+        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
         serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
         return Response(serializer.data)

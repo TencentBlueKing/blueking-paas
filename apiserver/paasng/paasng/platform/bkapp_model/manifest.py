@@ -501,7 +501,7 @@ def get_bkapp_resource_for_deploy(
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
-    proc_svc_enabled = "true"
+    proc_svc_enabled = "false"
     if deployment and (desc_obj := DeploymentDescription.objects.filter(deployment=deployment).first()):
         proc_svc_enabled = desc_obj.runtime.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true")
     model_res.set_proc_services_annotation(proc_svc_enabled)

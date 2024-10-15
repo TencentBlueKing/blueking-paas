@@ -333,8 +333,8 @@ content_patch_conf = {
     # 为 Helm Charts 中的 CRD 统一添加删除保护注解
     "bkapp-crd.yaml": [
         (
-            "controller-gen.kubebuilder.io/version: v0.9.0",
-            "controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep",
+            "controller-gen.kubebuilder.io/version: v0.14.0",
+            "controller-gen.kubebuilder.io/version: v0.14.0\n    helm.sh/resource-policy: keep",
         ),
         (
             wrap_multiline_str(
@@ -372,14 +372,14 @@ content_patch_conf = {
     ],
     "domaingroupmapping-crd.yaml": [
         (
-            "controller-gen.kubebuilder.io/version: v0.9.0",
-            "controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep",
+            "controller-gen.kubebuilder.io/version: v0.14.0",
+            "controller-gen.kubebuilder.io/version: v0.14.0\n    helm.sh/resource-policy: keep",
         )
     ],
     "projectconfig-crd.yaml": [
         (
-            "controller-gen.kubebuilder.io/version: v0.9.0",
-            "controller-gen.kubebuilder.io/version: v0.9.0\n    helm.sh/resource-policy: keep",
+            "controller-gen.kubebuilder.io/version: v0.14.0",
+            "controller-gen.kubebuilder.io/version: v0.14.0\n    helm.sh/resource-policy: keep",
         )
     ],
 }

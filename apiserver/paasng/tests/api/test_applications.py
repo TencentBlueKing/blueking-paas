@@ -696,6 +696,13 @@ class TestListEvaluation:
         )
         return report
 
+    @pytest.fixture()
+    def inactive_app(self, bk_user) -> Application:
+        app = create_app(owner_username=bk_user.username)
+        app.is_active = False
+        app.save()
+        return app
+
     def test_list_evaluation(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
         """
         测试应用评估详情列表
@@ -735,13 +742,15 @@ class TestListEvaluation:
 
         assert app_data == expected_app_data
 
-    def test_issue_count(self, api_client, latest_collection_task, app_operation_report1, app_operation_report2):
+    def test_issue_count(
+        self, api_client, latest_collection_task, app_operation_report1, app_operation_report2, inactive_app
+    ):
         """
         测试获取应用评估结果数量
         """
         response = api_client.get(reverse("api.applications.lists.evaluation.issue_count"))
 
-        assert response.data["total"] == 2
+        assert response.data["total"] == 3
         assert len(response.data["issue_type_counts"]) == 2
 
         for issue in response.data["issue_type_counts"]:

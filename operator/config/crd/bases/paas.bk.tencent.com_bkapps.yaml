@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: bkapps.paas.bk.tencent.com
 spec:
   group: paas.bk.tencent.com
@@ -31,14 +30,19 @@ spec:
         description: BkApp is the Schema for the bkapps API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -76,9 +80,10 @@ spec:
                   type: object
                 type: array
               build:
-                description: 'BuildConfig is the configuration related with application
-                  building, the platform support 3 types of build config currently:
-                  image, remote build by Dockerfile and remote build by buildpack.'
+                description: |-
+                  BuildConfig is the configuration related with application building, the platform
+                  support 3 types of build config currently: image, remote build by Dockerfile and
+                  remote build by buildpack.
                 properties:
                   args:
                     additionalProperties:
@@ -87,21 +92,25 @@ spec:
                       used to build image by Dockerfile
                     type: object
                   buildTarget:
-                    description: BuildTarget, when multiple stages are defined in
-                      Dockerfile, this field is used to specify the target stage.
+                    description: |-
+                      BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+                      to specify the target stage.
                     type: string
                   dockerfile:
-                    description: '*2. Remote build by Dockerfile* Dockerfile is the
-                      name of target Dockerfile, it will be used to build.'
+                    description: |-
+                      *2. Remote build by Dockerfile*
+                      Dockerfile is the name of target Dockerfile, it will be used to build.
                     type: string
                   image:
-                    description: '*1. Build by image* Image is the container image
-                      name of current application, tag and container registry address
-                      can be included.'
+                    description: |-
+                      *1. Build by image*
+                      Image is the container image name of current application, tag and container
+                      registry address can be included.
                     type: string
                   imageCredentialsName:
-                    description: ImageCredentialsName is the name of image credentials,
-                      required for pulling images stores in private registry.
+                    description: |-
+                      ImageCredentialsName is the name of image credentials, required for pulling
+                      images stores in private registry.
                     type: string
                   imagePullPolicy:
                     description: ImagePullPolicy is the image pull policy of given
@@ -131,8 +140,9 @@ spec:
                     type: array
                 type: object
               envOverlay:
-                description: EnvOverlay holds environment specified configurations,
-                  includes replica count and environment variables.
+                description: |-
+                  EnvOverlay holds environment specified configurations, includes replica
+                  count and environment variables.
                 properties:
                   autoscaling:
                     description: Autoscaling overwrite process's autoscaling config
@@ -144,18 +154,17 @@ spec:
                           description: EnvName is app environment name
                           type: string
                         maxReplicas:
-                          description: maxReplicas is the upper limit for the number
-                            of replicas to which the autoscaler can scale up. It cannot
-                            be less that minReplicas.
+                          description: |-
+                            maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+                            It cannot be less that minReplicas.
                           format: int32
                           type: integer
                         minReplicas:
-                          description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It
-                            defaults to 1 pod. minReplicas is allowed to be 0 if the
-                            alpha feature gate GPAScaleToZero is enabled and at least
-                            one Object or External metric is configured. Scaling is
-                            active as long as at least one metric value is available
+                          description: |-
+                            minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+                            It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+                            is enabled and at least one Object or External metric is configured. Scaling is active as long as
+                            at least one metric value is available
                           format: int32
                           type: integer
                         policy:
@@ -260,9 +269,9 @@ spec:
                     type: object
                 type: object
               observability:
-                description: Observability holds observability configurations, includes
-                  metrics config. However, it is primarily informational here, the
-                  real control logic is in paas "apiserver".
+                description: |-
+                  Observability holds observability configurations, includes metrics config.
+                  However, it is primarily informational here, the real control logic is in paas "apiserver".
                 properties:
                   monitoring:
                     description: Monitoring is monitor config
@@ -309,18 +318,17 @@ spec:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
                         maxReplicas:
-                          description: maxReplicas is the upper limit for the number
-                            of replicas to which the autoscaler can scale up. It cannot
-                            be less that minReplicas.
+                          description: |-
+                            maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+                            It cannot be less that minReplicas.
                           format: int32
                           type: integer
                         minReplicas:
-                          description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It
-                            defaults to 1 pod. minReplicas is allowed to be 0 if the
-                            alpha feature gate GPAScaleToZero is enabled and at least
-                            one Object or External metric is configured. Scaling is
-                            active as long as at least one metric value is available
+                          description: |-
+                            minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+                            It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+                            is enabled and at least one Object or External metric is configured. Scaling is active as long as
+                            at least one metric value is available
                           format: int32
                           type: integer
                         policy:
@@ -364,29 +372,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -394,10 +399,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -406,9 +413,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -435,33 +442,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -476,35 +485,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -516,29 +523,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -546,10 +550,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -558,9 +564,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -587,33 +593,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -628,35 +636,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -668,29 +674,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -698,10 +701,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -710,9 +715,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -739,33 +744,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -780,35 +787,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -818,8 +823,9 @@ spec:
                       format: int32
                       type: integer
                     resQuotaPlan:
-                      description: ResQuotaPlan is the name of plan which defines
-                        how much resources current process can consume.
+                      description: |-
+                        ResQuotaPlan is the name of plan which defines how much resources current process
+                        can consume.
                       type: string
                     services:
                       description: Services is a list of ProcService which used to
@@ -829,14 +835,15 @@ spec:
                           expose network
                         properties:
                           exposedType:
-                            description: "The exposed type of the service. If not
-                              specified(or specified as null), the service can only
-                              be accessed within the cluster, not from outside. however,
-                              it is primarily informational here, the real control
-                              logic is in paas \"apiserver\". TODO implement control
-                              logic in operator? \n ExposedType can be one of the
-                              following: - {Name: ExposedTypeNameBkHttp} exposed by
-                              DomainGroupMapping"
+                            description: |-
+                              The exposed type of the service. If not specified(or specified as null), the service can only be accessed
+                              within the cluster, not from outside. however, it is primarily informational here,
+                              the real control logic is in paas "apiserver".
+                              TODO implement control logic in operator?
+
+
+                              ExposedType can be one of the following:
+                              - {Name: ExposedTypeNameBkHttp} exposed by DomainGroupMapping
                             properties:
                               name:
                                 description: The name of the exposed type.
@@ -848,9 +855,9 @@ spec:
                             description: The name of the service.
                             type: string
                           port:
-                            description: The port that will be exposed by this service.
-                              If this is not specified, the value of the 'targetPort'
-                              field is used.
+                            description: |-
+                              The port that will be exposed by this service. If this is not specified, the value of
+                              the 'targetPort' field is used.
                             format: int32
                             type: integer
                           protocol:
@@ -925,9 +932,9 @@ spec:
                   type: object
                 type: array
               addresses:
-                description: Addresses holds all addressable locations of current
-                  BkApp, user may visit app via these locations, includes all domain
-                  source types.
+                description: |-
+                  Addresses holds all addressable locations of current BkApp, user may visit
+                  app via these locations, includes all domain source types.
                 items:
                   description: Addressable includes URL and other related properties
                   properties:
@@ -947,43 +954,49 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  description: |-
+                    Condition contains details for one aspect of the current state of this API Resource.
+                    ---
+                    This struct is intended for direct use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{
+                        // Represents the observations of a foo's current state.
+                        // Known .status.conditions.type are: "Available", "Progressing", and "Degraded"
+                        // +patchMergeKey=type
+                        // +patchStrategy=merge
+                        // +listType=map
+                        // +listMapKey=type
+                        Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+
+                        // other fields
+                    }
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -997,11 +1010,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -1056,9 +1070,9 @@ spec:
                 format: date-time
                 type: string
               observedGeneration:
-                description: observedGeneration is the most recent generation observed
-                  for this BkApp. It corresponds to the .metadata.generation, which
-                  is updated on mutation by the API Server.
+                description: |-
+                  observedGeneration is the most recent generation observed for this BkApp. It corresponds to the
+                  .metadata.generation, which is updated on mutation by the API Server.
                 format: int64
                 type: integer
               phase:
@@ -1099,14 +1113,19 @@ spec:
         description: BkApp is the Schema for the bkapps API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -1144,9 +1163,10 @@ spec:
                   type: object
                 type: array
               build:
-                description: 'BuildConfig is the configuration related with application
-                  building, the platform support 3 types of build config currently:
-                  image, remote build by Dockerfile and remote build by buildpack.'
+                description: |-
+                  BuildConfig is the configuration related with application building, the platform
+                  support 3 types of build config currently: image, remote build by Dockerfile and
+                  remote build by buildpack.
                 properties:
                   args:
                     additionalProperties:
@@ -1155,21 +1175,25 @@ spec:
                       used to build image by Dockerfile
                     type: object
                   buildTarget:
-                    description: BuildTarget, when multiple stages are defined in
-                      Dockerfile, this field is used to specify the target stage.
+                    description: |-
+                      BuildTarget, when multiple stages are defined in Dockerfile, this field is used
+                      to specify the target stage.
                     type: string
                   dockerfile:
-                    description: '*2. Remote build by Dockerfile* Dockerfile is the
-                      name of target Dockerfile, it will be used to build.'
+                    description: |-
+                      *2. Remote build by Dockerfile*
+                      Dockerfile is the name of target Dockerfile, it will be used to build.
                     type: string
                   image:
-                    description: '*1. Build by image* Image is the container image
-                      name of current application, tag and container registry address
-                      can be included.'
+                    description: |-
+                      *1. Build by image*
+                      Image is the container image name of current application, tag and container
+                      registry address can be included.
                     type: string
                   imageCredentialsName:
-                    description: ImageCredentialsName is the name of image credentials,
-                      required for pulling images stores in private registry.
+                    description: |-
+                      ImageCredentialsName is the name of image credentials, required for pulling
+                      images stores in private registry.
                     type: string
                   imagePullPolicy:
                     description: ImagePullPolicy is the image pull policy of given
@@ -1202,13 +1226,14 @@ spec:
                 description: Domain name resolution config
                 properties:
                   hostAliases:
-                    description: 'HostAliases is an optional list of hosts and IPs
-                      that will be injected into the pod''s hosts file if specified.
-                      This is only valid for non-hostNetwork pods. NOTE: Copied from
-                      Kubernetes PodSpec API.'
+                    description: |-
+                      HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
+                      file if specified. This is only valid for non-hostNetwork pods.
+                      NOTE: Copied from Kubernetes PodSpec API.
                     items:
-                      description: HostAlias holds the mapping between IP and hostnames
-                        that will be injected as an entry in the pod's hosts file.
+                      description: |-
+                        HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+                        pod's hosts file.
                       properties:
                         hostnames:
                           description: Hostnames for the above IP address.
@@ -1228,8 +1253,9 @@ spec:
                     type: array
                 type: object
               envOverlay:
-                description: EnvOverlay holds environment specified configurations,
-                  includes replica count and environment variables.
+                description: |-
+                  EnvOverlay holds environment specified configurations, includes replica
+                  count and environment variables.
                 properties:
                   autoscaling:
                     description: Autoscaling overwrite process's autoscaling config
@@ -1241,18 +1267,17 @@ spec:
                           description: EnvName is app environment name
                           type: string
                         maxReplicas:
-                          description: maxReplicas is the upper limit for the number
-                            of replicas to which the autoscaler can scale up. It cannot
-                            be less that minReplicas.
+                          description: |-
+                            maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+                            It cannot be less that minReplicas.
                           format: int32
                           type: integer
                         minReplicas:
-                          description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It
-                            defaults to 1 pod. minReplicas is allowed to be 0 if the
-                            alpha feature gate GPAScaleToZero is enabled and at least
-                            one Object or External metric is configured. Scaling is
-                            active as long as at least one metric value is available
+                          description: |-
+                            minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+                            It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+                            is enabled and at least one Object or External metric is configured. Scaling is active as long as
+                            at least one metric value is available
                           format: int32
                           type: integer
                         policy:
@@ -1312,8 +1337,9 @@ spec:
                           description: Source of the mount
                           properties:
                             configMap:
-                              description: ConfigMapSource represents a configMap
-                                that should populate this volume
+                              description: |-
+                                ConfigMapSource represents a configMap that should
+                                populate this volume
                               properties:
                                 name:
                                   type: string
@@ -1415,8 +1441,9 @@ spec:
                       description: Source of the mount
                       properties:
                         configMap:
-                          description: ConfigMapSource represents a configMap that
-                            should populate this volume
+                          description: |-
+                            ConfigMapSource represents a configMap that should
+                            populate this volume
                           properties:
                             name:
                               type: string
@@ -1440,9 +1467,9 @@ spec:
                   type: object
                 type: array
               observability:
-                description: Observability holds observability configurations, includes
-                  metrics config. However, it is primarily informational here, the
-                  real control logic is in paas "apiserver".
+                description: |-
+                  Observability holds observability configurations, includes metrics config.
+                  However, it is primarily informational here, the real control logic is in paas "apiserver".
                 properties:
                   monitoring:
                     description: Monitoring is monitor config
@@ -1489,18 +1516,17 @@ spec:
                       description: Autoscaling specifies the autoscaling configuration
                       properties:
                         maxReplicas:
-                          description: maxReplicas is the upper limit for the number
-                            of replicas to which the autoscaler can scale up. It cannot
-                            be less that minReplicas.
+                          description: |-
+                            maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+                            It cannot be less that minReplicas.
                           format: int32
                           type: integer
                         minReplicas:
-                          description: minReplicas is the lower limit for the number
-                            of replicas to which the autoscaler can scale down. It
-                            defaults to 1 pod. minReplicas is allowed to be 0 if the
-                            alpha feature gate GPAScaleToZero is enabled and at least
-                            one Object or External metric is configured. Scaling is
-                            active as long as at least one metric value is available
+                          description: |-
+                            minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+                            It defaults to 1 pod. minReplicas is allowed to be 0 if the alpha feature gate GPAScaleToZero
+                            is enabled and at least one Object or External metric is configured. Scaling is active as long as
+                            at least one metric value is available
                           format: int32
                           type: integer
                         policy:
@@ -1532,29 +1558,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -1562,10 +1585,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -1574,9 +1599,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -1603,33 +1628,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -1644,35 +1671,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -1684,29 +1709,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -1714,10 +1736,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -1726,9 +1750,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -1755,33 +1779,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -1796,35 +1822,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -1836,29 +1860,26 @@ spec:
                               description: Exec specifies the action to take.
                               properties:
                                 command:
-                                  description: Command is the command line to execute
-                                    inside the container, the working directory for
-                                    the command  is root ('/') in the container's
-                                    filesystem. The command is simply exec'd, it is
-                                    not run inside a shell, so traditional shell instructions
-                                    ('|', etc) won't work. To use a shell, you need
-                                    to explicitly call out to that shell. Exit status
-                                    of 0 is treated as live/healthy and non-zero is
-                                    unhealthy.
+                                  description: |-
+                                    Command is the command line to execute inside the container, the working directory for the
+                                    command  is root ('/') in the container's filesystem. The command is simply exec'd, it is
+                                    not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use
+                                    a shell, you need to explicitly call out to that shell.
+                                    Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
                                   items:
                                     type: string
                                   type: array
                               type: object
                             failureThreshold:
-                              description: Minimum consecutive failures for the probe
-                                to be considered failed after having succeeded. Defaults
-                                to 3. Minimum value is 1.
+                              description: |-
+                                Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                                Defaults to 3. Minimum value is 1.
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port. This is a beta field and requires enabling GRPCContainerProbe
-                                feature gate.
+                              description: |-
+                                GRPC specifies an action involving a GRPC port.
+                                This is a beta field and requires enabling GRPCContainerProbe feature gate.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -1866,10 +1887,12 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
-                                  description: "Service is the name of the service
-                                    to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-                                    \n If this is not specified, the default behavior
-                                    is defined by gRPC."
+                                  description: |-
+                                    Service is the name of the service to place in the gRPC HealthCheckRequest
+                                    (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+
+                                    If this is not specified, the default behavior is defined by gRPC.
                                   type: string
                               required:
                               - port
@@ -1878,9 +1901,9 @@ spec:
                               description: HTTPGet specifies the http request to perform.
                               properties:
                                 host:
-                                  description: Host name to connect to, defaults to
-                                    the pod IP. You probably want to set "Host" in
-                                    httpHeaders instead.
+                                  description: |-
+                                    Host name to connect to, defaults to the pod IP. You probably want to set
+                                    "Host" in httpHeaders instead.
                                   type: string
                                 httpHeaders:
                                   description: Custom headers to set in the request.
@@ -1907,33 +1930,35 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Name or number of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Name or number of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                                 scheme:
-                                  description: Scheme to use for connecting to the
-                                    host. Defaults to HTTP.
+                                  description: |-
+                                    Scheme to use for connecting to the host.
+                                    Defaults to HTTP.
                                   type: string
                               required:
                               - port
                               type: object
                             initialDelaySeconds:
-                              description: 'Number of seconds after the container
-                                has started before liveness probes are initiated.
-                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after the container has started before liveness probes are initiated.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                             periodSeconds:
-                              description: How often (in seconds) to perform the probe.
+                              description: |-
+                                How often (in seconds) to perform the probe.
                                 Default to 10 seconds. Minimum value is 1.
                               format: int32
                               type: integer
                             successThreshold:
-                              description: Minimum consecutive successes for the probe
-                                to be considered successful after having failed. Defaults
-                                to 1. Must be 1 for liveness and startup. Minimum
-                                value is 1.
+                              description: |-
+                                Minimum consecutive successes for the probe to be considered successful after having failed.
+                                Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
                               format: int32
                               type: integer
                             tcpSocket:
@@ -1948,35 +1973,33 @@ spec:
                                   anyOf:
                                   - type: integer
                                   - type: string
-                                  description: Number or name of the port to access
-                                    on the container. Number must be in the range
-                                    1 to 65535. Name must be an IANA_SVC_NAME.
+                                  description: |-
+                                    Number or name of the port to access on the container.
+                                    Number must be in the range 1 to 65535.
+                                    Name must be an IANA_SVC_NAME.
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
                               type: object
                             terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
+                              description: |-
+                                Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                                The grace period is the duration in seconds after the processes running in the pod are sent
+                                a termination signal and the time when the processes are forcibly halted with a kill signal.
+                                Set this value longer than the expected cleanup time for your process.
+                                If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                                value overrides the value provided by the pod spec.
+                                Value must be non-negative integer. The value zero indicates stop immediately via
+                                the kill signal (no opportunity to shut down).
+                                This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                                Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
                               format: int64
                               type: integer
                             timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              description: |-
+                                Number of seconds after which the probe times out.
+                                Defaults to 1 second. Minimum value is 1.
+                                More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                               format: int32
                               type: integer
                           type: object
@@ -1986,8 +2009,9 @@ spec:
                       format: int32
                       type: integer
                     resQuotaPlan:
-                      description: ResQuotaPlan is the name of plan which defines
-                        how much resources current process can consume.
+                      description: |-
+                        ResQuotaPlan is the name of plan which defines how much resources current process
+                        can consume.
                       type: string
                     services:
                       description: Services is a list of ProcService which used to
@@ -1997,14 +2021,15 @@ spec:
                           expose network
                         properties:
                           exposedType:
-                            description: "The exposed type of the service. If not
-                              specified(or specified as null), the service can only
-                              be accessed within the cluster, not from outside. however,
-                              it is primarily informational here, the real control
-                              logic is in paas \"apiserver\". TODO implement control
-                              logic in operator? \n ExposedType can be one of the
-                              following: - {Name: ExposedTypeNameBkHttp} exposed by
-                              DomainGroupMapping"
+                            description: |-
+                              The exposed type of the service. If not specified(or specified as null), the service can only be accessed
+                              within the cluster, not from outside. however, it is primarily informational here,
+                              the real control logic is in paas "apiserver".
+                              TODO implement control logic in operator?
+
+
+                              ExposedType can be one of the following:
+                              - {Name: ExposedTypeNameBkHttp} exposed by DomainGroupMapping
                             properties:
                               name:
                                 description: The name of the exposed type.
@@ -2016,9 +2041,9 @@ spec:
                             description: The name of the service.
                             type: string
                           port:
-                            description: The port that will be exposed by this service.
-                              If this is not specified, the value of the 'targetPort'
-                              field is used.
+                            description: |-
+                              The port that will be exposed by this service. If this is not specified, the value of
+                              the 'targetPort' field is used.
                             format: int32
                             type: integer
                           protocol:
@@ -2114,9 +2139,9 @@ spec:
                   type: object
                 type: array
               addresses:
-                description: Addresses holds all addressable locations of current
-                  BkApp, user may visit app via these locations, includes all domain
-                  source types.
+                description: |-
+                  Addresses holds all addressable locations of current BkApp, user may visit
+                  app via these locations, includes all domain source types.
                 items:
                   description: Addressable includes URL and other related properties
                   properties:
@@ -2136,43 +2161,49 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  description: |-
+                    Condition contains details for one aspect of the current state of this API Resource.
+                    ---
+                    This struct is intended for direct use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{
+                        // Represents the observations of a foo's current state.
+                        // Known .status.conditions.type are: "Available", "Progressing", and "Degraded"
+                        // +patchMergeKey=type
+                        // +patchStrategy=merge
+                        // +listType=map
+                        // +listMapKey=type
+                        Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+
+                        // other fields
+                    }
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -2186,11 +2217,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -2245,9 +2277,9 @@ spec:
                 format: date-time
                 type: string
               observedGeneration:
-                description: observedGeneration is the most recent generation observed
-                  for this BkApp. It corresponds to the .metadata.generation, which
-                  is updated on mutation by the API Server.
+                description: |-
+                  observedGeneration is the most recent generation observed for this BkApp. It corresponds to the
+                  .metadata.generation, which is updated on mutation by the API Server.
                 format: int64
                 type: integer
               phase:
@@ -2255,10 +2287,11 @@ spec:
                   of where the BkApp is in its lifecycle.
                 type: string
               revision:
-                description: 'Deprecated: The Revision field was designed to save
-                  the revision of the BkApp resource, controls how the reconcile works.
-                  But it doesn''t have any effects now because we switched to using
-                  "DeployID" field. Revision of the BkApp configuration it generates'
+                description: |-
+                  Deprecated: The Revision field was designed to save the revision of the BkApp resource,
+                  controls how the reconcile works. But it doesn't have any effects now because we switched
+                  to using "DeployID" field.
+                  Revision of the BkApp configuration it generates
                 properties:
                   revision:
                     description: BkApp's version

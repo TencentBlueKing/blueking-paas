@@ -31,11 +31,11 @@ export default {
 .ps-sample-footer {
   text-align: center;
   width: 100%;
-  // margin: 25px auto;
   margin: 0 auto;
   color: #63656e;
   font-size: 12px;
   padding: 15px 0;
+  background: #fff;
   .info {
     margin-bottom: 6px;
   }

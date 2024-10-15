@@ -509,7 +509,8 @@
   </div>
 </template>
 
-<script>import auth from '@/auth';
+<script>
+import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';
@@ -718,6 +719,9 @@ export default {
   },
   created() {
     this.getAppCategory(false);
+    if (this.$route.query.filter) {
+      this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' });
+    }
     if (this.$route.query.include_inactive) {
       this.appFilter.includeInactive = true;
     }

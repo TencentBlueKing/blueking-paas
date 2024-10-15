@@ -16,6 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+import i18n from '@/language/i18n';
+
 /**
  * 函数柯里化
  *
@@ -523,20 +525,20 @@ export function formatTime(time) {
   const minC = diffValue / minute;
   const yearC = diffValue / year;
   if (yearC >= 1) {
-    return `${parseInt(yearC)}${this.$t('年前')}`;
+    return `${parseInt(yearC)}${i18n.t('年前')}`;
   }
   if (monthC >= 1) {
-    result = `${parseInt(monthC)}${this.$t('月前')}`;
+    result = `${parseInt(monthC)}${i18n.t('月前')}`;
   } else if (weekC >= 1) {
-    result = `${parseInt(weekC)}${this.$t('周前')}`;
+    result = `${parseInt(weekC)}${i18n.t('周前')}`;
   } else if (dayC >= 1) {
-    result = `${parseInt(dayC)}${this.$t('天前')}`;
+    result = `${parseInt(dayC)}${i18n.t('天前')}`;
   } else if (hourC >= 1) {
-    result = `${parseInt(hourC)}${this.$t('小时前')}`;
+    result = `${parseInt(hourC)}${i18n.t('小时前')}`;
   } else if (minC >= 1) {
-    result = `${parseInt(minC)}${this.$t('分钟前')}`;
+    result = `${parseInt(minC)}${i18n.t('分钟前')}`;
   } else {
-    result = this.$t('刚刚');
+    result = i18n.t('刚刚');
   }
   return result;
 }

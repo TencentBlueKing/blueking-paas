@@ -28,15 +28,34 @@ import { json2Query } from '@/common/tools';
 const state = {
   stagGatewayInfos: null,
   prodGatewayInfos: null,
+  // 告警情况图表数据
+  alarmChartData: {
+    count: 0,
+    slowQueryCount: 0,
+  },
+  // 应用情况图表数据
+  appChartData: {
+    idleAppCount: 0,
+    updateTime: '',
+    allCount: 0,
+  },
 };
 
 // getters
-const getters = {
-
-};
+const getters = {};
 
 // mutations
-const mutations = {};
+const mutations = {
+  updateAppChartData(state, data) {
+    state.appChartData = {
+      ...state.appChartData,
+      ...data,
+    };
+  },
+  updateAlarmChartData(state, data) {
+    state.alarmChartData = data;
+  },
+};
 
 // actions
 const actions = {
@@ -137,6 +156,22 @@ const actions = {
    */
   getAppDashboardInfo({}, { appCode }) {
     const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/dashboard_info/`;
+    return http.get(url, {});
+  },
+
+  /**
+   * 获取总应用数及issue_type应用数
+   */
+  getAppsInfoCount() {
+    const url = `${BACKEND_URL}/api/bkapps/applications/lists/evaluation/issue_count/`;
+    return http.get(url, {});
+  },
+
+  /**
+   * 获取最近操作记录
+   */
+  getRecentOperationRecords({}, { params }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/lists/latest/?${json2Query(params)}`;
     return http.get(url, {});
   },
 };

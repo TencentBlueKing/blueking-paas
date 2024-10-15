@@ -385,6 +385,7 @@ export default {
       if (user.avatarUrl) {
         this.avatars = user.avatarUrl;
       }
+      this.$store.commit('updataUserInfo', user);
     });
   },
   methods: {

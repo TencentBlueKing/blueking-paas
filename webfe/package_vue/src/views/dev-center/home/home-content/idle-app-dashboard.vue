@@ -1,10 +1,10 @@
 <template>
   <div class="idle-app-dashboard" v-if="idleAppList.length">
     <!-- 闲置看板功能 -->
-    <div class="title-wrapper">
+    <!-- <div class="title-wrapper">
       <h3 class="title">{{ $t('闲置应用') }}</h3>
       <span class="update-time">{{ $t('更新于 {t}之前', { t: relativeTime }) }}</span>
-    </div>
+    </div> -->
     <bk-alert
       type="warning"
       :title="$t('近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。')">
@@ -208,10 +208,11 @@
 </template>
 
 <script>
-import TagBox from './comps/tag-box';
+import TagBox from '../comps/tag-box';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { bus } from '@/common/bus';
 
 export default {
   name: 'IdleAppDashboard',
@@ -223,7 +224,7 @@ export default {
       idleAppList: [],
       expandRowKeys: [],
       relativeTime: '',
-      isTableLoading: false,
+      isTableLoading: true,
       visibleTags: [],
       hiddenCount: 0,
       curOperationAppData: {},
@@ -260,6 +261,15 @@ export default {
           this.expandRowKeys.push(this.idleAppList[0].code);
         }
         this.relativeTime = dayjs(res.collected_at).fromNow(true);
+        this.$emit('async-list-length', {
+          name: 'idle',
+          length: this.idleAppList.length,
+        });
+        // 闲置应用数
+        this.$store.commit('baseInfo/updateAppChartData', {
+          idleAppCount: this.idleAppList.length,
+          updateTime: this.relativeTime,
+        });
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -267,6 +277,7 @@ export default {
         });
       } finally {
         this.isTableLoading = false;
+        bus.$emit('on-close-loading');
       }
     },
     // 行key

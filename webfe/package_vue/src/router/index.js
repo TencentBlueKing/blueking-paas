@@ -381,6 +381,7 @@ const router = new Router({
       component: frontPage,
       meta: {
         isFooterShown: true,
+        isDefaultBackgroundColor: true,
       },
     },
     {
@@ -389,6 +390,7 @@ const router = new Router({
       component: frontPage,
       meta: {
         isFooterShown: true,
+        isDefaultBackgroundColor: true,
       },
     },
     {

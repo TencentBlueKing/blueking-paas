@@ -336,7 +336,6 @@ export const APP_OPERATION = {
   offline: '下架',
 };
 
-
 /**
  * 操作记录-状态
  */
@@ -345,4 +344,17 @@ export const APP_RESULT_CODE = {
   1: '执行中',
   '-1': '失败',
   '-2': '中断',
+};
+
+/**
+ * 应用详情-应用状态
+ */
+export const APP_DATAILS_STATUS = {
+  none: '健康',
+  ownerless: '无主',
+  idle: '闲置',
+  unvisited: '无用户访问',
+  maintainless: '缺少维护',
+  undeploy: '未部署',
+  misconfigured: '配置不当',
 };

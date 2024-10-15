@@ -367,7 +367,7 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
             "name": process.main_container_name,
             "command": process.runtime.command,
             "args": process.runtime.args,
-            "imagePullPolicy": process.runtime.image_pull_policy,
+            "imagePullPolicy": process.runtime.image_pull_policy.value,
             "resources": {
                 "limits": process.resources.limits if process.resources else {},
                 "requests": process.resources.requests if process.resources else {},

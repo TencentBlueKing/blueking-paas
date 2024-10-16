@@ -31,13 +31,14 @@
     <div class="app-overview-container">
       <!-- 告警情况 -->
       <div
-        class="alarm-status card-style"
+        class="alarm-status card-style chart-box"
         v-if="platformFeature.MONITORING"
       >
         <div class="card-title chart-title">
           {{ $t('告警情况') }}
         </div>
         <chart
+          style="width: 450px; height: 200px"
           id="alarm-status"
           class="chart-el"
         ></chart>
@@ -45,7 +46,7 @@
           class="default-text"
           v-if="isAlarmLabel"
         >
-          <p class="vlaue">{{ alarmDefaultLabel.value }}</p>
+          <p :class="['vlaue', { 'high': alarmDefaultLabel.colorType === 'high' }]">{{ alarmDefaultLabel.value }}</p>
           <p class="name">{{ alarmDefaultLabel.name }}</p>
         </div>
         <!-- <div
@@ -54,11 +55,12 @@
         ></div> -->
       </div>
       <!-- 应用情况 -->
-      <div class="app-status card-style">
+      <div class="app-status card-style chart-box">
         <div class="card-title chart-title">
           {{ $t('应用情况') }}
         </div>
         <chart
+          style="width: 450px; height: 200px"
           id="chart-app-status"
           class="chart-el"
         ></chart>
@@ -66,7 +68,7 @@
           class="default-text"
           v-if="isAppLabel"
         >
-          <p class="vlaue">{{ appDefaultLabel.value }}</p>
+          <p :class="['vlaue', { 'high': appDefaultLabel.colorType === 'high' }]">{{ appDefaultLabel.value }}</p>
           <p class="name">{{ appDefaultLabel.name }}</p>
         </div>
       </div>
@@ -127,8 +129,18 @@ export default {
     },
     homeAlarmData() {
       return [
-        { value: this.alarmChartData.slowQueryCount, name: this.$t('慢查询告警数'), type: 'alarm' },
-        { value: this.alarmChartData.count, name: this.$t('总告警数'), type: 'alarm' },
+        {
+          value: this.alarmChartData.slowQueryCount,
+          name: this.$t('慢查询告警数'),
+          type: 'alarm',
+          colorType: 'high',
+        },
+        {
+          value: this.alarmChartData.count,
+          name: this.$t('总告警数'),
+          type: 'alarm',
+          colorType: 'low',
+        },
       ];
     },
     // 告警情况图表配置
@@ -137,9 +149,18 @@ export default {
     },
     appChartData() {
       return [
-        { value: this.appChartInfo.idleAppCount, name: this.$t('闲置应用数'), type: 'app' },
-        // { value: this.chartAppInfo.issueCount, name: this.$t('配置不当应用数') },
-        { value: this.chartAppInfo.total, name: this.$t('总应用数'), type: 'app' },
+        {
+          value: this.appChartInfo.idleAppCount,
+          name: this.$t('闲置应用数'),
+          type: 'app',
+          colorType: 'high',
+        },
+        {
+          value: this.chartAppInfo.total,
+          name: this.$t('总应用数'),
+          type: 'app',
+          colorType: 'low',
+        },
       ];
     },
     // 应用情况图表配置
@@ -153,7 +174,7 @@ export default {
       return this.appChartData.find((v) => v.value > 0) ?? this.appChartData[0];
     },
     alarmDefaultLabel() {
-      return this.homeAlarmData.find((v) => v.value > 0) ?? this.homeAlarmData[0];
+      return this.homeAlarmData.find((v) => v.value > 0) ?? this.homeAlarmData[1];
     },
   },
   watch: {
@@ -171,8 +192,6 @@ export default {
   mounted() {
     this.setChartFn('alarm');
     this.setChartFn('app');
-    // 防抖
-    window.addEventListener('resize', this.chartResize, false);
   },
   methods: {
     setChartFn(type) {
@@ -235,10 +254,6 @@ export default {
       this.curSelectionTime = this.getSpecifiedDate(day);
       bus.$emit('home-date', this.curSelectionTime);
     },
-    chartResize() {
-      this.alarmChart?.resize();
-      this.appChart?.resize();
-    },
     // 设置图表
     chartSet({ id, option, key, fn }) {
       this.$nextTick(() => {
@@ -300,6 +315,10 @@ export default {
       margin-right: 0;
     }
   }
+  .chart-box {
+    display: flex;
+    justify-content: center;
+  }
   .alarm-status,
   .app-status {
     position: relative;
@@ -319,7 +338,7 @@ export default {
       transition: all 0.3s;
       position: absolute;
       flex-direction: column;
-      left: calc(40% - 50px);
+      left: calc(50% - 95px);
       top: calc(50% - 50px);
       height: 100px;
       width: 100px;
@@ -333,6 +352,9 @@ export default {
         font-weight: bold;
         color: #313238;
         line-height: 40px;
+        &.high {
+          color: #EA3636;
+        }
       }
       .name {
         color: #696b73;

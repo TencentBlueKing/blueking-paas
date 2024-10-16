@@ -22,11 +22,8 @@
 
 export default function (data, color) {
   // 判断是否为空
-  const allZero = data.every(d => d.value === 0);
-  const legendIcons = [
-    'image:///static/images/circle-home1.svg',
-    'image:///static/images/circle-home2.svg',
-  ];
+  const allZero = data.every((d) => d.value === 0);
+  const legendIcons = ['image:///static/images/circle-home1.svg', 'image:///static/images/circle-home2.svg'];
   return {
     tooltip: {
       trigger: 'item',
@@ -36,7 +33,7 @@ export default function (data, color) {
     },
     legend: {
       orient: 'vertical',
-      left: '60%',
+      left: '65%',
       top: 'middle',
       itemHeight: 10,
       itemWidth: 10,
@@ -51,7 +48,7 @@ export default function (data, color) {
         },
       })),
       formatter(name) {
-        const item = data.find(d => d.name === name);
+        const item = data.find((d) => d.name === name);
         return `${name}：${item.value}`;
       },
     },
@@ -70,15 +67,25 @@ export default function (data, color) {
           },
           emphasis: {
             show: true,
-            formatter: params => `{value|${params.value}}\n{name|${params.name}}`,
+            formatter: (params) => {
+              const valueTag = params.data.colorType === 'high' ? 'valueHigh' : 'valueLow';
+              return `{${valueTag}|${params.value}}\n{name|${params.name}}`;
+            },
             textStyle: {
               align: 'center',
               verticalAlign: 'middle',
               rich: {
-                value: {
+                valueHigh: {
                   fontSize: 28,
                   fontWeight: 'bold',
-                  color: '#EA3636',
+                  color: '#EA3636', // 红色
+                  align: 'center',
+                  lineHeight: 40,
+                },
+                valueLow: {
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  color: '#313238',
                   align: 'center',
                   lineHeight: 40,
                 },

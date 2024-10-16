@@ -3,7 +3,10 @@
     <div class="top-tools">
       <div class="left">
         <div class="title mr20">{{ $t('最近操作记录') }}</div>
-        <bk-checkbox v-model="isExecutedByMe" @change="handleChange">
+        <bk-checkbox
+          v-model="isExecutedByMe"
+          @change="handleChange"
+        >
           {{ $t('仅展示我执行的') }}
         </bk-checkbox>
       </div>
@@ -17,35 +20,40 @@
     </div>
     <div
       class="records card-style"
-      :style="{ 'height': `${contentHeight <= defaultMinHeight ? defaultMinHeight : contentHeight}px` }">
-      <div class="records-content" v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+      :style="{ height: `${contentHeight <= defaultMinHeight ? defaultMinHeight : contentHeight}px` }"
+    >
+      <div
+        class="records-content"
+        v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+      >
         <ul>
           <li
             v-for="item in records"
             :key="item.name"
           >
-            <p
-              v-bk-overflow-tips
-              class="item-title"
-            >
-              <span
-                class="code"
+            <div class="record-item" @click="toAppOverview(item)">
+              <p
                 v-bk-overflow-tips
-                @click="toAppOverview(item)"
+                class="item-title"
               >
-                {{ item.application.name }}（{{ item.app_code }}）
-              </span>
-            </p>
-            <p
-              class="item-content"
-              v-bk-overflow-tips
-            >
-              {{ item.operate }}
-            </p>
-            <p class="time">
-              <i class="paasng-icon paasng-time"></i>
-              {{ smartTime(item.at,'fromNow') }}
-            </p>
+                <span
+                  class="code"
+                  v-bk-overflow-tips
+                >
+                  {{ item.application.name }}（{{ item.app_code }}）
+                </span>
+              </p>
+              <p
+                class="item-content"
+                v-bk-overflow-tips
+              >
+                {{ item.operate }}
+              </p>
+              <p class="time">
+                <i class="paasng-icon paasng-time"></i>
+                {{ smartTime(item.at, 'fromNow') }}
+              </p>
+            </div>
           </li>
         </ul>
       </div>
@@ -83,7 +91,7 @@ export default {
     async getRecentOperationRecords() {
       this.isLoading = true;
       const params = {
-        limit: 6, // 默认显示7条
+        limit: 5,
         ...(this.isExecutedByMe && { operator: this.curUserInfo.username }),
       };
       try {
@@ -150,6 +158,17 @@ export default {
     overflow-y: auto;
     font-size: 12px;
     color: #63656e;
+    .record-item {
+      padding: 0 0 5px 6px;
+    }
+    .record-item:hover {
+      cursor: pointer;
+      background: #fafbfd;
+      border-radius: 2px;
+      .code {
+        color: #3a84ff;
+      }
+    }
     .item-title {
       margin-top: 5px;
       line-height: 22px;
@@ -159,22 +178,21 @@ export default {
         overflow: hidden;
         text-overflow: ellipsis;
         cursor: pointer;
-        &:hover {
-          color: #3A84FF;
-        }
       }
     }
     .item-content {
-      font-size: 14px;
+      font-size: 12px;
       line-height: 22px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
       color: #979ba5;
     }
     .time {
       margin-top: 4px;
-      color: #979BA5;
+      color: #979ba5;
       i {
         font-size: 16px;
         transform: translateY(0px);
@@ -182,7 +200,7 @@ export default {
     }
     li {
       padding-bottom: 15px;
-      padding-left: 20px;
+      padding-left: 14px;
       position: relative;
       &:first-child {
         margin-top: 20px;
@@ -201,7 +219,7 @@ export default {
         position: absolute;
         content: '';
         width: 1px;
-        height: 73px;
+        height: calc(100% - 6px);
         top: 13px;
         left: 5px;
         background: #d8d8d8;

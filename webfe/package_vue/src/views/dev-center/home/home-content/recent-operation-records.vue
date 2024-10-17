@@ -11,13 +11,6 @@
           {{ $t('仅展示我执行的') }}
         </bk-checkbox>
       </div>
-      <bk-button
-        :text="true"
-        title="primary"
-        @click="toAppDevelopment"
-      >
-        {{ $t('更多') }}
-      </bk-button>
     </div>
     <div
       class="records card-style"
@@ -108,15 +101,6 @@ export default {
     },
     handleChange(val) {
       this.getRecentOperationRecords(val);
-    },
-    // 应用开发页
-    toAppDevelopment() {
-      this.$router.push({
-        name: 'myApplications',
-        query: {
-          filter: 'at',
-        },
-      });
     },
     // 概览
     toAppOverview(row) {

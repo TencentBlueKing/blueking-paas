@@ -719,9 +719,6 @@ export default {
   },
   created() {
     this.getAppCategory(false);
-    if (this.$route.query.filter) {
-      this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' });
-    }
     if (this.$route.query.include_inactive) {
       this.appFilter.includeInactive = true;
     }

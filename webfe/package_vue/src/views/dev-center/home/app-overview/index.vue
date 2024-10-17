@@ -177,7 +177,7 @@ export default {
     },
     // 应用情况图表配置
     appChartOption() {
-      return alertChartOption(this.appChartData, ['#85CCA8', '#3E96C2']);
+      return alertChartOption(this.appChartData, ['#FFA66B', '#3E96C2']);
     },
     platformFeature() {
       return this.$store.state.platformFeature;

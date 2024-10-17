@@ -15,19 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .code_editor import CodeEditorDeserializer, CodeEditorSerializer
-from .ingress import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
-from .sandbox import DevSandboxDeserializer, DevSandboxSerializer, get_dev_sandbox_labels
-from .service import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
+from blue_krill.data_types.enum import EnumField, StructuredEnum
 
-__all__ = [
-    "CodeEditorDeserializer",
-    "CodeEditorSerializer",
-    "DevSandboxIngressDeserializer",
-    "DevSandboxIngressSerializer",
-    "DevSandboxDeserializer",
-    "DevSandboxSerializer",
-    "DevSandboxServiceDeserializer",
-    "DevSandboxServiceSerializer",
-    "get_dev_sandbox_labels",
-]
+
+class SourceCodeFetchMethod(str, StructuredEnum):
+    HTTP = EnumField("HTTP")
+    GIT = EnumField("GIT")
+    BK_REPO = EnumField("BK_REPO")
+
+
+class CodeEditorStatus(str, StructuredEnum):
+    """代码编辑器状态"""
+
+    ALIVE = EnumField("alive", label="存活")
+    EXPIRED = EnumField("expired", label="过期")
+    ERROR = EnumField("error", label="错误")

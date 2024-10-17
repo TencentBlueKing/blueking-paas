@@ -18,6 +18,7 @@
 from rest_framework import serializers
 
 from paas_wl.bk_app.dev_sandbox.entities import HealthPhase
+from paasng.platform.sourcectl.constants import VersionType
 
 
 class DevSandboxDetailSLZ(serializers.Serializer):
@@ -26,3 +27,42 @@ class DevSandboxDetailSLZ(serializers.Serializer):
     url = serializers.CharField(help_text="dev sandbox 服务地址")
     token = serializers.CharField(help_text="访问 dev sandbox 中 devserver 服务的 token")
     status = serializers.ChoiceField(choices=HealthPhase.get_django_choices(), help_text="dev sandbox 的运行状态")
+
+
+class CreateDevSandboxWithCodeEditorSLZ(serializers.Serializer):
+    """Serializer for create dev sandbox"""
+
+    version_type = serializers.ChoiceField(
+        choices=VersionType.get_choices(),
+        required=True,
+        error_messages={"invalid_choice": f"Invalid choice. Valid choices are {VersionType.get_values()}"},
+        help_text="版本类型, 如 branch/tag/trunk",
+    )
+    version_name = serializers.CharField(
+        required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
+    )
+    revision = serializers.CharField(
+        required=False,
+        help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
+    )
+
+
+class DevSandboxWithCodeEditorUrlsSLZ(serializers.Serializer):
+    """Serializer for dev sandbox with code editor urls"""
+
+    app_url = serializers.CharField(help_text="访问 dev sandbox saas 的 url")
+    devserver_url = serializers.CharField(help_text="访问 dev sandbox devserver 的 url")
+    code_editor_url = serializers.CharField(help_text="访问 dev sandbox code editor 的 url")
+
+
+class DevSandboxWithCodeEditorDetailSLZ(serializers.Serializer):
+    """Serializer for dev sandbox with code editor detail"""
+
+    urls = DevSandboxWithCodeEditorUrlsSLZ()
+    token = serializers.CharField(help_text="访问 dev sandbox 中 devserver 服务的 token")
+    dev_sandbox_status = serializers.ChoiceField(
+        choices=HealthPhase.get_django_choices(), help_text="dev sandbox 的运行状态"
+    )
+    code_editor_status = serializers.ChoiceField(
+        choices=HealthPhase.get_django_choices(), help_text="code editor 的运行状态"
+    )

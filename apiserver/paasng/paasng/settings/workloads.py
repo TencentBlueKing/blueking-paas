@@ -87,6 +87,11 @@ CONTAINER_PORT = settings.get("CONTAINER_PORT", 5000)
 # dev sandbox 中 devserver 的监听地址
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
 DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
+DEV_SANDBOX_WORKSPACE = settings.get("DEV_SANDBOX_WORKSPACE", "/cnb/devsandbox/src")
+
+# dev sandbox 中 code-editor 的监听地址
+CODE_EDITOR_PORT = settings.get("CODE_EDITOR_PORT", 8080)
+CODE_EDITOR_IMAGE = settings.get("CODE_EDITOR_IMAGE", "bkpaas/code-editor:latest")
 
 # 服务相关插件配置
 SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})

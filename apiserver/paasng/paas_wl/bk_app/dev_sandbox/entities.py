@@ -20,6 +20,7 @@ from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StructuredEnum
 
+from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
@@ -115,3 +116,49 @@ class DevSandboxDetail:
     url: str
     envs: Dict[str, str]
     status: str
+
+
+class DevSandboxWithCodeEditorUrls:
+    app_url: str
+    devserver_url: str
+    code_editor_url: str
+
+    def __init__(self, base_url: str, username: str):
+        self.app_url = f"{base_url}/user/{username}/app/"
+        self.devserver = f"{base_url}/user/{username}/devserver/"
+        self.code_editor_url = f"{base_url}/user/{username}/code_editor/"
+
+
+@dataclass
+class DevSandboxWithCodeEditorDetail:
+    dev_sandbox_envs: Dict[str, str]
+    code_editor_envs: Dict[str, str]
+    dev_sandbox_status: str
+    code_editor_status: str
+    urls: Optional[DevSandboxWithCodeEditorUrls] = None
+
+
+@dataclass
+class SourceCodeConfig:
+    """源码持久化相关配置"""
+
+    # 源码持久化用的 pvc 名称
+    pvc_claim_name: Optional[str] = None
+    # 工作空间，用于读取/存储源码
+    workspace: Optional[str] = None
+    # 源码获取地址
+    source_fetch_url: Optional[str] = None
+    # 源码获取方式
+    source_fetch_method: SourceCodeFetchMethod = SourceCodeFetchMethod.HTTP
+
+
+@dataclass
+class CodeEditorConfig:
+    """代码编辑器相关配置"""
+
+    # 源码持久化用的 pvc 名称
+    pvc_claim_name: Optional[str] = None
+    # 项目目录, 读取项目源码的起始目录
+    start_dir: Optional[str] = None
+    # 登陆密码
+    password: Optional[str] = None

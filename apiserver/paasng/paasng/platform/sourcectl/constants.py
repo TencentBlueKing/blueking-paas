@@ -38,7 +38,6 @@ class BasicSourceType(StrEnum):
 def register_new_sourcectl_type(feature_flag: FeatureFlagField):
     """暴露给 TE 版本的注册 SourcectlType 的方法
 
-    :param name: 源码类型名称
     :param feature_flag: 用于控制该源码系统的黑/白名单
     """
     AccountFeatureFlag.register_ext_feature_flag(feature_flag)

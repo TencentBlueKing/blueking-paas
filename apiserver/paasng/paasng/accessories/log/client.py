@@ -106,7 +106,7 @@ class BKLogClient:
             resp = self._call_api(self._esclient.esquery_dsl, data=data, timeout=timeout)
 
         if not resp["result"]:
-            # 有可能是 scroll id 失效了, 反正抛异常就对了
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
             scroll_id = scroll_id or "none"
             raise ScanError(scroll_id, "Scroll request has failed on `{}`".format(resp["message"]))
 
@@ -222,9 +222,10 @@ class ESLogClient:
                 ),
             )
         if not response.success():
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
+            scroll_id = scroll_id or "none"
             failed = response._shards.failed
             total = response._shards.total
-            scroll_id = scroll_id or "none"
             raise ScanError(
                 scroll_id,
                 "Scroll request has failed on %d shards out of %d." % (failed, total),

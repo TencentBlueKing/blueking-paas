@@ -128,12 +128,6 @@ class ScalingPolicy(StrEnum):
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
 
-    # simulate `ReprEnum` behavior to work well with DRF serializer
-    # see also:
-    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
-    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
-    __str__ = str.__str__
-
 
 class ResQuotaPlan(StrEnum):
     """ResQuotaPlan is used to specify process resource quota"""
@@ -142,12 +136,6 @@ class ResQuotaPlan(StrEnum):
     P_4C1G = EnumField("4C1G", label="4C1G")
     P_4C2G = EnumField("4C2G", label="4C2G")
     P_4C4G = EnumField("4C4G", label="4C4G")
-
-    # simulate `ReprEnum` behavior to work well with DRF serializer
-    # see also:
-    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
-    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
-    __str__ = str.__str__
 
 
 class MountEnvName(StrEnum):

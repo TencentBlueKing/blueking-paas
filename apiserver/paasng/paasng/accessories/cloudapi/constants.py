@@ -15,17 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class ApplyStatusEnum(StructuredEnum):
+class ApplyStatusEnum(StrEnum):
     PARTIAL_APPROVED = EnumField("partial_approved", label="部分通过")
     APPROVED = EnumField("approved", label="通过")
     REJECTED = EnumField("rejected", label="驳回")
     PENDING = EnumField("pending", label="待审批")
 
 
-class PermissionStatusEnum(StructuredEnum):
+class PermissionStatusEnum(StrEnum):
     OWNED = EnumField("owned", label="已拥有")
     REJECTED = EnumField("rejected", label="已拒绝")
     EXPIRED = EnumField("expired", label="已过期")
@@ -33,24 +33,24 @@ class PermissionStatusEnum(StructuredEnum):
     NEED_APPLY = EnumField("need_apply", label="未申请")
 
 
-class PermissionLevelEnum(StructuredEnum):
+class PermissionLevelEnum(StrEnum):
     UNLIMITED = EnumField("unlimited", label="无限制")
     NORMAL = EnumField("normal", label="普通")
     SENSITIVE = EnumField("sensitive", label="敏感")
     SPECIAL = EnumField("special", label="特殊")
 
 
-class PermissionActionEnum(StructuredEnum):
+class PermissionActionEnum(StrEnum):
     APPLY = EnumField("apply", label="申请")
     RENEW = EnumField("renew", label="续期")
 
 
-class PermissionApplyExpireDaysEnum(StructuredEnum):
+class PermissionApplyExpireDaysEnum(StrEnum):
     PERMANENT = EnumField(0, label="永久")
     SIX_MONTH = EnumField(180, label="6个月")
     TWELVE_MONTH = EnumField(360, label="12个月")
 
 
-class GrantDimensionEnum(StructuredEnum):
+class GrantDimensionEnum(StrEnum):
     API = EnumField("api", label="按网关")
     RESOURCE = EnumField("resource", label="按资源")

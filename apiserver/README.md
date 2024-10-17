@@ -28,16 +28,16 @@ apiserver 为 blueking-paas 项目的主控模块。
 
 ### 准备 Python 开发环境
 
-1. 安装 Python 3.8
+1. 安装 Python 3.11
 
 我们推荐使用 [pyenv](https://github.com/pyenv/pyenv) 管理本地的 python 环境
 
 - 依照 [相关指引](https://github.com/pyenv/pyenv#getting-pyenv) 安装 pyenv
 
-- 使用 pyenv 安装 Python 3.8
+- 使用 pyenv 安装 Python 3.11
 
 ```shell
-❯ pyenv install 3.8.13
+❯ pyenv install 3.11.10
 ```
 
 2. 安装项目依赖
@@ -62,11 +62,12 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 1. 安装 [Nodejs](https://github.com/nodejs)，推荐使用 v14.21.1 版本
 
 我们推荐使用 [nvm](https://github.com/nvm-sh/nvm) 管理本地的 nodejs 环境
+
 - 依照 [相关指引](https://github.com/nvm-sh/nvm#installing-and-updating) 安装 nvm
 - 使用 nvm 安装 nodejs 14
 
 ```shell
-❯ nvm install 14 
+❯ nvm install 14
 ```
 
 2. 安装项目依赖
@@ -148,9 +149,9 @@ Nodejs 组件开发模式与常规的 Nodejs 项目无异, 但为了更方便地
 本项目未使用任何 `JavaScript 模块化技术`, 即所有组件都需要自行往 `window` 对象挂载, 例如:
 
 ```javascript
-import Vue from 'vue'
+import Vue from "vue";
 
-window.Vue = Vue
+window.Vue = Vue;
 ```
 
 否则, `Django Template` 将无法直接使用 Nodejs 中的组件。
@@ -158,7 +159,7 @@ window.Vue = Vue
 #### Template 页面开发指引
 
 Template 页面开发模式与常规的 Django 项目无异, 但是使用了 [Vuejs](https://cn.vuejs.org/)
-和 [MagicBox Vue组件库](https://magicbox.bk.tencent.com/static_api/v3/components_vue/2.0/example/index.html#/)
+和 [MagicBox Vue 组件库](https://magicbox.bk.tencent.com/static_api/v3/components_vue/2.0/example/index.html#/)
 完成前端的功能开发。
 
 在开发新的 Template 模板时应该遵循以下规范:
@@ -205,7 +206,7 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
 要点如下：
 
 1. 使用 `@ForceAllowAuthedApp.mark_view_set` 装饰视图类后，如果请求携带了经认证的有效应用身份（经由 API 网关完成认证与权限校验），平台将自动创建一个角色为 `SYSTEM_API_BASIC_READER` 的系统账号，由它完成请求。
-    - 后续如需要调整该账号的角色，可在 PaaS Admin 中完成。
+   - 后续如需要调整该账号的角色，可在 PaaS Admin 中完成。
 2. 使用 `@site_perm_required` 装饰视图函数，以保证请求只允许那些拥有系统级权限的账号访问（**非常重要，因为系统 API 一般都是用户无关，极容易发生越权问题。**）
 
 ## FAQ
@@ -213,16 +214,6 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
 ### docker compose 安装 bundle 依赖问题
 
 如果在安装 docker 时, 安装了 docker-compose-plugin, 需要修改'blueking-paas/apiserver/dev_utils/bundle/start.sh' 中的 docker-compose 改为 docker compose
-
-### poetry install 时 hash 值对不上问题 
-
-先执行
-
-```shell
-poetry config experimental.new-installer false
-```
-
-再重新执行 poetry install 即可
 
 ### admin42 页面 403 问题
 

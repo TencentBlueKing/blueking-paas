@@ -27,7 +27,6 @@ from typing import Dict, Optional
 import boto3
 from bkstorages.backends.bkrepo import BKRepoStorage
 from bkstorages.backends.rgw import RGWBoto3Storage
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from blue_krill.storages.blobstore.base import BlobStore
 from blue_krill.storages.blobstore.bkrepo import BKGenericRepo
 from blue_krill.storages.blobstore.s3 import S3Store
@@ -36,10 +35,12 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.encoding import force_bytes, force_text
 
+from paasng.utils.enum import EnumField, StrEnum
+
 logger = logging.getLogger(__name__)
 
 
-class StoreType(str, StructuredEnum):
+class StoreType(StrEnum):
     S3 = EnumField("s3")
     BKREPO = EnumField("bkrepo")
     # 向前兼容, 支持 http/https 协议

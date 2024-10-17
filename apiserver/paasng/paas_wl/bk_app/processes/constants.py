@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, StrEnum
 
 # 注解或标签中存储进程名称的键名
 PROCESS_NAME_KEY = "bkapp.paas.bk.tencent.com/process-name"
@@ -26,7 +26,7 @@ PROCESS_MAPPER_VERSION_KEY = "bkapp.paas.bk.tencent.com/process-mapper-version"
 DEFAULT_CNATIVE_MAX_REPLICAS = 10
 
 
-class ProcessUpdateType(str, StructuredEnum):
+class ProcessUpdateType(StrEnum):
     """Type of updating processes"""
 
     START = EnumField("start")
@@ -35,14 +35,14 @@ class ProcessUpdateType(str, StructuredEnum):
     SCALE = EnumField("scale")
 
 
-class ProcessTargetStatus(str, StructuredEnum):
+class ProcessTargetStatus(StrEnum):
     """Choices of process status"""
 
     START = EnumField("start")
     STOP = EnumField("stop")
 
 
-class ProbeType(str, StructuredEnum):
+class ProbeType(StrEnum):
     """Choices of probe type"""
 
     READINESS = EnumField("readiness", label="readinessProbe")

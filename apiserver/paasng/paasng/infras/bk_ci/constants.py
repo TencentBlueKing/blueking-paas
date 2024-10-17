@@ -15,11 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.enum import EnumField, StrEnum
 
-class PipelineBuildStatus(str, StructuredEnum):
+
+class PipelineBuildStatus(StrEnum):
     """蓝盾流水线构建状态"""
 
     SUCCEED = EnumField("SUCCEED", label=_("成功"))

@@ -69,7 +69,7 @@ class DeploymentDeclarativeController:
 
         self.handle_desc(desc)
 
-        return DeployHandleResult(use_cnb=desc.spec_version == AppSpecVersion.VER_3)
+        return DeployHandleResult(desc.spec_version)
 
     def handle_desc(self, desc: DeploymentDesc):
         """Handle the description object, which was read from the app description file."""
@@ -220,7 +220,15 @@ def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileP
     # Save the process configs to both the module's spec and current deployment object.
     ModuleProcessSpecManager(module).sync_from_desc(processes=list(proc_tmpls.values()))
     deployment.update_fields(processes=proc_tmpls)
-    return DeployHandleResult(use_cnb=False)
+
+    # 此处 DeploymentDescription 的创建, 只用于保存 proc services 特性状态(false 状态), 表示仅配置了 Procfile 的云原生应用
+    # 不启用 proc services 特性
+    DeploymentDescription.objects.create(
+        runtime={PROC_SERVICES_ENABLED_ANNOTATION_KEY: "false"},
+        deployment=deployment,
+    )
+
+    return DeployHandleResult()
 
 
 def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:

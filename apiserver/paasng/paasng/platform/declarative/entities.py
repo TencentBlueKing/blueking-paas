@@ -13,14 +13,18 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Optional
+
 from attrs import define
+
+from paasng.platform.declarative.constants import AppSpecVersion
 
 
 @define
 class DeployHandleResult:
     """部署阶段处理应用描述文件的结果类。
 
-    :param use_cnb: 是否使用了 v3 版本 CNB 模式，对 S-Mart 应用有意义
+    :param: spec_version 应用描述文件的版本
     """
 
-    use_cnb: bool
+    spec_version: Optional[AppSpecVersion] = None

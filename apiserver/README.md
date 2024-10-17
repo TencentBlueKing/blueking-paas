@@ -96,11 +96,11 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 ## 测试
 
-项目的自动化测试通过 pytest 编写的测试用例编写，这些测试用例，可被笼统分为单元测试和 E2E 测试两类。
+项目的自动化测试基于 [pytest](https://docs.pytest.org/en/stable/) 框架编写，所有测试用例，可被笼统分为单元测试和 E2E 测试两类。
 
 #### 单元测试
 
-单元测试是项目中数量最多的测试用例类型，它们主要位于 <./paasng/tests> 目录下。单元测试数量多，也最为全面，它们覆盖了项目绝大部分功能场景。
+单元测试是项目中数量最多的测试用例类型，它们主要位于 [./paasng/tests]() 目录下。单元测试数量众多，也最为全面，它们覆盖了项目绝大部分功能场景。
 
 本地开发时，可以执行 pytest 来运行测试用例：
 
@@ -122,13 +122,13 @@ $ pytest --reuse-db -s --maxfail=1 ./tests/
 
 #### E2E 测试
 
-E2E 测试是“端对端（End-to-end）测试”的缩写，特指那些需要访问真实的依赖服务才能正常运行的测试。E2E 测试运行速度慢，成本相比单元测试要高许多，比方说，运行 E2E 测试前，你需要准备一个真实可用的 Kubernetes 集群（通常用 [kind](https://github.com/kubernetes-sigs/kind) 启动）。
+E2E 测试是“端对端（End-to-end）测试”的缩写，特指那些需要访问真实的依赖服务才能正常运行的测试。E2E 测试运行速度慢，成本相比单元测试要高许多，比方说，运行测试前，你需要准备一个真实可用的 Kubernetes 集群（通常用 [kind](https://github.com/kubernetes-sigs/kind) 启动）。
 
 当前，E2E 测试用例的数量不多，主要覆盖的场景包括：
 
 - 验证在不同版本 Kubernetes 集群、不同版本的 Ingress-Nginx 路由下，请求应用时，请求路径与关键头信息能被正常处理。
 
-E2E 测试代码位于 <./paasng/tests/paas_wl/e2e> 目录中，也是基于 pytest 框架编写。执行 E2E 测试前，必须提供以下配置项：
+E2E 测试代码位于 [./paasng/tests/paas_wl/e2e]() 目录中，也是基于 pytest 框架编写。执行这些测试前，必须额外提供以下配置项：
 
 ```yaml
 FOR_TEST_E2E_INGRESS_CONFIG:
@@ -137,13 +137,13 @@ FOR_TEST_E2E_INGRESS_CONFIG:
   NGINX_HTTPS_PORT: 443
 ```
 
-执行 E2E 测试需传递特定的命令行参数 `--run-e2e-test`，如：
+相比单元测试，运行 E2E 测试需提供额外的命令行参数 `--run-e2e-test`，示例：
 
 ```bash
 $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 ```
 
-更多详细信息，可参考文档 <./paasng/tests/paas_wl/e2e/README.md>。
+更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/README.md]()。
 
 ## 数据库迁移
 

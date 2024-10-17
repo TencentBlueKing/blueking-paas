@@ -4,6 +4,7 @@
       <div class="left">
         <div class="title mr20">{{ $t('最近操作记录') }}</div>
         <bk-checkbox
+          ext-cls="checkbox-custom-cls"
           v-model="isExecutedByMe"
           @change="handleChange"
         >
@@ -140,6 +141,10 @@ export default {
     .left {
       display: flex;
       align-items: flex-end;
+      .checkbox-custom-cls /deep/ .bk-checkbox::after {
+        height: 10px !important;
+        width: 6px !important;
+      }
     }
     .title {
       font-weight: 700;

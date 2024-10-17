@@ -3,23 +3,8 @@
     <section class="home-top-title">
       <div class="title">
         {{ $t('应用总览') }}
-        <span class="tips">{{ $t('更新于 {t}之前', { t: appChartInfo.updateTime }) }}</span>
       </div>
       <div class="tools">
-        <bk-select
-          v-model="curDate"
-          style="width: 137px"
-          :clearable="false"
-          ext-cls="date-select-cls"
-          @change="handleDateChange"
-        >
-          <bk-option
-            v-for="option in dateList"
-            :key="option.id"
-            :id="option.id"
-            :name="option.label"
-          ></bk-option>
-        </bk-select>
         <bk-button
           :theme="'primary'"
           @click="toCreateApp"
@@ -46,8 +31,24 @@
           class="default-text"
           v-if="isAlarmLabel"
         >
-          <p :class="['vlaue', { 'high': alarmDefaultLabel.colorType === 'high' }]">{{ alarmDefaultLabel.value }}</p>
+          <p :class="['vlaue', { high: alarmDefaultLabel.colorType === 'high' }]">{{ alarmDefaultLabel.value }}</p>
           <p class="name">{{ alarmDefaultLabel.name }}</p>
+        </div>
+        <div class="date-change-box">
+          <bk-select
+            v-model="curDate"
+            style="width: 85px"
+            :clearable="false"
+            ext-cls="date-select-cls"
+            @change="handleDateChange"
+          >
+            <bk-option
+              v-for="option in dateList"
+              :key="option.id"
+              :id="option.id"
+              :name="option.label"
+            ></bk-option>
+          </bk-select>
         </div>
         <!-- <div
           class="chart-el chart-alert"
@@ -58,6 +59,13 @@
       <div class="app-status card-style chart-box">
         <div class="card-title chart-title">
           {{ $t('应用情况') }}
+          <i
+            class="paasng-icon paasng-info-line"
+            v-bk-tooltips="{
+              content: $t('更新于 {t}之前', { t: appChartInfo.updateTime }),
+              theme: 'light',
+            }"
+          ></i>
         </div>
         <chart
           style="width: 450px; height: 200px"
@@ -68,7 +76,7 @@
           class="default-text"
           v-if="isAppLabel"
         >
-          <p :class="['vlaue', { 'high': appDefaultLabel.colorType === 'high' }]">{{ appDefaultLabel.value }}</p>
+          <p :class="['vlaue', { high: appDefaultLabel.colorType === 'high' }]">{{ appDefaultLabel.value }}</p>
           <p class="name">{{ appDefaultLabel.name }}</p>
         </div>
       </div>
@@ -106,9 +114,9 @@ export default {
       },
       curDate: 1,
       dateList: [
-        { label: this.$t('1 天'), id: 1 },
-        { label: this.$t('7 天'), id: 7 },
-        { label: this.$t('15 天'), id: 15 },
+        { label: `1 ${this.$t('天')}`, id: 1 },
+        { label: `7 ${this.$t('天')}`, id: 7 },
+        { label: `15 ${this.$t('天')}`, id: 15 },
         { label: this.$t('一个月'), id: 30 },
       ],
       curSelectionTime: this.getSpecifiedDate(1),
@@ -128,7 +136,7 @@ export default {
       return this.$store.state.baseInfo.alarmChartData;
     },
     homeAlarmData() {
-      return [
+      const data = [
         {
           value: this.alarmChartData.slowQueryCount,
           name: this.$t('慢查询告警数'),
@@ -142,6 +150,10 @@ export default {
           colorType: 'low',
         },
       ];
+      if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
+        return data.filter((v) => v.colorType === 'low');
+      }
+      return data;
     },
     // 告警情况图表配置
     homeAlertChartOption() {
@@ -174,7 +186,10 @@ export default {
       return this.appChartData.find((v) => v.value > 0) ?? this.appChartData[0];
     },
     alarmDefaultLabel() {
-      return this.homeAlarmData.find((v) => v.value > 0) ?? this.homeAlarmData[1];
+      if (this.homeAlarmData.length > 1) {
+        return this.homeAlarmData.find((v) => v.value > 0) ?? this.homeAlarmData[1];
+      }
+      return this.homeAlarmData[0];
     },
   },
   watch: {
@@ -318,6 +333,11 @@ export default {
   .chart-box {
     display: flex;
     justify-content: center;
+    .date-change-box {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
   }
   .alarm-status,
   .app-status {
@@ -353,7 +373,7 @@ export default {
         color: #313238;
         line-height: 40px;
         &.high {
-          color: #EA3636;
+          color: #ea3636;
         }
       }
       .name {

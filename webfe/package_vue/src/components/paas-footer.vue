@@ -35,7 +35,7 @@ export default {
   color: #63656e;
   font-size: 12px;
   padding: 15px 0;
-  background: #fff;
+  background: #f5f7fa;
   .info {
     margin-bottom: 6px;
   }

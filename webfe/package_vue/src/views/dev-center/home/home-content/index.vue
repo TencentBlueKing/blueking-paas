@@ -89,7 +89,7 @@ export default {
       return this.$store.state.baseInfo.appChartData;
     },
     emptyTips() {
-      return this.$t('您当前有 <i>{n}</i> 个应用，全部没有告警和闲置状态，请继续保持！', { n: this.appChartInfo?.allCount });
+      return this.$t('您当前共管理 {n} 个应用，无任何应用处于告警或闲置状态，请继续保持！', { n: this.appChartInfo?.allCount });
     },
   },
   mounted() {

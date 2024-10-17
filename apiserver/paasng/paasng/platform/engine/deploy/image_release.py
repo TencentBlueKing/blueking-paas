@@ -107,7 +107,7 @@ class ImageReleaseMgr(DeployStep):
             self._parse_image_app_processes()
             use_cnb = False
 
-        # 目前构建流程必须有有效的 build_id, 因此需要 dummy build 过程
+        # 目前构建流程必须有有效的 build, 因此需要 dummy build 过程
         build_id = self._create_build(is_smart_app=is_smart_app, use_cnb=use_cnb)
 
         # dummy build 完成，更新 deployment 的 build_id

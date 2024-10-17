@@ -142,12 +142,14 @@ export default {
           name: this.$t('慢查询告警数'),
           type: 'alarm',
           colorType: 'high',
+          color: '#F5876C',
         },
         {
           value: this.alarmChartData.count,
           name: this.$t('总告警数'),
           type: 'alarm',
           colorType: 'low',
+          color: '#FFC685',
         },
       ];
       if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
@@ -157,27 +159,35 @@ export default {
     },
     // 告警情况图表配置
     homeAlertChartOption() {
-      return alertChartOption(this.homeAlarmData, ['#F5876C', '#FFC685']);
+      const colors = this.homeAlarmData.map(v => v.color);
+      return alertChartOption(this.homeAlarmData, colors);
     },
     appChartData() {
-      return [
+      const data = [
         {
           value: this.appChartInfo.idleAppCount,
           name: this.$t('闲置应用数'),
           type: 'app',
           colorType: 'high',
+          color: '#FFA66B'
         },
         {
           value: this.chartAppInfo.total,
           name: this.$t('总应用数'),
           type: 'app',
           colorType: 'low',
+          color: '#3E96C2'
         },
       ];
+      if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
+        return data.filter((v) => v.colorType === 'low');
+      }
+      return data;
     },
     // 应用情况图表配置
     appChartOption() {
-      return alertChartOption(this.appChartData, ['#FFA66B', '#3E96C2']);
+      const colors = this.appChartData.map(v => v.color);
+      return alertChartOption(this.appChartData, colors);
     },
     platformFeature() {
       return this.$store.state.platformFeature;

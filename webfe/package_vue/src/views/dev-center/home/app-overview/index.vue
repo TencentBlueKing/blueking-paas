@@ -117,7 +117,7 @@ export default {
         { label: `1 ${this.$t('天')}`, id: 1 },
         { label: `7 ${this.$t('天')}`, id: 7 },
         { label: `15 ${this.$t('天')}`, id: 15 },
-        { label: this.$t('一个月'), id: 30 },
+        { label: `1 ${this.$t('个月')}`, id: 30 },
       ],
       curSelectionTime: this.getSpecifiedDate(1),
       appChart: null,

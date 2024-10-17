@@ -189,6 +189,7 @@
 import repoInfo from '@/components/ui/repo-info.vue';
 import codeInspection from './code-inspection.vue';
 import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
+import { fileDownload } from '@/common/utils';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import dayjs from 'dayjs';
 
@@ -718,22 +719,20 @@ export default {
     },
 
     // 下载初始化模板
-    handleDownloadTemplate() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
-      this.$http.post(url).then((resp) => {
-        const downloadUrl = resp.downloadable_address;
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, (resp) => {
+    async handleDownloadTemplate() {
+      try {
+        const res = await this.$store.dispatch('getAppInitTemplateUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        fileDownload(res.downloadable_address);
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
           message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
         });
-      });
+      }
     },
   },
 };

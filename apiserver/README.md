@@ -100,7 +100,7 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 #### 单元测试
 
-单元测试是项目中数量最多的测试用例类型，它们主要位于 [./paasng/tests]() 目录下。单元测试数量众多，也最为全面，它们覆盖了项目绝大部分功能场景。
+单元测试是项目中数量最多的测试用例类型，它们主要位于 [./paasng/tests](./paasng/tests) 目录下。单元测试数量众多，也最为全面，它们覆盖了项目绝大部分功能场景。
 
 本地开发时，可以执行 pytest 来运行测试用例：
 
@@ -128,7 +128,7 @@ E2E 测试是“端对端（End-to-end）测试”的缩写，特指那些需要
 
 - 验证在不同版本 Kubernetes 集群、不同版本的 Ingress-Nginx 路由下，请求应用时，请求路径与关键头信息能被正常处理。
 
-E2E 测试代码位于 [./paasng/tests/paas_wl/e2e]() 目录中，也是基于 pytest 框架编写。执行这些测试前，必须额外提供以下配置项：
+E2E 测试代码位于 [./paasng/tests/paas_wl/e2e](./paasng/tests/paas_wl/e2e) 目录中，也是基于 pytest 框架编写。执行这些测试前，必须额外提供以下配置项：
 
 ```yaml
 FOR_TEST_E2E_INGRESS_CONFIG:
@@ -143,7 +143,7 @@ FOR_TEST_E2E_INGRESS_CONFIG:
 $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 ```
 
-更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/README.md]()。
+更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/README.md](./paasng/tests/paas_wl/e2e/README.md)。
 
 ## 数据库迁移
 

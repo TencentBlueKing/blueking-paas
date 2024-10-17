@@ -126,7 +126,7 @@ E2E 测试是“端对端（End-to-end）测试”的缩写，特指那些需要
 
 当前，E2E 测试用例的数量不多，主要覆盖的场景包括：
 
-- 验证在不同版本 Kubernetes 集群、不同版本的 Ingress-Nginx 路由下，请求应用时，请求路径与关键头信息能被正常处理。
+- ingress：验证在不同版本 Kubernetes 集群、不同版本的 Ingress-Nginx 路由下，请求应用时，请求路径与关键头信息能被正常处理。
 
 E2E 测试代码位于 [./paasng/tests/paas_wl/e2e](./paasng/tests/paas_wl/e2e) 目录中，也是基于 pytest 框架编写。执行这些测试前，必须额外提供以下配置项：
 
@@ -143,7 +143,7 @@ FOR_TEST_E2E_INGRESS_CONFIG:
 $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 ```
 
-更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/README.md](./paasng/tests/paas_wl/e2e/README.md)。
+更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/ingress/README.md](./paasng/tests/paas_wl/e2e/ingress/README.md)。
 
 ## 数据库迁移
 

@@ -17,7 +17,6 @@
       <div
         ref="tabContent"
         class="tab-content"
-        v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
       >
         <!--应用闲置看板功能 -->
         <idle-app-dashboard
@@ -66,7 +65,6 @@ export default {
   data() {
     return {
       active: 'idle',
-      isLoading: false,
       panels: [
         { name: 'idle', label: this.$t('闲置应用') },
         { name: 'alarm', label: this.$t('告警记录') },
@@ -122,7 +120,6 @@ export default {
     },
     handlePanelUpdate(data) {
       const { name, length } = data;
-      this.isLoading = true;
       if (length === 0) {
         // 移除对应的 tab 项
         this.panels = this.panels.filter(panel => panel.name !== name);
@@ -138,9 +135,6 @@ export default {
           }
         }
       }
-      setTimeout(() => {
-        this.isLoading = false;
-      }, 500);
     },
   },
 };

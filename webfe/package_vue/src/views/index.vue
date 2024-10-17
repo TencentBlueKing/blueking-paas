@@ -40,7 +40,7 @@
     >
       <div class="wrap">
         <paas-content-loader
-          :is-loading="loadingIndex < 2"
+          :is-loading="isLoading"
           placeholder="index-loading"
           :offset-top="0"
           :height="378"
@@ -132,7 +132,7 @@ export default {
       userHasApp: false,
       flag: false,
       isShowOffAppAction: false,
-      loadingIndex: 0,
+      isLoading: true,
     };
   },
   computed: {
@@ -171,7 +171,7 @@ export default {
   },
   created() {
     bus.$on('on-close-loading', () => {
-      this.loadingIndex += 1;
+      this.isLoading = false;
     });
   },
   methods: {

@@ -2853,7 +2853,6 @@ export default {
   最近操作记录: 'Recent Activity Log',
   仅展示我执行的: 'I executed',
   '太棒了！': 'Awesome!',
-  一个月: 'One month',
   慢查询告警数量: 'Number of slow query alerts',
   告警内容: 'Alarm content',
 };

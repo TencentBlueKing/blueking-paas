@@ -34,274 +34,34 @@
         </router-link>
       </div>
     </div>
-    <!-- 最近操作 start -->
     <div
       v-if="userHasApp"
-      class="paas-content white"
+      class="paas-content home-content"
     >
       <div class="wrap">
         <paas-content-loader
-          :is-loading="isLoading"
+          :is-loading="loadingIndex < 2"
           placeholder="index-loading"
           :offset-top="0"
           :height="378"
           data-test-id="developer_header_content"
         >
-          <div
-            class="paas-operation-tit"
-            data-test-id="developer_header_operationTit"
-          >
-            <h2> {{ $t('最近操作') }} </h2>
-            <div class="fright">
-              <router-link
-                :to="{ name: 'createApp' }"
-                class="paas-operation-icon"
-              >
-                <i class="paasng-icon paasng-plus" /> {{ $t('创建应用') }}
-              </router-link>
-            </div>
+          <!-- 应用总览 -->
+          <home-app-overview />
 
-            <div
-              v-if="userFeature.MGRLEGACY"
-              class="fright legacy-links"
-            >
-              <a
-                :href="GLOBAL.LINK.V2_APP_SUMMARY"
-                target="_blank"
-              >
-                <i class="paasng-icon paasng-chain" /> {{ $t('管理旧版应用') }} </a>
-              <router-link
-                :to="{ name: 'appLegacyMigration' }"
-                class="btn-link spacing-h-x2"
-              >
-                {{ $t('一键迁移') }}
-              </router-link>
-            </div>
-          </div>
-          <div data-test-id="developer_list_sectionApp">
-            <ul
-              v-if="records.length && !isLoading"
-              class="paas-operation"
-            >
-              <li
-                v-for="(recordItem, index) in records"
-                :key="index"
-                class="clearfix"
-              >
-                <div class="paas-operation-section section1">
-                  <template v-if="recordItem.engine_enabled">
-                    <router-link
-                      :to="{
-                        name: recordItem.appType === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
-                        params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId }
-                      }">
-                      <img
-                        :src="recordItem.applogo"
-                        width="38px"
-                        height="38px"
-                        class="fleft"
-                        style="border-radius: 4px"
-                      ><span
-                        v-bk-tooltips="recordItem.appname"
-                        class="spantext"
-                      >{{ recordItem.appname }}</span>
-                    </router-link>
-                  </template>
-                  <template v-else>
-                    <router-link
-                      :to="{
-                        name: recordItem.appType === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
-                        params: { id: recordItem.appcode, moduleId: recordItem.defaultModuleId }
-                      }">
-                      <img
-                        :src="recordItem.applogo"
-                        width="38px"
-                        height="38px"
-                        class="fleft"
-                        style="border-radius: 4px"
-                      ><span
-                        v-bk-tooltips="recordItem.appname"
-                        class="spantext"
-                      >{{ recordItem.appname }}</span>
-                    </router-link>
-                  </template>
-                </div>
-                <div class="paas-operation-section time-section">
-                  <em v-bk-tooltips="recordItem.time">{{ smartTime(recordItem.time,'fromNow') }}</em>
-                </div>
-                <div class="paas-operation-section section2 section-wrapper">
-                  <span
-                    v-bk-tooltips.bottom="recordItem.type"
-                    class="bottom-middle text-style"
-                    :title="recordItem.type"
-                  >{{ recordItem.type }}</span>
-                </div>
-
-                <div class="paas-operation-section fright">
-                  <template v-if="recordItem.engine_enabled">
-                    <bk-button
-                      theme="primary"
-                      text
-                      :style="{ marginRight: localLanguage === 'en' ? '15px' : '6px', height: '38px' }"
-                      @click="toDeploy(recordItem)"
-                    >
-                      {{ $t('部署') }}
-                    </bk-button>
-                    <bk-button
-                      theme="primary"
-                      text
-                      style="margin-right: 10px;height: 38px"
-                      @click="toViewLog(recordItem)"
-                    >
-                      {{ $t('查看日志') }}
-                    </bk-button>
-                  </template>
-                  <template v-else>
-                    <bk-button
-                      theme="primary"
-                      text
-                      style="margin-right: 10px;"
-                      @click="toCloudAPI(recordItem)"
-                    >
-                      {{ $t('申请云 API 权限') }}
-                    </bk-button>
-                  </template>
-                </div>
-              </li>
-              <li
-                v-if="appCount < 4"
-                class="clearfix lessthan"
-              >
-                <router-link :to="{ name: 'createApp' }">
-                  {{ $t('点击创建应用，探索蓝鲸 PaaS 平台的更多内容！') }}
-                </router-link>
-              </li>
-            </ul>
-            <div
-              v-else
-              class="paas-operation"
-              data-test-id="developer_list_empty"
-            >
-              <div class="ps-no-result">
-                <table-empty
-                  :empty-title="$t('暂无应用')"
-                  empty
-                />
-              </div>
-            </div>
-          </div>
-
-          <!--应用闲置看板功能 -->
-          <idle-app-dashboard class="idle-app-dashboard-cls" />
+          <!-- 应用闲置看板功能/告警记录/最近操作记录 -->
+          <home-content />
         </paas-content-loader>
       </div>
     </div>
-    <!-- 最近操作 end -->
 
     <!-- 中间部分 start -->
     <div
       class="paas-content home-content"
       data-test-id="developer_content_wrap"
+      v-if="!userHasApp"
     >
       <div class="wrap">
-
-        <div
-          v-if="userHasApp"
-          class="appuser"
-        >
-          <!-- 图表 start -->
-          <div
-            class="paas-content-boxpanel"
-            data-test-id="developer_content_highCharts"
-          >
-            <div class="paas-highcharts fleft">
-              <paas-content-loader
-                :is-loading="loading1"
-                background-color="#f5f6f9"
-                data-test-id="developer_highCharts_left"
-              >
-                <div style="width: 100%; height: 275px;">
-                  <chart
-                    id="viewchart"
-                    style="width: 100%; height: 275px;"
-                  />
-                  <div
-                    v-if="chartList1.length === 0"
-                    class="ps-no-result"
-                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
-                  >
-                    <table-empty empty />
-                  </div>
-                </div>
-              </paas-content-loader>
-            </div>
-            <div class="paas-highcharts fright">
-              <paas-content-loader
-                :is-loading="loading2"
-                background-color="#f5f6f9"
-                data-test-id="developer_highCharts_right"
-              >
-                <div style="width: 100%; height: 275px;">
-                  <chart
-                    id="visitedchart"
-                    style="width: 100%; height: 275px;"
-                  />
-                  <div
-                    v-if="chartList2.length === 0"
-                    class="ps-no-result"
-                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
-                  >
-                    <table-empty empty />
-                  </div>
-                </div>
-              </paas-content-loader>
-            </div>
-          </div>
-          <!-- 图表 end -->
-
-          <!-- 资源使用情况 start -->
-          <div
-            class="paas-content-boxpanel bk-fade-animate hide"
-            data-test-id="developer_list_resource"
-          >
-            <ul class="paas-resource">
-              <li>
-                <div class="paas-resource-title">
-                  Mysql
-                </div>
-                <div class="paas-resource-text">
-                  <p class="resource-text">
-                    <span>1024</span>/MB
-                  </p>
-                  <p> {{ $t('资源使用量') }} </p>
-                </div>
-              </li>
-              <li>
-                <div class="paas-resource-title">
-                  Redis
-                </div>
-                <div class="paas-resource-text">
-                  <p class="resource-text">
-                    <span>215</span>/MB
-                  </p>
-                  <p> {{ $t('资源使用量') }} </p>
-                </div>
-              </li>
-              <li>
-                <div class="paas-resource-title">
-                  {{ $t('对象储存') }}
-                </div>
-                <div class="paas-resource-text">
-                  <p class="resource-text">
-                    <span>852</span>/MB
-                  </p>
-                  <p> {{ $t('资源使用量') }} </p>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <!-- 资源使用情况 end -->
-        </div>
         <!-- 新手入门&使用指南 start -->
         <div
           class="paas-content-boxpanel"
@@ -357,44 +117,27 @@
 <script>
 import auth from '@/auth';
 import { bus } from '@/common/bus';
-import ECharts from 'vue-echarts/components/ECharts.vue';
-import echarts from 'echarts';
-import 'echarts/lib/chart/bar';
-import 'echarts/lib/component/tooltip';
-import IdleAppDashboard from '@/views/dev-center/home/idle-app-dashboard.vue';
+import homeContent from '@/views/dev-center/home/home-content/index.vue';
+import appOverview from '@/views/dev-center/home/app-overview/index.vue';
 import { psIndexInfo, psHeaderInfo } from '@/mixins/ps-static-mixin';
 
 export default {
   components: {
-    chart: ECharts,
-    IdleAppDashboard,
+    homeContent,
+    homeAppOverview: appOverview,
   },
   mixins: [psIndexInfo, psHeaderInfo],
   data() {
     return {
       userHasApp: false,
       flag: false,
-      appCount: 0,
-      records: [], // 操作记录
-      isLoading: true,
-      loading1: true,
-      loading2: true,
-      chartList1: [],
-      chartList2: [],
       isShowOffAppAction: false,
-      envList: [
-        { name: this.$t('访问模块'), id: 'default', showName: this.$t('访问模块') },
-        { name: this.$t('预发布环境'), id: 'stag', showName: this.$t('访问模块') },
-        { name: this.$t('生产环境'), id: 'prod', showName: this.$t('访问模块') },
-      ],
+      loadingIndex: 0,
     };
   },
   computed: {
     userFeature() {
       return this.$store.state.userFeature;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
     },
   },
   // Get userHasApp before render
@@ -427,247 +170,11 @@ export default {
     });
   },
   created() {
-    this.init();
+    bus.$on('on-close-loading', () => {
+      this.loadingIndex += 1;
+    });
   },
   methods: {
-    init() {
-      this.getRecentOperationRecords();
-      this.chartSet({
-        type: 'app_groups',
-        url: `${BACKEND_URL}/api/bkapps/applications/statistics/group_by_state/`,
-        id: 'viewchart',
-        title: this.$t('我的应用(模块)分布'),
-        yAxisName: this.$t('单位（个）'),
-        colorList: ['#3a84ff', '#89c1fa', '#a8d3ff', '#c9e4ff', '#e2f1ff'],
-      });
-      this.chartSet({
-        type: 'pv',
-        url: `${BACKEND_URL}/api/bkapps/applications/statistics/pv/top5/?limit=5&days_before=30`,
-        id: 'visitedchart',
-        title: this.$t('访问量 Top 5 (最近 30 天)'),
-        yAxisName: this.$t('单位（次）'),
-        colorList: ['#ccdff3', '#cfeedc', '#f7eedb', '#fae5d5', '#fcc8c8'],
-      });
-    },
-
-    // 获取最近四次操作记录
-    getRecentOperationRecords() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/lists/latest/`).then((response) => {
-        const resData = response;
-
-        this.appCount = resData.results.length;
-
-        resData.results.forEach((item) => {
-          const appinfo = item.application;
-
-          this.records.push({
-            applogo: appinfo.logo_url || '/static/images/default_logo.png',
-            appname: appinfo.name,
-            appcode: appinfo.code,
-            time: item.at,
-            type: item.operate,
-            appType: appinfo.type,
-            engine_enabled: appinfo.config_info.engine_enabled,
-            defaultModuleId: item.module_name,
-          });
-        });
-        this.isLoading = false;
-      });
-    },
-    async toDeploy(recordItem) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${recordItem.appcode}/`;
-      try {
-        const res = await this.$http.get(url);
-        const appType = res.application.type || 'default';
-        this.$router.push({
-          name: appType === 'cloud_native' ? 'cloudAppDeployManageStag' : 'appDeploy',
-          params: {
-            id: recordItem.appcode,
-          },
-        });
-      } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: e.message,
-        });
-      }
-    },
-
-    toViewLog(recordItem) {
-      this.$router.push({
-        name: 'appLog',
-        params: {
-          id: recordItem.appcode,
-          moduleId: recordItem.module_name || 'default',
-        },
-        query: {
-          tab: 'structured',
-        },
-      });
-    },
-
-    toCloudAPI(recordItem) {
-      this.$router.push({
-        name: 'appCloudAPI',
-        params: {
-          id: recordItem.appcode,
-        },
-      });
-    },
-
-    chartSet({ type, url, id, title, colorList, yAxisName }) {
-      this.$http.get(url).then((response) => {
-        const resData = response;
-
-        const chatData = {
-          countList: [],
-          nameList: [],
-        };
-
-        if (type === 'app_groups') {
-          this.loading1 = false;
-          for (let i = 0; i < resData.data.length; i++) {
-            chatData.countList.push(resData.data[i].count);
-            chatData.nameList.push(resData.data[i].name);
-          }
-          this.chartList1 = resData.data;
-        } else if (type === 'pv') {
-          this.loading2 = false;
-          for (let i = 0; i < resData.data.length; i++) {
-            chatData.countList.push(resData.data[i].pv);
-            chatData.nameList.push(resData.data[i].application_name);
-          }
-          this.chartList2 = resData.data;
-        }
-
-        this.$nextTick(() => {
-          const chart = echarts.init(document.getElementById(id));
-          let yAxisNameBackup = '';
-          if (id === 'viewchart') {
-            yAxisNameBackup = this.chartList1.length ? yAxisName : '';
-          } else {
-            yAxisNameBackup = this.chartList2.length ? yAxisName : '';
-          }
-          chart.setOption({
-            color: '#666666',
-            title: {
-              text: title,
-              x: 'center',
-              y: 'top',
-              textStyle: {
-                color: '#333333',
-                fontStyle: 'normal',
-                fontWeight: 'normal',
-                fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
-                fontSize: 16,
-              },
-            },
-            tooltip: {
-              trigger: 'item',
-              axisPointer: { // 坐标轴指示器，坐标轴触发有效
-                type: 'shadow', // 默认为直线，可选为：'line' | 'shadow'
-              },
-            },
-            xAxis: [
-              {
-                axisTick: { show: false },
-                type: 'category',
-                data: chatData.nameList,
-                splitArea: { show: false }, // 保留网格区域
-                splitLine: { // 分隔线
-                  show: false, // 默认显示，属性show控制显示与否
-                },
-                axisLine: {
-                  show: false,
-
-                },
-                axisLabel: {
-                  show: true,
-                  rotate: 0,
-                  interval: 'auto',
-                  textStyle: {
-                    color: '#666666',
-                    fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
-                  },
-                  formatter: (params) => {
-                    let newParamsName = '';
-                    const paramsNameNumber = params.length; // 字符总长度
-                    const provideNumber = 5; // 每行显示的字符数量
-                    const maxLenNumber = 9; // 最多两行显示的字符最大数量
-                    if (paramsNameNumber > provideNumber) {
-                      if (paramsNameNumber > maxLenNumber) {
-                        newParamsName = `${params.substring(0, provideNumber)}\n${params.substring(provideNumber, maxLenNumber)}...`;
-                      } else {
-                        newParamsName = `${params.substring(0, provideNumber)}\n${params.substring(provideNumber, paramsNameNumber)}`;
-                      }
-                    } else {
-                      newParamsName = params;
-                    }
-                    return newParamsName;
-                  },
-                },
-              },
-            ],
-            yAxis: [
-              {
-                name: yAxisNameBackup,
-                allowDecimals: false,
-                axisTick: { show: false },
-                type: 'value',
-                splitArea: { show: false },
-                splitLine: { // 分隔线
-                  show: true, // 默认显示，属性show控制显示与否
-                  lineStyle: { // 属性lineStyle（详见lineStyle）控制线条样式
-                    color: ['#e9edee'],
-                    width: 1,
-                    type: 'solid',
-                  },
-                },
-                axisLine: {
-                  show: false,
-                  lineStyle: {
-                    color: '#999999',
-                    type: 'solid',
-                    width: '0',
-                  },
-                },
-                axisLabel: {
-                  show: true,
-                  textStyle: {
-                    color: '#999999',
-                    fontFamily: 'Helvetica Neue, Helvetica, Tahoma, Arial, Microsoft Yahei, 微软雅黑, Hiragino Sans GB, PingFang SC, STHeiTi, sans-serif',
-                  },
-                },
-              },
-            ],
-            series: [
-              {
-
-                type: 'bar',
-                data: chatData.countList,
-                barWidth: 40,
-                itemStyle: {
-                  normal: {
-                    color: params => colorList[params.dataIndex],
-                    type: 'line',
-                    barBorderRadius: [8, 8, 0, 0],
-                    lineStyle: {
-                      color: '#3a84ff',
-                      type: 'dashed',
-                    },
-
-                  },
-                  emphasis: {
-                    barBorderRadius: [8, 8, 0, 0],
-                  },
-                },
-              },
-            ],
-          });
-        });
-      });
-    },
     setUserHasApp(value) {
       this.userHasApp = value;
       if (!value) {
@@ -679,11 +186,6 @@ export default {
 </script>
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
-
-.idle-app-dashboard-cls {
-  margin: 40px 0 30px;
-}
-
 .paas-content.home-content {
   background-color: #f5f7fa;
 }
@@ -793,81 +295,6 @@ export default {
     a {
       padding: 0 20px;
       font-size: 14px;
-    }
-  }
-}
-
-.paas-operation-tit {
-  padding: 10px 0 0 0;
-  color: #333;
-  line-height: 36px;
-  font-size: 16px;
-
-  h2 {
-    display: inline-block;
-    font-weight: 700;
-    font-size: 16px;
-    color: #313238;
-  }
-
-  .paas-operation-icon {
-    color: #fff;
-    font-size: 14px;
-    height: 36px;
-    line-height: 36px;
-    width: 120px;
-    text-align: center;
-    margin-left: 19px;
-    border-radius: 2px;
-    background: #3a84ff;
-    transition: all 0.5s;
-
-    &:hover {
-      background: #4b9cf2;
-    }
-
-    .paasng-icon {
-      margin-right: 5px;
-    }
-  }
-}
-
-.paas-operation {
-  padding: 2px 0 0 0;
-
-  li {
-    margin: 10px 0 0 0;
-    padding: 12px 0;
-    height: 62px;
-    border: solid 1px #dcdee5;
-    line-height: 38px;
-    color: #63656e;
-    border-radius: 2px;
-
-    &:hover {
-      box-shadow: 0 4px 5px -3px #dcdee5;
-    }
-
-    &.lessthan {
-      border: dashed 1px #e9edee;
-      text-align: center;
-      color: #ccc;
-      font-size: 14px;
-      transition: all 0.5s;
-
-      &:hover {
-        border: dashed 1px #999;
-      }
-
-      a {
-        color: #ccc;
-        font-size: 14px;
-        transition: all 0.5s;
-
-        &:hover {
-          color: #999;
-        }
-      }
     }
   }
 }
@@ -1335,8 +762,7 @@ export default {
 }
 
 .wrap {
-  width: 1180px;
-  margin: 50px auto auto auto;
+  margin: 24px 40px auto;
 }
 .section-wrapper {
   display: flex;

@@ -509,7 +509,8 @@
   </div>
 </template>
 
-<script>import auth from '@/auth';
+<script>
+import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';

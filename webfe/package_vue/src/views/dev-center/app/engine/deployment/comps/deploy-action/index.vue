@@ -1078,7 +1078,7 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from '../deploy-timeline';
 import deployLog from '../deploy-log';
 import { bus } from '@/common/bus';
-// import { getActualLeft, getActualTop } from '@/common/utils'
+import { fileDownload } from '@/common/utils';
 
 export default {
   isBranchesLoading: true,
@@ -3144,24 +3144,22 @@ export default {
     },
 
     /**
-             * 下载模板说明
-             */
-    handleDownloadTemplate() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
-      this.$http.post(url).then((resp) => {
-        const s3Address = resp.downloadable_address;
-        const a = document.createElement('a');
-        a.href = s3Address;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, (resp) => {
+     * 下载模板说明
+     */
+    async handleDownloadTemplate() {
+      try {
+        const res = await this.$store.dispatch('getAppInitTemplateUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        fileDownload(res.downloadable_address);
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
           message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
         });
-      });
+      }
     },
 
     dropdownShow() {

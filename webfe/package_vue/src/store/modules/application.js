@@ -24,16 +24,12 @@ import http from '@/api';
 
 // store
 const state = {
-  appLinks: {
-
-  },
+  appLinks: {},
   appCode: '',
 };
 
 // getters
-const getters = {
-
-};
+const getters = {};
 
 // mutations
 const mutations = {
@@ -47,16 +43,19 @@ const mutations = {
 const actions = {
   async fetchAppExposedLinkUrl({ commit, state }, { appCode, env }) {
     return new Promise((resolve) => {
-      Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/released_state/`).then((resp) => {
-        commit('updateAppExposedLinkUrl', {
-          appCode,
-          env,
-          value: resp.exposed_link.url,
-        });
-        resolve(state.appLinks[appCode][env]);
-      }, () => {
-        resolve(undefined);
-      });
+      Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/released_state/`).then(
+        (resp) => {
+          commit('updateAppExposedLinkUrl', {
+            appCode,
+            env,
+            value: resp.exposed_link.url,
+          });
+          resolve(state.appLinks[appCode][env]);
+        },
+        () => {
+          resolve(undefined);
+        }
+      );
     });
   },
 
@@ -69,6 +68,22 @@ const actions = {
   getAppCustomDomainEntrance({}, appCode, config) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
     return http.get(url, config);
+  },
+
+  /**
+   * 获取应用指定模块初始化模块地址
+   */
+  getAppInitTemplateUrl({}, { appCode, moduleId }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/sourcectl/init_template/`;
+    return http.post(url, {});
+  },
+
+  /**
+   * 获取应用默认初始化模块地址
+   */
+  getAppDefaultInitTemplateUrl({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/sourcectl/init_templates/${appCode}/ `;
+    return http.post(url, {});
   },
 };
 

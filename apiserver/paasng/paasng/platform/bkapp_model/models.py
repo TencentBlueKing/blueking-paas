@@ -23,7 +23,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
-from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     HostAlias,
@@ -185,6 +185,13 @@ class ProcessSpecEnvOverlay(TimestampedModel):
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
+
+
+class ProcessServicesFlag(TimestampedModel):
+    """process services 的标记"""
+
+    app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    auto_created = models.BooleanField("是否自动创建", default=False)
 
 
 class ModuleDeployHookManager(models.Manager):

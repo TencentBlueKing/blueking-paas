@@ -102,7 +102,7 @@ class ImageReleaseMgr(DeployStep):
             use_cnb = parse_result.spec_version == AppSpecVersion.VER_3
         # 仅托管镜像的应用(包含云原生应用和旧镜像应用)部署操作
         else:
-            self._parse_image_app_processes()
+            self._handle_image_app_processes()
             use_cnb = False
 
         # 目前构建流程必须有有效的 build, 因此需要 dummy build 过程
@@ -147,8 +147,8 @@ class ImageReleaseMgr(DeployStep):
         else:
             return result
 
-    def _parse_image_app_processes(self):
-        """解析镜像应用的进程信息"""
+    def _handle_image_app_processes(self):
+        """处理镜像应用的进程信息"""
         env_name = self.module_environment.environment
         processes_dict = {
             proc_spec.name: ProcessTmpl(

@@ -15,17 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, StrEnum
 
 
-class ETLType(str, StructuredEnum):
+class ETLType(StrEnum):
     DELIMITER = EnumField("bk_log_delimiter")
     REGEXP = EnumField("bk_log_regexp")
     JSON = EnumField("bk_log_json")
     TEXT = EnumField("bk_log_text")
 
 
-class FieldType(str, StructuredEnum):
+class FieldType(StrEnum):
     INT = EnumField("int")
     LONG = EnumField("long")
     DOUBLE = EnumField("double")
@@ -34,6 +34,6 @@ class FieldType(str, StructuredEnum):
     NESTED = EnumField("nested")
 
 
-class BkLogType(str, StructuredEnum):
+class BkLogType(StrEnum):
     JSON = EnumField("json")
     STDOUT = EnumField("stdout")

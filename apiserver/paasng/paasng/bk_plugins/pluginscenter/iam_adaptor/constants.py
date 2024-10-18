@@ -17,10 +17,10 @@
 
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
+from paasng.utils.enum import EnumField, StrEnum
 
 # 永不过期的时间（伪，其实是 2100.01.01 08:00:00，与权限中心保持一致)
 NEVER_EXPIRE_TIMESTAMP = 4102444800
@@ -41,7 +41,7 @@ FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 NEVER_EXPIRE_DAYS = -1
 
 
-class PluginPermissionActions(str, StructuredEnum):
+class PluginPermissionActions(StrEnum):
     """插件相关的操作权限"""
 
     BASIC_DEVELOPMENT = EnumField("basic_development", label=_("基础开发"))
@@ -75,5 +75,5 @@ class PluginPermissionActions(str, StructuredEnum):
         raise NotImplementedError
 
 
-class ResourceType(str, StructuredEnum):
+class ResourceType(StrEnum):
     PLUGIN = EnumField("plugin", label=_("蓝鲸插件"))

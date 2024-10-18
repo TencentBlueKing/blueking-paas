@@ -16,9 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from enum import Enum
 
-from blue_krill.data_types.enum import StructuredEnum
+from paasng.utils.enum import IntEnum, StrEnum
 
 # 需要在平台侧完全隐藏的字段名称，用户无法在产品上查看该字段内容，只能通过环境变量查看
 SERVICE_SENSITIVE_FIELDS: dict = {}
@@ -42,19 +41,19 @@ LEGACY_PLAN_INSTANCE = dict(
 )
 
 
-class Category(int, Enum):
+class Category(IntEnum):
     """Paas service categories"""
 
     DATA_STORAGE = 1
     MONITORING_HEALTHY = 2
 
 
-class ServiceType(str, StructuredEnum):
+class ServiceType(StrEnum):
     LOCAL = "local"
     REMOTE = "remote"
 
 
-class ServiceBindingType(int, Enum):
+class ServiceBindingType(IntEnum):
     """Type of service binding relationship"""
 
     NORMAL = 1

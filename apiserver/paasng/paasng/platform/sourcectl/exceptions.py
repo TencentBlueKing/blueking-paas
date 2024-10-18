@@ -45,6 +45,10 @@ class AccessTokenError(Exception):
     """access token 校验失败"""
 
 
+class AccessTokenHolderError(Exception):
+    """token holder 异常（如：未提供）"""
+
+
 class RequestError(Exception):
     """请求异常"""
 

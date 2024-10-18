@@ -17,7 +17,6 @@
 import abc
 import json
 import sys
-from enum import Enum
 from typing import Optional, Protocol
 
 from blue_krill.redis_tools.messaging import StreamChannel
@@ -26,6 +25,7 @@ from django.conf import settings
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.models import Deployment
 from paasng.utils import termcolors
+from paasng.utils.enum import StrEnum
 
 
 def make_style(*args, **kwargs):
@@ -67,7 +67,7 @@ class Style:
     White = make_style(fg="white", opts=("bold",))
 
 
-class StreamType(str, Enum):
+class StreamType(StrEnum):
     STDOUT = "STDOUT"
     STDERR = "STDERR"
 

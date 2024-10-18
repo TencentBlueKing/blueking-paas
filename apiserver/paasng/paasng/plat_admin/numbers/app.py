@@ -23,7 +23,6 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from enum import IntEnum
 from functools import lru_cache, reduce
 from typing import Any, Collection, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
@@ -50,6 +49,7 @@ from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
+from paasng.utils.enum import IntEnum
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord

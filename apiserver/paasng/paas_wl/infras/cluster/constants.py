@@ -17,16 +17,18 @@
 
 from typing import Dict
 
-from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, StructuredEnum
+from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.enum import EnumField, IntEnum, StrEnum
 
-class ClusterTokenType(int, StructuredEnum):
+
+class ClusterTokenType(IntEnum):
     SERVICE_ACCOUNT = 1
 
 
-class ClusterType(str, StructuredEnum):
+class ClusterType(StrEnum):
     """集群类别"""
 
     NORMAL = EnumField("normal", label=_("普通集群"))

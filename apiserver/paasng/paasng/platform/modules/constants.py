@@ -15,15 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import Enum, IntEnum
 from typing import Dict, List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, IntEnum, StrEnum
 
 DEFAULT_ENGINE_APP_PREFIX = "bkapp"
 
 
-class ModuleName(str, Enum):
+class ModuleName(StrEnum):
     DEFAULT = "default"
 
 
@@ -34,7 +33,7 @@ class ExposedURLType(IntEnum):
     SUBDOMAIN = 2
 
 
-class SourceOrigin(int, StructuredEnum):
+class SourceOrigin(IntEnum):
     """Source origin defines the origin of module's source code"""
 
     AUTHORIZED_VCS = EnumField(1, "Authorized VCS")
@@ -58,7 +57,7 @@ class SourceOrigin(int, StructuredEnum):
         return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
 
 
-class APP_CATEGORY(str, StructuredEnum):
+class APP_CATEGORY(StrEnum):
     """Application category, used when setting label to images"""
 
     NORMAL_APP = "normal_app"
@@ -67,7 +66,7 @@ class APP_CATEGORY(str, StructuredEnum):
     LEGACY_APP = "legacy_app"
 
 
-class DeployHookType(str, StructuredEnum):
+class DeployHookType(StrEnum):
     """DeployHook Type"""
 
     PRE_RELEASE_HOOK = EnumField("pre-release-hook", label="部署前置钩子")
@@ -80,7 +79,7 @@ class DeployHookType(str, StructuredEnum):
         return super()._missing_(value)
 
 
-class BuildPackType(str, StructuredEnum):
+class BuildPackType(StrEnum):
     # legacy heroku buildpack format, just a tarball
     TAR = EnumField("tar", label="tar")
 
@@ -102,7 +101,7 @@ class BuildPackType(str, StructuredEnum):
         }
 
 
-class AppImageType(str, StructuredEnum):
+class AppImageType(StrEnum):
     LEGACY = EnumField("legacy", label="legacy")
     CNB = EnumField("cnb", label="cnb")
 

@@ -14,25 +14,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from paasng.utils.enum import EnumField, IntEnum, StrEnum
 
 
-class PAMetadataKey(str, StructuredEnum):
+class PAMetadataKey(StrEnum):
     SITE_ID = "bkpa_site_id"
 
 
-class MetricSourceType(int, StructuredEnum):
+class MetricSourceType(IntEnum):
     INGRESS = EnumField(1, label="ingress")
     USER_TRACKER = EnumField(2, label="user_tracker")
 
 
-class MetricsDimensionType(str, StructuredEnum):
+class MetricsDimensionType(StrEnum):
     PATH = EnumField("path", label="path")
     USER = EnumField("user", label="user")
     ACTION = EnumField("action", label="action")
 
 
-class MetricsInterval(str, StructuredEnum):
+class MetricsInterval(StrEnum):
     """Available interval for metrics"""
 
     FIVE_MINUTES = EnumField("5m", label="5m")

@@ -32,7 +32,7 @@ from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestParseProcessesAndDummyBuild:
+class TestHandleProcessesAndDummyBuild:
     @pytest.fixture()
     def deployment_with_build_options(self, bk_stag_env):
         fake_build_id = uuid.uuid4()
@@ -59,36 +59,36 @@ class TestParseProcessesAndDummyBuild:
         return deployment
 
     def test_for_last_build(self, deployment_with_build_options):
-        """test ImageReleaseMgr._parse_processes_by_build"""
+        """test ImageReleaseMgr._handle_processes_by_build"""
         deployment = deployment_with_build_options
 
-        ImageReleaseMgr.from_deployment_id(deployment.id)._parse_app_processes_and_dummy_build()
+        ImageReleaseMgr.from_deployment_id(deployment.id)._handle_app_processes_and_dummy_build()
         deployment = Deployment.objects.get(id=deployment.id)
         assert deployment.processes == {"web": ProcessTmpl(name="web", command="run server")}
         assert str(deployment.build_id) == deployment.advanced_options.build_id
 
     @pytest.mark.usefixtures("_with_wl_apps")
     def test_for_smart_app(self, bk_app, simple_deployment):
-        """test ImageReleaseMgr._parse_smart_app_processes"""
+        """test ImageReleaseMgr._handle_smart_app_description"""
         app = Application.objects.get(id=bk_app.id)
         app.is_smart_app = True
         app.save()
 
         with mock.patch(
-            "paasng.platform.engine.deploy.image_release.ImageReleaseMgr._parse_smart_app_processes",
+            "paasng.platform.engine.deploy.image_release.ImageReleaseMgr._handle_smart_app_description",
             return_value=DeployHandleResult(spec_version=AppSpecVersion.VER_3),
         ):
-            ImageReleaseMgr.from_deployment_id(simple_deployment.id)._parse_app_processes_and_dummy_build()
+            ImageReleaseMgr.from_deployment_id(simple_deployment.id)._handle_app_processes_and_dummy_build()
             deployment = Deployment.objects.get(id=simple_deployment.id)
             build = Build.objects.get(uuid=deployment.build_id)
             assert build.artifact_metadata.get("use_cnb") is True
 
     @pytest.mark.usefixtures("_with_wl_apps")
     def test_for_image_app(self, bk_module, simple_deployment):
-        """test ImageReleaseMgr._parse_image_app_processes"""
+        """test ImageReleaseMgr._handle_image_app_processes"""
         G(ModuleProcessSpec, module=bk_module, name="web", command=["npm"], args=["run", "server"])
 
-        ImageReleaseMgr.from_deployment_id(simple_deployment.id)._parse_app_processes_and_dummy_build()
+        ImageReleaseMgr.from_deployment_id(simple_deployment.id)._handle_app_processes_and_dummy_build()
         deployment = Deployment.objects.get(id=simple_deployment.id)
         assert deployment.processes["web"].command == "npm run server"
         assert Build.objects.filter(uuid=deployment.build_id).exists()

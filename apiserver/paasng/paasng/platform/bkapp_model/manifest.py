@@ -36,7 +36,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
-    PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -54,6 +53,7 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.manager import ProcessServicesManager
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
@@ -67,7 +67,6 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
-from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
@@ -500,11 +499,7 @@ def get_bkapp_resource_for_deploy(
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
-    # 设置 bkapp.paas.bk.tencent.com/proc-services-feature-enabled 注解值
-    proc_svc_enabled = "true"
-    if deployment and (desc_obj := DeploymentDescription.objects.filter(deployment=deployment).first()):
-        proc_svc_enabled = desc_obj.runtime.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY, "true")
-    model_res.set_proc_services_annotation(proc_svc_enabled)
+    ProcessServicesManager(env).apply_to(model_res)
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)

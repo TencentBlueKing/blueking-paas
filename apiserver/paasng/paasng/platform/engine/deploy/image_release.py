@@ -18,20 +18,18 @@
 import logging
 
 from celery import shared_task
-from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
-from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.manager import ProcessServicesManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.handlers import DeployHandleResult
-from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -78,7 +76,7 @@ class ImageReleaseMgr(DeployStep):
 
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure("解析应用进程信息", phase=preparation_phase):
-            self._parse_app_processes_and_dummy_build()
+            self._handle_app_processes_and_dummy_build()
 
         with self.procedure_force_phase("配置镜像访问凭证", phase=preparation_phase):
             self._setup_image_credentials()
@@ -90,17 +88,17 @@ class ImageReleaseMgr(DeployStep):
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
         start_release_step(deployment_id=self.deployment.id)
 
-    def _parse_app_processes_and_dummy_build(self):
-        """解析应用进程信息并且完成 dummy build"""
+    def _handle_app_processes_and_dummy_build(self):
+        """处理应用进程信息并且完成 dummy build"""
         # build_id 值有效, 表示源码应用选择已构建的镜像进行部署操作
         if self.deployment.advanced_options and (build_id := self.deployment.advanced_options.build_id):
-            self._parse_processes_by_build(build_id)
+            self._handle_processes_by_build(build_id)
             self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
             return
 
         # smart 应用部署操作
         if is_smart_app := self.module_environment.module.application.is_smart_app:
-            parse_result = self._parse_smart_app_processes()
+            parse_result = self._handle_smart_app_description()
             use_cnb = parse_result.spec_version == AppSpecVersion.VER_3
         # 仅托管镜像的应用(包含云原生应用和旧镜像应用)部署操作
         else:
@@ -113,42 +111,41 @@ class ImageReleaseMgr(DeployStep):
         # dummy build 完成，更新 deployment 的 build_id
         self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
 
-    def _parse_processes_by_build(self, build_id: str):
-        """根据 build_id, 解析关联 deployment 的应用进程信息"""
+    def _handle_processes_by_build(self, build_id: str):
+        """根据 build_id, 处理关联 deployment 的应用进程信息"""
         last_deployment: Deployment = (
             Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
         )
         if not last_deployment:
             raise DeployShouldAbortError("failed to get processes")
 
-        # 为 deployment 创建关联的 DeploymentDescription
-        try:
-            last_declarative_config = last_deployment.declarative_config
-            DeploymentDescription.objects.create(
-                deployment=self.deployment, runtime=last_declarative_config.runtime, spec=last_declarative_config.spec
-            )
-        except ObjectDoesNotExist:
-            # 有部分仅 Procfile 的应用没有 DeploymentDescription
-            DeploymentDescription.objects.create(
-                deployment=self.deployment, runtime={PROC_SERVICES_ENABLED_ANNOTATION_KEY: "false"}
-            )
-
         self.deployment.update_fields(processes=last_deployment.processes)
 
-    def _parse_smart_app_processes(self) -> DeployHandleResult:
-        """parse processes from the description files for smart app."""
+    def _handle_smart_app_description(self) -> DeployHandleResult:
+        """Handle the description files for Smart app. Set the auto created flag for process services at the end."""
         try:
+            app_environment = self.deployment.app_environment
             handler = get_deploy_desc_handler_by_version(
-                self.deployment.app_environment.module,
+                app_environment.module,
                 self.deployment.operator,
                 self.deployment.version_info,
             )
-            return handler.handle(self.deployment)
+
+            result = handler.handle(self.deployment)
+
+            # 设置是否需要自动创建 process services 配置. 非 3 的版本需要自动创建
+            if result.spec_version == AppSpecVersion.VER_3:
+                ProcessServicesManager(app_environment).set_auto_created_flag(False)
+            else:
+                ProcessServicesManager(app_environment).set_auto_created_flag(True)
+
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except Exception as e:
             logger.exception("Error while handling s-mart app description file, deployment: %s.", self.deployment)
             raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
+        else:
+            return result
 
     def _parse_image_app_processes(self):
         """解析镜像应用的进程信息"""

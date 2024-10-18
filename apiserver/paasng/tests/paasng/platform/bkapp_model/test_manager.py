@@ -18,9 +18,12 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.entities import AutoscalingConfig as _AutoscalingConfig
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, ProcessServicesManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -68,3 +71,23 @@ class TestModuleProcessSpecManager:
             ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name="prod").scaling_config
             is not None
         ), "The config should have been preserved as it is"
+
+
+class TestProcessServicesManager:
+    @pytest.fixture()
+    def bkapp_resource(self) -> crd.BkAppResource:
+        """A blank bkapp resource object."""
+        return crd.BkAppResource(
+            apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=crd.BkAppSpec()
+        )
+
+    def test_apply(self, bkapp_resource, bk_stag_env):
+        mgr = ProcessServicesManager(bk_stag_env)
+
+        mgr.set_auto_created_flag(True)
+        mgr.apply_to(bkapp_resource)
+        assert bkapp_resource.get_proc_services_annotation() == "false"
+
+        mgr.set_auto_created_flag(False)
+        mgr.apply_to(bkapp_resource)
+        assert bkapp_resource.get_proc_services_annotation() == "true"

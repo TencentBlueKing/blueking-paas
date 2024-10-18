@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from django.db.transaction import atomic
 
-from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
@@ -150,18 +149,10 @@ class DeploymentDeclarativeController:
 
     def _save_desc_obj(self, desc: DeploymentDesc) -> DeploymentDescription:
         """Save the raw description data, return the object created."""
-        runtime = {"source_dir": desc.source_dir}
-
-        # specVersion: 3 ，默认开启 proc services 特性; 旧版本不启用
-        if desc.spec_version == AppSpecVersion.VER_3:
-            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
-        else:
-            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "false"
-
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "runtime": runtime,
+                "runtime": {"source_dir": desc.source_dir},
                 "spec": desc.spec,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
@@ -220,14 +211,6 @@ def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileP
     # Save the process configs to both the module's spec and current deployment object.
     ModuleProcessSpecManager(module).sync_from_desc(processes=list(proc_tmpls.values()))
     deployment.update_fields(processes=proc_tmpls)
-
-    # 此处 DeploymentDescription 的创建, 只用于保存 proc services 特性状态(false 状态), 表示仅配置了 Procfile 的云原生应用
-    # 不启用 proc services 特性
-    DeploymentDescription.objects.create(
-        runtime={PROC_SERVICES_ENABLED_ANNOTATION_KEY: "false"},
-        deployment=deployment,
-    )
-
     return DeployHandleResult()
 
 

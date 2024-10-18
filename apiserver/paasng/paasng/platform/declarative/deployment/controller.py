@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from django.db.transaction import atomic
 
-from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
@@ -69,7 +68,7 @@ class DeploymentDeclarativeController:
 
         self.handle_desc(desc)
 
-        return DeployHandleResult(use_cnb=desc.spec_version == AppSpecVersion.VER_3)
+        return DeployHandleResult(desc.spec_version)
 
     def handle_desc(self, desc: DeploymentDesc):
         """Handle the description object, which was read from the app description file."""
@@ -150,18 +149,10 @@ class DeploymentDeclarativeController:
 
     def _save_desc_obj(self, desc: DeploymentDesc) -> DeploymentDescription:
         """Save the raw description data, return the object created."""
-        runtime = {"source_dir": desc.source_dir}
-
-        # specVersion: 3 ，默认开启 proc services 特性; 旧版本不启用
-        if desc.spec_version == AppSpecVersion.VER_3:
-            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "true"
-        else:
-            runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = "false"
-
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "runtime": runtime,
+                "runtime": {"source_dir": desc.source_dir},
                 "spec": desc.spec,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
@@ -220,7 +211,7 @@ def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileP
     # Save the process configs to both the module's spec and current deployment object.
     ModuleProcessSpecManager(module).sync_from_desc(processes=list(proc_tmpls.values()))
     deployment.update_fields(processes=proc_tmpls)
-    return DeployHandleResult(use_cnb=False)
+    return DeployHandleResult()
 
 
 def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:

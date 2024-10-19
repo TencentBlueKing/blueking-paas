@@ -24,7 +24,7 @@ from paasng.platform.declarative.constants import AppSpecVersion
 class DeployHandleResult:
     """部署阶段处理应用描述文件的结果类。
 
-    :param: spec_version 应用描述文件的版本
+    :param: spec_version 应用描述文件的版本. None 表示没有有效的spec version, 如仅提供了 Procfile 的应用
     """
 
     spec_version: Optional[AppSpecVersion] = None

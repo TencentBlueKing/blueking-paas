@@ -53,11 +53,11 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
-from paasng.platform.bkapp_model.manager import ProcessServicesManager
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
     ObservabilityConfig,
+    ProcessServicesFlag,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -499,7 +499,8 @@ def get_bkapp_resource_for_deploy(
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
-    ProcessServicesManager(env).apply_to(model_res)
+    # 由于 bkapp 新增了 process services 配置特性，部分旧模块需要平台创建 process services 并注入到 model_res 中
+    apply_proc_svc_if_implicit_needed(model_res, env)
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
@@ -558,3 +559,19 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
         if not overlay:
             overlay = model_res.spec.envOverlay = crd.EnvOverlay(envVariables=[])
         overlay.envVariables = override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)
+
+
+def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleEnvironment):
+    """如果 implicit_needed flag 为 True, 则创建 process services, 并注入到 model_res 中; 否则不做任何操作.
+
+    :param model_res: The bkapp model resource object.
+    :param env: The environment object.
+
+    # 说明: 现阶段通过设置注解 bkapp.paas.bk.tencent.com/proc-services-feature-enabled, 在 operator 侧完成对应功能.
+    # TODO 后续处理: 当 implicit_needed 为 True 时, 创建并注入 process services 配置, 并且统一设置注解值为 true
+    """
+    flag, _ = ProcessServicesFlag.objects.get_or_create(app_environment=env, defaults={"implicit_needed": False})
+    if not flag.implicit_needed:
+        model_res.set_proc_services_annotation("true")
+    else:
+        model_res.set_proc_services_annotation("false")

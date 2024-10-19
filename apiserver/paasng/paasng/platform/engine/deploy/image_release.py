@@ -26,8 +26,7 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.manager import ProcessServicesManager
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.handlers import DeployHandleResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
@@ -122,7 +121,7 @@ class ImageReleaseMgr(DeployStep):
         self.deployment.update_fields(processes=last_deployment.processes)
 
     def _handle_smart_app_description(self) -> DeployHandleResult:
-        """Handle the description files for Smart app. Set the auto created flag for process services at the end."""
+        """Handle the description files for Smart app. Set the implicit_needed flag for process services at the end."""
         try:
             app_environment = self.deployment.app_environment
             handler = get_deploy_desc_handler_by_version(
@@ -133,11 +132,11 @@ class ImageReleaseMgr(DeployStep):
 
             result = handler.handle(self.deployment)
 
-            # 设置是否需要自动创建 process services 配置. 非 3 的版本需要自动创建
-            if result.spec_version == AppSpecVersion.VER_3:
-                ProcessServicesManager(app_environment).set_auto_created_flag(False)
-            else:
-                ProcessServicesManager(app_environment).set_auto_created_flag(True)
+            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显示配置 process services, 因此设置隐示标记, 由平台负责创建
+            implicit_needed = result.spec_version != AppSpecVersion.VER_3
+            ProcessServicesFlag.objects.update_or_create(
+                app_environment=app_environment, defaults={"implicit_needed": implicit_needed}
+            )
 
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))

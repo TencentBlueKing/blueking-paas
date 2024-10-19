@@ -20,11 +20,9 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from django.conf import settings
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.models import Module
@@ -201,37 +199,3 @@ def sync_hooks(module: Module, hooks: HookList):
 
     # Remove existing data that is not touched.
     module.deploy_hooks.filter(id__in=existing_index.values()).delete()
-
-
-class ProcessServicesManager:
-    """Process Services 配置管理器
-
-    :param env: ModuleEnvironment
-    """
-
-    def __init__(self, env: ModuleEnvironment):
-        self.env = env
-        self.flag, _ = ProcessServicesFlag.objects.get_or_create(
-            app_environment=self.env, defaults={"auto_created": False}
-        )
-
-    def set_auto_created_flag(self, auto_created: bool):
-        """设置是否自动创建 process services 配置
-
-        :param auto_created: 是否自动注入
-        """
-        self.flag.auto_created = auto_created
-        self.flag.save(update_fields=["auto_created"])
-
-    def apply_to(self, model_res: crd.BkAppResource):
-        """向 model_res 中注入 process services 配置.
-
-        :param model_res: The bkapp model resource object.
-
-        # 说明: 现阶段通过设置注解 bkapp.paas.bk.tencent.com/proc-services-feature-enabled, 在 operator 侧完成对应功能.
-        # TODO 后续处理: 当 auto_created 为 True 时, 创建并注入 process services 配置, 并且统一设置注解值为 true
-        """
-        if not self.flag.auto_created:
-            model_res.set_proc_services_annotation("true")
-        else:
-            model_res.set_proc_services_annotation("false")

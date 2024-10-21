@@ -102,7 +102,7 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
 
-class LightApplicationViewSetErrorCode(StrStructuredEnum):
+class LightApplicationViewSetErrorCode(IntStructuredEnum):
     SUCCESS = 0
     PARAM_NOT_VALID = 1301100
     CREATE_APP_ERROR = 1301101

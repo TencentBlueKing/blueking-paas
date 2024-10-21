@@ -15,20 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""kres is a well capsuled package for playing with kubernetes resources
-"""
+"""kres is a well capsuled package for playing with kubernetes resources"""
+
 import functools
 import json
 import logging
 import time
 from contextlib import contextmanager
 from datetime import datetime
-from enum import Enum
 from types import ModuleType
 from typing import Any, Callable, Collection, Dict, Iterator, List, Optional, Tuple, Type, Union, overload
 
 import cattr
 from attrs import define
+from blue_krill.data_types.enum import StrStructuredEnum
 from kubernetes import client as client_mod
 from kubernetes.client.api_client import ApiClient
 from kubernetes.client.exceptions import ApiException
@@ -66,7 +66,7 @@ def set_default_options(options: ClientOptionsDict):
     _default_options = options
 
 
-class PatchType(str, Enum):
+class PatchType(StrStructuredEnum):
     """Different merge types when patching a kubernetes resource
     See also: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
     """
@@ -116,12 +116,10 @@ class NameBasedMethodProxy:
         self.method_name = name
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "NameBasedMethodProxy":
-        ...
+    def __get__(self, instance: None, owner: None) -> "NameBasedMethodProxy": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> Callable:
-        ...
+    def __get__(self, instance: object, owner: Type) -> Callable: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["NameBasedMethodProxy", Callable]:
         if not instance:

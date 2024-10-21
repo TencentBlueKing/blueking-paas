@@ -93,7 +93,7 @@ func Unzip(srcFilePath, distDir string) error {
 // distDir is the directory where the extracted files will be placed.
 // Returns an error if there was a problem extracting the zip file.
 func ExtractTarGz(srcFilePath, distDir string) error {
-	z := archiver.NewZip()
+	z := archiver.NewTarGz()
 	if err := z.Unarchive(srcFilePath, distDir); err != nil {
 		return errors.Wrap(err, "extract tar.gz error")
 	}

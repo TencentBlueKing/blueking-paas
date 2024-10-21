@@ -1,18 +1,20 @@
 package config
 
 // 源码获取方式
+type FetchMethod string
+
 const (
-	HTTP    = "HTTP"
-	BK_REPO = "BK_REPO"
-	GIT     = "GIT"
+	HTTP    FetchMethod = "HTTP"
+	BK_REPO FetchMethod = "BK_REPO"
+	GIT     FetchMethod = "GIT"
 )
 
 // SourceCodeConfig 源码配置
 type SourceCodeConfig struct {
 	// 源码获取方式
-	SourceFetchMethod string
+	FetchMethod FetchMethod
 	// 源码地址
-	SourceFetchUrl string
+	FetchUrl string
 	// Git 仓库版本
 	GitRevision string
 	// 工作目录

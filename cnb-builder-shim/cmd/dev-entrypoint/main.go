@@ -36,12 +36,12 @@ func main() {
 	}
 
 	if err := initializeSourceCode(); err != nil {
-		logger.Error(err, "PreFetch Source Code Failed")
+		logger.Error(err, "Initialize source code failed")
 		os.Exit(1)
 	}
 
 	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init Config Failed")
+		logger.Error(err, "Init config failed")
 		os.Exit(1)
 	}
 

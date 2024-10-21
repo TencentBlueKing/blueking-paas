@@ -17,12 +17,17 @@ func InitConfig() error {
 
 // 从环境变量中加载配置源码相关配置
 func loadSourceConfigFromEnv() (SourceCodeConfig, error) {
-	sourceFetchMethod := utils.EnvOrDefault("SOURCE_FETCH_METHOD", HTTP)
+	sourceFetchMethod := FetchMethod(utils.EnvOrDefault("SOURCE_FETCH_METHOD", string(HTTP)))
 	sourceFetchUrl := utils.EnvOrDefault("SOURCE_FETCH_URL", "")
 	gitRevision := utils.EnvOrDefault("GIT_REVISION", "")
 	workspace := utils.EnvOrDefault("WORKSPACE", "/cnb/devsandbox/src")
 
-	return SourceCodeConfig{SourceFetchMethod: sourceFetchMethod, SourceFetchUrl: sourceFetchUrl, GitRevision: gitRevision, Workspace: workspace}, nil
+	return SourceCodeConfig{
+		FetchMethod: sourceFetchMethod,
+		FetchUrl:    sourceFetchUrl,
+		GitRevision: gitRevision,
+		Workspace:   workspace,
+	}, nil
 }
 
 func loadConfigFromEnv() (*Config, error) {

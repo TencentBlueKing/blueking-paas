@@ -141,7 +141,7 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 
 // initializeSourceCode: 根据配置初始化源码
 func initializeSourceCode() error {
-	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.SourceCode.SourceFetchMethod))
+	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.SourceCode.FetchMethod))
 	// TODO: 源码初始化不同的方式抽象成一个接口
 	workspace := config.G.SourceCode.Workspace
 	// 确保工作空间存在
@@ -158,9 +158,9 @@ func initializeSourceCode() error {
 	if codeExists {
 		return nil
 	}
-	switch config.G.SourceCode.SourceFetchMethod {
+	switch config.G.SourceCode.FetchMethod {
 	case config.BK_REPO:
-		downloadUrl, err := url.Parse(config.G.SourceCode.SourceFetchUrl)
+		downloadUrl, err := url.Parse(config.G.SourceCode.FetchUrl)
 		if err != nil {
 			return err
 		}

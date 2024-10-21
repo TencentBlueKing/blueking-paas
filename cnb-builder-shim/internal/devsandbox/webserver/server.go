@@ -114,8 +114,7 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var srcFilePath string
-		fmt.Println("dijiatest", config.G)
-		switch config.G.SourceCode.SourceFetchMethod {
+		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:
 			// 创建临时文件夹
 			tmpDir, err := os.MkdirTemp("", "source-*")
@@ -132,13 +131,13 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			}
 
 			fileName := filepath.Base(file.Filename)
-			uploadDir := path.Join(s.env.UploadDir, fileName)
-			if err = c.SaveUploadedFile(file, uploadDir); err != nil {
+			dst := path.Join(s.env.UploadDir, fileName)
+			if err = c.SaveUploadedFile(file, dst); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
 				return
 			}
 			// 解压文件到临时目录
-			if err = utils.Unzip(uploadDir, tmpDir); err != nil {
+			if err = utils.Unzip(dst, tmpDir); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
 				return
 			}
@@ -146,7 +145,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 		case config.BK_REPO:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.SourceFetchMethod)})
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
 			return
 		}
 

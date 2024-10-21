@@ -15,10 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import EnumField, StrEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class PipelineBuildStatus(StrEnum):
+class PipelineBuildStatus(StrStructuredEnum):
     """蓝盾流水线构建状态"""
 
     # 由于蓝盾接口文档未提供所有枚举值, 因此这里只列举目前已知的状态

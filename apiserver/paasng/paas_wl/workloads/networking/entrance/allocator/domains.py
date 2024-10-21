@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 from typing import Dict, List, Optional
 
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum
+
 from paas_wl.infras.cluster.models import Domain as DomainCfg
 from paas_wl.infras.cluster.models import IngressConfig, PortMap
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -28,10 +30,9 @@ from paas_wl.workloads.networking.entrance.addrs import URL
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
-from paasng.utils.enum import EnumField, IntEnum
 
 
-class DomainPriorityType(IntEnum):
+class DomainPriorityType(IntStructuredEnum):
     STABLE = EnumField(1, label="无缩写，完整域名")
     WITHOUT_MODULE = EnumField(2, label="无模块，指向主模块")
     ONLY_CODE = EnumField(3, label="无模块无环境，指向主模块生产环境")

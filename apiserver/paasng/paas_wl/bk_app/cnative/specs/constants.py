@@ -15,9 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
-
-from paasng.utils.enum import EnumField, StrEnum
 
 # Default resource limitations for each process
 DEFAULT_PROC_CPU = "4000m"
@@ -67,14 +66,14 @@ CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 PROC_SERVICES_ENABLED_ANNOTATION_KEY = "bkapp.paas.bk.tencent.com/proc-services-feature-enabled"
 
 
-class ApiVersion(StrEnum):
+class ApiVersion(StrStructuredEnum):
     """Kubernetes CRD API versions"""
 
     V1ALPHA1 = "paas.bk.tencent.com/v1alpha1"
     V1ALPHA2 = "paas.bk.tencent.com/v1alpha2"
 
 
-class DeployStatus(StrEnum):
+class DeployStatus(StrStructuredEnum):
     """Cloud-native app's deployment statuses"""
 
     PENDING = EnumField("pending", label=_("待实施"))
@@ -91,7 +90,7 @@ class DeployStatus(StrEnum):
         return val in [DeployStatus.READY, DeployStatus.ERROR]
 
 
-class DomainGroupSource(StrEnum):
+class DomainGroupSource(StrStructuredEnum):
     """The source types for DomainGroup data"""
 
     SUBDOMAIN = "subdomain"
@@ -99,14 +98,14 @@ class DomainGroupSource(StrEnum):
     CUSTOM = "custom"
 
 
-class MResConditionType(StrEnum):
+class MResConditionType(StrStructuredEnum):
     APP_AVAILABLE = EnumField("AppAvailable")
     APP_PROGRESSING = EnumField("AppProgressing")
     ADDONS_PROVISIONED = EnumField("AddOnsProvisioned")
     HOOKS_FINISHED = EnumField("HooksFinished")
 
 
-class ConditionStatus(StrEnum):
+class ConditionStatus(StrStructuredEnum):
     """k8s metav1.ConditionStatus"""
 
     TRUE = EnumField("True")
@@ -114,7 +113,7 @@ class ConditionStatus(StrEnum):
     UNKNOWN = EnumField("Unknown")
 
 
-class MResPhaseType(StrEnum):
+class MResPhaseType(StrStructuredEnum):
     """a label for the condition of a BkApp at the current time."""
 
     AppPending = EnumField("Pending")
@@ -122,14 +121,14 @@ class MResPhaseType(StrEnum):
     AppFailed = EnumField("Failed")
 
 
-class ScalingPolicy(StrEnum):
+class ScalingPolicy(StrStructuredEnum):
     """ScalingPolicy is used to specify which policy should be used while scaling"""
 
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
 
 
-class ResQuotaPlan(StrEnum):
+class ResQuotaPlan(StrStructuredEnum):
     """ResQuotaPlan is used to specify process resource quota"""
 
     P_DEFAULT = EnumField("default", label="default")
@@ -138,7 +137,7 @@ class ResQuotaPlan(StrEnum):
     P_4C4G = EnumField("4C4G", label="4C4G")
 
 
-class MountEnvName(StrEnum):
+class MountEnvName(StrStructuredEnum):
     """Environment name for managing mount volume"""
 
     STAG = EnumField("stag", label="仅测试环境")
@@ -146,12 +145,12 @@ class MountEnvName(StrEnum):
     GLOBAL = EnumField("_global_", label="所有环境")
 
 
-class VolumeSourceType(StrEnum):
+class VolumeSourceType(StrStructuredEnum):
     ConfigMap = EnumField("ConfigMap")
     PersistentStorage = EnumField("PersistentStorage")
 
 
-class PersistentStorageSize(StrEnum):
+class PersistentStorageSize(StrStructuredEnum):
     P_1G = EnumField("1Gi")
     P_2G = EnumField("2Gi")
     P_4G = EnumField("4Gi")

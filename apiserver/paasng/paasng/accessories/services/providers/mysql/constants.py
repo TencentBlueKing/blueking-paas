@@ -14,10 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from paasng.utils.enum import IntEnum
+from blue_krill.data_types.enum import IntStructuredEnum
 
 
-class MySQLAuthTypeEnum(IntEnum):
+class MySQLAuthTypeEnum(IntStructuredEnum):
     GRANT = 1
     REVOKE = 2
 

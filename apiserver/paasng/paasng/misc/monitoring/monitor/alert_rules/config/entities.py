@@ -15,10 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import StrEnum
+from blue_krill.data_types.enum import StrStructuredEnum
 
 
-class AlertCode(StrEnum):
+class AlertCode(StrStructuredEnum):
     HIGH_CPU_USAGE = "high_cpu_usage"
     HIGH_MEM_USAGE = "high_mem_usage"
     POD_RESTART = "pod_restart"

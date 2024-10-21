@@ -157,7 +157,7 @@ class AppDeploymentOperationObj(OperationObj):
 
     def get_text_display(self) -> str:
         if self.extra_values.status is not None:
-            status = JobStatus(self.extra_values.status)
+            status = JobStatus.SUCCESSFUL if self.extra_values.status is True else JobStatus.FAILED
         else:
             # Backward compatible with data which don't have `status` field
             status = JobStatus.SUCCESSFUL if self.extra_values.has_succeeded else JobStatus.FAILED

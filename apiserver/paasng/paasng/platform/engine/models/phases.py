@@ -17,6 +17,7 @@
 
 from typing import TYPE_CHECKING, Dict
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -25,14 +26,13 @@ from rest_framework.serializers import CharField, DateTimeField, Serializer
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.platform.engine.models import Deployment, EngineApp, MarkStatusMixin
-from paasng.utils.enum import EnumField, StrEnum
 from paasng.utils.models import UuidAuditedModel
 
 if TYPE_CHECKING:
     from paasng.platform.engine.models.steps import DeployStep
 
 
-class DeployPhaseTypes(StrEnum):
+class DeployPhaseTypes(StrStructuredEnum):
     """部署阶段"""
 
     PREPARATION = EnumField("preparation", label=_("准备阶段"))

@@ -14,9 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from paasng.utils.enum import IntEnum
+from blue_krill.data_types.enum import IntStructuredEnum
 
 
-class SimpleAppSource(IntEnum):
+class SimpleAppSource(IntStructuredEnum):
     DEFAULT = 1
     LEGACY = 2

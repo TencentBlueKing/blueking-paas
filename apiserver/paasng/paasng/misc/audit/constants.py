@@ -15,19 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
-from paasng.utils.enum import EnumField, IntEnum, StrEnum
 
-
-class AccessType(IntEnum):
+class AccessType(IntStructuredEnum):
     """访问方式"""
 
     WEB = EnumField(0, label=_("网页"))
     API = EnumField(1, label="API")
 
 
-class ResultCode(IntEnum):
+class ResultCode(IntStructuredEnum):
     """操作结果"""
 
     SUCCESS = EnumField(0, label=_("成功"))
@@ -40,7 +39,7 @@ class ResultCode(IntEnum):
         return [cls.SUCCESS, cls.FAILURE, cls.INTERRUPT]
 
 
-class DataType(StrEnum):
+class DataType(StrStructuredEnum):
     """记录操作前后数据的数据类型，前端会根据该字段做不同的展示
     前端不需要展示相关的 label, 故不用做国际化标记
     """
@@ -55,7 +54,7 @@ class DataType(StrEnum):
     )
 
 
-class OperationTarget(StrEnum):
+class OperationTarget(StrStructuredEnum):
     """操作对象"""
 
     APP = EnumField("app", label=_("应用"))
@@ -93,7 +92,7 @@ class OperationTarget(StrEnum):
     SLUGRUNNER = EnumField("slugrunner", label="Slugrunner")
 
 
-class OperationEnum(StrEnum):
+class OperationEnum(StrStructuredEnum):
     """操作类型"""
 
     CREATE = EnumField("create", label=_("新建"))

@@ -17,16 +17,17 @@
 import copy
 from typing import List, Optional, Tuple
 
+from blue_krill.data_types.enum import StrStructuredEnum
+
 from paas_wl.bk_app.cnative.specs.crd.bk_app import EnvVar, EnvVarOverlay
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.configurations.image import generate_image_repository
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig, Module
-from paasng.utils.enum import StrEnum
 
 
-class MergeStrategy(StrEnum):
+class MergeStrategy(StrStructuredEnum):
     """Different strategy when merging env vars"""
 
     OVERRIDE = "Override"

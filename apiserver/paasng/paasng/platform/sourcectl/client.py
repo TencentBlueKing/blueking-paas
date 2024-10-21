@@ -21,13 +21,13 @@ import logging
 from typing import Any, Dict, Generator, List, Optional
 
 import requests
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
 from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.models import GitProject
-from paasng.utils.enum import EnumField, StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ DEFAULT_REPO_REF = "master"
 RETRY_TIME = 3
 
 
-class GitRepoProvider(StrEnum):
+class GitRepoProvider(StrStructuredEnum):
     """Git 仓库服务提供方"""
 
     GitHub = EnumField("github", label="GitHub")

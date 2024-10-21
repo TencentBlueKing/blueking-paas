@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import EnumField, IntEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum
 
 
-class PluginTagIdType(IntEnum):
+class PluginTagIdType(IntStructuredEnum):
     UNTAGGED = EnumField(-1, label="未分类")

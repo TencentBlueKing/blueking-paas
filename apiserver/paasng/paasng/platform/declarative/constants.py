@@ -17,7 +17,7 @@
 
 from typing import Any, TypeVar
 
-from paasng.utils.enum import EnumField, IntEnum, StrEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 
 T = TypeVar("T")
 
@@ -43,7 +43,7 @@ class OmittedType:
 OMITTED_VALUE = OmittedType()
 
 
-class AppSpecVersion(IntEnum):
+class AppSpecVersion(IntStructuredEnum):
     # VER_1 meaning app.yaml is provided by S-Mart App
     VER_1 = 1
     VER_2 = 2
@@ -51,12 +51,12 @@ class AppSpecVersion(IntEnum):
     VER_3 = 3
 
 
-class AppDescPluginType(StrEnum):
+class AppDescPluginType(StrStructuredEnum):
     APP_VERSION = EnumField("app_version", label="应用版本")
     APP_LIBRARIES = EnumField("app_libraries", label="应用依赖库")
 
 
-class DiffType(StrEnum):
+class DiffType(StrStructuredEnum):
     ADDED = EnumField("added", label="新增")
     DELETED = EnumField("deleted", label="删除")
     NOT_MODIFIED = EnumField("not_modified", label="未改动")

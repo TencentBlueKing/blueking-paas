@@ -15,8 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import IntStructuredEnum, StrStructuredEnum
+
 from paasng.platform.applications.constants import ApplicationRole
-from paasng.utils.enum import IntEnum, StrEnum
 
 # 使用 -1 表示永不过期
 NEVER_EXPIRE_DAYS = -1
@@ -40,7 +41,7 @@ FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 LIST_GRADE_MANAGERS_LIMIT = 15000
 
 
-class ResourceType(StrEnum):
+class ResourceType(StrStructuredEnum):
     """
     iam 上注册的资源类型
     """
@@ -60,7 +61,7 @@ class ResourceType(StrEnum):
     BkLogEsSource = "es_source"
 
 
-class IAMErrorCodes(IntEnum):
+class IAMErrorCodes(IntStructuredEnum):
     """
     iam api 返回错误码
     https://bk.tencent.com/docs/document/7.0/236/39801

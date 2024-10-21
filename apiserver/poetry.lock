@@ -443,14 +443,14 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "blue-krill"
-version = "2.0.6"
+version = "2.0.7"
 description = "Tools and common packages for blueking PaaS platform."
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.12"
 files = [
-    {file = "blue_krill-2.0.6-py3-none-any.whl", hash = "sha256:fef55abd4b8f80caf2e7e0a031af3f0b394254763a4fa052c4f138c341852851"},
-    {file = "blue_krill-2.0.6.tar.gz", hash = "sha256:953392ab410106bee95caa1a0719cc57d09f5c40144e6b20aa86c211f2bbb2c7"},
+    {file = "blue_krill-2.0.7-py3-none-any.whl", hash = "sha256:3b7cbd86a8ed1721fe853981d48b19485115f4db8f6b69d3cf33f34b7299b8e3"},
+    {file = "blue_krill-2.0.7.tar.gz", hash = "sha256:7d0e42762033e63881ec7ab978f04558d17f1971ac132ef55812cbc7733561d5"},
 ]
 
 [package.dependencies]
@@ -5253,4 +5253,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "07a6d82d5b02d1b39441578e795ebe1c272f5ba8a2beb26330d07fa0774d7ad7"
+content-hash = "a58e48ca22c120be4413c9e412d5d1afa49af6fff43f55a47c1f5b25db46eb40"

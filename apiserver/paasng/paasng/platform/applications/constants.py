@@ -17,13 +17,11 @@
 
 from typing import Type
 
-from blue_krill.data_types.enum import FeatureFlag, FeatureFlagField
+from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
-from paasng.utils.enum import EnumField, IntEnum, StrEnum
 
-
-class ApplicationType(StrEnum):
+class ApplicationType(StrStructuredEnum):
     DEFAULT = EnumField("default", label="普通应用")  # 默认类型：无任何定制逻辑
     ENGINELESS_APP = EnumField(
         "engineless_app", label="外链应用"
@@ -33,7 +31,7 @@ class ApplicationType(StrEnum):
     CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
 
-class ApplicationRole(IntEnum):
+class ApplicationRole(IntStructuredEnum):
     NOBODY = EnumField(-1, label="无身份用户")
     COLLABORATOR = EnumField(1, label="协作者")
     ADMINISTRATOR = EnumField(2, label="管理员")
@@ -41,7 +39,7 @@ class ApplicationRole(IntEnum):
     OPERATOR = EnumField(4, label="运营")
 
     @classmethod
-    def get_roles(cls: Type[IntEnum]):
+    def get_roles(cls: Type[IntStructuredEnum]):
         return [
             {"id": role.value, "name": role.name.lower()}
             for role in cls
@@ -49,7 +47,7 @@ class ApplicationRole(IntEnum):
         ]
 
 
-class AppLanguage(StrEnum):
+class AppLanguage(StrStructuredEnum):
     PYTHON = EnumField("Python", label="Python")
     PHP = EnumField("PHP", label="PHP")
     GO = EnumField("Go", label="Go")
@@ -76,7 +74,7 @@ LEVEL_PARAM_DICT = {
 }
 
 
-class AppEnvironment(StrEnum):
+class AppEnvironment(StrStructuredEnum):
     STAGING = EnumField("stag", label="预发布环境")
     PRODUCTION = EnumField("prod", label="生产环境")
 
@@ -104,7 +102,7 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_PERSISTENT_STORAGE = FeatureFlagField(label=_("开启持久存储挂载卷"), default=False)
 
 
-class LightApplicationViewSetErrorCode(StrEnum):
+class LightApplicationViewSetErrorCode(StrStructuredEnum):
     SUCCESS = 0
     PARAM_NOT_VALID = 1301100
     CREATE_APP_ERROR = 1301101

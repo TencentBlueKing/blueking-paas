@@ -28,6 +28,7 @@ from typing import Any, Collection, Dict, Generator, Iterable, List, Optional, S
 
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
+from blue_krill.data_types.enum import IntStructuredEnum
 from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework.fields import get_attribute
@@ -49,7 +50,6 @@ from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-from paasng.utils.enum import IntEnum
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord
@@ -72,7 +72,7 @@ PV_UV_COUNT_PERIOD_LENGTH = 90
 logger = logging.getLogger(__name__)
 
 
-class DeployStatus(IntEnum):
+class DeployStatus(IntStructuredEnum):
     PRODUCTION = 1
     STAGING = 2
     DEVELOPING = 3

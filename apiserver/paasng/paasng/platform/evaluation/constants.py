@@ -15,32 +15,31 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
-from paasng.utils.enum import EnumField, StrEnum
 
-
-class BatchTaskStatus(StrEnum):
+class BatchTaskStatus(StrStructuredEnum):
     """任务状态"""
 
     RUNNING = EnumField("running", label=_("运行中"))
     FINISHED = EnumField("finished", label=_("已完成"))
 
 
-class EmailNotificationType(StrEnum):
+class EmailNotificationType(StrStructuredEnum):
     """邮件通知类型"""
 
     IDLE_APP_MODULE_ENVS = EnumField("idle_app_module_envs", label=_("闲置应用模块"))
 
 
-class EmailReceiverType(StrEnum):
+class EmailReceiverType(StrStructuredEnum):
     """邮件接收者类型"""
 
     PLAT_ADMIN = EnumField("plat_admin", label=_("平台管理员"))
     APP_DEVELOPER = EnumField("app_developer", label=_("应用开发者"))
 
 
-class OperationIssueType(StrEnum):
+class OperationIssueType(StrStructuredEnum):
     """应用运营问题类型"""
 
     NONE = EnumField("none", label=_("无"))

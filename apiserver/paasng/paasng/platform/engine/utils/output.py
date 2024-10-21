@@ -19,13 +19,13 @@ import json
 import sys
 from typing import Optional, Protocol
 
+from blue_krill.data_types.enum import StrStructuredEnum
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.conf import settings
 
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.models import Deployment
 from paasng.utils import termcolors
-from paasng.utils.enum import StrEnum
 
 
 def make_style(*args, **kwargs):
@@ -67,7 +67,7 @@ class Style:
     White = make_style(fg="white", opts=("bold",))
 
 
-class StreamType(StrEnum):
+class StreamType(StrStructuredEnum):
     STDOUT = "STDOUT"
     STDERR = "STDERR"
 

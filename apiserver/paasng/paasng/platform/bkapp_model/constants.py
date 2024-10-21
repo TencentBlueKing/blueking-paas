@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import EnumField, StrEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 # legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -25,7 +25,7 @@ DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 PORT_PLACEHOLDER = "${PORT}"
 
 
-class ExposedTypeName(StrEnum):
+class ExposedTypeName(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义
     # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
     """
@@ -33,7 +33,7 @@ class ExposedTypeName(StrEnum):
     BK_HTTP = "bk/http"
 
 
-class NetworkProtocol(StrEnum):
+class NetworkProtocol(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.NetworkProtocol 重复定义
     # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
     """
@@ -42,7 +42,7 @@ class NetworkProtocol(StrEnum):
     UDP = EnumField("UDP", label="UDP")
 
 
-class ImagePullPolicy(StrEnum):
+class ImagePullPolicy(StrStructuredEnum):
     """duplicated from paas_wl.workloads.release_controller.constants.ImagePullPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """
@@ -52,7 +52,7 @@ class ImagePullPolicy(StrEnum):
     NEVER = EnumField("Never")
 
 
-class ResQuotaPlan(StrEnum):
+class ResQuotaPlan(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """
@@ -63,7 +63,7 @@ class ResQuotaPlan(StrEnum):
     P_4C4G = EnumField("4C4G", label="4C4G")
 
 
-class ScalingPolicy(StrEnum):
+class ScalingPolicy(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """

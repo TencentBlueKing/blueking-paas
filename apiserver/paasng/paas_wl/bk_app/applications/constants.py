@@ -15,10 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import EnumField, StrEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class WlAppType(StrEnum):
+class WlAppType(StrStructuredEnum):
     """type of workloads app"""
 
     DEFAULT = EnumField("default")  # 默认类型：无任何定制逻辑
@@ -28,7 +28,7 @@ class WlAppType(StrEnum):
     CLOUD_NATIVE = EnumField("cloud_native")
 
 
-class ArtifactType(StrEnum):
+class ArtifactType(StrStructuredEnum):
     """type of build artifact"""
 
     SLUG = EnumField("slug")

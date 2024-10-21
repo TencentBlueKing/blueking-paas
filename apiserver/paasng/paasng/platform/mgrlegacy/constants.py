@@ -17,8 +17,9 @@
 
 from dataclasses import dataclass
 
+from blue_krill.data_types.enum import StrStructuredEnum
+
 from paasng.utils.basic import ChoicesEnum
-from paasng.utils.enum import StrEnum
 
 
 class MigrationStatus(ChoicesEnum):
@@ -120,7 +121,7 @@ class AppMember:
     role: int
 
 
-class CNativeMigrationStatus(StrEnum):
+class CNativeMigrationStatus(StrStructuredEnum):
     DEFAULT = "default"
     ON_MIGRATION = "on_migration"
     MIGRATION_SUCCEEDED = "migration_succeeded"

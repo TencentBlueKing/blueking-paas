@@ -15,16 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.enum import EnumField, StrEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class MetricsSeriesType(StrEnum):
+class MetricsSeriesType(StrStructuredEnum):
     CURRENT = EnumField("current", "使用量")
     REQUEST = EnumField("request", "保留量")
     LIMIT = EnumField("limit", "配额上限")
 
 
-class MetricsResourceType(StrEnum):
+class MetricsResourceType(StrStructuredEnum):
     MEM = EnumField("mem")
     CPU = EnumField("cpu")
 

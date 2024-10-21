@@ -133,5 +133,14 @@ export default {
       const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/alarm_strategies/`;
       return http.post(url, config);
     },
+
+    /**
+     * 查询用户各应用告警数量
+     * @param {Object} data 请求参数
+     */
+    queryAllAppAlerts({}, { data }, config = {}) {
+      const url = `${BACKEND_URL}/api/monitor/user/alerts/`;
+      return http.post(url, data, config);
+    },
   },
 };

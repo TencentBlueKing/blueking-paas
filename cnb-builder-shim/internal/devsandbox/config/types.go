@@ -2,9 +2,9 @@ package config
 
 // 源码获取方式
 const (
-	HTTP   = "HTTP"
-	BKREPO = "BKREPO"
-	GIT    = "GIT"
+	HTTP    = "HTTP"
+	BK_REPO = "BK_REPO"
+	GIT     = "GIT"
 )
 
 // SourceCodeConfig 源码配置
@@ -12,7 +12,7 @@ type SourceCodeConfig struct {
 	// 源码获取方式
 	SourceFetchMethod string
 	// 源码地址
-	SourceGetUrl string
+	SourceFetchUrl string
 	// Git 仓库版本
 	GitRevision string
 	// 工作目录
@@ -23,5 +23,4 @@ type SourceCodeConfig struct {
 type Config struct {
 	// 源码配置
 	SourceCode SourceCodeConfig
-	// ...
 }

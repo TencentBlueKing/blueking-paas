@@ -33,7 +33,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
@@ -45,6 +46,8 @@ var _ = Describe("Test webserver api", func() {
 	lg := logging.Default()
 
 	oldUploadDir := os.Getenv("UPLOAD_DIR")
+
+	_ = config.InitConfig()
 
 	BeforeEach(func() {
 		tmpUploadDir, _ = os.MkdirTemp("", "upload")
@@ -58,7 +61,7 @@ var _ = Describe("Test webserver api", func() {
 		s = &WebServer{
 			server: r,
 			lg:     &lg,
-			ch:     make(chan dc.AppReloadEvent, 1),
+			ch:     make(chan devsandbox.AppReloadEvent, 1),
 			env:    cfg,
 		}
 

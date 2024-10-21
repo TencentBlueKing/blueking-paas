@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -41,7 +41,7 @@ type deployStepOpts struct {
 // TODO 持久化
 type DeployResult struct {
 	DeployID string
-	Status   dc.ReloadStatus
+	Status   devsandbox.ReloadStatus
 	StepOpts *deployStepOpts
 	Log      string
 }
@@ -73,30 +73,30 @@ type DeployManager struct {
 // It analyzes the source code and copies it to the application directory.
 //
 // Parameters:
-// - tmpAppDir: The tmp path of the source file to be deployed.
+// - srcFilePath: The path of source file to be deployed.
 //
 // Returns:
 // - *DeployResult: The deployment result.
 // - error: Any error that occurred during the deployment process.
-func (m *DeployManager) Deploy(tmpAppDir string) (*DeployResult, error) {
+func (m *DeployManager) Deploy(srcFilePath string) (*DeployResult, error) {
 	deployID := m.newDeployID()
 
 	// 分析源码并拷贝到应用目录
-	if err := m.analyzeAndSyncToAppDir(tmpAppDir, dc.DefaultAppDir); err != nil {
+	if err := m.analyzeAndSyncToAppDir(srcFilePath, devsandbox.DefaultAppDir); err != nil {
 		return nil, err
 	}
 
 	// 生成 Procfile
-	if err := m.generateProcfile(dc.DefaultAppDir); err != nil {
+	if err := m.generateProcfile(devsandbox.DefaultAppDir); err != nil {
 		return nil, err
 	}
 
 	// 修改 app 目录的权限
-	if err := utils.Chownr(dc.DefaultAppDir, dc.GetCNBUID(), dc.GetCNBGID()); err != nil {
+	if err := utils.Chownr(devsandbox.DefaultAppDir, devsandbox.GetCNBUID(), devsandbox.GetCNBGID()); err != nil {
 		return nil, err
 	}
 
-	return &DeployResult{DeployID: deployID, StepOpts: m.stepOpts, Status: dc.ReloadProcessing}, nil
+	return &DeployResult{DeployID: deployID, StepOpts: m.stepOpts, Status: devsandbox.ReloadProcessing}, nil
 }
 
 // Result returns the deploy result for a given deploy ID.
@@ -107,7 +107,7 @@ func (m *DeployManager) Deploy(tmpAppDir string) (*DeployResult, error) {
 func (m DeployManager) Result(deployID string, withLog bool) (*DeployResult, error) {
 	var err error
 
-	storage, err := dc.NewReloadResultStorage()
+	storage, err := devsandbox.NewReloadResultStorage()
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 	}
 
 	// 如果 metadata.toml 不存在, 说明上次构建失败, 需要重新构建
-	_, err := os.Stat(path.Join(dc.DefaultLayersDir, "config", "metadata.toml"))
+	_, err := os.Stat(path.Join(devsandbox.DefaultLayersDir, "config", "metadata.toml"))
 	if os.IsNotExist(err) {
 		rebuild = true
 	}
@@ -219,10 +219,10 @@ var _ DeployServiceHandler = (*DeployManager)(nil)
 type FakeDeployManger struct{}
 
 // Deploy fake deploy for unit test
-func (m *FakeDeployManger) Deploy(tmpAppDir string) (*DeployResult, error) {
+func (m *FakeDeployManger) Deploy(srcFilePath string) (*DeployResult, error) {
 	return &DeployResult{
 		DeployID: uuid.NewString(),
-		Status:   dc.ReloadProcessing,
+		Status:   devsandbox.ReloadProcessing,
 		StepOpts: &deployStepOpts{Relaunch: true, Rebuild: true},
 	}, nil
 }
@@ -232,7 +232,7 @@ func (m FakeDeployManger) Result(deployID string, withLog bool) (*DeployResult, 
 	if withLog {
 		return &DeployResult{
 			DeployID: deployID,
-			Status:   dc.ReloadSuccess,
+			Status:   devsandbox.ReloadSuccess,
 			StepOpts: &deployStepOpts{Relaunch: true, Rebuild: true},
 			Log:      "build done...",
 		}, nil
@@ -240,7 +240,7 @@ func (m FakeDeployManger) Result(deployID string, withLog bool) (*DeployResult, 
 
 	return &DeployResult{
 		DeployID: deployID,
-		Status:   dc.ReloadSuccess,
+		Status:   devsandbox.ReloadSuccess,
 		StepOpts: &deployStepOpts{Relaunch: true, Rebuild: true},
 	}, nil
 }

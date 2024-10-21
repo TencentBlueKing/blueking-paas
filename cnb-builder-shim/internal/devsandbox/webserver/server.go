@@ -20,8 +20,6 @@ package webserver
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 	"net/http"
 	"os"
 	"path"
@@ -33,8 +31,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 type envConfig struct {
@@ -47,7 +47,7 @@ type envConfig struct {
 type WebServer struct {
 	server *gin.Engine
 	lg     *logr.Logger
-	ch     chan dc.AppReloadEvent
+	ch     chan devsandbox.AppReloadEvent
 	env    envConfig
 }
 
@@ -67,13 +67,12 @@ func New(lg *logr.Logger) (*WebServer, error) {
 		server: r,
 		lg:     lg,
 		// unbuffered channel
-		ch:  make(chan dc.AppReloadEvent),
+		ch:  make(chan devsandbox.AppReloadEvent),
 		env: cfg,
 	}
 
 	mgr := service.NewDeployManager()
 	r.POST("/deploys", DeployHandler(s, mgr))
-	r.POST("/deploys_without_file", DeployWithoutFileHandler(s, mgr))
 	r.GET("/deploys/:deployID/results", ResultHandler(mgr))
 
 	return s, nil
@@ -87,7 +86,7 @@ func (s *WebServer) Start() error {
 }
 
 // ReadReloadEvent blocking read on reload event
-func (s *WebServer) ReadReloadEvent() (dc.AppReloadEvent, error) {
+func (s *WebServer) ReadReloadEvent() (devsandbox.AppReloadEvent, error) {
 	return <-s.ch, nil
 }
 
@@ -114,73 +113,51 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // DeployHandler handles the deployment of a file to the web server.
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 在其他模式下，不允许使用该接口
-		if config.G.SourceCode.SourceFetchMethod != config.HTTP {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.SourceFetchMethod)})
-			return
-		}
-		var tmpAppDir string
-		// 创建临时文件夹
-		tmpDir, err := os.MkdirTemp("", "source-*")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
-			return
-		}
-		defer os.RemoveAll(tmpDir)
+		var srcFilePath string
+		fmt.Println("dijiatest", config.G)
+		switch config.G.SourceCode.SourceFetchMethod {
+		case config.HTTP:
+			// 创建临时文件夹
+			tmpDir, err := os.MkdirTemp("", "source-*")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
+				return
+			}
+			defer os.RemoveAll(tmpDir)
 
-		file, err := c.FormFile("file")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
-			return
-		}
+			file, err := c.FormFile("file")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
+				return
+			}
 
-		fileName := filepath.Base(file.Filename)
-		srcFilePath := path.Join(s.env.UploadDir, fileName)
-		if err = c.SaveUploadedFile(file, srcFilePath); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
-			return
-		}
-		// 解压文件到临时目录
-		if err = utils.Unzip(srcFilePath, tmpDir); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
-			return
-		}
-		tmpAppDir = path.Join(tmpDir, strings.Split(fileName, ".")[0])
-
-		status, err := svc.Deploy(tmpAppDir)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
-			return
-		}
-
-		select {
-		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
-			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
-		default:
-			c.JSON(
-				http.StatusTooManyRequests,
-				gin.H{"message": "app is deploying, please wait for a while and try again."},
-			)
-		}
-	}
-}
-
-// DeployWithoutFileHandler handles the deployment without file.
-func DeployWithoutFileHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if config.G.SourceCode.SourceFetchMethod == config.HTTP {
+			fileName := filepath.Base(file.Filename)
+			uploadDir := path.Join(s.env.UploadDir, fileName)
+			if err = c.SaveUploadedFile(file, uploadDir); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
+				return
+			}
+			// 解压文件到临时目录
+			if err = utils.Unzip(uploadDir, tmpDir); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+				return
+			}
+			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+		case config.BK_REPO:
+			srcFilePath = config.G.SourceCode.Workspace
+		case config.GIT:
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.SourceFetchMethod)})
 			return
 		}
 
-		status, err := svc.Deploy(config.G.SourceCode.Workspace)
+		status, err := svc.Deploy(srcFilePath)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
 			return
 		}
 
 		select {
-		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
+		case s.ch <- devsandbox.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:
 			c.JSON(
@@ -211,4 +188,4 @@ func ResultHandler(svc service.DeployServiceHandler) gin.HandlerFunc {
 	}
 }
 
-var _ dc.DevWatchServer = (*WebServer)(nil)
+var _ devsandbox.DevWatchServer = (*WebServer)(nil)

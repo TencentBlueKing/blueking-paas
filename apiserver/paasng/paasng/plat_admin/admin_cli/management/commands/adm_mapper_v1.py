@@ -37,9 +37,11 @@
     python manage.py adm_mapper_v1 --action rollback --env-id {ENV_ID}
 
 """
-import sys
-from enum import Enum
 
+import sys
+
+from blue_krill.data_types.enum import StrStructuredEnum
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 
 from paas_wl.bk_app.applications.api import get_latest_build_id
@@ -53,7 +55,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.release.legacy import release_by_engine
 
 
-class CommandAction(str, Enum):
+class CommandAction(StrStructuredEnum):
     """A command action."""
 
     # Upgrade to resource mapper v2
@@ -77,17 +79,17 @@ class Command(BaseCommand, CommandBasicMixin):
     def handle(self, *args, **options):
         try:
             env = ModuleEnvironment.objects.get(id=options["env_id"])
-        except ModuleEnvironment.DoesNotExist:
+        except ObjectDoesNotExist:
             self.exit_with_error(f"Environment {options['env_id']} does not exist")
-
-        if options["action"] == CommandAction.UPGRADE.value:
-            self._handle_upgrade(env)
-        elif options["action"] == CommandAction.ROLLBACK.value:
-            self._handle_rollback(env)
-        elif options["action"] == CommandAction.CLEAN_V1.value:
-            self._handle_clean_v1(env)
         else:
-            raise RuntimeError("Invalid action")
+            if options["action"] == CommandAction.UPGRADE:
+                self._handle_upgrade(env)
+            elif options["action"] == CommandAction.ROLLBACK:
+                self._handle_rollback(env)
+            elif options["action"] == CommandAction.CLEAN_V1:
+                self._handle_clean_v1(env)
+            else:
+                raise RuntimeError("Invalid action")
 
     def _handle_upgrade(self, env: ModuleEnvironment):
         """Upgrade the environment to use resource mapper v2, it will re-deploy the environment

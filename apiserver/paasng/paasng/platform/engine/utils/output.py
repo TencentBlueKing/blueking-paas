@@ -17,9 +17,9 @@
 import abc
 import json
 import sys
-from enum import Enum
 from typing import Optional, Protocol
 
+from blue_krill.data_types.enum import StrStructuredEnum
 from blue_krill.redis_tools.messaging import StreamChannel
 from django.conf import settings
 
@@ -67,7 +67,7 @@ class Style:
     White = make_style(fg="white", opts=("bold",))
 
 
-class StreamType(str, Enum):
+class StreamType(StrStructuredEnum):
     STDOUT = "STDOUT"
     STDERR = "STDERR"
 

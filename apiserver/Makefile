@@ -8,7 +8,7 @@ init-pre-commit: ## 初始化 pre-commit
 	pre-commit install
 
 init-py-dep: ## 初始化 python 依赖包
-	pip install poetry==1.3.2
+	pip install poetry==1.8.3
 	poetry install
 
 init-node-dep: ## 初始化 nodejs

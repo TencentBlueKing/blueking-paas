@@ -17,7 +17,7 @@
 
 import logging
 
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import StrStructuredEnum
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.publish.sync_market.managers import AppManger
@@ -28,7 +28,7 @@ from paasng.platform.applications.models import Application
 logger = logging.getLogger(__name__)
 
 
-class DelKeyType(str, StructuredEnum):
+class DelKeyType(StrStructuredEnum):
     """Source origin defines the origin of module's source code"""
 
     CODE = "code"

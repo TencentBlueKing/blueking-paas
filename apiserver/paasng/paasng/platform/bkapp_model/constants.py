@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 # legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -25,7 +25,7 @@ DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 PORT_PLACEHOLDER = "${PORT}"
 
 
-class ExposedTypeName(str, StructuredEnum):
+class ExposedTypeName(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义
     # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
     """
@@ -33,7 +33,7 @@ class ExposedTypeName(str, StructuredEnum):
     BK_HTTP = "bk/http"
 
 
-class NetworkProtocol(str, StructuredEnum):
+class NetworkProtocol(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.NetworkProtocol 重复定义
     # TODO 将 paasng 和 paas_wl 中重复定义的一些常量, 合并放到更底层的模块中, 避免破坏当前 importlinter 的依赖规则?
     """
@@ -42,7 +42,7 @@ class NetworkProtocol(str, StructuredEnum):
     UDP = EnumField("UDP", label="UDP")
 
 
-class ImagePullPolicy(str, StructuredEnum):
+class ImagePullPolicy(StrStructuredEnum):
     """duplicated from paas_wl.workloads.release_controller.constants.ImagePullPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """
@@ -52,7 +52,7 @@ class ImagePullPolicy(str, StructuredEnum):
     NEVER = EnumField("Never")
 
 
-class ResQuotaPlan(str, StructuredEnum):
+class ResQuotaPlan(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """
@@ -62,23 +62,11 @@ class ResQuotaPlan(str, StructuredEnum):
     P_4C2G = EnumField("4C2G", label="4C2G")
     P_4C4G = EnumField("4C4G", label="4C4G")
 
-    # simulate `ReprEnum` behavior to work well with DRF serializer
-    # see also:
-    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
-    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
-    __str__ = str.__str__
 
-
-class ScalingPolicy(str, StructuredEnum):
+class ScalingPolicy(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
     """
 
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
-
-    # simulate `ReprEnum` behavior to work well with DRF serializer
-    # see also:
-    # - https://docs.python.org/3/library/enum.html#enum.ReprEnum
-    # - https://docs.python.org/3/library/enum.html#enum.Enum.__str__
-    __str__ = str.__str__

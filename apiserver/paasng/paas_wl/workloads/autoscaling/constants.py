@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext as _
 
 # 添加注解 compute-by-limits=true 后，CPU 计算 Utilization 时
@@ -23,14 +23,14 @@ from django.utils.translation import gettext as _
 GPA_COMPUTE_BY_LIMITS_ANNO_KEY = "compute-by-limits"
 
 
-class ScalingMetricName(str, StructuredEnum):
+class ScalingMetricName(StrStructuredEnum):
     """扩缩容指标名称（用于组装 CPA 的指标）"""
 
     CPU = EnumField("cpu")
     MEMORY = EnumField("memory")
 
 
-class ScalingMetricSourceType(str, StructuredEnum):
+class ScalingMetricSourceType(StrStructuredEnum):
     """扩缩容指标类型"""
 
     RESOURCE = EnumField("Resource")
@@ -38,14 +38,14 @@ class ScalingMetricSourceType(str, StructuredEnum):
     OBJECT = EnumField("Object")
 
 
-class ScalingMetricTargetType(str, StructuredEnum):
+class ScalingMetricTargetType(StrStructuredEnum):
     """扩缩容指标计量类型（用于组装 CPA 的指标类型）"""
 
     UTILIZATION = EnumField("Utilization")
     AVERAGE_VALUE = EnumField("AverageValue")
 
 
-class ScalingEnvName(str, StructuredEnum):
+class ScalingEnvName(StrStructuredEnum):
     """扩缩容生效环境"""
 
     STAG = EnumField("stag", label="仅测试环境")
@@ -53,7 +53,7 @@ class ScalingEnvName(str, StructuredEnum):
     GLOBAL = EnumField("_global_", label="所有环境")
 
 
-class ScalingMetric(str, StructuredEnum):
+class ScalingMetric(StrStructuredEnum):
     """扩缩容指标（用户可选指标）"""
 
     CPU_UTILIZATION = EnumField("cpuUtilization", label=_("CPU 使用率"))

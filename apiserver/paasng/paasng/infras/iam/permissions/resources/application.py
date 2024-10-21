@@ -21,7 +21,7 @@ from typing import Dict, Type
 
 from attrs import define, field, validators
 from bkpaas_auth.core.encoder import user_id_encoder
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -34,7 +34,7 @@ from paasng.infras.iam.permissions.request import ResourceRequest
 logger = logging.getLogger(__name__)
 
 
-class AppAction(str, StructuredEnum):
+class AppAction(StrStructuredEnum):
     """蓝鲸 PaaS 应用相关权限"""
 
     # 应用基础信息查看

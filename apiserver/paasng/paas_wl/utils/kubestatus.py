@@ -20,13 +20,13 @@ from typing import List, Optional, Type, TypeVar, Union
 
 import kubernetes.client.models as kmodels
 from attrs import define
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import StrStructuredEnum
 from blue_krill.text import remove_prefix
 from kubernetes.client import ApiClient
 from kubernetes.dynamic.resource import ResourceField, ResourceInstance
 
 
-class HealthStatusType(StructuredEnum):
+class HealthStatusType(StrStructuredEnum):
     HEALTHY = "Healthy"
     UNHEALTHY = "Unhealthy"
     PROGRESSING = "progressing"

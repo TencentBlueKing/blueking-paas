@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import Enum
+from blue_krill.data_types.enum import IntStructuredEnum
 
 
-class DeployFailurePatternType(int, Enum):
+class DeployFailurePatternType(IntStructuredEnum):
     REGULAR_EXPRESSION = 1

@@ -17,7 +17,7 @@
 
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.utils.basic import ChoicesEnum
@@ -27,21 +27,21 @@ DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
 
 
-class ClusterType(str, StructuredEnum):
+class ClusterType(StrStructuredEnum):
     """集群类别"""
 
     NORMAL = EnumField("normal", label=_("普通集群"))
     VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
 
 
-class AppEnvName(str, StructuredEnum):
+class AppEnvName(StrStructuredEnum):
     """The default environment names"""
 
     STAG = EnumField("stag", label=_("预发布环境"))
     PROD = EnumField("prod", label=_("生产环境"))
 
 
-class JobStatus(str, StructuredEnum):
+class JobStatus(StrStructuredEnum):
     SUCCESSFUL = EnumField("successful", label="成功")
     FAILED = EnumField("failed", label="失败")
     PENDING = EnumField("pending", label="等待")
@@ -53,7 +53,7 @@ class JobStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class BuildStatus(str, StructuredEnum):
+class BuildStatus(StrStructuredEnum):
     """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = "successful"
@@ -67,7 +67,7 @@ class BuildStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class ReleaseStatus(str, StructuredEnum):
+class ReleaseStatus(StrStructuredEnum):
     """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = "successful"
@@ -109,7 +109,7 @@ class MetricsType(ChoicesEnum):
     _choices_labels = ((MEM, "mem"), (CPU, "cpu"), (__ALL__, "__all__"))
 
 
-class ConfigVarEnvName(str, StructuredEnum):
+class ConfigVarEnvName(StrStructuredEnum):
     """Environment name for managing config var"""
 
     STAG = EnumField("stag", label="仅测试环境")
@@ -141,20 +141,20 @@ class DeployConditions(ChoicesEnum):
     )
 
 
-class RuntimeType(str, StructuredEnum):
+class RuntimeType(StrStructuredEnum):
     BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
     DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
 
 
-class AppInfoBuiltinEnv(str, StructuredEnum):
+class AppInfoBuiltinEnv(StrStructuredEnum):
     """应用基本信息的内置环境变量built-in"""
 
     APP_ID = EnumField("APP_ID", label=_("蓝鲸应用ID"))
     APP_SECRET = EnumField("APP_SECRET", label=_("蓝鲸应用密钥"))
 
 
-class AppRunTimeBuiltinEnv(str, StructuredEnum):
+class AppRunTimeBuiltinEnv(StrStructuredEnum):
     """Built-in envs in the app runtime"""
 
     APP_MODULE_NAME = EnumField("APP_MODULE_NAME", label=_("应用当前模块名"))

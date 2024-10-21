@@ -182,7 +182,7 @@ class ESLogClient:
         """获取属性映射"""
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
-        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        all_mappings = self._client.indices.get_mapping(index=index, params={"request_timeout": timeout})
         if not all_mappings:
             raise error_codes.QUERY_ES_ERROR.f(
                 _("No mappings available, maybe index does not exist or no logs at all")

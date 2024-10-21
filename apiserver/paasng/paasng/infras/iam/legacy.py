@@ -18,7 +18,7 @@
 # PaaS 2.0 相关权限
 import logging
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.conf import settings
 from iam import IAM, Action, Request, Subject
 from iam.contrib.converter.sql import SQLConverter
@@ -27,7 +27,7 @@ from iam.exceptions import AuthAPIError
 logger = logging.getLogger(__name__)
 
 
-class LegacyAction(str, StructuredEnum):
+class LegacyAction(StrStructuredEnum):
     DEVELOP_APP = EnumField("develop_app", label="开发 SaaS 应用及外链应用")
     MANAGE_SMART = EnumField("manage_smart", label="管理 S-mart 应用")
 

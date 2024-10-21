@@ -21,7 +21,7 @@ import logging
 from typing import Any, Dict, Generator, List, Optional
 
 import requests
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
@@ -43,7 +43,7 @@ DEFAULT_REPO_REF = "master"
 RETRY_TIME = 3
 
 
-class GitRepoProvider(str, StructuredEnum):
+class GitRepoProvider(StrStructuredEnum):
     """Git 仓库服务提供方"""
 
     GitHub = EnumField("github", label="GitHub")
@@ -70,7 +70,7 @@ class BaseGitApiClient(abc.ABC):
             raise exceptions.AccessTokenMissingError("oauth_token required")
         self.session.headers.update(headers)
 
-        self.__token_holder: Oauth2TokenHolder = kwargs.get("__token_holder", None)
+        self.__token_holder: Optional[Oauth2TokenHolder] = kwargs.get("__token_holder")
 
     @abc.abstractmethod
     def list_repo(self, **kwargs) -> List[Dict]:

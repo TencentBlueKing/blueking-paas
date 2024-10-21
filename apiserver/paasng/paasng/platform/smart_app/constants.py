@@ -15,10 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import Enum
+from blue_krill.data_types.enum import StrStructuredEnum
 
 
-class SMartPackageBuilderVersionFlag(str, Enum):
+class SMartPackageBuilderVersionFlag(StrStructuredEnum):
     """s-mart 包构建器版本, 不同版本的构建器输出的产物类型不一样"""
 
     # 源码包

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 # 注解或标签中存储应用名称的键名
 BKAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/name"
@@ -29,7 +29,7 @@ ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 
 
-class BkLogConfigType(str, StructuredEnum):
+class BkLogConfigType(StrStructuredEnum):
     STD_LOG = EnumField("std_log_config", label="标准输出日志")
     CONTAINER_LOG = EnumField("container_log_config", label="容器日志")
     NODE_LOG = EnumField("node_log_config", label="节点日志")

@@ -16,10 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Process events related functions"""
+
 import logging
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import Any, Dict, Iterator, List, Tuple
+
+from blue_krill.data_types.enum import IntStructuredEnum
 
 from paas_wl.bk_app.processes.processes import PlainInstance, PlainProcess
 from paasng.platform.engine.processes.utils import diff_list
@@ -29,11 +31,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProcessBaseEvent:
-    type: IntEnum
+    type: IntStructuredEnum
     invoker: Any
 
 
-class ProcessEventType(IntEnum):
+class ProcessEventType(IntStructuredEnum):
     CREATED = 1
     REMOVED = 2
     UPDATED_COMMAND = 3
@@ -47,7 +49,7 @@ class ProcessEvent(ProcessBaseEvent):
     message: str
 
 
-class ProcInstEventType(IntEnum):
+class ProcInstEventType(IntStructuredEnum):
     CREATED = 1
     REMOVED = 2
     UPDATED_BECOME_READY = 3

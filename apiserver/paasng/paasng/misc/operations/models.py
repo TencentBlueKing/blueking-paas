@@ -118,7 +118,7 @@ class DeployOpValues:
     env_name: str
     has_succeeded: bool
     # `status` is optional to be compatible with legacy database data
-    status: Optional[bool] = None
+    status: Optional[str] = None
 
 
 class AppDeploymentOperationObj(OperationObj):
@@ -157,7 +157,7 @@ class AppDeploymentOperationObj(OperationObj):
 
     def get_text_display(self) -> str:
         if self.extra_values.status is not None:
-            status = JobStatus.SUCCESSFUL if self.extra_values.status is True else JobStatus.FAILED
+            status = JobStatus(self.extra_values.status)
         else:
             # Backward compatible with data which don't have `status` field
             status = JobStatus.SUCCESSFUL if self.extra_values.has_succeeded else JobStatus.FAILED

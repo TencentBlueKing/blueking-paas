@@ -188,11 +188,11 @@ class ProcessSpecEnvOverlay(TimestampedModel):
 
 
 class ProcessServicesFlag(TimestampedModel):
-    """ProcessServicesFlag 主要用途是标记是否隐示需要 process services 配置"""
+    """ProcessServicesFlag 主要用途是标记是否隐式需要 process services 配置"""
 
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显示配置 process services, 因此设计 implicit_needed 字段来标记是否需要平台隐示创建
-    implicit_needed = models.BooleanField("是否隐示需要 process services 配置", default=False)
+    # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设计 implicit_needed 字段来标记是否需要平台隐式创建
+    implicit_needed = models.BooleanField("是否隐式需要 process services 配置", default=False)
 
 
 class ModuleDeployHookManager(models.Manager):

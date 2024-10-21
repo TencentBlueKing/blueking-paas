@@ -164,7 +164,7 @@ class BaseBuilder(DeployStep):
             )
             result = handler.handle(self.deployment)
 
-            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显示配置 process services, 因此设置隐示标记, 由平台负责创建
+            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
             implicit_needed = result.spec_version != AppSpecVersion.VER_3
             ProcessServicesFlag.objects.update_or_create(
                 app_environment=app_environment, defaults={"implicit_needed": implicit_needed}

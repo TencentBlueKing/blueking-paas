@@ -24,12 +24,10 @@ from unittest import mock
 import pytest
 import yaml
 
-from paas_wl.bk_app.cnative.specs.constants import PROC_SERVICES_ENABLED_ANNOTATION_KEY
 from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
-from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
 from paasng.platform.modules.models.module import Module
 
@@ -85,10 +83,6 @@ class TestCnativeAppDescriptionHandler:
 
             assert bk_deployment.hooks[0].command == []
             assert bk_deployment.hooks[0].args == ["python", "manage.py", "migrate"]
-
-            # 测试 specVersion: 3, 正确记录 bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true
-            desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-            assert desc_obj.runtime[PROC_SERVICES_ENABLED_ANNOTATION_KEY] == "true"
 
             assert get_preset_env_variables(bk_deployment.app_environment) == {"FOO": "1"}
             assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == {

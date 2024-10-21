@@ -32,6 +32,8 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
+from paasng.platform.bkapp_model.models import ProcessServicesFlag
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.controller import DeployHandleResult
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
@@ -148,17 +150,26 @@ class BaseBuilder(DeployStep):
     def handle_app_description(self) -> DeployHandleResult:
         """Handle the description files for deployment. It try to parse the app description
         file and store the related configurations, e.g. processes.
+        Set the implicit_needed flag for process services at the end.
 
         :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
+            app_environment = self.deployment.app_environment
             handler = get_deploy_desc_handler_by_version(
-                self.deployment.app_environment.module,
+                app_environment.module,
                 self.deployment.operator,
                 self.deployment.version_info,
                 self.deployment.get_source_dir(),
             )
-            return handler.handle(self.deployment)
+            result = handler.handle(self.deployment)
+
+            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
+            implicit_needed = result.spec_version != AppSpecVersion.VER_3
+            ProcessServicesFlag.objects.update_or_create(
+                app_environment=app_environment, defaults={"implicit_needed": implicit_needed}
+            )
+
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
@@ -166,6 +177,8 @@ class BaseBuilder(DeployStep):
         except Exception as e:
             logger.exception("Error while handling app description file, deployment: %s.", self.deployment)
             raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
+        else:
+            return result
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""

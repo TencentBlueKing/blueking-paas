@@ -44,12 +44,14 @@ from paasng.platform.bkapp_model.manifest import (
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
     apply_env_annots,
+    apply_proc_svc_if_implicit_needed,
     get_manifest,
 )
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
     ObservabilityConfig,
+    ProcessServicesFlag,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -538,3 +540,14 @@ def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
 
     assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
     assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+
+
+def test_apply_proc_svc_if_implicit_needed_is_false(blank_resource, bk_stag_env):
+    apply_proc_svc_if_implicit_needed(blank_resource, bk_stag_env)
+    assert blank_resource.get_proc_services_annotation() == "true"
+
+
+def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource, bk_stag_env):
+    ProcessServicesFlag.objects.create(app_environment=bk_stag_env, implicit_needed=True)
+    apply_proc_svc_if_implicit_needed(blank_resource, bk_stag_env)
+    assert blank_resource.get_proc_services_annotation() == "false"

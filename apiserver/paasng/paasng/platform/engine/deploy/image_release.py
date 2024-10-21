@@ -26,11 +26,9 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.declarative.handlers import (
-    DeployHandleResult,
-)
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
+from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.declarative.handlers import DeployHandleResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.release import start_release_step
@@ -75,61 +73,9 @@ class ImageReleaseMgr(DeployStep):
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
 
-        module = self.module_environment.module
-        is_smart_app = module.application.is_smart_app
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
         with self.procedure("解析应用进程信息", phase=preparation_phase):
-            build_id = self.deployment.advanced_options.build_id
-            if build_id:
-                # 托管源码的应用在发布历史镜像时, advanced_options.build_id 不为空
-                deployment: Deployment = (
-                    Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
-                )
-                if not deployment:
-                    raise DeployShouldAbortError("failed to get processes")
-                processes = deployment.get_processes()
-                # 保存上一次部署的 Processes/Hooks 到 bkapp models
-                # FIXME: sync_hooks 会重置 proc_command, 导致 proc_command 再次优先于 command/args 解析
-                sync_to_bkapp_model(module=module, processes=processes, hooks=deployment.get_deploy_hooks())
-            else:
-                # advanced_options.build_id 为空有 2 种可能情况
-                # 1. s-mart 应用
-                # 2. 仅托管镜像的应用(包含云原生应用和旧镜像应用)
-                use_cnb = False
-                if is_smart_app:
-                    # S-Mart 应用使用 S-Mart 包的元信息记录启动进程
-                    handle_result = self._handle_smart_app_description()
-                    use_cnb = handle_result.use_cnb
-                else:
-                    env_name = self.module_environment.environment
-                    processes_dict = {
-                        proc_spec.name: ProcessTmpl(
-                            name=proc_spec.name,
-                            command=proc_spec.get_proc_command(),
-                            replicas=proc_spec.get_target_replicas(env_name),
-                            plan=proc_spec.get_plan_name(env_name),
-                            autoscaling=bool(proc_spec.get_autoscaling(env_name)),
-                            scaling_config=proc_spec.get_scaling_config(env_name),
-                            probes=proc_spec.probes,
-                        )
-                        for proc_spec in ModuleProcessSpec.objects.filter(module=module)
-                    }
-                    # 手动将进程配置数据保存到本次的 Deployment 对象中
-                    self.deployment.update_fields(processes=processes_dict)
-
-                runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
-                # 目前构建流程必须 build_id, 因此需要构造 Build 对象
-                build_id = self.engine_client.create_build(
-                    image=runtime_info.generate_image(self.version_info),
-                    extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
-                    # 需要兼容 s-mart 应用
-                    artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
-                    artifact_metadata={
-                        "use_cnb": use_cnb,
-                    },
-                )
-
-            self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+            self._handle_app_processes_and_dummy_build()
 
         with self.procedure_force_phase("配置镜像访问凭证", phase=preparation_phase):
             self._setup_image_credentials()
@@ -140,6 +86,94 @@ class ImageReleaseMgr(DeployStep):
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
         start_release_step(deployment_id=self.deployment.id)
+
+    def _handle_app_processes_and_dummy_build(self):
+        """处理应用进程信息并且完成 dummy build"""
+        # build_id 值有效, 表示源码应用选择已构建的镜像进行部署操作
+        if self.deployment.advanced_options and (build_id := self.deployment.advanced_options.build_id):
+            self._handle_processes_by_build(build_id)
+            self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+            return
+
+        # smart 应用部署操作
+        if is_smart_app := self.module_environment.module.application.is_smart_app:
+            parse_result = self._handle_smart_app_description()
+            use_cnb = parse_result.spec_version == AppSpecVersion.VER_3
+        # 仅托管镜像的应用(包含云原生应用和旧镜像应用)部署操作
+        else:
+            self._handle_image_app_processes()
+            use_cnb = False
+
+        # 目前构建流程必须有有效的 build, 因此需要 dummy build 过程
+        build_id = self._create_build(is_smart_app=is_smart_app, use_cnb=use_cnb)
+
+        # dummy build 完成，更新 deployment 的 build_id
+        self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
+
+    def _handle_processes_by_build(self, build_id: str):
+        """根据 build_id, 处理关联 deployment 的应用进程信息"""
+        last_deployment: Deployment = (
+            Deployment.objects.filter(build_id=build_id).exclude(processes={}).order_by("-created").first()
+        )
+        if not last_deployment:
+            raise DeployShouldAbortError("failed to get processes")
+
+        self.deployment.update_fields(processes=last_deployment.processes)
+
+    def _handle_smart_app_description(self) -> DeployHandleResult:
+        """Handle the description files for Smart app. Set the implicit_needed flag for process services at the end."""
+        try:
+            app_environment = self.deployment.app_environment
+            handler = get_deploy_desc_handler_by_version(
+                app_environment.module,
+                self.deployment.operator,
+                self.deployment.version_info,
+            )
+
+            result = handler.handle(self.deployment)
+
+            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
+            implicit_needed = result.spec_version != AppSpecVersion.VER_3
+            ProcessServicesFlag.objects.update_or_create(
+                app_environment=app_environment, defaults={"implicit_needed": implicit_needed}
+            )
+
+        except InitDeployDescHandlerError as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+        except Exception as e:
+            logger.exception("Error while handling s-mart app description file, deployment: %s.", self.deployment)
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
+        else:
+            return result
+
+    def _handle_image_app_processes(self):
+        """处理镜像应用的进程信息"""
+        env_name = self.module_environment.environment
+        processes_dict = {
+            proc_spec.name: ProcessTmpl(
+                name=proc_spec.name,
+                command=proc_spec.get_proc_command(),
+                replicas=proc_spec.get_target_replicas(env_name),
+                plan=proc_spec.get_plan_name(env_name),
+                autoscaling=bool(proc_spec.get_autoscaling(env_name)),
+                scaling_config=proc_spec.get_scaling_config(env_name),
+                probes=proc_spec.probes,
+            )
+            for proc_spec in ModuleProcessSpec.objects.filter(module=self.module_environment.module)
+        }
+        self.deployment.update_fields(processes=processes_dict)
+
+    def _create_build(self, is_smart_app: bool, use_cnb: bool = False) -> str:
+        runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
+        return self.engine_client.create_build(
+            image=runtime_info.generate_image(self.version_info),
+            extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
+            # 需要兼容 s-mart 应用
+            artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
+            artifact_metadata={
+                "use_cnb": use_cnb,
+            },
+        )
 
     def _provision_services(self, p: DeployProcedure):
         """Provision all preset services
@@ -177,18 +211,3 @@ class ImageReleaseMgr(DeployStep):
                     raise
 
                 AppImageCredential.objects.flush_from_refs(application, self.engine_app.to_wl_obj(), credential_refs)
-
-    def _handle_smart_app_description(self) -> DeployHandleResult:
-        """Handle the description files for S-Mart app."""
-        try:
-            handler = get_deploy_desc_handler_by_version(
-                self.deployment.app_environment.module,
-                self.deployment.operator,
-                self.deployment.version_info,
-            )
-            return handler.handle(self.deployment)
-        except InitDeployDescHandlerError as e:
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
-        except Exception as e:
-            logger.exception("Error while handling s-mart app description file, deployment: %s.", self.deployment)
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e

@@ -57,7 +57,15 @@
                   :href="downloadableAddress"
                 >
                   <i class="paasng-icon paasng-download" />
-                  {{ $t('下载') }}
+                  <span>{{ $t('下载') }}</span>
+                </a>
+                <a
+                  href="javascript: void(0);"
+                  :class="['ml10', { disabled: isRefresLoading }]"
+                  @click="refreshInitTemplateUrl"
+                >
+                  <i class="paasng-icon paasng-refresh-line" />
+                  {{ $t('刷新') }}
                 </a>
               </div>
             </div>
@@ -199,6 +207,7 @@ export default {
       isShowTips: false,
       user: {},
       isRuntimeType: false,
+      isRefresLoading: false,
     };
   },
   computed: {
@@ -256,8 +265,6 @@ export default {
       this.application = body.application;
       const { modules } = this.application;
 
-      console.log('response', response);
-
       if (modules && modules.length) {
         this.trunkURL = modules[0].repo?.trunk_url;
         const defaultModule = modules.find(item => item.name === 'default');
@@ -309,6 +316,24 @@ export default {
         el.style.display = 'none'; // 隐藏当前元素
       }
     },
+    // 刷新初始化模板地址
+    async refreshInitTemplateUrl() {
+      this.isRefresLoading = true;
+      try {
+        const res = await this.$store.dispatch('getAppDefaultInitTemplateUrl', {
+          appCode: this.appCode,
+        });
+        this.downloadableAddress = res.downloadable_address;
+      } catch (e) {
+        this.$paasMessage({
+          limit: 1,
+          theme: 'error',
+          message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
+        });
+      } finally {
+        this.isRefresLoading = false;
+      }
+    }
   },
 };
 </script>

@@ -90,6 +90,13 @@ export default {
       return this.$t('您当前共管理 <i>{n}</i> 个应用，无任何应用处于告警或闲置状态，请继续保持！', { n: this.appChartInfo?.allCount });
     },
   },
+  watch: {
+    showPanels(newPanels) {
+      if (newPanels.length) {
+        this.handleTabClick(newPanels[0]);
+      }
+    }
+  },
   mounted() {
     this.updateContainerHeight();
 

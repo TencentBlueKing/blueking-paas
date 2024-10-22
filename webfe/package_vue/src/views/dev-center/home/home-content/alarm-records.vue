@@ -108,7 +108,7 @@
                   <span class="code">（{{ row.application.code }}）</span>
                 </span>
               </span>
-              <span class="ml20">MySQL {{ $t('慢查询告警数量') }}: <span class="slow-query">{{ row.slow_query_count }}</span>/{{ row.count }}</span>
+              <span class="ml20 msg">MySQL {{ $t('慢查询告警数量') }}: <span class="slow-query">{{ row.slow_query_count }}</span>/{{ row.count }}</span>
             </div>
           </template>
         </bk-table-column>
@@ -255,6 +255,7 @@ export default {
     margin-top: 12px;
 
     .app-name-wrapper {
+      color: #313238;
       .click-area {
         cursor: pointer;
       }
@@ -269,6 +270,9 @@ export default {
       }
       .info:hover {
         color: #3a84ff;
+      }
+      .msg {
+        color: #63656E;
       }
       .slow-query {
         color: #EA3636;

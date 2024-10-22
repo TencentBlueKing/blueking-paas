@@ -88,15 +88,6 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     #
     # A debug page, doesn't need perm checking
     "StreamDebuggerView",
-    # TODO: The front page of admin, should add perm checking soon
-    "FrontPageView",
-    # TODO: The dynamic view created by runtime_views.ViewBuilder
-    "ListView",
-    "UpdateView",
-    "CreateView",
-    "DeleteView",
-    # TODO: The dynamic view created by runtimes.RuntimeAdminViewGenerator
-    "APIViewSet",
     #
     # == Function-based views
     # below are django system views

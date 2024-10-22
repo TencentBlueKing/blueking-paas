@@ -19,7 +19,7 @@ from __future__ import absolute_import
 
 from django.conf.urls import url
 
-from . import runtime_views, views
+from . import views
 from .views import (
     accountmgr,
     applications,
@@ -53,18 +53,6 @@ PART_MODULE_WITH_ENV = "modules/(?P<module_name>[^/]+)/envs/(?P<environment>[^/]
 
 urlpatterns = [
     url(r"^$", views.FrontPageView.as_view(), name="admin.front_page"),
-    url(r"^slugbuilder/$", runtime_views.SlugBuilderListView.as_view(), name="admin.slugbuilder.list"),
-    url(r"^slugbuilder/create$", runtime_views.SlugBuilderCreateView.as_view(), name="admin.slugbuilder.create"),
-    url(r"^slugbuilder/update", runtime_views.SlugBuilderUpdateView.as_view(), name="admin.slugbuilder.update"),
-    url(r"^slugbuilder/delete", runtime_views.SlugBuilderDeleteView.as_view(), name="admin.slugbuilder.delete"),
-    url(r"^slugrunner/$", runtime_views.SlugRunnerListView.as_view(), name="admin.slugrunner.list"),
-    url(r"^slugrunner/create$", runtime_views.SlugRunnerCreateView.as_view(), name="admin.slugrunner.create"),
-    url(r"^slugrunner/update", runtime_views.SlugRunnerUpdateView.as_view(), name="admin.slugrunner.update"),
-    url(r"^slugrunner/delete", runtime_views.SlugRunnerDeleteView.as_view(), name="admin.slugrunner.delete"),
-    url(r"^buildpack/$", runtime_views.BuildPackListView.as_view(), name="admin.buildpack.list"),
-    url(r"^buildpack/create$", runtime_views.BuildPackCreateView.as_view(), name="admin.buildpack.create"),
-    url(r"^buildpack/update", runtime_views.BuildPackUpdateView.as_view(), name="admin.buildpack.update"),
-    url(r"^buildpack/delete", runtime_views.BuildPackDeleteView.as_view(), name="admin.buildpack.delete"),
     # 平台管理
     url(r"^platform/$", applications.ApplicationListView.as_view(), name="admin.platform.index"),
     # 平台管理-应用资源方案
@@ -154,26 +142,11 @@ urlpatterns = [
     ),
     # 平台管理-运行时管理-BuildPack 管理
     url(
-        r"^platform/runtime/buildpack/manage/$",
-        runtimes.BuildPackTemplateView.as_view(),
-        name="admin.runtime.buildpack.manage",
-    ),
-    url(
         r"^platform/runtimes/buildpack/manage/$",
         runtimes.BuildPackManageView.as_view(),
         name="admin.runtimes.buildpack.manage",
     ),
     # 平台管理-运行时管理-BuildPack 管理 API
-    url(
-        r"^platform/runtime/buildpack/$",
-        runtimes.LegacyBuildPackAPIViewSet.as_view(dict(post="create", get="list")),
-        name="admin.runtime.buildpack",
-    ),
-    url(
-        r"^platform/runtime/buildpack/(?P<pk>[^/]+)/$",
-        runtimes.LegacyBuildPackAPIViewSet.as_view(dict(put="update", delete="destroy")),
-        name="admin.runtime.buildpack.detail",
-    ),
     url(
         "^platform/runtimes/buildpack/$",
         runtimes.BuildPackAPIViewSet.as_view(dict(post="create", get="list")),
@@ -191,31 +164,11 @@ urlpatterns = [
     ),
     # 平台管理-运行时管理-SlugBuilder 管理
     url(
-        r"^platform/runtime/slugbuilder/manage/$",
-        runtimes.SlugBuilderTemplateView.as_view(),
-        name="admin.runtime.slugbuilder.manage",
-    ),
-    url(
         "^platform/runtimes/slugbuilder/manage/$",
         runtimes.SlugBuilderManageView.as_view(),
         name="admin.runtimes.slugbuilder.manage",
     ),
     # 平台管理-运行时管理-SlugBuilder 管理 API
-    url(
-        r"^platform/runtime/slugbuilder/$",
-        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
-        name="admin.runtime.slugbuilder",
-    ),
-    url(
-        r"^platform/runtime/slugbuilder/(?P<pk>[^/]+)/$",
-        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(put="update", delete="destroy")),
-        name="admin.runtime.slugbuilder.detail",
-    ),
-    url(
-        r"^platform/runtime/slugbuilder/(?P<pk>[^/]+)/buildpacks",
-        runtimes.LegacySlugBuilderAPIViewSet.as_view(dict(post="set_buildpacks")),
-        name="admin.runtime.slugbuilder.detail.bind",
-    ),
     url(
         r"^platform/runtimes/slugbuilder/$",
         runtimes.SlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
@@ -233,26 +186,11 @@ urlpatterns = [
     ),
     # 平台管理-运行时管理-SlugRunner 管理
     url(
-        r"^platform/runtime/slugrunner/manage$",
-        runtimes.SlugRunnerTemplateView.as_view(),
-        name="admin.runtime.slugrunner.manage",
-    ),
-    url(
         r"^platform/runtimes/slugrunner/manage$",
         runtimes.AppSlugRunnerManageView.as_view(),
         name="admin.runtimes.slugrunner.manage",
     ),
     # 平台管理-运行时管理-SlugRunner 管理 API
-    url(
-        r"^platform/runtime/slugrunner/$",
-        runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),
-        name="admin.runtime.slugrunner",
-    ),
-    url(
-        r"^platform/runtime/slugrunner/(?P<pk>[^/]+)/$",
-        runtimes.LegacySlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
-        name="admin.runtime.slugrunner.detail",
-    ),
     url(
         r"^platform/runtimes/slugrunner/$",
         runtimes.SlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),

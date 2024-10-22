@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 #
 import logging
-from typing import Callable, Iterable, List
+from typing import Callable, Iterable, List, Tuple
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -33,13 +33,15 @@ def ensure_views_perm_configured():
 
     :raise ImproperlyConfigured: When a view function doesn't configure permission properly.
     """
-    for view_func in list_view_funcs():
+    for url, view_func in list_view_funcs():
+        is_admin42 = "admin42" in url
+
         if hasattr(view_func, "cls"):
             # A DRF style view function
             check_drf_view_perm(view_func)
         elif hasattr(view_func, "view_class"):
             # A normal Django view
-            check_django_view_perm(view_func)
+            check_django_view_perm(view_func, is_admin42)
         else:
             # Function-based views
             name = view_func.__name__
@@ -48,18 +50,20 @@ def ensure_views_perm_configured():
             raise ValueError(f"Unknown view type: {view_func}")
 
 
-def list_view_funcs() -> Iterable[Callable]:
-    """List all view functions in the project."""
+def list_view_funcs() -> Iterable[Tuple[str, Callable]]:
+    """List all view functions and url in the project."""
 
-    def list_urls(patterns):
+    def list_urls(patterns, prefix=""):
         if not patterns:
             return
 
         for item in patterns:
             if isinstance(item, URLPattern):
-                yield item.callback
+                full_url = prefix + item.pattern.regex.pattern
+                yield full_url, item.callback
             elif isinstance(item, URLResolver):
-                yield from list_urls(item.url_patterns)
+                nested_prefix = prefix + item.pattern.regex.pattern
+                yield from list_urls(item.url_patterns, nested_prefix)
 
     urlconf = __import__(settings.ROOT_URLCONF, {}, {}, [""])
     yield from list_urls(urlconf.urlpatterns)
@@ -119,12 +123,18 @@ def get_unprotected_actions(view_func) -> List[str]:
     return result
 
 
-def check_django_view_perm(view_func):
+def check_django_view_perm(view_func, is_admin42: bool):
     """Check if a django view function has configured permission properly.
 
     :raise ImproperlyConfigured: When the permission is not configured properly.
     """
     name = view_func.view_class.__name__
+
+    if is_admin42:
+        raise ImproperlyConfigured(
+            f"The view class {name} is a pure Django view, which is not supported in admin42, use DRF view instead."
+        )
+
     if name in INSURE_CHECKING_EXCLUDED_VIEWS:
         return
 

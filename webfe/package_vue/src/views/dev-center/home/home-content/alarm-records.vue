@@ -108,7 +108,9 @@
                   <span class="code">（{{ row.application.code }}）</span>
                 </span>
               </span>
-              <span class="ml20 msg">MySQL {{ $t('慢查询告警数量') }}: <span class="slow-query">{{ row.slow_query_count }}</span>/{{ row.count }}</span>
+              <span class="ml20 msg">
+                MySQL {{ $t('慢查询告警数量') }}: <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>/{{ row.count }}
+              </span>
             </div>
           </template>
         </bk-table-column>

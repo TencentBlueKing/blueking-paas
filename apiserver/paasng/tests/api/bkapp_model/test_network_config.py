@@ -31,11 +31,11 @@ def bk_app2() -> Application:
 
 
 class TestSvcDiscConfigViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def test_url(self, bk_app) -> str:
         return reverse("api.applications.svc_disc", kwargs={"code": bk_app.code})
 
-    @pytest.fixture
+    @pytest.fixture()
     def with_default_disc(self, api_client, test_url, bk_app2):
         """Create a default svc_disc object"""
         resp = api_client.post(test_url, {"bk_saas": [{"bk_app_code": bk_app2.code, "module_name": "default"}]})
@@ -87,11 +87,11 @@ class TestSvcDiscConfigViewSet:
 
 
 class TestDomainResolutionViewSet:
-    @pytest.fixture
+    @pytest.fixture()
     def test_url(self, bk_app) -> str:
         return reverse("api.applications.domain_resolution", kwargs={"code": bk_app.code})
 
-    @pytest.fixture
+    @pytest.fixture()
     def with_default_res(self, api_client, test_url):
         """创建一个默认的 DomainResolution 对象"""
         body = {

@@ -166,16 +166,16 @@ class DevSandboxWithCodeEditorController:
 
     def deploy(
         self,
-        dev_sandbox_envs: Dict[str, str],
-        code_editor_envs: Dict[str, str],
+        dev_sandbox_env_vars: Dict[str, str],
+        code_editor_env_vars: Dict[str, str],
         version_info: VersionInfo,
         relative_source_dir: Path,
         password: str,
     ):
         """部署 dev sandbox with code editor
 
-        :param dev_sandbox_envs: 启动开发沙箱所需要的环境变量
-        :param code_editor_envs: 启动代码编辑器所需要的环境变量
+        :param dev_sandbox_env_vars: 启动开发沙箱所需要的环境变量
+        :param code_editor_env_vars: 启动代码编辑器所需要的环境变量
         :param version_info: 版本信息
         :param relative_source_dir: 代码目录相对路径
         :param password: 部署密码
@@ -203,16 +203,16 @@ class DevSandboxWithCodeEditorController:
             )
         elif not sandbox_exists and not code_editor_exists:
             # 如果 sandbox 和 code editor 都不存在，则直接部署
-            self._deploy(dev_sandbox_envs, code_editor_envs, version_info, relative_source_dir, password)
+            self._deploy(dev_sandbox_env_vars, code_editor_env_vars, version_info, relative_source_dir, password)
         elif sandbox_exists or code_editor_exists:
             # 如果 sandbox, code editor 存在一个，则先删除全部资源再部署
             self.delete()
-            self._deploy(dev_sandbox_envs, code_editor_envs, version_info, relative_source_dir, password)
+            self._deploy(dev_sandbox_env_vars, code_editor_env_vars, version_info, relative_source_dir, password)
 
     def _deploy(
         self,
-        dev_sandbox_envs: Dict[str, str],
-        code_editor_envs: Dict[str, str],
+        dev_sandbox_env_vars: Dict[str, str],
+        code_editor_env_vars: Dict[str, str],
         version_info: VersionInfo,
         relative_source_dir: Path,
         password: str,
@@ -250,7 +250,7 @@ class DevSandboxWithCodeEditorController:
 
         sandbox_entity = DevSandbox.create(
             self.dev_wl_app,
-            runtime=Runtime(envs=dev_sandbox_envs, image=settings.DEV_SANDBOX_IMAGE),
+            runtime=Runtime(envs=dev_sandbox_env_vars, image=settings.DEV_SANDBOX_IMAGE),
             resources=default_sandbox_resources,
             source_code_config=source_code_config,
         )
@@ -269,7 +269,7 @@ class DevSandboxWithCodeEditorController:
 
         code_editor_entity = CodeEditor.create(
             self.dev_wl_app,
-            runtime=Runtime(envs=code_editor_envs, image=settings.CODE_EDITOR_IMAGE),
+            runtime=Runtime(envs=code_editor_env_vars, image=settings.CODE_EDITOR_IMAGE),
             resources=default_code_editor_resources,
             config=code_editor_config,
         )
@@ -364,8 +364,8 @@ class DevSandboxWithCodeEditorController:
             code_editor_entity.status.to_health_phase() if code_editor_entity.status else HealthPhase.UNKNOWN
         )
         return DevSandboxWithCodeEditorDetail(
-            dev_sandbox_envs=dev_sandbox_entity.runtime.envs,
-            code_editor_envs=code_editor_entity.runtime.envs,
+            dev_sandbox_env_vars=dev_sandbox_entity.runtime.envs,
+            code_editor_env_vars=code_editor_entity.runtime.envs,
             dev_sandbox_status=dev_sandbox_status,
             code_editor_status=code_editor_status,
             urls=urls,

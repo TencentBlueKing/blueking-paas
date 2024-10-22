@@ -91,7 +91,7 @@ class TestDevSandboxWithCodeEditorController:
 
     @pytest.fixture()
     def _do_deploy(self, controller):
-        dev_sandbox_envs = {"FOO": "test"}
+        dev_sandbox_env_vars = {"FOO": "test"}
         version_info = VersionInfo("1", "v1", "branches")
         relative_source_dir = Path(".")
         password = "123456"
@@ -100,8 +100,8 @@ class TestDevSandboxWithCodeEditorController:
             return_value="example.com",
         ):
             controller.deploy(
-                dev_sandbox_envs=dev_sandbox_envs,
-                code_editor_envs={},
+                dev_sandbox_env_vars=dev_sandbox_env_vars,
+                code_editor_env_vars={},
                 version_info=version_info,
                 relative_source_dir=relative_source_dir,
                 password=password,
@@ -139,7 +139,7 @@ class TestDevSandboxWithCodeEditorController:
 
     @pytest.mark.usefixtures("_do_deploy")
     def test_deploy_when_already_exists(self, controller, bk_app, module_name, user_dev_wl_app):
-        dev_sandbox_envs = {"FOO": "test"}
+        dev_sandbox_env_vars = {"FOO": "test"}
         version_info = VersionInfo("1", "v1", "branches")
         relative_source_dir = Path(".")
         password = "123456"
@@ -148,8 +148,8 @@ class TestDevSandboxWithCodeEditorController:
             return_value="example.com",
         ):
             controller.deploy(
-                dev_sandbox_envs=dev_sandbox_envs,
-                code_editor_envs={},
+                dev_sandbox_env_vars=dev_sandbox_env_vars,
+                code_editor_env_vars={},
                 version_info=version_info,
                 relative_source_dir=relative_source_dir,
                 password=password,
@@ -164,12 +164,12 @@ class TestDevSandboxWithCodeEditorController:
         assert detail.urls.app_url == f"{base_url}/user/{username}/app/"
         assert detail.urls.devserver == f"{base_url}/user/{username}/devserver/"
         assert detail.urls.code_editor_url == f"{base_url}/user/{username}/code_editor/"
-        assert detail.dev_sandbox_envs == {
+        assert detail.dev_sandbox_env_vars == {
             "FOO": "test",
             "SOURCE_FETCH_METHOD": "BK_REPO",
             "SOURCE_FETCH_URL": "example.com",
             "WORKSPACE": "/cnb/devsandbox/src",
         }
-        assert detail.code_editor_envs == {"PASSWORD": "123456", "START_DIR": "/home/coder/project"}
+        assert detail.code_editor_env_vars == {"PASSWORD": "123456", "START_DIR": "/home/coder/project"}
         assert detail.dev_sandbox_status in ["Progressing", "Healthy"]
         assert detail.code_editor_status in ["Progressing", "Healthy"]

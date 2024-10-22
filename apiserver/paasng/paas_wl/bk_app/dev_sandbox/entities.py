@@ -131,8 +131,8 @@ class DevSandboxWithCodeEditorUrls:
 
 @dataclass
 class DevSandboxWithCodeEditorDetail:
-    dev_sandbox_envs: Dict[str, str]
-    code_editor_envs: Dict[str, str]
+    dev_sandbox_env_vars: Dict[str, str]
+    code_editor_env_vars: Dict[str, str]
     dev_sandbox_status: str
     code_editor_status: str
     urls: Optional[DevSandboxWithCodeEditorUrls] = None

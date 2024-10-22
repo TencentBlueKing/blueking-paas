@@ -19,6 +19,9 @@ from pathlib import Path
 from typing import Dict
 
 from bkpaas_auth.models import User
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -30,7 +33,10 @@ from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandb
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.services.utils import generate_password
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
@@ -134,8 +140,8 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         try:
             controller.deploy(
-                dev_sandbox_envs=envs,
-                code_editor_envs={},
+                dev_sandbox_env_vars=envs,
+                code_editor_env_vars={},
                 version_info=version_info,
                 relative_source_dir=relative_source_dir,
                 password=password,
@@ -144,6 +150,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
         DevSandbox.objects.create(
+            region=app.region,
             owner=request.user.pk,
             module=module,
             status=CodeEditorStatus.ALIVE.value,
@@ -174,6 +181,8 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         """获取开发沙箱的运行详情"""
         app = self.get_application()
         module = self.get_module_via_path()
+        if not DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
@@ -187,12 +196,36 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "url": detail.urls,
-                "token": detail.dev_sandbox_envs[CONTAINER_TOKEN_ENV],
+                "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
             }
         )
         return Response(data=serializer.data)
+
+    @swagger_auto_schema(tags=["鉴权信息"], request_body=VerificationCodeSLZ)
+    def get_password(self, request, code, module_name):
+        """验证验证码查看代码编辑器密码"""
+        module = self.get_module_via_path()
+
+        try:
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
+        except DevSandbox.DoesNotExist:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        if settings.ENABLE_VERIFICATION_CODE:
+            serializer = VerificationCodeSLZ(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            verifier = make_verifier(request.session, FunctionType.GET_CODE_EDITOR_PASSWORD.value)
+            is_valid = verifier.validate(serializer.data["verification_code"])
+            if not is_valid:
+                raise ValidationError({"verification_code": [_("验证码错误")]})
+        else:
+            logger.warning("Verification code is not currently supported, return app secret directly")
+
+        return Response({"password": dev_sandbox.password})
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

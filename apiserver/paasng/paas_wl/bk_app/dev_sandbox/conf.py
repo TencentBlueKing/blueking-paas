@@ -55,7 +55,11 @@ CODE_SVC_PORT_PAIRS: List[ServicePortPair] = [
 
 
 def get_ingress_path_backends(service_name: str, username: str = "") -> List[IngressPathBackend]:
-    """get ingress path backends from _ingress_service_conf with service_name"""
+    """get ingress path backends from _ingress_service_conf with service_name and username
+
+    :param service_name: Service name
+    :param username: Pass in username when dev_sandbox is at the user level.
+    """
     _ingress_service_conf = _dev_sandbox_ingress_service_conf + _code_editor_ingress_service_conf
     if not username:
         return [

@@ -18,13 +18,13 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
-class HealthPhase(str, StructuredEnum):
+class HealthPhase(StrStructuredEnum):
     HEALTHY = EnumField("Healthy")
     PROGRESSING = EnumField("Progressing")
     UNHEALTHY = EnumField("Unhealthy")

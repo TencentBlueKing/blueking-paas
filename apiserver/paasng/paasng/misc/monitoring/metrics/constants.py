@@ -15,16 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class MetricsSeriesType(str, StructuredEnum):
+class MetricsSeriesType(StrStructuredEnum):
     CURRENT = EnumField("current", "使用量")
     REQUEST = EnumField("request", "保留量")
     LIMIT = EnumField("limit", "配额上限")
 
 
-class MetricsResourceType(str, StructuredEnum):
+class MetricsResourceType(StrStructuredEnum):
     MEM = EnumField("mem")
     CPU = EnumField("cpu")
 
@@ -41,7 +41,8 @@ RAW_PROMQL_TMPL = {
         "current": "sum by(container_name)(container_memory_working_set_bytes{{"
         'pod_name="{instance_name}", container_name!="POD", cluster_id="{cluster_id}"}})',
         # 内存预留值
-        "request": 'kube_pod_container_resource_requests_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
+        "request": "kube_pod_container_resource_requests_memory_bytes"
+        + '{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
         # 内存上限值
         "limit": 'kube_pod_container_resource_limits_memory_bytes{{pod="{instance_name}", cluster_id="{cluster_id}"}}',
     },

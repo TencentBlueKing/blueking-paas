@@ -15,10 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import IntStructuredEnum, StrStructuredEnum
 
 
-class AppDomainSource(int, StructuredEnum):
+class AppDomainSource(IntStructuredEnum):
     # "BUILT_IN" is reserved for the default ingress's domain, it looks like '{engine_app_name}.apps.com'
     BUILT_IN = 1
     # Auto-generated sub-domains
@@ -26,11 +26,11 @@ class AppDomainSource(int, StructuredEnum):
     INDEPENDENT = 3
 
 
-class AppSubpathSource(int, StructuredEnum):
+class AppSubpathSource(IntStructuredEnum):
     DEFAULT = 1
 
 
-class AddressType(str, StructuredEnum):
+class AddressType(StrStructuredEnum):
     """Address types, different value means different source. For example, "custom"
     means the address was provided by a custom domain created by user.
     """

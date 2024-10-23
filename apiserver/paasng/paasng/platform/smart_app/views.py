@@ -41,7 +41,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.declarative.application.resources import ApplicationDesc, ApplicationDescDiffDog
+from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -50,7 +50,6 @@ from paasng.platform.smart_app.serializers import (
     AppDescriptionSLZ,
     PackageStashRequestSLZ,
     PackageStashResponseSLZ,
-    PackageStashResponseWithDiffSLZ,
 )
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
@@ -240,7 +239,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     @swagger_auto_schema(
         tags=["源码包管理", "S-Mart"],
         request_body=PackageStashRequestSLZ,
-        response_serializer=PackageStashResponseWithDiffSLZ,
+        response_serializer=PackageStashResponseSLZ,
         parser_classes=[MultiPartParser],
     )
     def stash(self, request, code):
@@ -266,11 +265,10 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
         supported_services = mixed_service_mgr.list_by_region(application.region)
         return Response(
-            data=PackageStashResponseWithDiffSLZ(
+            data=PackageStashResponseSLZ(
                 {
                     "app_description": app_desc,
                     "signature": stat.sha256_signature,
-                    "diffs": ApplicationDescDiffDog(application=application, desc=app_desc).diff(),
                     "supported_services": [service.name for service in supported_services],
                 }
             ).data

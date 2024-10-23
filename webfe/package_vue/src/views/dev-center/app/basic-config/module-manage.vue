@@ -701,6 +701,7 @@ import gitExtend from '@/components/ui/git-extend';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appTopBar from '@/components/paas-app-bar';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { fileDownload } from '@/common/utils';
 
 export default {
   components: {
@@ -1646,22 +1647,20 @@ export default {
         });
     },
 
-    handleDownloadTemplate() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
-      this.$http.post(url).then((resp) => {
-        const s3Address = resp.downloadable_address;
-        const a = document.createElement('a');
-        a.href = s3Address;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, (resp) => {
+    async handleDownloadTemplate() {
+      try {
+        const res = await this.$store.dispatch('getAppInitTemplateUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        fileDownload(res.downloadable_address);
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
           message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
         });
-      });
+      }
     },
     changeSelectedSourceControl(sourceControlType) {
       // bk svn禁止切换

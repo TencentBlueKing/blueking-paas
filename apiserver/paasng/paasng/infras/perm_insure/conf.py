@@ -38,6 +38,8 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "ApplicationListViewSet.list_minimal",
     "ApplicationListViewSet.list_search",
     "ApplicationListViewSet.list_idle",
+    "ApplicationListViewSet.list_evaluation",
+    "ApplicationListViewSet.list_evaluation_issue_count",
     "UserVerificationGenerationView",
     "UserVerificationValidationView",
     "Oauth2BackendsViewSet",

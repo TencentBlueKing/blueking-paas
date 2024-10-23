@@ -33,10 +33,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: release go binaries
-        uses: wangyoucao577/go-release-action@v1.37
+        uses: wangyoucao577/go-release-action@v1.51
         with:
           github_token: ${{ secrets.REPO_RELEASE_ACCESS_TOKEN }}
-          goversion: "1.20"
+          goversion: "1.22.8"
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           project_path: bkpaas-cli

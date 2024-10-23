@@ -3,7 +3,7 @@
 ## 用于加密数据库内容的 Secret
 # BKKRILL_ENCRYPT_SECRET_KEY: ''
 
-## 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'，分别对应 'SM4CTR'和'Fernet' 算法
+## 选择加密数据库内容的算法，可选值：'SHANGMI', 'CLASSIC'，分别对应 'SM4CTR' 和 'FernetCipher' 算法
 # BK_CRYPTO_TYPE : ''
 
 ## （Django）特定 Django 安装的密钥。用于提供 加密签名，默认值为：${BKKRILL_ENCRYPT_SECRET_KEY}
@@ -602,6 +602,8 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # BK_DOC_APP_ID: ''
 ## 蓝鲸官网文档中心地址
 # BK_DOCS_URL_PREFIX: https://bk.tencent.com/docs
+## PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+# BK_PAAS_DOCS_VER: 1.5
 
 ## 平台 FAQ 地址
 # PLATFORM_FAQ_URL: http://localhost:8080

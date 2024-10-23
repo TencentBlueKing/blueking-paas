@@ -17,7 +17,7 @@
 
 import datetime
 import hashlib
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from typing import Any, Collection, Dict
 from uuid import UUID
 

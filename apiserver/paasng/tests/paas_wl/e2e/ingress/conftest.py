@@ -61,7 +61,7 @@ def ingress_nginx_reload_checker():
 
 @pytest.fixture(scope="module")
 def framework(
-    setup_ingress_nginx_controller, ingress_nginx_ns, ingress_nginx_reload_checker, k8s_client
+    _setup_ingress_nginx_controller, ingress_nginx_ns, ingress_nginx_reload_checker, k8s_client
 ) -> E2EFramework:
     pod = get_ingress_nginx_pod(namespace=ingress_nginx_ns, client=k8s_client)
     return E2EFramework(

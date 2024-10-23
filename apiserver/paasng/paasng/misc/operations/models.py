@@ -118,7 +118,7 @@ class DeployOpValues:
     env_name: str
     has_succeeded: bool
     # `status` is optional to be compatible with legacy database data
-    status: Optional[bool] = None
+    status: Optional[str] = None
 
 
 class AppDeploymentOperationObj(OperationObj):

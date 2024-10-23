@@ -106,7 +106,8 @@ class BKLogClient:
             resp = self._call_api(self._esclient.esquery_dsl, data=data, timeout=timeout)
 
         if not resp["result"]:
-            # 有可能是 scroll id 失效了, 反正抛异常就对了
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
+            scroll_id = scroll_id or "none"
             raise ScanError(scroll_id, "Scroll request has failed on `{}`".format(resp["message"]))
 
         response = Response(search.search, resp["data"])
@@ -221,6 +222,8 @@ class ESLogClient:
                 ),
             )
         if not response.success():
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
+            scroll_id = scroll_id or "none"
             failed = response._shards.failed
             total = response._shards.total
             raise ScanError(
@@ -272,7 +275,7 @@ class ESLogClient:
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
         es_index = self._get_indexes(index, time_range, timeout)
-        all_mappings = self._client.indices.get_mapping(es_index, params={"request_timeout": timeout})
+        all_mappings = self._client.indices.get_mapping(index=es_index, params={"request_timeout": timeout})
         # 由于手动创建会没有 properties, 需要将无 properties 的 mappings 过滤掉
         all_not_empty_mappings = {
             key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
@@ -290,7 +293,7 @@ class ESLogClient:
         # Note: 使用 stats 接口优化查询性能
         all_indexes = list(
             self._client.indices.stats(
-                index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
+                index=index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
             )["indices"].keys()
         )
         if filtered_indexes := filter_indexes_by_time_range(all_indexes, time_range=time_range):

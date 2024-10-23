@@ -7,28 +7,29 @@ Query standard output logs
 
 |   Parameter Name   |    Parameter Type  |  Required  |     Parameter Description     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   | string | Yes | Application ID |
-| module   | string | Yes | Module name, such as "default" |
+| code   | string | Yes | Application ID |
+| module_name   | string | Yes | Module name, such as "default" |
 
 #### 2. API Parameters:
 
-| Parameter Name              | Parameter Type | Required | Parameter Description                                                             |
-|-----------------------|----------|-----|------------------------------------------------------------------|
-| log_type              | string   | Yes   | Log type, optional values: "STRUCTURED" "STANDARD_OUTPUT" "INGRESS", default value: "STRUCTURED" |
-| time_range            | string   | Yes   | Time range, optional values: "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
-| start_time            | string   | No   | Required when time_range is "customized"                                |
-| end_time              | string   | No   | Required when time_range is "customized"                |
-| page              | int   | Yes   | Integer greater than 0               |
-| page_size              | int   | Yes   | Integer greater than 0                |
+| Parameter Name | Type | Required | Description |
+|-------------|--------| ------ |-------------|
+| time_range  | string | Yes | Time range，one of "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
+| start_time  | string | No | Start time, input if time time_range = "customized" |
+| end_time    | string | No | End time, input if time time_range = "customized" |
+| scroll_id   | string | No | Scroll ID |
+| page        | int    | No | Page，Integer greater than 0  |
+| page_size   | int    | No | Page size，Integer greater than 0  |
 
 **Note**: The log query parameters are consistent with the ES query syntax, please refer to: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
 
 ### Request Example
 ```bash
-curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{app_code}/modules/{module}/log/structured/list/?time_range=1h'
+curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{code}/modules/{module_name}/log/structured/list/?time_range=1h'
 ```
 
 ### Response Result Example
+#### Success Response
 ```javascript
 {
     "code": 0,
@@ -62,6 +63,27 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 }
 ```
 
+#### Exception Response
+example 1
+```json
+{
+    "code": "QUERY_LOG_FAILED",
+    "detail": "Query log failed: ..."
+}
+```
+example 2
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "...",
+    "fields_detail": {
+        "time_range": [
+            "this field can't be empty。"
+        ]
+    }
+}
+```
+
 ### Response Result Parameter Description
 
 | Field |   Type |  Description |
@@ -76,7 +98,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 | data.logs.region | string | Region |
 | data.logs.app_code | string | Application ID |
 | data.logs.environment | string | Environment |
-| data.logs.process_id | string | Process ID |
+| data.logs.process_id | string | Process unique type |
 | data.logs.stream | string | Stream |
 | data.logs.message | string | Message |
 | data.logs.detail | dict | Detailed information |

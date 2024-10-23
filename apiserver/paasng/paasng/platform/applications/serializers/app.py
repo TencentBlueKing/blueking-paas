@@ -31,6 +31,7 @@ from paasng.platform.applications.models import Application, UserMarkedApplicati
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
 from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
@@ -185,6 +186,51 @@ class IdleApplicationListOutputSLZ(serializers.Serializer):
     applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
+class ApplicationEvaluationSLZ(serializers.Serializer):
+    code = serializers.CharField(source="app.code", help_text="应用 Code")
+    name = serializers.CharField(source="app.name", help_text="应用名称")
+    type = serializers.CharField(source="app.type", help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(source="app.is_plugin_app", help_text="是否为插件应用")
+    logo_url = serializers.CharField(source="app.get_logo_url", help_text="应用 Logo 访问地址")
+    cpu_limits = serializers.IntegerField(help_text="CPU 配额")
+    mem_limits = serializers.IntegerField(help_text="内存配额")
+    cpu_usage_avg = serializers.FloatField(help_text="CPU 使用率(7d)")
+    mem_usage_avg = serializers.FloatField(help_text="内存使用率(7d)")
+    pv = serializers.IntegerField(help_text="PV(30d)")
+    uv = serializers.IntegerField(help_text="UV(30d)")
+    latest_operated_at = serializers.DateTimeField(help_text="最近操作时间")
+    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="应用状态")
+
+
+class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
+    issue_type = serializers.ChoiceField(
+        choices=OperationIssueType.get_choices(), help_text="应用状态", required=False, allow_null=True
+    )
+    order = serializers.CharField(help_text="排序", default="id")
+
+    def validate_order(self, value):
+        allowed_orders = ["cpu_usage_avg", "-cpu_usage_avg", "pv", "-pv", "uv", "-uv", "id", "-id"]
+        if value not in allowed_orders:
+            raise serializers.ValidationError(f"排序字段必须是 {', '.join(allowed_orders)} 之一")
+        return value
+
+
+class ApplicationEvaluationListResultSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    applications = serializers.ListField(help_text="应用列表", child=ApplicationEvaluationSLZ())
+
+
+class ApplicationEvaluationIssueCountSLZ(serializers.Serializer):
+    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="评估结果类型")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
+
+
 class EnvironmentDeployInfoSLZ(serializers.Serializer):
     deployed = serializers.BooleanField(help_text="是否部署")
     url = serializers.URLField(help_text="访问地址")
@@ -332,6 +378,17 @@ class ApplicationSLZ4Record(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "type", "code", "name", "logo_url", "config_info"]
+
+
+class ApplicationWithLogoMinimalSLZ(serializers.ModelSerializer):
+    """用于带Logo URL的简化应用列表"""
+
+    name = TranslatedCharField()
+    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的Logo地址")
+
+    class Meta:
+        model = Application
+        fields = ["id", "type", "code", "name", "logo_url"]
 
 
 class MarketAppMinimalSLZ(serializers.Serializer):

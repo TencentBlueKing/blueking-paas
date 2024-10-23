@@ -79,6 +79,16 @@ urlpatterns = [
         name="api.applications.lists.search",
     ),
     url(
+        r"^api/bkapps/applications/lists/evaluation/$",
+        views.ApplicationListViewSet.as_view({"get": "list_evaluation"}),
+        name="api.applications.lists.evaluation",
+    ),
+    url(
+        r"^api/bkapps/applications/lists/evaluation/issue_count/$",
+        views.ApplicationListViewSet.as_view({"get": "list_evaluation_issue_count"}),
+        name="api.applications.lists.evaluation.issue_count",
+    ),
+    url(
         r"^api/bkapps/applications/lists/idle/$",
         views.ApplicationListViewSet.as_view({"get": "list_idle"}),
         name="api.applications.lists.idle",

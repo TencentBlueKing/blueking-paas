@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -31,6 +32,8 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
+from paasng.platform.bkapp_model.models import ProcessServicesFlag
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.controller import DeployHandleResult
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
@@ -147,17 +150,26 @@ class BaseBuilder(DeployStep):
     def handle_app_description(self) -> DeployHandleResult:
         """Handle the description files for deployment. It try to parse the app description
         file and store the related configurations, e.g. processes.
+        Set the implicit_needed flag for process services at the end.
 
         :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
+            app_environment = self.deployment.app_environment
             handler = get_deploy_desc_handler_by_version(
-                self.deployment.app_environment.module,
+                app_environment.module,
                 self.deployment.operator,
                 self.deployment.version_info,
                 self.deployment.get_source_dir(),
             )
-            return handler.handle(self.deployment)
+            result = handler.handle(self.deployment)
+
+            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
+            implicit_needed = result.spec_version != AppSpecVersion.VER_3
+            ProcessServicesFlag.objects.update_or_create(
+                app_environment=app_environment, defaults={"implicit_needed": implicit_needed}
+            )
+
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
@@ -165,6 +177,8 @@ class BaseBuilder(DeployStep):
         except Exception as e:
             logger.exception("Error while handling app description file, deployment: %s.", self.deployment)
             raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
+        else:
+            return result
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
@@ -438,9 +452,9 @@ class BuildProcessPoller(DeployPoller):
             # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
             if coordinator.status_polling_timeout:
                 logger.warning(
-                    "[deploy_id=%s, build_process_id=%s] polling build status timeout, regarding as failed by PaaS",
-                    self.params["deployment_id"],
+                    "Polling status of build process [%s] timed out, consider it failed, deployment: %s",
                     self.params["build_process_id"],
+                    self.params["deployment_id"],
                 )
                 build_status = BuildStatus.FAILED
                 status = PollingStatus.DONE
@@ -448,7 +462,13 @@ class BuildProcessPoller(DeployPoller):
                 coordinator.update_polling_time()
 
         result = {"build_id": build_id, "build_status": build_status}
-        logger.info("[%s] got build status [%s][%s]", self.params["deployment_id"], build_id, build_status)
+        logger.info(
+            'The status of build process [%s] is "%s", deployment: %s, build_id: %s',
+            self.params["build_process_id"],
+            build_status,
+            self.params["deployment_id"],
+            build_id,
+        )
         return PollingResult(status=status, data=result)
 
     def update_steps(self, deployment: Deployment, build_proc: BuildProcess):
@@ -459,12 +479,19 @@ class BuildProcessPoller(DeployPoller):
             JobStatus.PENDING: phase.get_started_pattern_map(),
             JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
         }
-        logger.info("[%s] start updating steps by log lines", self.params["deployment_id"])
+        started_at = time.time()
+        logger.info("Update deployment steps by log lines, deployment: %s", self.params["deployment_id"])
 
         # TODO: Use a flag value to indicate the progress of the scanning of the log,
         # so that we won't need to scan the log from the beginning every time.
         for line in build_proc.output_stream.lines.all().values_list("line", flat=True):
             update_step_by_line(line, pattern_maps, phase)
+
+        logger.info(
+            "Finished updating deployment steps, deployment: %s, cost: %s",
+            self.params["deployment_id"],
+            time.time() - started_at,
+        )
 
 
 class BuildProcessResultHandler(CallbackHandler):

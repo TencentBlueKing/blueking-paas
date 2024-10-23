@@ -95,17 +95,20 @@ func (r apigwRequester) GetAppDeployResult(appCode, appModule, deployID string) 
 }
 
 // ListAppDeployHistory ...
-func (r apigwRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+func (r apigwRequester) ListAppDeployHistory(appCode, appModule, appEnv string) (map[string]any, error) {
 	url := fmt.Sprintf(
 		"%s/bkapps/applications/%s/modules/%s/deployments/lists/",
 		config.G.PaaSApigwUrl, appCode, appModule,
 	)
-	opts := grequests.RequestOptions{Headers: r.headers(), Params: map[string]string{"limit": "5"}}
+	opts := grequests.RequestOptions{
+		Headers: r.headers(),
+		Params:  map[string]string{"limit": "5", "environment": appEnv},
+	}
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
-// UpdataBkappModel ...
-func (r apigwRequester) UpdataBkappModel(
+// UpdateBkappModel ...
+func (r apigwRequester) UpdateBkappModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	url := fmt.Sprintf(

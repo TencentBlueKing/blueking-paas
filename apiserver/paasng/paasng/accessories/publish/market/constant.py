@@ -17,13 +17,13 @@
 
 from enum import Enum
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.core.region.states import RegionType
 
 
-class ProductSourceUrlType(int, StructuredEnum):
+class ProductSourceUrlType(IntStructuredEnum):
     """访问地址类型"""
 
     DISABLED = EnumField(1, label="未开启")
@@ -63,14 +63,14 @@ class AppState(Enum):
 TAG_REGION_CHOICES = list(RegionType.get_choices()) + [("all", "所有版本")]
 
 
-class OpenMode(str, StructuredEnum):
+class OpenMode(StrStructuredEnum):
     """应用在桌面的打开方式"""
 
     DESKTOP = EnumField(real_value="desktop", label="桌面")
     NEW_TAB = EnumField(real_value="new_tab", label="新标签页")
 
 
-class TagName(str, StructuredEnum):
+class TagName(StrStructuredEnum):
     """应用分类名称"""
 
     OPSTOOlS = EnumField("OpsTools", label=_("运维工具"))

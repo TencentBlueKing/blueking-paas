@@ -21,10 +21,10 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import IntStructuredEnum
 
 
-class MatchType(int, StructuredEnum):
+class MatchType(IntStructuredEnum):
     Unknown = 0
     Excat = 1
     Prefix = 2

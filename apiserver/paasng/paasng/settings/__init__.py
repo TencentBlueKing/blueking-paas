@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pymysql
+import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
@@ -84,6 +85,10 @@ settings = LazySettings(
 )
 
 _notset = object()
+
+# Patch the SSL module for compatibility with legacy CA credentials.
+# https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
+urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 pymysql.install_as_MySQLdb()
 # Patch version info to forcely pass Django client check
@@ -570,7 +575,7 @@ CORS_ORIGIN_ALLOW_ALL = settings.get("CORS_ORIGIN_ALLOW_ALL", False)
 # 默认允许通过通过跨域请求传递 Cookie，默认允许
 CORS_ALLOW_CREDENTIALS = True
 
-# == Celery 相关配置
+# ============================ Celery 相关配置 ============================
 
 CELERY_BROKER_URL = settings.get("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = settings.get("CELERY_RESULT_BACKEND", REDIS_URL)
@@ -579,7 +584,7 @@ if settings.get("CELERY_BROKER_HEARTBEAT", _notset) != _notset:
     CELERY_BROKER_HEARTBEAT = settings.get("CELERY_BROKER_HEARTBEAT")
 
 # Celery 格式 / 时区相关配置
-CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Shanghai"
@@ -1235,13 +1240,16 @@ BKDOC_URL = settings.get("BKDOC_URL", "http://localhost:8080")
 # 文档应用的应用ID
 BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 
-# 蓝鲸官网文档中心地址
-BK_DOCS_URL_PREFIX = settings.get(
-    "BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs/markdown/PaaS/DevelopTools/BaseGuide"
-)
+BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
+
+# PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+BK_PAAS_DOCS_VER = settings.get("BK_PAAS_DOCS_VER", "1.5")
+
+# PaaS 产品文档前缀，蓝鲸文档中心最新的方案需要各个产品自己添加语言、版本号
+PAAS_DOCS_URL_PREFIX = f"{BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/{BK_PAAS_DOCS_VER}"
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq")
+PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{PAAS_DOCS_URL_PREFIX}/BaseGuide/faq")
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get("SUPPORT_LIVE_AGENT", False)

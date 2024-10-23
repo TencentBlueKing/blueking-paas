@@ -15,26 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from enum import Enum, IntEnum
 from typing import Dict, List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 
 DEFAULT_ENGINE_APP_PREFIX = "bkapp"
 
 
-class ModuleName(str, Enum):
+class ModuleName(StrStructuredEnum):
     DEFAULT = "default"
 
 
-class ExposedURLType(IntEnum):
+class ExposedURLType(IntStructuredEnum):
     # eg: http://foo.com/region-bkapp-code-stag/
     SUBPATH = 1
     # eg: http://code.foo-apps.com/
     SUBDOMAIN = 2
 
 
-class SourceOrigin(int, StructuredEnum):
+class SourceOrigin(IntStructuredEnum):
     """Source origin defines the origin of module's source code"""
 
     AUTHORIZED_VCS = EnumField(1, "Authorized VCS")
@@ -58,7 +57,7 @@ class SourceOrigin(int, StructuredEnum):
         return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
 
 
-class APP_CATEGORY(str, StructuredEnum):
+class APP_CATEGORY(StrStructuredEnum):
     """Application category, used when setting label to images"""
 
     NORMAL_APP = "normal_app"
@@ -67,7 +66,7 @@ class APP_CATEGORY(str, StructuredEnum):
     LEGACY_APP = "legacy_app"
 
 
-class DeployHookType(str, StructuredEnum):
+class DeployHookType(StrStructuredEnum):
     """DeployHook Type"""
 
     PRE_RELEASE_HOOK = EnumField("pre-release-hook", label="部署前置钩子")
@@ -80,7 +79,7 @@ class DeployHookType(str, StructuredEnum):
         return super()._missing_(value)
 
 
-class BuildPackType(str, StructuredEnum):
+class BuildPackType(StrStructuredEnum):
     # legacy heroku buildpack format, just a tarball
     TAR = EnumField("tar", label="tar")
 
@@ -102,7 +101,7 @@ class BuildPackType(str, StructuredEnum):
         }
 
 
-class AppImageType(str, StructuredEnum):
+class AppImageType(StrStructuredEnum):
     LEGACY = EnumField("legacy", label="legacy")
     CNB = EnumField("cnb", label="cnb")
 

@@ -14,13 +14,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class NetworkProtocol(str, StructuredEnum):
+class NetworkProtocol(StrStructuredEnum):
     TCP = EnumField("TCP", label="TCP")
     UDP = EnumField("UDP", label="UDP")
 
 
-class ExposedTypeName(str, StructuredEnum):
+class ExposedTypeName(StrStructuredEnum):
     BK_HTTP = "bk/http"

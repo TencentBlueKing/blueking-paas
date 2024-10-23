@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import List
 
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.utils.basic import ChoicesEnum
@@ -29,5 +30,5 @@ class EnvRoleOperation(ChoicesEnum):
     }
 
     @classmethod
-    def get_default_role(cls, operation: str):
-        return cls.__default.value[operation]
+    def get_default_role(cls, operation: str) -> List[int]:
+        return cls.__default[operation]  # type: ignore

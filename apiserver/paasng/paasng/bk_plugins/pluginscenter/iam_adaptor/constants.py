@@ -17,7 +17,7 @@
 
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
@@ -41,7 +41,7 @@ FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 NEVER_EXPIRE_DAYS = -1
 
 
-class PluginPermissionActions(str, StructuredEnum):
+class PluginPermissionActions(StrStructuredEnum):
     """插件相关的操作权限"""
 
     BASIC_DEVELOPMENT = EnumField("basic_development", label=_("基础开发"))
@@ -75,5 +75,5 @@ class PluginPermissionActions(str, StructuredEnum):
         raise NotImplementedError
 
 
-class ResourceType(str, StructuredEnum):
+class ResourceType(StrStructuredEnum):
     PLUGIN = EnumField("plugin", label=_("蓝鲸插件"))

@@ -157,7 +157,6 @@ export default {
       },
       excludeCardStyleList: ['deploy', 'itsm', 'test'],
       isWebPolling: true,
-      messageStatus: '',
       PLUGIN_TEST_VERSION_STATUS,
     };
   },
@@ -281,12 +280,6 @@ export default {
         bus.$emit('release-stage-changes', value);
       }
     },
-    messageStatus(status) {
-      // 手动切换预览步骤，不通过postMessage的状态获取详情
-      if (this.isShowButtonGroup) {
-        this.updateStepStatus(status);
-      }
-    },
   },
   async created() {
     this.stepAllStages = this.curAllStages;
@@ -310,9 +303,9 @@ export default {
       if (!event.data || event.data?.type !== 'design-test') return;
       const status = event.data.data;
       if (status === 'success') {
-        this.messageStatus = 'successful';
+        this.isShowButtonGroup && this.updateStepStatus('successful');
       } else if (status === 'fail') {
-        this.messageStatus = 'failed';
+        this.isShowButtonGroup && this.updateStepStatus('failed');
       }
     },
     async pollingReleaseStageDetail() {

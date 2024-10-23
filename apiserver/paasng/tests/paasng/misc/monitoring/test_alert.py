@@ -52,7 +52,10 @@ def clear_filelock():
 
 
 AppQueryAlertsParams = partial(
-    QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()
+    QueryAlertsParams.create_by_app_codes,
+    app_codes=[FAKE_APP_CODE],
+    start_time=datetime.now(),
+    end_time=datetime.now(),
 )
 
 AppQueryAlarmStrategiesParams = partial(QueryAlarmStrategiesParams, app_code=FAKE_APP_CODE)
@@ -75,33 +78,34 @@ def bk_monitor_space():
 
 
 class TestQueryAlertsParams:
+    @pytest.mark.django_db()
     @pytest.mark.parametrize(
-        ("query_params", "expected_query_string"),
+        ("create_query_params", "expected_query_string"),
         [
             (
-                AppQueryAlertsParams(),
+                lambda: AppQueryAlertsParams(),
                 None,
             ),
             (
-                AppQueryAlertsParams(environment="stag"),
+                lambda: AppQueryAlertsParams(environment="stag"),
                 "labels:(stag)",
             ),
             (
-                AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
                 "labels:(stag AND high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(alert_code="high_cpu_usage"),
                 "labels:(high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
+                lambda: AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
                 f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
             ),
         ],
     )
-    def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
-        result = query_params.to_dict()
+    def test_to_dict(self, create_query_params, expected_query_string, bk_monitor_space):
+        result = create_query_params().to_dict()
         assert result["bk_biz_ids"] == [int(bk_monitor_space.iam_resource_id)]
         if query_string := result.get("query_string"):
             assert query_string == expected_query_string

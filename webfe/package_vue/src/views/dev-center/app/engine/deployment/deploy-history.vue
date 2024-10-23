@@ -142,12 +142,22 @@
     </bk-table>
 
     <bk-sideslider
-      :title="historySideslider.title"
       :width="920"
       :is-show.sync="historySideslider.isShow"
       :quick-close="true"
       @hidden="errorTips = {}"
     >
+      <div
+        slot="header"
+        class="deploy-header"
+      >
+        <div style="float: left;">
+          {{ historySideslider.title }}
+        </div>
+        <div style="float: right;">
+          <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+        </div>
+      </div>
       <div
         slot="content"
         v-bkloading="{ isLoading: isLogLoading || isTimelineLoading, opacity: 1 }"
@@ -256,6 +266,7 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      logExportUrl: '',
     };
   },
   computed: {
@@ -506,6 +517,7 @@ export default {
         return false;
       }
       this.isLogLoading = true;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.module_name || params.moduleName}/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -538,6 +550,9 @@ export default {
         return;
       }
       this.tableEmptyConf.keyword = '';
+    },
+    handleExportLog() {
+      window.open(this.logExportUrl, '_blank')
     },
   },
 };

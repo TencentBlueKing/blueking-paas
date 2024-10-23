@@ -66,3 +66,4 @@ class DevSandboxWithCodeEditorDetailSLZ(serializers.Serializer):
     code_editor_status = serializers.ChoiceField(
         choices=HealthPhase.get_django_choices(), help_text="code editor 的运行状态"
     )
+    dev_sandbox_env_vars = serializers.JSONField(default={}, blank=True, help_text="dev sandbox 环境变量")

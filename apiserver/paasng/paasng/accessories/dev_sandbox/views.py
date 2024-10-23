@@ -200,10 +200,11 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
-                "url": detail.urls,
+                "urls": detail.urls,
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
+                "dev_sandbox_env_vars": detail.dev_sandbox_env_vars,
             }
         )
         return Response(data=serializer.data)

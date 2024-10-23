@@ -2705,7 +2705,7 @@ msgstr ""
 msgid "网关 API 访问地址模板"
 msgstr "API Gateway API access URL template"
 
-#: paasng/platform/engine/configurations/config_var.py:296
+#: paasng/platform/engine/configurations/config_var.py:166, 296
 msgid "组件 API 访问地址"
 msgstr "Component API access URL"
 

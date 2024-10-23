@@ -905,7 +905,7 @@ DEFAULT_REGION_TEMPLATE = {
                 "stag": "http://example.com/static_api/",
                 "prod": "http://example.com/static_api/",
             },
-            "COMPONENT_API_URL": {
+            "BK_COMPONENT_API_URL": {
                 "stag": "http://api.example.com/",
                 "prod": "http://api.example.com/",
             },

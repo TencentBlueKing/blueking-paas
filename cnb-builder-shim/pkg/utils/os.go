@@ -87,19 +87,6 @@ func Unzip(srcFilePath, distDir string) error {
 	return nil
 }
 
-// ExtractTarGz extracts the contents of a tar.gz file to a specified directory.
-//
-// srcFilePath is the path to the zip file.
-// distDir is the directory where the extracted files will be placed.
-// Returns an error if there was a problem extracting the tar gz file.
-func ExtractTarGz(srcFilePath, distDir string) error {
-	z := archiver.NewTarGz()
-	if err := z.Unarchive(srcFilePath, distDir); err != nil {
-		return errors.Wrap(err, "extract tar.gz error")
-	}
-	return nil
-}
-
 // Chownr changes the ownership of a file or directory and all its contents recursively.
 //
 // The function takes three parameters:
@@ -162,4 +149,26 @@ func readAndSortLines(filePath string) ([]string, error) {
 	sort.Strings(lines)
 
 	return lines, nil
+}
+
+// ChmodR changes the permissions of a directory and all its contents recursively.
+func ChmodR(dirPath string) error {
+	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			err = os.Chmod(path, 0o777)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = os.Chmod(path, 0o666)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

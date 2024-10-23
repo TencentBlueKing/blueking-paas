@@ -20,9 +20,7 @@ package main
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -31,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -160,25 +158,14 @@ func initializeSourceCode() error {
 	}
 	switch config.G.SourceCode.FetchMethod {
 	case config.BK_REPO:
-		downloadUrl, err := url.Parse(config.G.SourceCode.FetchUrl)
-		if err != nil {
-			return err
-		}
-		// 创建临时文件夹存放源码压缩包
-		tmpDir, err := os.MkdirTemp("", "source-packages-*")
-		if err != nil {
-			return errors.Wrap(err, "create tmp dir")
-		}
-		defer os.RemoveAll(tmpDir)
-
-		// 下载源码压缩包
-		if err = fs.NewFetcher(logger).Fetch(downloadUrl.Path, tmpDir); err != nil {
+		projectPath := strings.TrimSuffix(workspace, "/") + "/dev_project"
+		// 下载源码
+		if err = http.NewFetcher(logger).Fetch(config.G.SourceCode.FetchUrl, projectPath); err != nil {
 			return errors.Wrap(err, "download source code")
 		}
-		// 解压源码至工作目录
-		srcFilePath := path.Join(tmpDir, "tar")
-		if err = utils.ExtractTarGz(srcFilePath, workspace); err != nil {
-			return err
+		// 修改目录权限
+		if err = utils.ChmodR(projectPath); err != nil {
+			return errors.Wrap(err, "chmod files")
 		}
 	case config.GIT:
 		return fmt.Errorf("TODO: clone git from revision")

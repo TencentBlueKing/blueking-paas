@@ -35,13 +35,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := initializeSourceCode(); err != nil {
-		logger.Error(err, "Initialize source code failed")
+	if err := config.InitConfig(); err != nil {
+		logger.Error(err, "Init config failed")
 		os.Exit(1)
 	}
 
-	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init config failed")
+	if err := initializeSourceCode(); err != nil {
+		logger.Error(err, "Initialize source code failed")
 		os.Exit(1)
 	}
 

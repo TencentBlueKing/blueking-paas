@@ -75,6 +75,7 @@ urlpatterns = [
     url(r"^", include("paasng.bk_plugins.pluginscenter.urls")),
     url(r"^", include("paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.urls")),
     url(r"^", include("paasng.accessories.app_secret.urls")),
+    url(r"^", include("paasng.accessories.dev_sandbox.urls")),
     # PaaS Admin system
     url(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
     url(r"^admin42/", include("paas_wl.apis.admin.urls")),

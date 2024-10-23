@@ -2610,7 +2610,8 @@ msgstr "BlueKing login service domain"
 
 #: paasng/platform/engine/configurations/config_var.py:155
 msgid "蓝鲸 APIGW 提供的 OAuth 服务，不推荐使用"
-msgstr "OAuth services provided by the BlueKing API Gateway, not recommended for use"
+msgstr ""
+"OAuth services provided by the BlueKing API Gateway, not recommended for use"
 
 #: paasng/platform/engine/configurations/config_var.py:156
 msgid "蓝鲸的组件 API 访问地址, 给SAAS使用"

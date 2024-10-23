@@ -153,7 +153,6 @@ def generate_env_vars_by_region_and_env(
         "LOGIN_URL": {"description": _("蓝鲸统一登录访问地址")},
         "LOGIN_DOMAIN": {"description": _("蓝鲸统一登录服务域名")},
         "APIGW_OAUTH_API_URL": {"description": _("蓝鲸 APIGW 提供的 OAuth 服务，不推荐使用")},
-        "COMPONENT_API_URL": {"description": _("蓝鲸的组件 API 访问地址, 给SAAS使用")},
     }
     region_envs_with_prefix = BuiltInEnvsRegionHelper(
         region_name=region,

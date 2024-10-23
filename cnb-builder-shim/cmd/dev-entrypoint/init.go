@@ -28,6 +28,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pkg/errors"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -133,4 +135,71 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 		return errors.Wrap(err, "failed to write order.toml")
 	}
 	return nil
+}
+
+// initializeSourceCode: 根据配置初始化源码
+func initializeSourceCode() error {
+	logger.Info(fmt.Sprintf("Downloading source code to %s...", config.G.SourceCode.FetchMethod))
+	// TODO: 源码初始化不同的方式抽象成一个接口
+	workspace := config.G.SourceCode.Workspace
+	// 确保工作空间存在
+	err := ensureWorkspace(workspace)
+	if err != nil {
+		return err
+	}
+	// 检查 workspace 下是否已经有文件
+	codeExists, err := fileExists(workspace)
+	if err != nil {
+		return err
+	}
+	// 源码已经下载到工作目录，无需初始化
+	if codeExists {
+		return nil
+	}
+	switch config.G.SourceCode.FetchMethod {
+	case config.BK_REPO:
+		projectPath := strings.TrimSuffix(workspace, "/") + "/dev_project"
+		// 下载源码
+		if err = http.NewFetcher(logger).Fetch(config.G.SourceCode.FetchUrl, projectPath); err != nil {
+			return errors.Wrap(err, "download source code")
+		}
+		// 修改目录权限
+		if err = utils.ChmodR(projectPath); err != nil {
+			return errors.Wrap(err, "chmod files")
+		}
+	case config.GIT:
+		return fmt.Errorf("TODO: clone git from revision")
+	}
+	return nil
+}
+
+// ensureWorkspace 确保 workspace 文件夹存在，如果不存在则创建该文件夹
+func ensureWorkspace(workspace string) (err error) {
+	// 检查文件夹是否存在
+	if _, err = os.Stat(workspace); os.IsNotExist(err) {
+		// 文件夹不存在，创建文件夹
+		logger.Info("creat workspace directory")
+		if err := os.MkdirAll(workspace, 0750); err != nil {
+			return errors.Wrap(err, "create workspace directory")
+		}
+		return nil
+	}
+	return err
+}
+
+// fileExists 判断文件夹是否存在文件
+func fileExists(path string) (exists bool, err error) {
+	// 文件夹存在，检查文件夹里面是否有文件
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return false, errors.Wrap(err, "read workspace directory")
+	}
+
+	if len(files) > 0 {
+		// 文件夹不为空，返回 nil
+		return true, nil
+	}
+
+	// 文件夹为空
+	return false, nil
 }

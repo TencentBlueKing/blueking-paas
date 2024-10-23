@@ -21,7 +21,8 @@ package main
 import (
 	"os"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
@@ -34,11 +35,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := config.InitConfig(); err != nil {
+		logger.Error(err, "Init config failed")
+		os.Exit(1)
+	}
+
+	if err := initializeSourceCode(); err != nil {
+		logger.Error(err, "Initialize source code failed")
+		os.Exit(1)
+	}
+
 	runDevContainerServer()
 }
 
 func runDevContainerServer() {
-	var srv dc.DevWatchServer
+	var srv devsandbox.DevWatchServer
 
 	srv, err := webserver.New(&logger)
 	if err != nil {
@@ -47,7 +58,7 @@ func runDevContainerServer() {
 	}
 
 	go func() {
-		mgr, mgrErr := dc.NewHotReloadManager()
+		mgr, mgrErr := devsandbox.NewHotReloadManager()
 		if mgrErr != nil {
 			logger.Error(mgrErr, "New HotReloadManager failed")
 			os.Exit(1)
@@ -60,27 +71,27 @@ func runDevContainerServer() {
 				os.Exit(1)
 			}
 
-			if writeErr := mgr.WriteStatus(event.ID, dc.ReloadProcessing); writeErr != nil {
+			if writeErr := mgr.WriteStatus(event.ID, devsandbox.ReloadProcessing); writeErr != nil {
 				logger.Error(writeErr, "HotReload WriteStatus failed")
 				os.Exit(1)
 			}
 
 			if event.Rebuild {
 				if innerErr := mgr.Rebuild(event.ID); innerErr != nil {
-					_ = mgr.WriteStatus(event.ID, dc.ReloadFailed)
+					_ = mgr.WriteStatus(event.ID, devsandbox.ReloadFailed)
 					logger.Error(innerErr, "HotReload Rebuild failed")
 					continue
 				}
 			}
 			if event.Relaunch {
 				if innerErr := mgr.Relaunch(event.ID); innerErr != nil {
-					_ = mgr.WriteStatus(event.ID, dc.ReloadFailed)
+					_ = mgr.WriteStatus(event.ID, devsandbox.ReloadFailed)
 					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue
 				}
 			}
 
-			_ = mgr.WriteStatus(event.ID, dc.ReloadSuccess)
+			_ = mgr.WriteStatus(event.ID, devsandbox.ReloadSuccess)
 		}
 	}()
 

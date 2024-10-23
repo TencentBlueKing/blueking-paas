@@ -1,0 +1,8 @@
+spec_version: 2
+module:
+  language: Python
+  scripts:
+    pre_release_hook: "python manage.py migrate --no-input"
+  processes:
+    web:
+      command: python manage.py runserver 0.0.0.0:8080

@@ -50,7 +50,6 @@ from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.models import Application
-from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.models import VersionInfo
@@ -315,12 +314,11 @@ class DevSandboxWithCodeEditorController:
 
     def _get_source_package_path(self, version_info: VersionInfo) -> str:
         """Return the blobstore path for storing source files package"""
-        engine_app = EngineApp.objects.get(region=self.dev_wl_app.region, name=self.dev_wl_app.name)
         branch = version_info.version_name
         revision = version_info.revision
 
-        slug_name = f"{engine_app.name}:{branch}:{revision}:dev"
-        return f"{engine_app.region}/home/{slug_name}/tar"
+        slug_name = f"{self.app.code}:{self.module_name}:{branch}:{revision}:dev"
+        return f"{self.dev_wl_app.region}/home/{slug_name}/tar"
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务"""

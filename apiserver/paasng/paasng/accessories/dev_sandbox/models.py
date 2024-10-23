@@ -54,7 +54,7 @@ class DevSandbox(OwnerTimestampedModel):
 class CodeEditor(UuidAuditedModel):
     """CodeEditor Model"""
 
-    sandbox = models.OneToOneField(
+    dev_sandbox = models.OneToOneField(
         DevSandbox, on_delete=models.CASCADE, db_constraint=False, related_name="code_editor"
     )
     password = EncryptField(max_length=32, verbose_name="登陆密码", help_text="登陆密码")

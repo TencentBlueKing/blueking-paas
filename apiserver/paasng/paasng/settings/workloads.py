@@ -38,6 +38,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量比 YAML 配置的优先级更高
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
+
 from pathlib import Path
 
 from dynaconf import LazySettings
@@ -91,7 +92,7 @@ DEV_SANDBOX_WORKSPACE = settings.get("DEV_SANDBOX_WORKSPACE", "/cnb/devsandbox/s
 
 # dev sandbox 中 code-editor 的监听地址
 CODE_EDITOR_PORT = settings.get("CODE_EDITOR_PORT", 8080)
-CODE_EDITOR_IMAGE = settings.get("CODE_EDITOR_IMAGE", "bkpaas/code-editor:latest")
+CODE_EDITOR_IMAGE = settings.get("CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
 
 # 服务相关插件配置
 SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})

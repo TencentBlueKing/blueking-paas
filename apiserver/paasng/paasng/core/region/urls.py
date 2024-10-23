@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
@@ -23,5 +23,9 @@ REGION = "(?P<region>[a-z0-9_-]{1,32})"
 
 urlpatterns = [
     # service APIs
-    url(r"^api/regions/%s/$" % REGION, views.RegionViewSet.as_view({"get": "retrieve"}), name="api.regions.retrieve"),
+    re_path(
+        r"^api/regions/%s/$" % REGION,
+        views.RegionViewSet.as_view({"get": "retrieve"}),
+        name="api.regions.retrieve",
+    ),
 ]

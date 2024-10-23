@@ -17,4 +17,5 @@
 from django.dispatch import Signal
 
 # Triggered when the custom domains of a cloud-native app have been updated
-cnative_custom_domain_updated = Signal(providing_args=["env"])
+# providing_args: [env: ModuleEnvironment]
+cnative_custom_domain_updated = Signal()

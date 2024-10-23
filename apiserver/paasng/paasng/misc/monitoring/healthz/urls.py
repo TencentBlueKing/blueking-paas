@@ -15,11 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
-    url(r"healthz/$", views.HealthViewSet.as_view({"get": "healthz"}), name="api.healthz"),
-    url(r"readyz/$", views.HealthViewSet.as_view({"get": "readyz"}), name="api.readyz"),
+    re_path(r"healthz/$", views.HealthViewSet.as_view({"get": "healthz"}), name="api.healthz"),
+    re_path(r"readyz/$", views.HealthViewSet.as_view({"get": "readyz"}), name="api.readyz"),
 ]

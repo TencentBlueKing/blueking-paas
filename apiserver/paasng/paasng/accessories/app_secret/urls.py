@@ -15,33 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.accessories.app_secret import views
+from paasng.utils.basic import re_path
 
 urlpatterns = [
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/secrets/$",
         views.BkAuthSecretViewSet.as_view({"get": "list", "post": "create"}),
         name="api.app_secret.secrets",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/secrets/(?P<bk_app_secret_id>\d+)/$",
         views.BkAuthSecretViewSet.as_view({"post": "toggle", "delete": "delete"}),
         name="api.app_secret.secret",
     ),
     # 验证验证码查看密钥详情
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/secret_verification/(?P<bk_app_secret_id>\d+)/$",
         views.BkAuthSecretViewSet.as_view({"post": "view_secret_detail"}),
         name="api.app_secret.secret_verification",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/default_secret/$",
         views.BkAppSecretInEnvVaViewSet.as_view({"get": "get_default_secret", "post": "rotate_default_secret"}),
         name="api.app_secret.default_secret",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/deployed_secret/$",
         views.BkAppSecretInEnvVaViewSet.as_view(
             {

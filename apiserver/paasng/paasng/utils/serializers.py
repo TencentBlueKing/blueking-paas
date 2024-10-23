@@ -27,7 +27,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from past.builtins import basestring
 from rest_framework import fields, serializers
@@ -101,7 +101,7 @@ class ChineseField(MaskField):
     中文字段
     """
 
-    REGEX = re.compile("[\u4e00-\u9fa5" + force_text(r"\w\-\_\；\？\。\—\…\《\》\“\”\.\,\s\?\'\"\;\‘\’\r\n]"))
+    REGEX = re.compile("[\u4e00-\u9fa5" + force_str(r"\w\-\_\；\？\。\—\…\《\》\“\”\.\,\s\?\'\"\;\‘\’\r\n]"))
 
 
 class RichTextField(serializers.CharField):

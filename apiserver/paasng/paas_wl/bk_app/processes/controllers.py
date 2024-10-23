@@ -20,7 +20,7 @@ import logging
 from typing import Dict, List, NamedTuple, Optional, Protocol, Type
 
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
@@ -125,14 +125,11 @@ def list_processes(env: ModuleEnvironment) -> ProcessesInfo:
 class ProcController(Protocol):
     """Control app's processes"""
 
-    def __init__(self, env: ModuleEnvironment):
-        ...
+    def __init__(self, env: ModuleEnvironment): ...
 
-    def start(self, proc_type: str):
-        ...
+    def start(self, proc_type: str): ...
 
-    def stop(self, proc_type: str):
-        ...
+    def stop(self, proc_type: str): ...
 
     def scale(
         self,
@@ -140,8 +137,7 @@ class ProcController(Protocol):
         autoscaling: bool = False,
         target_replicas: Optional[int] = None,
         scaling_config: Optional[AutoscalingConfig] = None,
-    ):
-        ...
+    ): ...
 
 
 class ProcControllerHub:

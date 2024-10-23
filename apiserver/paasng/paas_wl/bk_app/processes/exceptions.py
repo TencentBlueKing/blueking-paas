@@ -16,10 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Custom exceptions for processes module"""
+
 import re
 from typing import Optional
 
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from kubernetes.dynamic.exceptions import NotFoundError
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityDeserializeError
@@ -60,10 +61,11 @@ class ScaleProcessError(Exception):
 
     def caused_by_not_found(self) -> bool:
         """Check if the error was caused by missing namespace."""
-        if isinstance(self.exception, NotFoundError) and re.search(
-            r"namespaces .* not found", force_text(self.exception.summary())
+        if isinstance(self.exception, NotFoundError) and re.search(  # noqa: SIM103
+            r"namespaces .* not found", force_str(self.exception.summary())
         ):
             return True
+
         return False
 
 

@@ -15,13 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 # 统计相关
 urlpatterns = [
-    url(
+    re_path(
         r"^api/bkapps/applications/statistics/pv/top5",
         views.StatisticsPVAPIView.as_view(),
         name="api.global.statistics.pv.top5",
@@ -30,7 +30,7 @@ urlpatterns = [
 
 
 urlpatterns += [
-    url(
+    re_path(
         r"^api/sync_market/test_on_product_deploy/(?P<code>[^/]+)/",
         views.TestONProductDeployAPIView.as_view(),
         name="api.sync_market.test_on_product_deploy",

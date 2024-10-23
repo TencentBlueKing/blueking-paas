@@ -174,14 +174,12 @@ class GitLabApiClient:
             committed_date = arrow.get(commit.committed_date).date()
             project_commit_nums += commit.stats["additions"]
             project_commit_nums -= commit.stats["deletions"]
-            if project_first_commit_date > committed_date:
-                project_first_commit_date = committed_date
+            project_first_commit_date = min(project_first_commit_date, committed_date)
             if commit.author_name == username:
                 user_commit_nums += 1
                 user_total_lines += commit.stats["additions"]
                 user_total_lines -= commit.stats["deletions"]
-                if user_first_commit_date > committed_date:
-                    user_first_commit_date = committed_date
+                user_first_commit_date = min(user_first_commit_date, committed_date)
 
         return dict(
             project_total_lines=project_total_lines,

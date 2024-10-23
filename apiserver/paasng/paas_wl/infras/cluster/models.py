@@ -234,14 +234,13 @@ IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=Ing
 
 
 class Cluster(UuidAuditedModel):
-    def __str__(self):
-        return f"{self.__class__.__name__}(name={self.name}, default={self.is_default})"
+    """应用集群"""
 
     region = models.CharField(max_length=32, db_index=True)
     name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
     type = models.CharField(max_length=32, help_text="cluster type", default=ClusterType.NORMAL)
     description = models.TextField(help_text="描述信息", blank=True)
-    is_default = models.NullBooleanField(default=False)
+    is_default = models.BooleanField(default=False, null=True, help_text="是否为默认集群")
 
     ingress_config: IngressConfig = IngressConfigField()
     annotations = JSONField(default={}, help_text="Annotations are used to add metadata to describe the cluster.")
@@ -260,6 +259,9 @@ class Cluster(UuidAuditedModel):
     feature_flags = JSONField(default={}, help_text="cluster's feature flag set")
 
     objects = ClusterManager()
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(name={self.name}, default={self.is_default})"
 
     @property
     def bcs_cluster_id(self) -> Optional[str]:

@@ -17,7 +17,7 @@
 
 import logging
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.config_var import ConfigVar

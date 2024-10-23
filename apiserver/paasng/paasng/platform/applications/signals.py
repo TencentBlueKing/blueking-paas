@@ -15,21 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django.dispatch
+from django.dispatch import Signal
 
-prepare_use_application_code = django.dispatch.Signal(providing_args=["value"])
-prepare_use_application_name = django.dispatch.Signal(providing_args=["value", "instance"])
-post_create_application = django.dispatch.Signal(providing_args=["application"])
-before_finishing_application_creation = django.dispatch.Signal(providing_args=["application"])
+# providing_args: [value: str]
+prepare_use_application_code = Signal()
 
-prepare_change_application_name = django.dispatch.Signal(providing_args=["region", "code", "name", "name_en"])
+# providing_args: [value: str, instance: Optional["Application"] = None]
+prepare_use_application_name = Signal()
 
+# providing_args: [application: Application]
+post_create_application = Signal()
 
-module_environment_offline_success = django.dispatch.Signal(providing_args=["offline_instance", "environment"])
-application_member_updated = django.dispatch.Signal(providing_args=["application"])
+# providing_args: [application: Application]
+before_finishing_application_creation = Signal()
 
-application_default_module_switch = django.dispatch.Signal(providing_args=["application", "new_module", "old_module"])
+# providing_args: [code: str, name: Optional[str] = None, name_en: Optional[str] = None]
+prepare_change_application_name = Signal()
 
-# Signal that represents an update of application's logo, make sure to send this signal when logo
-# was updated.
-application_logo_updated = django.dispatch.Signal(providing_args=["application"])
+# providing_args: [offline_instance: OfflineOperation, environment: str]
+module_environment_offline_success = Signal()
+
+# providing_args: [application: Application]
+application_member_updated = Signal()
+
+# providing_args: [application: Application, new_module: Module, old_module: Module]
+application_default_module_switch = Signal()
+
+# Signal that represents an update of application's logo, make sure to send this signal when logo was updated.
+# providing_args: [application: Application]
+application_logo_updated = Signal()

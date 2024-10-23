@@ -24,7 +24,7 @@ import time
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
@@ -152,7 +152,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             for raw_line in self.build_handler.get_build_log(
                 name=self._builder_name, follow=True, timeout=_BUILD_PROCESS_TIMEOUT, namespace=self.wl_app.namespace
             ):
-                line = force_text(raw_line)
+                line = force_str(raw_line)
                 self.stream.write_message(line)
         except Exception:
             logger.warning("failed to watch build logs for App: %s", self.wl_app.name)
@@ -204,7 +204,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             artifact_type = ArtifactType.IMAGE
             artifact_metadata["use_dockerfile"] = metadata.get("use_dockerfile", False)
             artifact_metadata["use_cnb"] = metadata.get("use_cnb", False)
-        bkapp_revision_id = metadata.get("bkapp_revision_id", None)
+        bkapp_revision_id = metadata.get("bkapp_revision_id")
 
         # starting create build
         build_instance = Build.objects.create(
@@ -399,7 +399,7 @@ class PipelineBuildProcessExecutor(DeployStep):
             revision=self.bp.revision,
             procfile=procfile,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
-            bkapp_revision_id=metadata.get("bkapp_revision_id", None),
+            bkapp_revision_id=metadata.get("bkapp_revision_id"),
             artifact_type=ArtifactType.IMAGE,
             artifact_metadata={
                 "use_dockerfile": metadata.get("use_dockerfile", False),

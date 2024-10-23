@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional, Tuple, Union
 
 from blue_krill.data_types.url import MutableURL
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 logger = logging.getLogger(__name__)
 
@@ -348,7 +348,7 @@ class GitClient:
                     f"Command failed: cmd <{command}> execution timeout({self._default_timeout}s)"
                 )
 
-            str_stdout = force_text(stdout)
+            str_stdout = force_str(stdout)
             if proc.returncode != success_code:
                 raise self.err_stdout_as_exc(str_stdout, command, proc.returncode)
             return str_stdout

@@ -26,7 +26,7 @@ import requests.adapters
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
 from django.urls.resolvers import RegexPattern, URLPattern, URLResolver
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.module_loading import import_string
 from typing_extensions import Protocol
 
@@ -75,7 +75,7 @@ def sha256_checksum(file_path):
         )
         stdout, stderr = p.communicate()
         # PY3 compatibility
-        stdout, stderr = force_text(stdout), force_text(stderr)
+        stdout, stderr = force_str(stdout), force_str(stderr)
         if "command not found" in stderr:
             continue
 

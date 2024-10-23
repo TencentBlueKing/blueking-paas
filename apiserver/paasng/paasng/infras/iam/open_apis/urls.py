@@ -15,12 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 resource_types = "applications"
 
 urlpatterns = [
-    url(r"^api/iam-provider/(?P<resource_type>{})/".format(resource_types), views.ResourceAPIView.as_view()),
+    re_path(r"^api/iam-provider/(?P<resource_type>{})/".format(resource_types), views.ResourceAPIView.as_view()),
 ]

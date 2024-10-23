@@ -15,7 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django
+from django.dispatch import Signal
 
-post_change_app_router = django.dispatch.Signal(providing_args=["application", "legacy_app", "migration_process"])
-rollback_change_app_router = django.dispatch.Signal(providing_args=["application", "legacy_app", "migration_process"])
+# providing_args: [application: Application, legacy_app: LegacyApp, migration_process: MigrationProcess]
+post_change_app_router = Signal()
+
+# providing_args: [application: Application, legacy_app: LegacyApp, migration_process: MigrationProcess]
+rollback_change_app_router = Signal()

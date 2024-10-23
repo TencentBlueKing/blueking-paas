@@ -15,40 +15,42 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
-    url(r"^api/user/$", views.UserInfoViewSet.as_view(), name="api.accounts.user"),
-    url(
+    re_path(r"^api/user/$", views.UserInfoViewSet.as_view(), name="api.accounts.user"),
+    re_path(
         r"^api/accounts/feature_flags/$",
         views.AccountFeatureFlagViewSet.as_view({"get": "list"}),
         name="api.accounts.feature_flags",
     ),
-    url(r"^api/accounts/userinfo/$", views.UserInfoViewSet.as_view(), name="api.accounts.userinfo"),
-    url(
+    re_path(r"^api/accounts/userinfo/$", views.UserInfoViewSet.as_view(), name="api.accounts.userinfo"),
+    re_path(
         r"^api/accounts/verification/generation/$",
         views.UserVerificationGenerationView.as_view(),
         name="api.accounts.verification.generation",
     ),
-    url(
+    re_path(
         r"^api/accounts/verification/validation/$",
         views.UserVerificationValidationView.as_view(),
         name="api.accounts.verification.validation",
     ),
-    url(
+    re_path(
         r"^api/accounts/oauth/token/$",
         views.OauthTokenViewSet.as_view({"get": "fetch_paasv3cli_token"}),
         name="api.accounts.oauth.token",
     ),
-    url(r"^api/oauth/backends/$", views.Oauth2BackendsViewSet.as_view({"get": "list"})),
-    url(
+    re_path(r"^api/oauth/backends/$", views.Oauth2BackendsViewSet.as_view({"get": "list"})),
+    re_path(
         r"^api/oauth/backends/(?P<backend>[^/]+)/(?P<pk>[^/]+)/$",
         views.Oauth2BackendsViewSet.as_view({"delete": "disconnect"}),
     ),
     # for provider call back
-    url(r"^api/oauth/complete/(?P<backend>[^/]+)/?$", views.Oauth2BackendsViewSet.as_view({"get": "bind"})),
+    re_path(r"^api/oauth/complete/(?P<backend>[^/]+)/?$", views.Oauth2BackendsViewSet.as_view({"get": "bind"})),
     # specs APIs
-    url(r"^api/bkapps/regions/specs", views.RegionSpecsViewSet.as_view({"get": "retrieve"}), name="api.region.specs"),
+    re_path(
+        r"^api/bkapps/regions/specs", views.RegionSpecsViewSet.as_view({"get": "retrieve"}), name="api.region.specs"
+    ),
 ]

@@ -26,7 +26,7 @@ from django.contrib import auth
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
-from django.utils.encoding import smart_text
+from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from rest_framework.authentication import get_authorization_header
 
@@ -128,7 +128,7 @@ class PrivateTokenAuthenticationMiddleware:
         """Get private token string from current request header"""
         auth = get_authorization_header(request).split()
         # Turn bytestring into str
-        auth = [smart_text(s) for s in auth]
+        auth = [smart_str(s) for s in auth]
 
         if not auth or auth[0].lower() != self.AUTH_HEADER_TYPE.lower():
             return None

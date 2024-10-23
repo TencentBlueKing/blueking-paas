@@ -50,7 +50,9 @@ import pymysql
 import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
+from django.db.backends.mysql.features import DatabaseFeatures
 from django.utils.encoding import force_bytes, force_str
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
@@ -90,9 +92,25 @@ _notset = object()
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
+
+class PatchFeatures:
+    """Patched Django Features"""
+
+    @cached_property
+    def minimum_database_version(self):
+        if self.connection.mysql_is_mariadb:  # noqa
+            return (10, 4)
+        else:
+            return (5, 7)
+
+
+# Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
+# 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
+DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
+
 pymysql.install_as_MySQLdb()
-# Patch version info to forcely pass Django client check
-setattr(pymysql, "version_info", (1, 4, 2, "final", 0))
+# Patch version info to force pass Django client check
+setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥
@@ -563,8 +581,8 @@ BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
-# == CORS 请求跨域相关配置
-#
+# CORS 请求跨域相关配置
+
 # CORS 允许的来源
 CORS_ORIGIN_REGEX_WHITELIST = settings.get("CORS_ORIGIN_REGEX_WHITELIST", [])
 

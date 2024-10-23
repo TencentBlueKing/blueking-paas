@@ -34,7 +34,7 @@ from blue_krill.storages.blobstore.s3 import S3Store
 from botocore.exceptions import ClientError
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.utils.encoding import force_bytes, force_text
+from django.utils.encoding import force_bytes, force_str
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ def make_blob_store_env(encrypt: bool = False) -> Dict[str, str]:
 
 def encrypt_slug_config(raw_content: str) -> str:
     f = Fernet(settings.SLUG_ENCRYPT_SECRET_KEY)
-    return force_text(f.encrypt(force_bytes(raw_content)))
+    return force_str(f.encrypt(force_bytes(raw_content)))
 
 
 def download_file_from_blob_store(bucket: str, key: str, local_path: PathLike, store_type: Optional[StoreType] = None):

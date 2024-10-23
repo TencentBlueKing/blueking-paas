@@ -15,10 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django
+from django.dispatch import Signal
 
-svn_account_updated = django.dispatch.Signal(providing_args=["username", "account", "password", "created", "region"])
+# providing_args: [username: str, account: str, password: str, created: bool, region: str]
+svn_account_updated = Signal()
 
-empty_svn_accounts_fetched = django.dispatch.Signal(providing_args=["username"])
+# providing_args: [username: str]
+empty_svn_accounts_fetched = Signal()
 
-repo_updated = django.dispatch.Signal(providing_args=["module_id", "operator"])
+# TODO 这个信号应该没有用到？（sent but not receiver）
+# providing_args: [module_id: int, operator: str]
+repo_updated = Signal()

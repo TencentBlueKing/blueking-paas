@@ -155,7 +155,7 @@ class Domain(TimestampedModel):
     path_prefix = models.CharField(max_length=64, default="/", help_text="the accessable path for current domain")
     module_id = models.UUIDField(help_text="关联的模块 ID", null=False)
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
-    https_enabled = models.NullBooleanField(default=False, help_text="该域名是否开启 https.")
+    https_enabled = models.BooleanField(default=False, null=True, help_text="该域名是否开启 https")
 
     module = ModuleAttrFromID()
     environment = ModuleEnvAttrFromID()

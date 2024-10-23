@@ -15,14 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
 urlpatterns = [
-    url(
+    re_path(
         r"^api/mgrlegacy/applications/$",
         views.LegacyAppViewset.as_view({"get": "list"}),
         name="api.mgrlegacy.applications.list",
@@ -34,59 +32,59 @@ urlpatterns = [
     ),
     # post - create migration process
     # delete - rollback - do rollback then change the entrance back
-    url(
+    re_path(
         r"^api/mgrlegacy/migrations/progress/$",
         views.MigrationCreateViewset.as_view({"post": "create"}),
         name="api.mgrlegacy.migrations.progress.create",
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/state",
         views.MigrationDetailViewset.as_view({"get": "state"}),
         name="api.mgrlegacy.migrations.progress.state",
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/old_state",
         views.MigrationDetailViewset.as_view({"get": "old_state"}),
         name="api.mgrlegacy.migrations.progress.old_state",
     ),
     # confirmed - change the entrance
-    url(
+    re_path(
         r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/confirm",
         views.MigrationConfirmViewset.as_view({"post": "confirm"}),
         name="api.mgrlegacy.migrations.progress.confirm",
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/migrations/progress/(?P<id>\d+)/rollback",
         views.MigrationDetailViewset.as_view({"post": "rollback"}),
         name="api.mgrlegacy.migrations.progress.rollback",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/migration/info$",
         views.ApplicationMigrationInfoAPIView.as_view({"get": "retrieve"}),
         name="api.applications.migration.info",
     ),
     # 普通应用迁移到云原生应用
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migrate/$",
         views.CNativeMigrationViewSet.as_view({"post": "migrate"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/rollback/$",
         views.CNativeMigrationViewSet.as_view({"post": "rollback"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migration_processes/$",
         views.CNativeMigrationViewSet.as_view({"get": "list_processes"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/applications/(?P<code>[^/]+)/migration_processes/latest/$",
         views.CNativeMigrationViewSet.as_view({"get": "get_latest_process"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/migration_processes/(?P<process_id>\d+)/$",
         views.CNativeMigrationViewSet.as_view({"get": "get_process_by_id"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/cloud-native/migration_processes/(?P<process_id>\d+)/confirm/$",
         views.CNativeMigrationViewSet.as_view({"put": "confirm"}),
     ),
@@ -95,12 +93,12 @@ urlpatterns = [
         make_app_pattern(r"/processes/$", prefix="api/mgrlegacy/applications/"),
         views.DefaultAppProcessViewSet.as_view({"put": "update", "get": "list"}),
     ),
-    url(
+    re_path(
         r"^api/mgrlegacy/applications/(?P<code>[^/]+)/entrances/$",
         views.DefaultAppEntranceViewSet.as_view({"get": "list_all_entrances"}),
     ),
     # 普通应用迁移前的 checklist 数据(如是否绑定了出口 IP 等)
-    url(
+    re_path(
         r"^api/mgrlegacy/applications/(?P<code>[^/]+)/checklist_info/$",
         views.RetrieveChecklistInfoViewSet.as_view({"get": "get"}),
     ),

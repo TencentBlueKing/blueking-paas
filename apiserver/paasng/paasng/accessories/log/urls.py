@@ -14,9 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from django.conf.urls import url
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from .views import config
@@ -110,7 +107,7 @@ urlpatterns = [
         name="api.logs.ingress.aggregate_fields_filters.legacy",
     ),
     # System APIs
-    url(
+    re_path(
         r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/"
         r"envs/(?P<environment>stag|prod)/structured/list/$",
         logs_views.SysStructuredLogAPIView.as_view({"post": "query_logs"}),
@@ -147,7 +144,7 @@ urlpatterns += [
         legacy_views.V1StdoutLogAPIView.as_view({"get": "query_logs_scroll_with_get", "post": "query_logs_scroll"}),
         name="api.logs.standard.list.deprecated",
     ),
-    url(
+    re_path(
         r"sys/api/log/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/structured/list/$",
         legacy_views.V1SysStructuredLogAPIView.as_view({"post": "query_logs", "get": "query_logs_get"}),
         name="sys.api.logs.structured.deprecated",

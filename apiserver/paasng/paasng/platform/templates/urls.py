@@ -15,24 +15,24 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
     # 获取指定 Region 可用场景 SaaS 模板列表
-    url(
+    re_path(
         r"^api/bkapps/(?P<tpl_type>[^/]+)/tmpls/$",
         views.TemplateViewSet.as_view({"get": "list_tmpls"}),
         name="api.templates.list_tmpls",
     ),
     # 获取指定 Region 可用场景 SaaS 模板列表
-    url(
+    re_path(
         r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/$",
         views.RegionTemplateViewSet.as_view({"get": "list"}),
         name="api.templates.list",
     ),
-    url(
+    re_path(
         r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/template/(?P<tpl_name>[^/]+)$",
         views.RegionTemplateViewSet.as_view({"get": "retrieve"}),
         name="api.templates.detail",

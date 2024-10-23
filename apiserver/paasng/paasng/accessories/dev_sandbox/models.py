@@ -21,7 +21,7 @@ from django.db import models
 
 from paas_wl.bk_app.dev_sandbox.constants import CodeEditorStatus
 from paasng.platform.modules.models import Module
-from paasng.utils.models import OwnerTimestampedModel
+from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 
 
 class DevSandbox(OwnerTimestampedModel):
@@ -30,7 +30,6 @@ class DevSandbox(OwnerTimestampedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE)
     status = models.CharField(max_length=32, verbose_name="代码编辑器状态", choices=CodeEditorStatus.get_choices())
     expire_at = models.DateTimeField(null=True, help_text="到期时间")
-    password = EncryptField(verbose_name="登陆密码", help_text="登陆密码")
 
     def update_status(self, status):
         # 如果状态不是ALIVE, 则设置两小时后过期
@@ -50,3 +49,12 @@ class DevSandbox(OwnerTimestampedModel):
 
     class Meta:
         unique_together = ("module", "owner")
+
+
+class CodeEditor(UuidAuditedModel):
+    """CodeEditor Model"""
+
+    sandbox = models.OneToOneField(
+        DevSandbox, on_delete=models.CASCADE, db_constraint=False, related_name="code_editor"
+    )
+    password = EncryptField(max_length=32, verbose_name="登陆密码", help_text="登陆密码")

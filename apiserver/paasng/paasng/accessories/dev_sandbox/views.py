@@ -31,7 +31,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import CodeEditorStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paasng.accessories.dev_sandbox.models import DevSandbox
+from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
@@ -149,13 +149,18 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         except DevSandboxAlreadyExists:
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
-        DevSandbox.objects.create(
+        dev_sandbox = DevSandbox.objects.create(
             region=app.region,
             owner=request.user.pk,
             module=module,
             status=CodeEditorStatus.ALIVE.value,
+        )
+
+        CodeEditor.objects.create(
+            dev_sandbox=dev_sandbox,
             password=password,
         )
+
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(responses={"204": "没有返回数据"})
@@ -225,7 +230,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         else:
             logger.warning("Verification code is not currently supported, return app secret directly")
 
-        return Response({"password": dev_sandbox.password})
+        return Response({"password": dev_sandbox.code_editor.password})
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

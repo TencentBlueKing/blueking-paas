@@ -17,7 +17,7 @@
 
 from typing import List, Type
 
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 
 class Tag:
@@ -28,8 +28,8 @@ class Tag:
     """
 
     def __init__(self, tag_type, tag_value):
-        self.tag_type = force_text(tag_type)
-        self.tag_value = force_text(tag_value)
+        self.tag_type = force_str(tag_type)
+        self.tag_value = force_str(tag_value)
 
     def __str__(self):
         return "{}:{}".format(self.tag_type, self.tag_value)

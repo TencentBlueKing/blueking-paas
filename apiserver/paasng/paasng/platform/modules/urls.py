@@ -15,19 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
 urlpatterns = [
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/$",
         views.ModuleViewSet.as_view({"get": "list", "post": "create"}),
         name="modules",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/$",
         views.ModuleViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
         name="module.actions",
@@ -37,18 +35,18 @@ urlpatterns = [
         views.ModuleViewSet.as_view({"post": "set_as_default"}),
         name="module.set_default",
     ),
-    url(
+    re_path(
         r"^api/bkapps/cloud-native/(?P<code>[^/]+)/modules/$",
         views.ModuleViewSet.as_view({"post": "create_cloud_native_module"}),
         name="module.create.cloud_native",
     ),
     # BuildPack Runtime(Deprecated: using ModuleBuildConfigViewSet)
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/list/$",
         views.ModuleRuntimeViewSet.as_view({"get": "list_available"}),
         name="api.modules.runtime.available_list",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/$",
         views.ModuleRuntimeViewSet.as_view({"get": "retrieve", "post": "bind"}),
         name="api.modules.runtime",
@@ -64,7 +62,7 @@ urlpatterns = [
         views.ModuleBuildConfigViewSet.as_view({"get": "retrieve", "post": "modify"}),
         name="api.modules.build_config",
     ),
-    url(
+    re_path(
         make_app_pattern("/bp_runtimes/$", include_envs=False),
         views.ModuleBuildConfigViewSet.as_view({"get": "list_available_bp_runtimes"}),
         name="api.modules.bp_runtime.available_list",

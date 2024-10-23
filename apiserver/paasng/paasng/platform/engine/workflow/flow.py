@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Core components for deploy workflow"""
+
 import logging
 import time
 from contextlib import contextmanager
@@ -22,7 +23,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 import redis
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
@@ -235,7 +236,7 @@ class DeploymentCoordinator:
 
     def acquire_lock(self) -> bool:
         """Acquire lock to start a new deployment"""
-        if self.redis.set(self.key_name_lock, self.DEFAULT_TOKEN, nx=True, px=self.timeout_ms):
+        if self.redis.set(self.key_name_lock, self.DEFAULT_TOKEN, nx=True, px=self.timeout_ms):  # noqa: SIM103
             return True
         return False
 
@@ -250,7 +251,7 @@ class DeploymentCoordinator:
         def execute_release(pipe):
             if expected_deployment:
                 deployment_id = pipe.get(self.key_name_deployment)
-                if deployment_id and (force_text(deployment_id) != str(expected_deployment.pk)):
+                if deployment_id and (force_str(deployment_id) != str(expected_deployment.pk)):
                     raise ValueError(
                         f"deployment lock holder mismatch, found: {deployment_id}, expected: {expected_deployment.pk}"
                     )
@@ -277,7 +278,7 @@ class DeploymentCoordinator:
                 self.release_lock()
                 return None
 
-            return Deployment.objects.get(pk=force_text(deployment_id))
+            return Deployment.objects.get(pk=force_str(deployment_id))
         return None
 
     def update_polling_time(self):
@@ -293,7 +294,7 @@ class DeploymentCoordinator:
             self.update_polling_time()
             return False
 
-        return (time.time() - float(force_text(latest_polling_time))) > self.POLLING_TIMEOUT
+        return (time.time() - float(force_str(latest_polling_time))) > self.POLLING_TIMEOUT
 
     @contextmanager
     def release_on_error(self):

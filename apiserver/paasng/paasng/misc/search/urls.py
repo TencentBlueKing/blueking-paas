@@ -15,19 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
-    url(r"^api/document/search/$", views.MixDocumentSearch.as_view({"get": "search"}), name="document-search"),
+    re_path(
+        r"^api/document/search/$",
+        views.MixDocumentSearch.as_view({"get": "search"}),
+        name="document-search",
+    ),
     # API: search results in each categories
-    url(
+    re_path(
         r"^api/search/applications/$",
         views.ApplicationsSearchViewset.as_view({"get": "search"}),
         name="search.applications",
     ),
-    url(
+    re_path(
         r"^api/search/bk_docs/$",
         views.BkDocsSearchViewset.as_view({"get": "search"}),
         name="search.bk_docs",

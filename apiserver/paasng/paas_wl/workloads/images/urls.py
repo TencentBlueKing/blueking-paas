@@ -15,17 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import path
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
-    path(
-        "api/bkapps/applications/<str:code>/image_credentials/",
+    re_path(
+        r"^api/bkapps/applications/<str:code>/image_credentials/$",
         views.AppUserCredentialViewSet.as_view({"get": "list", "post": "create"}),
         name="api.applications.image_credentials",
     ),
-    path(
+    re_path(
         "api/bkapps/applications/<str:code>/image_credentials/<str:name>",
         views.AppUserCredentialViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="api.applications.image_credentials.detail",

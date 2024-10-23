@@ -22,7 +22,7 @@ from typing import Dict
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from past.builtins import basestring
 
 from paasng.core.region.models import Region, RegionList, filter_region_by_name
@@ -43,7 +43,7 @@ class DnsSafeNameValidator:
         self.validator = RegexValidator("^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$", message=self.message)
 
     def __call__(self, value):
-        value = force_text(value)
+        value = force_str(value)
         self.validator(value)
 
 
@@ -58,7 +58,7 @@ class ReservedWordValidator:
         self.validator = RegexValidator("|".join(self.reserved_word), message=self.message, inverse_match=True)
 
     def __call__(self, value):
-        value = force_text(value)
+        value = force_str(value)
         self.validator(value)
 
 
@@ -83,9 +83,7 @@ class RegionListValidator:
             return False
         else:
             # make sure region not repeat
-            if len(region_list) == len(set(region_list)) == len(value.split(";")):
-                return True
-            return False
+            return len(region_list) == len(set(region_list)) == len(value.split(";"))
 
 
 @deconstructible

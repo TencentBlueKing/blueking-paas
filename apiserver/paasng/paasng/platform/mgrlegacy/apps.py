@@ -15,9 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.utils.addons import AddonsUrlRegister, PlugableAppConfig
+from paasng.utils.basic import re_path
 
 
 class MgrlegacyConfig(PlugableAppConfig):
@@ -29,4 +28,4 @@ def contribute_to_app(app_name):
 
     from .urls import urlpatterns as extra_urlpatterns
 
-    AddonsUrlRegister(base_urlpatterns).register(url(r"^", (extra_urlpatterns, None, None)))
+    AddonsUrlRegister(base_urlpatterns).register(re_path(r"^", (extra_urlpatterns, None, None)))

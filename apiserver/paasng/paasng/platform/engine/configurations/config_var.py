@@ -153,7 +153,7 @@ def generate_env_vars_by_region_and_env(
         "LOGIN_URL": {"description": _("蓝鲸统一登录访问地址")},
         "LOGIN_DOMAIN": {"description": _("蓝鲸统一登录服务域名")},
         "APIGW_OAUTH_API_URL": {"description": _("蓝鲸 APIGW 提供的 OAuth 服务，不推荐使用")},
-        "COMPONENT_API_URL": {"description": _("蓝鲸的组件 API 地址，网关 SDK 依赖该配置项")},
+        "COMPONENT_API_URL": {"description": _("蓝鲸的组件 API 访问地址, 给SAAS使用")},
     }
     region_envs_with_prefix = BuiltInEnvsRegionHelper(
         region_name=region,
@@ -317,6 +317,9 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEn
         [
             BuiltInEnvVarDetail(
                 key="BK_API_URL_TMPL", value=settings.BK_API_URL_TMPL, description=_("网关 API 访问地址模板")
+            ),
+            BuiltInEnvVarDetail(
+                key="BK_COMPONENT_API_URL", value=settings.BK_COMPONENT_API_URL, description=_("组件 API 访问地址")
             ),
             BuiltInEnvVarDetail(
                 key="BK_PAAS2_URL", value=settings.BK_PAAS2_URL, description=_("PaaS2.0 开发者中心地址")

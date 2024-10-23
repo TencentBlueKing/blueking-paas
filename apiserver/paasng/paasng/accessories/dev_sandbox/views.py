@@ -108,7 +108,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user.username,
+            owner=request.user,
         )
 
         serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
@@ -171,7 +171,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user.username,
+            owner=request.user,
         )
         controller.delete()
 
@@ -191,7 +191,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user.username,
+            owner=request.user,
         )
         try:
             detail = controller.get_detail()

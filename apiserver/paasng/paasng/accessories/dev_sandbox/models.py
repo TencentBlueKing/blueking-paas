@@ -27,7 +27,7 @@ from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 class DevSandbox(OwnerTimestampedModel):
     """DevSandbox Model"""
 
-    module = models.ForeignKey(Module, on_delete=models.CASCADE)
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(max_length=32, verbose_name="代码编辑器状态", choices=CodeEditorStatus.get_choices())
     expire_at = models.DateTimeField(null=True, help_text="到期时间")
 

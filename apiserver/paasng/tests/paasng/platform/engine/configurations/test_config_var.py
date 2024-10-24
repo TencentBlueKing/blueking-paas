@@ -223,7 +223,7 @@ class TestBuiltInEnvVars:
             assert config_vars["BK_COMPONENT_API_URL"] == api_url
 
     def test_builtin_env_bk_component_api_url_default(self, bk_app):
-        """测试默认使用平台的BK_COMPONENT_API_URL, 如果没有修改REGION_CONFIG的BK_COMPONENT_API_URL设置"""
+        """测试默认使用平台的 BK_COMPONENT_API_URL, 如果没有修改 REGION_CONFIG 的 BK_COMPONENT_API_URL 设置"""
 
         bk_module = bk_app.get_default_module()
         bk_stag_env = bk_module.envs.get(environment="stag")

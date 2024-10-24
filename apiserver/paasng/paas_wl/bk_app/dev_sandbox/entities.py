@@ -126,7 +126,7 @@ class DevSandboxWithCodeEditorUrls:
     def __init__(self, base_url: str, username: str):
         self.app_url = f"{base_url}/user/{username}/app/"
         self.devserver_url = f"{base_url}/user/{username}/devserver/"
-        self.code_editor_url = f"{base_url}/user/{username}/code_editor/"
+        self.code_editor_url = f"{base_url}/user/{username}/code-editor/"
 
 
 @dataclass

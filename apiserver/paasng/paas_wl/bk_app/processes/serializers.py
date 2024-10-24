@@ -418,3 +418,30 @@ class WatchProcessesQuerySLZ(serializers.Serializer):
     timeout_seconds = serializers.IntegerField(required=False, default=30, max_value=120)
     rv_proc = serializers.CharField(required=True)
     rv_inst = serializers.CharField(required=True)
+
+
+class ModuleOrderSLZ(serializers.Serializer):
+    module_name = serializers.CharField()
+    order = serializers.IntegerField()
+
+
+class ModuleOrderReqSLZ(serializers.Serializer):
+    module_orders = ModuleOrderSLZ(many=True)
+
+    def validate(self, data):
+        module_names = []
+        orders = []
+
+        for module in data["module_orders"]:
+            module_name = module["module_name"]
+            order = module["order"]
+
+            if module_name in module_names:
+                raise serializers.ValidationError(f"Duplicate module_name: {module_name}")
+            if order in orders:
+                raise serializers.ValidationError(f"Duplicate order: {order}")
+
+            module_names.append(module_name)
+            orders.append(order)
+
+        return data

@@ -29,10 +29,12 @@ from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
-from paas_wl.utils.models import TimestampedModel
+from paas_wl.utils.models import BkUserField, TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.entities import ProbeHandler
 from paasng.platform.engine.models.deployment import ProcessTmpl
+from paasng.platform.modules.models import Module
 from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
@@ -345,3 +347,21 @@ def initialize_default_proc_spec_plans():
                 limits=unstructure(PLAN_TO_LIMIT_QUOTA_MAP[cnative_plan]),
                 requests=unstructure(PLAN_TO_REQUEST_QUOTA_MAP[cnative_plan]),
             )
+
+
+class ModuleOrder(models.Model):
+    app = models.ForeignKey(Application, on_delete=models.CASCADE, verbose_name="应用")
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块")
+    order = models.IntegerField(verbose_name="顺序")
+
+    class Meta:
+        unique_together = ("app", "module")
+        verbose_name = "模块顺序"
+
+
+class ModuleOrderRecord(models.Model):
+    user = BkUserField()
+    app = models.ForeignKey(Application, on_delete=models.DO_NOTHING, verbose_name="应用")
+    before_order = models.JSONField(default=dict, verbose_name="排序前顺序")
+    after_order = models.JSONField(default=dict, verbose_name="排序后顺序")
+    created_at = models.DateTimeField(auto_now_add=True)

@@ -67,7 +67,7 @@ class ModuleProcessSpecManager:
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: ProcessTmpl) -> ModuleProcessSpec:
-            spec = ModuleProcessSpec(
+            return ModuleProcessSpec(
                 module=self.module,
                 name=process.name,
                 proc_command=process.command,
@@ -76,18 +76,10 @@ class ModuleProcessSpecManager:
                 probes=process.probes,
                 services=process.services,
             )
-            # 创建时, 分环境设置副本数
-            for app_env_name in AppEnvName.get_values():
-                target_replicas = process.replicas or self.get_default_replicas(name, app_env_name)
-                if target_replicas != spec.target_replicas:
-                    ProcessSpecEnvOverlay.objects.update_or_create(
-                        proc_spec=spec,
-                        environment_name=AppEnvName(app_env_name).value,
-                        defaults={"target_replicas": target_replicas},
-                    )
-            return spec
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
+        # 为新创建的进程, 分环境设置副本数
+        self.set_env_overlay_replicas(adding_procs)
         # add spec objects end
 
         # update spec objects start
@@ -173,6 +165,22 @@ class ModuleProcessSpecManager:
                 environment_name=AppEnvName(env_name).value,
                 defaults={"target_replicas": replicas},
             )
+
+    def set_env_overlay_replicas(self, adding_procs: List[ProcessTmpl]):
+        """分环境设置副本数(仅用于新增进程)
+
+        :param adding_procs: 新增的进程列表
+        """
+        for proc in adding_procs:
+            for env_name in AppEnvName.get_values():
+                spec = ModuleProcessSpec.objects.get(module=self.module, name=proc.name, environment_name=env_name)
+                target_replicas = proc.replicas or self.get_default_replicas(proc.name, env_name)
+                if target_replicas != spec.target_replicas:
+                    ProcessSpecEnvOverlay.objects.update_or_create(
+                        proc_spec=spec,
+                        environment_name=AppEnvName(env_name).value,
+                        defaults={"target_replicas": target_replicas},
+                    )
 
     def set_autoscaling(
         self, proc_name: str, env_name: str, enabled: bool, config: Optional[AutoscalingConfig] = None

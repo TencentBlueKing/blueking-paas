@@ -159,7 +159,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
             module=module,
             status=CodeEditorStatus.ALIVE.value,
-            version=version_info,
+            version_info=version_info,
         )
 
         CodeEditor.objects.create(

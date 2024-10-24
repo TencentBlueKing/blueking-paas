@@ -73,6 +73,8 @@ class TestModuleProcessSpecManager:
 
 
 class TestSyncFromDescMethod:
+    """测试 ModuleProcessSpecManager.sync_from_desc 方法"""
+
     @pytest.fixture()
     def process_with_replicas(self, bk_module) -> ModuleProcessSpec:
         spec = G(ModuleProcessSpec, module=bk_module, name="foo")

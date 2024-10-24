@@ -47,7 +47,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_desc(self, processes: List[ProcessTmpl]):  # noqa: C901
+    def sync_from_desc(self, processes: List[ProcessTmpl]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess ProcessTmpl

@@ -37,6 +37,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manager_cls
+from paasng.misc.monitoring.monitor.models import AppDashBoard
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.utils.error_codes import error_codes
@@ -60,6 +61,7 @@ from .serializers import (
     AlertListByUserSLZ,
     AlertRuleSLZ,
     AlertSLZ,
+    AppDashBoardSLZ,
     ListAlarmStrategiesSLZ,
     ListAlertRulesSLZ,
     ListAlertsSLZ,
@@ -352,3 +354,16 @@ class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
             return Response({"dashboard_url": settings.BK_MONITORV3_URL})
         else:
             return Response({"dashboard_url": f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}#/grafana/home"})
+
+    def get_builtin_dashboards(self, request, code):
+        """内置到监控应用命名空间下的内置仪表盘地址，没有 bk_biz_id 时不返回数据，故用独立的函数"""
+        app = self.get_application()
+        try:
+            bk_biz_id = BKMonitorSpace.objects.get(application=app).iam_resource_id
+        except BKMonitorSpace.DoesNotExist:
+            return Response([])
+
+        # 查询应用所有已经内置的仪表盘
+        dashboards = AppDashBoard.objects.filter(application=app)
+        serializer = AppDashBoardSLZ(dashboards, context={"bk_biz_id": bk_biz_id}, many=True)
+        return Response(serializer.data)

@@ -60,3 +60,20 @@ class AppAlertRule(AuditedModel):
 
     def __str__(self):
         return f"{self.display_name}-{self.alert_code}"
+
+
+class AppDashBoard(AuditedModel):
+    """记录 APP 初始化的仪表盘信息"""
+
+    application = models.ForeignKey(
+        "applications.Application", on_delete=models.CASCADE, db_constraint=False, related_name="dashboards"
+    )
+    name = models.CharField(max_length=64, unique=True, help_text="仪表盘名称，如：bksaas/framework-python")
+    display_name = models.CharField(max_length=512, help_text="仪表盘展示名称，如：Python 开发框架内置仪表盘")
+    template_version = models.CharField(max_length=32, help_text="模板版本更新时，可以根据该字段作为批量刷新仪表盘")
+
+    class Meta:
+        unique_together = ("application", "name")
+
+    def __str__(self):
+        return f"{self.name}-{self.application.code}"

@@ -59,4 +59,9 @@ urlpatterns = [
         "api/monitor/applications/<slug:code>/dashboard_info/",
         views.GetDashboardInfoView.as_view({"get": "get"}),
     ),
+    path(
+        "api/monitor/applications/<slug:code>/builtin_dashboards/",
+        views.GetDashboardInfoView.as_view({"get": "get_builtin_dashboards"}),
+        name="api.modules.monitor.builtin_dashboards",
+    ),
 ]

@@ -910,6 +910,10 @@ DEFAULT_REGION_TEMPLATE = {
                 "stag": "http://example.com/static_api/",
                 "prod": "http://example.com/static_api/",
             },
+            "BK_COMPONENT_API_URL": {
+                "stag": BK_COMPONENT_API_URL,
+                "prod": BK_COMPONENT_API_URL,
+            },
         },
     },
     "entrance_config": {

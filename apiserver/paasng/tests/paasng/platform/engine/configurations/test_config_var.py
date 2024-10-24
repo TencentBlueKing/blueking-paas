@@ -42,7 +42,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.usefixtures("_with_wl_apps")
 class TestGetEnvVariables:
-    @pytest.fixture()
+    @pytest.fixture
     def _create_for_test_svc_discovery(self):
         # 为了检验 BKPAAS_SERVICE_ADDRESSES_BKSAAS 通过
         G(Application, code="foo-app")
@@ -189,6 +189,47 @@ class TestBuiltInEnvVars:
         env_vars = get_env_variables(bk_stag_env)
         assert env_vars["BKPAAS_LOGIN_URL"] == "bar"
         assert env_vars["BKPAAS_FOO"] == "bar"
+
+    @pytest.mark.parametrize(
+        ("env", "bk_component_api_url", "api_url"),
+        [
+            (
+                "prod",
+                {
+                    "stag": "http://stag.test.example.com/",
+                    "prod": "http://test.example.com/",
+                },
+                "http://test.example.com/",
+            ),
+            (
+                "stag",
+                {
+                    "stag": "http://stag.test.example.com/",
+                    "prod": "http://test.example.com/",
+                },
+                "http://stag.test.example.com/",
+            ),
+        ],
+    )
+    def test_builtin_env_bk_component_api_url(self, bk_app, env, bk_component_api_url, api_url):
+        def update_region_hook(config):
+            config["basic_info"]["built_in_config_var"]["BK_COMPONENT_API_URL"] = bk_component_api_url
+
+        with override_region_configs(bk_app.region, update_region_hook):
+            bk_module = bk_app.get_default_module()
+            bk_stag_env = bk_module.envs.get(environment=env)
+            config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+
+            assert config_vars["BK_COMPONENT_API_URL"] == api_url
+
+    def test_builtin_env_bk_component_api_url_default(self, bk_app):
+        """测试默认使用平台的 BK_COMPONENT_API_URL, 如果没有修改 REGION_CONFIG 的 BK_COMPONENT_API_URL 设置"""
+
+        bk_module = bk_app.get_default_module()
+        bk_stag_env = bk_module.envs.get(environment="stag")
+        config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+
+        assert config_vars["BK_COMPONENT_API_URL"] == settings.BK_COMPONENT_API_URL
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

@@ -161,6 +161,17 @@ def generate_env_vars_by_region_and_env(
         required_env_dict=region_related_envs,
     ).get_envs()
 
+    # 不需要添加前缀的变量
+    region_related_envs_without_prefix = {
+        "BK_COMPONENT_API_URL": {"description": _("组件 API 访问地址")},
+    }
+    region_envs_without_prefix = BuiltInEnvsRegionHelper(
+        region_name=region,
+        app_env=environment,
+        prefix="",
+        required_env_dict=region_related_envs_without_prefix,
+    ).get_envs()
+
     # 微信内显示应用的静态资源地址前缀，从 PaaS2.0 上迁移过来的应用可能会用到
     weixin_url = settings.BKPAAS_WEIXIN_URL_MAP.get(environment)
     region_envs_with_prefix.extend(
@@ -183,7 +194,7 @@ def generate_env_vars_by_region_and_env(
     # 不需要写入兼容性的环境变量，则直接返回
     region_container = get_region(region)
     if not region_container.provide_env_vars_platform:
-        return region_envs_with_prefix
+        return region_envs_with_prefix + region_envs_without_prefix
 
     region_envs_with_prefix.extend(
         [
@@ -201,7 +212,8 @@ def generate_env_vars_by_region_and_env(
                 key=paas2_env_key, value=paas2_env_data["value"], description=paas2_env_data["description"]
             )
         )
-    return region_envs_with_prefix
+
+    return region_envs_with_prefix + region_envs_without_prefix
 
 
 def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEnvVarDetail]:

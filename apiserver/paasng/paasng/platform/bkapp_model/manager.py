@@ -47,7 +47,7 @@ class ModuleProcessSpecManager:
     def __init__(self, module: Module):
         self.module = module
 
-    def sync_from_desc(self, processes: List[ProcessTmpl]):
+    def sync_from_desc(self, processes: List[ProcessTmpl]):  # noqa: C901
         """Sync ProcessSpecs data with given processes.
 
         :param processes: process spec structure defined in the form BkAppProcess ProcessTmpl
@@ -67,7 +67,7 @@ class ModuleProcessSpecManager:
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: ProcessTmpl) -> ModuleProcessSpec:
-            return ModuleProcessSpec(
+            spec = ModuleProcessSpec(
                 module=self.module,
                 name=process.name,
                 proc_command=process.command,
@@ -76,6 +76,15 @@ class ModuleProcessSpecManager:
                 probes=process.probes,
                 services=process.services,
             )
+            for app_env_name in AppEnvName.get_values():
+                target_replicas = process.replicas or self.get_default_replicas(name, app_env_name)
+                if target_replicas != spec.target_replicas:
+                    ProcessSpecEnvOverlay.objects.update_or_create(
+                        proc_spec=spec,
+                        environment_name=AppEnvName(app_env_name).value,
+                        defaults={"target_replicas": target_replicas},
+                    )
+            return spec
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
         # add spec objects end
@@ -111,7 +120,8 @@ class ModuleProcessSpecManager:
         # 根据环境, 设置副本数
         for name, process in processes_map.items():
             for env_name in AppEnvName.get_values():
-                self.set_replicas(name, env_name, process.replicas or self.get_default_replicas(name, env_name))
+                if process.replicas:
+                    self.set_replicas(name, env_name, process.replicas)
 
     def delete_outdated_procs(self, cur_procs_name: Iterable[str]):
         """Delete all ModuleProcessSpec not existed in cur_procs_name"""

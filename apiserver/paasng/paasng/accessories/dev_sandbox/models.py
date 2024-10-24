@@ -20,8 +20,12 @@ from blue_krill.models.fields import EncryptField
 from django.db import models
 
 from paas_wl.bk_app.dev_sandbox.constants import CodeEditorStatus
+from paas_wl.utils.models import make_json_field
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
+
+VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 
 class DevSandbox(OwnerTimestampedModel):
@@ -30,6 +34,7 @@ class DevSandbox(OwnerTimestampedModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(max_length=32, verbose_name="代码编辑器状态", choices=CodeEditorStatus.get_choices())
     expire_at = models.DateTimeField(null=True, help_text="到期时间")
+    version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
     def update_status(self, status):
         # 如果状态不是ALIVE, 则设置两小时后过期

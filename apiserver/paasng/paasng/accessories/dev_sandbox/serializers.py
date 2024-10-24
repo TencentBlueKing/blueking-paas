@@ -16,8 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 from rest_framework import serializers
+from rest_framework.fields import SerializerMethodField
 
 from paas_wl.bk_app.dev_sandbox.entities import HealthPhase
+from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
 
 
@@ -67,3 +69,23 @@ class DevSandboxWithCodeEditorDetailSLZ(serializers.Serializer):
         choices=HealthPhase.get_django_choices(), help_text="code editor 的运行状态"
     )
     dev_sandbox_env_vars = serializers.JSONField(default={}, help_text="dev sandbox 环境变量")
+
+
+class DevSandboxSLZ(serializers.ModelSerializer):
+    """Serializer for dev sandbox"""
+
+    module_name = SerializerMethodField()
+
+    class Meta:
+        model = DevSandbox
+        fields = [
+            "id",
+            "status",
+            "expire_at",
+            "version_info",
+            "created",
+            "updated",
+        ]
+
+    def get_module_name(self, obj: DevSandbox) -> str:
+        return obj.module.name

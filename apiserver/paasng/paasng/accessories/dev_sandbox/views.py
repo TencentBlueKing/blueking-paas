@@ -49,7 +49,12 @@ from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
-from .serializers import CreateDevSandboxWithCodeEditorSLZ, DevSandboxDetailSLZ, DevSandboxWithCodeEditorDetailSLZ
+from .serializers import (
+    CreateDevSandboxWithCodeEditorSLZ,
+    DevSandboxDetailSLZ,
+    DevSandboxSLZ,
+    DevSandboxWithCodeEditorDetailSLZ,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +159,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
             module=module,
             status=CodeEditorStatus.ALIVE.value,
+            version=version_info,
         )
 
         CodeEditor.objects.create(
@@ -232,6 +238,15 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             logger.warning("Verification code is not currently supported, return app secret directly")
 
         return Response({"password": dev_sandbox.code_editor.password})
+
+    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})
+    def list_app_dev_sandbox(self, request, code):
+        """获取该应用下用户的开发沙箱"""
+        app = self.get_application()
+        modules = app.modules.all()
+        dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
+
+        return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

@@ -76,6 +76,7 @@ class ModuleProcessSpecManager:
                 probes=process.probes,
                 services=process.services,
             )
+            # 创建时, 分环境设置副本数
             for app_env_name in AppEnvName.get_values():
                 target_replicas = process.replicas or self.get_default_replicas(name, app_env_name)
                 if target_replicas != spec.target_replicas:
@@ -120,6 +121,7 @@ class ModuleProcessSpecManager:
         # 根据环境, 设置副本数
         for name, process in processes_map.items():
             for env_name in AppEnvName.get_values():
+                # 只有设置了有效副本数, 才更新, 否则不更新(使用已设置的副本数)
                 if process.replicas:
                     self.set_replicas(name, env_name, process.replicas)
 

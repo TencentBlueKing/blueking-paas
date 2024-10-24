@@ -181,10 +181,11 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         )
         controller.delete()
 
-        DevSandbox.objects.get(
-            owner=request.user.pk,
-            module=module,
-        ).delete()
+        try:
+            DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
+        except DevSandbox.DoesNotExist:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})

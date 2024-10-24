@@ -263,7 +263,7 @@ class DevSandboxWithCodeEditorController:
         )
 
         code_editor_config = CodeEditorConfig(
-            pvc_claim_name=get_pvc_name(self.dev_wl_app), start_dir="/home/coder/project", password=password
+            pvc_claim_name=get_pvc_name(self.dev_wl_app), start_dir=settings.CODE_EDITOR_START_DIR, password=password
         )
 
         code_editor_entity = CodeEditor.create(

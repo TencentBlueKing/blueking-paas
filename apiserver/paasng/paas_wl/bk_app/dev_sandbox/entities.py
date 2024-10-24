@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -125,7 +126,7 @@ class DevSandboxWithCodeEditorUrls:
 
     def __init__(self, base_url: str, username: str):
         self.app_url = f"{base_url}/user/{username}/app/"
-        self.devserver_url = f"{base_url}/user/{username}/devserver/"
+        self.devserver_url = f"{base_url}/user/{username}/devserver/?folder={settings.CODE_EDITOR_START_DIR}"
         self.code_editor_url = f"{base_url}/user/{username}/code-editor/"
 
 

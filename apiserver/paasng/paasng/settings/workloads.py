@@ -93,6 +93,9 @@ DEV_SANDBOX_WORKSPACE = settings.get("DEV_SANDBOX_WORKSPACE", "/cnb/devsandbox/s
 # dev sandbox 中 code-editor 的监听地址
 CODE_EDITOR_PORT = settings.get("CODE_EDITOR_PORT", 8080)
 CODE_EDITOR_IMAGE = settings.get("CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
+# code-editor 的项目启动目录
+CODE_EDITOR_START_DIR = settings.get("CODE_EDITOR_START_DIR", "/home/coder/project")
+
 
 # 服务相关插件配置
 SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})

@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from dataclasses import asdict
+
 from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
@@ -75,6 +77,7 @@ class DevSandboxSLZ(serializers.ModelSerializer):
     """Serializer for dev sandbox"""
 
     module_name = SerializerMethodField()
+    version_info_dict = SerializerMethodField()
 
     class Meta:
         model = DevSandbox
@@ -82,10 +85,14 @@ class DevSandboxSLZ(serializers.ModelSerializer):
             "id",
             "status",
             "expire_at",
-            "version_info",
+            "version_info_dict",
             "created",
             "updated",
+            "module_name",
         ]
 
     def get_module_name(self, obj: DevSandbox) -> str:
         return obj.module.name
+
+    def get_version_info_dict(self, obj: DevSandbox) -> dict:
+        return asdict(obj.version_info)

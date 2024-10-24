@@ -225,15 +225,11 @@ class TestBuiltInEnvVars:
     def test_builtin_env_bk_component_api_url_default(self, bk_app):
         """测试如果没有设置REGION_CONIFG里的BK_COMPONENT_API_URL, 使用平台的BK_COMPONENT_API_URL"""
 
-        def update_region_hook(config):
-            config["basic_info"]["built_in_config_var"]["BK_COMPONENT_API_URL"] = {}
+        bk_module = bk_app.get_default_module()
+        bk_stag_env = bk_module.envs.get(environment="stag")
+        config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
 
-        with override_region_configs(bk_app.region, update_region_hook):
-            bk_module = bk_app.get_default_module()
-            bk_stag_env = bk_module.envs.get(environment="stag")
-            config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
-
-            assert config_vars["BK_COMPONENT_API_URL"] != ""
+        assert config_vars["BK_COMPONENT_API_URL"] == settings.BK_COMPONENT_API_URL
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

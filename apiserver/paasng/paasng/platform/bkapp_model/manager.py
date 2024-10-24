@@ -173,7 +173,7 @@ class ModuleProcessSpecManager:
         """
         for proc in adding_procs:
             for env_name in AppEnvName.get_values():
-                spec = ModuleProcessSpec.objects.get(module=self.module, name=proc.name, environment_name=env_name)
+                spec = ModuleProcessSpec.objects.get(module=self.module, name=proc.name)
                 target_replicas = proc.replicas or self.get_default_replicas(proc.name, env_name)
                 if target_replicas != spec.target_replicas:
                     ProcessSpecEnvOverlay.objects.update_or_create(

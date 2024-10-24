@@ -18,9 +18,9 @@
 import datetime
 import json
 import logging
-from operator import attrgetter
 from typing import Dict, Optional
 
+from django.core.serializers import serialize
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -40,11 +40,12 @@ from paas_wl.bk_app.processes.exceptions import (
     ProcessOperationTooOften,
     ScaleProcessError,
 )
-from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.bk_app.processes.models import ModuleOrder, ModuleOrderRecord, ProcessSpec
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
+    ModuleOrderReqSLZ,
     ModuleScopedData,
     ModuleState,
     NamespaceScopedListWatchRespSLZ,
@@ -242,10 +243,23 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             else:
                 container.instances.extend(process.instances)
 
+        module_order_dict = dict(
+            ModuleOrder.objects.filter(app=application)
+            .order_by("order")
+            .select_related("module")
+            .values_list("module__name", "order")
+        )
+
+        # 自定义排序函数
+        def sort_by_custom_order(item: ModuleScopedData):
+            # 检查 item.module_name 是否在 module_order_dict 中
+            # 如果存在，按 order 排序，否则按 module_name 字母排序
+            return (module_order_dict.get(item.module_name, float("inf")), item.module_name)
+
         return Response(
             NamespaceScopedListWatchRespSLZ(
                 {
-                    "data": sorted(grouped_data.values(), key=attrgetter("module_name")),
+                    "data": sorted(grouped_data.values(), key=sort_by_custom_order),
                     "rv_proc": processes_status.rv_proc,
                     "rv_inst": processes_status.rv_inst,
                 },
@@ -458,3 +472,53 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         with get_client_by_app(wl_app) as client:
             KPod(client).delete(name=process_instance_name, namespace=wl_app.namespace)
         return Response(status=status.HTTP_200_OK)
+
+
+class ModuleOrderViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """模块的排序, 获取当前进程与进程实例时的模块顺序"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(request_body=ModuleOrderReqSLZ)
+    def module_order(self, request, code):
+        """设置模块的排序"""
+        serializer = ModuleOrderReqSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        module_orders_data = serializer.validated_data["module_orders"]
+
+        application = self.get_application()
+        modules = Module.objects.filter(application=application)
+
+        # 把请求数据转换成模块顺序对象数组
+        module_orders = []
+        for module in modules:
+            for item in module_orders_data:
+                if item.module_name == module.name:
+                    module_orders.append(ModuleOrder(app=application, module=module, order=item.order))
+
+        if not module_orders:
+            return Response()
+
+        # 记录排序操作日志
+        # 操作前
+        old_module_orders = ModuleOrder.objects.filter(app=application).values("module", "order")
+        old_module_orders_json = serialize("json", old_module_orders)
+
+        # 批量更新或创建模块排序
+        ModuleOrder.objects.bulk_create(
+            module_orders, update_conflicts=True, unique_fields=["app", "module"], update_fields=["order"]
+        )
+
+        # 操作后
+        new_module_orders = ModuleOrder.objects.filter(app=application).values("module", "order")
+        new_module_orders_json = serialize("json", new_module_orders)
+
+        record = ModuleOrderRecord(
+            user=request.user.pk,
+            app=application,
+            before_order=old_module_orders_json,
+            after_order=new_module_orders_json,
+        )
+        record.save()
+
+        return Response()

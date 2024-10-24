@@ -80,4 +80,9 @@ urlpatterns = [
         views.ProcessesViewSet.as_view({"put": "restart"}),
         name="api.process.restart",
     ),
+    re_path(
+        make_app_pattern(r"processes/list/module_order/$", include_envs=False),
+        views.ModuleOrderViewSet.as_view({"post": "module_order"}),
+        name="api.list_processes.module_order",
+    ),
 ]

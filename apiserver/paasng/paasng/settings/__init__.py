@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pymysql
+import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
 from django.utils.encoding import force_bytes, force_str
@@ -84,6 +85,10 @@ settings = LazySettings(
 )
 
 _notset = object()
+
+# Patch the SSL module for compatibility with legacy CA credentials.
+# https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
+urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
 pymysql.install_as_MySQLdb()
 # Patch version info to forcely pass Django client check

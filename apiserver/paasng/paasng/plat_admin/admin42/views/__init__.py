@@ -15,12 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.shortcuts import render
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
 
-class FrontPageView(View):
+class FrontPageView(GenericTemplateView):
     """Welcome to admin42"""
 
-    def get(self, request):
-        return render(request, "admin42/front_page.html")
+    template_name = "admin42/front_page.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.VISIT_ADMIN42)]

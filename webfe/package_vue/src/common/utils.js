@@ -144,9 +144,7 @@ class NavDataProcessor {
   }
 }
 
-export {
-  NavDataProcessor,
-};
+export { NavDataProcessor };
 
 export function processNavData(data) {
   const processer = new NavDataProcessor();
@@ -207,7 +205,7 @@ export function clearFilter(refInstance) {
     // eslint-disable-next-line no-restricted-syntax
     for (const key in filterPanels) {
       filterPanels[key].handleReset();
-    };
+    }
   }
 }
 
@@ -224,7 +222,8 @@ export function renderHeader(h, { column }) {
 // 获取唯一随机数
 export function uuid() {
   let id = '';
-  const randomNum = Math.floor((1 + Math.random()) * 0x10000).toString(16)
+  const randomNum = Math.floor((1 + Math.random()) * 0x10000)
+    .toString(16)
     .substring(1);
 
   for (let i = 0; i < 7; i++) {
@@ -310,8 +309,8 @@ export function isJsonString(str) {
       return true;
     }
   } catch (e) {
+    return false;
   }
-  return false;
 }
 
 /**
@@ -345,4 +344,21 @@ export function paginationFun(data = [], currentPage = 1, pageSize = 10) {
     totalPages,
     pageData,
   };
+}
+
+/**
+ * 下载文件函数
+ * @param {String} url - 下载地址
+ * @param {String} [filename] - 可选的文件名
+ */
+export function fileDownload(url, filename = '') {
+  const a = document.createElement('a');
+  a.href = url;
+  // 如果提供了文件名，则设置下载属性
+  if (filename) {
+    a.download = filename;
+  }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

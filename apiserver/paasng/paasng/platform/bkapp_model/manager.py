@@ -78,6 +78,8 @@ class ModuleProcessSpecManager:
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
+        # 为新创建的进程, 分环境设置副本数
+        self.set_env_overlay_replicas(adding_procs)
         # add spec objects end
 
         # update spec objects start
@@ -111,7 +113,9 @@ class ModuleProcessSpecManager:
         # 根据环境, 设置副本数
         for name, process in processes_map.items():
             for env_name in AppEnvName.get_values():
-                self.set_replicas(name, env_name, process.replicas or self.get_default_replicas(name, env_name))
+                # 只有设置了有效副本数, 才更新, 否则不更新(使用已设置的副本数)
+                if process.replicas:
+                    self.set_replicas(name, env_name, process.replicas)
 
     def delete_outdated_procs(self, cur_procs_name: Iterable[str]):
         """Delete all ModuleProcessSpec not existed in cur_procs_name"""
@@ -161,6 +165,22 @@ class ModuleProcessSpecManager:
                 environment_name=AppEnvName(env_name).value,
                 defaults={"target_replicas": replicas},
             )
+
+    def set_env_overlay_replicas(self, adding_procs: List[ProcessTmpl]):
+        """分环境设置副本数(仅用于新增进程)
+
+        :param adding_procs: 新增的进程列表
+        """
+        for proc in adding_procs:
+            for env_name in AppEnvName.get_values():
+                spec = ModuleProcessSpec.objects.get(module=self.module, name=proc.name)
+                target_replicas = proc.replicas or self.get_default_replicas(proc.name, env_name)
+                if target_replicas != spec.target_replicas:
+                    ProcessSpecEnvOverlay.objects.update_or_create(
+                        proc_spec=spec,
+                        environment_name=AppEnvName(env_name).value,
+                        defaults={"target_replicas": target_replicas},
+                    )
 
     def set_autoscaling(
         self, proc_name: str, env_name: str, enabled: bool, config: Optional[AutoscalingConfig] = None

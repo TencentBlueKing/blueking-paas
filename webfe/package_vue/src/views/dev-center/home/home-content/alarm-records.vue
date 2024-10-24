@@ -96,18 +96,21 @@
             <div
               class="app-name-wrapper"
               v-bk-overflow-tips="{ content: `${row.application.name}（${row.application.code}）` }"
-              @click="toAppDetail(row)"
             >
-              <img
-                class="app-logo"
-                :src="row.application.logo_url"
-                alt="logo"
-              />
-              <span class="info">
-                {{ row.application.name }}
-                <span class="code">（{{ row.application.code }}）</span>
+              <span class="click-area" @click="toAppDetail(row)">
+                <img
+                  class="app-logo"
+                  :src="row.application.logo_url"
+                  alt="logo"
+                />
+                <span class="info">
+                  {{ row.application.name }}
+                  <span class="code">（{{ row.application.code }}）</span>
+                </span>
               </span>
-              MySQL {{ $t('慢查询告警数量') }}: <span class="slow-query">{{ row.slow_query_count }}</span>/{{ row.count }}
+              <span class="ml20 msg">
+                MySQL {{ $t('慢查询告警数量') }}: <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>/{{ row.count }}
+              </span>
             </div>
           </template>
         </bk-table-column>
@@ -115,51 +118,7 @@
           :label="$t('告警内容')"
           prop="source"
           class-name="env-column-cls"
-        >
-          <template slot-scope="{ row }">
-            <bk-popover
-              :ref="`quit${row.application.code}`"
-              placement="top"
-              theme="light-border"
-              trigger="click"
-              width="260"
-              :on-hide="handleHide"
-              ext-cls="exit-app-popover-cls"
-            >
-              <bk-button
-                :theme="'default'"
-                type="submit"
-                size="small"
-                ext-cls="exit-app-button"
-                @click="handleLeaveApp(row)"
-              >
-                {{ $t('退出应用') }}
-              </bk-button>
-              <div slot="content">
-                <div class="popover-title">{{ $t('退出应用') }}</div>
-                <div class="popover-content">{{ $t('退出并放弃此应用的对应权限，是否确定？') }}</div>
-                <div class="popover-operate">
-                  <bk-button
-                    :theme="'primary'"
-                    size="small"
-                    class="mr4"
-                    :loading="isPopoverLoading"
-                    @click="confirmLeaveApp(`quit${row.application.code}`)"
-                  >
-                    {{ $t('确定') }}
-                  </bk-button>
-                  <bk-button
-                    :theme="'default'"
-                    size="small"
-                    @click="handleCancel(`quit${row.application.code}`)"
-                  >
-                    {{ $t('取消') }}
-                  </bk-button>
-                </div>
-              </div>
-            </bk-popover>
-          </template>
-        </bk-table-column>
+        ></bk-table-column>
         <bk-table-column
           :label="$t('告警开始时间')"
           width="180"
@@ -194,8 +153,6 @@ export default {
       relativeTime,
       expandRowKeys: [],
       slowQueryCount: 0,
-      isPopoverLoading: false,
-      exitAppDataCode: '',
       selectionTime: {},
     };
   },
@@ -287,40 +244,6 @@ export default {
         params: { id: row.application.code },
       });
     },
-    // 退出应用
-    async handleLeaveApp(data) {
-      this.exitAppDataCode = data.application.code;
-    },
-    // 确定退出应用
-    async confirmLeaveApp(refName) {
-      this.isPopoverLoading = true;
-      try {
-        await this.$store.dispatch('member/quitApplication', {
-          appCode: this.exitAppDataCode,
-        });
-        this.handleCancel(refName);
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('退出成功'),
-        });
-        // 重新刷新表格
-        this.queryAllAppAlerts();
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('退出应用失败：')} ${e.detail}`,
-        });
-      } finally {
-        this.isPopoverLoading = false;
-      }
-    },
-    // 取消关闭
-    handleCancel(refName) {
-      this.$refs[refName].hideHandler();
-    },
-    handleHide() {
-      this.isPopoverLoading = false;
-    },
     handleDetail(row) {
       window.open(row.detail_link, '_blank');
     },
@@ -334,7 +257,10 @@ export default {
     margin-top: 12px;
 
     .app-name-wrapper {
-      cursor: pointer;
+      color: #313238;
+      .click-area {
+        cursor: pointer;
+      }
       .app-logo {
         width: 16px;
         height: 16px;
@@ -346,6 +272,9 @@ export default {
       }
       .info:hover {
         color: #3a84ff;
+      }
+      .msg {
+        color: #63656E;
       }
       .slow-query {
         color: #EA3636;
@@ -383,21 +312,5 @@ export default {
 }
 .mr4 {
   margin-right: 4px;
-}
-.exit-app-popover-cls {
-  .popover-title {
-    font-size: 14px;
-    color: #313238;
-    margin-bottom: 10px;
-  }
-  .popover-content {
-    margin-bottom: 10px;
-  }
-  .popover-operate {
-    text-align: right;
-  }
-  .tl em {
-    font-weight: bold;
-  }
 }
 </style>

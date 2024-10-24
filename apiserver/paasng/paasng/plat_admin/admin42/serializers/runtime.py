@@ -21,10 +21,6 @@ from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlug
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
-class SlugBuilderBindRequest(serializers.Serializer):
-    buildpack_id_list = serializers.ListField(child=serializers.CharField())
-
-
 class AppSlugBuilderSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()

@@ -49,7 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                             {
                                 name: "运行时管理",
-                                url: "{% url 'admin.buildpack.list' %}",
+                                url: "{% url 'admin.runtimes.buildpack.manage' %}",
+                            },
+                            {
+                                name: "智能顾问",
+                                url: "{% url 'admin.smart_advisor.documents.manage' %}",
                             },
                             {
                                 name: "应用资源方案",

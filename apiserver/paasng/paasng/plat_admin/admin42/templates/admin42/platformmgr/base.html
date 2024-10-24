@@ -49,25 +49,6 @@
         {
             name: '运行时管理',
             icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.runtime.buildpack.manage' %}",
-            children: [
-                {
-                    name: 'BuildPack管理',
-                    url: '{% url "admin.runtime.buildpack.manage" %}'
-                },
-                {
-                    name: 'SlugBuilder管理',
-                    url: '{% url "admin.runtime.slugbuilder.manage" %}'
-                },
-                {
-                    name: 'SlugRunner管理',
-                    url: '{% url "admin.runtime.slugrunner.manage" %}'
-                },
-            ]
-        },
-        {
-            name: '运行时管理 (新)',
-            icon: 'icon-tree-module-shape',
             url: "{% url 'admin.runtimes.buildpack.manage' %}",
             children: [
                 {
@@ -87,7 +68,7 @@
         {
             name: '智能顾问',
             icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.services.manage' %}",
+            url: "{% url 'admin.smart_advisor.documents.manage' %}",
             children: [
                 {
                     name: '文档管理',

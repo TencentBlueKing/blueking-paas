@@ -19,46 +19,38 @@ from dataclasses import dataclass
 from typing import Optional
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, SourceCodeConfig, Status
-from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxDeserializer, DevSandboxSerializer
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, Runtime, Status
+from paas_wl.bk_app.dev_sandbox.kres_slzs import CodeEditorDeserializer, CodeEditorSerializer
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 
 @dataclass
-class DevSandbox(AppEntity):
-    """DevSandbox entity"""
+class CodeEditor(AppEntity):
+    """CodeEditor entity"""
 
     runtime: Runtime
     resources: Optional[Resources] = None
     # 部署后, 从集群中获取状态
     status: Optional[Status] = None
-    # 源码相关配置
-    source_code_config: Optional[SourceCodeConfig] = None
+    # 编辑器相关配置
+    config: Optional[CodeEditorConfig] = None
 
     class Meta:
         kres_class = kres.KDeployment
-        serializer = DevSandboxSerializer
-        deserializer = DevSandboxDeserializer
+        serializer = CodeEditorSerializer
+        deserializer = CodeEditorDeserializer
 
     @classmethod
     def create(
-        cls,
-        dev_wl_app: WlApp,
-        runtime: Runtime,
-        resources: Optional[Resources] = None,
-        source_code_config: Optional[SourceCodeConfig] = None,
-    ) -> "DevSandbox":
+        cls, dev_wl_app: WlApp, runtime: Runtime, config: CodeEditorConfig, resources: Optional[Resources] = None
+    ) -> "CodeEditor":
         return cls(
-            app=dev_wl_app,
-            name=get_dev_sandbox_name(dev_wl_app),
-            runtime=runtime,
-            resources=resources,
-            source_code_config=source_code_config,
+            app=dev_wl_app, name=get_code_editor_name(dev_wl_app), config=config, runtime=runtime, resources=resources
         )
 
     def construct_envs(self):
-        if not self.source_code_config:
+        if not self.config:
             return
 
         envs = self.runtime.envs
@@ -67,13 +59,11 @@ class DevSandbox(AppEntity):
             if value:
                 envs.update({key: value})
 
-        # 注入源码获取方式环境变量
-        update_env_var("SOURCE_FETCH_METHOD", self.source_code_config.source_fetch_method.value)
-        # 注入源码获取地址
-        update_env_var("SOURCE_FETCH_URL", self.source_code_config.source_fetch_url)
-        # 注入工作空间环境变量
-        update_env_var("WORKSPACE", self.source_code_config.workspace)
+        # 注入登陆密码环境变量
+        update_env_var("PASSWORD", self.config.password)
+        # 注入启动目录环境变量
+        update_env_var("START_DIR", self.config.start_dir)
 
 
-def get_dev_sandbox_name(dev_wl_app: WlApp) -> str:
-    return dev_wl_app.scheduler_safe_name
+def get_code_editor_name(dev_wl_app: WlApp) -> str:
+    return f"{dev_wl_app.scheduler_safe_name}-code-editor"

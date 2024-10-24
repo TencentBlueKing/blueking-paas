@@ -30,6 +30,7 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
+
 from django.conf.urls import include, url
 from django.urls import path
 from django.views import i18n as django_i18n_views
@@ -75,6 +76,7 @@ urlpatterns = [
     url(r"^", include("paasng.bk_plugins.pluginscenter.urls")),
     url(r"^", include("paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.urls")),
     url(r"^", include("paasng.accessories.app_secret.urls")),
+    url(r"^", include("paasng.accessories.dev_sandbox.urls")),
     # PaaS Admin system
     url(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
     url(r"^admin42/", include("paas_wl.apis.admin.urls")),
@@ -90,5 +92,4 @@ urlpatterns = [
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
     url(r"^", include("paasng.accessories.paas_analysis.urls")),
     url(r"^notice/", include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
-    url(r"^", include("paasng.accessories.dev_sandbox.urls")),
 ]

@@ -15,19 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .code_editor import CodeEditorDeserializer, CodeEditorSerializer
-from .ingress import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
-from .sandbox import DevSandboxDeserializer, DevSandboxSerializer, get_dev_sandbox_labels
-from .service import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
+from django.apps import AppConfig
 
-__all__ = [
-    "CodeEditorDeserializer",
-    "CodeEditorSerializer",
-    "DevSandboxIngressDeserializer",
-    "DevSandboxIngressSerializer",
-    "DevSandboxDeserializer",
-    "DevSandboxSerializer",
-    "DevSandboxServiceDeserializer",
-    "DevSandboxServiceSerializer",
-    "get_dev_sandbox_labels",
-]
+
+class DevSandboxConfig(AppConfig):
+    name = "paasng.accessories.dev_sandbox"

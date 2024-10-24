@@ -114,6 +114,15 @@ export default {
     flex: 1 1 auto;
     overflow: hidden;
     overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 6px;
+      background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 5px;
+      border-radius: 2px;
+      background-color: #616161;
+    }
     /deep/ .d2h-file-wrapper {
       border: none;
       .d2h-code-wrapper {

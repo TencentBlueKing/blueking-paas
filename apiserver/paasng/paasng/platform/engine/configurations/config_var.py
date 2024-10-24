@@ -157,8 +157,8 @@ def generate_env_vars_by_region_and_env(
     region_envs_with_prefix = BuiltInEnvsRegionHelper(
         region_name=region,
         app_env=environment,
-        required_env_dict=region_related_envs,
         prefix=config_vars_prefix,
+        required_env_dict=region_related_envs,
     ).get_envs()
 
     # 不需要添加前缀的变量
@@ -168,6 +168,7 @@ def generate_env_vars_by_region_and_env(
     region_envs_without_prefix = BuiltInEnvsRegionHelper(
         region_name=region,
         app_env=environment,
+        prefix="",
         required_env_dict=region_related_envs_without_prefix,
     ).get_envs()
 

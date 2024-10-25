@@ -97,7 +97,7 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 ## 测试
 
-项目的自动化测试基于 [pytest](https://docs.pytest.org/en/stable/) 框架编写，所有测试用例，可被笼统分为单元测试和 E2E 测试两类。
+项目的自动化测试基于 [pytest](https://docs.pytest.org/en/stable/) 框架编写，所有测试用例，可被笼统分为单元测试、API 测试和 E2E 测试三类。
 
 #### 单元测试
 
@@ -120,6 +120,23 @@ $ pytest --reuse-db -s --maxfail=1 ./tests/
 你可以访问 [pytest 的官方文档](https://docs.pytest.org/en/stable/) 来了解更多。
 
 > 提示：每次提交代码改动前，请务必保证通过所有单元测试。
+
+#### API 测试
+
+API 测试，指通过请求接口并验证响应是否符合预期的自动化测试。同单元测试相比，API 测试的速度通常更慢、依赖项更多，但是能覆盖更多的业务逻辑。
+
+本项目的 API 测试代码主要位于 [./paasng/tests/api/](./paasng/tests/api/) 目录下。与传统的“黑盒 API 测试”（发送真实 HTTP 请求）有所不同，本项目的 API 测试是基于 Django/DRF 框架的 API 测试套件编写，并不发出真实网络请求，不过，这并不影响最终的测试效果。
+
+一个典型的 API 测试，由“数据准备”、“发送请求”、“验证响应”这三个步骤组成。为了提升测试效果，让代码尽可能地便于维护，编码时请遵循以下建议：
+
+- 用例代码尽可能地简单，避免复杂逻辑；
+- 尽量只通过调用 API 来完成测试；
+- 减少依赖项，尽量避免 Mock，不直接操作数据模型；
+- 除 bk_app 等 fixture 之外，不轻易引入其他模块代码；
+- 避免直接调用各模块的功能函数（可以通过调 API 替代）；
+- 使用 `reverse()` 函数获取请求路径，而不是硬编码字符串。
+
+示例代码可参考：[./paasng/tests/api/bkapp_model/test_network_config.py](./paasng/tests/api/bkapp_model/test_network_config.py)。
 
 #### E2E 测试
 

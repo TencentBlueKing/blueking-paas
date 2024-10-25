@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import shlex
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Type
 
 import cattr
 from django.conf import settings
@@ -143,7 +143,11 @@ class LegacyEnvVariableSLZ(serializers.Serializer):
 
 @i18n
 class SMartV1DescriptionSLZ(serializers.Serializer):
-    """Serializer for parsing the origin version of S-Mart application description"""
+    """Serializer for parsing the origin version of S-Mart application description.
+
+    This serializer doesn't contain all fields in the specification, some fields
+    related with deployment such as "env" are in the `SMartV1DeploymentDescLZ`.
+    """
 
     # For some reason, the max length for the `app_code` field uses the legacy value of 16
     # in the v1 schema, the value is changed to 20 in later versions.
@@ -155,22 +159,16 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
     is_use_celery_with_gevent = serializers.BooleanField(
         required=False, help_text="是否启用 celery (gevent)模式", default=False
     )
-    is_use_celery_beat = serializers.BooleanField(required=False, help_text="是否启用 celery beat", default=False)
     author = serializers.CharField(required=True, help_text="应用作者")
     introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
 
     # Not required fields
     category = ProductTagByNameField(required=False, source="tag")
-    language = serializers.CharField(
-        required=False, help_text="开发语言", default=AppLanguage.PYTHON.value, validators=[validate_language]
-    )
     desktop = DesktopOptionsSLZ(required=False, default=DesktopOptionsSLZ.gen_default_value, help_text="桌面展示选项")
-    env = serializers.ListField(child=LegacyEnvVariableSLZ(), required=False, default=list)
-    container = ContainerSpecSLZ(required=False, allow_null=True, source="package_plan")
     libraries = serializers.ListField(child=LibrarySLZ(), required=False, default=list)
     logo_b64data = Base64FileField(required=False, help_text="logo", source="logo")
 
-    def to_internal_value(self, data) -> Tuple[ApplicationDesc, DeploymentDesc]:
+    def to_internal_value(self, data) -> ApplicationDesc:
         attrs = super().to_internal_value(data)
         market_desc = MarketDesc(
             introduction_en=attrs["introduction_en"],
@@ -181,6 +179,57 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
         if attrs.get("tag"):
             market_desc.tag_id = attrs["tag"].id
 
+        # Get addons
+        addons = [Addon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
+        if attrs["is_use_celery"] or attrs["is_use_celery_with_gevent"]:
+            addons.append(Addon(name="rabbitmq"))
+
+        plugins = [
+            dict(type=constants.AppDescPluginType.APP_VERSION, data=attrs["version"]),
+            dict(type=constants.AppDescPluginType.APP_LIBRARIES, data=attrs["libraries"]),
+        ]
+
+        application_desc = ApplicationDesc(
+            spec_version=constants.AppSpecVersion.VER_1,
+            code=attrs["app_code"],
+            name_en=attrs["app_name_en"],
+            name_zh_cn=attrs["app_name_zh_cn"],
+            market=market_desc,
+            modules={
+                "default": {
+                    "name": "default",
+                    "is_default": True,
+                    "services": [{"name": addon.name} for addon in addons],
+                }
+            },
+            plugins=plugins,
+            instance_existed=bool(self.instance),
+        )
+        return application_desc
+
+
+class SMartV1DeploymentDescLZ(serializers.Serializer):
+    """Serializer for parsing the origin version of S-Mart application description,
+    only include deployment related fields.
+    """
+
+    # Celery 相关
+    is_use_celery = serializers.BooleanField(required=True, help_text="是否启用 celery")
+    is_use_celery_with_gevent = serializers.BooleanField(
+        required=False, help_text="是否启用 celery (gevent)模式", default=False
+    )
+    is_use_celery_beat = serializers.BooleanField(required=False, help_text="是否启用 celery beat", default=False)
+
+    # Not required fields
+    language = serializers.CharField(
+        required=False, help_text="开发语言", default=AppLanguage.PYTHON.value, validators=[validate_language]
+    )
+    env = serializers.ListField(child=LegacyEnvVariableSLZ(), required=False, default=list)
+    container = ContainerSpecSLZ(required=False, allow_null=True, source="package_plan")
+
+    def to_internal_value(self, data) -> DeploymentDesc:
+        attrs = super().to_internal_value(data)
+        # DeploymentDesc
         package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
         addons = [Addon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
         processes = [
@@ -231,37 +280,16 @@ class SMartV1DescriptionSLZ(serializers.Serializer):
                 }
             )
 
-        plugins = [
-            dict(type=constants.AppDescPluginType.APP_VERSION, data=attrs["version"]),
-            dict(type=constants.AppDescPluginType.APP_LIBRARIES, data=attrs["libraries"]),
-        ]
-
         spec = v1alpha2.BkAppSpec(
             processes=processes,
             configuration={"env": [{"name": item["key"], "value": item["value"]} for item in attrs.get("env", [])]},
             addons=addons,
         )
-        application_desc = ApplicationDesc(
-            spec_version=constants.AppSpecVersion.VER_1,
-            code=attrs["app_code"],
-            name_en=attrs["app_name_en"],
-            name_zh_cn=attrs["app_name_zh_cn"],
-            market=market_desc,
-            modules={
-                "default": {
-                    "name": "default",
-                    "is_default": True,
-                    "services": [{"name": addon.name} for addon in addons],
-                }
-            },
-            plugins=plugins,
-            instance_existed=bool(self.instance),
-        )
         deployment_desc = cattr.structure(
             {"spec": spec, "language": attrs.get("language"), "spec_version": constants.AppSpecVersion.VER_1},
             DeploymentDesc,
         )
-        return application_desc, deployment_desc
+        return deployment_desc
 
 
 def validate_procfile_procs(data: Dict[str, str]) -> List[ProcfileProc]:

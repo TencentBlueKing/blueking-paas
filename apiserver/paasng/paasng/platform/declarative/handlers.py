@@ -41,6 +41,7 @@ from paasng.platform.declarative.deployment.validations import v2 as deploy_spec
 from paasng.platform.declarative.deployment.validations import v3 as deploy_spec_v3
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import (
+    SMartV1DeploymentDescLZ,
     SMartV1DescriptionSLZ,
     UniConfigSLZ,
     validate_desc,
@@ -194,7 +195,9 @@ class SMartDescriptionHandler:
         """
         instance = get_application(self.json_data, "app_code")
         # S-mart application always perform a full update by using partial=False
-        app_desc, _ = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
+        app_desc = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
+        # Also use the DeploymentDesc serializer to validate the data but ignore the result
+        validate_desc(SMartV1DeploymentDescLZ, self.json_data)
         return app_desc
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
@@ -300,7 +303,7 @@ def deploy_desc_getter_v1(json_data: Dict, module_name: str) -> DeploymentDesc:
     """Get the deployment desc object, spec ver 1."""
     instance = get_application(json_data, "app_code")
     # S-mart application always perform a full update by using partial=False
-    _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, json_data, instance, partial=False)
+    deploy_desc = validate_desc(SMartV1DeploymentDescLZ, json_data, instance, partial=False)
     return deploy_desc
 
 

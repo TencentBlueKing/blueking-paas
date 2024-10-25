@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 """svc_rabbitmq URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -31,14 +32,14 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import include, url
 from django.contrib import admin
+from django.urls import include, re_path
 from django.views.generic.base import RedirectView
 
 urlpatterns = [
-    url('', include('paas_service.urls')),
-    url('', include('vendor.urls')),
-    url('', include('monitor.urls')),
-    url(r'^django/admin/', admin.site.urls),
-    url('^accounts/login/', RedirectView.as_view(url="/")),
+    re_path(r"^", include("paas_service.urls")),
+    re_path(r"^", include("vendor.urls")),
+    re_path(r"^", include("monitor.urls")),
+    re_path(r"^django/admin/", admin.site.urls),
+    re_path(r"^accounts/login/", RedirectView.as_view(url="/")),
 ]

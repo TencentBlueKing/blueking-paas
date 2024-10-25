@@ -16,10 +16,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf.urls import url
+
+from django.urls import re_path
+
 from vendor import views
 
 urlpatterns = [
-    url(r'^healthz/', views.healthz),
-    url(r'^cluster/(?P<cluster_id>\d+)/metrics', views.ClusterMinimalMetricsView.as_view()),
+    re_path(r"^healthz/", views.healthz),
+    re_path(r"^cluster/(?P<cluster_id>\d+)/metrics", views.ClusterMinimalMetricsView.as_view()),
 ]

@@ -28,10 +28,12 @@ from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ServiceSpec
 from paasng.platform.declarative.constants import AppDescPluginType
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import (
     DefaultDeployDescHandler,
     SMartDescriptionHandler,
     deploy_desc_getter_v1,
+    get_deploy_desc_by_module,
     get_desc_handler,
 )
 from paasng.platform.declarative.models import DeploymentDescription
@@ -144,3 +146,25 @@ def test_app_data_to_desc(random_name):
     assert plugin
     assert plugin["data"] == "0.0.1"
     assert desc.default_module.language == AppLanguage.PYTHON
+
+
+def test_get_desc_when_creating_with_duplicated_app_name(bk_app):
+    app_data = {
+        # Change the code to make it represents a "new" application while keep the
+        # app_name intact.
+        "app_code": bk_app.code + "new",
+        "app_name": bk_app.name,
+        "author": "blueking",
+        "introduction": "blueking app",
+        "is_use_celery": False,
+        "version": "0.0.1",
+        "env": [],
+        "language": "python",
+    }
+
+    # An error will be raised because the app_name was duplicated
+    with pytest.raises(DescriptionValidationError):
+        _ = get_desc_handler(app_data).app_desc
+
+    # But getting deployment description won't raise any error
+    _ = get_deploy_desc_by_module(app_data, "default")

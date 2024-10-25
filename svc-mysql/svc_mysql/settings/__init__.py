@@ -52,7 +52,7 @@ DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_versi
 
 pymysql.install_as_MySQLdb()
 # Patch version info to force pass Django client check
-setattr(pymysql, "version_info", (1, 4, 2, "final", 0))
+setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
 
 env = environ.Env(

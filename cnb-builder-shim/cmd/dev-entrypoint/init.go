@@ -158,13 +158,12 @@ func initializeSourceCode() error {
 	}
 	switch config.G.SourceCode.FetchMethod {
 	case config.BK_REPO:
-		projectPath := strings.TrimSuffix(workspace, "/") + "/dev_project"
 		// 下载源码
-		if err = http.NewFetcher(logger).Fetch(config.G.SourceCode.FetchUrl, projectPath); err != nil {
+		if err = http.NewFetcher(logger).Fetch(config.G.SourceCode.FetchUrl, workspace); err != nil {
 			return errors.Wrap(err, "download source code")
 		}
 		// 修改目录权限
-		if err = utils.ChmodR(projectPath); err != nil {
+		if err = utils.ChmodR(workspace); err != nil {
 			return errors.Wrap(err, "chmod files")
 		}
 	case config.GIT:

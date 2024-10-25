@@ -41,6 +41,11 @@ export default {
       this.editor = monaco.editor.createDiffEditor(this.$refs.container, {
         theme: 'vs-dark',
         readOnly: true,
+        unicodeHighlight: {
+          ambiguousCharacters: false, // 禁用对模糊字符的高亮
+          invisibleCharacters: false, // 禁用对不可见字符的高亮
+          nonBasicASCII: false, // 禁用对非基本 ASCII 字符的高亮
+        },
       });
       this.updateModels();
       this.editor.layout();

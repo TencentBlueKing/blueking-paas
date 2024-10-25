@@ -152,15 +152,15 @@ class TestDomainResolutionViewSet:
         ],
     )
     def test_upsert(self, with_default_res, api_client, test_url, req_body):
-        old_ns = with_default_res.data["nameservers"]
-        old_ha = with_default_res.data["host_aliases"]
-
         response = api_client.post(test_url, req_body)
 
         assert response.status_code == 200
-        # When the field is missing in the body, the old value should be kept
-        assert response.data["nameservers"] == req_body.get("nameservers") or old_ns
-        assert response.data["host_aliases"] == req_body.get("host_aliases") or old_ha
+
+        # The value of a field should has been updated when it's provided in the request
+        # body, otherwise it should be the same as before.
+        expected = with_default_res.data.copy()
+        expected.update(req_body)
+        assert response.data == expected
 
     def test_upsert_no_data(self, with_default_res, api_client, test_url):
         response = api_client.post(test_url)

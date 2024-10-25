@@ -329,9 +329,6 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEn
                 key="BK_API_URL_TMPL", value=settings.BK_API_URL_TMPL, description=_("网关 API 访问地址模板")
             ),
             BuiltInEnvVarDetail(
-                key="BK_COMPONENT_API_URL", value=settings.BK_COMPONENT_API_URL, description=_("组件 API 访问地址")
-            ),
-            BuiltInEnvVarDetail(
                 key="BK_PAAS2_URL", value=settings.BK_PAAS2_URL, description=_("PaaS2.0 开发者中心地址")
             ),
         ]

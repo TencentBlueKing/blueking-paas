@@ -362,7 +362,7 @@ export default {
       this.diffConfig.isLoading = true;
       if (row.detail_type === 'raw_data') {
         // raw_data 类型直接使用接口返回数据
-        this.setDiffData(row.data_before?.data, row.data_after?.data);
+        this.setDiffData(row.data_before?.data ?? '', row.data_after?.data ?? '');
         this.diffConfig.isLoading = false;
       } else {
         // 通过id查询

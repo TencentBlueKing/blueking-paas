@@ -27,9 +27,11 @@ from paasng.platform.applications.models import Application
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument("--app_codes", nargs="*", help="specified app code list. optional, default: all")
+        parser.add_argument(
+            "--app_codes", nargs="*", default=[], help="specified app code list. optional, default: all"
+        )
 
-    def handle(self, source, app_codes, *args, **options):
+    def handle(self, app_codes, *args, **options):
         """按应用 ID 导入仪表盘，可用于：
 
         - 功能上线后，批量初始化存量应用仪表盘

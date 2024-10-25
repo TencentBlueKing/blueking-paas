@@ -40,6 +40,7 @@ from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manage
 from paasng.misc.monitoring.monitor.models import AppDashBoard
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 from .exceptions import BKMonitorNotSupportedError
@@ -364,6 +365,10 @@ class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
             return Response([])
 
         # 查询应用所有已经内置的仪表盘
-        dashboards = AppDashBoard.objects.filter(application=app)
+        dashboards = AppDashBoard.objects.filter(application=app).order_by("created")
         serializer = AppDashBoardSLZ(dashboards, context={"bk_biz_id": bk_biz_id}, many=True)
-        return Response(serializer.data)
+
+        # 将 dashboards 的数据将 app_languages 中出现过的语言对应的 name 排到前面
+        app_languages = set(Module.objects.filter(application=app).values_list("language", flat=True))
+        sorted_data = sorted(serializer.data, key=lambda d: (d["language"] not in app_languages))
+        return Response(sorted_data)

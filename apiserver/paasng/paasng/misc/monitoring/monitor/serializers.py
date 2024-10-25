@@ -194,6 +194,7 @@ class AlarmStrategySLZ(serializers.Serializer):
 class AppDashBoardSLZ(serializers.Serializer):
     name = serializers.CharField()
     display_name = serializers.CharField()
+    language = serializers.CharField()
     dashboard_url = serializers.SerializerMethodField()
 
     def get_dashboard_url(self, instance):

@@ -28,19 +28,30 @@ class TestGetDashboardInfoViewSet:
     @pytest.fixture()
     def bk_monitor_space(self, bk_app):
         return BKMonitorSpace.objects.create(
-            application=bk_app, id=-1, space_type_id="bk_saas", space_id="app1", extra_info={}
+            application=bk_app, id=1, space_type_id="bk_saas", space_id="app1", extra_info={}
         )
 
     @pytest.fixture()
-    def app_dashboard(self, bk_app):
-        return AppDashBoard.objects.create(
+    def app_dashboards(self, bk_app):
+        # 先创建其他语言的仪表盘，仪表盘默认按创建时间排序
+        other_language_dashboard = AppDashBoard.objects.create(
             application=bk_app,
+            language="fake_language",
+            name="bksaas/framework-fake_language",
+            display_name="fake_language 开发框架内置仪表盘",
+            template_version="v1",
+        )
+
+        default_dashboard = AppDashBoard.objects.create(
+            application=bk_app,
+            language=bk_app.default_module.language,
             name="bksaas/framework-python",
             display_name="Python 开发框架内置仪表盘",
             template_version="v1",
         )
+        return [other_language_dashboard, default_dashboard]
 
-    def test_get_builtin_dashboards(self, api_client, bk_app, bk_monitor_space, app_dashboard):
+    def test_get_builtin_dashboards(self, api_client, bk_app, bk_monitor_space, app_dashboards):
         url = reverse(
             "api.modules.monitor.builtin_dashboards",
             kwargs={
@@ -51,3 +62,5 @@ class TestGetDashboardInfoViewSet:
         assert response.status_code == 200
         assert "dashboard_url" in response.data[0]
         assert response.data[0]["name"] == "bksaas/framework-python"
+        # 保证应用所属语言仪表盘排在前面
+        assert response.data[0]["language"] == bk_app.default_module.language

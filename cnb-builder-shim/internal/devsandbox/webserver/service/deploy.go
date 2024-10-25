@@ -134,12 +134,12 @@ func (m DeployManager) newDeployID() string {
 	return strings.Replace(uuidString, "-", "", -1)
 }
 
-func (m *DeployManager) analyzeAndSyncToAppDir(tmpAppDir, appDir string) error {
+func (m *DeployManager) analyzeAndSyncToAppDir(srcFilePath, appDir string) error {
 	// 1. 通过对比新旧文件的变化, 确定哪些步骤需要执行
-	m.stepOpts = parseDeployStepOpts(appDir, tmpAppDir)
+	m.stepOpts = parseDeployStepOpts(appDir, srcFilePath)
 
 	// 2. 将 tmpAppDir 中的文件拷贝到 appDir
-	if err := m.syncFiles(tmpAppDir, appDir); err != nil {
+	if err := m.syncFiles(srcFilePath, appDir); err != nil {
 		return err
 	}
 

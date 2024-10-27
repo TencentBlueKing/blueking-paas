@@ -18,7 +18,7 @@
 import pytest
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
-from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator, _UserDevWlAppCreator
+from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, ResourceSpec, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.kres_entities import CodeEditor, DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.infras.cluster.models import Cluster
@@ -42,6 +42,11 @@ def module_name():
 
 
 @pytest.fixture()
+def dev_sandbox_code():
+    return "DevSandboxCode"
+
+
+@pytest.fixture()
 def dev_wl_app(bk_app, module_name):
     return _DevWlAppCreator(bk_app, module_name).create()
 
@@ -59,8 +64,8 @@ def dev_sandbox_entity(dev_wl_app, dev_runtime):
 
 
 @pytest.fixture()
-def user_dev_wl_app(bk_app, module_name, bk_user):
-    return _UserDevWlAppCreator(bk_app, module_name, bk_user.username).create()
+def user_dev_wl_app(bk_app, module_name, dev_sandbox_code):
+    return _DevWlAppCreator(bk_app, module_name, dev_sandbox_code).create()
 
 
 @pytest.fixture()
@@ -115,5 +120,5 @@ def dev_sandbox_ingress_entity(bk_app, dev_wl_app, module_name):
 
 
 @pytest.fixture()
-def user_dev_sandbox_ingress_entity(bk_app, dev_wl_app, module_name, bk_user):
-    return DevSandboxIngress.create(dev_wl_app, bk_app.code, bk_user.username)
+def dev_sandbox_ingress_entity_with_dev_sandbox_code(bk_app, dev_wl_app, module_name, dev_sandbox_code):
+    return DevSandboxIngress.create(dev_wl_app, bk_app.code, dev_sandbox_code)

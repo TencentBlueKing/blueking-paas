@@ -28,10 +28,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.dev_sandbox.constants import CodeEditorStatus
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
+from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, generate_random_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
@@ -110,10 +110,16 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
+        dev_sandbox_code = generate_random_code()
+        # 确保应用下唯一
+        while DevSandbox.objects.filter(module=module, code=dev_sandbox_code).exists():
+            dev_sandbox_code = generate_random_code()
+
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user,
+            dev_sandbox_code=dev_sandbox_code,
+            owner=request.user.pk,
         )
 
         serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
@@ -158,8 +164,9 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             region=app.region,
             owner=request.user.pk,
             module=module,
-            status=CodeEditorStatus.ALIVE.value,
+            status=DevSandboxStatus.ALIVE.value,
             version_info=version_info,
+            code=dev_sandbox_code,
         )
 
         CodeEditor.objects.create(
@@ -174,17 +181,19 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         """清理开发沙箱"""
         app = self.get_application()
         module = self.get_module_via_path()
+
+        try:
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
+        except DevSandbox.DoesNotExist:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user,
+            dev_sandbox_code=dev_sandbox.code,
+            owner=request.user.pk,
         )
         controller.delete()
-
-        try:
-            DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
-        except DevSandbox.DoesNotExist:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -193,12 +202,16 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         """获取开发沙箱的运行详情"""
         app = self.get_application()
         module = self.get_module_via_path()
-        if not DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
+        try:
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
+        except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
+
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            owner=request.user,
+            dev_sandbox_code=dev_sandbox.code,
+            owner=request.user.pk,
         )
         try:
             detail = controller.get_detail()

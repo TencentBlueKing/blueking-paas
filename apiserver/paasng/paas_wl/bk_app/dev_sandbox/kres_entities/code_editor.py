@@ -50,6 +50,7 @@ class CodeEditor(AppEntity):
         )
 
     def construct_envs(self):
+        """该函数将 CodeEditor 对象的属性(需要通过环境变量生效的配置)注入环境变量"""
         if not self.config:
             return
 

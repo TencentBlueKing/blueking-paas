@@ -83,8 +83,8 @@ class TestDevSandboxController:
 
 class TestDevSandboxWithCodeEditorController:
     @pytest.fixture()
-    def controller(self, bk_app, module_name, bk_user):
-        ctrl = DevSandboxWithCodeEditorController(bk_app, module_name, bk_user)
+    def controller(self, bk_app, module_name, bk_user, dev_sandbox_code):
+        ctrl = DevSandboxWithCodeEditorController(bk_app, module_name, dev_sandbox_code, bk_user.pk)
         yield ctrl
         # just test delete ok!
         ctrl.delete()
@@ -159,11 +159,11 @@ class TestDevSandboxWithCodeEditorController:
     def test_get_sandbox_detail(self, controller, bk_app, module_name, user_dev_wl_app):
         detail = controller.get_detail()
         base_url = get_sub_domain_host(bk_app.code, user_dev_wl_app, module_name)
-        username = controller.owner.username
+        dev_sandbox_code = controller.dev_sandbox_code
 
-        assert detail.urls.app_url == f"{base_url}/user/{username}/app/"
-        assert detail.urls.devserver == f"{base_url}/user/{username}/devserver/"
-        assert detail.urls.code_editor_url == f"{base_url}/user/{username}/code_editor/"
+        assert detail.urls.app_url == f"{base_url}/user/{dev_sandbox_code}/app/"
+        assert detail.urls.devserver == f"{base_url}/user/{dev_sandbox_code}/devserver/"
+        assert detail.urls.code_editor_url == f"{base_url}/user/{dev_sandbox_code}/code_editor/"
         assert detail.dev_sandbox_env_vars == {
             "FOO": "test",
             "SOURCE_FETCH_METHOD": "BK_REPO",

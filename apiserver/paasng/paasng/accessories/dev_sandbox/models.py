@@ -15,11 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import datetime
+import random
+import string
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
 
-from paas_wl.bk_app.dev_sandbox.constants import CodeEditorStatus
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.utils.models import make_json_field
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.models import VersionInfo
@@ -28,17 +30,24 @@ from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 
+def generate_random_code(length: int = 16) -> str:
+    """生成随机的沙箱标识(只包含大小写字母和数字)"""
+    characters = string.ascii_letters + string.digits
+    return "".join(random.choice(characters) for _ in range(length))
+
+
 class DevSandbox(OwnerTimestampedModel):
     """DevSandbox Model"""
 
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
-    status = models.CharField(max_length=32, verbose_name="代码编辑器状态", choices=CodeEditorStatus.get_choices())
+    status = models.CharField(max_length=32, verbose_name="沙箱状态", choices=DevSandboxStatus.get_choices())
+    code = models.CharField(max_length=16, help_text="沙箱标识,模块下唯一", default=generate_random_code)
     expire_at = models.DateTimeField(null=True, help_text="到期时间")
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
     def renew_expire_at(self):
         # 如果状态不是ALIVE, 则设置两小时后过期
-        if self.status != CodeEditorStatus.ALIVE.value:
+        if self.status != DevSandboxStatus.ALIVE.value:
             self.expire_at = datetime.datetime.now() + datetime.timedelta(hours=2)
         else:
             self.expire_at = None

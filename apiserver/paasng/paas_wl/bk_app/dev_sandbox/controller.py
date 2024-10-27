@@ -17,10 +17,8 @@
 
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
-from bkpaas_auth.models import User
-from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -50,12 +48,9 @@ from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.volume.persistent_volume_claim.kres_entities import PersistentVolumeClaim, pvc_kmodel
 from paasng.platform.applications.models import Application
-from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
-from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.engine.utils.source import upload_source_code
+from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.repo_controller import get_repo_controller
-from paasng.platform.sourcectl.utils import compress_directory_ext, generate_temp_dir, generate_temp_file
-from paasng.utils.blobstore import make_blob_store
 
 from .exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 
@@ -149,7 +144,8 @@ class DevSandboxWithCodeEditorController:
 
     :param app: Application 实例
     :param module_name: 模块名称
-    :param owner: 沙盒拥有者
+    :param dev_sandbox_code: 沙盒标识
+    :param owner: 沙箱拥有者
     """
 
     sandbox_mgr: AppEntityManager[DevSandbox] = AppEntityManager[DevSandbox](DevSandbox)
@@ -157,10 +153,11 @@ class DevSandboxWithCodeEditorController:
     ingress_mgr: AppEntityManager[DevSandboxIngress] = AppEntityManager[DevSandboxIngress](DevSandboxIngress)
     code_editor_mgr: AppEntityManager[CodeEditor] = AppEntityManager[CodeEditor](CodeEditor)
 
-    def __init__(self, app: Application, module_name: str, owner: User):
+    def __init__(self, app: Application, module_name: str, dev_sandbox_code: str, owner: str):
         self.app = app
         self.module_name = module_name
-        self.dev_wl_app: WlApp = _UserDevWlAppCreator(app, module_name, owner.username).create()
+        self.dev_wl_app: WlApp = _DevWlAppCreator(app, module_name, dev_sandbox_code).create()
+        self.dev_sandbox_code = dev_sandbox_code
         self.owner = owner
 
     def deploy(
@@ -231,10 +228,38 @@ class DevSandboxWithCodeEditorController:
             )
         )
 
-        # step 3. upload source code
-        source_fetch_url = self._upload_source_code(version_info, relative_source_dir)
+        # step 3. create dev sandbox
+        self._create_dev_sandbox(dev_sandbox_env_vars, version_info, relative_source_dir)
 
-        # step 4. create dev sandbox
+        # step 4. create code editor
+        self._create_code_editor(code_editor_env_vars, password)
+
+        # step 5. upsert service
+        service_entity = DevSandboxService.create(self.dev_wl_app)
+        self.service_mgr.upsert(service_entity)
+
+        # step 6. upsert ingress
+        ingress_entity = DevSandboxIngress.create(self.dev_wl_app, self.app.code, self.dev_sandbox_code)
+        self.ingress_mgr.upsert(ingress_entity)
+
+    def _get_source_package_path(self, version_info: VersionInfo) -> str:
+        """Return the blobstore path for storing source files package"""
+        branch = version_info.version_name
+        revision = version_info.revision
+
+        slug_name = f"{self.app.code}:{self.module_name}:{branch}:{revision}:dev"
+        return f"{self.dev_wl_app.region}/home/{slug_name}/tar"
+
+    def _create_dev_sandbox(
+        self, dev_sandbox_env_vars: Dict[str, str], version_info: VersionInfo, relative_source_dir: Path
+    ):
+        # upload source code
+        module = self.app.get_module(self.module_name)
+        source_fetch_url = upload_source_code(
+            module, version_info, relative_source_dir, self.owner, self.dev_wl_app.region
+        )
+
+        # create dev sandbox
         default_sandbox_resources = Resources(
             limits=ResourceSpec(cpu="4", memory="2Gi"),
             requests=ResourceSpec(cpu="200m", memory="512Mi"),
@@ -256,7 +281,7 @@ class DevSandboxWithCodeEditorController:
         sandbox_entity.construct_envs()
         self.sandbox_mgr.create(sandbox_entity)
 
-        # step 5. create code editor
+    def _create_code_editor(self, code_editor_env_vars: Dict[str, str], password: str):
         default_code_editor_resources = Resources(
             limits=ResourceSpec(cpu="4", memory="2Gi"),
             requests=ResourceSpec(cpu="500m", memory="1024Mi"),
@@ -275,51 +300,6 @@ class DevSandboxWithCodeEditorController:
         code_editor_entity.construct_envs()
         self.code_editor_mgr.create(code_editor_entity)
 
-        # step 6. upsert service
-        service_entity = DevSandboxService.create(self.dev_wl_app)
-        self.service_mgr.upsert(service_entity)
-
-        # step 7. upsert ingress
-        ingress_entity = DevSandboxIngress.create(self.dev_wl_app, self.app.code, self.owner.username)
-        self.ingress_mgr.upsert(ingress_entity)
-
-    def _upload_source_code(self, version_info: VersionInfo, relative_source_dir: Path) -> str:
-        """上传源码, 参考方法 "BaseBuilder.compress_and_upload"
-
-        return: source fetch url
-        """
-        module = self.app.get_module(self.module_name)
-        spec = ModuleSpecs(module)
-        with generate_temp_dir() as working_dir:
-            source_dir = working_dir.absolute() / relative_source_dir
-            # 下载源码到临时目录
-            if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-                get_repo_controller(module, operator=self.owner.pk).export(working_dir, version_info)
-            else:
-                raise NotImplementedError
-
-            # 上传源码
-            with generate_temp_file(suffix=".tar.gz") as package_path:
-                source_destination_path = self._get_source_package_path(version_info)
-                compress_directory_ext(source_dir, package_path)
-                logger.info(f"Uploading source files to {source_destination_path}")
-                store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
-                store.upload_file(package_path, source_destination_path)
-
-        source_fetch_url = store.generate_presigned_url(
-            key=source_destination_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-        )
-
-        return source_fetch_url
-
-    def _get_source_package_path(self, version_info: VersionInfo) -> str:
-        """Return the blobstore path for storing source files package"""
-        branch = version_info.version_name
-        revision = version_info.revision
-
-        slug_name = f"{self.app.code}:{self.module_name}:{branch}:{revision}:dev"
-        return f"{self.dev_wl_app.region}/home/{slug_name}/tar"
-
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务"""
         ns_handler = NamespacesHandler.new_by_app(self.dev_wl_app)
@@ -337,7 +317,10 @@ class DevSandboxWithCodeEditorController:
         return ingress_entity.domains[0].host
 
     def get_detail(self) -> DevSandboxWithCodeEditorDetail:
-        """获取详情"""
+        """
+        获取详情
+        raises: DevSandboxResourceNotFound: 如果开发沙箱资源（dev_sandbox 或者 code_editor）未找到。
+        """
         try:
             dev_sandbox_entity: DevSandbox = self.sandbox_mgr.get(
                 self.dev_wl_app, get_dev_sandbox_name(self.dev_wl_app)
@@ -353,7 +336,7 @@ class DevSandboxWithCodeEditorController:
             raise DevSandboxResourceNotFound("code editor not found")
 
         base_url = self._get_url()
-        urls = DevSandboxWithCodeEditorUrls(base_url=base_url, username=self.owner.username)
+        urls = DevSandboxWithCodeEditorUrls(base_url=base_url, dev_sandbox_code=self.dev_sandbox_code)
 
         dev_sandbox_status = (
             dev_sandbox_entity.status.to_health_phase() if dev_sandbox_entity.status else HealthPhase.UNKNOWN
@@ -373,9 +356,10 @@ class DevSandboxWithCodeEditorController:
 class _DevWlAppCreator:
     """WlApp 实例构造器"""
 
-    def __init__(self, app: Application, module_name: str):
+    def __init__(self, app: Application, module_name: str, dev_sandbox_code: Optional[str] = None):
         self.app = app
         self.module_name = module_name
+        self.dev_sandbox_code = dev_sandbox_code
 
     def create(self) -> WlApp:
         """创建 WlApp 实例"""
@@ -383,7 +367,8 @@ class _DevWlAppCreator:
 
         # 因为 dev_wl_app 不是查询集结果, 所以需要覆盖 namespace 和 module_name, 以保证 AppEntityManager 模式能够正常工作
         # TODO 考虑更规范的方式处理这两个 cached_property 属性. 如考虑使用 WlAppProtocol 满足 AppEntityManager 模式
-        setattr(dev_wl_app, "namespace", f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev".replace("_", "0us0"))
+        namespace_name = self._make_namespace_name()
+        setattr(dev_wl_app, "namespace", namespace_name.replace("_", "0us0"))
         setattr(dev_wl_app, "module_name", self.module_name)
 
         return dev_wl_app
@@ -391,40 +376,21 @@ class _DevWlAppCreator:
     def _make_dev_wl_app_name(self) -> str:
         """参考 make_engine_app_name 规则, 生成 dev 环境的 WlApp name"""
         if self.module_name == ModuleName.DEFAULT.value:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
+            if self.dev_sandbox_code:
+                return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.dev_sandbox_code}-dev"
+            else:
+                return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
+        elif self.dev_sandbox_code:
+            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-{self.dev_sandbox_code}-dev"
         else:
             return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-dev"
 
-
-class _UserDevWlAppCreator:
-    """用户级别 WlApp 实例构造器"""
-
-    def __init__(self, app: Application, module_name: str, username: str):
-        self.app = app
-        self.module_name = module_name
-        self.username = username
-
-    def create(self) -> WlApp:
-        """创建 WlApp 实例"""
-        dev_wl_app = WlApp(region=self.app.region, name=self._make_dev_wl_app_name(), type=self.app.type)
-
-        # 因为 dev_wl_app 不是查询集结果, 所以需要覆盖 namespace 和 module_name, 以保证 AppEntityManager 模式能够正常工作
-        # TODO 考虑更规范的方式处理这两个 cached_property 属性. 如考虑使用 WlAppProtocol 满足 AppEntityManager 模式
-        setattr(
-            dev_wl_app,
-            "namespace",
-            f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.username}-dev".replace("_", "0us0"),
-        )
-        setattr(dev_wl_app, "module_name", self.module_name)
-
-        return dev_wl_app
-
-    def _make_dev_wl_app_name(self) -> str:
-        """参考 make_engine_app_name 规则, 生成 dev 环境的 WlApp name"""
-        if self.module_name == ModuleName.DEFAULT.value:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.username}-dev"
+    def _make_namespace_name(self) -> str:
+        """生成 namespace_name"""
+        if self.dev_sandbox_code:
+            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.dev_sandbox_code}-dev"
         else:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-{self.username}-dev"
+            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
 
 
 def get_pvc_name(dev_wl_app: WlApp) -> str:

@@ -46,11 +46,11 @@ class DevSandboxIngress(AppEntity):
         self.set_header_x_script_name = True
 
     @classmethod
-    def create(cls, dev_wl_app: WlApp, app_code: str, username: str = "") -> "DevSandboxIngress":
+    def create(cls, dev_wl_app: WlApp, app_code: str, dev_sandbox_code: str = "") -> "DevSandboxIngress":
         service_name = get_service_name(dev_wl_app)
         sub_domain = IngressDomain(
             host=get_sub_domain_host(app_code, dev_wl_app, dev_wl_app.module_name),
-            path_backends=get_ingress_path_backends(service_name, username),
+            path_backends=get_ingress_path_backends(service_name, dev_sandbox_code),
         )
         return cls(app=dev_wl_app, name=get_ingress_name(dev_wl_app), domains=[sub_domain])
 

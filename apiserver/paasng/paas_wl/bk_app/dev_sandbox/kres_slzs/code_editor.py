@@ -67,11 +67,11 @@ class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
             main_container["resources"] = obj.resources.to_dict()
 
         spec = {"containers": [main_container]}
-        self._construct_volume_mounts(obj, spec)
+        self._set_volume_mounts(obj, spec)
 
         return spec
 
-    def _construct_volume_mounts(self, obj: "CodeEditor", spec: Dict):
+    def _set_volume_mounts(self, obj: "CodeEditor", spec: Dict):
         if not obj.config:
             return
 

@@ -237,15 +237,21 @@ class TestDevSandboxIngressSerializer:
         }
 
     def test_serialize_with_user(
-        self, gvk_config, user_dev_sandbox_ingress_entity, bk_app, module_name, default_dev_sandbox_cluster, bk_user
+        self,
+        gvk_config,
+        dev_sandbox_ingress_entity_with_dev_sandbox_code,
+        bk_app,
+        module_name,
+        default_dev_sandbox_cluster,
+        dev_sandbox_code,
     ):
         slz = DevSandboxIngressSerializer(DevSandboxIngress, gvk_config)
-        manifest = slz.serialize(user_dev_sandbox_ingress_entity)
+        manifest = slz.serialize(dev_sandbox_ingress_entity_with_dev_sandbox_code)
 
-        service_name = get_service_name(user_dev_sandbox_ingress_entity.app)
+        service_name = get_service_name(dev_sandbox_ingress_entity_with_dev_sandbox_code.app)
         assert manifest["apiVersion"] == "networking.k8s.io/v1"
         assert manifest["metadata"] == {
-            "name": user_dev_sandbox_ingress_entity.name,
+            "name": dev_sandbox_ingress_entity_with_dev_sandbox_code.name,
             "annotations": {
                 "bkbcs.tencent.com/skip-filter-clb": "true",
                 "nginx.ingress.kubernetes.io/ssl-redirect": "false",
@@ -259,7 +265,7 @@ class TestDevSandboxIngressSerializer:
             "http": {
                 "paths": [
                     {
-                        "path": f"/(user/{bk_user.username}/devserver)/(.*)()",
+                        "path": f"/(user/{dev_sandbox_code}/devserver)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
@@ -269,7 +275,7 @@ class TestDevSandboxIngressSerializer:
                         },
                     },
                     {
-                        "path": f"/(user/{bk_user.username}/app)/(.*)()",
+                        "path": f"/(user/{dev_sandbox_code}/app)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
@@ -279,7 +285,7 @@ class TestDevSandboxIngressSerializer:
                         },
                     },
                     {
-                        "path": f"/(user/{bk_user.username}/code-editor)/(.*)()",
+                        "path": f"/(user/{dev_sandbox_code}/code-editor)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {

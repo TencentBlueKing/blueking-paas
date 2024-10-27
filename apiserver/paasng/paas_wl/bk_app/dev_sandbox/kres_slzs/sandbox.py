@@ -67,11 +67,12 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             main_container["resources"] = obj.resources.to_dict()
 
         spec = {"containers": [main_container]}
-        self._construct_volume_mounts(obj, spec)
+        self._set_volume_mounts(obj, spec)
 
         return spec
 
-    def _construct_volume_mounts(self, obj: "DevSandbox", spec: Dict):
+    def _set_volume_mounts(self, obj: "DevSandbox", spec: Dict):
+        """将 DevSandbox 下工作目录挂载到容器内"""
         if not obj.source_code_config:
             return
 
@@ -125,11 +126,14 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
         raise RuntimeError(f"No {_CONTAINER_NAME} container found in resource")
 
     def _construct_source_code_config(self, deployment: ResourceInstance) -> SourceCodeConfig:
+        """通过挂载，环境变量等信息，构造 SourceCodeConfig"""
         deployment_dict = deployment.to_dict()
         main_container_dict = self._get_main_container_dict(deployment)
 
+        # 获取挂载信息
         volume = get_items(deployment_dict, "spec.template.spec.volumes", [{}])[0]
         volume_mounts = get_items(main_container_dict, "volumeMounts", [{}])[0]
+        # 获取环境变量
         env_list = get_items(main_container_dict, "env", [{}])
         envs = {env["name"]: env["value"] for env in env_list}
         source_code_config = cattr.structure(

@@ -58,6 +58,7 @@ class DevSandbox(AppEntity):
         )
 
     def construct_envs(self):
+        """该函数将 DevSandbox 对象的属性(需要通过环境变量生效的配置)注入环境变量"""
         if not self.source_code_config:
             return
 

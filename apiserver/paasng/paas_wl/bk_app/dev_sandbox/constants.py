@@ -24,8 +24,8 @@ class SourceCodeFetchMethod(StrStructuredEnum):
     BK_REPO = EnumField("BK_REPO")
 
 
-class CodeEditorStatus(StrStructuredEnum):
-    """代码编辑器状态"""
+class DevSandboxStatus(StrStructuredEnum):
+    """沙箱状态"""
 
     ALIVE = EnumField("alive", label="存活")
     EXPIRED = EnumField("expired", label="过期")

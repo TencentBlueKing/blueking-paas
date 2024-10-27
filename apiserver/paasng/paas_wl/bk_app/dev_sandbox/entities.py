@@ -124,10 +124,12 @@ class DevSandboxWithCodeEditorUrls:
     devserver_url: str
     code_editor_url: str
 
-    def __init__(self, base_url: str, username: str):
-        self.app_url = f"{base_url}/user/{username}/app/"
-        self.devserver_url = f"{base_url}/user/{username}/devserver/"
-        self.code_editor_url = f"{base_url}/user/{username}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
+    def __init__(self, base_url: str, dev_sandbox_code: str):
+        self.app_url = f"{base_url}/user/{dev_sandbox_code}/app/"
+        self.devserver_url = f"{base_url}/user/{dev_sandbox_code}/devserver/"
+        self.code_editor_url = (
+            f"{base_url}/user/{dev_sandbox_code}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
+        )
 
 
 @dataclass

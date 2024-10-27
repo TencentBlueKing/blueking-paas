@@ -81,7 +81,7 @@ settings = LazySettings(
         # Configure minimal required settings
         Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
     ],
-    # Envvar name configs
+    # Env var name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS",
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
@@ -575,7 +575,7 @@ FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME")
 CSRF_COOKIE_DOMAIN = settings.get("CSRF_COOKIE_DOMAIN")
 SESSION_COOKIE_DOMAIN = settings.get("SESSION_COOKIE_DOMAIN")
 
-# 蓝鲸登录票据在Cookie中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
+# 蓝鲸登录票据在 Cookie 中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
 
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#allowed-hosts
@@ -590,6 +590,10 @@ CORS_ORIGIN_ALLOW_ALL = settings.get("CORS_ORIGIN_ALLOW_ALL", False)
 
 # 默认允许通过通过跨域请求传递 Cookie，默认允许
 CORS_ALLOW_CREDENTIALS = True
+
+# 跨域请求弹窗策略
+# https://docs.djangoproject.com/en/4.2/topics/security/#cross-origin-opener-policy
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "unsafe-none"
 
 # ============================ Celery 相关配置 ============================
 

@@ -31,7 +31,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path(r'^blog/', include('blog.urls'))
 """
 
-from django.urls import include
+from django.urls import include, path
 from django.views import i18n as django_i18n_views
 
 from paasng.utils.basic import re_path
@@ -81,14 +81,14 @@ urlpatterns = [
     re_path(r"^admin42/", include("paas_wl.apis.admin.urls")),
     # switch language
     re_path(r"^i18n/setlang/$", django_i18n_views.set_language, name="set_language"),
-    re_path("^", include("paasng.misc.changelog.urls")),
+    path("", include("paasng.misc.changelog.urls")),
     # Views in paas_wl module
-    re_path("^", include("paas_wl.workloads.networking.entrance.urls")),
-    re_path("^", include("paas_wl.workloads.networking.egress.urls")),
-    re_path("^", include("paas_wl.workloads.networking.ingress.urls")),
-    re_path("^", include("paas_wl.workloads.images.urls")),
-    re_path("^", include("paas_wl.bk_app.processes.urls")),
-    re_path("^", include("paas_wl.bk_app.cnative.specs.urls")),
+    path("", include("paas_wl.workloads.networking.entrance.urls")),
+    path("", include("paas_wl.workloads.networking.egress.urls")),
+    path("", include("paas_wl.workloads.networking.ingress.urls")),
+    path("", include("paas_wl.workloads.images.urls")),
+    path("", include("paas_wl.bk_app.processes.urls")),
+    path("", include("paas_wl.bk_app.cnative.specs.urls")),
     re_path(r"^", include("paasng.accessories.paas_analysis.urls")),
     re_path(r"^notice/", include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
     re_path(r"^", include("paasng.accessories.dev_sandbox.urls")),

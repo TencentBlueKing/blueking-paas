@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class EngineConfig(PlugableAppConfig):
     name = "paasng.platform.engine"
+    default = True
 
     def ready(self):
         super().ready()

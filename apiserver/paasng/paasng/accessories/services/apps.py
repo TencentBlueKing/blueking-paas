@@ -20,3 +20,4 @@ from paasng.utils.addons import PlugableAppConfig
 
 class ServicesAppConfig(PlugableAppConfig):
     name = "paasng.accessories.services"
+    default = True

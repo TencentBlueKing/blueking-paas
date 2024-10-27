@@ -21,6 +21,7 @@ from paasng.utils.basic import re_path
 
 class MgrlegacyConfig(PlugableAppConfig):
     name = "paasng.platform.mgrlegacy"
+    default = True
 
 
 def contribute_to_app(app_name):

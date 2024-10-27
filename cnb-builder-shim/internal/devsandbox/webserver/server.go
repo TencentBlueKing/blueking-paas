@@ -132,6 +132,11 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 
 			fileName := filepath.Base(file.Filename)
 			dst := path.Join(s.env.UploadDir, fileName)
+			if len(dst) > 0 && dst[len(dst)-1] == '.' {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)})
+				return
+			}
+
 			if err = c.SaveUploadedFile(file, dst); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
 				return
@@ -145,6 +150,9 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 		case config.BK_REPO:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
+			return
+		default:
 			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
 			return
 		}

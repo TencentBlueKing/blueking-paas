@@ -77,7 +77,7 @@ var _ = Describe("Test webserver api", func() {
 
 	Describe("deploy", func() {
 		It("deploy app", func() {
-			srcPath := filepath.Join("service", "testdata", "django-helloworld.zip")
+			srcPath := filepath.Join("service", "testdata", "helloworld.zip")
 
 			file, _ := os.Open(srcPath)
 			defer file.Close()

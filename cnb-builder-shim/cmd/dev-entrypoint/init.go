@@ -143,8 +143,7 @@ func initializeSourceCode() error {
 	logger.Info(fmt.Sprintf("Downloading source code to %s...", workspace))
 	// TODO: 源码初始化不同的方式抽象成一个接口
 	// 确保工作空间存在
-	err := ensureWorkspace(workspace)
-	if err != nil {
+	if err := ensureWorkspace(workspace); err != nil {
 		return err
 	}
 	// 检查 workspace 下是否已经有文件
@@ -163,7 +162,7 @@ func initializeSourceCode() error {
 			return errors.Wrap(err, "download source code")
 		}
 		// 修改目录权限
-		if err = utils.ChmodR(workspace); err != nil {
+		if err = utils.SetFullPermissions(workspace); err != nil {
 			return errors.Wrap(err, "chmod files")
 		}
 	case config.GIT:
@@ -194,11 +193,5 @@ func fileExists(path string) (exists bool, err error) {
 		return false, errors.Wrap(err, "read workspace directory")
 	}
 
-	if len(files) > 0 {
-		// 文件夹不为空，返回 nil
-		return true, nil
-	}
-
-	// 文件夹为空
-	return false, nil
+	return len(files) > 0, nil
 }

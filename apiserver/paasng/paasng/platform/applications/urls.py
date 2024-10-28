@@ -191,7 +191,7 @@ urlpatterns += [
 # 轻应用
 urlpatterns += [
     re_path(
-        "^sys/api/light-applications/$",
+        r"^sys/api/light-applications/$",
         views.LightAppViewSet.as_view({"post": "create", "delete": "delete", "patch": "edit", "get": "query"}),
         name="sys.api.light-applications",
     ),

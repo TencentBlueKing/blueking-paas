@@ -164,7 +164,7 @@ urlpatterns = [
     ),
     # 平台管理-运行时管理-SlugBuilder 管理
     re_path(
-        "^platform/runtimes/slugbuilder/manage/$",
+        r"^platform/runtimes/slugbuilder/manage/$",
         runtimes.SlugBuilderManageView.as_view(),
         name="admin.runtimes.slugbuilder.manage",
     ),

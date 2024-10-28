@@ -15,21 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""paasng URL Configuration
-
-Examples:
-
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path(r'^$', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path(r'^$', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import path, include
-    2. Add a URL to urlpatterns:  path(r'^blog/', include('blog.urls'))
-"""
-
 from django.urls import include, path
 from django.views import i18n as django_i18n_views
 

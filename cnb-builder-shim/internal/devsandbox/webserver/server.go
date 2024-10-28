@@ -111,6 +111,7 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 }
 
 // DeployHandler handles the deployment of a file to the web server.
+// TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var srcFilePath string

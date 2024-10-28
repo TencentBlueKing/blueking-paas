@@ -30,8 +30,8 @@ ADD ./manage.py .
 ADD ./start.sh .
 
 ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini tini
-RUN chmod +x tini start.sh
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini start.sh
 
 ENV DJANGO_SETTINGS_MODULE svc_mysql.settings
 

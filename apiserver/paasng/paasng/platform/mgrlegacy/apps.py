@@ -29,4 +29,4 @@ def contribute_to_app(app_name):
 
     from .urls import urlpatterns as extra_urlpatterns
 
-    AddonsUrlRegister(base_urlpatterns).register(re_path(r"^", (extra_urlpatterns, None, None)))
+    AddonsUrlRegister(base_urlpatterns).register(re_path("", (extra_urlpatterns, None, None)))

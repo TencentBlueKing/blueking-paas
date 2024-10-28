@@ -20,7 +20,6 @@ from typing import Dict
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -59,10 +58,6 @@ from paasng.platform.engine.serializers import (
 )
 
 
-@method_decorator(name="update", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"]))
-@method_decorator(name="create", decorator=swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"]))
-@method_decorator(name="list", decorator=swagger_auto_schema(query_serializer=ListConfigVarsSLZ(), tags=["环境配置"]))
-@method_decorator(name="destroy", decorator=swagger_auto_schema(tags=["环境配置"]))
 class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """ViewSet for config vars"""
 
@@ -82,6 +77,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         context["module"] = self.get_module_via_path()
         return context
 
+    @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
         data_before = DataDetail(
@@ -108,6 +104,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={200: ConfigVarSLZ()})
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
@@ -136,6 +133,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
         return Response(slz.data)
 
+    @swagger_auto_schema(tags=["环境配置"], responses={204: ""})
     def destroy(self, request, *args, **kwargs):
         """删除环境变量"""
         config_var = self.get_object()
@@ -163,10 +161,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        tags=["环境配置"],
-        responses={201: ConfigVarApplyResultSLZ()},
-    )
+    @swagger_auto_schema(tags=["环境配置"], responses={201: ConfigVarApplyResultSLZ()})
     def clone(self, request, **kwargs):
         """从某一模块克隆环境变量至当前模块"""
         data_before = DataDetail(

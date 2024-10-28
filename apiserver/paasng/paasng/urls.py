@@ -17,9 +17,8 @@
 
 """paasng URL Configuration
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/1.10/topics/http/urls/
 Examples:
+
 Function views
     1. Add an import:  from my_app import views
     2. Add a URL to urlpatterns:  path(r'^$', views.home, name='home')
@@ -89,7 +88,7 @@ urlpatterns = [
     path("", include("paas_wl.workloads.images.urls")),
     path("", include("paas_wl.bk_app.processes.urls")),
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
-    re_path(r"^", include("paasng.accessories.paas_analysis.urls")),
+    path("", include("paasng.accessories.paas_analysis.urls")),
+    path("", include("paasng.accessories.dev_sandbox.urls")),
     re_path(r"^notice/", include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
-    re_path(r"^", include("paasng.accessories.dev_sandbox.urls")),
 ]

@@ -22,6 +22,6 @@ from django.urls import re_path
 from vendor import views
 
 urlpatterns = [
-    re_path(r"^healthz/", views.healthz),
-    re_path(r"^cluster/(?P<cluster_id>\d+)/metrics", views.ClusterMinimalMetricsView.as_view()),
+    re_path(r"healthz/", views.healthz),
+    re_path(r"cluster/(?P<cluster_id>\d+)/metrics", views.ClusterMinimalMetricsView.as_view()),
 ]

@@ -1,5 +1,5 @@
 ### Description
-Query basic information of multi-platform applications based on id or name fuzzy search. With priority given to applications on PaaS3.0 Developer Center，only the first 1000 data items are returned, with a maximum limit of 100 and a maximum offset of 900..
+Query basic information of multi-platform applications based on id or name fuzzy search. Only the first 1000 pieces of data will be returned, with priority given to applications on PaaS3.0 Developer Center.
 
 ### Request Parameters
 

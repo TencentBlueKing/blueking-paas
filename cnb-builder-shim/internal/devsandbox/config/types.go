@@ -21,8 +21,30 @@ type SourceCodeConfig struct {
 	Workspace string
 }
 
+// CorsConfig 跨域配置
+type CorsConfig struct {
+	// 允许的来源
+	AllowOrigins []string
+	// 允许的HTTP方法
+	AllowMethods []string
+	// 允许的请求头
+	AllowHeaders []string
+	// 暴露的响应头
+	ExposeHeaders []string
+	// 凭证共享
+	AllowCredentials bool
+}
+
+// ServiceConfig 服务配置
+type ServiceConfig struct {
+	// 源码获取方式
+	Cors CorsConfig
+}
+
 // Config  全局配置
 type Config struct {
 	// 源码配置
 	SourceCode SourceCodeConfig
+	// 服务配置
+	Service ServiceConfig
 }

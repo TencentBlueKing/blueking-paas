@@ -18,7 +18,6 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.processes.models import PROC_DEFAULT_REPLICAS
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.entities import AutoscalingConfig as _AutoscalingConfig
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
@@ -99,7 +98,6 @@ class TestSyncFromDescMethod:
             [ProcessTmpl(name=proc_name, command="foo", replicas=replicas)]
         )
         spec = ModuleProcessSpec.objects.get(name=proc_name, module=bk_module)
-        assert spec.target_replicas == replicas or PROC_DEFAULT_REPLICAS
         assert spec.get_target_replicas("stag") == expected_stag_replicas
         assert spec.get_target_replicas("prod") == expected_prod_replicas
 

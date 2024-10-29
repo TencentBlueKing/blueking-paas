@@ -32,6 +32,9 @@ var DefaultLayersDir = "/layers"
 // DefaultAppDir is the default build dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 
+// DefaultAppLogDir is the saas default log dir
+var DefaultAppLogDir = utils.EnvOrDefault("CNB_APP_LOG_DIR", "/v3logs")
+
 // AppReloadEvent 事件
 type AppReloadEvent struct {
 	ID string

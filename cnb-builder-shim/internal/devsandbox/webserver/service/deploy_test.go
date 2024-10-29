@@ -34,7 +34,7 @@ var _ = Describe("Test DeployManager", func() {
 	var m *DeployManager
 	var tmpAppDir string
 
-	testSrcFilePath := filepath.Join("testdata", "templates", "django-helloworld")
+	testSrcFilePath := filepath.Join("testdata", "templates", "helloworld")
 	oldAppDir := devsandbox.DefaultAppDir
 
 	BeforeEach(func() {
@@ -55,12 +55,13 @@ var _ = Describe("Test DeployManager", func() {
 
 	Describe("Test deploy", func() {
 		It("test deploy", func() {
-			result, _ := m.Deploy(testSrcFilePath)
+			result, err := m.Deploy(testSrcFilePath)
+			Expect(err).To(BeNil())
 
 			Expect(len(result.DeployID)).To(Equal(32))
 			Expect(result.Status).To(Equal(devsandbox.ReloadProcessing))
 
-			_, err := os.Stat(path.Join(devsandbox.DefaultAppDir, "Procfile"))
+			_, err = os.Stat(path.Join(devsandbox.DefaultAppDir, "Procfile"))
 			Expect(err).To(BeNil())
 
 			// 验证隐藏目录不会被覆盖(删除)
@@ -99,6 +100,49 @@ var _ = Describe("Test DeployManager", func() {
 
 			result, _ = m.Result(reloadID, true)
 			Expect(result.Log).To(Equal(expectedLog))
+		})
+	})
+})
+
+var _ = Describe("Test GetAppLogs", func() {
+	var err error
+	var logPath string
+	var celeryLogPath string
+	var mysqlLogPath string
+	var newCeleryLogPath string
+	BeforeEach(func() {
+		logPath, err = os.MkdirTemp("", "log_test")
+		Expect(err).To(BeNil())
+		celeryLogPath = filepath.Join(logPath, "celery-test-celery.log")
+		mysqlLogPath = filepath.Join(logPath, "web-test-mysql.log")
+		newCeleryLogPath = filepath.Join(logPath, "celery-test-new-celery.log")
+		logContent1 := "value1\nvalue2\n"
+		logContent2 := "value3\nvalue4\n"
+		err := os.WriteFile(celeryLogPath, []byte(logContent1), 0644)
+		Expect(err).To(BeNil())
+		err = os.WriteFile(newCeleryLogPath, []byte(logContent2), 0644)
+		err = os.WriteFile(mysqlLogPath, []byte(logContent2), 0644)
+		Expect(err).To(BeNil())
+	})
+	AfterEach(func() {
+		Expect(os.RemoveAll(logPath)).To(BeNil())
+	})
+	Describe("Test GetAppLogs", func() {
+		It("test lines < logs", func() {
+			logs, err := GetAppLogs(logPath, 1)
+			Expect(err).To(BeNil())
+			Expect(len(logs["celery"])).To(Equal(1))
+			Expect(logs["celery"]).To(Equal([]string{"value4"}))
+			Expect(len(logs["mysql"])).To(Equal(1))
+			Expect(logs["mysql"]).To(Equal([]string{"value4"}))
+		})
+		It("test lines > logs", func() {
+			logs, err := GetAppLogs(logPath, 5)
+			Expect(err).To(BeNil())
+			Expect(len(logs["celery"])).To(Equal(4))
+			Expect(logs["celery"]).To(Equal([]string{"value1", "value2", "value3", "value4"}))
+			Expect(len(logs["mysql"])).To(Equal(2))
+			Expect(logs["mysql"]).To(Equal([]string{"value3", "value4"}))
 		})
 	})
 })

@@ -21,6 +21,7 @@ package webserver
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -30,8 +31,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 type envConfig struct {
@@ -44,7 +47,7 @@ type envConfig struct {
 type WebServer struct {
 	server *gin.Engine
 	lg     *logr.Logger
-	ch     chan dc.AppReloadEvent
+	ch     chan devsandbox.AppReloadEvent
 	env    envConfig
 }
 
@@ -64,7 +67,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 		server: r,
 		lg:     lg,
 		// unbuffered channel
-		ch:  make(chan dc.AppReloadEvent),
+		ch:  make(chan devsandbox.AppReloadEvent),
 		env: cfg,
 	}
 
@@ -83,7 +86,7 @@ func (s *WebServer) Start() error {
 }
 
 // ReadReloadEvent blocking read on reload event
-func (s *WebServer) ReadReloadEvent() (dc.AppReloadEvent, error) {
+func (s *WebServer) ReadReloadEvent() (devsandbox.AppReloadEvent, error) {
 	return <-s.ch, nil
 }
 
@@ -108,29 +111,61 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 }
 
 // DeployHandler handles the deployment of a file to the web server.
+// TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		file, err := c.FormFile("file")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
-			return
-		}
+		var srcFilePath string
+		switch config.G.SourceCode.FetchMethod {
+		case config.HTTP:
+			// 创建临时文件夹
+			tmpDir, err := os.MkdirTemp("", "source-*")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
+				return
+			}
+			defer os.RemoveAll(tmpDir)
 
-		fileName := filepath.Base(file.Filename)
-		srcFilePath := path.Join(s.env.UploadDir, fileName)
-		if err = c.SaveUploadedFile(file, srcFilePath); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
+			file, err := c.FormFile("file")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
+				return
+			}
+
+			fileName := filepath.Base(file.Filename)
+			dst := path.Join(s.env.UploadDir, fileName)
+			if len(dst) > 0 && dst[len(dst)-1] == '.' {
+				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)})
+				return
+			}
+
+			if err = c.SaveUploadedFile(file, dst); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
+				return
+			}
+			// 解压文件到临时目录
+			if err = utils.Unzip(dst, tmpDir); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+				return
+			}
+			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+		case config.BK_REPO:
+			srcFilePath = config.G.SourceCode.Workspace
+		case config.GIT:
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
+			return
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
 			return
 		}
 
 		status, err := svc.Deploy(srcFilePath)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("deploy error: %s", err.Error())})
 			return
 		}
 
 		select {
-		case s.ch <- dc.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
+		case s.ch <- devsandbox.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:
 			c.JSON(
@@ -161,4 +196,4 @@ func ResultHandler(svc service.DeployServiceHandler) gin.HandlerFunc {
 	}
 }
 
-var _ dc.DevWatchServer = (*WebServer)(nil)
+var _ devsandbox.DevWatchServer = (*WebServer)(nil)

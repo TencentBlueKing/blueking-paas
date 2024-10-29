@@ -27,15 +27,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dc "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 )
 
 var _ = Describe("Test DeployManager", func() {
 	var m *DeployManager
 	var tmpAppDir string
 
-	testSrcFilePath := filepath.Join("testdata", "django-helloworld.zip")
-	oldAppDir := dc.DefaultAppDir
+	testSrcFilePath := filepath.Join("testdata", "templates", "django-helloworld")
+	oldAppDir := devsandbox.DefaultAppDir
 
 	BeforeEach(func() {
 		m = NewDeployManager()
@@ -44,13 +44,13 @@ var _ = Describe("Test DeployManager", func() {
 		// 创建隐藏目录
 		Expect(os.MkdirAll(path.Join(tmpAppDir, ".heroku"), 0o755)).To(BeNil())
 
-		dc.DefaultAppDir = tmpAppDir
+		devsandbox.DefaultAppDir = tmpAppDir
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(tmpAppDir)).To(BeNil())
 
-		dc.DefaultAppDir = oldAppDir
+		devsandbox.DefaultAppDir = oldAppDir
 	})
 
 	Describe("Test deploy", func() {
@@ -58,43 +58,43 @@ var _ = Describe("Test DeployManager", func() {
 			result, _ := m.Deploy(testSrcFilePath)
 
 			Expect(len(result.DeployID)).To(Equal(32))
-			Expect(result.Status).To(Equal(dc.ReloadProcessing))
+			Expect(result.Status).To(Equal(devsandbox.ReloadProcessing))
 
-			_, err := os.Stat(path.Join(dc.DefaultAppDir, "Procfile"))
+			_, err := os.Stat(path.Join(devsandbox.DefaultAppDir, "Procfile"))
 			Expect(err).To(BeNil())
 
 			// 验证隐藏目录不会被覆盖(删除)
-			_, err = os.Stat(path.Join(dc.DefaultAppDir, ".heroku"))
+			_, err = os.Stat(path.Join(devsandbox.DefaultAppDir, ".heroku"))
 			Expect(err).To(BeNil())
 		})
 	})
 
 	Describe("Test get result", func() {
-		oldReloadDir := dc.ReloadDir
-		oldReloadLogDir := dc.ReloadLogDir
+		oldReloadDir := devsandbox.ReloadDir
+		oldReloadLogDir := devsandbox.ReloadLogDir
 
-		var storage dc.ReloadResultStorage
+		var storage devsandbox.ReloadResultStorage
 
 		BeforeEach(func() {
-			dc.ReloadDir, _ = os.MkdirTemp("", "reload")
-			dc.ReloadLogDir = filepath.Join(dc.ReloadDir, "log")
+			devsandbox.ReloadDir, _ = os.MkdirTemp("", "reload")
+			devsandbox.ReloadLogDir = filepath.Join(devsandbox.ReloadDir, "log")
 
-			storage, _ = dc.NewReloadResultStorage()
+			storage, _ = devsandbox.NewReloadResultStorage()
 		})
 		AfterEach(func() {
-			Expect(os.RemoveAll(dc.ReloadDir)).To(BeNil())
+			Expect(os.RemoveAll(devsandbox.ReloadDir)).To(BeNil())
 
-			dc.ReloadDir = oldReloadDir
-			dc.ReloadLogDir = oldReloadLogDir
+			devsandbox.ReloadDir = oldReloadDir
+			devsandbox.ReloadLogDir = oldReloadLogDir
 		})
 		It("Test get result", func() {
 			reloadID := uuid.NewString()
-			_ = storage.WriteStatus(reloadID, dc.ReloadSuccess)
+			_ = storage.WriteStatus(reloadID, devsandbox.ReloadSuccess)
 			expectedLog := "build done..."
-			_ = os.WriteFile(filepath.Join(dc.ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
+			_ = os.WriteFile(filepath.Join(devsandbox.ReloadLogDir, reloadID), []byte(expectedLog), 0o644)
 
 			result, _ := m.Result(reloadID, false)
-			Expect(result.Status).To(Equal(dc.ReloadSuccess))
+			Expect(result.Status).To(Equal(devsandbox.ReloadSuccess))
 			Expect(result.Log).To(Equal(""))
 
 			result, _ = m.Result(reloadID, true)

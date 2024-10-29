@@ -150,3 +150,25 @@ func readAndSortLines(filePath string) ([]string, error) {
 
 	return lines, nil
 }
+
+// SetFullPermissions changes the full permissions of a directory and all its contents recursively.
+func SetFullPermissions(dirPath string) error {
+	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			err = os.Chmod(path, 0o777)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = os.Chmod(path, 0o666)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

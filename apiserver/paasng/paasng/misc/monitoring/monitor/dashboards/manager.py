@@ -37,7 +37,7 @@ class ManagerProtocol(Protocol):
         ...
 
 
-class BkDashboardManger:
+class BkDashboardManager:
     """蓝鲸监控仪表盘管理器"""
 
     def __init__(self, application: Application):
@@ -82,7 +82,7 @@ def get_bk_dashboard_manager_cls() -> Type[ManagerProtocol]:
         logger.warning("bkmonitor in this edition not enabled, skip the built-in dashboard")
         return NullManager
     else:
-        return BkDashboardManger
+        return BkDashboardManager
 
 
 bk_dashboard_manager_cls = get_bk_dashboard_manager_cls()

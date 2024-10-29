@@ -97,7 +97,10 @@
               class="app-name-wrapper"
               v-bk-overflow-tips="{ content: `${row.application.name}（${row.application.code}）` }"
             >
-              <span class="click-area" @click="toAppDetail(row)">
+              <span
+                class="click-area"
+                @click="toAppDetail(row)"
+              >
                 <img
                   class="app-logo"
                   :src="row.application.logo_url"
@@ -109,7 +112,10 @@
                 </span>
               </span>
               <span class="ml20 msg">
-                MySQL {{ $t('慢查询告警数量') }}: <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>/{{ row.count }}
+                MySQL {{ $t('慢查询告警数量') }}:
+                <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>
+                <span>/</span>
+                <span>{{ row.count }}</span>
               </span>
             </div>
           </template>
@@ -274,10 +280,10 @@ export default {
         color: #3a84ff;
       }
       .msg {
-        color: #63656E;
+        color: #63656e;
       }
       .slow-query {
-        color: #EA3636;
+        color: #ea3636;
       }
     }
   }
@@ -297,8 +303,13 @@ export default {
     .bk-table-expand-icon .bk-icon {
       color: #979ba5;
     }
-    .child-module-table-cls .bk-table-header-wrapper {
-      display: none;
+    .child-module-table-cls {
+      .bk-table-header-wrapper {
+        display: none;
+      }
+      .bk-table-body-wrapper {
+        color: #63656e;
+      }
     }
     .env-column-cls .cell {
       display: flex;

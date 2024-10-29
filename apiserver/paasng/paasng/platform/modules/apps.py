@@ -20,6 +20,7 @@ from paasng.utils.addons import PlugableAppConfig
 
 class ModulesConfig(PlugableAppConfig):
     name = "paasng.platform.modules"
+    default = True
 
     def ready(self):
         super().ready()

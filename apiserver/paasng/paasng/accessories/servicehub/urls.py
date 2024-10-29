@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
 
 from paasng.utils.basic import make_app_pattern, re_path
 
@@ -28,38 +27,38 @@ CATEGORY_ID = r"(?P<category_id>[\d]+)"
 
 urlpatterns = [
     # service APIs
-    url(
+    re_path(
         r"^api/services/%s/$" % SERVICE_UUID,
         views.ServiceViewSet.as_view({"get": "retrieve"}),
         name="api.services.get_service_detail",
     ),
-    url(
+    re_path(
         r"^api/services/regions/%s/$" % REGION,
         views.ServiceViewSet.as_view({"get": "list_by_region"}),
         name="api.services.list_service_by_region",
     ),
-    url(
+    re_path(
         r"^api/services/regions/%s/init_templates/(?P<template>[\w-]+)$" % REGION,
         views.ServiceViewSet.as_view({"get": "list_by_template"}),
         name="api.services.list_service_by_template",
     ),
-    url(
+    re_path(
         r"^api/services/%s/application-attachments/$" % SERVICE_UUID,
         views.ServiceViewSet.as_view({"get": "list_related_apps"}),
         name="api.services.list_application",
     ),
-    url(
+    re_path(
         r"^api/services/%s/regions/%s/specs$" % (SERVICE_UUID, REGION),
         views.ServicePlanViewSet.as_view({"get": "retrieve_specifications"}),
         name="api.services.get_specifications",
     ),
-    url(
+    re_path(
         f"^api/services/categories/{CATEGORY_ID}/$",
         views.ServiceSetViewSet.as_view({"get": "list_by_category"}),
         name="api.services.list_service_by_category",
     ),
     # List attachments (from service side)
-    url(
+    re_path(
         r"^api/services/name/(?P<service_name>[\w-]+)/application-attachments/$",
         views.ServiceSetViewSet.as_view({"get": "list_by_name"}),
         name="api.services.list_service_with_application",
@@ -102,13 +101,13 @@ urlpatterns = [
         name="api.services.list_by_application",
     ),
     # Manager service attachments (from services side)
-    url(
+    re_path(
         r"^api/services/service-attachments/$",
         views.ModuleServicesViewSet.as_view({"post": "bind"}),
         name="api.services.service_application_attachments.bind",
     ),
     # Manager engine_app attachment
-    url(
+    re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/credentials_enabled/$", include_envs=False),
         views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
         name="api.services.credentials_enabled",

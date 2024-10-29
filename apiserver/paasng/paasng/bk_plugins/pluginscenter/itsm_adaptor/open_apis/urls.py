@@ -38,7 +38,8 @@ urlpatterns = [
     ),
     # 灰度发布策略修改回调 API
     path(
-        "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/strategy/<str:release_strategy_id>/",
+        "open/api/itsm/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/"
+        + "<str:release_id>/strategy/<str:release_strategy_id>/",
         views.PluginCallBackApiViewSet.as_view({"post": "itsm_canary_callback"}),
     ),
 ]

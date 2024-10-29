@@ -27,4 +27,3 @@
 在返回插件数据时，刻意用了与普通 Application 不同的结构，屏蔽了一些字段，这是有意为之。
 不直接使用 Application 结构，我们就能更方便的在后期针对插件做定制。
 """
-default_app_config = "paasng.bk_plugins.bk_plugins.apps.BkPluginsAppConfig"

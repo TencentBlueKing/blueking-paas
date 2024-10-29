@@ -18,15 +18,26 @@
 from django.dispatch import Signal
 
 # Triggered when a single deployment process is finished(usually in background worker process)
-post_appenv_deploy = Signal(providing_args=["deployment"])
-pre_appenv_deploy = Signal(providing_args=["deployment"])
-pre_appenv_build = Signal(providing_args=["deployment", "step"])
+# providing_args: [deployment: Deployment]
+post_appenv_deploy = Signal()
+
+# providing_args: [deployment: Deployment]
+pre_appenv_deploy = Signal()
+
+# TODO 这个信号应该没有用到？（sent but not receiver）
+# providing_args: [deployment: Deployment, step: DeployStep]
+pre_appenv_build = Signal()
 
 # mainly for DeployPhase & DeployStep
-pre_phase_start = Signal(providing_args=["phase"])
-post_phase_end = Signal(providing_args=["status", "phase"])
+# providing_args: [phase: DeployPhaseTypes]
+pre_phase_start = Signal()
 
-# 当某个 module_env 进行 release 时, 会触发该信号
-on_release_created = Signal(providing_args=["env"])
+# providing_args: [status: JobStatus, phase: DeployPhaseTypes]
+post_phase_end = Signal()
 
-processes_updated = Signal(providing_args=["events", "extra_params"])
+# triggered when module_env released
+# providing_args: [env: ModuleEnvironment]
+on_release_created = Signal()
+
+# providing_args: [events: Iterable[ProcessBaseEvent], extra_params: Dict]
+processes_updated = Signal()

@@ -14,8 +14,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
@@ -76,49 +74,49 @@ urlpatterns = [
         name="api.analysis.metrics.event.aggregate_by_interval",
     ),
     # 自定义站点
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/config$",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/config$",
         views.PageViewConfigViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.config",
     ),
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/aggregate_by_interval$",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/aggregate_by_interval$",
         views.PageViewMetricTrendViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.aggregate_by_interval$",
     ),
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/total$",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/total$",
         views.PageViewTotalMetricsViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.total",
     ),
-    url(
+    re_path(
         f"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/metrics/dimension/{RE_DIMENSION_TYPE}$",  # noqa
         views.DimensionMetricsViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.group_by_dimension",
     ),
     # 自定义站点-自定义事件
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/config$",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/config$",
         views.CustomEventConfigViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.event.config",
     ),
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/total$",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/total$",
         views.CustomEventTotalMetricsViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.total",
     ),
-    url(
-        "^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/overview",
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/overview",
         views.CustomEventOverviewViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.overview",
     ),
-    url(
-        f"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/c/(?P<category>[^/]+)/d/(?P<dimension>[^/]+)/detail",  # noqa
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/c/(?P<category>[^/]+)/d/(?P<dimension>[^/]+)/detail",  # noqa
         views.CustomEventDetailViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.detail",
     ),
-    url(
-        f"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/aggregate_by_interval",  # noqa
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/analysis/site/(?P<site_name>default)/event/metrics/aggregate_by_interval",  # noqa
         views.CustomEventTrendViewSet.as_view({"get": "retrieve_for_custom_site"}),
         name="api.analysis.custom_site.metrics.event.aggregate_by_interval",
     ),

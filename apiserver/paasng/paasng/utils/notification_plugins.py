@@ -20,7 +20,6 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import requests
 from django.conf import settings
-from django.utils.encoding import force_text
 from django.utils.module_loading import import_string
 
 from paasng.utils.notifier import UserNotificationPlugin, get_notification_backend
@@ -144,7 +143,6 @@ class SMSNotificationPlugin(BaseComponentAPIPlugin):
             logger.error("The receivers of sending SMS is empty, skipped")
             return False
 
-        content = force_text(content)
         params = {
             "receiver__username": receivers,
             "content": content,

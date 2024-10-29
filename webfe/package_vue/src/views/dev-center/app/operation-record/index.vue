@@ -105,7 +105,7 @@
             :filters="envFilters"
             :filter-multiple="false"
           >
-            <span slot-scope="{ row }">{{ envFilters.find(v => v.value === row.environment)?.text || '--' }}</span>
+            <span slot-scope="{ row }">{{ envFilters.find((v) => v.value === row.environment)?.text || '--' }}</span>
           </bk-table-column>
           <bk-table-column
             :label="$t('状态')"
@@ -134,9 +134,7 @@
             :label="$t('操作')"
             width="120"
           >
-            <template
-              slot-scope="{ row }"
-            >
+            <template slot-scope="{ row }">
               <bk-button
                 v-if="row.detail_type"
                 style="margin-right: 12px"
@@ -160,7 +158,10 @@
       :quick-close="true"
       ext-cls="diff-sideslider-cls"
     >
-      <div slot="header" class="detail-header-wrapper">
+      <div
+        slot="header"
+        class="detail-header-wrapper"
+      >
         {{ $t('操作详情') }}
         <span class="tips">
           {{ sidesliderTitleTips }}
@@ -179,7 +180,10 @@
       :width="640"
       :quick-close="true"
     >
-      <div slot="header" class="detail-header-wrapper">
+      <div
+        slot="header"
+        class="detail-header-wrapper"
+      >
         {{ $t('操作详情') }}
         <span class="tips">
           {{ sidesliderTitleTips }}
@@ -206,6 +210,7 @@ import user from '@/components/user';
 import diff from './comps/diff.vue';
 import cloudApiDetail from './comps/cloud-api-detail.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import yamljs from 'js-yaml';
 
 export default {
   name: 'OperationRecord',
@@ -264,7 +269,7 @@ export default {
       return this.$route.params.id;
     },
     moduleFilters() {
-      return this.curAppModuleList.map(m => ({ value: m.name, text: m.name }));
+      return this.curAppModuleList.map((m) => ({ value: m.name, text: m.name }));
     },
     dateShortcuts() {
       return createTimeShortcuts(this.$i18n);
@@ -350,14 +355,14 @@ export default {
       }
     },
     setDiffData(before, after) {
-      this.diffConfig.beforeYaml = JSON.stringify(before, null, 2);
-      this.diffConfig.afterYaml = JSON.stringify(after, null, 2);
+      this.diffConfig.beforeYaml = yamljs.dump(before, { indent: 2 });
+      this.diffConfig.afterYaml = yamljs.dump(after, { indent: 2 });
     },
     handleOpenDiff(row) {
       this.diffConfig.isLoading = true;
       if (row.detail_type === 'raw_data') {
         // raw_data 类型直接使用接口返回数据
-        this.setDiffData(row.data_before?.data, row.data_after?.data);
+        this.setDiffData(row.data_before?.data ?? '', row.data_after?.data ?? '');
         this.diffConfig.isLoading = false;
       } else {
         // 通过id查询
@@ -367,18 +372,24 @@ export default {
     },
     // bkapp_revision 类型通过 id 获取数据
     getDiffData(row) {
-      const { module_name, environment } = row;
-      Promise.all([
-        this.getDeployVersionDetails(module_name, environment, row.data_before?.data),
-        this.getDeployVersionDetails(module_name, environment, row.data_after?.data),
-      ])
+      const { module_name, environment, data_before, data_after } = row;
+
+      const getDataPromise = (data) => {
+        return data ? this.getDeployVersionDetails(module_name, environment, data) : Promise.resolve(null);
+      };
+
+      const promises = [getDataPromise(data_before?.data), getDataPromise(data_after?.data)];
+
+      Promise.all(promises)
         .then(([before, after]) => {
-          this.setDiffData(before.json_value, after.json_value);
+          const beforeJsonValue = before?.json_value || '';
+          const afterJsonValue = after?.json_value || '';
+          this.setDiffData(beforeJsonValue, afterJsonValue);
         })
         .catch((e) => {
           this.catchErrorHandler(e);
         })
-        . finally(() => {
+        .finally(() => {
           this.diffConfig.isLoading = false;
         });
     },
@@ -415,7 +426,7 @@ export default {
     // 时间筛选
     handleDateChange(date) {
       // 清空
-      if (date?.every(t => t === '')) {
+      if (date?.every((t) => t === '')) {
         this.dateParams = {};
         this.getRecords(1);
         return;
@@ -492,7 +503,7 @@ export default {
     }
   }
   .detail-header-wrapper .tips {
-    color: #63656E;
+    color: #63656e;
     font-size: 14px;
   }
 }

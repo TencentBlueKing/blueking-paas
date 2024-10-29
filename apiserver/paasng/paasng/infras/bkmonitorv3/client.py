@@ -39,29 +39,21 @@ logger = logging.getLogger(__name__)
 class BkMonitorBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def metadata_get_space_detail(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_get_space_detail(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_create_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_create_space(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_update_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_update_space(self, *args, **kwargs) -> Dict: ...
 
-    def search_alert(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alert(self, *args, **kwargs) -> Dict: ...
 
-    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict: ...
 
-    def promql_query(self, *args, **kwargs) -> Dict:
-        ...
+    def promql_query(self, *args, **kwargs) -> Dict: ...
 
-    def as_code_import_config(self, *args, **kwargs) -> Dict:
-        ...
+    def as_code_import_config(self, *args, **kwargs) -> Dict: ...
 
-    def quick_import_dashboard(self, *args, **kwargs) -> Dict:
-        ...
+    def quick_import_dashboard(self, *args, **kwargs) -> Dict: ...
 
 
 class BKMonitorSpaceManager:
@@ -203,9 +195,9 @@ class BkMonitorClient:
         if not resp.get("result"):
             raise BkMonitorApiError(resp["message"])
         data = resp.get("data", {})
-        data[
-            "strategy_config_link"
-        ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        data["strategy_config_link"] = (
+            f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        )
         return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
@@ -267,7 +259,7 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp["message"])
 
     def import_dashboard(self, biz_or_space_id: int, dash_name: str):
-        """ "导入仪表盘到蓝鲸应用的命名空间
+        """导入仪表盘到蓝鲸应用的命名空间
 
         :param biz_or_space_id: 业务或空间 ID
         :param dash_name: 仪表盘名称，需要提前将仪表盘的 JSON 文件内置到监控的代码目录中

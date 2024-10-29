@@ -19,22 +19,22 @@ import pytest
 from django.urls import reverse
 
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.misc.monitoring.monitor.models import AppDashBoard
+from paasng.misc.monitoring.monitor.models import AppDashboard
 
 pytestmark = pytest.mark.django_db
 
 
 class TestGetDashboardInfoViewSet:
-    @pytest.fixture()
+    @pytest.fixture
     def bk_monitor_space(self, bk_app):
         return BKMonitorSpace.objects.create(
             application=bk_app, id=1, space_type_id="bk_saas", space_id="app1", extra_info={}
         )
 
-    @pytest.fixture()
-    def app_dashboards(self, bk_app):
+    @pytest.fixture
+    def init_app_dashboards(self, bk_app):
         # 先创建其他语言的仪表盘，仪表盘默认按创建时间排序
-        other_language_dashboard = AppDashBoard.objects.create(
+        other_language_dashboard = AppDashboard.objects.create(
             application=bk_app,
             language="fake_language",
             name="bksaas/framework-fake_language",
@@ -42,7 +42,7 @@ class TestGetDashboardInfoViewSet:
             template_version="v1",
         )
 
-        default_dashboard = AppDashBoard.objects.create(
+        default_dashboard = AppDashboard.objects.create(
             application=bk_app,
             language=bk_app.default_module.language,
             name="bksaas/framework-python",
@@ -51,7 +51,8 @@ class TestGetDashboardInfoViewSet:
         )
         return [other_language_dashboard, default_dashboard]
 
-    def test_get_builtin_dashboards(self, api_client, bk_app, bk_monitor_space, app_dashboards):
+    @pytest.mark.usefixtures("init_app_dashboards")
+    def test_get_builtin_dashboards(self, api_client, bk_app, bk_monitor_space):
         url = reverse(
             "api.modules.monitor.builtin_dashboards",
             kwargs={

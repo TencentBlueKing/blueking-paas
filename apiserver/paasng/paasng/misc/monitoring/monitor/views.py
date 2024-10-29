@@ -37,7 +37,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.monitoring.monitor.alert_rules.ascode.exceptions import AsCodeAPIError
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manager_cls
-from paasng.misc.monitoring.monitor.models import AppDashBoard
+from paasng.misc.monitoring.monitor.models import AppDashboard
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
 from paasng.platform.modules.models import Module
@@ -62,7 +62,7 @@ from .serializers import (
     AlertListByUserSLZ,
     AlertRuleSLZ,
     AlertSLZ,
-    AppDashBoardSLZ,
+    AppDashboardSLZ,
     ListAlarmStrategiesSLZ,
     ListAlertRulesSLZ,
     ListAlertsSLZ,
@@ -345,8 +345,8 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
 class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
-    def get(self, request, code):
-        """获取监控仪表盘地址等信息"""
+    def get_dashboard_url(self, request, code):
+        """获取应用在蓝鲸监控仪表盘页面的地址"""
         app = self.get_application()
 
         try:
@@ -356,8 +356,8 @@ class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
         else:
             return Response({"dashboard_url": f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}#/grafana/home"})
 
-    def get_builtin_dashboards(self, request, code):
-        """内置到监控应用命名空间下的内置仪表盘地址，没有 bk_biz_id 时不返回数据，故用独立的函数"""
+    def list_builtin_dashboards(self, request, code):
+        """查询应用已内置的仪表盘信息，没有 bk_biz_id 时不返回数据"""
         app = self.get_application()
         try:
             bk_biz_id = BKMonitorSpace.objects.get(application=app).iam_resource_id
@@ -365,10 +365,10 @@ class GetDashboardInfoView(ViewSet, ApplicationCodeInPathMixin):
             return Response([])
 
         # 查询应用所有已经内置的仪表盘
-        dashboards = AppDashBoard.objects.filter(application=app).order_by("created")
-        serializer = AppDashBoardSLZ(dashboards, context={"bk_biz_id": bk_biz_id}, many=True)
+        dashboards = AppDashboard.objects.filter(application=app).order_by("created")
+        serializer = AppDashboardSLZ(dashboards, context={"bk_biz_id": bk_biz_id}, many=True)
 
-        # 将 dashboards 的数据将 app_languages 中出现过的语言对应的 name 排到前面
+        # app_languages 中出现过的语言对应的仪表盘排到前面
         app_languages = set(Module.objects.filter(application=app).values_list("language", flat=True))
         sorted_data = sorted(serializer.data, key=lambda d: (d["language"] not in app_languages))
         return Response(sorted_data)

@@ -23,36 +23,35 @@ from django.test.utils import override_settings
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.misc.monitoring.monitor.models import AppDashBoard
-from paasng.platform.templates.models import AppDashBoardTemplate
+from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture()
+@pytest.fixture
 def bk_monitor_space(bk_app):
     return BKMonitorSpace.objects.create(
         application=bk_app, id=1, space_type_id="bksaas", space_id="app1", extra_info={}
     )
 
 
-@pytest.fixture()
-def dashboard_templates(bk_app):
-    default_template = AppDashBoardTemplate.objects.create(
+@pytest.fixture
+def init_dashboard_templates(bk_app):
+    default_template = AppDashboardTemplate.objects.create(
         language=bk_app.default_module.language,
         name="bksaas/framework-python",
         display_name="Python 开发框架内置仪表盘",
         version="v1",
         is_plugin_template=False,
     )
-    other_language_template = AppDashBoardTemplate.objects.create(
+    other_language_template = AppDashboardTemplate.objects.create(
         language="fake_language",
         name="bksaas/framework-fake_language",
         display_name="fake_language 开发框架内置仪表盘",
         version="v1",
         is_plugin_template=False,
     )
-    plugin_template = AppDashBoardTemplate.objects.create(
+    plugin_template = AppDashboardTemplate.objects.create(
         language=bk_app.default_module.language,
         name="bksaas/plugin-fake_language",
         display_name="Python 插件内置仪表盘",
@@ -62,13 +61,17 @@ def dashboard_templates(bk_app):
     return [default_template, other_language_template, plugin_template]
 
 
-def test_init_dashboard_command(bk_app, bk_monitor_space, dashboard_templates):
+@pytest.mark.usefixtures("init_dashboard_templates")
+def test_init_dashboard_command(
+    bk_app,
+    bk_monitor_space,
+):
     with override_settings(ENABLE_BK_MONITOR=True), mock.patch.object(
         BkMonitorClient, "import_dashboard", return_value=None
     ):
         # 仅初始化非插件、Python 语言的仪表盘
         call_command("init_dashboards", app_codes=[bk_app.code])
 
-    app_dashboards = AppDashBoard.objects.filter(application=bk_app)
+    app_dashboards = AppDashboard.objects.filter(application=bk_app)
     assert app_dashboards.count() == 1
     assert app_dashboards[0].name == "bksaas/framework-python"

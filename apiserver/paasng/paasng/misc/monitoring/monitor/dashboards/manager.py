@@ -22,23 +22,22 @@ from django.conf import settings
 
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.misc.monitoring.monitor.models import AppDashBoard
+from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
-from paasng.platform.templates.models import AppDashBoardTemplate
 
 logger = logging.getLogger(__name__)
 
 
 class ManagerProtocol(Protocol):
-    def __init__(self, application: Application):
-        ...
+    def __init__(self, application: Application): ...
 
     def init_builtin_dashboard(self):
+        """初始化内置仪表盘"""
         ...
 
 
-class BkDashBoardManger:
+class BkDashboardManger:
     """蓝鲸监控仪表盘管理器"""
 
     def __init__(self, application: Application):
@@ -50,13 +49,13 @@ class BkDashBoardManger:
         """初始化内置仪表盘"""
         # 查询应用已经导入过的仪表盘
         imported_dashboard_names = set(
-            AppDashBoard.objects.filter(application=self.application).values_list("name", flat=True)
+            AppDashboard.objects.filter(application=self.application).values_list("name", flat=True)
         )
         # 查询应用所有模块的语言
         app_languages = set(Module.objects.filter(application=self.application).values_list("language", flat=True))
 
         # 按应用的类型、语言查询应用还需要导入的仪表盘
-        dashboard_templates = AppDashBoardTemplate.objects.filter(
+        dashboard_templates = AppDashboardTemplate.objects.filter(
             is_plugin_template=self.application.is_plugin_app, language__in=app_languages
         ).exclude(name__in=imported_dashboard_names)
 
@@ -64,7 +63,7 @@ class BkDashBoardManger:
         # 导入模板中新增的仪表盘
         for template in dashboard_templates:
             self.client.import_dashboard(int(space.iam_resource_id), template.name)
-            AppDashBoard.objects.create(
+            AppDashboard.objects.create(
                 application=self.application,
                 name=template.name,
                 display_name=template.display_name,
@@ -73,11 +72,9 @@ class BkDashBoardManger:
 
 
 class NullManager:
-    def __init__(self, application: Application):
-        ...
+    def __init__(self, application: Application): ...
 
-    def init_builtin_dashboard(self):
-        ...
+    def init_builtin_dashboard(self): ...
 
 
 def get_bk_dashboard_manager_cls() -> Type[ManagerProtocol]:
@@ -85,7 +82,7 @@ def get_bk_dashboard_manager_cls() -> Type[ManagerProtocol]:
         logger.warning("bkmonitor in this edition not enabled, skip the built-in dashboard")
         return NullManager
     else:
-        return BkDashBoardManger
+        return BkDashboardManger
 
 
 bk_dashboard_manager_cls = get_bk_dashboard_manager_cls()

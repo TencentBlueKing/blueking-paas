@@ -191,7 +191,7 @@ class AlarmStrategySLZ(serializers.Serializer):
     strategy_config_link = serializers.CharField(help_text="策略配置链接")
 
 
-class AppDashBoardSLZ(serializers.Serializer):
+class AppDashboardSLZ(serializers.Serializer):
     name = serializers.CharField()
     display_name = serializers.CharField()
     language = serializers.CharField()

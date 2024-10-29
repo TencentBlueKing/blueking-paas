@@ -57,13 +57,3 @@ class Template(AuditedModel):
 
     class Meta:
         ordering = ["created"]
-
-
-class AppDashBoardTemplate(AuditedModel):
-    """仪表盘模板，只需要记录名称和版本号，模板的内容在蓝鲸监控侧维护"""
-
-    name = models.CharField(max_length=64, unique=True, help_text="仪表盘名称，如：bksaas/framework-python")
-    display_name = models.CharField(max_length=512, help_text="仪表盘展示名称，如：Python 开发框架内置仪表盘")
-    version = models.CharField(max_length=32)
-    language = models.CharField(verbose_name="仪表盘所属语言", max_length=32)
-    is_plugin_template = models.BooleanField("是否为插件应用的模板", default=False)

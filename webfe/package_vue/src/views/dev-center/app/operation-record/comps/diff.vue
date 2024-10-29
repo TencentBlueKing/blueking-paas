@@ -9,14 +9,10 @@
         <span>{{ $t('操作后') }}</span>
       </div>
     </div>
-    <bk-diff
+    <code-diff
       :old-content="oldCode"
       :new-content="newCode"
-      :language="language"
-      :format="'side-by-side'"
-      theme="dark"
-      ext-cls="record-diff-cls"
-    ></bk-diff>
+    />
     <section class="buttom-status-bar">
       <div
         class="item"
@@ -38,8 +34,12 @@
 </template>
 
 <script>
+import codeDiff from './code-diff.vue';
 export default {
   name: 'RecordDiff',
+  components: {
+    codeDiff,
+  },
   props: {
     oldCode: {
       type: String,
@@ -107,37 +107,6 @@ export default {
         color: #64a0fa;
         background: #1e3567;
         border-radius: 2px;
-      }
-    }
-  }
-  .record-diff-cls {
-    flex: 1 1 auto;
-    overflow: hidden;
-    overflow-y: auto;
-    /deep/ .d2h-file-wrapper {
-      border: none;
-      .d2h-code-wrapper {
-        border-left: none !important;
-        tbody.d2h-diff-tbody tr {
-          position: relative;
-        }
-      }
-      .d2h-file-side-diff {
-        border-left: 1px solid #313238;
-        background: #1d1d1d;
-        margin-bottom: 0;
-        &::-webkit-scrollbar-thumb {
-          background-color: #616161;
-        }
-      }
-      .d2h-code-wrapper {
-        .hljs {
-          white-space: pre;
-        }
-        code,
-        pre {
-          font-family: Menlo, Monaco, Consolas, Courier, monospace;
-        }
       }
     }
   }

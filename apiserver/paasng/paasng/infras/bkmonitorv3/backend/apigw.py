@@ -91,6 +91,14 @@ class Group(OperationGroup):
         path="/as_code_import_config/",
     )
 
+    # 快捷应用内置仪表盘
+    quick_import_dashboard = bind_property(
+        Operation,
+        name="quick_import_dashboard",
+        method="POST",
+        path="/quick_import_dashboard/",
+    )
+
 
 class Client(APIGatewayClient):
     """bkmonitorv3

@@ -98,7 +98,6 @@ class Test__get_deploy_desc_handler:
     @pytest.mark.parametrize(
         ("yaml_fixture_name", "expected_name"),
         [
-            ("yaml_v1_normal", "deploy_desc_getter_v1"),
             ("yaml_v2_normal", "deploy_desc_getter_v2"),
             ("yaml_v3_normal", "deploy_desc_getter_v3"),
         ],
@@ -108,6 +107,10 @@ class Test__get_deploy_desc_handler:
         handler = get_deploy_desc_handler(yaml.safe_load(_yaml_content))
         assert hasattr(handler, "desc_getter")
         assert handler.desc_getter.__name__ == expected_name
+
+    def test_unsupported_version(self, yaml_v1_normal):
+        with pytest.raises(ValueError, match='procfile data is empty.* spec version "1" is not supported'):
+            _ = get_deploy_desc_handler(yaml.safe_load(yaml_v1_normal))
 
 
 class TestAppDescriptionHandler:
@@ -199,7 +202,7 @@ class TestAppDescriptionHandler:
 
     def test_invalid_desc_and_valid_procfile(self, bk_module, bk_deployment):
         handler = get_deploy_desc_handler(
-            {"not": "valid yaml"}, procfile_data={"web": "gunicorn app", "worker": "celery"}
+            {"spec_version": 2, "not": "valid yaml"}, procfile_data={"web": "gunicorn app", "worker": "celery"}
         )
         with pytest.raises(DescriptionValidationError):
             _ = handler.handle(bk_deployment)

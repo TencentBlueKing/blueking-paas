@@ -49,7 +49,7 @@ class MetaDataReader(Protocol):
         """
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from repository
+        """Read app_desc.yaml from repository
 
         :raises: exceptions.GetAppYamlError
         """
@@ -100,11 +100,11 @@ class MetaDataFileReader:
         return procfile
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from repository
+        """Read app_desc.yaml from repository
 
         :raises: exceptions.GetAppYamlError
         """
-        possible_keys = ["app_desc.yaml", "app_desc.yml", "app.yml", "app.yaml"]
+        possible_keys = ["app_desc.yaml", "app_desc.yml"]
         if self.source_dir != Path("."):
             # Note: 为了保证不影响源码包部署的应用, 优先从根目录读取 app_desc.yaml, 随后再尝试从 source_dir 目录读取
             possible_keys = [
@@ -112,10 +112,6 @@ class MetaDataFileReader:
                 "app_desc.yml",
                 str(self.source_dir / "app_desc.yaml"),
                 str(self.source_dir / "app_desc.yml"),
-                "app.yml",
-                "app.yaml",
-                str(self.source_dir / "app.yml"),
-                str(self.source_dir / "app.yaml"),
             ]
 
         content = None
@@ -134,9 +130,9 @@ class MetaDataFileReader:
         try:
             app_description = yaml.full_load(content)
         except Exception as e:
-            raise exceptions.GetAppYamlFormatError('file "app.yaml"\'s format is not YAML') from e
+            raise exceptions.GetAppYamlFormatError('file "app_desc.yaml"\'s format is not YAML') from e
         if not isinstance(app_description, dict):
-            raise exceptions.GetAppYamlFormatError('file "app.yaml" must be dict type')
+            raise exceptions.GetAppYamlFormatError('file "app_desc.yaml" must be dict type')
         return app_description
 
     def get_dockerignore(self, version_info: VersionInfo) -> str:
@@ -220,7 +216,7 @@ class PackageMetaDataReader(MetaDataFileReader):
         return super().get_procfile(version_info)
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
+        """Read app_desc.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
         _, version = self.extract_version_info(version_info)
         package_storage = self.module.packages.get(version=version)
         if package_storage.meta_info:

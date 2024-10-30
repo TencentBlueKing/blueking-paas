@@ -44,8 +44,10 @@ OMITTED_VALUE = OmittedType()
 
 
 class AppSpecVersion(IntStructuredEnum):
-    # VER_1 meaning app.yaml is provided by S-Mart App
+    # VER_1 meaning app.yaml is provided by legacy S-Mart App,
+    # **this version is not supported anymore**
     VER_1 = 1
+
     VER_2 = 2
     # VER_3 meaning cnative app
     VER_3 = 3
@@ -53,7 +55,6 @@ class AppSpecVersion(IntStructuredEnum):
 
 class AppDescPluginType(StrStructuredEnum):
     APP_VERSION = EnumField("app_version", label="应用版本")
-    APP_LIBRARIES = EnumField("app_libraries", label="应用依赖库")
 
 
 class DiffType(StrStructuredEnum):

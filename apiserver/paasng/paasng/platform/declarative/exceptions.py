@@ -53,6 +53,10 @@ class DescriptionValidationError(Exception):
         return cls(error.detail, err_messages[0])
 
 
+class UnsupportedSpecVer(Exception):
+    """Raised if the app spec data is using an unsupported version"""
+
+
 class ControllerError(Exception):
     """An error occurred when controller is processing the input data"""
 

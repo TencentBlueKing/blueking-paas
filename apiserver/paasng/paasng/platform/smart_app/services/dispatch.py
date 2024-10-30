@@ -26,7 +26,7 @@ from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.handlers import get_deploy_desc_by_module
+from paasng.platform.declarative.handlers import get_source_dir_from_desc
 from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
 from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
@@ -86,7 +86,7 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
     """Patch an uncompressed package and upload compressed tarball one blobstore,
     then bind the package to provided module.
 
-    [deprecated] `patch_and_store_package` is a handler for legacy pacakge which only contain source code.
+    [deprecated] `patch_and_store_package` is a handler for legacy package which only contain source code.
     """
     logger.debug("Patching module for module '%s'", module.name)
     with generate_temp_dir() as workplace:
@@ -110,10 +110,10 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     """
     logger.debug("dispatching slug-image for module '%s', working at '%s'", module.name, workplace)
 
-    deploy_desc = get_deploy_desc_by_module(stat.meta_info, module.name)
+    source_dir = get_source_dir_from_desc(stat.meta_info, module.name)
 
-    layer_path = workplace / stat.relative_path / deploy_desc.source_dir / "layer.tar.gz"
-    procfile_path = workplace / stat.relative_path / deploy_desc.source_dir / f"{module.name}.Procfile.tar.gz"
+    layer_path = workplace / stat.relative_path / source_dir / "layer.tar.gz"
+    procfile_path = workplace / stat.relative_path / source_dir / f"{module.name}.Procfile.tar.gz"
 
     mgr = SMartImageManager(module)
     base_image = mgr.get_slugrunner_image_info()

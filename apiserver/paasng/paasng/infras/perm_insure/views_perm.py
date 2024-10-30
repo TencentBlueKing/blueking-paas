@@ -23,9 +23,18 @@ from django.urls import URLPattern, URLResolver
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
 
-from .conf import INSURE_CHECKING_EXCLUDED_VIEWS
+from .conf import ADMIN42_MODULE_NAMESPACES, ADMIN42_PERMISSION_CLASS_NAMESPACE, INSURE_CHECKING_EXCLUDED_VIEWS
 
 logger = logging.getLogger(__name__)
+
+
+def is_admin42_url(url: str) -> bool:
+    """Check if the url is a admin42 url."""
+    return "admin42" in url
+
+
+def is_admin42_view_func(view_func) -> bool:
+    return any(view_func.__module__.startswith(ns) for ns in ADMIN42_MODULE_NAMESPACES)
 
 
 def ensure_views_perm_configured():
@@ -34,11 +43,11 @@ def ensure_views_perm_configured():
     :raise ImproperlyConfigured: When a view function doesn't configure permission properly.
     """
     for url, view_func in list_view_funcs():
-        is_admin42 = "admin42" in url
+        is_admin42 = is_admin42_url(url) or is_admin42_view_func(view_func)
 
         if hasattr(view_func, "cls"):
             # A DRF style view function
-            check_drf_view_perm(view_func)
+            check_drf_view_perm(view_func, is_admin42)
         elif hasattr(view_func, "view_class"):
             # A normal Django view
             check_django_view_perm(view_func, is_admin42)
@@ -69,7 +78,7 @@ def list_view_funcs() -> Iterable[Tuple[str, Callable]]:
     yield from list_urls(urlconf.urlpatterns)
 
 
-def check_drf_view_perm(view_func):
+def check_drf_view_perm(view_func, is_admin42: bool):
     """Check if a DRF view function has configured permission properly.
 
     :raise ImproperlyConfigured: When the permission is not configured properly.
@@ -92,6 +101,14 @@ def check_drf_view_perm(view_func):
         raise TypeError("not a valid DRF View")
 
     enabled_perm = view_cls.permission_classes
+
+    # When the view class is admin42 view, it should contain site_perm_class in permission_classes
+    if is_admin42:  # noqa: SIM102
+        if not any(p.__module__ == ADMIN42_PERMISSION_CLASS_NAMESPACE for p in enabled_perm):
+            raise ImproperlyConfigured(
+                f"The view class {view_cls} has no site_perm_class configured in permission_classes"
+            )
+
     if not enabled_perm or (len(enabled_perm) == 1 and enabled_perm[0].__name__ == "IsAuthenticated"):
         name = view_cls if not unprotected_actions else f"{view_cls} - {unprotected_actions!r}"
         raise ImproperlyConfigured(

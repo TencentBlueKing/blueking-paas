@@ -94,3 +94,12 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "set_language",
     "get_current_information",
 }
+
+# Admin42 drf views' namespaces prefix, used to check if a view is an admin42 view
+ADMIN42_MODULE_NAMESPACES = {
+    "paasng.plat_admin.admin42.views",
+    "paas_wl.apis.admin.views",
+}
+
+# Admin42 site_perm_class namespaces, used to check if a view whether contains a site_perm_class in permission_classes
+ADMIN42_PERMISSION_CLASS_NAMESPACE = "paasng.infras.accounts.permissions.global_site"

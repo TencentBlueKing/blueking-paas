@@ -63,7 +63,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	}
 
 	r := gin.Default()
-	corsConfig := config.G.Service.Cors
+	corsConfig := config.G.Service.CORS
 	// 添加跨域中间件
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     corsConfig.AllowOrigins,     // 允许所有来源

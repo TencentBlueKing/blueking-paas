@@ -34,14 +34,14 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 @pytest.fixture()
 def region():
-    return get_random_string()
+    return get_random_string(12)
 
 
 @pytest.fixture()
 def default_cluster_creator(example_cluster_config):
     def creator(region: str):
         return Cluster.objects.register_cluster(
-            region=region, name=get_random_string(), is_default=True, **example_cluster_config
+            region=region, name=get_random_string(12), is_default=True, **example_cluster_config
         )
 
     return creator
@@ -56,7 +56,7 @@ class TestCluster:
         ],
     )
     def test_register(self, region, is_default, expectation, example_cluster_config):
-        name = get_random_string()
+        name = get_random_string(12)
         with expectation:
             Cluster.objects.register_cluster(region=region, name=name, is_default=is_default, **example_cluster_config)
 
@@ -76,9 +76,9 @@ class TestCluster:
             default_cluster_creator(region)
 
     def test_register_duplicated_cluster_name(self, example_cluster_config):
-        region1 = get_random_string()
-        region2 = get_random_string()
-        name = get_random_string()
+        region1 = get_random_string(12)
+        region2 = get_random_string(12)
+        name = get_random_string(12)
 
         Cluster.objects.register_cluster(region=region1, name=name, is_default=True, **example_cluster_config)
         with pytest.raises(IntegrityError):

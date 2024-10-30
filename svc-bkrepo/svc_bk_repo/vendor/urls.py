@@ -16,15 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from django.conf.urls import url
+
+from django.urls import re_path
+
 from svc_bk_repo.vendor import views
 
 urlpatterns = [
-    url(r"healthz/$", views.HealthzView.as_view()),
-    url(r"web/instances/(?P<instance_id>[^/]+)/$", views.BKRepoIndexView.as_view(), name='instance.index'),
-    url(
+    re_path(r"healthz/$", views.HealthzView.as_view()),
+    re_path(r"web/instances/(?P<instance_id>[^/]+)/$", views.BKRepoIndexView.as_view(), name="instance.index"),
+    re_path(
         r"web/instances/(?P<instance_id>[^/]+)/(?P<bucket>[^/]+)/$",
         views.BKRepoManageView.as_view(),
-        name='instance.manage',
+        name="instance.manage",
     ),
 ]

@@ -18,4 +18,5 @@
 from django.dispatch import Signal
 
 # 云原生应用部署完成后触发的信号，会执行操作记录等后续步骤
-post_cnative_env_deploy = Signal(providing_args=["deploy"])
+# providing_args: [deploy: AppModelDeploy]
+post_cnative_env_deploy = Signal()

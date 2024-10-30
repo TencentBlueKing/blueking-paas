@@ -20,6 +20,7 @@ from paasng.utils.addons import PlugableAppConfig
 
 class AppsConfig(PlugableAppConfig):
     name = "paasng.accessories.publish.market"
+    default = True
 
     def ready(self):
         from . import handlers  # noqa: F401

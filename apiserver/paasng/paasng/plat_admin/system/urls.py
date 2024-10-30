@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
-
 from paasng.plat_admin.system.views import (
     ClusterNamespaceInfoView,
     LessCodeSystemAPIViewSet,
@@ -27,24 +25,24 @@ from paasng.utils.basic import make_app_pattern, re_path
 
 urlpatterns = [
     # Query universal applications
-    url(
-        "sys/api/uni_applications/query/by_id/$",
+    re_path(
+        r"^sys/api/uni_applications/query/by_id/$",
         SysUniApplicationViewSet.as_view({"get": "query_by_id"}),
         name="sys.api.uni_applications.list_by_ids",
     ),
-    url(
-        "sys/api/uni_applications/query/by_username/$",
+    re_path(
+        r"^sys/api/uni_applications/query/by_username/$",
         SysUniApplicationViewSet.as_view({"get": "query_by_username"}),
         name="sys.api.uni_applications.list_by_username",
     ),
     # 分页查询应用基本信息
-    url(
-        "sys/api/uni_applications/list/minimal/$",
+    re_path(
+        r"^sys/api/uni_applications/list/minimal/$",
         SysUniApplicationViewSet.as_view({"get": "list_minimal_app"}),
         name="sys.api.uni_applications.list_minimal_app",
     ),
-    url(
-        "sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$",
+    re_path(
+        r"^sys/api/bkapps/applications/(?P<code>[^/]+)/cluster_namespaces/$",
         ClusterNamespaceInfoView.as_view({"get": "list_by_app_code"}),
         name="sys.api.applications.cluster_namespace.list_by_app_code",
     ),

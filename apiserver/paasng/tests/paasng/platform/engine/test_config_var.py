@@ -132,9 +132,9 @@ def dest_prod_env(dest_module):
 @pytest.fixture()
 def random_config_var_maker():
     def maker(environment_name, **kwargs):
-        kwargs.setdefault("key", get_random_string(allowed_chars=ascii_uppercase))
-        kwargs.setdefault("value", get_random_string())
-        kwargs.setdefault("description", get_random_string())
+        kwargs.setdefault("key", get_random_string(length=12, allowed_chars=ascii_uppercase))
+        kwargs.setdefault("value", get_random_string(12))
+        kwargs.setdefault("description", get_random_string(12))
         kwargs["environment_name"] = environment_name
         return kwargs
 

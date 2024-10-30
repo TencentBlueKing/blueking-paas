@@ -20,4 +20,3 @@
 - ProcessService: for internal communications (Kubernetes Service)
 - ProcessIngress: for external communications (Kubernetes Ingress)
 """
-default_app_config = "paas_wl.workloads.networking.ingress.apps.IngressConfig"

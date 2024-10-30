@@ -22,6 +22,7 @@ from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.platform.bkapp_model.entities import AutoscalingConfig as _AutoscalingConfig
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.engine.models.deployment import ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -68,3 +69,48 @@ class TestModuleProcessSpecManager:
             ProcessSpecEnvOverlay.objects.get(proc_spec=process_web, environment_name="prod").scaling_config
             is not None
         ), "The config should have been preserved as it is"
+
+
+class TestSyncFromDescMethod:
+    """测试 ModuleProcessSpecManager.sync_from_desc 方法"""
+
+    @pytest.fixture()
+    def process_with_replicas(self, bk_module) -> ModuleProcessSpec:
+        spec = G(ModuleProcessSpec, module=bk_module, name="foo")
+        ProcessSpecEnvOverlay.objects.create(proc_spec=spec, environment_name="stag", target_replicas=3)
+        ProcessSpecEnvOverlay.objects.create(proc_spec=spec, environment_name="prod", target_replicas=5)
+        return spec
+
+    @pytest.mark.parametrize(
+        ("proc_name", "replicas", "expected_stag_replicas", "expected_prod_replicas"),
+        [
+            ("worker", 2, 2, 2),
+            ("worker", 1, 1, 1),
+            # web 进程具有默认值. stag 环境默认 1, prod 环境默认 2
+            ("web", None, 1, 2),
+            ("worker", None, 1, 1),
+        ],
+    )
+    def test_sync_replicas_when_create_proc_spec(
+        self, proc_name, bk_module, replicas, expected_stag_replicas, expected_prod_replicas
+    ):
+        ModuleProcessSpecManager(bk_module).sync_from_desc(
+            [ProcessTmpl(name=proc_name, command="foo", replicas=replicas)]
+        )
+        spec = ModuleProcessSpec.objects.get(name=proc_name, module=bk_module)
+        assert spec.get_target_replicas("stag") == expected_stag_replicas
+        assert spec.get_target_replicas("prod") == expected_prod_replicas
+
+    @pytest.mark.parametrize(
+        ("replicas", "expected_stag_replicas", "expected_prod_replicas"),
+        [(2, 2, 2), (1, 1, 1), (None, 3, 5)],
+    )
+    def test_sync_replicas_when_update_proc_spec(
+        self, bk_module, process_with_replicas, replicas, expected_stag_replicas, expected_prod_replicas
+    ):
+        ModuleProcessSpecManager(bk_module).sync_from_desc(
+            [ProcessTmpl(name=process_with_replicas.name, command="bar", replicas=replicas)]
+        )
+        spec = ModuleProcessSpec.objects.get(name=process_with_replicas.name, module=bk_module)
+        assert spec.get_target_replicas("stag") == expected_stag_replicas
+        assert spec.get_target_replicas("prod") == expected_prod_replicas

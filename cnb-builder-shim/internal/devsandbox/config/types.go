@@ -21,8 +21,8 @@ type SourceCodeConfig struct {
 	Workspace string
 }
 
-// CorsConfig 跨域配置
-type CorsConfig struct {
+// CORSConfig 跨域配置
+type CORSConfig struct {
 	// 允许的来源
 	AllowOrigins []string
 	// 允许的HTTP方法
@@ -37,8 +37,8 @@ type CorsConfig struct {
 
 // ServiceConfig 服务配置
 type ServiceConfig struct {
-	// 源码获取方式
-	Cors CorsConfig
+	// 跨域配置
+	CORS CORSConfig
 }
 
 // Config  全局配置

@@ -34,13 +34,13 @@ func loadSourceConfigFromEnv() (SourceCodeConfig, error) {
 	}, nil
 }
 
-func loadCorsConfigFromEnv() (CorsConfig, error) {
+func loadCORSConfigFromEnv() (CORSConfig, error) {
 	allowOrigins := getListFromEnv("ALLOW_ORIGINS", "")
 	allowMethods := getListFromEnv("ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS")
 	allowHeaders := getListFromEnv("ALLOW_HEADERS", "Origin,Content-Type,Authorization")
 	exposeHeaders := getListFromEnv("EXPOSE_HEADERS", "Content-Length")
 	allowCredentials := utils.EnvOrDefault("ALLOW_CREDENTIALS", "true") == "true"
-	return CorsConfig{
+	return CORSConfig{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     allowMethods,
 		AllowHeaders:     allowHeaders,
@@ -49,12 +49,12 @@ func loadCorsConfigFromEnv() (CorsConfig, error) {
 	}, nil
 }
 func loadServiceConfigFromEnv() (ServiceConfig, error) {
-	corsConfig, err := loadCorsConfigFromEnv()
+	corsConfig, err := loadCORSConfigFromEnv()
 	if err != nil {
 		return ServiceConfig{}, err
 	}
 	return ServiceConfig{
-		Cors: corsConfig,
+		CORS: corsConfig,
 	}, nil
 }
 
@@ -74,10 +74,10 @@ func loadConfigFromEnv() (*Config, error) {
 	}, nil
 }
 
-// getListFromEnv 从指定的环境变量中获取列表, 例如 "value1,value2,value3"
-func getListFromEnv(envVar string, defaultValue string) []string {
+// 从指定的环境变量中获取列表, 例如 "value1,value2,value3"
+func getListFromEnv(envVar string, defaultEnvValue string) []string {
 	// 获取环境变量的值
-	listStr := utils.EnvOrDefault(envVar, defaultValue)
+	listStr := utils.EnvOrDefault(envVar, defaultEnvValue)
 	// 使用 "," 分割字符串并去除空格
 	elements := strings.Split(listStr, ",")
 	for i := range elements {

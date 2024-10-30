@@ -112,7 +112,7 @@ var _ = Describe("Test InitConfig", func() {
 		sourceConfig := config.G.SourceCode
 		Expect(sourceConfig.FetchMethod).To(Equal(config.HTTP))
 		Expect(sourceConfig.Workspace).To(Equal("/cnb/devsandbox/src"))
-		corsConfig := config.G.Service.Cors
+		corsConfig := config.G.Service.CORS
 		Expect(corsConfig.AllowOrigins).To(Equal([]string{""}))
 		Expect(corsConfig.AllowMethods).To(Equal([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}))
 		Expect(corsConfig.AllowHeaders).To(Equal([]string{"Origin", "Content-Type", "Authorization"}))

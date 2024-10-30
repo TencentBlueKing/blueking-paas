@@ -19,11 +19,16 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from django.conf import settings
 from kubernetes.client.apis import VersionApi
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists
-from paas_wl.bk_app.dev_sandbox.kres_entities import get_ingress_name, get_service_name, get_sub_domain_host
+from paas_wl.bk_app.dev_sandbox.kres_entities import (
+    get_dev_sandbox_service_name,
+    get_ingress_name,
+    get_sub_domain_host,
+)
 from paas_wl.bk_app.dev_sandbox.kres_entities.code_editor import get_code_editor_name
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paasng.platform.sourcectl.models import VersionInfo
@@ -61,8 +66,8 @@ class TestDevSandboxController:
         assert sandbox_entity_in_cluster.status.ready_replicas in [0, 1]
         assert sandbox_entity_in_cluster.status.to_health_phase() in ["Progressing", "Healthy"]
 
-        service_entity_in_cluster = controller.service_mgr.get(dev_wl_app, get_service_name(dev_wl_app))
-        assert service_entity_in_cluster.name == get_service_name(dev_wl_app)
+        service_entity_in_cluster = controller.service_mgr.get(dev_wl_app, get_dev_sandbox_service_name(dev_wl_app))
+        assert service_entity_in_cluster.name == get_dev_sandbox_service_name(dev_wl_app)
 
         ingress_entity_in_cluster = controller.ingress_mgr.get(dev_wl_app, get_ingress_name(dev_wl_app))
         assert ingress_entity_in_cluster.name == get_ingress_name(dev_wl_app)
@@ -83,7 +88,7 @@ class TestDevSandboxController:
 
 class TestDevSandboxWithCodeEditorController:
     @pytest.fixture()
-    def controller(self, bk_app, module_name, bk_user, dev_sandbox_code):
+    def controller(self, bk_app, bk_user, module_name, dev_sandbox_code):
         ctrl = DevSandboxWithCodeEditorController(bk_app, module_name, dev_sandbox_code, bk_user.pk)
         yield ctrl
         # just test delete ok!
@@ -96,7 +101,7 @@ class TestDevSandboxWithCodeEditorController:
         relative_source_dir = Path(".")
         password = "123456"
         with mock.patch(
-            "paas_wl.bk_app.dev_sandbox.controller.DevSandboxWithCodeEditorController._upload_source_code",
+            "paas_wl.bk_app.dev_sandbox.controller.upload_source_code",
             return_value="example.com",
         ):
             controller.deploy(
@@ -128,8 +133,10 @@ class TestDevSandboxWithCodeEditorController:
         assert code_editor_entity_in_cluster.status.ready_replicas in [0, 1]
         assert code_editor_entity_in_cluster.status.to_health_phase() in ["Progressing", "Healthy"]
 
-        service_entity_in_cluster = controller.service_mgr.get(user_dev_wl_app, get_service_name(user_dev_wl_app))
-        assert service_entity_in_cluster.name == get_service_name(user_dev_wl_app)
+        service_entity_in_cluster = controller.dev_sandbox_svc_mgr.get(
+            user_dev_wl_app, get_dev_sandbox_service_name(user_dev_wl_app)
+        )
+        assert service_entity_in_cluster.name == get_dev_sandbox_service_name(user_dev_wl_app)
 
         ingress_entity_in_cluster = controller.ingress_mgr.get(user_dev_wl_app, get_ingress_name(user_dev_wl_app))
         assert ingress_entity_in_cluster.name == get_ingress_name(user_dev_wl_app)
@@ -144,7 +151,7 @@ class TestDevSandboxWithCodeEditorController:
         relative_source_dir = Path(".")
         password = "123456"
         with pytest.raises(DevSandboxAlreadyExists), mock.patch(
-            "paas_wl.bk_app.dev_sandbox.controller.DevSandboxWithCodeEditorController._upload_source_code",
+            "paas_wl.bk_app.dev_sandbox.controller.upload_source_code",
             return_value="example.com",
         ):
             controller.deploy(
@@ -161,9 +168,12 @@ class TestDevSandboxWithCodeEditorController:
         base_url = get_sub_domain_host(bk_app.code, user_dev_wl_app, module_name)
         dev_sandbox_code = controller.dev_sandbox_code
 
-        assert detail.urls.app_url == f"{base_url}/user/{dev_sandbox_code}/app/"
-        assert detail.urls.devserver == f"{base_url}/user/{dev_sandbox_code}/devserver/"
-        assert detail.urls.code_editor_url == f"{base_url}/user/{dev_sandbox_code}/code_editor/"
+        assert detail.urls.app_url == f"{base_url}/dev_sandbox/{dev_sandbox_code}/app/"
+        assert detail.urls.devserver_url == f"{base_url}/dev_sandbox/{dev_sandbox_code}/devserver/"
+        assert (
+            detail.urls.code_editor_url
+            == f"{base_url}/dev_sandbox/{dev_sandbox_code}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
+        )
         assert detail.dev_sandbox_env_vars == {
             "FOO": "test",
             "SOURCE_FETCH_METHOD": "BK_REPO",

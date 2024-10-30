@@ -20,7 +20,13 @@ import pytest
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import _DevWlAppCreator
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, ResourceSpec, Runtime, SourceCodeConfig
-from paas_wl.bk_app.dev_sandbox.kres_entities import CodeEditor, DevSandbox, DevSandboxIngress, DevSandboxService
+from paas_wl.bk_app.dev_sandbox.kres_entities import (
+    CodeEditor,
+    CodeEditorService,
+    DevSandbox,
+    DevSandboxIngress,
+    DevSandboxService,
+)
 from paas_wl.infras.cluster.models import Cluster
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 
@@ -43,7 +49,7 @@ def module_name():
 
 @pytest.fixture()
 def dev_sandbox_code():
-    return "DevSandboxCode"
+    return "devsandbox"
 
 
 @pytest.fixture()
@@ -112,6 +118,11 @@ def code_editor_entity(user_dev_wl_app, dev_runtime):
 @pytest.fixture()
 def dev_sandbox_service_entity(dev_wl_app):
     return DevSandboxService.create(dev_wl_app)
+
+
+@pytest.fixture()
+def code_editor_service_entity(dev_wl_app):
+    return CodeEditorService.create(dev_wl_app)
 
 
 @pytest.fixture()

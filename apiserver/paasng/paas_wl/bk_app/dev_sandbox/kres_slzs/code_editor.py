@@ -24,7 +24,7 @@ from kubernetes.dynamic import ResourceField, ResourceInstance
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.conf import CODE_SVC_PORT_PAIRS
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, Runtime, Status
-from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_dev_sandbox_labels
+from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_code_editor_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.dictx import get_items
@@ -37,7 +37,7 @@ _CONTAINER_NAME = "code-editor"
 
 class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
     def serialize(self, obj: "CodeEditor", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        labels = get_dev_sandbox_labels(obj.app)
+        labels = get_code_editor_labels(obj.app)
         deployment_body = {
             "apiVersion": self.get_apiversion(),
             "kind": "Deployment",

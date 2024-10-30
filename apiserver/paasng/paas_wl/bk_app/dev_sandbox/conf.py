@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List
+from typing import Dict, List
 
 from django.conf import settings
 
@@ -54,13 +54,15 @@ CODE_SVC_PORT_PAIRS: List[ServicePortPair] = [
 ]
 
 
-def get_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> List[IngressPathBackend]:
-    """get ingress path backends from _ingress_service_conf with service_name and dev_sandbox_code
+def get_ingress_path_backends(
+    service_name: str, service_confs: List[Dict], dev_sandbox_code: str = ""
+) -> List[IngressPathBackend]:
+    """get ingress path backends from service_confs with service_name and dev_sandbox_code
 
     :param service_name: Service name
     :param dev_sandbox_code: dev sandbox code.
+    :param service_confs: service configs
     """
-    _ingress_service_conf = _dev_sandbox_ingress_service_conf + _code_editor_ingress_service_conf
     if not dev_sandbox_code:
         return [
             IngressPathBackend(
@@ -68,14 +70,22 @@ def get_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> 
                 service_name=service_name,
                 service_port_name=conf["service_port_name"],
             )
-            for conf in _ingress_service_conf
+            for conf in service_confs
         ]
 
     return [
         IngressPathBackend(
-            path_prefix=f"/user/{dev_sandbox_code}{conf['path_prefix']}",
+            path_prefix=f"/dev_sandbox/{dev_sandbox_code}{conf['path_prefix']}",
             service_name=service_name,
             service_port_name=conf["service_port_name"],
         )
-        for conf in _ingress_service_conf
+        for conf in service_confs
     ]
+
+
+def get_dev_sandbox_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> List[IngressPathBackend]:
+    return get_ingress_path_backends(service_name, _dev_sandbox_ingress_service_conf, dev_sandbox_code)
+
+
+def get_code_editor_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> List[IngressPathBackend]:
+    return get_ingress_path_backends(service_name, _code_editor_ingress_service_conf, dev_sandbox_code)

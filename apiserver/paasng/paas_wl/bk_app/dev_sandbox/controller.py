@@ -37,6 +37,7 @@ from paas_wl.bk_app.dev_sandbox.entities import (
 )
 from paas_wl.bk_app.dev_sandbox.kres_entities import (
     CodeEditor,
+    CodeEditorService,
     DevSandbox,
     DevSandboxIngress,
     DevSandboxService,
@@ -149,9 +150,10 @@ class DevSandboxWithCodeEditorController:
     """
 
     sandbox_mgr: AppEntityManager[DevSandbox] = AppEntityManager[DevSandbox](DevSandbox)
-    service_mgr: AppEntityManager[DevSandboxService] = AppEntityManager[DevSandboxService](DevSandboxService)
+    dev_sandbox_svc_mgr: AppEntityManager[DevSandboxService] = AppEntityManager[DevSandboxService](DevSandboxService)
     ingress_mgr: AppEntityManager[DevSandboxIngress] = AppEntityManager[DevSandboxIngress](DevSandboxIngress)
     code_editor_mgr: AppEntityManager[CodeEditor] = AppEntityManager[CodeEditor](CodeEditor)
+    code_editor_svc_mgr: AppEntityManager[CodeEditorService] = AppEntityManager[CodeEditorService](CodeEditorService)
 
     def __init__(self, app: Application, module_name: str, dev_sandbox_code: str, owner: str):
         self.app = app
@@ -235,8 +237,10 @@ class DevSandboxWithCodeEditorController:
         self._create_code_editor(code_editor_env_vars, password)
 
         # step 5. upsert service
-        service_entity = DevSandboxService.create(self.dev_wl_app)
-        self.service_mgr.upsert(service_entity)
+        dev_sandbox_svc_entity = DevSandboxService.create(self.dev_wl_app)
+        self.dev_sandbox_svc_mgr.upsert(dev_sandbox_svc_entity)
+        code_editor_svc_entity = CodeEditorService.create(self.dev_wl_app)
+        self.code_editor_svc_mgr.upsert(code_editor_svc_entity)
 
         # step 6. upsert ingress
         ingress_entity = DevSandboxIngress.create(self.dev_wl_app, self.app.code, self.dev_sandbox_code)
@@ -354,7 +358,12 @@ class DevSandboxWithCodeEditorController:
 
 
 class _DevWlAppCreator:
-    """WlApp 实例构造器"""
+    """WlApp 实例构造器
+
+    :param app: 应用
+    :param module_name: 模块名称
+    :param dev_sandbox_code: 沙箱标识，在模块下沙箱不唯一时传入
+    """
 
     def __init__(self, app: Application, module_name: str, dev_sandbox_code: Optional[str] = None):
         self.app = app

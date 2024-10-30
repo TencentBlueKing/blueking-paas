@@ -19,7 +19,10 @@ from dataclasses import dataclass
 from typing import List
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import get_ingress_path_backends
+from paas_wl.bk_app.dev_sandbox.conf import (
+    get_code_editor_ingress_path_backends,
+    get_dev_sandbox_ingress_path_backends,
+)
 from paas_wl.bk_app.dev_sandbox.entities import IngressDomain
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
 from paas_wl.infras.cluster.utils import get_dev_sandbox_cluster
@@ -27,7 +30,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
 
-from .service import get_service_name
+from .service import get_code_editor_service_name, get_dev_sandbox_service_name
 
 
 @dataclass
@@ -47,10 +50,14 @@ class DevSandboxIngress(AppEntity):
 
     @classmethod
     def create(cls, dev_wl_app: WlApp, app_code: str, dev_sandbox_code: str = "") -> "DevSandboxIngress":
-        service_name = get_service_name(dev_wl_app)
+        dev_sandbox_svc_name = get_dev_sandbox_service_name(dev_wl_app)
+        code_editor_svc_name = get_code_editor_service_name(dev_wl_app)
+        path_backends = get_dev_sandbox_ingress_path_backends(
+            dev_sandbox_svc_name, dev_sandbox_code
+        ) + get_code_editor_ingress_path_backends(code_editor_svc_name, dev_sandbox_code)
         sub_domain = IngressDomain(
             host=get_sub_domain_host(app_code, dev_wl_app, dev_wl_app.module_name),
-            path_backends=get_ingress_path_backends(service_name, dev_sandbox_code),
+            path_backends=path_backends,
         )
         return cls(app=dev_wl_app, name=get_ingress_name(dev_wl_app), domains=[sub_domain])
 

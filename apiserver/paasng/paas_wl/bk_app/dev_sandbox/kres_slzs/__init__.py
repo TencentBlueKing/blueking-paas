@@ -17,8 +17,13 @@
 
 from .code_editor import CodeEditorDeserializer, CodeEditorSerializer
 from .ingress import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
-from .sandbox import DevSandboxDeserializer, DevSandboxSerializer, get_dev_sandbox_labels
-from .service import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
+from .sandbox import DevSandboxDeserializer, DevSandboxSerializer, get_code_editor_labels, get_dev_sandbox_labels
+from .service import (
+    CodeEditorServiceDeserializer,
+    CodeEditorServiceSerializer,
+    DevSandboxServiceDeserializer,
+    DevSandboxServiceSerializer,
+)
 
 __all__ = [
     "CodeEditorDeserializer",
@@ -29,5 +34,8 @@ __all__ = [
     "DevSandboxSerializer",
     "DevSandboxServiceDeserializer",
     "DevSandboxServiceSerializer",
+    "CodeEditorServiceSerializer",
+    "CodeEditorServiceDeserializer",
     "get_dev_sandbox_labels",
+    "get_code_editor_labels",
 ]

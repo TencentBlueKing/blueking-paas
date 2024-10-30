@@ -154,3 +154,8 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
 def get_dev_sandbox_labels(app: WlApp) -> Dict[str, str]:
     """get deployment labels for dev_sandbox by WlApp"""
     return {"env": "dev", "category": "bkapp", "app": app.scheduler_safe_name}
+
+
+def get_code_editor_labels(app: WlApp) -> Dict[str, str]:
+    """get deployment labels for code_editor by WlApp"""
+    return {"env": "code_editor", "category": "bkapp", "app": app.scheduler_safe_name}

@@ -30,28 +30,36 @@ from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 
-def generate_random_code(length: int = 16) -> str:
+def generate_random_code(length: int = 8) -> str:
     """生成随机的沙箱标识(只包含大小写字母和数字)"""
     characters = string.ascii_letters + string.digits
     return "".join(random.choice(characters) for _ in range(length))
 
 
+def gen_dev_sandbox_code() -> str:
+    """生成随机的唯一的沙箱标识(只包含大小写字母和数字)"""
+    dev_sandbox_code = generate_random_code()
+    while DevSandbox.objects.filter(code=dev_sandbox_code).exists():
+        dev_sandbox_code = generate_random_code()
+    return dev_sandbox_code
+
+
 class DevSandbox(OwnerTimestampedModel):
     """DevSandbox Model"""
 
+    code = models.CharField(max_length=8, help_text="沙箱标识,模块下唯一", unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(max_length=32, verbose_name="沙箱状态", choices=DevSandboxStatus.get_choices())
-    code = models.CharField(max_length=16, help_text="沙箱标识,模块下唯一", default=generate_random_code)
     expire_at = models.DateTimeField(null=True, help_text="到期时间")
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
     def renew_expire_at(self):
         # 如果状态不是ALIVE, 则设置两小时后过期
-        if self.status != DevSandboxStatus.ALIVE.value:
+        if self.status != DevSandboxStatus.ACTIVE.value:
             self.expire_at = datetime.datetime.now() + datetime.timedelta(hours=2)
         else:
             self.expire_at = None
-        self.save()
+        self.save(update_fields=["expire_at"])
 
     def should_recycle(self) -> bool:
         """检查是否应该被回收"""

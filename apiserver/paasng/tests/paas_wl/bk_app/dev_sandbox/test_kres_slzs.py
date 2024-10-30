@@ -20,16 +20,20 @@ from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.kres_entities import (
     CodeEditor,
+    CodeEditorService,
     DevSandbox,
     DevSandboxIngress,
     DevSandboxService,
-    get_service_name,
+    get_code_editor_service_name,
+    get_dev_sandbox_service_name,
 )
 from paas_wl.bk_app.dev_sandbox.kres_slzs import (
     CodeEditorSerializer,
+    CodeEditorServiceSerializer,
     DevSandboxIngressSerializer,
     DevSandboxSerializer,
     DevSandboxServiceSerializer,
+    get_code_editor_labels,
     get_dev_sandbox_labels,
 )
 from paas_wl.infras.resources.kube_res.base import GVKConfig
@@ -153,7 +157,7 @@ class TestDevSandboxServiceSLZ:
             "apiVersion": "v1",
             "kind": "Service",
             "metadata": {
-                "name": get_service_name(dev_sandbox_service_entity.app),
+                "name": get_dev_sandbox_service_name(dev_sandbox_service_entity.app),
                 "labels": {"env": "dev"},
             },
             "spec": {
@@ -166,7 +170,6 @@ class TestDevSandboxServiceSLZ:
                         "protocol": "TCP",
                     },
                     {"name": "app", "port": 80, "targetPort": settings.CONTAINER_PORT, "protocol": "TCP"},
-                    {"name": "code-editor", "port": 10251, "protocol": "TCP", "targetPort": 8080},
                 ],
             },
         }
@@ -186,7 +189,8 @@ class TestDevSandboxIngressSerializer:
         slz = DevSandboxIngressSerializer(DevSandboxIngress, gvk_config)
         manifest = slz.serialize(dev_sandbox_ingress_entity)
 
-        service_name = get_service_name(dev_sandbox_ingress_entity.app)
+        dev_sandbox_svc_name = get_dev_sandbox_service_name(dev_sandbox_ingress_entity.app)
+        code_editor_svc_name = get_code_editor_service_name(dev_sandbox_ingress_entity.app)
         assert manifest["apiVersion"] == "networking.k8s.io/v1"
         assert manifest["metadata"] == {
             "name": dev_sandbox_ingress_entity.name,
@@ -207,7 +211,7 @@ class TestDevSandboxIngressSerializer:
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": dev_sandbox_svc_name,
                                 "port": {"name": "devserver"},
                             },
                         },
@@ -217,7 +221,7 @@ class TestDevSandboxIngressSerializer:
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": dev_sandbox_svc_name,
                                 "port": {"name": "app"},
                             },
                         },
@@ -227,7 +231,7 @@ class TestDevSandboxIngressSerializer:
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": code_editor_svc_name,
                                 "port": {"name": "code-editor"},
                             },
                         },
@@ -248,7 +252,9 @@ class TestDevSandboxIngressSerializer:
         slz = DevSandboxIngressSerializer(DevSandboxIngress, gvk_config)
         manifest = slz.serialize(dev_sandbox_ingress_entity_with_dev_sandbox_code)
 
-        service_name = get_service_name(dev_sandbox_ingress_entity_with_dev_sandbox_code.app)
+        app = dev_sandbox_ingress_entity_with_dev_sandbox_code.app
+        dev_sandbox_svc_name = get_dev_sandbox_service_name(app)
+        code_editor_svc_name = get_code_editor_service_name(app)
         assert manifest["apiVersion"] == "networking.k8s.io/v1"
         assert manifest["metadata"] == {
             "name": dev_sandbox_ingress_entity_with_dev_sandbox_code.name,
@@ -265,31 +271,31 @@ class TestDevSandboxIngressSerializer:
             "http": {
                 "paths": [
                     {
-                        "path": f"/(user/{dev_sandbox_code}/devserver)/(.*)()",
+                        "path": f"/(dev_sandbox/{dev_sandbox_code}/devserver)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": dev_sandbox_svc_name,
                                 "port": {"name": "devserver"},
                             },
                         },
                     },
                     {
-                        "path": f"/(user/{dev_sandbox_code}/app)/(.*)()",
+                        "path": f"/(dev_sandbox/{dev_sandbox_code}/app)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": dev_sandbox_svc_name,
                                 "port": {"name": "app"},
                             },
                         },
                     },
                     {
-                        "path": f"/(user/{dev_sandbox_code}/code-editor)/(.*)()",
+                        "path": f"/(dev_sandbox/{dev_sandbox_code}/code-editor)/(.*)()",
                         "pathType": "ImplementationSpecific",
                         "backend": {
                             "service": {
-                                "name": service_name,
+                                "name": code_editor_svc_name,
                                 "port": {"name": "code-editor"},
                             },
                         },
@@ -313,7 +319,7 @@ class TestCodeEditorSLZ:
         slz = CodeEditorSerializer(CodeEditor, gvk_config)
         manifest = slz.serialize(code_editor_entity)
 
-        labels = get_dev_sandbox_labels(code_editor_entity.app)
+        labels = get_code_editor_labels(code_editor_entity.app)
         assert manifest == {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
@@ -351,5 +357,40 @@ class TestCodeEditorSLZ:
                         "volumes": [{"name": "start-dir", "persistentVolumeClaim": {"claimName": "test-pvc"}}],
                     },
                 },
+            },
+        }
+
+
+class TestCodeEditorServiceSLZ:
+    @pytest.fixture()
+    def gvk_config(self):
+        return GVKConfig(
+            server_version="1.20.0",
+            kind="Service",
+            preferred_apiversion="v1",
+            available_apiversions=["v1"],
+        )
+
+    def test_serialize(self, gvk_config, code_editor_service_entity):
+        slz = CodeEditorServiceSerializer(CodeEditorService, gvk_config)
+        manifest = slz.serialize(code_editor_service_entity)
+
+        assert manifest == {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": get_code_editor_service_name(code_editor_service_entity.app),
+                "labels": {"env": "dev"},
+            },
+            "spec": {
+                "selector": get_code_editor_labels(code_editor_service_entity.app),
+                "ports": [
+                    {
+                        "name": "code-editor",
+                        "port": 10251,
+                        "targetPort": settings.CODE_EDITOR_PORT,
+                        "protocol": "TCP",
+                    },
+                ],
             },
         }

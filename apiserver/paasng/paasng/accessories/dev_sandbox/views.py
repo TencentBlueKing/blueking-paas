@@ -31,7 +31,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, generate_random_code
+from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
@@ -110,18 +110,6 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
-        dev_sandbox_code = generate_random_code()
-        # 确保应用下唯一
-        while DevSandbox.objects.filter(module=module, code=dev_sandbox_code).exists():
-            dev_sandbox_code = generate_random_code()
-
-        controller = DevSandboxWithCodeEditorController(
-            app=app,
-            module_name=module.name,
-            dev_sandbox_code=dev_sandbox_code,
-            owner=request.user.pk,
-        )
-
         serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
@@ -134,22 +122,44 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         # 获取版本信息
         version_info = self._get_version_info(request.user, module, params)
 
-        # 获取构建目录相对路径
-        source_dir = get_source_dir(module, request.user.pk, version_info)
-        relative_source_dir = Path(source_dir)
-        if relative_source_dir.is_absolute():
-            logger.warning("Unsupported absolute path<%s>, force transform to relative_to path.", relative_source_dir)
-            relative_source_dir = relative_source_dir.relative_to("/")
+        dev_sandbox_code = gen_dev_sandbox_code()
+        dev_sandbox = DevSandbox.objects.create(
+            region=app.region,
+            owner=request.user.pk,
+            module=module,
+            status=DevSandboxStatus.ACTIVE.value,
+            version_info=version_info,
+            code=dev_sandbox_code,
+        )
 
-        # 生成密码
+        # 生成代码编辑器密码
         password = generate_password()
+        code_editor = CodeEditor.objects.create(
+            dev_sandbox=dev_sandbox,
+            password=password,
+        )
 
-        # 获取环境变量（复用 stag 环境）
-        envs = generate_envs(app, module)
-        stag_envs = get_env_variables(module.get_envs("stag"))
-        envs.update(stag_envs)
-
+        controller = DevSandboxWithCodeEditorController(
+            app=app,
+            module_name=module.name,
+            dev_sandbox_code=dev_sandbox_code,
+            owner=request.user.pk,
+        )
         try:
+            # 获取构建目录相对路径
+            source_dir = get_source_dir(module, request.user.pk, version_info)
+            relative_source_dir = Path(source_dir)
+            if relative_source_dir.is_absolute():
+                logger.warning(
+                    "Unsupported absolute path<%s>, force transform to relative_to path.", relative_source_dir
+                )
+                relative_source_dir = relative_source_dir.relative_to("/")
+
+            # 获取环境变量（复用 stag 环境）
+            envs = generate_envs(app, module)
+            stag_envs = get_env_variables(module.get_envs("stag"))
+            envs.update(stag_envs)
+
             controller.deploy(
                 dev_sandbox_env_vars=envs,
                 code_editor_env_vars={},
@@ -158,21 +168,13 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            dev_sandbox.delete()
+            code_editor.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
-
-        dev_sandbox = DevSandbox.objects.create(
-            region=app.region,
-            owner=request.user.pk,
-            module=module,
-            status=DevSandboxStatus.ALIVE.value,
-            version_info=version_info,
-            code=dev_sandbox_code,
-        )
-
-        CodeEditor.objects.create(
-            dev_sandbox=dev_sandbox,
-            password=password,
-        )
+        except Exception:
+            dev_sandbox.delete()
+            code_editor.delete()
+            raise
 
         return Response(status=status.HTTP_201_CREATED)
 

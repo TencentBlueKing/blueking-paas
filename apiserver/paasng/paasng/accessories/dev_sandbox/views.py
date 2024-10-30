@@ -185,7 +185,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         module = self.get_module_via_path()
 
         try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
         except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
@@ -196,6 +196,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
         )
         controller.delete()
+        dev_sandbox.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

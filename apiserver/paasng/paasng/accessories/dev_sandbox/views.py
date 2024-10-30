@@ -142,7 +142,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         controller = DevSandboxWithCodeEditorController(
             app=app,
             module_name=module.name,
-            dev_sandbox_code=dev_sandbox_code,
+            dev_sandbox_code=dev_sandbox.code,
             owner=request.user.pk,
         )
         try:

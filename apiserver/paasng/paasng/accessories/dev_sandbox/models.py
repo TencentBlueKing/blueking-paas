@@ -47,7 +47,7 @@ def gen_dev_sandbox_code() -> str:
 class DevSandbox(OwnerTimestampedModel):
     """DevSandbox Model"""
 
-    code = models.CharField(max_length=8, help_text="沙箱标识,模块下唯一", unique=True)
+    code = models.CharField(max_length=8, help_text="沙箱标识", unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(max_length=32, verbose_name="沙箱状态", choices=DevSandboxStatus.get_choices())
     expire_at = models.DateTimeField(null=True, help_text="到期时间")

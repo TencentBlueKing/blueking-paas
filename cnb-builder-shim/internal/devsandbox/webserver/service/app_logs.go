@@ -19,86 +19,86 @@
 package service
 
 import (
-	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+
+	"github.com/docker/docker/pkg/tailfile"
 )
 
+// GetAppLogs 获取应用日志
+// Parameters:
+//   - logPath: 日志路径
+//   - lines: 需要的日志行数
+//
+// Returns:
+//   - map[string][]string: key 为日志类型, value 为日志内容
 func GetAppLogs(logPath string, lines int) (map[string][]string, error) {
+	// 检查文件是否存在
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		// 文件不存在，返回 nil, nil
+		return nil, nil
+	}
 	logs := make(map[string][]string)
-	logFiles, err := getLatestLogFiles(logPath)
+	logFiles, err := getLogFiles(logPath)
 	if err != nil {
 		return nil, err
 	}
-	for logType, files := range logFiles {
-		for _, file := range files {
-			lastXLines, err := getLastLines(logPath, file.Name(), lines)
-			if err != nil {
-				continue
-			}
-			logs[logType] = append(lastXLines, logs[logType]...)
-			if len(lastXLines) >= lines {
-				break
-			}
+	for logType, file := range logFiles {
+		logLines, err := tailFile(logPath, file, lines)
+		if err != nil {
+			return nil, err
 		}
+		logs[logType] = append(logLines, logs[logType]...)
 	}
 	return logs, nil
 }
 
-// getLatestLogFiles 按日志类型分类，并且获取最新的日志文件列表
-// 日志文件名称需要符合格式：{{process_type}}-{{random_str}}-{{log_type}}.log
-func getLatestLogFiles(logDir string) (map[string][]os.FileInfo, error) {
-	logFiles := make(map[string][]os.FileInfo)
+// 按日志类型分类日志文件
+func getLogFiles(logDir string) (map[string]os.FileInfo, error) {
+	logFiles := make(map[string]os.FileInfo)
 	err := filepath.Walk(logDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		// 过滤非日志文件, 并且根据文件名称将日志进行分类
-		if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".log") {
-			logName := strings.TrimSuffix(strings.ToLower(info.Name()), filepath.Ext(info.Name()))
-			lastDashIndex := strings.LastIndex(logName, "-")
-			if lastDashIndex == -1 {
-				return fmt.Errorf("invalid log file name: %s", info.Name())
-			}
-			logType := logName[lastDashIndex+1:]
-			logFiles[logType] = append(logFiles[logType], info)
+		// 获取日志类型
+		logType := getLogType(info)
+		if logType != "" {
+			logFiles[logType] = info
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	// 按日志类型进行时间排序
-	for _, files := range logFiles {
-		sort.Slice(files, func(i, j int) bool {
-			return files[i].ModTime().After(files[j].ModTime())
-		})
-	}
 	return logFiles, nil
 }
 
-// getLastLines returns the last lines of the log file
-func getLastLines(logPath string, fileName string, lines int) ([]string, error) {
-	filePath := filepath.Join(logPath, fileName)
-	file, err := os.Open(filePath)
+// 通过文件名称获取日志类型, 需要符合格式：{{type}}.log
+func getLogType(info os.FileInfo) string {
+	if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".log") {
+		logType := strings.TrimSuffix(strings.ToLower(info.Name()), filepath.Ext(info.Name()))
+		return logType
+	}
+	return ""
+}
+
+// 获取文件最新部分的内容
+func tailFile(logPath string, file os.FileInfo, lines int) (logs []string, err error) {
+	filePath := filepath.Join(logPath, file.Name())
+	logFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	var logs []string
-	scanner := bufio.NewScanner(file)
-	// 全量读取日志文件,日志文件都有进行分片,对于内存压力应该还好
-	for scanner.Scan() {
-		logs = append(logs, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
+	tailBytes, err := tailfile.TailFile(logFile, lines)
+	if err != nil {
 		return nil, err
 	}
-	if len(logs) > lines {
-		logs = logs[len(logs)-lines:]
+	tailStr := make([]string, len(tailBytes))
+	for index, b := range tailBytes {
+		tailStr[index] = string(b)
 	}
+
+	logs = append(logs, tailStr...)
 	return logs, nil
 }

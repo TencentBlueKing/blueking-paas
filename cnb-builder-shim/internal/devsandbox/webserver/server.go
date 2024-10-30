@@ -20,6 +20,7 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"net/http"
 	"os"
 	"path"
@@ -213,7 +214,7 @@ func AppLogHandler() gin.HandlerFunc {
 			queryParams.Lines = 100
 		}
 		// 读取日志
-		appLogPath := path.Join(devsandbox.DefaultAppDir, devsandbox.DefaultAppLogDir)
+		appLogPath := path.Join(launch.SupervisorDir, "log")
 		logs, err := service.GetAppLogs(appLogPath, queryParams.Lines)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get app log error: %s", err.Error())})

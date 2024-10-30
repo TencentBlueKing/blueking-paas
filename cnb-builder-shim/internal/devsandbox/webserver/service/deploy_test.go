@@ -109,18 +109,15 @@ var _ = Describe("Test GetAppLogs", func() {
 	var logPath string
 	var celeryLogPath string
 	var mysqlLogPath string
-	var newCeleryLogPath string
 	BeforeEach(func() {
 		logPath, err = os.MkdirTemp("", "log_test")
 		Expect(err).To(BeNil())
-		celeryLogPath = filepath.Join(logPath, "celery-test-celery.log")
-		mysqlLogPath = filepath.Join(logPath, "web-test-mysql.log")
-		newCeleryLogPath = filepath.Join(logPath, "celery-test-new-celery.log")
+		celeryLogPath = filepath.Join(logPath, "celery.log")
+		mysqlLogPath = filepath.Join(logPath, "mysql.log")
 		logContent1 := "value1\nvalue2\n"
 		logContent2 := "value3\nvalue4\n"
 		err := os.WriteFile(celeryLogPath, []byte(logContent1), 0644)
 		Expect(err).To(BeNil())
-		err = os.WriteFile(newCeleryLogPath, []byte(logContent2), 0644)
 		err = os.WriteFile(mysqlLogPath, []byte(logContent2), 0644)
 		Expect(err).To(BeNil())
 	})
@@ -132,17 +129,22 @@ var _ = Describe("Test GetAppLogs", func() {
 			logs, err := GetAppLogs(logPath, 1)
 			Expect(err).To(BeNil())
 			Expect(len(logs["celery"])).To(Equal(1))
-			Expect(logs["celery"]).To(Equal([]string{"value4"}))
+			Expect(logs["celery"]).To(Equal([]string{"value2"}))
 			Expect(len(logs["mysql"])).To(Equal(1))
 			Expect(logs["mysql"]).To(Equal([]string{"value4"}))
 		})
 		It("test lines > logs", func() {
 			logs, err := GetAppLogs(logPath, 5)
 			Expect(err).To(BeNil())
-			Expect(len(logs["celery"])).To(Equal(4))
-			Expect(logs["celery"]).To(Equal([]string{"value1", "value2", "value3", "value4"}))
+			Expect(len(logs["celery"])).To(Equal(2))
+			Expect(logs["celery"]).To(Equal([]string{"value1", "value2"}))
 			Expect(len(logs["mysql"])).To(Equal(2))
 			Expect(logs["mysql"]).To(Equal([]string{"value3", "value4"}))
+		})
+		It("logFile does not exist", func() {
+			logs, err := GetAppLogs("", 5)
+			Expect(err).To(BeNil())
+			Expect(logs).To(BeNil())
 		})
 	})
 })

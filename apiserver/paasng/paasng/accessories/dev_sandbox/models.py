@@ -31,13 +31,13 @@ VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 
 def generate_random_code(length: int = 8) -> str:
-    """生成随机的沙箱标识(只包含大小写字母和数字)"""
-    characters = string.ascii_letters + string.digits
+    """生成随机的沙箱标识(只包含小写字母和数字)"""
+    characters = string.ascii_lowercase + string.digits
     return "".join(random.choice(characters) for _ in range(length))
 
 
 def gen_dev_sandbox_code() -> str:
-    """生成随机的唯一的沙箱标识(只包含大小写字母和数字)"""
+    """生成随机的唯一的沙箱标识"""
     dev_sandbox_code = generate_random_code()
     while DevSandbox.objects.filter(code=dev_sandbox_code).exists():
         dev_sandbox_code = generate_random_code()

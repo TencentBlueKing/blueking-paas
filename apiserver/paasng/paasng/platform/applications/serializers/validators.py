@@ -59,7 +59,7 @@ class AppUniqueValidator(UniqueValidator):
         self.signal_external(value, instance=instance)
 
     def signal_external(self, value: str, instance: Optional[Application]):
-        """Send signal to external datasources, will raise ValidateError when external validation fails"""
+        """Send signal to external data sources, will raise ValidateError when external validation fails"""
         try:
             self.signal.send(sender=self.__class__, value=value, instance=instance)
         except AppFieldValidationError as e:

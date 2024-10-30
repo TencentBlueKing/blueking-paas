@@ -18,4 +18,3 @@
 """
 ServiceHub module
 """
-default_app_config = "paasng.accessories.services.apps.ServicesAppConfig"

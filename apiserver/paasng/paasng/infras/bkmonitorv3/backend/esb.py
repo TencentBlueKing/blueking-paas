@@ -84,6 +84,14 @@ class MonitorV3Group(OperationGroup):
         path="/api/c/compapi/v2/monitor_v3/as_code/import_config/",
     )
 
+    # 快捷应用内置仪表盘
+    quick_import_dashboard = bind_property(
+        Operation,
+        name="quick_import_dashboard",
+        method="POST",
+        path="/api/c/compapi/v2/monitor_v3/quick_import_dashboard/",
+    )
+
 
 class Client(ESBClient):
     """ESB Components"""

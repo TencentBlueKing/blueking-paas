@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Repo connectors for applications
-"""
+"""Repo connectors for applications"""
+
 import abc
 import logging
 from dataclasses import dataclass, field
@@ -312,7 +312,7 @@ class BlobStoreSyncProcedure:
             compress_directory(source_path, package_path)
             self.blob_store.upload_file(package_path, self.key, ExtraArgs={"ACL": "private"})
 
-        # Generate a temporary accessable url for source codes
+        # Generate a temporary accessible url for source codes
         url = self.blob_store.generate_presigned_url(key=self.key, expires_in=self.downloadable_address_expires_in)
         return SourceSyncResult(
             dest_type=self.blob_store.STORE_TYPE,

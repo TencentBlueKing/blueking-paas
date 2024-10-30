@@ -255,7 +255,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ADD_ON,
             attribute=service.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=module_attachment.service.config),
+            data_before=DataDetail(type=DataType.RAW_DATA, data=service.config if service else None),
         )
         return Response(status=status.HTTP_200_OK)
 

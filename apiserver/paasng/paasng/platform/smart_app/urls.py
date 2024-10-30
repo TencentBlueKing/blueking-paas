@@ -15,52 +15,52 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
     # 创建 S-Mart 应用(旧接口)
-    url(
+    re_path(
         r"^api/sourcectl/smart_packages/$",
         views.SMartPackageCreatorViewSet.as_view({"post": "upload"}),
         name="api.sourcectl.smart_packages",
     ),
-    url(
+    re_path(
         r"^api/sourcectl/smart_packages/prepared/$",
         views.SMartPackageCreatorViewSet.as_view({"post": "create_prepared"}),
         name="api.sourcectl.smart_packages.prepared",
     ),
     # 创建 S-Mart 应用
-    url(
+    re_path(
         r"^api/bkapps/s-mart/$",
         views.SMartPackageCreatorViewSet.as_view({"post": "upload"}),
         name="api.applications.create.smart_packages.upload",
     ),
-    url(
+    re_path(
         r"^api/bkapps/s-mart/confirm/$",
         views.SMartPackageCreatorViewSet.as_view({"post": "create_prepared"}),
         name="api.applications.create.smart_packages.confirm",
     ),
     # 查询 S-Mart 包列表
-    url(
+    re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/$",
         views.SMartPackageManagerViewSet.as_view({"get": "list"}),
         name="api.sourcectl.source_package.s-mart.list",
     ),
     # 暂存一个 S-Mart 应用包
-    url(
+    re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/stash/$",
         views.SMartPackageManagerViewSet.as_view({"post": "stash"}),
         name="api.sourcectl.source_package.s-mart.stash",
     ),
     # 确认上传一个 S-Mart 应用包
-    url(
+    re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/commit/(?P<signature>[^/]+)/$",
         views.SMartPackageManagerViewSet.as_view({"post": "commit"}),
         name="api.sourcectl.source_package.s-mart.commit",
     ),
-    url(
+    re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/source_package/(?P<pk>[^/]+)/$",
         views.SMartPackageManagerViewSet.as_view({"get": "retrieve"}),
         name="api.sourcectl.source_package.s-mart.detail",

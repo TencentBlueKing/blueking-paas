@@ -32,5 +32,3 @@ perm_insure 模块的主要功能是确保每一个视图函数都配置了恰�
 
 综上所述，perm_insure 通过增加对权限配置的二次确认，来规避权限配置错误。
 """
-
-default_app_config = "paasng.infras.perm_insure.apps.PermInsureConfig"

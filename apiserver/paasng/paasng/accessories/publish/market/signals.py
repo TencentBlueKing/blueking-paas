@@ -15,9 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import django
+from django.dispatch import Signal
 
 # A signal work like `post_save` but provide `operator` info additionally
-product_create_or_update_by_operator = django.dispatch.Signal(providing_args=["product", "operator", "created"])
+# providing_args: [product: Product, operator: User, created: bool]
+product_create_or_update_by_operator = Signal()
 
-product_contact_updated = django.dispatch.Signal(providing_args=["product"])
+# providing_args: [product: Product]
+product_contact_updated = Signal()

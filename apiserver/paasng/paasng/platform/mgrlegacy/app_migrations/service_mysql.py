@@ -17,7 +17,7 @@
 
 import logging
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.publish.sync_market.managers import AppSecureInfoManger
 from paasng.platform.engine.constants import ConfigVarEnvName

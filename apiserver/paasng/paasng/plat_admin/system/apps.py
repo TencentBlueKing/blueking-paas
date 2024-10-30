@@ -20,3 +20,4 @@ from paasng.utils.addons import PlugableAppConfig
 
 class SystemConfig(PlugableAppConfig):
     name = "paasng.plat_admin.system"
+    default = True

@@ -50,7 +50,9 @@ import pymysql
 import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
+from django.db.backends.mysql.features import DatabaseFeatures
 from django.utils.encoding import force_bytes, force_str
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
@@ -79,7 +81,7 @@ settings = LazySettings(
         # Configure minimal required settings
         Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
     ],
-    # Envvar name configs
+    # Env var name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS",
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
@@ -90,9 +92,25 @@ _notset = object()
 # https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
 urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
 
+
+class PatchFeatures:
+    """Patched Django Features"""
+
+    @cached_property
+    def minimum_database_version(self):
+        if self.connection.mysql_is_mariadb:  # noqa
+            return (10, 4)
+        else:
+            return (5, 7)
+
+
+# Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
+# 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
+DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
+
 pymysql.install_as_MySQLdb()
-# Patch version info to forcely pass Django client check
-setattr(pymysql, "version_info", (1, 4, 2, "final", 0))
+# Patch version info to force pass Django client check
+setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥
@@ -557,14 +575,14 @@ FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME")
 CSRF_COOKIE_DOMAIN = settings.get("CSRF_COOKIE_DOMAIN")
 SESSION_COOKIE_DOMAIN = settings.get("SESSION_COOKIE_DOMAIN")
 
-# 蓝鲸登录票据在Cookie中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
+# 蓝鲸登录票据在 Cookie 中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
 
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
-# == CORS 请求跨域相关配置
-#
+# CORS 请求跨域相关配置
+
 # CORS 允许的来源
 CORS_ORIGIN_REGEX_WHITELIST = settings.get("CORS_ORIGIN_REGEX_WHITELIST", [])
 
@@ -572,6 +590,10 @@ CORS_ORIGIN_ALLOW_ALL = settings.get("CORS_ORIGIN_ALLOW_ALL", False)
 
 # 默认允许通过通过跨域请求传递 Cookie，默认允许
 CORS_ALLOW_CREDENTIALS = True
+
+# 跨域请求弹窗策略
+# https://docs.djangoproject.com/en/4.2/topics/security/#cross-origin-opener-policy
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "unsafe-none"
 
 # ============================ Celery 相关配置 ============================
 

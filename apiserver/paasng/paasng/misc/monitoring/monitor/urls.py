@@ -15,27 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
 from django.urls import path
+
+from paasng.utils.basic import re_path
 
 from . import views
 
 # FIXME: phalanx 方案已经下线, 删除废弃 url
 urlpatterns = [
-    url(
+    re_path(
         r"api/monitor/applications/(?P<code>[^/]+)/record/query/$",
         views.EventRecordView.as_view({"post": "query"}),
     ),
-    url(
+    re_path(
         r"api/monitor/applications/(?P<code>[^/]+)/record/(?P<record>[^/]+)/$",
         views.EventRecordDetailsView.as_view({"get": "get"}),
     ),
-    url(
+    re_path(
         r"api/monitor/applications/(?P<code>[^/]+)/record_metrics/(?P<record>[^/]+)/$",
         views.EventRecordMetricsView.as_view({"get": "get"}),
     ),
-    url(r"api/monitor/applications/(?P<code>[^/]+)/genre/$", views.EventGenreView.as_view({"get": "list"})),
-    url(
+    re_path(r"api/monitor/applications/(?P<code>[^/]+)/genre/$", views.EventGenreView.as_view({"get": "list"})),
+    re_path(
         r"api/monitor/record/applications/summary/$",
         views.EventRecordView.as_view({"get": "app_summary"}),
     ),
@@ -57,6 +58,11 @@ urlpatterns = [
     ),
     path(
         "api/monitor/applications/<slug:code>/dashboard_info/",
-        views.GetDashboardInfoView.as_view({"get": "get"}),
+        views.GetDashboardInfoView.as_view({"get": "get_dashboard_url"}),
+    ),
+    path(
+        "api/monitor/applications/<slug:code>/builtin_dashboards/",
+        views.GetDashboardInfoView.as_view({"get": "list_builtin_dashboards"}),
+        name="api.modules.monitor.builtin_dashboards",
     ),
 ]

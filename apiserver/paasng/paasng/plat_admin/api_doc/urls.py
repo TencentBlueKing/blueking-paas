@@ -15,33 +15,33 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf.urls import url
+from paasng.utils.basic import re_path
 
 from . import views
 
 urlpatterns = [
     # 返回合并后的 swagger文档
-    url(
+    re_path(
         r"^docs/$",
         views.FullSwaggerConfigurationView.with_ui("swagger", cache_timeout=0),
         name="full-swagger-ui",
     ),
-    url(
+    re_path(
         r"^docs/swagger/$",
         views.FullSwaggerConfigurationView.with_ui("swagger", cache_timeout=0),
         name="full-swagger-ui",
     ),
-    url(r"^docs/redoc/$", views.FullSwaggerConfigurationView.with_ui("redoc", cache_timeout=0), name="full-redoc"),
-    url(
+    re_path(r"^docs/redoc/$", views.FullSwaggerConfigurationView.with_ui("redoc", cache_timeout=0), name="full-redoc"),
+    re_path(
         r"^docs/swagger(?P<format>\.json|\.yaml)$",
         views.FullSwaggerConfigurationView.without_ui(cache_timeout=0),
         name="full-schema",
     ),
-    url(
+    re_path(
         r"^docs/auto/swagger(?P<format>\.json|\.yaml)$",
         views.schema_view.without_ui(cache_timeout=0),
         name="schema",
     ),
-    url(r"^docs/auto/swagger/$", views.schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
-    url(r"^docs/auto/redoc/$", views.schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+    re_path(r"^docs/auto/swagger/$", views.schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    re_path(r"^docs/auto/redoc/$", views.schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]

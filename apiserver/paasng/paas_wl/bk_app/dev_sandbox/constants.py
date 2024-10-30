@@ -27,5 +27,5 @@ class SourceCodeFetchMethod(StrStructuredEnum):
 class DevSandboxStatus(StrStructuredEnum):
     """沙箱状态"""
 
-    ACTIVE = EnumField("active", label="存活")
+    ACTIVE = EnumField("active", label="活跃")
     ERROR = EnumField("error", label="错误")

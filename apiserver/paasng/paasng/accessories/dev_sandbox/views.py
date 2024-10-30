@@ -134,7 +134,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         # 生成代码编辑器密码
         password = generate_password()
-        code_editor = CodeEditor.objects.create(
+        CodeEditor.objects.create(
             dev_sandbox=dev_sandbox,
             password=password,
         )
@@ -169,11 +169,9 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             )
         except DevSandboxAlreadyExists:
             dev_sandbox.delete()
-            code_editor.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
             dev_sandbox.delete()
-            code_editor.delete()
             raise
 
         return Response(status=status.HTTP_201_CREATED)
@@ -206,7 +204,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         app = self.get_application()
         module = self.get_module_via_path()
         try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module).delete()
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
         except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 

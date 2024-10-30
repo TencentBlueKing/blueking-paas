@@ -113,7 +113,7 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)),
+`, SupervisorDir)),
 		Entry("with env_variables",
 			[]Process{
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
@@ -145,5 +145,5 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)))
+`, SupervisorDir)))
 })

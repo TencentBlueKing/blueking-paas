@@ -218,6 +218,7 @@ func AppLogHandler() gin.HandlerFunc {
 		logs, err := service.GetAppLogs(appLogPath, queryParams.Lines)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get app log error: %s", err.Error())})
+			return
 		}
 		c.JSON(http.StatusOK, gin.H{"log": logs})
 	}

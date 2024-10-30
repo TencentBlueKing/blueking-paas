@@ -26,6 +26,7 @@ from .views import (
     audit,
     bk_plugins,
     builtin_config_vars,
+    dashboard_templates,
     runtimes,
     services,
     smart_advisor,
@@ -452,7 +453,7 @@ urlpatterns = [
 
 # 应用配置管理，可以提供给管理应用、插件模板的同学使用
 urlpatterns += [
-    # 平台管理-模板配置
+    # 应用配置管理-模板配置
     re_path(
         r"^configuration/tmpls/manage/$",
         templates.TemplateManageView.as_view(),
@@ -468,7 +469,7 @@ urlpatterns += [
         templates.TemplateViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.tmpl.detail",
     ),
-    # 平台管理-插件分类配置
+    # 应用配置管理-插件分类配置
     re_path(
         r"^configuration/bk_plugins/tags/manage/$",
         bk_plugins.BKPluginTagManageView.as_view(),
@@ -484,7 +485,7 @@ urlpatterns += [
         bk_plugins.BKPluginTagView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.tags.detail",
     ),
-    # 平台管理-插件使用方配置
+    # 应用配置管理-插件使用方配置
     re_path(
         r"^configuration/bk_plugins/distributors/manage/$",
         bk_plugins.BKPluginDistributorsManageView.as_view(),
@@ -499,6 +500,22 @@ urlpatterns += [
         r"^configuration/bk_plugins/distributors/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginDistributorsView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.distributors.detail",
+    ),
+    # 应用配置管理-仪表盘模板配置
+    re_path(
+        r"^configuration/dashboard_template/manage/$",
+        dashboard_templates.DashboardTemplateManageView.as_view(),
+        name="admin.configuration.dashboard_template.manage",
+    ),
+    re_path(
+        r"^configuration/dashboard_template/$",
+        dashboard_templates.DashboardTemplateViewSet.as_view(dict(post="create", get="list")),
+        name="admin.configuration.dashboard_template",
+    ),
+    re_path(
+        r"^configuration/dashboard_template/(?P<pk>[^/]+)/",
+        dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
+        name="admin.configuration.dashboard_template.detail",
     ),
 ]
 

@@ -28,5 +28,4 @@ class DevSandboxStatus(StrStructuredEnum):
     """沙箱状态"""
 
     ACTIVE = EnumField("active", label="存活")
-    EXPIRED = EnumField("expired", label="过期")
     ERROR = EnumField("error", label="错误")

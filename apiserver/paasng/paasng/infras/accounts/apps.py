@@ -20,6 +20,7 @@ from paasng.utils.addons import PlugableAppConfig
 
 class AppsConfig(PlugableAppConfig):
     name = "paasng.infras.accounts"
+    default = True
 
     def ready(self):
         super().ready()

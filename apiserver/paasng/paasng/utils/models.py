@@ -17,6 +17,7 @@
 
 # flake8: noqa
 """Utilities for django models and fields"""
+
 import os
 import sys
 import uuid
@@ -306,7 +307,7 @@ def _make_json_field(
         raise NotImplementedError(f"Unsupported type: {py_model}")
 
     def is_pymodel_instance(value):
-        """should unstructure value to string?"""
+        """should unstructured value to string?"""
         if is_sequence(py_model):
             elem_type = py_model.__args__[0]  # type: ignore
             return all(isinstance(v, elem_type) for v in value)
@@ -324,6 +325,15 @@ def _make_json_field(
 
     def get_prep_value(self, value):
         """Convert `py_model` object to a string"""
+        # Django 4.2 中对字段转换逻辑做了调整，会导致直接
+        # 传递 Cast 给到 get_prep_value，需要做特殊处理
+        # ref:
+        # - https://code.djangoproject.com/ticket/35167
+        # - https://code.djangoproject.com/ticket/34539
+        # - https://code.djangoproject.com/ticket/35381
+        if hasattr(value, "as_sql"):
+            return value
+
         if value is not None and is_pymodel_instance(value):
             value = cattr.unstructure(value)
         return base_class.get_prep_value(self, value)

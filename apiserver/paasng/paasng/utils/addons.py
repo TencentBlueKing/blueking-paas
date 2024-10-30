@@ -47,6 +47,7 @@ class AddonsUrlRegister:
 
 class PlugableAppConfig(AppConfig):
     method: str = "contribute_to_app"
+    default = False
 
     def ready(self):
         __module__ = self.__module__

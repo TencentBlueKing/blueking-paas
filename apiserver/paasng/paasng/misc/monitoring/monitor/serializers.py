@@ -189,3 +189,14 @@ class AlarmStrategySLZ(serializers.Serializer):
     strategy_config_list = serializers.ListField(child=StrategyConfigSLZ(), help_text="策略配置列表")
     user_group_list = serializers.ListField(child=UserGroupSLZ(), help_text="通知组列表")
     strategy_config_link = serializers.CharField(help_text="策略配置链接")
+
+
+class AppDashboardSLZ(serializers.Serializer):
+    name = serializers.CharField()
+    display_name = serializers.CharField()
+    language = serializers.CharField()
+    dashboard_url = serializers.SerializerMethodField()
+
+    def get_dashboard_url(self, instance):
+        bk_biz_id = self.context["bk_biz_id"]
+        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}&dashName={instance.name}&pure=1"

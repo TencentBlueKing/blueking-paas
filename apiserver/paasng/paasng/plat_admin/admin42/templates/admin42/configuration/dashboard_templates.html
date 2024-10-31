@@ -197,17 +197,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.$bkInfo({
                     title: `确定要删除 ${row.name}？`,
                     confirmLoading: true,
-                    theme: 'danger',
+                    theme: "danger",
                     confirmFn: async () => {
                         try {
                             await this.deleteRow(row)
                             this.$bkMessage({
-                                theme: 'success',
-                                message: '删除成功',
+                                theme: "success",
+                                message: "删除成功",
                             });
                         } catch (e) {
                             this.$bkMessage({
-                                theme: 'error',
+                                theme: "error",
                                 message: e.response.data.detail,
                             });
                         }

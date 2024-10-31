@@ -151,7 +151,7 @@ global_site_resource = _init_global_site_resource()
 def site_perm_class(action: SiteAction):
     """构建 DRF 可用的权限类，管理站点访问相关权限。"""
 
-    class AdminPermission(BasePermission):
+    class Permission(BasePermission):
         # used to check if is admin42 permission
         perm_action = action
 
@@ -165,7 +165,7 @@ def site_perm_class(action: SiteAction):
                 raise PermissionDenied("You are not allowed to do this operation.")
             return True
 
-    return AdminPermission
+    return Permission
 
 
 def site_perm_required(action: SiteAction):

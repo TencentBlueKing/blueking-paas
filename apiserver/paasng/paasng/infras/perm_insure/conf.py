@@ -16,6 +16,8 @@
 #
 from typing import Set
 
+from paasng.infras.accounts.permissions.constants import SiteAction
+
 # These views either check permissions in their own way or don't need to check permissions
 # at all, so they are excluded from the checking process by perm_insure.
 INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
@@ -100,3 +102,11 @@ ADMIN42_MODULE_NAMESPACES = (
     "paasng.plat_admin.admin42.views",
     "paas_wl.apis.admin.views",
 )
+
+# Admin42 actions used to check whether a permission is admin42 permission
+ADMIN42_ACTIONS = {
+    SiteAction.VISIT_ADMIN42,
+    SiteAction.MANAGE_PLATFORM,
+    SiteAction.MANAGE_APP_TEMPLATES,
+    SiteAction.OPERATE_PLATFORM,
+}

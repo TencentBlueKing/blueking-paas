@@ -37,34 +37,45 @@
           ></bk-alert>
         </div>
         <section class="sandbox-editor">
-          <div class="iframe-box">
-            <!-- 添加一个loading？ -->
-            <iframe
-              v-if="isLoadingSandbox"
-              ref="iframeRef"
-              id="iframe-embed"
-              :src="iframeUrl"
-              scrolling="no"
-              frameborder="0"
-            />
+          <bk-resize-layout
+            placement="right"
+            :min="360"
+            :initial-divide="360"
+            :border="false"
+            ext-cls="sandbox-resize-layout"
+          >
             <div
-              v-else
-              class="iframe-loading"
+              slot="main"
+              class="iframe-box"
             >
-              <img src="/static/images/loading.gif" />
+              <iframe
+                v-if="isLoadingSandbox"
+                ref="iframeRef"
+                id="iframe-embed"
+                :src="iframeUrl"
+                scrolling="no"
+                frameborder="0"
+              />
+              <div
+                v-else
+                class="iframe-loading"
+              >
+                <img src="/static/images/loading.gif" />
+              </div>
             </div>
-          </div>
-          <!-- 登录展示沙盒后，展示右侧的tab信息 -->
-          <right-tab
-            ref="rightTabRef"
-            class="right-tab-cls"
-            :data="sandboxData"
-            :service-name="serviceName"
-            :buildLog="buildLog"
-            :runLog="runLog"
-            :loading="isLogsLoading"
-            @tab-change="rightTabChange"
-          />
+            <!-- 登录展示沙盒后，展示右侧的tab信息 -->
+            <right-tab
+              slot="aside"
+              ref="rightTabRef"
+              class="right-tab-cls"
+              :data="sandboxData"
+              :service-name="serviceName"
+              :buildLog="buildLog"
+              :runLog="runLog"
+              :loading="isLogsLoading"
+              @tab-change="rightTabChange"
+            />
+          </bk-resize-layout>
         </section>
       </div>
       <section class="footer-tools-box">
@@ -209,6 +220,7 @@ export default {
   },
   beforeDestroy() {
     this.clearIntervals();
+    clearInterval(this.sandboxIntervalId);
   },
   methods: {
     ensureHttpProtocol(url) {
@@ -433,10 +445,18 @@ export default {
       }
     }
     .sandbox-editor {
-      display: flex;
       height: calc(100vh - 236px);
+      .sandbox-resize-layout {
+        height: 100%;
+        /deep/ .bk-resize-layout-main {
+          margin-right: 16px;
+        }
+        /deep/ .bk-resize-layout-aside {
+          border: none !important;
+        }
+      }
       .iframe-box {
-        flex: 1;
+        height: 100%;
         iframe#iframe-embed {
           width: 100%;
           height: 100%;
@@ -457,7 +477,6 @@ export default {
         }
       }
       .right-tab-cls {
-        margin-left: 16px;
         flex-shrink: 0;
       }
     }

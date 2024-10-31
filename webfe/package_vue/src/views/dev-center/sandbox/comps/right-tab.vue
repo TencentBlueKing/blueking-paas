@@ -58,7 +58,7 @@ export default {
 .sandbox-rig-tab {
   display: flex;
   flex-direction: column;
-  width: 360px;
+  height: 100%;
   .tab-header {
     z-index: 9;
     flex-shrink: 0;

@@ -44,10 +44,10 @@
         </div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="名称" :property="name" :required="true">
-                <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="与蓝鲸监控约定的仪表盘名称，如：bksaas/framework-python"></bk-input>
+                <bk-input v-model="dialog.form.name" placeholder="与蓝鲸监控约定的仪表盘名称，如：bksaas/framework-python"></bk-input>
             </bk-form-item>
             <bk-form-item label="展示名称" :required="true">
-                <bk-input v-model="dialog.form.display_name"></bk-input>
+                <bk-input v-model="dialog.form.display_name" placeholder="仪表盘展示名称，如：Python 开发框架内置仪表盘"></bk-input>
             </bk-form-item>
             <bk-form-item label="语言" :required="true">
                 <bk-select v-model="dialog.form.language" searchable>
@@ -194,11 +194,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.visible = true
             },
             handleDelete: function (row) {
-                this.dialog.type = "delete"
-                this.dialog.row = row
-
-                this.dialog.form = {...row}
-                this.dialog.visible = true
+                this.$bkInfo({
+                    title: `确定要删除 ${row.name}？`,
+                    confirmLoading: true,
+                    theme: 'danger',
+                    confirmFn: async () => {
+                        try {
+                            await this.deleteRow(row)
+                            this.$bkMessage({
+                                theme: 'success',
+                                message: '删除成功',
+                            });
+                        } catch (e) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            });
+                        }
+                    }
+                })
+            },
+            deleteRow: async function (row) {
+                const url = this.fillUrlTemplate(URLRouter.detail, {row})
+                await this.$http.delete(url)
+                this.fetchDashboardTmplList()
             },
             handleView: function (row) {
                 this.readOnlyDialog.form = {...row}

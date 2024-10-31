@@ -2856,5 +2856,5 @@ export default {
   慢查询告警数量: 'Number of slow query alerts',
   告警内容: 'Alarm content',
   慢查询记录: 'Slow query records',
-  'GCS-MySQL 增强服务实例已解绑，无法再查看慢查询记录': 'GCS-MySQL enhanced service instance has been unbound, and slow query records can no longer be viewed',
+  'GCS-MySQL 增强服务实例已解绑，无法再查看慢查询记录': 'The GCS-MySQL Add-ons instance has been unbound, and slow query records can no longer be viewed',
 };

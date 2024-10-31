@@ -145,5 +145,13 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/`;
       return http.get(url, {}, config);
     },
+
+    /**
+     * 获取应用增强服务信息
+     */
+    getServiceInfo({}, { appCode, moduleId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/info/`;
+      return http.get(url, {}, config);
+    },
   },
 };

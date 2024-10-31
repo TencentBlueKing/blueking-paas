@@ -25,11 +25,11 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
-	"strings"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"

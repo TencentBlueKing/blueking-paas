@@ -23,7 +23,7 @@ from django.urls import URLPattern, URLResolver
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
 
-from .conf import ADMIN42_MODULE_NAMESPACES, ADMIN42_PERMISSION_CLASS_NAMESPACE, INSURE_CHECKING_EXCLUDED_VIEWS
+from .conf import ADMIN42_MODULE_NAMESPACES, INSURE_CHECKING_EXCLUDED_VIEWS
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def is_admin42_url(url: str) -> bool:
 
 
 def is_admin42_view_func(view_func) -> bool:
-    return any(view_func.__module__.startswith(ns) for ns in ADMIN42_MODULE_NAMESPACES)
+    return view_func.__module__.startswith(ADMIN42_MODULE_NAMESPACES)
 
 
 def ensure_views_perm_configured():
@@ -104,7 +104,7 @@ def check_drf_view_perm(view_func, is_admin42: bool):
 
     # When the view class is admin42 view, it should contain site_perm_class in permission_classes
     if is_admin42:  # noqa: SIM102
-        if not any(p.__module__ == ADMIN42_PERMISSION_CLASS_NAMESPACE for p in enabled_perm):
+        if not any(p.__name__ == "AdminPermission" for p in enabled_perm):
             raise ImproperlyConfigured(
                 f"The view class {view_cls} has no site_perm_class configured in permission_classes"
             )

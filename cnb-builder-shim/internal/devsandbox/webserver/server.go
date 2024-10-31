@@ -20,17 +20,16 @@ package webserver
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"strings"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
@@ -209,18 +208,13 @@ func AppLogHandler() gin.HandlerFunc {
 			})
 			return
 		}
-		// 如果没有提供 lines 参数，则设置默认值 100
-		if queryParams.Lines == 0 {
-			queryParams.Lines = 100
-		}
 		// 读取日志
-		appLogPath := path.Join(launch.SupervisorDir, "log")
-		logs, err := service.GetAppLogs(appLogPath, queryParams.Lines)
+		logs, err := service.GetAppLogs(service.DefaultAppLogDir, queryParams.Lines)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get app log error: %s", err.Error())})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"log": logs})
+		c.JSON(http.StatusOK, gin.H{"logs": logs})
 	}
 }
 

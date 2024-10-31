@@ -30,9 +30,9 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
-var SupervisorDir = "/cnb/devsandbox/supervisor"
+var supervisorDir = "/cnb/devsandbox/supervisor"
 
-var confFilePath = filepath.Join(SupervisorDir, "dev.conf")
+var confFilePath = filepath.Join(supervisorDir, "dev.conf")
 
 var confTmpl = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
@@ -68,7 +68,7 @@ else
   echo "supervisord is not running. start supervisord..."
   supervisord -c %[2]s
 fi
-`, SupervisorDir, confFilePath)
+`, supervisorDir, confFilePath)
 
 // ProcessConf is a process config
 type ProcessConf struct {
@@ -86,7 +86,7 @@ type SupervisorConf struct {
 // MakeSupervisorConf returns a new SupervisorConf
 func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
-		RootDir: SupervisorDir,
+		RootDir: supervisorDir,
 	}
 
 	if procEnvs != nil {
@@ -112,7 +112,7 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*Supervis
 // NewSupervisorCtl returns a new SupervisorCtl
 func NewSupervisorCtl() *SupervisorCtl {
 	return &SupervisorCtl{
-		RootDir: SupervisorDir,
+		RootDir: supervisorDir,
 	}
 }
 

@@ -20,5 +20,5 @@ package webserver
 
 // LogQueryParams : log query params
 type LogQueryParams struct {
-	Lines int `form:"lines" binding:"omitempty,gte=1,lte=200"`
+	Lines int `form:"lines,default=100" binding:"omitempty,gte=1,lte=200"`
 }

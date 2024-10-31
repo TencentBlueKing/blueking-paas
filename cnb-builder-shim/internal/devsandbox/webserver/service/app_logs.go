@@ -26,6 +26,9 @@ import (
 	"github.com/docker/docker/pkg/tailfile"
 )
 
+// DefaultAppLogDir 应用日志默认目录
+var DefaultAppLogDir = "/cnb/devsandbox/supervisor/log"
+
 // GetAppLogs 获取应用日志
 // Parameters:
 //   - logPath: 日志路径
@@ -33,19 +36,20 @@ import (
 //
 // Returns:
 //   - map[string][]string: key 为日志类型, value 为日志内容
-func GetAppLogs(logPath string, lines int) (map[string][]string, error) {
+func GetAppLogs(logDir string, lines int) (map[string][]string, error) {
 	// 检查文件是否存在
-	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		// 文件不存在，返回 nil, nil
 		return nil, nil
 	}
 	logs := make(map[string][]string)
-	logFiles, err := getLogFiles(logPath)
+	logFiles, err := getLogFiles(logDir)
 	if err != nil {
 		return nil, err
 	}
 	for logType, file := range logFiles {
-		logLines, err := tailFile(logPath, file, lines)
+		logPath := filepath.Join(logDir, file.Name())
+		logLines, err := tailFile(logPath, lines)
 		if err != nil {
 			return nil, err
 		}
@@ -84,13 +88,12 @@ func getLogType(info os.FileInfo) string {
 }
 
 // 获取文件最新部分的内容
-func tailFile(logPath string, file os.FileInfo, lines int) (logs []string, err error) {
-	filePath := filepath.Join(logPath, file.Name())
-	logFile, err := os.Open(filePath)
+func tailFile(filePath string, lines int) (logs []string, err error) {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	tailBytes, err := tailfile.TailFile(logFile, lines)
+	tailBytes, err := tailfile.TailFile(file, lines)
 	if err != nil {
 		return nil, err
 	}

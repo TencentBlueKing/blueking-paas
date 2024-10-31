@@ -53,7 +53,7 @@ func GetAppLogs(logDir string, lines int) (map[string][]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		logs[logType] = append(logLines, logs[logType]...)
+		logs[logType] = logLines
 	}
 	return logs, nil
 }

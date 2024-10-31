@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
@@ -98,5 +99,24 @@ version = 'v213'
 id = 'bk-buildpack-python'
 version = 'v213'
 `))
+	})
+})
+
+var _ = Describe("Test InitConfig", func() {
+	var err error
+	BeforeEach(func() {
+		err = config.InitConfig()
+		Expect(err).To(BeNil())
+	})
+	It("test load config with default values", func() {
+		sourceConfig := config.G.SourceCode
+		Expect(sourceConfig.FetchMethod).To(Equal(config.HTTP))
+		Expect(sourceConfig.Workspace).To(Equal("/cnb/devsandbox/src"))
+		corsConfig := config.G.Service.CORS
+		Expect(corsConfig.AllowOrigins).To(Equal([]string{""}))
+		Expect(corsConfig.AllowMethods).To(Equal([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}))
+		Expect(corsConfig.AllowHeaders).To(Equal([]string{"Origin", "Content-Type", "Authorization"}))
+		Expect(corsConfig.ExposeHeaders).To(Equal([]string{"Content-Length"}))
+		Expect(corsConfig.AllowCredentials).To(Equal(true))
 	})
 })

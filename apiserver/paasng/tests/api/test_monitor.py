@@ -69,8 +69,10 @@ class TestListAlertsView:
         )
         assert len(resp.data) == 1
         assert resp.data[0]["count"] == 3
-        assert resp.data[0]["slow_query_count"] == 3
+        assert resp.data[0]["slow_query_count"] == 1
         assert len(resp.data[0]["alerts"]) == 3
+        assert "gcs_mysql_slow_query" not in resp.data[0]["alerts"][1]["labels"]
+        assert "gcs_mysql_slow_query" in resp.data[0]["alerts"][0]["labels"]
         assert resp.data[0]["application"]["id"] == "1"
 
 

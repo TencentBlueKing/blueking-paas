@@ -125,7 +125,7 @@ class AlertSLZ(serializers.Serializer):
 
 class AlertListByUserSLZ(serializers.Serializer):
     application = ApplicationWithLogoMinimalSLZ(help_text="应用基础信息", read_only=True)
-    alerts = serializers.ListSerializer(help_text="应用告警", child=AlertSLZ())
+    alerts = serializers.SerializerMethodField(help_text="应用告警")
     count = serializers.SerializerMethodField(help_text="应用告警数")
     slow_query_count = serializers.SerializerMethodField(help_text="应用慢查询数")
 
@@ -134,6 +134,12 @@ class AlertListByUserSLZ(serializers.Serializer):
 
     def get_slow_query_count(self, obj):
         return sum(1 for alert in (obj.get("alerts") or []) if "gcs_mysql_slow_query" in alert.get("labels", []))
+
+    def get_alerts(self, obj):
+        alerts = obj.get("alerts") or []
+        # 慢查询告警排在前面，即 labels 中包含 gcs_mysql_slow_query 的排在前面
+        sorted_alerts = sorted(alerts, key=lambda alert: "gcs_mysql_slow_query" not in alert.get("labels", []))
+        return AlertSLZ(sorted_alerts, many=True).data
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

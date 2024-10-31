@@ -133,7 +133,7 @@ class AlertListByUserSLZ(serializers.Serializer):
         return len(obj.get("alerts") or [])
 
     def get_slow_query_count(self, obj):
-        return sum(1 for alert in (obj.get("alerts") or []) if "慢查询" in alert.get("alert_name", ""))
+        return sum(1 for alert in (obj.get("alerts") or []) if "gcs_mysql_slow_query" in alert.get("labels", []))
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):

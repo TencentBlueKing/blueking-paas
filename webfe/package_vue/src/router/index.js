@@ -29,6 +29,10 @@ const devCenterIndex = () => import(/* webpackChunkName: 'dev-center-index' */'@
   window.showDeployTip(error);
 });
 
+const sandboxIndex = () => import(/* webpackChunkName: 'sandbox-index' */'@/views/dev-center/sandbox/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const monitorIndex = () => import(/* webpackChunkName: 'monitor-index' */'@/views/dev-center/monitor').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -399,6 +403,15 @@ const router = new Router({
       component: devCenterIndex,
       meta: {
         isDefaultBackgroundColor: true,
+      },
+    },
+    {
+      path: '/developer-center/sandbox/',
+      name: 'sandbox',
+      component: sandboxIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+        sandboxPage: true,
       },
     },
     {

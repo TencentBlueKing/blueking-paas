@@ -21,6 +21,7 @@
       :class="{
         'plugin-min-width': isPlugin,
         'full-screen-height-cls': isDefaultBackgroundColor,
+        'sandbox-page': sandboxPage,
       }"
     >
       <router-view />
@@ -70,6 +71,9 @@ export default {
     },
     isDefaultBackgroundColor() {
       return this.$route.meta?.isDefaultBackgroundColor;
+    },
+    sandboxPage() {
+      return this.$route.meta?.sandboxPage;
     },
     paasVersion() {
       return window.BK_PAAS_VERSION;
@@ -137,6 +141,10 @@ export default {
 
 .gray-bg {
   background: #fafbfd;
+}
+
+.sandbox-page {
+  height: 100%;
 }
 
 .notice {

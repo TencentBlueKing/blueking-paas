@@ -1873,9 +1873,15 @@ msgstr "Egress Setting"
 
 #: paasng/misc/audit/constants.py:89
 #, fuzzy
-#| msgid "模块"
+#| msgid "模板"
 msgid "模板"
-msgstr "Module"
+msgstr "Template"
+
+#: paasng/misc/audit/constants.py:90
+#, fuzzy
+#| msgid "仪表盘模板"
+msgid "仪表盘模板"
+msgstr "Dashboard Template"
 
 #: paasng/misc/audit/constants.py:100 paasng/misc/operations/constant.py:57
 msgid "创建应用"

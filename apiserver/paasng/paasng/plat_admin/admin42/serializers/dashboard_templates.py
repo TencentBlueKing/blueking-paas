@@ -23,4 +23,4 @@ from paasng.misc.monitoring.monitor.models import AppDashboardTemplate
 class DashboardTemplateSLZ(serializers.ModelSerializer):
     class Meta:
         model = AppDashboardTemplate
-        fields = "__all__"
+        fields = ["id", "name", "display_name", "version", "language", "is_plugin_template"]

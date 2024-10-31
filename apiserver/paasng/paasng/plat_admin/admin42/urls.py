@@ -505,17 +505,17 @@ urlpatterns += [
     re_path(
         r"^configuration/dashboard_template/manage/$",
         dashboard_templates.DashboardTemplateManageView.as_view(),
-        name="admin.configuration.dashboard_template.manage",
+        name="admin.configuration.dashboard_tmpl.manage",
     ),
     re_path(
         r"^configuration/dashboard_template/$",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(post="create", get="list")),
-        name="admin.configuration.dashboard_template",
+        name="admin.configuration.dashboard_tmpl",
     ),
     re_path(
         r"^configuration/dashboard_template/(?P<pk>[^/]+)/",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.dashboard_template.detail",
+        name="admin.configuration.dashboard_tmpl.detail",
     ),
 ]
 

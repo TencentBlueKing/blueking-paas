@@ -36,7 +36,6 @@
         header-position="left"
         width="800"
         :confirm-fn="submitDialog"
-        @cancel="cancelDialog"
         :mask-close="false"
     >
         <div slot="header">
@@ -76,9 +75,9 @@
 const langChoices = {{ language_choices | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.dashboard_template' %}"),
-    list: decodeURI("{% url 'admin.configuration.dashboard_template' %}"),
-    detail: decodeURI("{% url 'admin.configuration.dashboard_template.detail' '${id}' %}"),
+    create: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
+    list: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
+    detail: decodeURI("{% url 'admin.configuration.dashboard_tmpl.detail' '${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -152,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     row = {}
                 return url_template.replace("${id}", row.id)
             },
-            cancelDialog: function () {},
             processData: function (data) {
                 return new Promise(resolve => {
                   resolve(data)
@@ -217,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteRow: async function (row) {
                 const url = this.fillUrlTemplate(URLRouter.detail, {row})
                 await this.$http.delete(url)
-                this.fetchDashboardTmplList()
+                await this.fetchDashboardTmplList()
             },
             handleView: function (row) {
                 this.readOnlyDialog.form = {...row}

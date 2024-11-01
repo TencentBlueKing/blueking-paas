@@ -15,11 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import datetime
-import random
 import string
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
+from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.utils.models import make_json_field
@@ -30,17 +30,12 @@ from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 
-def generate_random_code(length: int = 8) -> str:
-    """生成随机的沙箱标识(只包含小写字母和数字)"""
-    characters = string.ascii_lowercase + string.digits
-    return "".join(random.choice(characters) for _ in range(length))
-
-
 def gen_dev_sandbox_code() -> str:
-    """生成随机的唯一的沙箱标识"""
-    dev_sandbox_code = generate_random_code()
+    """生成随机的唯一的沙箱标识(只包含小写字母和数字)"""
+    characters = string.ascii_lowercase + string.digits
+    dev_sandbox_code = get_random_string(8, characters)
     while DevSandbox.objects.filter(code=dev_sandbox_code).exists():
-        dev_sandbox_code = generate_random_code()
+        dev_sandbox_code = get_random_string(8, characters)
     return dev_sandbox_code
 
 

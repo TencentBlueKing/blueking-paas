@@ -19,6 +19,8 @@
 package webserver
 
 // LogQueryParams : log query params
+// It includes the following fields:
+//   - lines: Specifies the number of log lines to retrieve
 type LogQueryParams struct {
 	Lines int `form:"lines,default=100" binding:"omitempty,gte=1,lte=200"`
 }

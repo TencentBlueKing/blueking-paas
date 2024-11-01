@@ -50,6 +50,13 @@ def relative_path_of_app_desc(filepath: str) -> Optional[str]:
     """Get the relative path of the app description file, if the given path is not
     a app description file, return None.
     """
+    # The pattern acts as a delimiter to help split the relative path of the app
+    # description file. It uses a lookbehind to match the path delimiter before the
+    # filename and the result of re.split() can still have the delimiter.
+    #
+    # Example of split():
+    #  - /path/to/app_desc.yaml -> ['/path/to/', '', '']
+    #
     desc_pattern = re.compile(r"(^(?<=[/\\\\])?|(?<=[/\\\\]))app_desc\.ya?ml$")
     parts = desc_pattern.split(filepath)
     if len(parts) > 1:

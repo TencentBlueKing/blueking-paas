@@ -42,6 +42,7 @@ def yaml_v1_normal() -> str:
     """A sample YAML content using v1 spec version."""
     return dedent(
         """
+        app_code: foo
         version: 1
         module:
             language: python

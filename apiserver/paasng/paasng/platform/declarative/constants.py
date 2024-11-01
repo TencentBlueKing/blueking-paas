@@ -49,8 +49,11 @@ class AppSpecVersion(IntStructuredEnum):
     VER_1 = 1
 
     VER_2 = 2
-    # VER_3 meaning cnative app
+    # VER_3 means cnative app
     VER_3 = 3
+
+    # UNSPECIFIED means the version is not specified
+    UNSPECIFIED = -1
 
 
 class AppDescPluginType(StrStructuredEnum):

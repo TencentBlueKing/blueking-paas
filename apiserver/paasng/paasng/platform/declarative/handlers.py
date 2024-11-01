@@ -57,20 +57,39 @@ def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
 
     :param json_data: The description data in dict format.
     """
-    spec_version = detect_spec_version(json_data)
-    if spec_version == AppSpecVersion.VER_1:
-        return UnsupportedVerDescriptionHandler(version="1")
-    elif spec_version == AppSpecVersion.VER_2:
-        return AppDescriptionHandler(json_data)
-    else:
-        # 对应 AppSpecVersion.VER_3
-        return CNativeAppDescriptionHandler(json_data)
+    try:
+        spec_version = detect_spec_version(json_data)
+    except ValueError as e:
+        return UnsupportedVerDescriptionHandler(version=str(e))
+
+    match spec_version:
+        case AppSpecVersion.VER_2:
+            return AppDescriptionHandler(json_data)
+        case AppSpecVersion.VER_3:
+            return CNativeAppDescriptionHandler(json_data)
+        case AppSpecVersion.UNSPECIFIED:
+            return NoVerDescriptionHandler()
+        case _:
+            return UnsupportedVerDescriptionHandler(version=str(spec_version.value))
 
 
 def detect_spec_version(json_data: Dict) -> AppSpecVersion:
+    """Detect the spec version from the input data.
+
+    :return: The version.
+    :raise ValueError: When the version is specified but it's value is invalid.
+    """
     if spec_version := json_data.get("spec_version") or json_data.get("specVersion"):
-        return AppSpecVersion(spec_version)
-    return AppSpecVersion.VER_1
+        try:
+            return AppSpecVersion(spec_version)
+        except ValueError:
+            raise ValueError(spec_version)
+
+    # The spec ver "1" use no version field while the "app_code" field is always presented.
+    if "app_code" in json_data:
+        return AppSpecVersion.VER_1
+
+    return AppSpecVersion.UNSPECIFIED
 
 
 class DescriptionHandler(Protocol):
@@ -175,13 +194,23 @@ class AppDescriptionHandler:
 
 
 class UnsupportedVerDescriptionHandler:
-    """A handler that always raise an exception when handling the description data.
-
-    :param reason: The reason why the handler is unavailable.
-    """
+    """A special handler, raise error if the version is not supported."""
 
     def __init__(self, version: str):
-        self.message = f'App spec version "{version}" is not supported, please use a newer version.'
+        self.message = f'App spec version "{version}" is not supported, please use a valid version like "3".'
+
+    @property
+    def app_desc(self) -> ApplicationDesc:
+        raise DescriptionValidationError(self.message)
+
+    def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
+        raise DescriptionValidationError(self.message)
+
+
+class NoVerDescriptionHandler:
+    """A special handler, raise error if no version is specified."""
+
+    message = "No spec version is specified, please set the spec version to a valid value."
 
     @property
     def app_desc(self) -> ApplicationDesc:
@@ -273,14 +302,20 @@ def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
 
     :raise UnsupportedSpecVer: When the spec version is not supported.
     """
-    spec_version = detect_spec_version(desc_data)
-    if spec_version == AppSpecVersion.VER_1:
-        raise UnsupportedSpecVer('app spec version "1" is not supported')
+    try:
+        spec_version = detect_spec_version(desc_data)
+    except ValueError as e:
+        raise UnsupportedSpecVer(f'app spec version "{str(e)}" is not supported')
 
-    if spec_version == AppSpecVersion.VER_2:
-        return deploy_desc_getter_v2
-    else:
-        return deploy_desc_getter_v3
+    match spec_version:
+        case AppSpecVersion.VER_2:
+            return deploy_desc_getter_v2
+        case AppSpecVersion.VER_3:
+            return deploy_desc_getter_v3
+        case AppSpecVersion.UNSPECIFIED:
+            raise UnsupportedSpecVer("no spec version is specified")
+        case _:
+            raise UnsupportedSpecVer(f'app spec version "{spec_version.value}" is not supported')
 
 
 class DefaultDeployDescHandler:

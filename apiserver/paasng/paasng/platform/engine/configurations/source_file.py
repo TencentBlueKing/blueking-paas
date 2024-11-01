@@ -51,6 +51,9 @@ class MetaDataReader(Protocol):
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
         """Read app_desc.yaml from repository
 
+        NOTE: The platform used to support "app.yaml" using the version 1 spec, support
+        has been dropped because no applications use it anymore.
+
         :raises: exceptions.GetAppYamlError
         """
 

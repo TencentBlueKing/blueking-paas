@@ -1,6 +1,10 @@
 package config
 
-import "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+import (
+	"strings"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+)
 
 var G *Config
 
@@ -30,11 +34,54 @@ func loadSourceConfigFromEnv() (SourceCodeConfig, error) {
 	}, nil
 }
 
+func loadCORSConfigFromEnv() (CORSConfig, error) {
+	allowOrigins := getListFromEnv("ALLOW_ORIGINS", "")
+	allowMethods := getListFromEnv("ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS")
+	allowHeaders := getListFromEnv("ALLOW_HEADERS", "Origin,Content-Type,Authorization")
+	exposeHeaders := getListFromEnv("EXPOSE_HEADERS", "Content-Length")
+	allowCredentials := utils.EnvOrDefault("ALLOW_CREDENTIALS", "true") == "true"
+	return CORSConfig{
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     allowMethods,
+		AllowHeaders:     allowHeaders,
+		ExposeHeaders:    exposeHeaders,
+		AllowCredentials: allowCredentials,
+	}, nil
+}
+func loadServiceConfigFromEnv() (ServiceConfig, error) {
+	corsConfig, err := loadCORSConfigFromEnv()
+	if err != nil {
+		return ServiceConfig{}, err
+	}
+	return ServiceConfig{
+		CORS: corsConfig,
+	}, nil
+}
+
 func loadConfigFromEnv() (*Config, error) {
 	sourceCodeConfig, err := loadSourceConfigFromEnv()
 	if err != nil {
 		return nil, err
 	}
 
-	return &Config{SourceCode: sourceCodeConfig}, nil
+	serviceConfig, err := loadServiceConfigFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return &Config{
+		SourceCode: sourceCodeConfig,
+		Service:    serviceConfig,
+	}, nil
+}
+
+// 从指定的环境变量中获取列表, 例如 "value1,value2,value3"
+func getListFromEnv(envVar string, defaultEnvValue string) []string {
+	// 获取环境变量的值
+	listStr := utils.EnvOrDefault(envVar, defaultEnvValue)
+	// 使用 "," 分割字符串并去除空格
+	elements := strings.Split(listStr, ",")
+	for i := range elements {
+		elements[i] = strings.TrimSpace(elements[i])
+	}
+	return elements
 }

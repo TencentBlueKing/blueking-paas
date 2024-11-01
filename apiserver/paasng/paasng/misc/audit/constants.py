@@ -78,6 +78,7 @@ class OperationTarget(StrStructuredEnum):
     PROCESS_SPEC_PLAN = EnumField("process_spec_plan", label=_("应用资源方案"))
     BKPLUGIN_TAG = EnumField("bkplugin_tag", label=_("插件分类"))
     BKPLUGIN_DISTRIBUTOR = EnumField("bkplugin_distributor", label=_("插件使用方"))
+    BKPLUGIN_MEMBER = EnumField("bkplugin_member", label=_("插件成员"))
     DOCUMENT = EnumField("document", label=_("文档"))
     DEPLOY_FAILURE_TIPS = EnumField("deploy_failure_tips", label=_("部署失败提示"))
     SOURCE_TYPE_SPEC = EnumField("source_type_spec", label=_("代码库配置"))

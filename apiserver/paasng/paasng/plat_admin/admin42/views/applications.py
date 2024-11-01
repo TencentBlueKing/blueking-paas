@@ -28,6 +28,8 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
+from paasng.bk_plugins.pluginscenter.constants import PluginRole
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as plugin_members_api
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -287,6 +289,9 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
+        kwargs["USER_IS_ADMIN_IN_PLUGIN"] = self.request.user.username in plugin_members_api.fetch_role_members(
+            application.code, PluginRole.ADMINISTRATOR
+        )
         kwargs["cluster_choices"] = [
             {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application.region).list_clusters()
@@ -424,6 +429,46 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     def sync_membership(self, application):
         sync_developers_to_sentry.delay(application.id)
         application_member_updated.send(sender=application, application=application)
+
+
+class PluginMembersManageViewSet(viewsets.GenericViewSet):
+    """插件应用成员 CRUD 接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    @staticmethod
+    def _gen_data_detail(code: str, username: str) -> DataDetail:
+        return DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [
+                    PluginRole(role).name.lower() for role in plugin_members_api.fetch_user_roles(code, username)
+                ],
+            },
+        )
+
+    def update(self, request, code):
+        application = get_object_or_404(Application, code=code)
+        username, role = request.data["username"], request.data["role"]
+        data_before = self._gen_data_detail(application.code, username)
+
+        try:
+            remove_user_all_roles(application.code, username)
+            add_role_members(application.code, ApplicationRole(role), username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_MEMBER,
+            app_code=code,
+            data_before=data_before,
+            data_after=self._gen_data_detail(application.code, username),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationFeatureFlagsView(ApplicationDetailBaseView):

@@ -15,15 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
+from paasng.bk_plugins.pluginscenter import constants as plugin_constants
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
+from paasng.bk_plugins.pluginscenter.models import PluginInstance
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit import constants
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
@@ -150,4 +155,61 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
             data_before=data_before,
         )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BKPluginMembersManageViewSet(ViewSet):
+    """插件成员管理接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    @staticmethod
+    def _gen_data_detail(code: str, username: str) -> DataDetail:
+        return DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [
+                    plugin_constants.PluginRole(role).name.lower()
+                    for role in members_api.fetch_user_roles(code, username)
+                ],
+            },
+        )
+
+    def update(self, request, code):
+        """将用户添加为某个角色的成员"""
+        plugin = get_object_or_404(PluginInstance, id=code)
+        username, role = request.data["username"], request.data["role"]
+        data_before = self._gen_data_detail(plugin.id, username)
+
+        members_api.add_role_members(plugin.id, plugin_constants.PluginRole(role), username)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BKPLUGIN_MEMBER,
+            app_code=code,
+            data_before=data_before,
+            data_after=self._gen_data_detail(plugin.id, username),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, code):
+        """将用户从某个角色的成员中删除"""
+        plugin = get_object_or_404(PluginInstance, id=code)
+        username, role = request.data["username"], request.data["role"]
+        data_before = self._gen_data_detail(plugin.id, username)
+
+        members_api.delete_role_members(plugin.id, plugin_constants.PluginRole(role), username)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BKPLUGIN_MEMBER,
+            app_code=code,
+            data_before=data_before,
+            data_after=self._gen_data_detail(plugin.id, username),
+        )
+
         return Response(status=status.HTTP_204_NO_CONTENT)

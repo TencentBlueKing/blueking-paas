@@ -22,22 +22,22 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_SVC_PORT_PAIRS
-from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
-from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, SourceCodeConfig, Status
+from paas_wl.bk_app.dev_sandbox.conf import CODE_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, Runtime, Status
+from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_code_editor_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.dictx import get_items
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
+    from paas_wl.bk_app.dev_sandbox.kres_entities import CodeEditor
 
-_CONTAINER_NAME = "dev-sandbox"
+_CONTAINER_NAME = "code-editor"
 
 
-class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
-    def serialize(self, obj: "DevSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        labels = get_dev_sandbox_labels(obj.app)
+class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
+    def serialize(self, obj: "CodeEditor", original_obj: Optional[ResourceInstance] = None, **kwargs):
+        labels = get_code_editor_labels(obj.app)
         deployment_body = {
             "apiVersion": self.get_apiversion(),
             "kind": "Deployment",
@@ -54,13 +54,13 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         }
         return deployment_body
 
-    def _construct_pod_spec(self, obj: "DevSandbox") -> Dict:
+    def _construct_pod_spec(self, obj: "CodeEditor") -> Dict:
         main_container = {
             "name": _CONTAINER_NAME,
             "image": obj.runtime.image,
             "env": [{"name": str(key), "value": str(value)} for key, value in obj.runtime.envs.items()],
             "imagePullPolicy": obj.runtime.image_pull_policy,
-            "ports": [{"containerPort": port_pair.target_port} for port_pair in DEV_SANDBOX_SVC_PORT_PAIRS],
+            "ports": [{"containerPort": port_pair.target_port} for port_pair in CODE_SVC_PORT_PAIRS],
         }
 
         if obj.resources:
@@ -71,26 +71,25 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
 
         return spec
 
-    def _set_volume_mounts(self, obj: "DevSandbox", spec: Dict):
-        """将 DevSandbox 下工作目录挂载到容器内"""
-        if not obj.source_code_config:
+    def _set_volume_mounts(self, obj: "CodeEditor", spec: Dict):
+        if not obj.config:
             return
 
-        if workspace := obj.source_code_config.workspace:
+        if start_dir := obj.config.start_dir:
             main_container = spec["containers"][0]
-            main_container["volumeMounts"] = [{"name": "workspace", "mountPath": workspace}]
+            main_container["volumeMounts"] = [{"name": "start-dir", "mountPath": start_dir}]
 
-        if pvc_claim_name := obj.source_code_config.pvc_claim_name:
+        if pvc_claim_name := obj.config.pvc_claim_name:
             spec["volumes"] = [
                 {
-                    "name": "workspace",
+                    "name": "start-dir",
                     "persistentVolumeClaim": {"claimName": pvc_claim_name},
                 }
             ]
 
 
-class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandbox":
+class CodeEditorDeserializer(AppEntityDeserializer["CodeEditor"]):
+    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "CodeEditor":
         main_container = self._get_main_container(kube_data)
         runtime = cattr.structure(
             {
@@ -105,7 +104,7 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
             name=kube_data.metadata.name,
             runtime=runtime,
             resources=cattr.structure(getattr(main_container, "resources", None), Resources),
-            source_code_config=self._construct_source_code_config(kube_data),
+            config=self._construct_config(kube_data),
             status=Status(kube_data.status.get("replicas", 1), kube_data.status.get("readyReplicas", 0)),
         )
 
@@ -125,37 +124,21 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
                 return c
         raise RuntimeError(f"No {_CONTAINER_NAME} container found in resource")
 
-    def _construct_source_code_config(self, deployment: ResourceInstance) -> SourceCodeConfig:
-        """通过挂载，环境变量等信息，构造 SourceCodeConfig"""
+    def _construct_config(self, deployment: ResourceInstance) -> CodeEditorConfig:
         deployment_dict = deployment.to_dict()
         main_container_dict = self._get_main_container_dict(deployment)
 
-        # 获取挂载信息
         volume = get_items(deployment_dict, "spec.template.spec.volumes", [{}])[0]
         volume_mounts = get_items(main_container_dict, "volumeMounts", [{}])[0]
-        # 获取环境变量
         env_list = get_items(main_container_dict, "env", [{}])
         envs = {env["name"]: env["value"] for env in env_list}
-        source_code_config = cattr.structure(
+        config = cattr.structure(
             {
                 "pvc_claim_name": get_items(volume, "persistentVolumeClaim.claimName"),
-                "workspace": get_items(volume_mounts, "mountPath"),
-                "source_fetch_url": envs.get("SOURCE_FETCH_URL"),
-                "source_fetch_method": SourceCodeFetchMethod(
-                    envs.get("SOURCE_FETCH_METHOD", SourceCodeFetchMethod.HTTP.value)
-                ),
+                "start_dir": get_items(volume_mounts, "mountPath"),
+                "password": envs.get("PASSWORD"),
             },
-            SourceCodeConfig,
+            CodeEditorConfig,
         )
 
-        return source_code_config
-
-
-def get_dev_sandbox_labels(app: WlApp) -> Dict[str, str]:
-    """get deployment labels for dev_sandbox by WlApp"""
-    return {"env": "dev", "category": "bkapp", "app": app.scheduler_safe_name}
-
-
-def get_code_editor_labels(app: WlApp) -> Dict[str, str]:
-    """get deployment labels for code_editor by WlApp"""
-    return {"env": "code_editor", "category": "bkapp", "app": app.scheduler_safe_name}
+        return config

@@ -114,9 +114,11 @@ class FunctionType(ChoicesEnum):
     DEFAULT = "default"
     SVN = "SVN"
     GET_APP_SECRET = "GET_APP_SECRET"
+    GET_CODE_EDITOR_PASSWORD = "GET_CODE_EDITOR_PASSWORD"
 
 
 FUNCTION_TYPE_MAP = {
     FunctionType.SVN.value: "verification_code",
     FunctionType.GET_APP_SECRET.value: "app_secret_vcode_storage_key",
+    FunctionType.GET_CODE_EDITOR_PASSWORD.value: "code_editor_password_storage_key",
 }

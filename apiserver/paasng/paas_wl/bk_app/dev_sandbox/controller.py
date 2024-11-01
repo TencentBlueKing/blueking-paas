@@ -246,14 +246,6 @@ class DevSandboxWithCodeEditorController:
         ingress_entity = DevSandboxIngress.create(self.dev_wl_app, self.app.code, self.dev_sandbox_code)
         self.ingress_mgr.upsert(ingress_entity)
 
-    def _get_source_package_path(self, version_info: VersionInfo) -> str:
-        """Return the blobstore path for storing source files package"""
-        branch = version_info.version_name
-        revision = version_info.revision
-
-        slug_name = f"{self.app.code}:{self.module_name}:{branch}:{revision}:dev"
-        return f"{self.dev_wl_app.region}/home/{slug_name}/tar"
-
     def _create_dev_sandbox(
         self, dev_sandbox_env_vars: Dict[str, str], version_info: VersionInfo, relative_source_dir: Path
     ):

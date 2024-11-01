@@ -182,7 +182,7 @@
         memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
         exitApp: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code request.user.username %}"),
         bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}"),
-        pluginMemberManage: decodeURI("{% url 'admin.applications.detail.base_info.pulgin.members.api' application.code %}"),
+        pluginMemberManage: decodeURI("{% url 'admin.applications.detail.base_info.plugin.members.api' application.code %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {

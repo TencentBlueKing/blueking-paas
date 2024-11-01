@@ -6,21 +6,29 @@
     }"
   >
     <section class="top-bar card-style">
-      <span>{{ $t('应用') }}：</span>
-      <bk-breadcrumb>
-        <bk-breadcrumb-item
-          v-for="(item, index) in breadcrumbList"
-          :key="index"
-          :class="{ fore: item.title !== $t('沙箱开发') }"
-        >
-          {{ item.title }}
-        </bk-breadcrumb-item>
-      </bk-breadcrumb>
+      <div class="title">
+        <span>{{ $t('应用') }}：</span>
+        <bk-breadcrumb>
+          <bk-breadcrumb-item
+            v-for="(item, index) in breadcrumbList"
+            :key="index"
+            :class="{ fore: item.title !== $t('沙箱开发') }"
+          >
+            {{ item.title }}
+          </bk-breadcrumb-item>
+        </bk-breadcrumb>
+      </div>
+      <div
+        class="back"
+        @click="back"
+      >
+        <i class="paasng-icon paasng-arrows-left icon-cls-back mr5"></i>
+        <span>{{ $t('返回') }}</span>
+      </div>
     </section>
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="sandbox-loading"
-      class="sandbox-loading-cls"
       :height="450"
     >
       <div class="sandbox-content">
@@ -33,10 +41,34 @@
           </bk-button>
           <bk-alert
             type="warning"
-            title="沙箱环境仅用于临时在线调试，关闭页面后环境将立即销毁。"
-          ></bk-alert>
+            class="sandbox-alert-cls"
+          >
+            <div slot="title">
+              <span>{{ $t('沙箱环境仅用于临时在线调试，如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。') }}</span>
+              <bk-popconfirm
+                trigger="click"
+                ext-cls="sandbox-destroy-cls"
+                width="288"
+                @confirm="handleSandboxDestruction"
+              >
+                <div slot="content">
+                  <div class="custom">
+                    <i class="bk-icon icon-info-circle-shape pr5 content-icon"></i>
+                    <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
+                  </div>
+                </div>
+                <bk-button
+                  :theme="'primary'"
+                  text
+                  size="small"
+                >
+                  {{ $t('立即销毁') }}
+                </bk-button>
+              </bk-popconfirm>
+            </div>
+          </bk-alert>
         </div>
-        <section class="sandbox-editor">
+        <section :class="['sandbox-editor', { collapse: !isCollapse }]">
           <bk-resize-layout
             placement="right"
             :min="360"
@@ -73,12 +105,17 @@
               :buildLog="buildLog"
               :runLog="runLog"
               :loading="isLogsLoading"
+              :env="env"
               @tab-change="rightTabChange"
+              @collapse-change="handleRightTabCollapseChange"
             />
           </bk-resize-layout>
         </section>
       </div>
-      <section class="footer-tools-box">
+      <section
+        v-if="isLoadingSandbox"
+        class="footer-tools-box"
+      >
         <!-- 运行状态 -->
         <div
           class="run-tip"
@@ -163,6 +200,7 @@ export default {
       // 构建日志状态
       buildStatus: '',
       isLogsLoading: true,
+      isCollapse: true,
     };
   },
   computed: {
@@ -171,6 +209,9 @@ export default {
     },
     module() {
       return this.$route.query.module;
+    },
+    env() {
+      return this.$route.query.env;
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;
@@ -236,10 +277,6 @@ export default {
     },
     rightTabChange(name) {
       this.curTabActive = name;
-      this.clearIntervals();
-      if (name === 'log') {
-        this.automaticRefresh();
-      }
     },
     // 清除现有的计时器
     clearIntervals() {
@@ -261,7 +298,7 @@ export default {
       // 如果构建不成功，则继续获取构建日志
       if (!this.isBuildSuccess) {
         this.buildIntervalId = setInterval(() => {
-          this.getBuildLog();
+          this.getBuildLog(true);
         }, this.refreshTime.build * 1000);
       }
 
@@ -328,6 +365,10 @@ export default {
         const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}deploys`);
         const res = await this.executeRequest(url, 'post');
         this.deployId = res.deployID;
+        // 如果tab为折叠状态时，运行需打开
+        if (!this.isCollapse) {
+          this.$refs.rightTabRef.handleSwitchSide();
+        }
         // 获取相关日志（构建/运行）
         this.getBuildLog();
         this.getRunLog();
@@ -341,8 +382,8 @@ export default {
       }
     },
     // 获取构建日志
-    async getBuildLog() {
-      if (this.isBuildSuccess) return;
+    async getBuildLog(isAutomaticRefresh = false) {
+      if (this.isBuildSuccess && isAutomaticRefresh) return;
       try {
         const url = this.ensureHttpProtocol(
           `${this.sandboxData.urls?.devserver_url}deploys/${this.deployId}/results?log=true`
@@ -374,6 +415,34 @@ export default {
     handleVisitNow() {
       const url = this.ensureHttpProtocol(this.sandboxData?.urls?.app_url);
       window.open(url, '_blank');
+    },
+    handleRightTabCollapseChange(data) {
+      this.isCollapse = data;
+    },
+    back() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.code,
+          moduleId: 'default',
+        },
+      });
+    },
+    // 立即销毁
+    async handleSandboxDestruction() {
+      try {
+        await this.$store.dispatch('sandbox/destroySandbox', {
+          appCode: this.code,
+          moduleId: this.module,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('销毁成功！'),
+        });
+        this.back();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
   },
 };
@@ -425,17 +494,35 @@ export default {
   .top-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     height: 52px;
     padding: 0 24px;
+    .title {
+      display: flex;
+      align-items: center;
+    }
+    .back {
+      cursor: pointer;
+      color: #3a84ff;
+      font-size: 16px;
+      i {
+        transform: translateY(0px);
+        font-weight: 700;
+      }
+      span {
+        font-size: 14px;
+      }
+    }
   }
-  .sandbox-loading-cls {
-    margin: 0 24px;
+  .sandbox-alert-cls /deep/ .bk-alert-wraper {
+    height: 32px;
+    align-items: center;
   }
   .sandbox-content {
     padding-top: 16px;
     .top-box {
       display: flex;
-      margin-bottom: 16px;
+      margin: 0 24px 16px;
       /deep/ .bk-button {
         flex-shrink: 0;
         margin-right: 12px;
@@ -446,10 +533,17 @@ export default {
     }
     .sandbox-editor {
       height: calc(100vh - 236px);
+      margin: 0 24px;
+      &.collapse {
+        margin-right: 0;
+        /deep/ .bk-resize-layout-aside {
+          width: 0 !important;
+        }
+      }
       .sandbox-resize-layout {
         height: 100%;
         /deep/ .bk-resize-layout-main {
-          margin-right: 16px;
+          margin-right: 24px;
         }
         /deep/ .bk-resize-layout-aside {
           border: none !important;
@@ -479,6 +573,23 @@ export default {
       .right-tab-cls {
         flex-shrink: 0;
       }
+    }
+  }
+}
+.sandbox-destroy-cls {
+  .custom {
+    font-size: 14px;
+    line-height: 24px;
+    color: #63656e;
+    padding-bottom: 16px;
+    .content-icon {
+      color: #ea3636;
+      position: absolute;
+      top: 22px;
+    }
+    .content-text {
+      display: inline-block;
+      margin-left: 20px;
     }
   }
 }

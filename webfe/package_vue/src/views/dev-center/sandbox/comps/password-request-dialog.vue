@@ -28,6 +28,7 @@
       </bk-button>
     </div>
     <div class="dialog-content">
+      <p class="label">{{ $t('企业微信（验证码将发送至您的企业微信）') }}</p>
       <div class="get-code">
         <bk-input
           :disabled="true"
@@ -194,6 +195,11 @@ export default {
     /deep/ .bk-button {
       flex-shrink: 0;
     }
+  }
+  .label {
+    color: #63656e;
+    font-size: 14px;
+    line-height: 32px;
   }
   .ml12 {
     margin-left: 12px;

@@ -52,6 +52,7 @@
     />
 
     <sandbox-sideslider
+      env="stag"
       :show.sync="isShowSandboxSideslider"
       @create-sandbox="isShowSandboxDialog = true"
     />

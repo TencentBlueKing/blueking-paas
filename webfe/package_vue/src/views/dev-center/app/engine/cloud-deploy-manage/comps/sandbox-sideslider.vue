@@ -23,7 +23,11 @@
     >
       <bk-alert
         type="info"
-        title="沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。"
+        :title="
+          $t(
+            '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。'
+          )
+        "
         closable
       ></bk-alert>
       <bk-button
@@ -97,6 +101,9 @@ export default {
       type: Boolean,
       default: false,
     },
+    env: {
+      type: String,
+    },
   },
   data() {
     return {
@@ -130,6 +137,7 @@ export default {
         query: {
           code: this.appCode,
           module: row.module_name,
+          env: this.env,
         },
       });
     },

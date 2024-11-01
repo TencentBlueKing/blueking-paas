@@ -29,7 +29,7 @@
       <bk-alert
         class="mb16"
         type="warning"
-        :title="`${$t('沙箱环境将复用 “{n}” 的增强服务和环境变量', { n: envZh })}`"
+        :title="`${$t('沙箱环境将复用 “{n}” 的 Mysql 增强服务和环境变量', { n: envZh })}`"
         closable
       ></bk-alert>
       <bk-form

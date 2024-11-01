@@ -2,7 +2,7 @@
   <div class="sandbox-config-info-box">
     <p class="alert mb10">
       <i class="paasng-icon paasng-info-line"></i>
-      <span>沙箱环境复用“预发布环境”的增强服务和环境变量</span>
+      <span>{{ $t('沙箱环境将复用 “{n}” 的 Mysql 增强服务和环境变量', { n: envZh }) }}</span>
     </p>
     <div class="info">
       <div class="info-item">
@@ -23,11 +23,12 @@
       </div>
       <div class="info-item">
         <div class="label">{{ $t('环境变量') }}：</div>
-        <div class="value">{{ envVarLength }}</div>
+        <div class="value">{{ $t('共 {n} 个', { n: envVarLength }) }}</div>
       </div>
     </div>
     <bk-input
       :clearable="true"
+      :placeholder="$t('请输入关键字搜索环境变量')"
       :right-icon="'bk-icon icon-search'"
       v-model="searchValue"
     ></bk-input>
@@ -58,6 +59,9 @@ export default {
       type: String,
       default: '',
     },
+    env: {
+      type: String,
+    },
   },
   data() {
     return {
@@ -81,6 +85,9 @@ export default {
       return this.envVars.filter(
         (item) => item[0].toLocaleLowerCase().includes(search) || item[1].toLocaleLowerCase().includes(search)
       );
+    },
+    envZh() {
+      return this.env === 'stag' ? this.$t('预发布环境') : this.$t('生产环境');
     },
   },
 };

@@ -64,11 +64,21 @@
       v-bkloading="{ isLoading: loading, opacity: 1, color: '#313238', zIndex: 10 }"
     >
       <!-- 防止loading位置出错 -->
-      <pre
-        v-if="displayLogs"
-        class="log log-item pt10"
-        v-html="loading ? '' : displayLogs"
-      />
+      <template v-if="displayLogs">
+        <template v-if="Array.isArray(displayLogs)">
+          <pre
+            v-for="(item, index) in displayLogs"
+            :key="index"
+            class="log log-item"
+            v-html="item"
+          />
+        </template>
+        <pre
+          v-else
+          class="log log-item"
+          v-html="loading ? '' : displayLogs"
+        />
+      </template>
       <table-empty
         v-else
         empty

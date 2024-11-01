@@ -51,6 +51,7 @@
       v-bind="$attrs"
     />
     <sandbox-sideslider
+      env="prod"
       :show.sync="isShowSandboxSideslider"
       @create-sandbox="isShowSandboxDialog = true"
     />

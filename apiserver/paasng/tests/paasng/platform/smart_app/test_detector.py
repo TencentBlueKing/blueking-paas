@@ -19,124 +19,99 @@ import pytest
 import yaml
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import (
-    AppYamlDetector,
-    DetectResult,
     ManifestDetector,
     SourcePackageStatReader,
+    relative_path_of_app_desc,
 )
-from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML
+from tests.paasng.platform.sourcectl.packages.utils import V2_APP_DESC_EXAMPLE
 
 pytestmark = pytest.mark.django_db
 
 
-class TestAppYamlDetector:
+class Test__relative_path_of_app_desc:
     @pytest.mark.parametrize(
-        ("spec_version", "filepath", "expected"),
+        ("filepath", "expected"),
         [
-            (AppSpecVersion.VER_1, "app.yaml", DetectResult("", AppSpecVersion.VER_1)),
-            (AppSpecVersion.VER_1, "app.yml", DetectResult("", AppSpecVersion.VER_1)),
-            (AppSpecVersion.VER_1, "./app.yaml", DetectResult("./", AppSpecVersion.VER_1)),
-            (AppSpecVersion.VER_1, "path/to/app.yaml", DetectResult("path/to/", AppSpecVersion.VER_1)),
-            (AppSpecVersion.VER_1, "E:\\app.yaml", DetectResult("E:\\", AppSpecVersion.VER_1)),
-            (AppSpecVersion.VER_1, "app_desc.yaml", None),
-            (AppSpecVersion.VER_1, "app_desc.yml", None),
-            (AppSpecVersion.VER_1, "./app_desc.yaml", None),
-            (AppSpecVersion.VER_1, "path/to/app_desc.yaml", None),
-            (AppSpecVersion.VER_1, "E:\\app_desc.yaml", None),
-            (AppSpecVersion.VER_2, "app.yaml", None),
-            (AppSpecVersion.VER_2, "app.yml", None),
-            (AppSpecVersion.VER_2, "./app.yaml", None),
-            (AppSpecVersion.VER_2, "path/to/app.yaml", None),
-            (AppSpecVersion.VER_2, "E:\\app.yaml", None),
-            (AppSpecVersion.VER_2, "app_desc.yaml", DetectResult("", AppSpecVersion.VER_2)),
-            (AppSpecVersion.VER_2, "app_desc.yml", DetectResult("", AppSpecVersion.VER_2)),
-            (AppSpecVersion.VER_2, "./app_desc.yaml", DetectResult("./", AppSpecVersion.VER_2)),
-            (AppSpecVersion.VER_2, "path/to/app_desc.yaml", DetectResult("path/to/", AppSpecVersion.VER_2)),
-            (AppSpecVersion.VER_2, "E:\\app_desc.yaml", DetectResult("E:\\", AppSpecVersion.VER_2)),
-            (AppSpecVersion.VER_1, "._app.yaml", None),
-            (AppSpecVersion.VER_1, "./._app.yaml", None),
-            (AppSpecVersion.VER_1, "xxxapp.yaml", None),
-            (AppSpecVersion.VER_1, "./xxxapp.yaml", None),
-            (AppSpecVersion.VER_2, "._app_desc.yaml", None),
-            (AppSpecVersion.VER_2, "./._app_desc.yaml", None),
-            (AppSpecVersion.VER_2, "xxxapp_desc.yaml", None),
-            (AppSpecVersion.VER_2, "./xxxapp_desc.yaml", None),
+            ("app_desc.yaml", ""),
+            ("app_desc.yml", ""),
+            ("./app_desc.yaml", "./"),
+            ("path/to/app_desc.yaml", "path/to/"),
+            ("E:\\app_desc.yaml", "E:\\"),
+            # Not a app desc file
+            ("foo/bar.txt", None),
+            ("._app_desc.yaml", None),
+            ("./._app_desc.yaml", None),
+            ("xxxapp_desc.yaml", None),
+            ("./xxxapp_desc.yaml", None),
+            # Legacy app_desc file names are not supported
+            ("app.yaml", None),
+            ("app.yml", None),
         ],
     )
-    def test_detect(self, spec_version, filepath, expected):
-        assert AppYamlDetector.detect(filepath, spec_version) == expected
+    def test_detect(self, filepath, expected):
+        assert relative_path_of_app_desc(filepath) == expected
 
 
 @pytest.mark.parametrize("package_root", ["untar_path", "zip_path"], indirect=["package_root"])
 class TestManifestDetector:
+    @pytest.fixture
+    def detector(self, package_root, package_stat) -> ManifestDetector:
+        """The detector instance for testing."""
+        return ManifestDetector(
+            package_root=package_root,
+            app_description=get_app_description(package_stat),
+            relative_path=package_stat.relative_path,
+        )
+
     @pytest.mark.parametrize(
         ("contents", "error"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, KeyError("Procfile not found.")),
-            ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, KeyError("Procfile not found.")),
+            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "Procfile not found."),
+            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "Procfile not found."),
         ],
     )
-    def test_error(self, package_root, package_stat, contents, error):
-        with pytest.raises(KeyError) as e:
-            ManifestDetector(
-                package_root=package_root,
-                app_description=get_app_description(package_stat),
-                relative_path=package_stat.relative_path,
-            ).detect()
-        assert str(e.value) == str(error)
+    def test_only_app_desc_file(self, detector, contents, error):
+        with pytest.raises(KeyError, match=error):
+            detector.detect()
 
     @pytest.mark.parametrize(
         ("contents", "expected"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./app.yaml"),
-            ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, "./app.yaml"),
+            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "./app_desc.yaml"),
+            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "./app_desc.yaml"),
         ],
     )
-    def test_detect_app_desc(self, package_root, package_stat, contents, expected):
-        assert (
-            ManifestDetector(
-                package_root=package_root,
-                app_description=get_app_description(package_stat),
-                relative_path=package_stat.relative_path,
-            ).detect_app_desc()
-            == expected
-        )
+    def test_detect_app_desc(self, detector, contents, expected):
+        assert detector.detect_app_desc() == expected
 
     @pytest.mark.parametrize(
         ("contents", "expected"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, None),
+            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, None),
             (
-                {"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML), "foo/src/requirements.txt": ""},
+                {"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "foo/src/requirements.txt": ""},
                 "./src/requirements.txt",
             ),
-            ({"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML), "src/requirements.txt": ""}, None),
+            # Not in the same directories
+            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "src/requirements.txt": ""}, None),
         ],
     )
-    def test_detect_dependency(self, package_root, package_stat, contents, expected):
-        assert (
-            ManifestDetector(
-                package_root=package_root,
-                app_description=get_app_description(package_stat),
-                relative_path=package_stat.relative_path,
-            ).detect_dependency()
-            == expected
-        )
+    def test_detect_dependency(self, detector, contents, expected):
+        assert detector.detect_dependency() == expected
 
     @pytest.mark.parametrize(
         ("contents", "expected"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, {}),
+            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, {}),
             (
-                {"foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML), "foo/cert/bk_root_ca.cert": ""},
+                {"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "foo/cert/bk_root_ca.cert": ""},
                 {"root": "./cert/bk_root_ca.cert"},
             ),
             (
                 {
-                    "foo/app.yaml": yaml.dump(EXAMPLE_APP_YAML),
+                    "foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE),
                     "foo/cert/bk_root_ca.cert": "",
                     "foo/cert/bk_saas_sign.cert": "",
                 },
@@ -144,62 +119,64 @@ class TestManifestDetector:
             ),
         ],
     )
-    def test_detect_certs(self, package_root, package_stat, contents, expected):
-        assert (
-            ManifestDetector(
-                package_root=package_root,
-                app_description=get_app_description(package_stat),
-                relative_path=package_stat.relative_path,
-            ).detect_certs()
-            == expected
-        )
+    def test_detect_certs(self, detector, contents, expected):
+        assert detector.detect_certs() == expected
 
     @pytest.mark.parametrize(
         ("contents", "expected"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, {}),
+            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, {}),
             (
-                {"bar/app.yaml": yaml.dump(EXAMPLE_APP_YAML), "bar/conf/SHA256": ""},
+                {"bar/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "bar/conf/SHA256": ""},
                 {"sha256": "./conf/SHA256"},
             ),
             (
-                {"bar/app.yaml": yaml.dump(EXAMPLE_APP_YAML), "bar/conf/SHA256": "", "./bar/conf/package.conf": ""},
+                {
+                    "bar/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE),
+                    "bar/conf/SHA256": "",
+                    "./bar/conf/package.conf": "",
+                },
                 {"sha256": "./conf/SHA256", "package": "./conf/package.conf"},
             ),
         ],
     )
-    def test_detect_encryption(self, package_root, package_stat, contents, expected):
-        assert (
-            ManifestDetector(
-                package_root=package_root,
-                app_description=get_app_description(package_stat),
-                relative_path=package_stat.relative_path,
-            ).detect_encryption()
-            == expected
-        )
+    def test_detect_encryption(self, detector, contents, expected):
+        assert detector.detect_encryption() == expected
 
 
 class TestSourcePackageStatReader:
+    # The simple description data for validations
+    desc_data = {"foo": "bar"}
+    desc_data_str = yaml.safe_dump(desc_data)
+
     @pytest.mark.parametrize(
-        ("contents", "expected_meta_info", "expected_relative_path"),
+        ("contents", "expected_relative_path"),
         [
-            # 我们的打包脚本会默认打成相对路径形式
-            ({"app.yaml": yaml.dump({"version": "v1"})}, {"version": "v1"}, "./"),
-            ({"./app.yaml": yaml.dump({"version": "v1"})}, {"version": "v1"}, "./"),
-            ({"app_code/app.yaml": yaml.dump({"version": "v1"})}, {"version": "v1"}, "./app_code/"),
-            ({"app.yml": yaml.dump({"name": "v1"})}, {"name": "v1"}, "./"),
-            ({"./app.yml": yaml.dump({"name": "v1"})}, {"name": "v1"}, "./"),
-            ({"app_code/app.yml": yaml.dump({"name": "v1"})}, {"name": "v1"}, "./app_code/"),
-            ({"Procfile": ""}, {}, "./"),
-            ({"foo": yaml.dump({"version": "v1"})}, {}, "./"),
+            # 打包脚本默认使用相对路径形式
+            ({"app_desc.yaml": desc_data_str}, "./"),
+            ({"./app_desc.yaml": desc_data_str}, "./"),
+            ({"app_code/app_desc.yaml": desc_data_str}, "./app_code/"),
+            ({"app_desc.yml": desc_data_str}, "./"),
         ],
     )
-    def test_get_meta_info(self, tar_path, expected_meta_info, expected_relative_path):
+    def test_get_meta_info_found_desc_file(self, contents, tar_path, expected_relative_path):
         relative_path, meta_info = SourcePackageStatReader(tar_path).get_meta_info()
-        assert meta_info == expected_meta_info
+        assert meta_info == self.desc_data
         assert relative_path == expected_relative_path
 
-    @pytest.mark.parametrize("contents", [{"app.yaml": "invalid-: yaml: content"}])
+    @pytest.mark.parametrize(
+        "contents",
+        [
+            {"Procfile": ""},
+            {"foo": desc_data_str},
+        ],
+    )
+    def test_get_meta_info_no_desc_file(self, tar_path):
+        relative_path, meta_info = SourcePackageStatReader(tar_path).get_meta_info()
+        assert meta_info == {}
+        assert relative_path == "./"
+
+    @pytest.mark.parametrize("contents", [{"app_desc.yaml": "invalid-: yaml: content"}])
     def test_invalid_file_format(self, tar_path):
         with pytest.raises(ValidationError):
             SourcePackageStatReader(tar_path).get_meta_info()
@@ -207,11 +184,15 @@ class TestSourcePackageStatReader:
     @pytest.mark.parametrize(
         ("contents", "meta_info", "version"),
         [
-            ({"app.yaml": yaml.dump(EXAMPLE_APP_YAML)}, EXAMPLE_APP_YAML, EXAMPLE_APP_YAML["version"]),
             (
-                {"app.yaml": yaml.dump(EXAMPLE_APP_YAML), "logo.png": "dummy"},
-                {"logo_b64data": "base64,ZHVtbXk=", "logoB64data": "base64,ZHVtbXk=", **EXAMPLE_APP_YAML},
-                EXAMPLE_APP_YAML["version"],
+                {"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)},
+                V2_APP_DESC_EXAMPLE,
+                V2_APP_DESC_EXAMPLE["app_version"],
+            ),
+            (
+                {"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "logo.png": "dummy"},
+                {"logo_b64data": "base64,ZHVtbXk=", "logoB64data": "base64,ZHVtbXk="} | V2_APP_DESC_EXAMPLE,
+                V2_APP_DESC_EXAMPLE["app_version"],
             ),
         ],
     )

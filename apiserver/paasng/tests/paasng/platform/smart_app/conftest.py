@@ -26,13 +26,13 @@ import yaml
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.path import ZipPath
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
-from tests.paasng.platform.sourcectl.packages.utils import EXAMPLE_APP_YAML, gen_tar, gen_zip
+from tests.paasng.platform.sourcectl.packages.utils import V2_APP_DESC_EXAMPLE, gen_tar, gen_zip
 
 
 @pytest.fixture()
 def contents() -> Dict:
     """The default contents for making tar file."""
-    return {"app.yaml": yaml.safe_dump(EXAMPLE_APP_YAML)}
+    return {"app_desc.yaml": yaml.safe_dump(V2_APP_DESC_EXAMPLE)}
 
 
 @pytest.fixture()

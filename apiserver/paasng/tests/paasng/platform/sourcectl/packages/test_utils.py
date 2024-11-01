@@ -33,14 +33,10 @@ pytestmark = pytest.mark.django_db
         ({"app_name": "阿尔法"}, False, None),
         (
             {
-                "app_name": "阿尔法",
-                "app_name_en": "alpha",
-                "app_code": "foo",
-                "author": "blueking",
-                "introduction": "blueking app",
-                "is_use_celery": False,
-                "version": "0.0.1",
-                "env": [],
+                "spec_version": 2,
+                "app_version": "0.0.1",
+                "app": {"bk_app_code": "foo", "bk_app_name": "阿尔法", "bk_app_name_en": "alpha"},
+                "modules": {"default": {"is_default": True, "language": "python"}},
             },
             True,
             gettext_lazy({"zh-cn": "阿尔法", "en": "alpha"}),

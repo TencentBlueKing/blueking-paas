@@ -29,7 +29,7 @@ from paasng.accessories.smart_advisor.models import cleanup_module, tag_module
 from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_by_module, get_deploy_desc_handler
+from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler, get_source_dir_from_desc
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
@@ -134,7 +134,7 @@ def get_source_dir(module: Module, operator: str, version_info: VersionInfo) -> 
     desc_data = get_desc_data_by_version(module, operator, version_info)
     if not desc_data:
         return ""
-    return get_deploy_desc_by_module(desc_data, module.name).source_dir
+    return get_source_dir_from_desc(desc_data, module.name)
 
 
 _current_path = Path(".")
@@ -216,7 +216,10 @@ def get_deploy_desc_handler_by_version(
             msg.append(f"[Procfile] {procfile_exc}")
         raise InitDeployDescHandlerError("; ".join(msg))
 
-    return get_deploy_desc_handler(app_desc, procfile_data)
+    try:
+        return get_deploy_desc_handler(app_desc, procfile_data)
+    except ValueError as e:
+        raise InitDeployDescHandlerError(str(e))
 
 
 def get_source_package_path(deployment: Deployment) -> str:

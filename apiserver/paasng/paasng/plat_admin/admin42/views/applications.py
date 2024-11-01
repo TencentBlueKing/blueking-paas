@@ -431,46 +431,6 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
         application_member_updated.send(sender=application, application=application)
 
 
-class PluginMembersManageViewSet(viewsets.GenericViewSet):
-    """插件应用成员 CRUD 接口"""
-
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-
-    @staticmethod
-    def _gen_data_detail(code: str, username: str) -> DataDetail:
-        return DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "username": username,
-                "roles": [
-                    PluginRole(role).name.lower() for role in plugin_members_api.fetch_user_roles(code, username)
-                ],
-            },
-        )
-
-    def update(self, request, code):
-        application = get_object_or_404(Application, code=code)
-        username, role = request.data["username"], request.data["role"]
-        data_before = self._gen_data_detail(application.code, username)
-
-        try:
-            remove_user_all_roles(application.code, username)
-            add_role_members(application.code, ApplicationRole(role), username)
-        except BKIAMGatewayServiceError as e:
-            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.MODIFY,
-            target=OperationTarget.APP_MEMBER,
-            app_code=code,
-            data_before=data_before,
-            data_after=self._gen_data_detail(application.code, username),
-        )
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
     """Application应用特性管理页"""
 

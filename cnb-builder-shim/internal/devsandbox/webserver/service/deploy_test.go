@@ -34,7 +34,7 @@ var _ = Describe("Test DeployManager", func() {
 	var m *DeployManager
 	var tmpAppDir string
 
-	testSrcFilePath := filepath.Join("testdata", "templates", "django-helloworld")
+	testSrcFilePath := filepath.Join("testdata", "helloworld")
 	oldAppDir := devsandbox.DefaultAppDir
 
 	BeforeEach(func() {
@@ -55,12 +55,13 @@ var _ = Describe("Test DeployManager", func() {
 
 	Describe("Test deploy", func() {
 		It("test deploy", func() {
-			result, _ := m.Deploy(testSrcFilePath)
+			result, err := m.Deploy(testSrcFilePath)
+			Expect(err).To(BeNil())
 
 			Expect(len(result.DeployID)).To(Equal(32))
 			Expect(result.Status).To(Equal(devsandbox.ReloadProcessing))
 
-			_, err := os.Stat(path.Join(devsandbox.DefaultAppDir, "Procfile"))
+			_, err = os.Stat(path.Join(devsandbox.DefaultAppDir, "Procfile"))
 			Expect(err).To(BeNil())
 
 			// 验证隐藏目录不会被覆盖(删除)

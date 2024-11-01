@@ -86,6 +86,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	mgr := service.NewDeployManager()
 	r.POST("/deploys", DeployHandler(s, mgr))
 	r.GET("/deploys/:deployID/results", ResultHandler(mgr))
+	r.GET("/app_logs", AppLogHandler())
 
 	return s, nil
 }
@@ -205,6 +206,27 @@ func ResultHandler(svc service.DeployServiceHandler) gin.HandlerFunc {
 		} else {
 			c.JSON(http.StatusOK, gin.H{"status": result.Status})
 		}
+	}
+}
+
+// AppLogHandler 获取 app 日志
+func AppLogHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var queryParams LogQueryParams
+		if err := c.ShouldBindQuery(&queryParams); err != nil {
+			// 验证失败
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "查询参数无效，lines 必须是 1 到 200 之间的整数",
+			})
+			return
+		}
+		// 读取日志
+		logs, err := service.GetAppLogs(service.DefaultAppLogDir, queryParams.Lines)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get app log error: %s", err.Error())})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"logs": logs})
 	}
 }
 

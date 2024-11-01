@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-10-31 12:14+0800\n"
+"POT-Creation-Date: 2024-11-01 15:26+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -457,7 +457,7 @@ msgid "内存使用量"
 msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
-#: paasng/platform/applications/views.py:916
+#: paasng/platform/applications/views.py:917
 #: paasng/platform/modules/views.py:335
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
@@ -521,7 +521,7 @@ msgid "当前密钥为内置密钥，不允许删除"
 msgstr "The current secret is built-in and cannot be deleted"
 
 #: paasng/accessories/app_secret/views.py:169
-#: paasng/platform/applications/views.py:1168
+#: paasng/platform/applications/views.py:1169
 #: paasng/platform/sourcectl/views.py:178
 msgid "验证码错误"
 msgstr "Verification code error"
@@ -798,7 +798,7 @@ msgid "创建"
 msgstr "Create "
 
 #: paasng/bk_plugins/pluginscenter/constants.py:142
-#: paasng/misc/audit/constants.py:99
+#: paasng/misc/audit/constants.py:100
 msgid "新建"
 msgstr "Create"
 
@@ -811,17 +811,17 @@ msgid "终止发布"
 msgstr "Unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
-#: paasng/misc/audit/constants.py:101
+#: paasng/misc/audit/constants.py:102
 msgid "修改"
 msgstr "Modify"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:146
-#: paasng/misc/audit/constants.py:100
+#: paasng/misc/audit/constants.py:101
 msgid "删除"
 msgstr "Delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
-#: paasng/misc/audit/constants.py:118
+#: paasng/misc/audit/constants.py:119
 msgid "下架"
 msgstr "archive"
 
@@ -1833,138 +1833,144 @@ msgid "插件使用方"
 msgstr "Plugin Distributor"
 
 #: paasng/misc/audit/constants.py:81
+#, fuzzy
+#| msgid "插件成员"
+msgid "插件成员"
+msgstr "Plugin Member"
+
+#: paasng/misc/audit/constants.py:82
 msgid "文档"
 msgstr "Document"
 
-#: paasng/misc/audit/constants.py:82
+#: paasng/misc/audit/constants.py:83
 #, fuzzy
 #| msgid "失败提示"
 msgid "部署失败提示"
 msgstr "Failure Tip"
 
-#: paasng/misc/audit/constants.py:83
+#: paasng/misc/audit/constants.py:84
 msgid "代码库配置"
 msgstr "Source Type Setting"
 
-#: paasng/misc/audit/constants.py:84
+#: paasng/misc/audit/constants.py:85
 msgid "共享证书"
 msgstr "Shared Cert"
 
-#: paasng/misc/audit/constants.py:85
+#: paasng/misc/audit/constants.py:86
 #, fuzzy
 #| msgid "增强服务"
 msgid "增强服务方案"
 msgstr "Add-ons Plan"
 
-#: paasng/misc/audit/constants.py:86
+#: paasng/misc/audit/constants.py:87
 msgid "平台用户"
 msgstr "Platform User"
 
-#: paasng/misc/audit/constants.py:87
+#: paasng/misc/audit/constants.py:88
 #, fuzzy
 #| msgid "修改特性标记"
 msgid "特性标记"
 msgstr "Feature Flag"
 
-#: paasng/misc/audit/constants.py:88
+#: paasng/misc/audit/constants.py:89
 #, fuzzy
 #| msgid "创建 Egress 配置"
 msgid "Egress 配置"
 msgstr "Egress Setting"
 
-#: paasng/misc/audit/constants.py:89
+#: paasng/misc/audit/constants.py:90
 #, fuzzy
 #| msgid "模板"
 msgid "模板"
 msgstr "Template"
 
-#: paasng/misc/audit/constants.py:90
+#: paasng/misc/audit/constants.py:91
 msgid "仪表盘模板"
 msgstr "Dashboard Template"
 
-#: paasng/misc/audit/constants.py:103 paasng/misc/operations/constant.py:57
+#: paasng/misc/audit/constants.py:104 paasng/misc/operations/constant.py:57
 msgid "创建应用"
 msgstr "create APP"
 
-#: paasng/misc/audit/constants.py:104
+#: paasng/misc/audit/constants.py:105
 msgid "发布到应用市场"
 msgstr " publish to APP market"
 
-#: paasng/misc/audit/constants.py:105 paasng/misc/operations/constant.py:64
+#: paasng/misc/audit/constants.py:106 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
 msgstr "remove from the APP market"
 
-#: paasng/misc/audit/constants.py:106 paasng/misc/operations/constant.py:61
+#: paasng/misc/audit/constants.py:107 paasng/misc/operations/constant.py:61
 msgid "完善应用市场配置"
 msgstr "improve market configuration"
 
-#: paasng/misc/audit/constants.py:107
+#: paasng/misc/audit/constants.py:108
 msgid "修改应用市场访问地址"
 msgstr "modify market url"
 
-#: paasng/misc/audit/constants.py:108
+#: paasng/misc/audit/constants.py:109
 msgid "修改基本信息"
 msgstr "modify basic information"
 
-#: paasng/misc/audit/constants.py:110
+#: paasng/misc/audit/constants.py:111
 msgid "启动"
 msgstr "start"
 
-#: paasng/misc/audit/constants.py:111
+#: paasng/misc/audit/constants.py:112
 msgid "停止"
 msgstr "stop"
 
-#: paasng/misc/audit/constants.py:112
+#: paasng/misc/audit/constants.py:113
 msgid "扩缩容"
 msgstr "scale"
 
-#: paasng/misc/audit/constants.py:113
+#: paasng/misc/audit/constants.py:114
 msgid "启用"
 msgstr "enable"
 
-#: paasng/misc/audit/constants.py:114
+#: paasng/misc/audit/constants.py:115
 msgid "停用"
 msgstr "disable"
 
-#: paasng/misc/audit/constants.py:115
+#: paasng/misc/audit/constants.py:116
 msgid "申请"
 msgstr "apply"
 
-#: paasng/misc/audit/constants.py:116
+#: paasng/misc/audit/constants.py:117
 msgid "续期"
 msgstr "renew"
 
-#: paasng/misc/audit/constants.py:117
+#: paasng/misc/audit/constants.py:118
 msgid "部署"
 msgstr "Deploy"
 
-#: paasng/misc/audit/constants.py:120
+#: paasng/misc/audit/constants.py:121
 msgid "切换资源方案"
 msgstr "switch process plan"
 
-#: paasng/misc/audit/constants.py:121
+#: paasng/misc/audit/constants.py:122
 msgid "修改用户特性"
 msgstr "modify user feature flag"
 
-#: paasng/misc/audit/constants.py:122
+#: paasng/misc/audit/constants.py:123
 msgid "切换默认集群"
 msgstr "switch default cluster"
 
-#: paasng/misc/audit/constants.py:123
+#: paasng/misc/audit/constants.py:124
 msgid "切换绑定集群"
 msgstr "switch binding cluster"
 
-#: paasng/misc/audit/constants.py:124
+#: paasng/misc/audit/constants.py:125
 msgid "日志采集管理"
 msgstr "log config manage"
 
-#: paasng/misc/audit/constants.py:125
+#: paasng/misc/audit/constants.py:126
 #, fuzzy
 #| msgid "增强服务"
 msgid "分配增强服务实例"
 msgstr "provision add-ons instance"
 
-#: paasng/misc/audit/constants.py:126
+#: paasng/misc/audit/constants.py:127
 #, fuzzy
 #| msgid "增强服务"
 msgid "回收增强服务实例"
@@ -2332,7 +2338,7 @@ msgid "已上线"
 msgstr "Now online"
 
 #: paasng/plat_admin/numbers/app.py:539
-#: paasng/platform/applications/views.py:1098
+#: paasng/platform/applications/views.py:1099
 msgid "已下架"
 msgstr "Archived"
 
@@ -2439,50 +2445,50 @@ msgstr "{} for {} already exists"
 msgid "不支持修改应用 ID"
 msgstr "Modifying APP ID is not supported"
 
-#: paasng/platform/applications/views.py:452
+#: paasng/platform/applications/views.py:453
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views.py:585
+#: paasng/platform/applications/views.py:586
 #, fuzzy
 #| msgid "{} 为 {} 的应用已存在"
 msgid "code 为 {} 或 name 为 {} 的应用已存在"
 msgstr "{} for {} already exists"
 
-#: paasng/platform/applications/views.py:612
-#: paasng/platform/applications/views.py:695
+#: paasng/platform/applications/views.py:613
+#: paasng/platform/applications/views.py:696
 msgid "你无法使用高级创建选项"
 msgstr "You cannot use the advanced creation option"
 
-#: paasng/platform/applications/views.py:621
-#: paasng/platform/applications/views.py:704
+#: paasng/platform/applications/views.py:622
+#: paasng/platform/applications/views.py:705
 msgid "当前版本下无法创建蓝鲸插件应用"
 msgstr "The  bk-plugin APP cannot be created under the current version"
 
-#: paasng/platform/applications/views.py:798
+#: paasng/platform/applications/views.py:799
 msgid "你无法在所指定的 region 中创建应用"
 msgstr "You cannot create an application in the specified region"
 
-#: paasng/platform/applications/views.py:816
+#: paasng/platform/applications/views.py:817
 #, python-format
 msgid "集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."
 msgstr ""
 
-#: paasng/platform/applications/views.py:1094
+#: paasng/platform/applications/views.py:1095
 msgid "开发中"
 msgstr "Developing"
 
-#: paasng/platform/applications/views.py:1095
+#: paasng/platform/applications/views.py:1096
 #: paasng/platform/engine/constants.py:40
 msgid "预发布环境"
 msgstr " Stag Env "
 
-#: paasng/platform/applications/views.py:1096
+#: paasng/platform/applications/views.py:1097
 #: paasng/platform/engine/constants.py:41
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/applications/views.py:1097
+#: paasng/platform/applications/views.py:1098
 msgid "应用市场"
 msgstr " Market "
 

@@ -19,11 +19,8 @@ from pathlib import Path
 from typing import Dict
 
 from bkpaas_auth.models import User
-from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -33,8 +30,6 @@ from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandb
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
-from paasng.infras.accounts.constants import FunctionType
-from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -239,18 +234,6 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
         except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
-        if settings.ENABLE_VERIFICATION_CODE:
-            serializer = VerificationCodeSLZ(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            verifier = make_verifier(request.session, FunctionType.GET_CODE_EDITOR_PASSWORD.value)
-            is_valid = verifier.validate(serializer.data["verification_code"])
-            if not is_valid:
-                raise ValidationError({"verification_code": [_("验证码错误")]})
-        else:
-            logger.warning("Verification code is not currently supported, return app secret directly")
 
         return Response({"password": dev_sandbox.code_editor.password})
 

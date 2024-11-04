@@ -1,5 +1,8 @@
 <template>
-  <div class="idle-app-dashboard" v-if="idleAppList.length">
+  <div
+    class="idle-app-dashboard"
+    v-if="idleAppList.length"
+  >
     <!-- 闲置看板功能 -->
     <!-- <div class="title-wrapper">
       <h3 class="title">{{ $t('闲置应用') }}</h3>
@@ -7,8 +10,8 @@
     </div> -->
     <bk-alert
       type="warning"
-      :title="$t('近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。')">
-    </bk-alert>
+      :title="$t('近 30 天内没有访问记录，CPU 使用率低于 1% 且近 7 天无使用波动的模块，请尽快下架。')"
+    ></bk-alert>
     <bk-table
       :data="idleAppList"
       size="small"
@@ -18,16 +21,27 @@
       :expand-row-keys="expandRowKeys"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       row-class-name="idle-table-row-cls"
-      ext-cls="idle-app-dashboard-table">
-      <bk-table-column type="expand" width="30">
+      ext-cls="idle-app-dashboard-table"
+    >
+      <bk-table-column
+        type="expand"
+        width="30"
+      >
         <template slot-scope="props">
           <bk-table
             :data="props.row.module_envs"
             :outer-border="false"
-            :header-cell-style="{background: 'red', borderRight: 'none'}"
-            ext-cls="child-module-table-cls">
-            <bk-table-column label="" width="30"></bk-table-column>
-            <bk-table-column label="" width="240">
+            :header-cell-style="{ background: 'red', borderRight: 'none' }"
+            ext-cls="child-module-table-cls"
+          >
+            <bk-table-column
+              label=""
+              width="30"
+            ></bk-table-column>
+            <bk-table-column
+              label=""
+              width="240"
+            >
               <template slot-scope="{ row: childRow }">
                 {{ childRow.module_name }}
               </template>
@@ -43,9 +57,7 @@
               </template>
             </bk-table-column>
             <bk-table-column label="">
-              <template slot-scope="{ row: childRow }">
-                {{ (childRow?.cpu_usage_avg * 100).toFixed(2) }}%
-              </template>
+              <template slot-scope="{ row: childRow }">{{ (childRow?.cpu_usage_avg * 100).toFixed(2) }}%</template>
             </bk-table-column>
             <bk-table-column label="">
               <template slot-scope="{ row: childRow }">
@@ -63,15 +75,19 @@
                   trigger="click"
                   width="260"
                   :on-hide="handleHide"
-                  ext-cls="idle-popover-cls">
+                  ext-cls="idle-popover-cls"
+                >
                   <bk-button
                     :text="true"
                     :title="$t('下架')"
-                    @click="handleShowPopover(childRow, props.row)">
+                    @click="handleShowPopover(childRow, props.row)"
+                  >
                     {{ $t('下架') }}
                   </bk-button>
                   <div slot="content">
-                    <div class="popover-title">{{ $t('是否下架 {n} 模块', { n: curOperationAppData.module_name }) }}</div>
+                    <div class="popover-title">
+                      {{ $t('是否下架 {n} 模块', { n: curOperationAppData.module_name }) }}
+                    </div>
                     <div class="popover-content tl">
                       {{ $t('将模块从') }}
                       <em>{{ curOperationAppData.env_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</em>
@@ -83,13 +99,15 @@
                         size="small"
                         class="mr4"
                         :loading="isPopoverLoading"
-                        @click="handleConfirm('offlineApp', `removed${childRow.env_name}-${childRow.module_name}`)">
+                        @click="handleConfirm('offlineApp', `removed${childRow.env_name}-${childRow.module_name}`)"
+                      >
                         {{ $t('确定') }}
                       </bk-button>
                       <bk-button
                         :theme="'default'"
                         size="small"
-                        @click="handleCancel(`removed${childRow.env_name}-${childRow.module_name}`)">
+                        @click="handleCancel(`removed${childRow.env_name}-${childRow.module_name}`)"
+                      >
                         {{ $t('取消') }}
                       </bk-button>
                     </div>
@@ -103,12 +121,14 @@
                   trigger="click"
                   width="260"
                   :on-hide="handleHide"
-                  ext-cls="idle-popover-cls">
+                  ext-cls="idle-popover-cls"
+                >
                   <bk-button
                     :text="true"
                     class="ml10"
                     :title="$t('忽略')"
-                    @click="handleShowPopover(childRow, props.row)">
+                    @click="handleShowPopover(childRow, props.row)"
+                  >
                     {{ $t('忽略') }}
                   </bk-button>
                   <div slot="content">
@@ -126,13 +146,15 @@
                         size="small"
                         class="mr4"
                         :loading="isPopoverLoading"
-                        @click="handleConfirm('ignoreModule', `ignore${childRow.env_name}-${childRow.module_name}`)">
+                        @click="handleConfirm('ignoreModule', `ignore${childRow.env_name}-${childRow.module_name}`)"
+                      >
                         {{ $t('忽略') }}
                       </bk-button>
                       <bk-button
                         :theme="'default'"
                         size="small"
-                        @click="handleCancel(`ignore${childRow.env_name}-${childRow.module_name}`)">
+                        @click="handleCancel(`ignore${childRow.env_name}-${childRow.module_name}`)"
+                      >
                         {{ $t('取消') }}
                       </bk-button>
                     </div>
@@ -143,22 +165,33 @@
           </bk-table>
         </template>
       </bk-table-column>
-      <bk-table-column :label="$t('闲置模块')" width="240">
+      <bk-table-column
+        :label="$t('闲置模块')"
+        width="240"
+      >
         <template slot-scope="{ row }">
           <div
             class="app-name-wrapper"
             v-bk-overflow-tips="{ content: `${row.name}（${row.code}）` }"
             @click="toAppDetail(row)"
           >
-            <img class="app-logo" :src="row.logo_url" alt="logo" />
-            <span class="info">{{ row.name }}<span class="code">（{{ row.code }}）</span></span>
+            <img
+              class="app-logo"
+              :src="row.logo_url"
+              alt="logo"
+            />
+            <span class="info">
+              {{ row.name }}
+              <span class="code">（{{ row.code }}）</span>
+            </span>
           </div>
         </template>
       </bk-table-column>
       <bk-table-column
         :label="$t('环境')"
         prop="source"
-        class-name="env-column-cls">
+        class-name="env-column-cls"
+      >
         <template slot-scope="{ row }">
           <tag-box :tags="row.staffList" />
           <bk-popover
@@ -168,12 +201,14 @@
             trigger="click"
             width="260"
             :on-hide="handleHide"
-            ext-cls="idle-popover-cls">
+            ext-cls="idle-popover-cls"
+          >
             <bk-button
               :theme="'default'"
               type="submit"
               size="small"
-              @click="handleLeaveApp(row)">
+              @click="handleLeaveApp(row)"
+            >
               {{ $t('退出应用') }}
             </bk-button>
             <div slot="content">
@@ -185,13 +220,15 @@
                   size="small"
                   class="mr4"
                   :loading="isPopoverLoading"
-                  @click="confirmLeaveApp(`quit${row.code}`)">
+                  @click="confirmLeaveApp(`quit${row.code}`)"
+                >
                   {{ $t('确定') }}
                 </bk-button>
                 <bk-button
                   :theme="'default'"
                   size="small"
-                  @click="handleCancel(`quit${row.code}`)">
+                  @click="handleCancel(`quit${row.code}`)"
+                >
                   {{ $t('取消') }}
                 </bk-button>
               </div>
@@ -252,8 +289,8 @@ export default {
         const res = await this.$store.dispatch('baseInfo/getIdleAppList');
         // 该应用无模块，则无需展示
         this.idleAppList = res.applications
-          .filter(app => app.module_envs.length)
-          .map(item => ({
+          .filter((app) => app.module_envs.length)
+          .map((item) => ({
             ...item,
             staffList: [...item.administrators, ...item.developers],
           }));
@@ -288,7 +325,8 @@ export default {
     arraySpanMethod({ columnIndex }) {
       if (columnIndex === 2) {
         return [1, 5];
-      } if (columnIndex >= 3 && columnIndex <= 5) {
+      }
+      if (columnIndex >= 3 && columnIndex <= 5) {
         return [0, 0];
       }
     },
@@ -345,7 +383,10 @@ export default {
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || e.message || (name === 'offlineApp' ? this.$t('下架失败，请稍候再试') : this.$t('忽略失败，请稍候再试')),
+          message:
+            e.detail ||
+            e.message ||
+            (name === 'offlineApp' ? this.$t('下架失败，请稍候再试') : this.$t('忽略失败，请稍候再试')),
         });
       } finally {
         this.isPopoverLoading = false;
@@ -407,10 +448,10 @@ export default {
       vertical-align: middle;
     }
     .code {
-      color: #979BA5;
+      color: #979ba5;
     }
     .info:hover {
-      color: #3A84FF;
+      color: #3a84ff;
     }
   }
 
@@ -420,16 +461,21 @@ export default {
 
   :deep(.idle-app-dashboard-table) {
     .bk-table-body-wrapper .idle-table-row-cls {
-      background: #F0F1F5;
+      background: #f0f1f5;
     }
     tr.expanded .bk-table-expand-icon .bk-icon {
-      color: #63656E;
+      color: #63656e;
     }
     .bk-table-expand-icon .bk-icon {
-      color: #979BA5;
+      color: #979ba5;
     }
-    .child-module-table-cls .bk-table-header-wrapper {
-      display: none;
+    .child-module-table-cls {
+      .bk-table-header-wrapper {
+        display: none;
+      }
+      .bk-table-body-wrapper {
+        color: #63656e;
+      }
     }
     .env-column-cls .cell {
       display: flex;

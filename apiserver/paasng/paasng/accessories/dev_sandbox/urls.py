@@ -34,6 +34,6 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r"/user/dev_sandbox_password/$", include_envs=False),
-        DevSandboxWithCodeEditorViewSet.as_view({"post": "get_password"}),
+        DevSandboxWithCodeEditorViewSet.as_view({"gti": "get_password"}),
     ),
 ]

@@ -31,7 +31,6 @@ from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSa
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
@@ -225,7 +224,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         )
         return Response(data=serializer.data)
 
-    @swagger_auto_schema(tags=["鉴权信息"], request_body=VerificationCodeSLZ)
+    @swagger_auto_schema(tags=["开发沙箱"])
     def get_password(self, request, code, module_name):
         """验证验证码查看代码编辑器密码"""
         module = self.get_module_via_path()

@@ -58,9 +58,9 @@ export default {
     /**
      * 获取沙箱环境密码
      */
-    getSandboxPassword({}, { appCode, moduleId, data }, config = {}) {
+    getSandboxPassword({}, { appCode, moduleId }, config = {}) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_password/`;
-      return http.post(url, data, config);
+      return http.get(url, config);
     },
     /**
      * 获取沙箱增强服务信息

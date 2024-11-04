@@ -6,6 +6,7 @@
     :header-position="'left'"
     :mask-close="false"
     :auto-close="false"
+    render-directive="if"
     :title="$t('创建沙箱开发环境')"
   >
     <div slot="footer">
@@ -49,17 +50,18 @@
             searchable
           >
             <bk-option
-              v-for="option in curAppModuleList"
+              v-for="option in displayModuleList"
               :key="option.name"
               :id="option.name"
               :name="option.name"
+              :disabled="option.isDisabled"
             ></bk-option>
           </bk-select>
           <p
             slot="tip"
             class="item-tips"
           >
-            {{ $t('仅使用“蓝鲸 Buildpack”构建并部署到预发布环境的模块，才可使用沙箱开发功能') }}
+            {{ $t('仅使用“蓝鲸 Buildpack”构建且开发语言为 Python，并部署到预发布环境的模块，才能启用沙箱开发功能') }}
           </p>
         </bk-form-item>
         <bk-form-item
@@ -67,6 +69,12 @@
           class="line-item"
         >
           <span :class="{ 'repo-url': curModuleInfo.repo?.repo_url }">{{ curModuleInfo.repo?.repo_url || '--' }}</span>
+        </bk-form-item>
+        <bk-form-item
+          :label="`${$t('构建目录')}：`"
+          class="line-item"
+        >
+          <span>{{ curModuleInfo.repo?.source_dir || '--' }}</span>
         </bk-form-item>
         <bk-form-item
           :label="$t('代码分支')"
@@ -103,6 +111,14 @@ export default {
     env: {
       type: String,
       default: 'stag',
+    },
+    moduleDeployList: {
+      type: Array,
+      default: [],
+    },
+    sandboxList: {
+      type: Array,
+      default: [],
     },
   },
   data() {
@@ -149,6 +165,27 @@ export default {
     },
     curAppModuleList() {
       return this.$store.state.curAppModuleList || [];
+    },
+    displayModuleList() {
+      const moduleList = this.curAppModuleList.filter((m) => {
+        const curModuleDeploy = this.moduleDeployList.find((v) => v.name === m.name) || {};
+        if (
+          m.web_config?.build_method === 'buildpack' &&
+          m.language?.toLocaleLowerCase() === 'python' &&
+          curModuleDeploy?.isDeployed
+        ) {
+          return true;
+        }
+      });
+      if (moduleList.length === 0) return [];
+      return moduleList.map((m) => {
+        const isCreated = this.sandboxList.some((v) => v.module_name === m.name);
+        return {
+          ...m,
+          // 已创建禁用
+          isDisabled: isCreated,
+        };
+      });
     },
     curModuleInfo() {
       return this.curAppModuleList.find((v) => v.name === this.formData.module) ?? {};

@@ -1,7 +1,13 @@
 <template>
-  <div class="log-card">
+  <div :class="['log-card', { collapsed: isCollapsed }]">
     <div class="top">
-      <div class="title">{{ title }}</div>
+      <div class="title">
+        <i
+          class="paasng-icon paasng-right-shape"
+          @click="isCollapsed = !isCollapsed"
+        ></i>
+        {{ title }}
+      </div>
       <div class="tools">
         <bk-select
           v-if="!isBuildLog"
@@ -63,7 +69,6 @@
       :class="['logs-box', { loading: loading }]"
       v-bkloading="{ isLoading: loading, opacity: 1, color: '#313238', zIndex: 10 }"
     >
-      <!-- 防止loading位置出错 -->
       <template v-if="displayLogs">
         <template v-if="Array.isArray(displayLogs)">
           <pre
@@ -111,6 +116,7 @@ export default {
       isDropdownShow: false,
       curRefreshTime: '5s',
       curRunLogType: '',
+      isCollapsed: false,
     };
   },
   computed: {
@@ -201,12 +207,28 @@ export default {
 .log-card {
   display: flex;
   flex-direction: column;
+  transition: flex 0.2s ease;
+  overflow: hidden;
+  &.collapsed {
+    flex: 0 0 50px;
+    .top .paasng-right-shape {
+      transform: rotate(0deg);
+    }
+    .logs-box {
+      display: none;
+    }
+  }
   .top {
+    height: 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
     color: #c4c6cc;
+    .paasng-right-shape {
+      cursor: pointer;
+      transform: rotate(90deg);
+    }
     .tools {
       display: flex;
       align-items: center;
@@ -239,7 +261,8 @@ export default {
     }
   }
   .logs-box {
-    height: 100%;
+    flex: 1;
+    display: block;
     overflow-y: auto;
     font-size: 12px;
     color: #dcdee5;

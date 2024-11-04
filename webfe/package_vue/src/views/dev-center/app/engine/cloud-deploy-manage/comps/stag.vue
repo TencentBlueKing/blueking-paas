@@ -38,6 +38,7 @@
       </div>
       <bk-button
         class="sandbox-btn"
+        :loading="isSandboxLoading"
         @click="handleSandboxDev"
       >
         {{ $t('沙箱开发') }}
@@ -49,17 +50,13 @@
       ref="moduleListRef"
       :environment="environment"
       v-bind="$attrs"
+      @module-deployment-info="updateModuleDeploymentData"
     />
 
     <sandbox-sideslider
       env="stag"
       :show.sync="isShowSandboxSideslider"
-      @create-sandbox="isShowSandboxDialog = true"
-    />
-
-    <sandbox-dialog
-      :show.sync="isShowSandboxDialog"
-      env="stag"
+      :module-deploy-list="moduleDeploymentData"
     />
   </div>
 </template>
@@ -88,8 +85,9 @@ export default {
       moduleValue: this.$t('全部模块'),
       showModuleList: [],
       isExpand: false,
-      isShowSandboxDialog: false,
       isShowSandboxSideslider: false,
+      isSandboxLoading: true,
+      moduleDeploymentData: [],
     };
   },
 
@@ -144,9 +142,10 @@ export default {
     // 沙箱开发
     handleSandboxDev() {
       this.isShowSandboxSideslider = true;
-      // setTimeout(() => {
-      //   this.isShowSandboxDialog = true;
-      // }, 1000);
+    },
+    updateModuleDeploymentData(data) {
+      this.moduleDeploymentData = data;
+      this.isSandboxLoading = false;
     },
   },
 };

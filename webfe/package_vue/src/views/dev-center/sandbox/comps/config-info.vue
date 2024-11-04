@@ -6,18 +6,6 @@
     </p>
     <div class="info">
       <div class="info-item">
-        <div class="label">{{ $t('基础镜像') }}：</div>
-        <div class="value">--</div>
-      </div>
-      <div class="info-item">
-        <div class="label">{{ $t('资源配额') }}：</div>
-        <div class="value">--</div>
-      </div>
-      <div class="info-item">
-        <div class="label">{{ $t('构建工具') }}：</div>
-        <div class="value">--</div>
-      </div>
-      <div class="info-item">
         <div class="label">{{ $t('增强服务') }}：</div>
         <div class="value">{{ serviceName }}</div>
       </div>

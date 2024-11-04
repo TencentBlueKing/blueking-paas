@@ -38,6 +38,7 @@
       </div>
       <bk-button
         class="sandbox-btn"
+        :loading="isSandboxLoading"
         @click="handleSandboxDev"
       >
         {{ $t('沙箱开发') }}
@@ -49,15 +50,12 @@
       ref="prodModuleListRef"
       :environment="environment"
       v-bind="$attrs"
+      @module-deployment-info="updateModuleDeploymentData"
     />
     <sandbox-sideslider
       env="prod"
       :show.sync="isShowSandboxSideslider"
-      @create-sandbox="isShowSandboxDialog = true"
-    />
-    <sandbox-dialog
-      :show.sync="isShowSandboxDialog"
-      env="prod"
+      :module-deploy-list="moduleDeploymentData"
     />
   </div>
 </template>
@@ -65,12 +63,10 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployModuleList from './deploy-module-list.vue';
-import SandboxDialog from './sandbox-dialog.vue';
 import SandboxSideslider from './sandbox-sideslider.vue';
 export default {
   components: {
     deployModuleList,
-    SandboxDialog,
     SandboxSideslider,
   },
   mixins: [appBaseMixin],
@@ -86,8 +82,9 @@ export default {
       moduleValue: this.$t('全部模块'),
       showModuleList: [],
       isExpand: false,
-      isShowSandboxDialog: false,
       isShowSandboxSideslider: false,
+      isSandboxLoading: true,
+      moduleDeploymentData: [],
     };
   },
 
@@ -142,6 +139,10 @@ export default {
     // 沙箱开发
     handleSandboxDev() {
       this.isShowSandboxSideslider = true;
+    },
+    updateModuleDeploymentData(data) {
+      this.moduleDeploymentData = data;
+      this.isSandboxLoading = false;
     },
   },
 };

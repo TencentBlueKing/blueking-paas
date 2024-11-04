@@ -1,101 +1,113 @@
 <template>
-  <bk-sideslider
-    :is-show.sync="sidesliderVisible"
-    :quick-close="true"
-    width="960"
-    @shown="handleShown"
-  >
-    <div slot="header">
-      <div class="header-box">
-        <span>{{ $t('沙箱开发') }}</span>
+  <div>
+    <bk-sideslider
+      :is-show.sync="sidesliderVisible"
+      :quick-close="true"
+      width="960"
+      @shown="handleShown"
+    >
+      <div slot="header">
+        <div class="header-box">
+          <span>{{ $t('沙箱开发') }}</span>
+          <bk-button
+            :theme="'primary'"
+            text
+          >
+            {{ $t('沙箱开发指引') }}
+            <i class="paasng-icon paasng-jump-link"></i>
+          </bk-button>
+        </div>
+      </div>
+      <div
+        class="sideslider-content"
+        slot="content"
+      >
+        <bk-alert
+          type="info"
+          :title="
+            $t(
+              '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。'
+            )
+          "
+          closable
+        ></bk-alert>
         <bk-button
           :theme="'primary'"
-          text
+          class="mt15"
+          @click="createSandbox"
         >
-          {{ $t('沙箱开发指引') }}
-          <i class="paasng-icon paasng-jump-link"></i>
+          {{ $t('新建沙箱') }}
         </bk-button>
-      </div>
-    </div>
-    <div
-      class="sideslider-content"
-      slot="content"
-    >
-      <bk-alert
-        type="info"
-        :title="
-          $t(
-            '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。'
-          )
-        "
-        closable
-      ></bk-alert>
-      <bk-button
-        :theme="'primary'"
-        class="mt15"
-        @click="createSandbox"
-      >
-        {{ $t('新建沙箱') }}
-      </bk-button>
-      <bk-table
-        style="margin-top: 15px"
-        :data="sandboxEnvList"
-        :outer-border="false"
-        size="small"
-        v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-      >
-        <bk-table-column
-          :label="$t('模块')"
-          prop="module_name"
-        ></bk-table-column>
-        <bk-table-column :label="$t('代码分支')">
-          <template slot-scope="{ row }">
-            {{ row.version_info_dict?.version_name }}
-          </template>
-        </bk-table-column>
-        <bk-table-column
-          :label="$t('创建时间')"
-          prop="created"
-        ></bk-table-column>
-        <bk-table-column :label="$t('操作')">
-          <template slot-scope="{ row }">
-            <bk-button
-              :theme="'primary'"
-              text
-              @click="toSandboxPage(row)"
-            >
-              {{ $t('进入') }}
-            </bk-button>
-            <bk-popconfirm
-              trigger="click"
-              ext-cls="sandbox-destroy-cls"
-              width="288"
-              @confirm="handleDestroy(row)"
-            >
-              <div slot="content">
-                <div class="custom">
-                  <i class="bk-icon icon-info-circle-shape pr5 content-icon"></i>
-                  <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
-                </div>
-              </div>
+        <bk-table
+          style="margin-top: 15px"
+          :data="sandboxEnvList"
+          :outer-border="false"
+          size="small"
+          v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+        >
+          <bk-table-column
+            :label="$t('模块')"
+            prop="module_name"
+          ></bk-table-column>
+          <bk-table-column :label="$t('代码分支')">
+            <template slot-scope="{ row }">
+              {{ row.version_info_dict?.version_name }}
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('创建时间')"
+            prop="created"
+          ></bk-table-column>
+          <bk-table-column :label="$t('操作')">
+            <template slot-scope="{ row }">
               <bk-button
                 :theme="'primary'"
                 text
-                class="ml10"
+                @click="toSandboxPage(row)"
               >
-                {{ $t('销毁') }}
+                {{ $t('进入') }}
               </bk-button>
-            </bk-popconfirm>
-          </template>
-        </bk-table-column>
-      </bk-table>
-    </div>
-  </bk-sideslider>
+              <bk-popconfirm
+                trigger="click"
+                ext-cls="sandbox-destroy-cls"
+                width="288"
+                @confirm="handleDestroy(row)"
+              >
+                <div slot="content">
+                  <div class="custom">
+                    <i class="bk-icon icon-info-circle-shape pr5 content-icon"></i>
+                    <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
+                  </div>
+                </div>
+                <bk-button
+                  :theme="'primary'"
+                  text
+                  class="ml10"
+                >
+                  {{ $t('销毁') }}
+                </bk-button>
+              </bk-popconfirm>
+            </template>
+          </bk-table-column>
+        </bk-table>
+      </div>
+    </bk-sideslider>
+    <sandbox-dialog
+      :show.sync="isShowSandboxDialog"
+      :env="env"
+      :sandbox-list="sandboxEnvList"
+      v-bind="$attrs"
+    />
+  </div>
 </template>
 
 <script>
+import SandboxDialog from './sandbox-dialog.vue';
 export default {
   name: 'SandboxSideslider',
+  components: {
+    SandboxDialog,
+  },
   props: {
     show: {
       type: Boolean,
@@ -109,6 +121,7 @@ export default {
     return {
       sandboxEnvList: [],
       isTableLoading: false,
+      isShowSandboxDialog: false,
     };
   },
   computed: {
@@ -126,7 +139,7 @@ export default {
   },
   methods: {
     createSandbox() {
-      this.$emit('create-sandbox');
+      this.isShowSandboxDialog = true;
     },
     handleShown() {
       this.getSandboxList();

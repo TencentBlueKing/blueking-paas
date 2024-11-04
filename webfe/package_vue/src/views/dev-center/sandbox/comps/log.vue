@@ -58,6 +58,8 @@ export default {
 
 <style lang="scss" scoped>
 .sandbox-log-box {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   padding: 16px;
   background: #313238;
@@ -67,7 +69,10 @@ export default {
     justify-content: center;
   }
   .log-card-box {
-    height: 50%;
+    flex: 1;
+    &.collapsed {
+      flex: 0 0 32px;
+    }
     &:first-child {
       /deep/ .logs-box {
         margin-bottom: 16px;

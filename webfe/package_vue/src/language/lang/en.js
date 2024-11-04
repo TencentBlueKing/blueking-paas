@@ -2877,4 +2877,5 @@ export default {
   请输入关键字搜索环境变量: 'Please enter a keyword to search for environment variables',
   '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。': 'The sandbox provides a cloud-based development environment where you can modify and run code online. Each module is allowed to create only one sandbox environment. If there is no activity within 2 hours, the sandbox environment will be automatically destroyed.',
   '沙箱环境仅用于临时在线调试，如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。': 'The sandbox environment is intended for temporary online debugging only. If there is no activity within 2 hours, the sandbox environment will be automatically destroyed.',
+  '仅使用“蓝鲸 Buildpack”构建且开发语言为 Python，并部署到预发布环境的模块，才能启用沙箱开发功能': 'Only modules built using the "BlueKing Buildpack" with Python as the development language and deployed to the staging environment can enable the sandbox development feature',
 };

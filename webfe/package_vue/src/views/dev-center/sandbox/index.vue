@@ -127,29 +127,27 @@
             closable
           ></bk-alert>
         </div>
-        <div class="left">
-          <template v-if="isBuildSuccess">
-            <bk-button
-              :theme="'default'"
-              class="ml8"
-              :loading="isRunNowLoading"
-              @click="handleRunNow"
-            >
-              <i class="paasng-icon paasng-refresh-line"></i>
-              {{ $t('重新启动') }}
-            </bk-button>
-          </template>
-          <template v-else>
-            <bk-button
-              :theme="'primary'"
-              :loading="isRunNowLoading"
-              @click="handleRunNow"
-            >
-              <i class="paasng-icon paasng-right-shape"></i>
-              {{ $t('立即运行') }}
-            </bk-button>
-          </template>
-        </div>
+        <template v-if="isBuildSuccess">
+          <bk-button
+            :theme="'default'"
+            class="ml8"
+            :loading="isRunNowLoading"
+            @click="handleRunNow"
+          >
+            <i class="paasng-icon paasng-refresh-line"></i>
+            {{ $t('重新启动') }}
+          </bk-button>
+        </template>
+        <template v-else>
+          <bk-button
+            :theme="'primary'"
+            :loading="isRunNowLoading"
+            @click="handleRunNow"
+          >
+            <i class="paasng-icon paasng-right-shape"></i>
+            {{ $t('立即运行') }}
+          </bk-button>
+        </template>
         <!-- 访问链接 -->
         <bk-button
           :theme="'primary'"
@@ -453,7 +451,6 @@ export default {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: 52px;
   padding: 0 24px;
   background: #e1ecff;

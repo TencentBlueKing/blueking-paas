@@ -60,7 +60,10 @@ class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
     api_version = "monitoring.coreos.com/v1"
 
     def serialize(self, obj: "ServiceMonitor", original_obj: Optional[ResourceInstance] = None, **kwargs) -> Dict:
-        """serialize to ServiceMonitor described in https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md"""
+        """
+        serialize to ServiceMonitor described in
+        https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md
+        """
         return {
             "apiVersion": self.get_apiversion(),
             "kind": "ServiceMonitor",
@@ -75,7 +78,10 @@ class ServiceMonitorSerializer(AppEntitySerializer["ServiceMonitor"]):
         }
 
     def _construct_endpoints_spec(self, ep: Endpoint) -> List[Dict]:
-        """construct endpoints spec, see https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint"""
+        """
+        construct endpoints spec, see
+        https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint
+        """
         ep_spec = {
             "interval": ep.interval,
             "path": ep.path,

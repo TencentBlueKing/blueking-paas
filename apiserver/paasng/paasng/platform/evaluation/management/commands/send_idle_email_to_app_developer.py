@@ -28,9 +28,13 @@ Examples:
     # 全量应用 + 异步执行
     python manage.py send_idle_email_to_app_developer --all --async
 
+    # 通知时候排除特定的人员
+    python manage.py send_idle_email_to_app_developer --all --exclude_specified_users user-1 user-2
+
     # 仅通知指定的应用的指定管理员 & 开发者
     python manage.py send_idle_email_to_app_developer --codes app-code-1 --only_specified_users user-1 user-2
 """
+
 from django.core.management.base import BaseCommand
 
 from paasng.platform.evaluation.tasks import send_idle_email_to_app_developers
@@ -44,14 +48,19 @@ class Command(BaseCommand):
         parser.add_argument(
             "--only_specified_users", dest="only_specified_users", default=[], nargs="*", help="只发送给指定的用户"
         )
+        parser.add_argument(
+            "--exclude_specified_users", dest="exclude_specified_users", default=[], nargs="*", help="排除指定的用户"
+        )
         parser.add_argument("--all", dest="notify_all", default=False, action="store_true", help="全量应用通知")
         parser.add_argument("--async", dest="async_run", default=False, action="store_true", help="异步执行")
 
-    def handle(self, app_codes, only_specified_users, notify_all, async_run, *args, **options):
+    def handle(
+        self, app_codes, only_specified_users, exclude_specified_users, notify_all, async_run, *args, **options
+    ):
         if not (notify_all or app_codes):
             raise ValueError("please specify --codes or --all")
 
         if async_run:
-            send_idle_email_to_app_developers.delay(app_codes, only_specified_users)
+            send_idle_email_to_app_developers.delay(app_codes, only_specified_users, exclude_specified_users)
         else:
-            send_idle_email_to_app_developers(app_codes, only_specified_users)
+            send_idle_email_to_app_developers(app_codes, only_specified_users, exclude_specified_users)

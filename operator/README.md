@@ -1,32 +1,13 @@
 # bkpaas-app-operator
 
-蓝鲸 PaaS 平台云原生应用 K8S Operator。
-
-## 部署说明
-
-K8S 集群版本要求: **>=1.19**
-
-### 部署步骤
-
-1. (可选) 安装 cert-manager
-
-cert-manager 用于签发 webhooks 需要的证书, 如不希望安装 cert-manager, 则需要自行管理 https 证书。
-
-开发者可根据此 [文档](https://cert-manager.io/docs/installation/supported-releases/) 选择需要安装的 cert-manager 版本
-
-2. 创建命名空间
-
-```bash
-kubectl create ns bkpaas-app-operator-system
-```
-
-3. helm install
-
-```bash
-helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operator-system -f values.yaml
-```
+蓝鲸 PaaS 平台云原生应用 K8S Operator（k8s >= 1.19）。
 
 ## 开发指南
+
+安装 manifest 生成/管理工具
+
+    $ make controller-gen
+    $ make kustomize
 
 安装 ginkgo 命令行工具：
 
@@ -79,9 +60,9 @@ helm install bkpaas-app-operator paasv3/bkpaas-app-operator -n bkpaas-app-operat
 
     $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cert-manager.yaml
 
-生成拉取私有 Registry 所需的 dockerconfig 文件（可选，仅当需将镜像推送到私有 registry 时使用）：
+生成拉取私有 Registry 所需的 dockerconfig 文件（可选，仅当需将镜像推送到私有 registry 时使用，DOCKER_CONFIG_JSON 为 base64 字符串）：
 
-    $ make dockerconfigjson
+    $ make dockerconfigjson DOCKER_CONFIG_JSON="eyJhdXRo...=="
 
 构建容器镜像：
 

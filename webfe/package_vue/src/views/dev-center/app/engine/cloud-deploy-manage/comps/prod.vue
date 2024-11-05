@@ -36,13 +36,14 @@
           </bk-select>
         </div>
       </div>
-      <bk-button
+      <!-- 后续兼容 -->
+      <!-- <bk-button
         class="sandbox-btn"
         :loading="isSandboxLoading"
         @click="handleSandboxDev"
       >
         {{ $t('沙箱开发') }}
-      </bk-button>
+      </bk-button> -->
     </section>
     <!-- 根据模块渲染 -->
     <deploy-module-list
@@ -52,11 +53,12 @@
       v-bind="$attrs"
       @module-deployment-info="updateModuleDeploymentData"
     />
-    <sandbox-sideslider
+    <!-- 后续兼容 -->
+    <!-- <sandbox-sideslider
       env="prod"
       :show.sync="isShowSandboxSideslider"
       :module-deploy-list="moduleDeploymentData"
-    />
+    /> -->
   </div>
 </template>
 

@@ -30,7 +30,7 @@
       <bk-alert
         class="mb16"
         type="warning"
-        :title="`${$t('沙箱环境将复用 “{n}” 的 Mysql 增强服务和环境变量', { n: envZh })}`"
+        :title="$t('沙箱环境将复用 “预发布环境” 的增强服务和环境变量')"
         closable
       ></bk-alert>
       <bk-form
@@ -189,9 +189,6 @@ export default {
     },
     curModuleInfo() {
       return this.curAppModuleList.find((v) => v.name === this.formData.module) ?? {};
-    },
-    envZh() {
-      return this.env === 'stag' ? this.$t('预发布环境') : this.$t('生产环境');
     },
   },
   watch: {

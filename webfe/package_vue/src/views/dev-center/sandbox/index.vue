@@ -93,6 +93,7 @@
                 class="iframe-loading"
               >
                 <img src="/static/images/loading.gif" />
+                <p>{{ $t('沙箱环境正在启动，预计需要约 1 分钟，请稍候。') }}</p>
               </div>
             </div>
             <!-- 登录展示沙盒后，展示右侧的tab信息 -->
@@ -123,11 +124,11 @@
         >
           <bk-alert
             :type="isBuildSuccess ? 'success' : 'error'"
-            :title="isBuildSuccess ? $t('部署成功') : $t('部署失败')"
+            :title="isBuildSuccess ? $t('运行成功') : $t('运行失败')"
             closable
           ></bk-alert>
         </div>
-        <template v-if="isBuildSuccess">
+        <template v-if="isProcessRunning || isBuildSuccess">
           <bk-button
             :theme="'default'"
             class="ml8"
@@ -135,14 +136,14 @@
             @click="handleRunNow"
           >
             <i class="paasng-icon paasng-refresh-line"></i>
-            {{ $t('重新启动') }}
+            {{ $t('重新运行') }}
           </bk-button>
         </template>
         <template v-else>
           <bk-button
             :theme="'primary'"
             :loading="isRunNowLoading"
-            @click="handleRunNow"
+            @click="showRunSandboxDialog"
           >
             <i class="paasng-icon paasng-right-shape"></i>
             {{ $t('立即运行') }}
@@ -150,6 +151,7 @@
         </template>
         <!-- 访问链接 -->
         <bk-button
+          v-if="isProcessRunning"
           :theme="'primary'"
           text
           class="ml8"
@@ -162,6 +164,12 @@
     </paas-content-loader>
     <!-- 密码获取 -->
     <password-request-dialog :show.sync="isDialogVisible" />
+    <!-- 立即运行二次确认 -->
+    <run-sandbox-dialog
+      :show.sync="isRunSandboxVisible"
+      :process-data="processData"
+      @confirm="handleRunNow"
+    />
   </div>
 </template>
 
@@ -170,12 +178,14 @@ import PasswordRequestDialog from './comps/password-request-dialog.vue';
 import RightTab from './comps/right-tab.vue';
 import { bus } from '@/common/bus';
 import axios from 'axios';
+import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
 
 export default {
   name: 'Sandbox',
   components: {
     PasswordRequestDialog,
     RightTab,
+    RunSandboxDialog,
   },
   data() {
     return {
@@ -199,6 +209,9 @@ export default {
       buildStatus: '',
       isLogsLoading: true,
       isCollapse: true,
+      processInfo: {},
+      processData: {},
+      isRunSandboxVisible: false,
     };
   },
   computed: {
@@ -233,6 +246,10 @@ export default {
     // 构建成功
     isBuildSuccess() {
       return this.buildStatus === 'Success';
+    },
+    // 是否存在进程信息
+    isProcessRunning() {
+      return !!Object.keys(this.processInfo).length;
     },
   },
   created() {
@@ -292,14 +309,20 @@ export default {
       if (this.curTabActive !== 'log' || !this.deployId) return;
       // 右侧tab高亮切换，当高亮为日志时，需要按照对应时间自动刷新(点击立即运行后，才允许自动刷新)
       this.clearIntervals();
-
+      this.pollingBuildLog();
+      this.pollingRunLog();
+    },
+    // 轮询构建日志
+    pollingBuildLog() {
       // 如果构建不成功，则继续获取构建日志
       if (!this.isBuildSuccess) {
         this.buildIntervalId = setInterval(() => {
           this.getBuildLog(true);
         }, this.refreshTime.build * 1000);
       }
-
+    },
+    // 轮询运行日志
+    pollingRunLog() {
       // 如果运行日志的刷新时间不是 'off'，则继续获取运行日志
       if (this.refreshTime.run !== 'off') {
         this.runIntervalId = setInterval(() => {
@@ -319,6 +342,11 @@ export default {
           moduleId: this.module,
         });
         this.sandboxData = res;
+        this.$nextTick(() => {
+          if (this.isLoadingSandbox) {
+            this.getSandboxStatus();
+          }
+        });
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -352,14 +380,47 @@ export default {
         return e;
       }
     },
+    // 获取当前沙箱进程状态
+    async getSandboxStatus() {
+      try {
+        const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}processes/status`);
+        const res = await this.executeRequest(url, 'get');
+        this.processInfo = res.status || {};
+        if (!!Object.keys(this.processInfo).length) {
+          this.switchLogTab();
+          // 轮询运行日志
+          if (this.runIntervalId) {
+            clearInterval(this.runIntervalId);
+            this.runIntervalId = null;
+          }
+          this.pollingRunLog();
+        }
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取沙箱进程列表
+    async getSandboxProcesses() {
+      const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}processes/list`);
+      const res = await this.executeRequest(url, 'get');
+      this.processData = res.processes;
+    },
+    // 切换至日志tab
+    switchLogTab() {
+      this.$refs.rightTabRef.handleTabChange({ name: 'log', label: this.$t('日志') });
+    },
+    // 运行沙箱环境二次确认弹窗
+    showRunSandboxDialog() {
+      this.isRunSandboxVisible = true;
+      this.getSandboxProcesses();
+    },
     // 立即运行
     async handleRunNow() {
       this.isRunNowLoading = true;
       // 重置状态
       this.buildStatus = '';
       try {
-        // 切换tab
-        this.$refs.rightTabRef.handleTabChange({ name: 'log', label: this.$t('日志') });
+        this.switchLogTab();
         const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}deploys`);
         const res = await this.executeRequest(url, 'post');
         this.deployId = res.deployID;
@@ -392,7 +453,7 @@ export default {
         this.buildStatus = res.status;
       } finally {
         this.isLogsLoading = false;
-        if (this.isBuildSuccess) {
+        if (this.isBuildSuccess || this.buildStatus === 'Failed') {
           this.isRunNowLoading = false;
         }
       }
@@ -561,6 +622,7 @@ export default {
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-direction: column;
         width: 100%;
         height: 100%;
         img {

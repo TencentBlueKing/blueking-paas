@@ -41,8 +41,8 @@ export default {
       default: '',
     },
     runLog: {
-      type: String,
-      default: '',
+      type: String | Object,
+      required: true,
     },
   },
   data() {
@@ -50,7 +50,7 @@ export default {
   },
   computed: {
     isEmpty() {
-      return !this.buildLog.length && !this.runLog.length;
+      return !this.buildLog.length && this.runLog === null;
     },
   },
 };

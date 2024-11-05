@@ -66,7 +66,7 @@
     </div>
     <div
       ref="logRef"
-      :class="['logs-box', { loading: loading }]"
+      :class="['logs-box', { loading: loading, empty: !displayLogs }]"
       v-bkloading="{ isLoading: loading, opacity: 1, color: '#313238', zIndex: 10 }"
     >
       <template v-if="displayLogs">
@@ -215,7 +215,7 @@ export default {
       transform: rotate(0deg);
     }
     .logs-box {
-      display: none;
+      display: none !important;
     }
   }
   .top {
@@ -276,6 +276,11 @@ export default {
     }
     &.loading {
       overflow: hidden;
+    }
+    &.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     &::-webkit-scrollbar {
       width: 4px;

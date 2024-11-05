@@ -138,7 +138,7 @@ class AlertListByUserSLZ(serializers.Serializer):
     def get_alerts(self, obj):
         alerts = obj.get("alerts") or []
         # 慢查询告警排在前面，即 labels 中包含 gcs_mysql_slow_query 的排在前面
-        sorted_alerts = sorted(alerts, key=lambda alert: "gcs_mysql_slow_query" not in alert.get("labels", []))
+        sorted_alerts = sorted(alerts, key=lambda alert: "gcs_mysql_slow_query" not in (alert.get("labels") or []))
         return AlertSLZ(sorted_alerts, many=True).data
 
 

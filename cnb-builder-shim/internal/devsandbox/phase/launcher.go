@@ -27,8 +27,8 @@ import (
 const DefaultDevLauncherPath = "/cnb/devsandbox/bin/dev-launcher"
 
 // MakeLauncherCmd make launcher cmd
-func MakeLauncherCmd() *exec.Cmd {
-	cmd := exec.Command(DefaultDevLauncherPath)
+func MakeLauncherCmd(subCommand string) *exec.Cmd {
+	cmd := exec.Command(DefaultDevLauncherPath, subCommand)
 	cmd.Env = os.Environ()
 	return cmd
 }

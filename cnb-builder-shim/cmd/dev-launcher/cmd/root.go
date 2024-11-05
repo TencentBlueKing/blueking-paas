@@ -16,12 +16,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package cmd
 
 import (
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/cmd"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	cmd.Execute()
+var rootCmd = &cobra.Command{
+	Use:   "dev-launcher",
+	Short: "dev-launcher cli",
+	Long: `Manage processes defined by app_desc, including 
+reload, getting status, stopping.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("run dev-launcher...")
+	},
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

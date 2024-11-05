@@ -34,6 +34,8 @@ var (
 	ReloadDir = "/cnb/devsandbox/reload"
 	// ReloadLogDir used to store reload log
 	ReloadLogDir = path.Join(ReloadDir, "log")
+	// reload sub command of dev-launcher
+	reloadSubCommand = "rebuild"
 )
 
 // ReloadStatus is the status of a reload operation.
@@ -74,7 +76,7 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 
 // Relaunch ...
 func (m HotReloadManager) Relaunch(reloadID string) error {
-	cmd := phase.MakeLauncherCmd()
+	cmd := phase.MakeLauncherCmd(reloadSubCommand)
 	return m.runCmd(reloadID, cmd)
 }
 

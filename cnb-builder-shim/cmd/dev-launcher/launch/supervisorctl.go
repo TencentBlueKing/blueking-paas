@@ -70,6 +70,15 @@ else
 fi
 `, supervisorDir, confFilePath)
 
+var statusScript = fmt.Sprintf(`#!/bin/bash
+
+socket_file="%[1]s/supervisor.sock"
+# 检查supervisor的socket文件是否存在
+if [ -S "$socket_file" ]; then
+  supervisorctl -c %[2]s status
+fi
+`, supervisorDir, confFilePath)
+
 // ProcessConf is a process config
 type ProcessConf struct {
 	Process
@@ -155,6 +164,18 @@ func (ctl *SupervisorCtl) reload() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(reloadScript)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+// Status get the status of all processes by running 'supervisorctl status'.
+func (ctl *SupervisorCtl) Status() error {
+	cmd := exec.Command("bash")
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = bytes.NewBufferString(statusScript)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 

@@ -72,7 +72,7 @@ svc = Service.objects.create(name="bkrepo", display_name_zh_cn="蓝鲸制品库"
 
 # bkrepo 上给蓝鲸 SaaS 增强服务使用的仓库信息，可参考 apiserver 项目下的脚本创建 bkrepo 仓库
 # apiserver/paasng/paasng/plat_admin/initialization/management/commands/init_bkrepo.py
-config = {"endpoint_url": "http://bkrepo.bk-dev.woa.com", "username": "bksaas-addons", "password": "blueking", "project": "bksaas-addons"}
+config = {"endpoint_url": "http://bkrepo.example.com", "username": "bksaas-addons", "password": "blueking", "project": "bksaas-addons"}
 
 # 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 region 的值
 Plan.objects.create(name="default-bk-repo", description="bk-repo service", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))

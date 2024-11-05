@@ -135,7 +135,7 @@ class PluginRepoAccessor:
         _id = quote(self.project.path_with_namespace, safe="")
         _url = f"api/v3/projects/{_id}/tloc/daily/count"
         # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
-        time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
+        time_zone_num = int(timezone.localtime().tzinfo.utcoffset(timezone.now()).seconds / 3600)
 
         params: Dict[str, Union[str, int]] = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
         resp = self._session.get(urljoin(self._api_url, _url), params=params)

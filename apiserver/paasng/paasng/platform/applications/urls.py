@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.infras.accounts.views import OauthTokenViewSet
-from paasng.utils.basic import re_path
+from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
@@ -216,6 +216,15 @@ urlpatterns += [
         r"^sys/api/bkapps/(?P<sys_id>[^/]+)/third_app/$",
         views.SysAppViewSet.as_view({"post": "create_sys_third_app"}),
         name="sys.applications.create_third_app.sys",
+    ),
+]
+
+# 部署管理-进程列表 Module 顺序
+urlpatterns += [
+    re_path(
+        make_app_pattern(r"deployment/module_order/$", include_envs=False),
+        views.ApplicationDeploymentModuleOrderViewSet.as_view({"get": "list", "post": "upsert"}),
+        name="api.applications.deployment.module_order",
     ),
 ]
 

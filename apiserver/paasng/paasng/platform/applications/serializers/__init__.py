@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .app import (
+    ApplicationDeploymentModuleOrderReqSLZ,
+    ApplicationDeploymentModuleOrderSLZ,
     ApplicationEvaluationIssueCountListResultSLZ,
     ApplicationEvaluationListQuerySLZ,
     ApplicationEvaluationListResultSLZ,
@@ -107,4 +109,6 @@ __all__ = [
     "RoleField",
     "AppIDUniqueValidator",
     "ApplicationMembersInfoSLZ",
+    "ApplicationDeploymentModuleOrderSLZ",
+    "ApplicationDeploymentModuleOrderReqSLZ",
 ]

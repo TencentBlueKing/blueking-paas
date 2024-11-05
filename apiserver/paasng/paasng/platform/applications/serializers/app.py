@@ -494,3 +494,31 @@ class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "code", "name", "administrators", "devopses", "developers", "last_operator"]
+
+
+class ApplicationDeploymentModuleOrderSLZ(serializers.Serializer):
+    module_name = serializers.CharField(max_length=20, required=True, help_text="模块名称")
+    order = serializers.IntegerField(required=True, help_text="模块顺序")
+
+
+class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
+    module_orders = ApplicationDeploymentModuleOrderSLZ(many=True)
+
+    def validate(self, data):
+        module_names = []
+        orders = []
+
+        # 模块名和顺序不能重复
+        for module in data["module_orders"]:
+            module_name = module["module_name"]
+            order = module["order"]
+
+            if module_name in module_names:
+                raise serializers.ValidationError(f"Duplicate module_name: {module_name}")
+            if order in orders:
+                raise serializers.ValidationError(f"Duplicate order: {order}")
+
+            module_names.append(module_name)
+            orders.append(order)
+
+        return data

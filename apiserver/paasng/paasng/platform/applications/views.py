@@ -39,6 +39,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from yaml import serialize
 
 from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networking
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
@@ -86,6 +87,8 @@ from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIE
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
+    ApplicationDeploymentModuleOrder,
+    ApplicationDeploymentModuleOrderRecord,
     ApplicationEnvironment,
     JustLeaveAppManager,
     UserApplicationFilter,
@@ -119,6 +122,7 @@ from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from paasng.platform.templates.constants import TemplateType
@@ -1498,3 +1502,69 @@ class SysAppViewSet(viewsets.ViewSet):
             data={"bk_app_code": application.code, "bk_app_secret": secret},
             status=status.HTTP_201_CREATED,
         )
+
+
+class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """部署管理-进程列表，模块的排序"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(request_body=slzs.ApplicationDeploymentModuleOrderReqSLZ)
+    def upsert(self, request, code):
+        """设置模块的排序"""
+        serializer = slzs.ApplicationDeploymentModuleOrderReqSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        module_orders_data = serializer.validated_data["module_orders"]
+
+        application = self.get_application()
+        modules = Module.objects.filter(application=application)
+
+        # 把请求数据转换成模块顺序对象数组
+        module_orders = []
+        for module in modules:
+            for item in module_orders_data:
+                # 过滤掉模块名称不存在的
+                if item.module_name == module.name:
+                    module_orders.append(
+                        ApplicationDeploymentModuleOrder(
+                            app=application, module=module, module_name=item.module_name, order=item.order
+                        )
+                    )
+
+        if not module_orders:
+            return Response()
+
+        # 记录排序操作日志
+        # 操作前
+        old_module_orders = ApplicationDeploymentModuleOrder.objects.filter(app=application).values(
+            "module_name", "order"
+        )
+        old_module_orders_json = serialize("json", old_module_orders)
+
+        # 更新或创建模块排序
+        ApplicationDeploymentModuleOrder.objects.bulk_create(
+            module_orders, update_conflicts=True, unique_fields=["app", "module"], update_fields=["order"]
+        )
+
+        # 操作后
+        new_module_orders = ApplicationDeploymentModuleOrder.objects.filter(app=application).values(
+            "module_name", "order"
+        )
+        new_module_orders_json = serialize("json", new_module_orders)
+
+        record = ApplicationDeploymentModuleOrderRecord(
+            user=request.user.pk,
+            app=application,
+            before_order=old_module_orders_json,
+            after_order=new_module_orders_json,
+        )
+        record.save()
+
+        return Response()
+
+    def list(self, request, code):
+        """获取模块的排序"""
+        application = self.get_application()
+        data = ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(data, many=True)
+        return Response(serializer.data)

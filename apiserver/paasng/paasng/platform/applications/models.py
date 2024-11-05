@@ -35,6 +35,7 @@ from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models.module import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
@@ -602,3 +603,22 @@ class UserMarkedApplication(OwnerTimestampedModel):
     @property
     def code(self):
         return self.application.code
+
+
+class ApplicationDeploymentModuleOrder(models.Model):
+    app = models.ForeignKey(Application, on_delete=models.CASCADE, verbose_name="应用")
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块")
+    module_name = models.CharField(verbose_name="模块名称", max_length=20)
+    order = models.IntegerField(verbose_name="顺序")
+
+    class Meta:
+        unique_together = ("app", "module")
+        verbose_name = "模块顺序"
+
+
+class ApplicationDeploymentModuleOrderRecord(models.Model):
+    user = BkUserField()
+    app = models.ForeignKey(Application, on_delete=models.DO_NOTHING, verbose_name="应用")
+    before_order = models.JSONField(default=dict, verbose_name="排序前顺序")
+    after_order = models.JSONField(default=dict, verbose_name="排序后顺序")
+    created_at = models.DateTimeField(auto_now_add=True)

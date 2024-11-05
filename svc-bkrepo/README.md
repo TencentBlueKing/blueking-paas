@@ -78,6 +78,8 @@ config = {"endpoint_url": "http://bkrepo.bk-dev.woa.com", "username": "bksaas-ad
 Plan.objects.create(name="default-bk-repo", description="bk-repo service", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```
 
+**说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
+
 ### 5. 启动项目
 
 使用以下命令启动项目：

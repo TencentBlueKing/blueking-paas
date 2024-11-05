@@ -77,6 +77,8 @@ config = {"auth_ip_list":["%"], "host":"127.0.0.1", "password":"blueking", "port
 Plan.objects.create(name="default-mysql", description="mysql 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```
 
+**说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
+
 ### 5. 启动项目
 
 使用以下命令启动项目：

@@ -74,6 +74,8 @@ python manage.py register_cluster \
 --check
 ```
 
+**说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
+
 ### 5. 启动项目
 
 使用以下命令启动项目：

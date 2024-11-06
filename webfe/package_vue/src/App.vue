@@ -16,11 +16,11 @@
     />
     <paas-header />
     <div
-      style="min-height: calc(100% - 70px); overflow: auto;"
+      style="min-height: calc(100% - 70px); overflow: auto"
       :style="{ 'padding-top': `${pluginPaddingTop}px` }"
       :class="{
         'plugin-min-width': isPlugin,
-        'full-screen-height-cls': isDefaultBackgroundColor
+        'full-screen-height-cls': isDefaultBackgroundColor,
       }"
     >
       <router-view />
@@ -47,7 +47,6 @@ export default {
   data() {
     return {
       userInfo: {},
-      showLoginModal: false,
       isPlugin: false,
       apiUrl: `${BACKEND_URL}/notice/announcements/`,
     };
@@ -89,26 +88,15 @@ export default {
     isPlugin() {
       this.setGlobalBodyStyle();
     },
-    showLoginModal(vlaue) {
-      if (vlaue) {
-        this.openLoginWindow();
-      }
-    },
   },
   created() {
     bus.$on('show-login-modal', () => {
-      this.showLoginModal = true;
-    });
-    bus.$on('close-login-modal', () => {
-      this.showLoginModal = false;
+      this.openLoginWindow();
     });
     // 获取平台通用配置
     getPlatformConfig(this);
   },
   methods: {
-    hideLoginModal() {
-      this.showLoginModal = false;
-    },
     // 公告列表change事件回调， isShow代表是否含有跑马灯类型公告
     async showAlertChange(isShow) {
       // 更新store数据
@@ -131,52 +119,52 @@ export default {
 </script>
 
 <style lang="scss">
-    @import './assets/css/patch.scss';
-    @import './assets/css/ps-style.scss';
-    @import '~@/assets/css/mixins/dashed.scss';
-    .notice-cls {
-      position: fixed;
-      top: 0px;
-      left: 0px;
-      height: 40px;
-      width: 100%;
-      z-index: 1001;
-    }
+@import './assets/css/patch.scss';
+@import './assets/css/ps-style.scss';
+@import '~@/assets/css/mixins/dashed.scss';
+.notice-cls {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  height: 40px;
+  width: 100%;
+  z-index: 1001;
+}
 
-    .full-screen-height-cls {
-      background-color: #F5F7FA;
-    }
+.full-screen-height-cls {
+  background-color: #f5f7fa;
+}
 
-    .gray-bg {
-        background: #fafbfd;
-    }
+.gray-bg {
+  background: #fafbfd;
+}
 
-    .notice {
-        position: fixed;
-        left: 0px;
-        top: 0px;
-        width: 100%;
-        z-index: 1001;
-        text-align: center;
-        line-height: 32px;
-        background-color: #ff9600;
-        color: #fff;
-        max-height: 32px;
-    }
+.notice {
+  position: fixed;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  z-index: 1001;
+  text-align: center;
+  line-height: 32px;
+  background-color: #ff9600;
+  color: #fff;
+  max-height: 32px;
+}
 
-    .plugin-min-width {
-        min-width: 1366px;
-    }
+.plugin-min-width {
+  min-width: 1366px;
+}
 
-    .table-header-tips-cls {
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
+.table-header-tips-cls {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
 
-    .success-dividing-line {
-        position: relative;
-        top: -1px;
-        margin: 0 5px;
-    }
+.success-dividing-line {
+  position: relative;
+  top: -1px;
+  margin: 0 5px;
+}
 </style>

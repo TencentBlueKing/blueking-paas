@@ -2877,8 +2877,11 @@ export default {
   运行失败: 'Run Failed',
   立即销毁: 'Destroy Immediately',
   请输入关键字搜索环境变量: 'Please enter a keyword to search for environment variables',
-  '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。': 'The sandbox provides a cloud-based development environment where you can modify and run code online. Each module is allowed to create only one sandbox environment. If there is no activity within 2 hours, the sandbox environment will be automatically destroyed.',
+  '沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。': 'The sandbox provides a cloud-based development environment where you can modify and run code online. Each module is allowed to create only one sandbox environment.',
   '沙箱环境仅用于临时在线调试，如果沙箱环境在 2 个小时内没有任何操作，将自动被销毁。': 'The sandbox environment is intended for temporary online debugging only. If there is no activity within 2 hours, the sandbox environment will be automatically destroyed.',
   '仅使用“蓝鲸 Buildpack”构建且开发语言为 Python，并部署到预发布环境的模块，才能启用沙箱开发功能': 'Only modules built using the "BlueKing Buildpack" with Python as the development language and deployed to the staging environment can enable the sandbox development feature',
   '沙箱环境正在启动，预计需要约 1 分钟，请稍候。': 'The sandbox environment is starting up and is expected to take about 1 minute. Please wait.',
+  沙箱环境密码: 'Sandbox Environment Password',
+  复制密码并关闭: 'Copy Password and Close',
+  '获取密码后，请在 “Welcome to code-server” 界面的 PASSWORD 处输入': 'After obtaining the password, please enter it in the PASSWORD field on the "Welcome to code-server" screen',
 };

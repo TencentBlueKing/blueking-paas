@@ -128,33 +128,34 @@
             closable
           ></bk-alert>
         </div>
-        <template v-if="isProcessRunning || isBuildSuccess">
-          <bk-button
-            :theme="'default'"
-            class="ml8"
-            :loading="isRunNowLoading"
-            @click="handleRunNow"
-          >
-            <i class="paasng-icon paasng-refresh-line"></i>
-            {{ $t('重新运行') }}
-          </bk-button>
-        </template>
-        <template v-else>
-          <bk-button
-            :theme="'primary'"
-            :loading="isRunNowLoading"
-            @click="showRunSandboxDialog"
-          >
-            <i class="paasng-icon paasng-right-shape"></i>
-            {{ $t('立即运行') }}
-          </bk-button>
-        </template>
+        <div class="left">
+          <template v-if="isProcessRunning || isBuildSuccess">
+            <bk-button
+              :theme="'default'"
+              class="ml8"
+              :loading="isRunNowLoading"
+              @click="handleRunNow"
+            >
+              <i class="paasng-icon paasng-refresh-line"></i>
+              {{ $t('重新运行') }}
+            </bk-button>
+          </template>
+          <template v-else>
+            <bk-button
+              :theme="'primary'"
+              :loading="isRunNowLoading"
+              @click="showRunSandboxDialog"
+            >
+              <i class="paasng-icon paasng-right-shape"></i>
+              {{ $t('立即运行') }}
+            </bk-button>
+          </template>
+        </div>
         <!-- 访问链接 -->
         <bk-button
           v-if="isProcessRunning"
           :theme="'primary'"
           text
-          class="ml8"
           @click="handleVisitNow"
         >
           {{ $t('立即访问') }}
@@ -512,6 +513,7 @@ export default {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 52px;
   padding: 0 24px;
   background: #e1ecff;

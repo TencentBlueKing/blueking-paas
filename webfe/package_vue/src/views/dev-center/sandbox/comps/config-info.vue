@@ -26,6 +26,7 @@
         class="item"
         v-for="(item, index) in displayEnvVars"
         :key="index"
+        v-bk-overflow-tips="{ content: `${item[0]}=${item[1]}`, allowHTML: true }"
       >
         <span>{{ item[0] }}</span>
         <span>=</span>

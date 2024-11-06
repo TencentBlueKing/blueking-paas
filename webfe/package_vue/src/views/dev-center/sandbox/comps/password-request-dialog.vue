@@ -19,7 +19,7 @@
         theme="primary"
         @click="handleConfirm"
       >
-        {{ $t('复制密码并关闭弹窗') }}
+        {{ $t('复制密码并关闭') }}
       </bk-button>
       <bk-button
         :theme="'default'"
@@ -32,7 +32,7 @@
     </div>
     <div class="dialog-content">
       <div class="password-box">
-        <p>{{ $t('沙箱环境密码') }}</p>
+        <p class="mb6">{{ $t('沙箱环境密码') }}</p>
         <div class="password">
           <span>{{ sandboxPassword || '--' }}</span>
           <i
@@ -40,6 +40,7 @@
             v-copy="sandboxPassword"
           ></i>
         </div>
+        <p class="tips">{{ $t('获取密码后，请在 “Welcome to code-server” 界面的 PASSWORD 处输入') }}</p>
       </div>
     </div>
   </bk-dialog>
@@ -117,8 +118,12 @@ export default {
     margin-top: 16px;
     p {
       font-size: 14px;
-      color: #63656e;
+      color: #4d4f56;
+
       line-height: 22px;
+    }
+    .mb6 {
+      margin-bottom: 6px;
     }
     .password {
       position: relative;
@@ -136,6 +141,11 @@ export default {
         color: #3a84ff;
         cursor: pointer;
       }
+    }
+    .tips {
+      font-size: 12px;
+      margin-top: 6px;
+      color: #63656e;
     }
   }
 }

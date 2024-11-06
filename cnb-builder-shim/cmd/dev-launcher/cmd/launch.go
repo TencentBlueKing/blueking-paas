@@ -22,12 +22,13 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/buildpacks/lifecycle/launch"
+	"github.com/spf13/cobra"
+
 	devlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
-	"github.com/buildpacks/lifecycle/launch"
-	"github.com/spf13/cobra"
 )
 
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")

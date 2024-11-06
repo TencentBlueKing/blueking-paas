@@ -60,7 +60,7 @@ redirect_stderr = true
 var reloadScript = fmt.Sprintf(`#!/bin/bash
 
 socket_file="%[1]s/supervisor.sock"
-# 检查supervisor的socket文件是否存在
+# 检查 supervisor 的 socket 文件是否存在
 if [ -S "$socket_file" ]; then
   echo "supervisord is already running. update and restart processes..."
   supervisorctl -c %[2]s reload
@@ -73,7 +73,7 @@ fi
 var statusScript = fmt.Sprintf(`#!/bin/bash
 
 socket_file="%[1]s/supervisor.sock"
-# 检查supervisor的socket文件是否存在
+# 检查 supervisor 的 socket 文件是否存在
 if [ -S "$socket_file" ]; then
   supervisorctl -c %[2]s status
 fi

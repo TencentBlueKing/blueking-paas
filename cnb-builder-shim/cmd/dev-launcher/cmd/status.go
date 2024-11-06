@@ -19,8 +19,9 @@
 package cmd
 
 import (
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 )
 
 var statusCmd = &cobra.Command{

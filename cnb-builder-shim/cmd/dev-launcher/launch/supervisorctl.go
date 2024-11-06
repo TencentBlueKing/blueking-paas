@@ -21,12 +21,13 @@ package launch
 import (
 	"bytes"
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var supervisorDir = "/cnb/devsandbox/supervisor"

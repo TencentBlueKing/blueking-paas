@@ -14,11 +14,11 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import datetime
 import string
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
@@ -49,13 +49,13 @@ class DevSandbox(OwnerTimestampedModel):
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
     def renew_expire_at(self):
-        self.expire_at = datetime.datetime.now() + datetime.timedelta(hours=2)
+        self.expire_at = timezone.now() + timezone.timedelta(hours=2)
         self.save(update_fields=["expire_at"])
 
     def should_recycle(self) -> bool:
         """检查是否应该被回收"""
         if self.expire_at:
-            return self.expire_at <= datetime.datetime.now()
+            return self.expire_at <= timezone.now()
         return False
 
     class Meta:

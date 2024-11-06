@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "更新沙箱状态"
 
-    def handle(self):
+    def handle(self, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
             controller = DevSandboxWithCodeEditorController(
                 app=dev_sandbox.module.application,

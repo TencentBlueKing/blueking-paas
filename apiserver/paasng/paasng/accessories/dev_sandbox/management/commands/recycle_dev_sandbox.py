@@ -15,14 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-
 from django.core.management.base import BaseCommand
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxWithCodeEditorController
 from paasng.accessories.dev_sandbox.models import DevSandbox
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -49,7 +45,6 @@ class Command(BaseCommand):
             "--user_id",
             required=False,
             dest="user_id",
-            type=int,
             help="owner id of the dev sandbox",
         )
 
@@ -61,7 +56,7 @@ class Command(BaseCommand):
             help="only recycle expired dev sandboxes",
         )
 
-    def handle(self, app_code, module_name, user_id, only_expired):
+    def handle(self, app_code, module_name, user_id, only_expired, *args, **options):
         qs = DevSandbox.objects.all()
         if app_code:
             qs = qs.filter(module__application__code=app_code)
@@ -80,3 +75,4 @@ class Command(BaseCommand):
             )
             if not only_expired or dev_sandbox.is_expired():
                 controller.delete()
+                dev_sandbox.delete()

@@ -7,7 +7,9 @@
           <p>
             <i class="paasng-icon paasng-check-1 text-success" />
           </p>
-          <p>{{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ extraInfo.pluginName }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>
+            {{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ extraInfo.pluginName }}"&nbsp;&nbsp;{{ $t('创建成功') }}
+          </p>
           <p>
             <bk-button
               :theme="'primary'"
@@ -38,11 +40,7 @@
                 v-copy="gitClone"
               >
                 <i
-                  :class="[
-                    'paasng-icon',
-                    'paasng-general-copy',
-                    localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
-                  ]"
+                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
                 />
                 {{ $t('复制') }}
               </div>
@@ -82,7 +80,7 @@
           <div class="plugin-guide">
             <a
               target="_blank"
-              :href="GLOBAL.DOC.PLUGIN_TOOL_FRAMEWORK"
+              :href="extraInfo.docs"
             >
               {{ $t('查看更多开发和发布指引') }}
               <i class="paasng-icon paasng-double-arrow-right" />
@@ -112,11 +110,7 @@ export default {
     },
     // 提交到代码仓库
     pushTips() {
-      return [
-        'git add .',
-        'git commit -m "Your modified content"',
-        'git push',
-      ].join('\n');
+      return ['git add .', 'git commit -m "Your modified content"', 'git push'].join('\n');
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -136,15 +130,17 @@ export default {
     this.init();
   },
   mounted() {
-    const objectKey = localStorage.getItem(this.$route.query.key) === 'undefined'
-      ? ''
-      : localStorage.getItem(this.$route.query.key);
+    const objectKey =
+      localStorage.getItem(this.$route.query.key) === 'undefined' ? '' : localStorage.getItem(this.$route.query.key);
     this.extraInfo = JSON.parse(objectKey || '{}');
   },
   methods: {
     async init() {
       try {
-        const res = await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pluginTypeId });
+        const res = await this.$store.dispatch('plugin/getPluginInfo', {
+          pluginId: this.pluginId,
+          pluginTypeId: this.pluginTypeId,
+        });
         this.pluginInfo = res;
       } catch (e) {
         console.error(e);

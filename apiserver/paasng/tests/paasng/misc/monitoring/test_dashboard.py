@@ -18,13 +18,12 @@
 from unittest import mock
 
 import pytest
-from django.core.management import call_command
 from django.test.utils import override_settings
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
+from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
 from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
-from paasng.platform.modules.models import Module
 
 pytestmark = pytest.mark.django_db
 
@@ -67,22 +66,11 @@ def test_init_dashboard_command(
     bk_app,
     bk_monitor_space,
 ):
-    # 查询应用所有模块的语言
-    app_languages = set(Module.objects.filter(application=bk_app).values_list("language", flat=True))
-
-    # 按应用的类型、语言查询应用还需要导入的仪表盘
-    dashboard_templates = AppDashboardTemplate.objects.filter(
-        is_plugin_template=bk_app.is_plugin_app, language__in=app_languages
-    )
-    assert bk_app.default_module.language in app_languages
-    assert bk_app.is_plugin_app is False
-    assert dashboard_templates.count() == 1
-
     with override_settings(ENABLE_BK_MONITOR=True), mock.patch.object(
         BkMonitorClient, "import_dashboard", return_value=None
     ):
         # 仅初始化非插件、Python 语言的仪表盘
-        call_command("init_dashboards", app_codes=[bk_app.code])
+        bk_dashboard_manager_cls(bk_app).init_builtin_dashboard()
 
     app_dashboards = AppDashboard.objects.filter(application=bk_app)
     assert app_dashboards.count() == 1

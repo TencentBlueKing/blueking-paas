@@ -281,7 +281,12 @@ def tag_module_from_source_files(module, source_files_path):
 
 
 def upload_source_code(
-    module: Module, version_info: VersionInfo, relative_source_dir: Path, operator: str, region: str
+    module: Module,
+    version_info: VersionInfo,
+    relative_source_dir: Path,
+    operator: str,
+    region: str,
+    try_to_preserve_meta_info: bool = True,
 ) -> str:
     """上传应用模块源码到 blob 存储, 并且返回源码的下载链接, 参考方法 "BaseBuilder.compress_and_upload"
 
@@ -292,7 +297,7 @@ def upload_source_code(
         source_dir = working_dir.absolute() / relative_source_dir
         # 下载源码到临时目录
         if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-            get_repo_controller(module, operator=operator).export(working_dir, version_info)
+            get_repo_controller(module, operator=operator).export(working_dir, version_info, try_to_preserve_meta_info)
         else:
             raise NotImplementedError
 

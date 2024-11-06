@@ -59,7 +59,7 @@ class SvnRepoController:
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo):
+    def export(self, local_path, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
         target_branch, revision = self.extract_version_info(version_info)
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
 

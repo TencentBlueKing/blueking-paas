@@ -62,11 +62,12 @@ class RepoController(Protocol):
         :return: 是否有权限
         """
 
-    def export(self, local_path: PathLike, version_info: VersionInfo):
+    def export(self, local_path: PathLike, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
         """导出指定版本的整个项目内容到本地路径
 
         :param local_path: 本地路径
         :param version_info: 指定版本信息
+        :param try_to_preserve_meta_info: 是否尝试保留源码元信息
         """
 
     def build_url(self, version_info: VersionInfo) -> str:

@@ -28,8 +28,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "dev-launcher",
 	Short: "dev-launcher cli",
-	Long: `Manage processes defined by app_desc, including 
-reload, getting status, stopping.`,
+	Long:  `Manage processes defined by app_desc, including reload, getting status.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("run dev-launcher...")
 	},

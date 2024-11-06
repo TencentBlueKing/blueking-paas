@@ -54,7 +54,7 @@ var reloadCmd = &cobra.Command{
 		}
 
 		if err = devlaunch.Run(md.Processes, appDesc); err != nil {
-			logger.Error(err, "hot launch")
+			logger.Error(err, "failed to hot launch")
 			return err
 		}
 		return nil

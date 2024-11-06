@@ -49,11 +49,7 @@ class DevSandbox(OwnerTimestampedModel):
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
     def renew_expire_at(self):
-        # 如果状态不是ALIVE, 则设置两小时后过期
-        if self.status != DevSandboxStatus.ACTIVE.value:
-            self.expire_at = datetime.datetime.now() + datetime.timedelta(hours=2)
-        else:
-            self.expire_at = None
+        self.expire_at = datetime.datetime.now() + datetime.timedelta(hours=2)
         self.save(update_fields=["expire_at"])
 
     def should_recycle(self) -> bool:

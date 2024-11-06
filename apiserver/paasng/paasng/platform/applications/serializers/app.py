@@ -502,7 +502,7 @@ class ApplicationDeploymentModuleOrderSLZ(serializers.Serializer):
 
 
 class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
-    module_orders = ApplicationDeploymentModuleOrderSLZ(many=True)
+    module_orders = ApplicationDeploymentModuleOrderSLZ(many=True, required=True)
 
     def validate(self, data):
         module_names = []

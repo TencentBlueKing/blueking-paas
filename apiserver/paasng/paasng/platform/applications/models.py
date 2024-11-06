@@ -617,7 +617,7 @@ class ApplicationDeploymentModuleOrder(models.Model):
 
 
 class ApplicationDeploymentModuleOrderRecord(models.Model):
-    user = BkUserField()
+    operator = BkUserField(verbose_name="操作人")
     app = models.ForeignKey(Application, on_delete=models.DO_NOTHING, verbose_name="应用")
     before_order = models.JSONField(default=dict, verbose_name="排序前顺序")
     after_order = models.JSONField(default=dict, verbose_name="排序后顺序")

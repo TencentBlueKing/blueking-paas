@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import json
 import logging
 import random
 import string
@@ -39,7 +40,6 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from yaml import serialize
 
 from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networking
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
@@ -1519,52 +1519,53 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
         application = self.get_application()
         modules = Module.objects.filter(application=application)
 
-        # 把请求数据转换成模块顺序对象数组
-        module_orders = []
+        # 记录排序操作日志
+        # 操作前
+        old_module_orders = list(
+            ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
+        )
+        old_module_orders_json = json.dumps(old_module_orders)
+
+        # 更新或创建模块排序
         for module in modules:
             for item in module_orders_data:
                 # 过滤掉模块名称不存在的
-                if item.module_name == module.name:
-                    module_orders.append(
-                        ApplicationDeploymentModuleOrder(
-                            app=application, module=module, module_name=item.module_name, order=item.order
-                        )
+                if item["module_name"] == module.name:
+                    ApplicationDeploymentModuleOrder.objects.update_or_create(
+                        app=application,
+                        module=module,
+                        module_name=item["module_name"],
+                        defaults={
+                            "order": item["order"],
+                        },
                     )
 
-        if not module_orders:
-            return Response()
-
-        # 记录排序操作日志
-        # 操作前
-        old_module_orders = ApplicationDeploymentModuleOrder.objects.filter(app=application).values(
-            "module_name", "order"
-        )
-        old_module_orders_json = serialize("json", old_module_orders)
-
-        # 更新或创建模块排序
-        ApplicationDeploymentModuleOrder.objects.bulk_create(
-            module_orders, update_conflicts=True, unique_fields=["app", "module"], update_fields=["order"]
-        )
-
         # 操作后
-        new_module_orders = ApplicationDeploymentModuleOrder.objects.filter(app=application).values(
-            "module_name", "order"
+        new_module_orders = list(
+            ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
         )
-        new_module_orders_json = serialize("json", new_module_orders)
+        new_module_orders_json = json.dumps(new_module_orders)
+
+        if old_module_orders_json == new_module_orders_json:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         record = ApplicationDeploymentModuleOrderRecord(
-            user=request.user.pk,
+            operator=request.user.pk,
             app=application,
             before_order=old_module_orders_json,
             after_order=new_module_orders_json,
         )
         record.save()
 
-        return Response()
+        return Response(status=status.HTTP_201_CREATED)
 
     def list(self, request, code):
         """获取模块的排序"""
         application = self.get_application()
-        data = ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
+        data = (
+            ApplicationDeploymentModuleOrder.objects.filter(app=application)
+            .order_by("order")
+            .values("module_name", "order")
+        )
         serializer = slzs.ApplicationDeploymentModuleOrderSLZ(data, many=True)
         return Response(serializer.data)

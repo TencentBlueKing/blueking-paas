@@ -23,3 +23,4 @@ class MonitorConfig(AppConfig):
 
     def ready(self):
         from .alert_rules import handlers  # noqa: F401
+        from .dashboards import handlers as dashboard_handlers  # noqa: F401

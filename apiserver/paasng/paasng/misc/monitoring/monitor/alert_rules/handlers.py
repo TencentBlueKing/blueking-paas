@@ -19,12 +19,12 @@ import logging
 
 from django.dispatch import receiver
 
+from paasng.misc.monitoring.monitor.alert_rules.tasks import create_rules as create_rules_task
+from paasng.misc.monitoring.monitor.alert_rules.tasks import update_notice_group as update_notice_group_task
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.signals import post_appenv_deploy
-
-from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,9 @@ def create_rules_after_deploy(sender: ApplicationEnvironment, deployment: Deploy
     if not deployment.has_succeeded():
         return
 
-    tasks.create_rules.delay(sender.application.code, sender.module.name, sender.environment)
+    create_rules_task.delay(sender.application.code, sender.module.name, sender.environment)
 
 
 @receiver(application_member_updated)
 def update_notice_group(sender, application, **kwargs):
-    tasks.update_notice_group.delay(application.code)
+    update_notice_group_task.delay(application.code)

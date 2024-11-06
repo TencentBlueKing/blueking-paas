@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"golang.org/x/exp/slices"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -135,8 +136,12 @@ func (m DeployManager) newDeployID() string {
 }
 
 func (m *DeployManager) analyzeAndSyncToAppDir(srcFilePath, appDir string) error {
+	var err error
 	// 1. 通过对比新旧文件的变化, 确定哪些步骤需要执行
-	m.stepOpts = parseDeployStepOpts(appDir, srcFilePath)
+	m.stepOpts, err = parseDeployStepOpts(appDir, srcFilePath)
+	if err != nil {
+		return err
+	}
 
 	// 2. 将 tmpAppDir 中的文件拷贝到 appDir
 	if err := m.syncFiles(srcFilePath, appDir); err != nil {
@@ -180,8 +185,9 @@ func (m DeployManager) generateProcfile(appDir string) error {
 //
 //	oldDir string - the directory where old build dependent files are located
 //	newDir string - the directory where new build dependent files are located
-func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile"}
+func parseDeployStepOpts(oldDir, newDir string) (*deployStepOpts, error) {
+	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile", "app_desc.yaml"}
+	metaDataRebuildFiles := []string{"Procfile", "app_desc.yaml"}
 	rebuild := false
 
 	for _, fileName := range buildDependentFiles {
@@ -199,6 +205,12 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 		eq, err := utils.SortedCompareFile(oldFilePath, newFilePath)
 		if err != nil || !eq {
 			rebuild = true
+			// metaDataRebuildFiles 中的文件被修改时, 需要删除 metadata.toml, 以便生成最新的 metadata.toml
+			if slices.Contains(metaDataRebuildFiles, fileName) {
+				if err := os.Remove(path.Join(devsandbox.DefaultLayersDir, "config", "metadata.toml")); err != nil {
+					return nil, err
+				}
+			}
 			break
 		}
 
@@ -210,7 +222,7 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 		rebuild = true
 	}
 
-	return &deployStepOpts{Rebuild: rebuild, Relaunch: true}
+	return &deployStepOpts{Rebuild: rebuild, Relaunch: true}, nil
 }
 
 var _ DeployServiceHandler = (*DeployManager)(nil)

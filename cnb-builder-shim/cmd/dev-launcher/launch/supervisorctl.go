@@ -21,13 +21,12 @@ package launch
 import (
 	"bytes"
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
 var supervisorDir = "/cnb/devsandbox/supervisor"
@@ -76,6 +75,16 @@ socket_file="%[1]s/supervisor.sock"
 # 检查 supervisor 的 socket 文件是否存在
 if [ -S "$socket_file" ]; then
   supervisorctl -c %[2]s status
+fi
+`, supervisorDir, confFilePath)
+
+var stopScript = fmt.Sprintf(`#!/bin/bash
+
+socket_file="%[1]s/supervisor.sock"
+# 检查 supervisor 的 socket 文件是否存在
+if [ -S "$socket_file" ]; then
+  echo "stop all processes..."
+  supervisorctl -c %[2]s stop all
 fi
 `, supervisorDir, confFilePath)
 
@@ -131,11 +140,14 @@ type SupervisorCtl struct {
 }
 
 // Reload start or update/restart the processes
+// TODO: 现在 reload 还是会导致子进程堆积僵尸进程
 func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
-
+	if err := ctl.stop(); err != nil {
+		return err
+	}
 	if err := ctl.refreshConf(conf); err != nil {
 		return err
 	}
@@ -176,6 +188,18 @@ func (ctl *SupervisorCtl) Status() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(statusScript)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+// stop all processes by running 'supervisorctl stop all'.
+func (ctl *SupervisorCtl) stop() error {
+	cmd := exec.Command("bash")
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = bytes.NewBufferString(stopScript)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 

@@ -18,11 +18,10 @@
 from unittest import mock
 
 import pytest
-from django.test.utils import override_settings
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
+from paasng.misc.monitoring.monitor.dashboards.manager import BkDashboardManager
 from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
 
 pytestmark = pytest.mark.django_db
@@ -66,11 +65,9 @@ def test_init_dashboard_command(
     bk_app,
     bk_monitor_space,
 ):
-    with override_settings(ENABLE_BK_MONITOR=False), mock.patch.object(
-        BkMonitorClient, "import_dashboard", return_value=None
-    ):
+    with mock.patch.object(BkMonitorClient, "import_dashboard", return_value=None):
         # 仅初始化非插件、Python 语言的仪表盘
-        bk_dashboard_manager_cls(bk_app).init_builtin_dashboard()
+        BkDashboardManager(bk_app).init_builtin_dashboard()
 
     app_dashboards = AppDashboard.objects.filter(application=bk_app)
     assert app_dashboards.count() == 1

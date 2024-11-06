@@ -271,6 +271,7 @@ class BkMonitorClient:
                     "dash_name": dash_name,
                 }
             )
+            logger.info(f"quick_import_dashboard, resp:{resp}, bk_biz_id: {biz_or_space_id}, dash_name: {dash_name}")
         except APIGatewayResponseError:
             raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
 

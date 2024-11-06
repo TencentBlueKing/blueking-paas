@@ -35,7 +35,7 @@ var (
 	// ReloadLogDir used to store reload log
 	ReloadLogDir = path.Join(ReloadDir, "log")
 	// reload sub command of dev-launcher
-	reloadSubCommand = "rebuild"
+	reloadSubCommand = "reload"
 )
 
 // ReloadStatus is the status of a reload operation.

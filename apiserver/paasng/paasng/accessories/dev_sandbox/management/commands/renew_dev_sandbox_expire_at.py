@@ -31,18 +31,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
+            controller = DevSandboxWithCodeEditorController(
+                app=dev_sandbox.module.application,
+                module_name=dev_sandbox.module.name,
+                dev_sandbox_code=dev_sandbox.code,
+                owner=dev_sandbox.owner,
+            )
             try:
-                controller = DevSandboxWithCodeEditorController(
-                    app=dev_sandbox.module.application,
-                    module_name=dev_sandbox.module.name,
-                    dev_sandbox_code=dev_sandbox.code,
-                    owner=dev_sandbox.owner,
-                )
+                detail = controller.get_detail()
             except Exception:
-                # 防止沙箱资源被删除导致报错
+                # 防止沙箱资源被管理员删除等导致的报错
                 continue
 
-            detail = controller.get_detail()
             url = detail.urls.code_editor_health_url if detail.urls is not None else None
             # 沙箱相关域名无法确定协议，因此全部遍历 http 和 https
             if url and (check_alive(f"http://{url}") or check_alive(f"https://{url}")):

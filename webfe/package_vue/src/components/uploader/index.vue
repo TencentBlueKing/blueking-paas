@@ -1,7 +1,7 @@
 <template>
   <article
     class="config-upload"
-    :class="{ 'content-hover': beforeUpload, 'isdrag': isdrag }"
+    :class="{ 'content-hover': beforeUpload, isdrag: isdrag }"
   >
     <!--上传界面-->
     <section
@@ -13,7 +13,7 @@
         v-bind="{ acceptTips }"
       >
         <span class="content-icon"><i class="paasng-icon paasng-upload-2" /></span>
-        <span class="content-drop"> {{ $t('点击选择或拖拽文件至此') }} </span>
+        <span class="content-drop">{{ $t('点击选择或拖拽文件至此') }}</span>
         <span class="content-tip">{{ acceptTips }}</span>
       </slot>
     </section>
@@ -26,10 +26,12 @@
         name="upload-file"
         v-bind="{ beforeAbortUpload, file }"
       >
-        <span class="file-abort"><i
-          class="paasng-icon paasng-close-circle-shape"
-          @click="beforeAbortUpload"
-        /></span>
+        <span class="file-abort">
+          <i
+            class="paasng-icon paasng-close-circle-shape"
+            @click="beforeAbortUpload"
+          />
+        </span>
         <div class="file-info">
           <span class="info-icon"><i class="paasng-icon paasng-order-shape" /></span>
           <div class="info-name">
@@ -45,7 +47,9 @@
           <span
             class="info-status"
             :class="{ 'fail-message': file.hasError }"
-          >{{ fileStatusMap[file.status] || file.errorMsg }}</span>
+          >
+            {{ fileStatusMap[file.status] || file.errorMsg }}
+          </span>
         </div>
       </slot>
     </section>
@@ -68,7 +72,7 @@
           :disabled="!beforeUpload && !isdrag"
           type="file"
           @change="handleChange"
-        >
+        />
       </slot>
     </section>
     <!--上传提示-->
@@ -83,7 +87,8 @@
   </article>
 </template>
 
-<script>export default {
+<script>
+export default {
   name: 'ImportConfigurationUpload',
   props: {
     // 上传至服务器的名称
@@ -110,7 +115,7 @@
     },
     // 最大文件大小
     maxSize: {
-      type: Number,
+      type: [Number, String],
       default: 500, // 单位M
     },
     // 请求头
@@ -207,7 +212,7 @@
         message: '',
         success: true,
       };
-      if (file.size > (this.maxSize * 1024 * 1024)) {
+      if (file.size > this.maxSize * 1024 * 1024) {
         validate.success = false;
         validate.message = `${this.$t('文件不能超过')}${this.maxSize} MB`;
       }
@@ -217,7 +222,9 @@
       }
       if (this.validateName && !this.validateName.test(file.name)) {
         validate.success = false;
-        validate.message = this.$t('格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)');
+        validate.message = this.$t(
+          '格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)'
+        );
       }
       if (!validate.success) {
         this.$bkMessage({
@@ -290,7 +297,7 @@
       if (xhr.upload) {
         xhr.upload.onprogress = (e) => {
           if (e.total > 0) {
-            e.percent = Math.round(e.loaded * 100 / e.total);
+            e.percent = Math.round((e.loaded * 100) / e.total);
           }
           option.onProgress(e);
         };
@@ -386,167 +393,167 @@
 </script>
 
 <style lang="scss" scoped>
-    @import "./common";
-    $contentBackground: #f5f9ff;
-    $whiteBackground: #fff;
-    $contentTipColor: #979ba5;
-    $grayBackground: #f0f1f5;
+@import './common';
+$contentBackground: #f5f9ff;
+$whiteBackground: #fff;
+$contentTipColor: #979ba5;
+$grayBackground: #f0f1f5;
 
-    @mixin layout-flex($flexDirection, $alignItems, $justifyContent) {
-      display: flex;
-      flex-direction: $flexDirection;
-      align-items: $alignItems;
-      justify-content: $justifyContent;
+@mixin layout-flex($flexDirection, $alignItems, $justifyContent) {
+  display: flex;
+  flex-direction: $flexDirection;
+  align-items: $alignItems;
+  justify-content: $justifyContent;
+}
+@mixin content-hover {
+  background: $contentBackground;
+
+  @include border-dashed-1px($primaryFontColor);
+}
+
+.content-hover {
+  cursor: pointer;
+  &:hover {
+    @include content-hover;
+  }
+}
+article {
+  .isdrag {
+    @include content-hover;
+  }
+}
+.config-upload {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: $whiteBackground;
+
+  @include layout-flex(column, center, flex-start);
+  @include border-dashed-1px($unsetColor);
+  &-content {
+    padding: 70px 0 100px 0;
+    @include layout-flex(column, center, flex-start);
+    .content-icon {
+      height: 64px;
+      width: 64px;
+      text-align: center;
+      font-size: 50px;
+      color: #979ba5;
     }
-    @mixin content-hover {
-      background: $contentBackground;
-
-      @include border-dashed-1px($primaryFontColor);
+    .content-drop {
+      margin-top: 10px;
+      line-height: 19px;
+      font-size: 14px;
+      font-weight: bold;
+      color: $defaultFontColor;
     }
-
-    .content-hover {
+    .content-tip {
+      width: 440px;
+      text-align: center;
+      margin-top: 6px;
+      line-height: 16px;
+      color: #979ba5;
+      font-size: 12px;
+    }
+  }
+  &-file {
+    width: 100%;
+    padding: 80px 0;
+    .file-abort {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+      font-size: 16px;
+      text-align: center;
+      color: $slightFontColor;
+      z-index: 2;
       cursor: pointer;
       &:hover {
-        @include content-hover
-        }
+        background: $grayBackground;
+        border-radius: 50%;
+      }
     }
-    article {
-      .isdrag {
-        @include content-hover
-        }
-    }
-    .config-upload {
-      position: relative;
+    .file-info {
       width: 100%;
-      height: 100%;
-      border-radius: 2px;
-      background: $whiteBackground;
 
       @include layout-flex(column, center, flex-start);
-      @include border-dashed-1px($unsetColor);
-      &-content {
-        padding: 70px 0 100px 0;
-        @include layout-flex(column, center, flex-start);
-        .content-icon {
-          height: 64px;
-          width: 64px;
-          text-align: center;
-          font-size: 50px;
-          color: #979BA5;
+      .info-icon {
+        height: 56px;
+        width: 48px;
+        font-size: 50px;
+        color: $primaryFontColor;
+      }
+      .info-name {
+        margin-top: 14px;
+        font-size: 14px;
+        font-weight: bold;
+        color: $defaultFontColor;
+        line-height: 19px;
+      }
+      .info-progress {
+        margin-top: 21px;
+        width: 76%;
+        height: 6px;
+        background: $grayBackground;
+        border-radius: 3px;
+        .progress-bar {
+          width: 10%;
+          height: 6px;
+          border-radius: 3px;
+          background: $primaryFontColor;
+          transition: width 0.3s ease-in-out;
         }
-        .content-drop {
-          margin-top: 10px;
-          line-height: 19px;
-          font-size: 14px;
-          font-weight: bold;
-          color: $defaultFontColor;
-        }
-        .content-tip {
-          width: 440px;
-          text-align: center;
-          margin-top: 6px;
-          line-height: 16px;
-          color: #979ba5;
-          font-size: 12px;
+        .fail-background {
+          background: $failFontColor;
         }
       }
-      &-file {
-        width: 100%;
-        padding: 80px 0;
-        .file-abort {
-          position: absolute;
-          right: 0;
-          top: 0;
-          width: 32px;
-          height: 32px;
-          line-height: 32px;
-          font-size: 16px;
-          text-align: center;
-          color: $slightFontColor;
-          z-index: 2;
-          cursor: pointer;
-          &:hover {
-            background: $grayBackground;
-            border-radius: 50%;
-          }
-        }
-        .file-info {
-          width: 100%;
-
-          @include layout-flex(column, center, flex-start);
-          .info-icon {
-            height: 56px;
-            width: 48px;
-            font-size: 50px;
-            color: $primaryFontColor;
-          }
-          .info-name {
-            margin-top: 14px;
-            font-size: 14px;
-            font-weight: bold;
-            color: $defaultFontColor;
-            line-height: 19px;
-          }
-          .info-progress {
-            margin-top: 21px;
-            width: 76%;
-            height: 6px;
-            background: $grayBackground;
-            border-radius: 3px;
-            .progress-bar {
-              width: 10%;
-              height: 6px;
-              border-radius: 3px;
-              background: $primaryFontColor;
-              transition: width .3s ease-in-out;
-            }
-            .fail-background {
-              background: $failFontColor;
-            }
-          }
-          .info-status {
-            margin-top: 17px;
-            padding: 0 20px;
-            line-height: 16px;
-            color: $primaryFontColor;
-            word-break: break-all;
-          }
-          .fail-message {
-            color: $failFontColor;
-          }
-        }
+      .info-status {
+        margin-top: 17px;
+        padding: 0 20px;
+        line-height: 16px;
+        color: $primaryFontColor;
+        word-break: break-all;
       }
-      &-input {
-        input {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          cursor: pointer;
-          opacity: 0;
-        }
-        .input-hide {
-          cursor: default;
-        }
-      }
-      &-footer {
-        position: absolute;
-        bottom: 20px;
-        .footer-explain {
-          line-height: 16px;
-          color: $unsetIconColor;
-          &-button {
-            color: $primaryFontColor;
-            cursor: pointer;
-            z-index: 2;
-          }
-        }
-      }
-      &:hover {
-        .config-upload-content .content-icon {
-          color: #3A84FF;
-        }
+      .fail-message {
+        color: $failFontColor;
       }
     }
+  }
+  &-input {
+    input {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      opacity: 0;
+    }
+    .input-hide {
+      cursor: default;
+    }
+  }
+  &-footer {
+    position: absolute;
+    bottom: 20px;
+    .footer-explain {
+      line-height: 16px;
+      color: $unsetIconColor;
+      &-button {
+        color: $primaryFontColor;
+        cursor: pointer;
+        z-index: 2;
+      }
+    }
+  }
+  &:hover {
+    .config-upload-content .content-icon {
+      color: #3a84ff;
+    }
+  }
+}
 </style>

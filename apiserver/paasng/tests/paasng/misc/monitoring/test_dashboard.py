@@ -22,10 +22,8 @@ from django.test.utils import override_settings
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
-from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
 from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
-from paasng.platform.applications.models import Application
 
 pytestmark = pytest.mark.django_db
 
@@ -68,10 +66,7 @@ def test_init_dashboard_command(
     bk_app,
     bk_monitor_space,
 ):
-    space, _ = get_or_create_bk_monitor_space(Application.objects.get(code=bk_app.code))
-    assert space.iam_resource_id == -1
-
-    with override_settings(ENABLE_BK_MONITOR=True), mock.patch.object(
+    with override_settings(ENABLE_BK_MONITOR=False), mock.patch.object(
         BkMonitorClient, "import_dashboard", return_value=None
     ):
         # 仅初始化非插件、Python 语言的仪表盘

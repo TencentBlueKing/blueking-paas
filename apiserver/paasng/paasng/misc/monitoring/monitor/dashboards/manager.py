@@ -62,7 +62,7 @@ class BkDashboardManager:
         space, _ = get_or_create_bk_monitor_space(Application.objects.get(code=self.app_code))
         # 导入模板中新增的仪表盘
         for template in dashboard_templates:
-            # self.client.import_dashboard(int(space.iam_resource_id), template.name)
+            self.client.import_dashboard(int(space.iam_resource_id), template.name)
             AppDashboard.objects.create(
                 application=self.application,
                 name=template.name,

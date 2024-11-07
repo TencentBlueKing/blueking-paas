@@ -205,4 +205,4 @@ class AppDashboardSLZ(serializers.Serializer):
 
     def get_dashboard_url(self, instance):
         bk_biz_id = self.context["bk_biz_id"]
-        return f"{settings.BK_MONITORV3_URL}/?bizId={bk_biz_id}&dashName={instance.name}&pure=1"
+        return f"{settings.BK_MONITORV3_URL}/grafana/dashboard?bizId={bk_biz_id}&dashName={instance.name}&pure=1"

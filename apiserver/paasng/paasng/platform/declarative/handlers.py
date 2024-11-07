@@ -39,9 +39,8 @@ from paasng.platform.declarative.deployment.controller import (
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.deployment.validations import v2 as deploy_spec_v2
 from paasng.platform.declarative.deployment.validations import v3 as deploy_spec_v3
-from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.exceptions import DescriptionValidationError, UnsupportedSpecVer
 from paasng.platform.declarative.serializers import (
-    SMartV1DescriptionSLZ,
     UniConfigSLZ,
     validate_desc,
     validate_procfile_procs,
@@ -58,21 +57,39 @@ def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
 
     :param json_data: The description data in dict format.
     """
-    spec_version = detect_spec_version(json_data)
-    # TODO 删除 SMartDescriptionHandler 分支. VER_1 存量版本基本不再支持
-    if spec_version == AppSpecVersion.VER_1:
-        return SMartDescriptionHandler(json_data)
-    elif spec_version == AppSpecVersion.VER_2:
-        return AppDescriptionHandler(json_data)
-    else:
-        # 对应 AppSpecVersion.VER_3
-        return CNativeAppDescriptionHandler(json_data)
+    try:
+        spec_version = detect_spec_version(json_data)
+    except ValueError as e:
+        return UnsupportedVerDescriptionHandler(version=str(e))
+
+    match spec_version:
+        case AppSpecVersion.VER_2:
+            return AppDescriptionHandler(json_data)
+        case AppSpecVersion.VER_3:
+            return CNativeAppDescriptionHandler(json_data)
+        case AppSpecVersion.UNSPECIFIED:
+            return NoVerDescriptionHandler()
+        case _:
+            return UnsupportedVerDescriptionHandler(version=str(spec_version.value))
 
 
 def detect_spec_version(json_data: Dict) -> AppSpecVersion:
+    """Detect the spec version from the input data.
+
+    :return: The version.
+    :raise ValueError: When the version is specified but it's value is invalid.
+    """
     if spec_version := json_data.get("spec_version") or json_data.get("specVersion"):
-        return AppSpecVersion(spec_version)
-    return AppSpecVersion.VER_1
+        try:
+            return AppSpecVersion(spec_version)
+        except ValueError:
+            raise ValueError(spec_version)
+
+    # The spec ver "1" use no version field while the "app_code" field is always presented.
+    if "app_code" in json_data:
+        return AppSpecVersion.VER_1
+
+    return AppSpecVersion.UNSPECIFIED
 
 
 class DescriptionHandler(Protocol):
@@ -176,34 +193,31 @@ class AppDescriptionHandler:
         return controller.perform_action(self.app_desc)
 
 
-class SMartDescriptionHandler:
-    """A handler to process S-Mart app description file"""
+class UnsupportedVerDescriptionHandler:
+    """A special handler, raise error if the version is not supported."""
 
-    @classmethod
-    def from_file(cls, fp: TextIO):
-        return cls(yaml.safe_load(fp))
-
-    def __init__(self, json_data: Dict):
-        self.json_data = json_data
+    def __init__(self, version: str):
+        self.message = f'App spec version "{version}" is not supported, please use a valid version like "3".'
 
     @property
     def app_desc(self) -> ApplicationDesc:
-        """Turn json data into application description object
-
-        :raises: DescriptionValidationError when input is invalid
-        """
-        instance = get_application(self.json_data, "app_code")
-        # S-mart application always perform a full update by using partial=False
-        app_desc, _ = validate_desc(SMartV1DescriptionSLZ, self.json_data, instance, partial=False)
-        return app_desc
+        raise DescriptionValidationError(self.message)
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
-        """Handle a app config
+        raise DescriptionValidationError(self.message)
 
-        :param user: User to perform actions as
-        """
-        controller = AppDeclarativeController(user)
-        return controller.perform_action(self.app_desc)
+
+class NoVerDescriptionHandler:
+    """A special handler, raise error if no version is specified."""
+
+    message = "No spec version is specified, please set the spec version to a valid value."
+
+    @property
+    def app_desc(self) -> ApplicationDesc:
+        raise DescriptionValidationError(self.message)
+
+    def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
+        raise DescriptionValidationError(self.message)
 
 
 ###
@@ -218,15 +232,27 @@ def get_deploy_desc_handler(
 
     :param desc_data: The description data in dict format, optional
     :param procfile_data: The "Procfile" data in dict format, format: {<proc_type>: <command>}
+    :raise ValueError: When the input data is invalid for creating a handler.
     """
     if not (desc_data or procfile_data):
-        raise ValueError("json_data and procfile_data can't be both None")
+        raise ValueError("the app desc and procfile data can't be both empty")
 
     if not desc_data:
         # Only procfile data is provided, use the handler to handle processes data only
         assert procfile_data
         return ProcfileOnlyDeployDescHandler(procfile_data)
-    return DefaultDeployDescHandler(desc_data, procfile_data, get_desc_getter_func(desc_data))
+
+    try:
+        _func = get_desc_getter_func(desc_data)
+    except UnsupportedSpecVer as e:
+        # When the spec version is not supported and no procfile data is provided,
+        # raise an error to inform the user.
+        if not procfile_data:
+            raise ValueError("the procfile data is empty and the app desc data is invalid, detail: {}".format(str(e)))
+        else:
+            return ProcfileOnlyDeployDescHandler(procfile_data)
+
+    return DefaultDeployDescHandler(desc_data, procfile_data, _func)
 
 
 def get_deploy_desc_by_module(desc_data: Dict, module_name: str) -> DeploymentDesc:
@@ -234,8 +260,28 @@ def get_deploy_desc_by_module(desc_data: Dict, module_name: str) -> DeploymentDe
 
     :param desc_data: The description data in dict format, may contains multiple modules
     :param module_name: The module name
+    :raise DescriptionValidationError: When the input data is invalid
     """
-    return get_desc_getter_func(desc_data)(desc_data, module_name)
+    try:
+        _func = get_desc_getter_func(desc_data)
+    except UnsupportedSpecVer as e:
+        raise DescriptionValidationError(str(e))
+    return _func(desc_data, module_name)
+
+
+def get_source_dir_from_desc(desc_data: Dict, module_name: str) -> str:
+    """Get the source directory specified in the description data by module name.
+
+    :param desc_data: The description data in dict format, may contains multiple modules
+    :param module_name: The module name
+    :return: The source directory
+    """
+    try:
+        _func = get_desc_getter_func(desc_data)
+    except UnsupportedSpecVer:
+        # When the spec version is not supported, use the default value
+        return ""
+    return _func(desc_data, module_name).source_dir
 
 
 class DeployDescHandler(Protocol):
@@ -252,15 +298,24 @@ DescGetterFunc: TypeAlias = Callable[[Dict, str], DeploymentDesc]
 
 
 def get_desc_getter_func(desc_data: Dict) -> DescGetterFunc:
-    """Get the description getter function by current desc data."""
-    spec_version = detect_spec_version(desc_data)
-    # TODO: 删除此分支，VER_1 存量版本基本不再支持
-    if spec_version == AppSpecVersion.VER_1:
-        return deploy_desc_getter_v1
-    elif spec_version == AppSpecVersion.VER_2:
-        return deploy_desc_getter_v2
-    else:
-        return deploy_desc_getter_v3
+    """Get the description getter function by current desc data.
+
+    :raise UnsupportedSpecVer: When the spec version is not supported.
+    """
+    try:
+        spec_version = detect_spec_version(desc_data)
+    except ValueError as e:
+        raise UnsupportedSpecVer(f'app spec version "{str(e)}" is not supported')
+
+    match spec_version:
+        case AppSpecVersion.VER_2:
+            return deploy_desc_getter_v2
+        case AppSpecVersion.VER_3:
+            return deploy_desc_getter_v3
+        case AppSpecVersion.UNSPECIFIED:
+            raise UnsupportedSpecVer("no spec version is specified")
+        case _:
+            raise UnsupportedSpecVer(f'app spec version "{spec_version.value}" is not supported')
 
 
 class DefaultDeployDescHandler:
@@ -294,14 +349,6 @@ class ProcfileOnlyDeployDescHandler:
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         procfile_procs = validate_procfile_procs(self.procfile_data)
         return handle_procfile_procs(deployment, procfile_procs)
-
-
-def deploy_desc_getter_v1(json_data: Dict, module_name: str) -> DeploymentDesc:
-    """Get the deployment desc object, spec ver 1."""
-    instance = get_application(json_data, "app_code")
-    # S-mart application always perform a full update by using partial=False
-    _, deploy_desc = validate_desc(SMartV1DescriptionSLZ, json_data, instance, partial=False)
-    return deploy_desc
 
 
 def deploy_desc_getter_v2(json_data: Dict, module_name: str) -> DeploymentDesc:

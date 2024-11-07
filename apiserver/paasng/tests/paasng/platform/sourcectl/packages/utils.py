@@ -86,7 +86,8 @@ def gen_zip(target_path, contents: Dict[str, Union[str, bytes]]):
             shutil.move(filename, target_path)
 
 
-EXAMPLE_APP_YAML: dict = {
+# This version of app description has been deprecated and is not supported anymore
+V1_APP_DESC_EXAMPLE: dict = {
     "app_name": "foo",
     "app_code": "foo",
     "author": "blueking",
@@ -94,4 +95,15 @@ EXAMPLE_APP_YAML: dict = {
     "is_use_celery": False,
     "version": "0.0.1",
     "env": [],
+}
+
+V2_APP_DESC_EXAMPLE: dict = {
+    "spec_version": 2,
+    "app_version": "0.0.1",
+    "app": {
+        "bk_app_code": "foo",
+        "bk_app_name": "foo",
+        "market": {"introduction": "foobar"},
+    },
+    "modules": {"default": {"is_default": True, "language": "python"}},
 }

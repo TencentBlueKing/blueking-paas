@@ -162,6 +162,8 @@ INSTALLED_APPS = [
     "paasng.platform.sourcectl",
     "paasng.accessories.servicehub",
     "paasng.accessories.services",
+    # dev_sandbox
+    "paasng.accessories.dev_sandbox",
     "paasng.platform.templates",
     "paasng.plat_admin.api_doc",
     "paasng.plat_admin.admin42",

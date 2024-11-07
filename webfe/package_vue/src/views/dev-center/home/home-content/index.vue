@@ -81,13 +81,15 @@ export default {
       if (this.platformFeature.MONITORING) {
         return this.panels;
       }
-      return this.panels.filter(item => item.name !== 'alarm');
+      return this.panels.filter((item) => item.name !== 'alarm');
     },
     appChartInfo() {
       return this.$store.state.baseInfo.appChartData;
     },
     emptyTips() {
-      return this.$t('您当前共管理 <i>{n}</i> 个应用，无任何应用处于告警或闲置状态，请继续保持！', { n: this.appChartInfo?.allCount });
+      return this.$t('您当前共管理 <i>{n}</i> 个应用，无任何应用处于告警或闲置状态，请继续保持！', {
+        n: this.appChartInfo?.allCount,
+      });
     },
   },
   watch: {
@@ -95,7 +97,7 @@ export default {
       if (newPanels.length) {
         this.handleTabClick(newPanels[0]);
       }
-    }
+    },
   },
   mounted() {
     this.updateContainerHeight();
@@ -103,8 +105,14 @@ export default {
     // 创建一个 ResizeObserver 实例
     this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        // 列表元素高度同步到右侧操作记录
-        this.contentHeight = entry.contentRect.height + 32;
+        const newHeight = entry.contentRect.height;
+
+        // 如果高度发生变化
+        if (newHeight !== this.contentHeight - 32) {
+          window.requestAnimationFrame(() => {
+            this.contentHeight = newHeight + 32;
+          });
+        }
       }
     });
     this.resizeObserver.observe(this.$refs.tabContent);
@@ -129,11 +137,11 @@ export default {
       const { name, length } = data;
       if (length === 0) {
         // 移除对应的 tab 项
-        this.panels = this.panels.filter(panel => panel.name !== name);
+        this.panels = this.panels.filter((panel) => panel.name !== name);
         this.active = this.panels[0].name;
       } else {
         // 确保在 length > 0 时，该 tab 存在于 panels 中
-        if (!this.panels.some(panel => panel.name === name)) {
+        if (!this.panels.some((panel) => panel.name === name)) {
           this.isLoading = true;
           if (name === 'idle') {
             this.panels.unshift({ name: 'idle', label: this.$t('闲置应用') });
@@ -221,6 +229,6 @@ export default {
 /deep/ .no-data .empty-tips i {
   font-style: normal;
   font-weight: 700;
-  color: #3A84FF;
+  color: #3a84ff;
 }
 </style>

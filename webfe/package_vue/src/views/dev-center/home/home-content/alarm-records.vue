@@ -73,15 +73,22 @@
               </bk-table-column>
               <bk-table-column
                 label=""
-                width="180"
+                :width="localLanguage === 'en' ? 210 : 180"
               >
                 <template slot-scope="{ row: childRow }">
                   <bk-button
                     :text="true"
-                    class="ml10"
                     @click="handleDetail(childRow)"
                   >
                     {{ $t('查看详情') }}
+                  </bk-button>
+                  <bk-button
+                    v-if="childRow.labels && childRow.labels.includes('gcs_mysql_slow_query')"
+                    :text="true"
+                    class="ml10"
+                    @click="handleSlowQuery(props.row, childRow)"
+                  >
+                    {{ $t('慢查询记录') }}
                   </bk-button>
                 </template>
               </bk-table-column>
@@ -97,7 +104,10 @@
               class="app-name-wrapper"
               v-bk-overflow-tips="{ content: `${row.application.name}（${row.application.code}）` }"
             >
-              <span class="click-area" @click="toAppDetail(row)">
+              <span
+                class="click-area"
+                @click="toAppDetail(row)"
+              >
                 <img
                   class="app-logo"
                   :src="row.application.logo_url"
@@ -109,7 +119,10 @@
                 </span>
               </span>
               <span class="ml20 msg">
-                MySQL {{ $t('慢查询告警数量') }}: <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>/{{ row.count }}
+                MySQL {{ $t('慢查询告警数量') }}:
+                <span :class="{ 'slow-query': !!row.slow_query_count }">{{ row.slow_query_count }}</span>
+                <span>/</span>
+                <span>{{ row.count }}</span>
               </span>
             </div>
           </template>
@@ -154,7 +167,13 @@ export default {
       expandRowKeys: [],
       slowQueryCount: 0,
       selectionTime: {},
+      errorMessage: this.$t('GCS-MySQL 增强服务实例已解绑，无法再查看慢查询记录'),
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
   },
   created() {
     dayjs.extend(relativeTime);
@@ -247,6 +266,53 @@ export default {
     handleDetail(row) {
       window.open(row.detail_link, '_blank');
     },
+    // 处理慢查询页面跳转
+    handleSlowQuery(row, childRow) {
+      const params = {
+        appCode: row.application.code,
+        moduleId: childRow?.module_name || 'default',
+      };
+      this.getServiceInfo(params, childRow.env);
+    },
+    async getServiceInfo(params, env) {
+      try {
+        const GCS_MYSQL_NAME = 'gcs_mysql';
+        const res = await this.$store.dispatch('service/getServiceInfo', params);
+        const services = res[env];
+        if (!services.length) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.errorMessage,
+          });
+          return;
+        }
+        // 服务服务id
+        const serviceId = services?.find((v) => v.name === GCS_MYSQL_NAME)?.service_id;
+        this.getServiceInstances(params, serviceId);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取服务实例详情
+    async getServiceInstances(params, serviceId) {
+      try {
+        const res = await this.$store.dispatch('service/getServiceInstances', {
+          ...params,
+          service: serviceId,
+        });
+        if (!res.results.length) {
+          this.$paasMessage({
+            theme: 'error',
+            message: this.errorMessage,
+          });
+          return;
+        }
+        const url = `${res.results[0].service_instance?.config?.admin_url}&redirect_url=instance.slow_sql.fingers.list`;
+        window.open(url, '_blank');
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
@@ -274,10 +340,10 @@ export default {
         color: #3a84ff;
       }
       .msg {
-        color: #63656E;
+        color: #63656e;
       }
       .slow-query {
-        color: #EA3636;
+        color: #ea3636;
       }
     }
   }
@@ -297,8 +363,13 @@ export default {
     .bk-table-expand-icon .bk-icon {
       color: #979ba5;
     }
-    .child-module-table-cls .bk-table-header-wrapper {
-      display: none;
+    .child-module-table-cls {
+      .bk-table-header-wrapper {
+        display: none;
+      }
+      .bk-table-body-wrapper {
+        color: #63656e;
+      }
     }
     .env-column-cls .cell {
       display: flex;

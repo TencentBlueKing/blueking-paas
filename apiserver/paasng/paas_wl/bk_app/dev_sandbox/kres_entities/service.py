@@ -19,9 +19,14 @@ from dataclasses import dataclass
 from typing import List
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.conf import CODE_SVC_PORT_PAIRS, DEV_SANDBOX_SVC_PORT_PAIRS
 from paas_wl.bk_app.dev_sandbox.entities import ServicePortPair
-from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
+from paas_wl.bk_app.dev_sandbox.kres_slzs import (
+    CodeEditorServiceDeserializer,
+    CodeEditorServiceSerializer,
+    DevSandboxServiceDeserializer,
+    DevSandboxServiceSerializer,
+)
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
@@ -40,8 +45,29 @@ class DevSandboxService(AppEntity):
 
     @classmethod
     def create(cls, dev_wl_app: WlApp) -> "DevSandboxService":
-        return cls(app=dev_wl_app, name=get_service_name(dev_wl_app))
+        return cls(app=dev_wl_app, name=get_dev_sandbox_service_name(dev_wl_app))
 
 
-def get_service_name(dev_wl_app: WlApp) -> str:
-    return dev_wl_app.scheduler_safe_name
+@dataclass
+class CodeEditorService(AppEntity):
+    """service entity to expose code editor network"""
+
+    class Meta:
+        kres_class = kres.KService
+        serializer = CodeEditorServiceSerializer
+        deserializer = CodeEditorServiceDeserializer
+
+    def __post_init__(self):
+        self.ports: List[ServicePortPair] = CODE_SVC_PORT_PAIRS
+
+    @classmethod
+    def create(cls, dev_wl_app: WlApp) -> "CodeEditorService":
+        return cls(app=dev_wl_app, name=get_code_editor_service_name(dev_wl_app))
+
+
+def get_dev_sandbox_service_name(dev_wl_app: WlApp) -> str:
+    return f"{dev_wl_app.scheduler_safe_name}-dev-sandbox"
+
+
+def get_code_editor_service_name(dev_wl_app: WlApp) -> str:
+    return f"{dev_wl_app.scheduler_safe_name}-code-editor"

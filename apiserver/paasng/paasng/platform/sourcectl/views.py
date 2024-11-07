@@ -298,7 +298,7 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
         operation_description="目前仅提供给 lesscode 项目使用",
     )
     def upload_via_url(self, request, code, module_name):
-        """根据 URL 方式上传源码包, 目前不校验 app.yaml"""
+        """根据 URL 方式上传源码包, 目前不校验 app_desc.yaml"""
         module = self.get_module()
         slz = slzs.SourcePackageUploadViaUrlSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

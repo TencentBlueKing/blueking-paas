@@ -30,7 +30,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
         {
             "id": generate_random_string(6),
             "bk_biz_id": -4000000,
-            "alert_name": generate_random_string(6) + "慢查询",
+            "alert_name": generate_random_string(6),
             "status": random.choice(["ABNORMAL", "CLOSED", "RECOVERED"]),
             "description": generate_random_string(),
             "begin_time": start_time,
@@ -41,6 +41,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
         }
         for _ in range(3)
     ]
+    alerts[1]["labels"].append("gcs_mysql_slow_query")
     return alerts
 
 

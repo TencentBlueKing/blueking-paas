@@ -2839,6 +2839,8 @@ export default {
   慢查询告警数: 'Slow Query Alerts',
   总应用数: 'Total Apps',
   闲置应用数: 'Idle Apps',
+  其他告警数: 'Other Alerts',
+  活跃应用数: 'Active Apps',
   配置不当应用数: 'Misconfigured Apps',
   应用详情: 'App Details',
   最近操作时间: 'Recent Operation Time',

@@ -270,7 +270,7 @@ class DevSandboxWithCodeEditorController:
 
         sandbox_entity = DevSandbox.create(
             self.dev_wl_app,
-            runtime=Runtime(envs=dev_sandbox_env_vars, image=settings.DEV_SANDBOX_IMAGE),
+            runtime=Runtime(envs=dev_sandbox_env_vars, image=settings.DEV_CODE_SANDBOX_IMAGE),
             resources=default_sandbox_resources,
             source_code_config=source_code_config,
         )

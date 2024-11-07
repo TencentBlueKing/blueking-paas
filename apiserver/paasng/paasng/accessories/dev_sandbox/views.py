@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict
 
 from bkpaas_auth.models import User
+from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -98,6 +99,9 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
         """部署开发沙箱"""
+        if DevSandbox.objects.all().count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
+
         app = self.get_application()
         module = self.get_module_via_path()
 
@@ -244,6 +248,15 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
 
         return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
+
+    @swagger_auto_schema(tags=["开发沙箱"])
+    def pre_deploy_check(self, request, code, module_name):
+        """部署前确认是否可以部署"""
+        # 判断开发沙箱数量是否超过限制
+        if DevSandbox.objects.all() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            return Response(data={"result": False})
+
+        return Response(data={"result": True})
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

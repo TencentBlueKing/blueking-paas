@@ -61,6 +61,10 @@ class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
             "env": [{"name": str(key), "value": str(value)} for key, value in obj.runtime.envs.items()],
             "imagePullPolicy": obj.runtime.image_pull_policy,
             "ports": [{"containerPort": port_pair.target_port} for port_pair in CODE_SVC_PORT_PAIRS],
+            "readinessProbe": [
+                {"tcpSocket": {"port": port_pair.target_port}, "initialDelaySeconds": 2}
+                for port_pair in CODE_SVC_PORT_PAIRS
+            ],
         }
 
         if obj.resources:

@@ -29,6 +29,10 @@ urlpatterns = [
         DevSandboxWithCodeEditorViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_detail"}),
     ),
     re_path(
+        make_app_pattern(r"/user/dev_sandbox_with_code_editor/pre_deploy_check/$", include_envs=False),
+        DevSandboxWithCodeEditorViewSet.as_view({"get": "pre_deploy_check"}),
+    ),
+    re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/user/dev_sandbox_with_code_editors/lists/$",
         DevSandboxWithCodeEditorViewSet.as_view({"get": "list_app_dev_sandbox"}),
     ),

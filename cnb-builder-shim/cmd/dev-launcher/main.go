@@ -19,9 +19,9 @@
 package main
 
 import (
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/cmd"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
 )
 
 func main() {
-	cmd.Execute()
+	subcmd.Execute()
 }

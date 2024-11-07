@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package cmd
+package subcmd
 
 import (
 	"github.com/spf13/cobra"

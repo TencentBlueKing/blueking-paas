@@ -80,13 +80,10 @@ class TestDevSandboxSLZ:
                                     {"containerPort": settings.DEV_SANDBOX_DEVSERVER_PORT},
                                     {"containerPort": settings.CONTAINER_PORT},
                                 ],
-                                "readinessProbe": [
-                                    {
-                                        "initialDelaySeconds": 2,
-                                        "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
-                                    },
-                                    {"initialDelaySeconds": 2, "tcpSocket": {"port": settings.CONTAINER_PORT}},
-                                ],
+                                "readinessProbe": {
+                                    "initialDelaySeconds": 2,
+                                    "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
+                                },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
                                     "limits": {"cpu": "4", "memory": "2Gi"},
@@ -132,13 +129,10 @@ class TestDevSandboxSLZ:
                                     {"containerPort": settings.DEV_SANDBOX_DEVSERVER_PORT},
                                     {"containerPort": settings.CONTAINER_PORT},
                                 ],
-                                "readinessProbe": [
-                                    {
-                                        "initialDelaySeconds": 2,
-                                        "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
-                                    },
-                                    {"initialDelaySeconds": 2, "tcpSocket": {"port": settings.CONTAINER_PORT}},
-                                ],
+                                "readinessProbe": {
+                                    "initialDelaySeconds": 2,
+                                    "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
+                                },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
                                     "limits": {"cpu": "4", "memory": "2Gi"},
@@ -361,9 +355,10 @@ class TestCodeEditorSLZ:
                                 "ports": [
                                     {"containerPort": settings.CODE_EDITOR_PORT},
                                 ],
-                                "readinessProbe": [
-                                    {"initialDelaySeconds": 2, "tcpSocket": {"port": settings.CODE_EDITOR_PORT}}
-                                ],
+                                "readinessProbe": {
+                                    "initialDelaySeconds": 2,
+                                    "tcpSocket": {"port": settings.CODE_EDITOR_PORT},
+                                },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
                                     "limits": {"cpu": "4", "memory": "2Gi"},

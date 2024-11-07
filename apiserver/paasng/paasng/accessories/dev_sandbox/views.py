@@ -169,6 +169,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
+            controller.delete()
             dev_sandbox.delete()
             raise
 
@@ -253,7 +254,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     def pre_deploy_check(self, request, code, module_name):
         """部署前确认是否可以部署"""
         # 判断开发沙箱数量是否超过限制
-        if DevSandbox.objects.all() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+        if DevSandbox.objects.all().count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             return Response(data={"result": False})
 
         return Response(data={"result": True})

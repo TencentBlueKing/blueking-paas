@@ -69,5 +69,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/stag/services/attachments/`;
       return http.get(url, config);
     },
+    /**
+     * 新建沙箱前置检查
+     */
+    createSandboxPreDeployCheck({}, { appCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/user/dev_sandbox_with_code_editors/pre_deploy_check/`;
+      return http.get(url, config);
+    },
   },
 };

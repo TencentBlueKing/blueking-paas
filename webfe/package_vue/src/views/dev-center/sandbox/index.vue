@@ -153,7 +153,7 @@
         </div>
         <!-- 访问链接 -->
         <bk-button
-          v-if="isProcessRunning"
+          v-if="isProcessRunning || isBuildSuccess"
           :theme="'primary'"
           text
           @click="handleVisitNow"
@@ -465,7 +465,7 @@ export default {
         const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}app_logs`);
         const res = await this.executeRequest(url);
 
-        this.runLog = res.logs;
+        this.runLog = res.logs ?? '';
       } finally {
         setTimeout(() => {
           this.isLogsLoading = false;

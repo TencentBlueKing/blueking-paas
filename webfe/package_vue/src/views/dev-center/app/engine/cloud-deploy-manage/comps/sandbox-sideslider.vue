@@ -29,6 +29,7 @@
         <bk-button
           :theme="'primary'"
           class="mt15"
+          :loading="isCreateSandboxLoading"
           @click="createSandbox"
         >
           {{ $t('新建沙箱') }}
@@ -117,6 +118,7 @@ export default {
       sandboxEnvList: [],
       isTableLoading: false,
       isShowSandboxDialog: false,
+      isCreateSandboxLoading: false,
     };
   },
   computed: {
@@ -133,8 +135,52 @@ export default {
     },
   },
   methods: {
-    createSandbox() {
-      this.isShowSandboxDialog = true;
+    // 新建沙箱前置检查
+    async createSandboxPreDeployCheck() {
+      this.isCreateSandboxLoading = true;
+      try {
+        const res = await this.$store.dispatch('sandbox/createSandboxPreDeployCheck', {
+          appCode: this.appCode,
+        });
+        return res.result ?? false;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.isCreateSandboxLoading = false;
+      }
+    },
+    insufficientResourcesNotify() {
+      const h = this.$createElement;
+      this.$bkInfo({
+        subHeader: h(
+          'div',
+          {
+            class: 'sandbox-info-box',
+          },
+          [
+            h('i', { class: 'paasng-icon paasng-paas-remind-fill' }, null),
+            h('div', { class: 'title' }, [
+              h('p', null, this.$t('沙箱资源不足')),
+              h(
+                'p',
+                { class: 'tip-text' },
+                this.$t('沙箱功能正在灰度开放，目前沙箱资源已申请完。如需体验，请联系 BK 助手。')
+              ),
+            ]),
+          ]
+        ),
+        extCls: 'sandbox-info-cls',
+        width: 360,
+        showFooter: false,
+      });
+    },
+    async createSandbox() {
+      const result = await this.createSandboxPreDeployCheck();
+      if (result) {
+        this.isShowSandboxDialog = true;
+      } else {
+        this.insufficientResourcesNotify();
+      }
     },
     handleShown() {
       this.getSandboxList();
@@ -205,6 +251,27 @@ export default {
     .content-text {
       display: inline-block;
       margin-left: 20px;
+    }
+  }
+}
+</style>
+<style lang="scss">
+.sandbox-info-cls {
+  .bk-info-box .bk-dialog-sub-header {
+    padding: 0 16px 30px !important;
+  }
+  .sandbox-info-box {
+    display: flex;
+    i {
+      transform: translateY(2px);
+      margin-right: 5px;
+      color: #ff9c01;
+    }
+    color: #313238;
+    .tip-text {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #63656e;
     }
   }
 }

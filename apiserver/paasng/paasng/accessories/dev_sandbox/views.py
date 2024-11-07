@@ -251,7 +251,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
 
     @swagger_auto_schema(tags=["开发沙箱"])
-    def pre_deploy_check(self, request, code, module_name):
+    def pre_deploy_check(self, request, code):
         """部署前确认是否可以部署"""
         # 判断开发沙箱数量是否超过限制
         if DevSandbox.objects.all().count() >= settings.DEV_SANDBOX_COUNT_LIMIT:

@@ -39,13 +39,14 @@ class Command(BaseCommand):
             )
             try:
                 detail = controller.get_detail()
-            except Exception:
+            except Exception as e:
                 # 防止沙箱资源被管理员删除等导致的报错
+                logger.warning(f"Failed to get detail of dev sandbox: {dev_sandbox.code}. Error: {e}")
                 continue
 
-            url = detail.urls.code_editor_health_url if detail.urls is not None else None
+            url = detail.urls.code_editor_health_url
             # 沙箱相关域名无法确定协议，因此全部遍历 http 和 https
-            if url and (check_alive(f"http://{url}") or check_alive(f"https://{url}")):
+            if check_alive(f"http://{url}") or check_alive(f"https://{url}"):
                 dev_sandbox.renew_expire_at()
 
 

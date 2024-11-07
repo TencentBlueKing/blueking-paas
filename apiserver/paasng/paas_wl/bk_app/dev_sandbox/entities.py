@@ -140,7 +140,7 @@ class DevSandboxWithCodeEditorDetail:
     code_editor_env_vars: Dict[str, str]
     dev_sandbox_status: str
     code_editor_status: str
-    urls: Optional[DevSandboxWithCodeEditorUrls] = None
+    urls: DevSandboxWithCodeEditorUrls
 
 
 @dataclass

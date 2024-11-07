@@ -45,17 +45,17 @@ class DevSandbox(OwnerTimestampedModel):
     code = models.CharField(max_length=8, help_text="沙箱标识", unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(max_length=32, verbose_name="沙箱状态", choices=DevSandboxStatus.get_choices())
-    expire_at = models.DateTimeField(null=True, help_text="到期时间")
+    expired_at = models.DateTimeField(null=True, help_text="到期时间")
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
-    def renew_expire_at(self):
-        self.expire_at = timezone.now() + timezone.timedelta(hours=2)
+    def renew_expired_at(self):
+        self.expired_at = timezone.now() + timezone.timedelta(hours=2)
         self.save(update_fields=["expire_at"])
 
     def should_recycle(self) -> bool:
         """检查是否应该被回收"""
-        if self.expire_at:
-            return self.expire_at <= timezone.now()
+        if self.expired_at:
+            return self.expired_at <= timezone.now()
         return False
 
     class Meta:

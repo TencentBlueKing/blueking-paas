@@ -70,7 +70,12 @@ type HotReloadManager struct {
 
 // Rebuild ...
 func (m HotReloadManager) Rebuild(reloadID string) error {
-	cmd := phase.MakeBuilderCmd()
+	cmd := phase.MakeLauncherCmd("stop")
+	err := m.runCmd(reloadID, cmd)
+	if err != nil {
+		return err
+	}
+	cmd = phase.MakeBuilderCmd()
 	return m.runCmd(reloadID, cmd)
 }
 

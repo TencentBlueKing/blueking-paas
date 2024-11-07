@@ -146,9 +146,6 @@ func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
-	if err := ctl.stop(); err != nil {
-		return err
-	}
 	if err := ctl.refreshConf(conf); err != nil {
 		return err
 	}
@@ -196,7 +193,7 @@ func (ctl *SupervisorCtl) Status() error {
 }
 
 // stop all processes by running 'supervisorctl stop all'.
-func (ctl *SupervisorCtl) stop() error {
+func (ctl *SupervisorCtl) Stop() error {
 	cmd := exec.Command("bash")
 
 	cmd.Env = os.Environ()

@@ -29,6 +29,7 @@ from paasng.platform.declarative.serializers import validate_language
 from paasng.platform.declarative.utils import get_quota_plan
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.serializers import field_env_var_key
+from paasng.utils.structure import NOTSET, NotSetType
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
@@ -71,7 +72,7 @@ class DeploymentDescSLZ(serializers.Serializer):
     source_dir = serializers.CharField(help_text="源码目录", default="")
     env_variables = serializers.ListField(child=EnvVariableSLZ(), required=False)
     processes = serializers.DictField(help_text="key: 进程名称, value: 进程信息", default=dict, child=ProcessSLZ())
-    svc_discovery = SvcDiscConfigSLZ(help_text="应用所需服务发现配置", required=False)
+    svc_discovery = SvcDiscConfigSLZ(help_text="应用所需服务发现配置", default=NOTSET)
     scripts = serializers.DictField(help_text="key: 脚本名称, value: 脚本指令内容", default=dict)
     bkmonitor = BluekingMonitorSLZ(help_text="SaaS 监控采集配置", required=False, source="bk_monitor")
 
@@ -113,12 +114,16 @@ class DeploymentDescSLZ(serializers.Serializer):
                 )
 
         # svc_discovery -> SvcDiscConfig
-        svc_discovery = {}
-        if _svc_discovery_value := attrs.get("svc_discovery"):
-            svc_discovery["bk_saas"] = [
-                {"bk_app_code": item["bk_app_code"], "module_name": item.get("module_name")}
-                for item in _svc_discovery_value["bk_saas"]
-            ]
+        _svc_discovery_value = attrs.get("svc_discovery")
+        svc_discovery: NotSetType | dict[str, list[dict]]
+        if _svc_discovery_value == NOTSET:
+            svc_discovery = NOTSET
+        else:
+            svc_discovery = {}
+            if bk_sass := _svc_discovery_value.get("bk_saas"):
+                svc_discovery["bk_saas"] = [
+                    {"bk_app_code": item["bk_app_code"], "module_name": item.get("module_name")} for item in bk_sass
+                ]
 
         spec = v1alpha2.BkAppSpec(
             processes=processes,

@@ -16,99 +16,160 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Any, Callable, Dict, List, Type, cast
+from typing import Callable, Dict, Iterable, List, Set, Tuple, Union
 
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
+from paasng.utils.structure import NotSetType
 
 from .result import CommonSyncResult
 
 logger = logging.getLogger(__name__)
 
 
-def _upsert_replicas(proc_spec: ModuleProcessSpec, input_p: ReplicasOverlay) -> bool:
-    """save ReplicasOverlay item"""
-    _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec, environment_name=input_p.env_name, defaults={"target_replicas": input_p.count}
+def sync_env_overlays_replicas(
+    module: Module, overlay_replicas: List[ReplicasOverlay] | NotSetType, manager: fieldmgr.ManagerType
+) -> CommonSyncResult:
+    """Sync replicas overlay data to db."""
+    syncer = OverlayDataSyncer(
+        empty_defaults_value={"target_replicas": None},
+        defaults_value_getter=lambda input_p: {"target_replicas": input_p.count},
+        field_mgr_key_func=fieldmgr.f_overlay_replicas,
     )
-    return created
+    return syncer.sync(module, overlay_replicas, manager)
 
 
-def _upsert_res_quota(proc_spec: ModuleProcessSpec, input_p: ResQuotaOverlay) -> bool:
-    """save ResQuotaOverlay item"""
-    _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec, environment_name=input_p.env_name, defaults={"plan_name": input_p.plan}
+def sync_env_overlays_res_quotas(
+    module: Module, overlay_res_quotas: List[ResQuotaOverlay] | NotSetType, manager: fieldmgr.ManagerType
+) -> CommonSyncResult:
+    """Sync res_quota overlay data to db."""
+    syncer = OverlayDataSyncer(
+        empty_defaults_value={"plan_name": None},
+        defaults_value_getter=lambda input_p: {"plan_name": input_p.plan},
+        field_mgr_key_func=fieldmgr.f_overlay_res_quotas,
     )
-    return created
+    return syncer.sync(module, overlay_res_quotas, manager)
 
 
-def _upsert_autoscaling(proc_spec: ModuleProcessSpec, input_p: AutoscalingOverlay) -> bool:
-    """save AutoscalingOverlay item"""
-    _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-        proc_spec=proc_spec,
-        environment_name=input_p.env_name,
-        defaults={
+def sync_env_overlays_autoscalings(
+    module: Module, overlay_autoscalings: List[AutoscalingOverlay] | NotSetType, manager: fieldmgr.ManagerType
+) -> CommonSyncResult:
+    """Sync autoscaling overlay data to db model"""
+
+    def _value_getter(input_p):
+        return {
             "autoscaling": True,
             "scaling_config": {
                 "min_replicas": input_p.min_replicas,
                 "max_replicas": input_p.max_replicas,
                 "policy": input_p.policy,
             },
-        },
+        }
+
+    syncer = OverlayDataSyncer(
+        empty_defaults_value={"autoscaling": None, "scaling_config": None},
+        defaults_value_getter=_value_getter,
+        field_mgr_key_func=fieldmgr.f_overlay_replicas,
     )
-    return created
+    return syncer.sync(module, overlay_autoscalings, manager)
 
 
-_handlers: Dict[Type, Callable[..., bool]] = {
-    ReplicasOverlay: _upsert_replicas,
-    ResQuotaOverlay: _upsert_res_quota,
-    AutoscalingOverlay: _upsert_autoscaling,
-}
+def clean_empty_overlays(module):
+    """Clean up overlay records that contains empty data."""
+    empty_values = {"autoscaling": None, "scaling_config": None, "target_replicas": None, "plan_name": None}
 
+    # If new fields were added to the module, the clean up process should abort to avoid data loss.
+    fields = {f.name for f in ProcessSpecEnvOverlay._meta.fields}
+    if set(fields) - set(empty_values) != {"id", "region", "proc_spec", "updated", "environment_name", "created"}:
+        raise RuntimeError("unexpected fields found on ProcessSpecEnvOverlay")
 
-def sync_proc_env_overlays(
-    module: Module,
-    overlay_replicas: List[ReplicasOverlay],
-    overlay_res_quotas: List[ResQuotaOverlay],
-    overlay_autoscalings: List[AutoscalingOverlay],
-) -> CommonSyncResult:
-    """Sync multiple processes overlay data to db model
-
-    :param overlay_replicas: A list of ResQuotaOverlay items.
-    :param overlay_res_quotas: A list of ResQuotaOverlay items.
-    :param overlay_autoscalings: A list of AutoscalingOverlay items.
-    :return: sync result.
-    """
-    ret = CommonSyncResult()
-
-    # Build the index of existing data first to remove data later.
-    # Data structure: {(process name, environment name): pk}
-    existing_index = {}
-    existing_specs = {}
     for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-        existing_specs[proc_spec.name] = proc_spec
         for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
-            existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
+            if all(getattr(overlay_item, key) == value for key, value in empty_values.items()):
+                overlay_item.delete()
 
-    # Update or create data
-    handle_record: Dict[Any, bool] = {}
-    for items in [overlay_replicas, overlay_res_quotas, overlay_autoscalings]:
-        # fix mypy error
-        items = cast(list, items)
+
+class OverlayDataSyncer:
+    """Sync overlay data to db model.
+
+    :param empty_defaults_value: The empty default value, used to reset the data.
+    :param defaults_value_getter: A function to get the default value as a dict for upsert.
+    :param field_mgr_key_func: A function to get the field manager key.
+    """
+
+    def __init__(
+        self,
+        empty_defaults_value: Dict,
+        defaults_value_getter: Callable,
+        field_mgr_key_func: Callable[[str, str], str],
+    ):
+        self.empty_defaults_value = empty_defaults_value
+        self.defaults_value_getter = defaults_value_getter
+        self.field_mgr_key_func = field_mgr_key_func
+
+    def sync(
+        self,
+        module: Module,
+        items: Iterable[Union[ReplicasOverlay, ResQuotaOverlay, AutoscalingOverlay]] | NotSetType,
+        manager: fieldmgr.ManagerType,
+    ) -> CommonSyncResult:
+        """Sync overlay data to the db."""
+        ret = CommonSyncResult()
+        if isinstance(items, NotSetType):
+            items = []
+
+        # Build the index of existing data first to clean data later.
+        # Data structure: {(process name, environment name): pk}, contains not none
+        # data on the sub_field.
+        existing_index = {}
+        existing_specs = {}
+        for proc_spec in ModuleProcessSpec.objects.filter(module=module):
+            existing_specs[proc_spec.name] = proc_spec
+            for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
+                if self.is_already_empty(overlay_item):
+                    continue
+                existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
+
+        not_managed_envs = self.get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
+
         for input_p in items:
-            if not (proc_spec := existing_specs.get(input_p.process)):
+            proc, env = input_p.process, input_p.env_name
+            if not (proc_spec := existing_specs.get(proc)):
                 logger.info("Process spec not found, ignore, name: %s", input_p.process)
                 continue
 
-            # Update the column by handler function and store the created flag
-            handle_record.setdefault((input_p.process, input_p.env_name), _handlers[type(input_p)](proc_spec, input_p))
-            # Move out from the index
-            existing_index.pop((input_p.process, input_p.env_name), None)
+            _, created = ProcessSpecEnvOverlay.objects.update_or_create(
+                proc_spec=proc_spec, environment_name=input_p.env_name, defaults=self.defaults_value_getter(input_p)
+            )
+            ret.incr_by_created_flag(created)
 
-    for created in handle_record.values():
-        ret.incr_by_created_flag(created)
+            # Update the index and set the field manger
+            existing_index.pop((proc, env), None)
+            fieldmgr.FieldManager(module, self.field_mgr_key_func(proc, env)).set(manager)
 
-    # Remove existing data that is not touched.
-    ret.deleted_num, _ = ProcessSpecEnvOverlay.objects.filter(id__in=existing_index.values()).delete()
-    return ret
+        # Reset existing data
+        for (proc, env), pk in existing_index.items():
+            # Do not reset the data if the environment is not managed by the current manager.
+            if (proc, env) in not_managed_envs:
+                continue
+
+            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.empty_defaults_value)
+            ret.deleted_num += 1
+        return ret
+
+    def get_not_managed_proc_envs(
+        self, module: Module, manager: fieldmgr.ManagerType, proc_envs: List[Tuple[str, str]]
+    ) -> Set[Tuple[str, str]]:
+        """Get the environments that is not managed by the current manager."""
+        not_managed_envs = set()
+        for process, env_name in proc_envs:
+            mgr = fieldmgr.FieldManager(module, self.field_mgr_key_func(process, env_name))
+            if not mgr.is_managed_by(manager):
+                not_managed_envs.add((process, env_name))
+        return not_managed_envs
+
+    def is_already_empty(self, overlay_item: ProcessSpecEnvOverlay) -> bool:
+        """Check if the overlay item is already empty."""
+        return all(getattr(overlay_item, key) == value for key, value in self.empty_defaults_value.items())

@@ -580,7 +580,7 @@ def dummy_gitlab_spec():
         "attrs": {
             "name": "dft_gitlab",
             "server_config": {"api_url": "http://127.0.0.1:8080/"},
-            "oauth_credentials": {
+            "oauth_backend_config": {
                 "client_id": "client_id",
                 "client_secret": "client_secret",
                 "authorization_base_url": "http://127.0.0.1:8080/owner/repo.git",

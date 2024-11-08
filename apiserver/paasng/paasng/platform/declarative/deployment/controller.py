@@ -23,7 +23,8 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, Process, SvcDiscConfig, v1alpha2
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, Process, v1alpha2
 from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
@@ -34,6 +35,7 @@ from paasng.platform.declarative.entities import DeployHandleResult
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations import preset_envvars
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
+from paasng.utils.structure import NotSetType
 
 logger = logging.getLogger(__name__)
 
@@ -92,36 +94,12 @@ class DeploymentDeclarativeController:
 
         TODO: 优化 import 方式, 例如直接接受 desc.spec
         Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
-        ---
 
-        NOTE: 对于云原生应用， import_bkapp_spec_entity() 的默认行为是将 spec 中的数据导入
-        到平台中，所有数据以它为准，是类似 PUT 请求的全量更新行为。然后这会导致一个问题：
-
-        - 用户只在描述文件中定义了进程，未通过 envOverlay 定义区分环境的 replicas 数据
-        - 用户通过产品页面，对进程进行了扩缩容，数据记录在 ProcessSpecEnvOverlay 中（体现为
-          模型中的 envOverlay）
-        - 用户重新部署，import_bkapp_spec_entity() 将描述文件中的数据导入，其判断没有 envOverlay
-          数据，已有的 ProcessSpecEnvOverlay 数据被删除，用户设置的副本数丢失
-
-        为了解决这个问题，我们在 import_bkapp_spec_entity() 中增加了 reset_overlays_when_absent 参数，
-        比在这里调用时，将其设置为 False，避免已有的 envOverlay 数据被删除。
-
-        然而，这也算不上是万全之策。因为用户仍然可能会在描述文件中定义 envOverlay 数据，
-        或删除已有的 envOverlay 数据，这些操作仍然可能会导致预期之外的后果。更彻底的解决
-        方法，可能包括以下方面：
-
-        - 在 ProcessSpecEnvOverlay 等数据模型中增加字段（或增加新模型），以区分由
-          用户手动设置的数据和由描述文件导入的数据，并依据一定优先级来处理
-        - 模仿和参考 kubectl apply 的行为，开发新方法 apply_manifest()，对于通过
-          由配置文件定义的内容（比如 ProcessSpecEnvOverlay），打上特定的 manage-by
-          标签，这样，当配置文件中没有定义时，仅在旧数据原本是由配置文件定义时才删除，
-          否则跳过。
         """
         import_bkapp_spec_entity(
             self.module,
             spec_entity=v1alpha2.BkAppSpec(**sanitize_bkapp_spec_to_dict(desc_obj.spec)),
-            # Don't remove existed overlays data when no overlays data in input_data
-            reset_overlays_when_absent=False,
+            manager=fieldmgr.ManagerType.APP_DESC,
         )
         if hooks := desc_obj.get_deploy_hooks():
             self.deployment.update_fields(hooks=hooks)
@@ -140,9 +118,9 @@ class DeploymentDeclarativeController:
             self.deployment.update_fields(hooks=hooks)
 
         # 导入服务发现配置
-        # Warning: SvcDiscConfig 是 Application 全局的, 多模块配置不一样时会互相覆盖(这与普通应用原来的行为不一致, 但目前暂无更好的解决方案)
-        if svc_disc := get_svc_discovery(spec=desc.spec):
-            sync_svc_discovery(module=self.module, svc_disc=svc_disc)
+        # Warning: SvcDiscConfig 是 Application 全局的, 多模块配置不一样时会互相覆盖
+        # (这与普通应用原来的行为不一致, 但目前暂无更好的解决方案)
+        sync_svc_discovery(module=self.module, svc_disc=desc.spec.svc_discovery, manager=fieldmgr.ManagerType.APP_DESC)
 
         # 更新进程探针配置
         self._update_probes(desc.get_processes())
@@ -227,15 +205,10 @@ def sanitize_bkapp_spec_to_dict(spec: v1alpha2.BkAppSpec) -> Dict:
 def get_preset_env_vars(spec: v1alpha2.BkAppSpec) -> Tuple[List[EnvVar], List[EnvVarOverlay]]:
     """从应用描述文件中提取预定义环境变量, 存储到 PresetEnvVariable 表中"""
     overlay_env_vars: List[EnvVarOverlay] = []
-    if spec.env_overlay:
+    if (
+        not isinstance(spec.env_overlay, NotSetType)
+        and spec.env_overlay
+        and not isinstance(spec.env_overlay.env_variables, NotSetType)
+    ):
         overlay_env_vars = spec.env_overlay.env_variables or []
     return spec.configuration.env, overlay_env_vars
-
-
-def get_svc_discovery(spec: v1alpha2.BkAppSpec) -> Optional[SvcDiscConfig]:
-    """从应用描述文件中提取服务发现配置, 存储到 SvcDiscConfig 表中
-
-    NOTE: 仅用于普通应用, 让普通应用也可以通过 SvcDiscConfig 模型拿到服务发现配置的环境变量
-    (云原生应用在 import_manifest 已导入服务发现配置)
-    """
-    return spec.svc_discovery

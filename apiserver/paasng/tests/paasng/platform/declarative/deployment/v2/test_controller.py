@@ -20,7 +20,10 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities_syncer.svc_discovery import sync_svc_discovery
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, SvcDiscConfig, get_svc_disc_as_env_variables
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
@@ -163,6 +166,39 @@ class TestSvcDiscoveryField:
                 "stag": "http://foo.com/stag--api--bar-app/",
                 "prod": "http://foo.com/prod--api--bar-app/",
             }
+
+
+class TestSvcDiscoveryFieldMultiManagers:
+    def test_notset_should_reset(self, bk_app, bk_deployment):
+        json_data = {"svc_discovery": {"bk_saas": [{"bk_app_code": bk_app.code}]}, "language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery
+        json_data = {"language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert not SvcDiscConfig.objects.filter(application=bk_app).exists()
+
+    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+        # Insert the data using "web_form" manager
+        sync_svc_discovery(
+            bk_module,
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
+            fieldmgr.ManagerType.WEB_FORM,
+        )
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery, the data should stay because it's
+        # managed by a different manager.
+        json_data = {"language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
 
 
 class TestHookField:

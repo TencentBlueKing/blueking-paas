@@ -21,11 +21,14 @@ from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.managers import ConfigVarManager
 from paasng.platform.modules.models import Module
+from paasng.utils.structure import NotSetType
 
 from .result import CommonSyncResult
 
 
-def sync_env_vars(module: Module, env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay]) -> CommonSyncResult:
+def sync_env_vars(
+    module: Module, env_vars: List[EnvVar], overlay_env_vars: List[EnvVarOverlay] | NotSetType
+) -> CommonSyncResult:
     """Sync environment variables to db model, existing data that is not in the input list may be removed
 
     :param module: app module
@@ -33,7 +36,6 @@ def sync_env_vars(module: Module, env_vars: List[EnvVar], overlay_env_vars: List
     :param overlay_env_vars: The environment-specified variables
     :return: sync result
     """
-
     config_vars: List[ConfigVar] = []
     for var in env_vars:
         config_vars.append(
@@ -45,6 +47,10 @@ def sync_env_vars(module: Module, env_vars: List[EnvVar], overlay_env_vars: List
                 value=var.value,
             )
         )
+
+    if isinstance(overlay_env_vars, NotSetType):
+        overlay_env_vars = []
+
     for overlay_var in overlay_env_vars:
         env = module.envs.get(environment=overlay_var.env_name)
         config_vars.append(

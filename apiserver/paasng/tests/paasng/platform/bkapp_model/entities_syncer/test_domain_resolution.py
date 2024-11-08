@@ -17,6 +17,7 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import DomainResolution, HostAlias
 from paasng.platform.bkapp_model.entities_syncer import sync_domain_resolution
 from paasng.platform.bkapp_model.models import DomainResolution as DomainResolutionDB
@@ -29,6 +30,7 @@ class Test__sync_domain_resolution:
         ret = sync_domain_resolution(
             bk_module,
             DomainResolution(nameservers=["127.0.0.1"], host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])]),
+            fieldmgr.ManagerType.APP_DESC,
         )
 
         assert ret.created_num == 1
@@ -50,8 +52,9 @@ class Test__sync_domain_resolution:
         ret = sync_domain_resolution(
             bk_module,
             DomainResolution(
-                nameservers=["localhost"], host_aliases=[HostAlias(ip="192.168.1.1", hostnames=["bar.com"])]
+                nameservers=["8.8.8.8"], host_aliases=[HostAlias(ip="192.168.1.1", hostnames=["bar.com"])]
             ),
+            fieldmgr.ManagerType.APP_DESC,
         )
 
         assert ret.created_num == 0
@@ -59,11 +62,8 @@ class Test__sync_domain_resolution:
         assert ret.deleted_num == 0
 
         obj = DomainResolutionDB.objects.get(application=bk_module.application)
-        assert set(obj.nameservers) == {"localhost", "127.0.0.1"}
-        assert set(obj.host_aliases) == {
-            HostAlias(ip="1.1.1.1", hostnames=["foo.com"]),
-            HostAlias(ip="192.168.1.1", hostnames=["bar.com"]),
-        }
+        assert obj.nameservers == ["8.8.8.8"]
+        assert obj.host_aliases == [HostAlias(ip="192.168.1.1", hostnames=["bar.com"])]
 
     def test_delete(self, bk_module):
         G(
@@ -76,6 +76,7 @@ class Test__sync_domain_resolution:
         ret = sync_domain_resolution(
             bk_module,
             DomainResolution(nameservers=[], host_aliases=[]),
+            fieldmgr.ManagerType.APP_DESC,
         )
 
         assert ret.deleted_num == 1

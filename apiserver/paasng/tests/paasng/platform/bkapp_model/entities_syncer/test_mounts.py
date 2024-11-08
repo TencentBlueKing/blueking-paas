@@ -22,6 +22,7 @@ import pytest
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.cnative.specs.models import Mount as MountDB
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import ConfigMapSource, Mount, MountOverlay, VolumeSource
 from paasng.platform.bkapp_model.entities_syncer import sync_mounts
 
@@ -60,6 +61,7 @@ class Test__sync_mounts:
                     source=VolumeSource(config_map=ConfigMapSource(name="nginx-foobar")),
                 )
             ],
+            manager=fieldmgr.ManagerType.APP_DESC,
         )
         assert MountDB.objects.count() == 2
         assert ret.created_num == 1

@@ -30,6 +30,7 @@ from paasng.platform.bkapp_model.constants import (
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
+from paasng.utils.structure import NOTSET
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
@@ -123,11 +124,11 @@ class AutoscalingOverlayInputSLZ(AutoscalingSpecInputSLZ):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """Validate the `envOverlay` field."""
 
-    replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), required=False)
-    resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), required=False, source="res_quotas")
-    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), required=False, source="env_variables")
-    autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), required=False)
-    mounts = serializers.ListField(child=MountOverlayInputSLZ(), required=False)
+    replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), default=NOTSET)
+    resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), default=NOTSET, source="res_quotas")
+    envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), default=NOTSET, source="env_variables")
+    autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), default=NOTSET)
+    mounts = serializers.ListField(child=MountOverlayInputSLZ(), default=NOTSET)
 
 
 class ConfigurationInputSLZ(serializers.Serializer):
@@ -287,9 +288,9 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     addons = serializers.ListField(child=AddonInputSLZ(), required=False, allow_empty=True)
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
     hooks = HooksInputSLZ(allow_null=True, default=None)
-    envOverlay = EnvOverlayInputSLZ(required=False, source="env_overlay")
-    svcDiscovery = ServiceDiscoveryInputSLZ(required=False, source="svc_discovery")
-    domainResolution = DomainResolutionInputSLZ(required=False, source="domain_resolution")
+    envOverlay = EnvOverlayInputSLZ(source="env_overlay", default=NOTSET)
+    svcDiscovery = ServiceDiscoveryInputSLZ(source="svc_discovery", default=NOTSET)
+    domainResolution = DomainResolutionInputSLZ(source="domain_resolution", default=NOTSET)
     observability = ObservabilityInputSLZ(required=False)
 
     def to_internal_value(self, data) -> v1alpha2.BkAppSpec:

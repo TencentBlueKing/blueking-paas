@@ -18,7 +18,17 @@
 import cattr
 import pytest
 
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
+from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities_syncer.domain_resolution import sync_domain_resolution
+from paasng.platform.bkapp_model.entities_syncer.svc_discovery import sync_svc_discovery
+from paasng.platform.bkapp_model.models import (
+    DomainResolution,
+    ModuleProcessSpec,
+    SvcDiscConfig,
+    get_svc_disc_as_env_variables,
+)
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.declarative.deployment.validations.v3 import DeploymentDescSLZ
@@ -26,6 +36,7 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.declarative.serializers import validate_desc
 from paasng.platform.engine.constants import ConfigVarEnvName
+from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook, HookList
@@ -179,6 +190,41 @@ class TestSvcDiscoveryField:
             }
 
 
+class TestSvcDiscoveryFieldMultiManagers:
+    def test_notset_should_reset(self, bk_app, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "svcDiscovery": {"bkSaaS": [{"bkAppCode": bk_app.code}]},
+                "processes": [],
+            },
+        )
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery
+        json_data = builder.make_module(module_name="test", module_spec={"processes": []})
+        perform_action(bk_deployment, json_data)
+        assert not SvcDiscConfig.objects.filter(application=bk_app).exists()
+
+    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+        # Insert the data using "web_form" manager
+        sync_svc_discovery(
+            bk_module,
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
+            fieldmgr.ManagerType.WEB_FORM,
+        )
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery, the data should stay because it's
+        # managed by a different manager.
+        json_data = builder.make_module(module_name="test", module_spec={"processes": []})
+        perform_action(bk_deployment, json_data)
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+
 class TestHookField:
     @pytest.mark.parametrize(
         ("json_data", "expected"),
@@ -194,8 +240,7 @@ class TestHookField:
         ],
     )
     def test_hooks(self, bk_deployment, json_data, expected):
-        controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+        perform_action(bk_deployment, json_data)
 
         desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
         assert desc_obj.get_deploy_hooks() == expected
@@ -221,8 +266,7 @@ class TestHookField:
         bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
         bk_deployment.save()
 
-        controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+        perform_action(bk_deployment, json_data)
 
         assert bk_deployment.get_deploy_hooks() == expected
 
@@ -251,3 +295,39 @@ class TestHookField:
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
         bk_deployment.refresh_from_db()
         assert bk_deployment.get_deploy_hooks() == expected
+
+
+class TestDomainResolutionFieldMultiManagers:
+    def test_notset_should_reset(self, bk_app, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={"domainResolution": {"nameservers": ["8.8.8.8"]}, "processes": []},
+        )
+        perform_action(bk_deployment, json_data)
+        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+
+        # Re-apply the data without svc_discovery
+        json_data = builder.make_module(module_name="test", module_spec={"processes": []})
+        perform_action(bk_deployment, json_data)
+        assert not DomainResolution.objects.filter(application=bk_app).exists()
+
+    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+        # Insert the data using "web_form" manager
+        sync_domain_resolution(
+            bk_module,
+            DomainResolutionEntity(nameservers=["8.8.8.8"], host_aliases=[]),
+            fieldmgr.ManagerType.WEB_FORM,
+        )
+        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+
+        # Re-apply the data without svc_discovery, the data should stay because it's
+        # managed by a different manager.
+        json_data = builder.make_module(module_name="test", module_spec={"processes": []})
+        perform_action(bk_deployment, json_data)
+        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+
+
+def perform_action(deployment: Deployment, json_data: dict):
+    """A shortcut to perform validation and action on a deployment using the given data."""
+    controller = DeploymentDeclarativeController(deployment)
+    controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))

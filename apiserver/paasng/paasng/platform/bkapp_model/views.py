@@ -36,6 +36,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.importer import import_manifest
@@ -125,7 +126,7 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         update_app_resource(application, module, manifest)
         try:
-            import_manifest(module, manifest)
+            import_manifest(module, manifest, fieldmgr.ManagerType.APP_DESC)
         except Exception as e:
             raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
 
@@ -282,6 +283,11 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             },
         )
         svc_disc.refresh_from_db()
+        # Set the field manager using the default module
+        fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_SVC_DISCOVERY).set(
+            fieldmgr.ManagerType.WEB_FORM
+        )
+
         data = SvcDiscConfigSLZ(svc_disc).data
         add_app_audit_record(
             app_code=code,
@@ -330,6 +336,10 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         )
 
         domain_resolution.refresh_from_db()
+        # Set the field manager using the default module
+        fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_DOMAIN_RESOLUTION).set(
+            fieldmgr.ManagerType.WEB_FORM
+        )
 
         data = DomainResolutionSLZ(domain_resolution).data
         add_app_audit_record(

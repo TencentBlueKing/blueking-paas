@@ -22,7 +22,7 @@ from paasng.utils.camel_converter import snake_to_camel
 
 
 def transform_spec2_to_spec3(spec2):
-    """转换配置版本 spec2 到 spec3"""
+    """转换应用描述文件版本2到版本3"""
     spec3 = OrderedDict()
 
     spec3["specVersion"] = 3
@@ -115,7 +115,7 @@ def _transform_module_spec(spec, key, value):
 
 
 def _transform_module_spec_process(process_name, process_info):
-    """转换 module.spec.processes"""
+    """转换 module.spec.processes 里的 process"""
     services = {"name": process_name, "protocol": "TCP", "targetPort": 5000, "port": 80}
     if process_name == "web":
         services["exposedType"] = {"name": "bk/http"}

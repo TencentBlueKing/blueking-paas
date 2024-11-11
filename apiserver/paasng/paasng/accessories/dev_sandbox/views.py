@@ -130,7 +130,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             code=dev_sandbox_code,
         )
         # 更新过期时间
-        dev_sandbox.renew_expire_at()
+        dev_sandbox.renew_expired_at()
 
         # 生成代码编辑器密码
         password = generate_password()

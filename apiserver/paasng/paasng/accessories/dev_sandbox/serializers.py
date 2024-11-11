@@ -84,7 +84,7 @@ class DevSandboxSLZ(serializers.ModelSerializer):
         fields = [
             "id",
             "status",
-            "expire_at",
+            "expired_at",
             "version_info_dict",
             "created",
             "updated",

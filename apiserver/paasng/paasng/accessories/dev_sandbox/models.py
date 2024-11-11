@@ -50,7 +50,7 @@ class DevSandbox(OwnerTimestampedModel):
 
     def renew_expired_at(self):
         self.expired_at = timezone.now() + timezone.timedelta(hours=2)
-        self.save(update_fields=["expire_at"])
+        self.save(update_fields=["expired_at"])
 
     def should_recycle(self) -> bool:
         """检查是否应该被回收"""

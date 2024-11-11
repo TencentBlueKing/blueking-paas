@@ -28,6 +28,7 @@ from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
+from paasng.accessories.servicehub.services import EngineAppInstanceRel
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.accessories.services.providers import (
     get_instance_schema_by_service_name,
@@ -44,6 +45,7 @@ from paasng.plat_admin.admin42.serializers.services import (
     PlanWithPreCreatedInstanceSLZ,
     PreCreatedInstanceSLZ,
     ServiceInstanceBindInfoSLZ,
+    ServiceInstanceSLZ,
     ServiceObjSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -90,6 +92,21 @@ class ApplicationServicesManageViewSet(GenericViewSet):
     serializer_class = ServiceInstanceBindInfoSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
+    @staticmethod
+    def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
+        service_data = ServiceObjSLZ(rel.get_service()).data
+        # 该字段会导致无法序列化，同时该字段不随当前 API 操作改变，故删除
+        del service_data["specifications"]
+
+        return DataDetail(
+            type=DataType.RAW_DATA,
+            data={
+                "instance": ServiceInstanceSLZ(rel.get_instance()).data,
+                "service": service_data,
+                "plan": PlanObjSLZ(rel.get_plan()).data,
+            },
+        )
+
     def list(self, request, code):
         service_instance_list = []
         application = get_object_or_404(Application, code=code)
@@ -123,6 +140,15 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("当前环境不存在未分配的增强服务实例"))
 
         rel.provision()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.PROVISION_INSTANCE,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_after=self._gen_service_data_detail(rel),
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     @atomic
@@ -143,7 +169,16 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.FEATURE_FLAG_DISABLED.f(_("迁移应用不支持回收增强服务实例"))
 
         if instance_rel.is_provisioned():
+            data_before = self._gen_service_data_detail(instance_rel)
             instance_rel.recycle_resource()
+            add_admin_audit_record(
+                user=request.user.pk,
+                operation=OperationEnum.RECYCLE_RESOURCE,
+                target=OperationTarget.APP,
+                app_code=code,
+                module_name=module_name,
+                data_before=data_before,
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

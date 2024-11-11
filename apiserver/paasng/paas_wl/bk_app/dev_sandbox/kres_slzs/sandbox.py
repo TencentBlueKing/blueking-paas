@@ -61,7 +61,10 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "env": [{"name": str(key), "value": str(value)} for key, value in obj.runtime.envs.items()],
             "imagePullPolicy": obj.runtime.image_pull_policy,
             "ports": [{"containerPort": port_pair.target_port} for port_pair in DEV_SANDBOX_SVC_PORT_PAIRS],
-            "readinessProbe": {"tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT}, "initialDelaySeconds": 2},
+            "readinessProbe": {
+                "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
+                "initialDelaySeconds": 2,
+            },
         }
 
         if obj.resources:

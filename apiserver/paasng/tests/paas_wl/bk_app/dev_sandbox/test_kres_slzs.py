@@ -82,7 +82,7 @@ class TestDevSandboxSLZ:
                                 ],
                                 "readinessProbe": {
                                     "initialDelaySeconds": 2,
-                                    "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
+                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
                                 },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
@@ -131,7 +131,7 @@ class TestDevSandboxSLZ:
                                 ],
                                 "readinessProbe": {
                                     "initialDelaySeconds": 2,
-                                    "tcpSocket": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT},
+                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
                                 },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
@@ -357,7 +357,7 @@ class TestCodeEditorSLZ:
                                 ],
                                 "readinessProbe": {
                                     "initialDelaySeconds": 2,
-                                    "tcpSocket": {"port": settings.CODE_EDITOR_PORT},
+                                    "httpGet": {"port": settings.CODE_EDITOR_PORT, "path": "/healthz"},
                                 },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},

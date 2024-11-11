@@ -76,7 +76,8 @@ func parseStatusOutput(output string) map[string]string {
 		// 按空格分割，格式为 "<process_name> <process_state> ..."
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
-			continue // 如果格式不符合预期，跳过该行
+			// 如果格式不符合预期，跳过该行
+			continue
 		}
 		// 提取进程名称和状态
 		processName := parts[0]

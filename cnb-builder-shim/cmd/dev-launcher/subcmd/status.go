@@ -16,12 +16,23 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package subcmd
 
 import (
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
+	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 )
 
-func main() {
-	subcmd.Execute()
+var statusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "process status.",
+	Long:  "Get status of all processes.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return launch.NewSupervisorCtl().Status()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(statusCmd)
 }

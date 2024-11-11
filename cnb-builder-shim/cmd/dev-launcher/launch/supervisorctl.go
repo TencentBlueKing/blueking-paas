@@ -141,7 +141,6 @@ type SupervisorCtl struct {
 }
 
 // Reload start or update/restart the processes
-// TODO: 现在 reload 还是会导致子进程堆积僵尸进程
 func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err

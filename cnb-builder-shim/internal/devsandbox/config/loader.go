@@ -35,11 +35,11 @@ func loadSourceConfigFromEnv() (SourceCodeConfig, error) {
 }
 
 func loadCORSConfigFromEnv() (CORSConfig, error) {
-	allowOrigins := getListFromEnv("ALLOW_ORIGINS", "")
-	allowMethods := getListFromEnv("ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS")
-	allowHeaders := getListFromEnv("ALLOW_HEADERS", "Origin,Content-Type,Authorization")
-	exposeHeaders := getListFromEnv("EXPOSE_HEADERS", "Content-Length")
-	allowCredentials := utils.EnvOrDefault("ALLOW_CREDENTIALS", "true") == "true"
+	allowOrigins := getListFromEnv("CORS_ALLOW_ORIGINS", "")
+	allowMethods := getListFromEnv("CORS_ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS")
+	allowHeaders := getListFromEnv("CORS_ALLOW_HEADERS", "Origin,Content-Type,Authorization")
+	exposeHeaders := getListFromEnv("CORS_EXPOSE_HEADERS", "Content-Length")
+	allowCredentials := utils.EnvOrDefault("CORS_ALLOW_CREDENTIALS", "true") == "true"
 	return CORSConfig{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     allowMethods,

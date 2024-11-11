@@ -169,6 +169,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.FEATURE_FLAG_DISABLED.f(_("迁移应用不支持回收增强服务实例"))
 
         if instance_rel.is_provisioned():
+            data_before = self._gen_service_data_detail(instance_rel)
             instance_rel.recycle_resource()
             add_admin_audit_record(
                 user=request.user.pk,
@@ -176,7 +177,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
                 target=OperationTarget.APP,
                 app_code=code,
                 module_name=module_name,
-                data_before=self._gen_service_data_detail(instance_rel),
+                data_before=data_before,
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

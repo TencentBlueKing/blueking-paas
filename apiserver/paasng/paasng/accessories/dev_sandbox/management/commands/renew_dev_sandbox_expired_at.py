@@ -50,6 +50,7 @@ class Command(BaseCommand):
                 dev_sandbox.renew_expire_at()
 
 
+# 通过 code_editor_health_url 检查沙箱是否存活
 def check_alive(url: str) -> bool:
     try:
         resp = requests.get(url)

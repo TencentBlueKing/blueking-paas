@@ -41,7 +41,7 @@ class Command(BaseCommand):
                 detail = controller.get_detail()
             except Exception as e:
                 # 防止沙箱资源被管理员删除等导致的报错
-                logger.warning("Failed to get detail of dev sandbox: %s. Error: %s", dev_sandbox, e)
+                logger.warning("Failed to get detail of dev sandbox: %s. Error: %s", dev_sandbox.code, e)
                 continue
 
             url = detail.urls.code_editor_health_url

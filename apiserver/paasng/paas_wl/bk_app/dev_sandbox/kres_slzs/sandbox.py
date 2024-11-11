@@ -62,7 +62,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "imagePullPolicy": obj.runtime.image_pull_policy,
             "ports": [{"containerPort": port_pair.target_port} for port_pair in DEV_SANDBOX_SVC_PORT_PAIRS],
             "readinessProbe": {
-                "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
+                "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
                 "initialDelaySeconds": 2,
             },
         }

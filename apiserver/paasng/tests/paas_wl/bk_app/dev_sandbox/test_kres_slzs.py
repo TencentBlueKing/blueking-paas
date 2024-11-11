@@ -82,7 +82,7 @@ class TestDevSandboxSLZ:
                                 ],
                                 "readinessProbe": {
                                     "initialDelaySeconds": 2,
-                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
+                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
                                 },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},
@@ -131,7 +131,7 @@ class TestDevSandboxSLZ:
                                 ],
                                 "readinessProbe": {
                                     "initialDelaySeconds": 2,
-                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/health"},
+                                    "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
                                 },
                                 "resources": {
                                     "requests": {"cpu": "200m", "memory": "512Mi"},

@@ -14,27 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-import logging
-
-from django.dispatch import receiver
-
-from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
-from paasng.platform.applications.models import Application, ApplicationEnvironment
-from paasng.platform.engine.models.deployment import Deployment
-from paasng.platform.engine.signals import post_appenv_deploy
-
-logger = logging.getLogger(__name__)
-
-
-@receiver(post_appenv_deploy)
-def import_dashboard_after_deploy(sender: ApplicationEnvironment, deployment: Deployment, **kwargs):
-    if not deployment.has_succeeded():
-        return
-
-    app_code = sender.application.code
-    try:
-        dashboard_manager = bk_dashboard_manager_cls(Application.objects.get(code=app_code))
-        dashboard_manager.init_builtin_dashboard()
-    except Exception:
-        logger.exception(f"Unable to import builtin dashboards after release app(code: {app_code})")

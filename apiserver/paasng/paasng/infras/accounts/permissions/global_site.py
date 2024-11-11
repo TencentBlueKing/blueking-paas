@@ -152,6 +152,9 @@ def site_perm_class(action: SiteAction):
     """构建 DRF 可用的权限类，管理站点访问相关权限。"""
 
     class Permission(BasePermission):
+        # used to check if is admin42 permission
+        perm_action = action
+
         def has_permission(self, request, *args, **kwargs):
             if not user_has_site_action_perm(request.user, action):
                 raise PermissionDenied("You are not allowed to do this operation.")

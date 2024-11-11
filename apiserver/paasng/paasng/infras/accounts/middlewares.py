@@ -23,8 +23,7 @@ from bkpaas_auth.models import DatabaseUser
 from blue_krill.auth.utils import validate_jwt_token
 from django.conf import settings
 from django.contrib import auth
-from django.core.exceptions import PermissionDenied
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
@@ -46,17 +45,6 @@ class SiteAccessControlMiddleware(MiddlewareMixin):
     """Control who can visit which paths in macro way"""
 
     def process_request(self, request):
-        # TODO: Find a better way to determine which views are belongs to admin42
-        if request.path_info.startswith("/admin42/"):
-            if request.user.is_anonymous or not request.user.is_authenticated:
-                # 用户验证失败，重定向到登录页面
-                return HttpResponseRedirect(f"{settings.LOGIN_FULL}?c_url={request.build_absolute_uri()}")
-
-            if not user_has_site_action_perm(request.user, SiteAction.VISIT_ADMIN42):
-                raise PermissionDenied("You are not allowed to visit this")
-
-            return None
-
         # Ignore anonymous user
         if not request.user.is_authenticated:
             return None

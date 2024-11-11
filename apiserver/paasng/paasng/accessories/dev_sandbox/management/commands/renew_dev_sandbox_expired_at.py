@@ -41,7 +41,7 @@ class Command(BaseCommand):
                 detail = controller.get_detail()
             except Exception as e:
                 # 防止沙箱资源被管理员删除等导致的报错
-                logger.warning(f"Failed to get detail of dev sandbox: {dev_sandbox.code}. Error: {e}")
+                logger.warning("Failed to get detail of dev sandbox: %s. Error: %s", dev_sandbox, e)
                 continue
 
             url = detail.urls.code_editor_health_url
@@ -55,5 +55,5 @@ def check_alive(url: str) -> bool:
         resp = requests.get(url)
         return resp.status_code == 200 and resp.json().get("status") == "alive"
     except Exception as e:
-        logger.warning(f"Dev sandbox status check failed for URL: {url}. Error: {e}")
+        logger.warning("Dev sandbox status check failed for URL: %s. Error: %s", url, e)
         return False

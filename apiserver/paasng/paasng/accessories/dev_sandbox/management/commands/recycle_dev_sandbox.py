@@ -15,14 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Recycle dev sandbox
+"""Recycle dev sandbox.
+
+By default, only expired sandboxes are recycled. Use the --all flag to recycle all sandboxes.
 
 Examples:
 
     # 仅回收过期沙箱
     python manage.py recycle_dev_sandbox
 
-    # 全量应用通知
+    # 全量回收沙箱
     python manage.py recycle_dev_sandbox --only_expired false
 """
 
@@ -37,13 +39,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--only_expired",
-            dest="only_expired",
-            default=True,
-            help="only recycle expired dev sandboxes",
+            "--all",
+            dest="all",
+            action="store_true",
+            help="recycle all dev sandboxes",
         )
 
-    def handle(self, only_expired, *args, **options):
+    def handle(self, all, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
             controller = DevSandboxWithCodeEditorController(
                 app=dev_sandbox.module.application,
@@ -51,6 +53,6 @@ class Command(BaseCommand):
                 dev_sandbox_code=dev_sandbox.code,
                 owner=dev_sandbox.owner,
             )
-            if not only_expired or dev_sandbox.is_expired():
+            if all or dev_sandbox.is_expired():
                 controller.delete()
                 dev_sandbox.delete()

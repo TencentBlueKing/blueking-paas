@@ -28,6 +28,7 @@ from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
+from paasng.accessories.servicehub.services import EngineAppInstanceRel
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.accessories.services.providers import (
     get_instance_schema_by_service_name,
@@ -44,6 +45,7 @@ from paasng.plat_admin.admin42.serializers.services import (
     PlanWithPreCreatedInstanceSLZ,
     PreCreatedInstanceSLZ,
     ServiceInstanceBindInfoSLZ,
+    ServiceInstanceSLZ,
     ServiceObjSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -90,6 +92,20 @@ class ApplicationServicesManageViewSet(GenericViewSet):
     serializer_class = ServiceInstanceBindInfoSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
+    @staticmethod
+    def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
+        service_slz = ServiceObjSLZ(rel.get_service()).data
+        del service_slz["specifications"]
+
+        return DataDetail(
+            type=DataType.RAW_DATA,
+            data={
+                "instance": ServiceInstanceSLZ(rel.get_instance()).data,
+                "service": service_slz,
+                "plan": PlanObjSLZ(rel.get_plan()).data,
+            },
+        )
+
     def list(self, request, code):
         service_instance_list = []
         application = get_object_or_404(Application, code=code)
@@ -130,14 +146,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             app_code=code,
             module_name=module_name,
             environment=environment,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=dict(
-                    instance=rel.get_instance(),
-                    service=rel.get_service(),
-                    plan=rel.get_plan(),
-                ),
-            ),
+            data_after=self._gen_service_data_detail(rel),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -166,14 +175,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
                 target=OperationTarget.APP,
                 app_code=code,
                 module_name=module_name,
-                data_before=DataDetail(
-                    type=DataType.RAW_DATA,
-                    data=dict(
-                        instance=instance_rel.get_instance(),
-                        service=instance_rel.get_service(),
-                        plan=instance_rel.get_plan(),
-                    ),
-                ),
+                data_before=self._gen_service_data_detail(instance_rel),
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

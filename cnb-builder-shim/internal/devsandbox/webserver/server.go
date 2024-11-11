@@ -36,6 +36,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -87,6 +88,8 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/deploys", DeployHandler(s, mgr))
 	r.GET("/deploys/:deployID/results", ResultHandler(mgr))
 	r.GET("/app_logs", AppLogHandler())
+	r.GET("/processes/status", ProcessStatusHandler())
+	r.GET("/processes/list", ProcessListHandler())
 
 	return s, nil
 }
@@ -227,6 +230,32 @@ func AppLogHandler() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"logs": logs})
+	}
+}
+
+// ProcessStatusHandler ...
+func ProcessStatusHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		status, err := devsandbox.Status()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": status})
+	}
+}
+
+// ProcessListHandler ...
+func ProcessListHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		appDescFilePath := path.Join(config.G.SourceCode.Workspace, "app_desc.yaml")
+		appDesc, err := appdesc.UnmarshalToAppDesc(appDescFilePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"processes": appDesc.Module.Processes})
 	}
 }
 

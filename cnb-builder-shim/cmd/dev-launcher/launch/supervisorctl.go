@@ -60,13 +60,22 @@ redirect_stderr = true
 var reloadScript = fmt.Sprintf(`#!/bin/bash
 
 socket_file="%[1]s/supervisor.sock"
-# 检查supervisor的socket文件是否存在
+# 检查 supervisor 的 socket 文件是否存在
 if [ -S "$socket_file" ]; then
   echo "supervisord is already running. update and restart processes..."
   supervisorctl -c %[2]s reload
 else
   echo "supervisord is not running. start supervisord..."
   supervisord -c %[2]s
+fi
+`, supervisorDir, confFilePath)
+
+var statusScript = fmt.Sprintf(`#!/bin/bash
+
+socket_file="%[1]s/supervisor.sock"
+# 检查 supervisor 的 socket 文件是否存在
+if [ -S "$socket_file" ]; then
+  supervisorctl -c %[2]s status
 fi
 `, supervisorDir, confFilePath)
 
@@ -155,6 +164,18 @@ func (ctl *SupervisorCtl) reload() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(reloadScript)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+// Status get the status of all processes by running 'supervisorctl status'.
+func (ctl *SupervisorCtl) Status() error {
+	cmd := exec.Command("bash")
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = bytes.NewBufferString(statusScript)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 

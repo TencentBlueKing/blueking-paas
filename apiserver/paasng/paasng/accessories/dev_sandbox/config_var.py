@@ -52,7 +52,7 @@ def generate_envs(app: Application, module: Module) -> Dict[str, str]:
     envs.update(_get_devserver_env())
 
     # Inject cors config
-    envs.update({"ALLOW_ORIGINS": settings.DEV_SANDBOX_CORS_ALLOW_ORIGINS})
+    envs.update({"CORS_ALLOW_ORIGINS": settings.DEV_SANDBOX_CORS_ALLOW_ORIGINS})
 
     return envs
 

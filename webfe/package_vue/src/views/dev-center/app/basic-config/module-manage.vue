@@ -68,7 +68,7 @@
                 <td>
                   {{ initTemplateDesc || '--' }}
                   <a
-                    v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
+                    v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc"
                     class="ml5"
                     href="javascript: void(0);"
                     @click="handleDownloadTemplate"
@@ -1351,12 +1351,9 @@ export default {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         const { region } = this.curAppModule;
 
-        this.initTemplateDesc = '';
-        if (res[region] && res[region].languages) {
-          const languages = res[region].languages[this.initLanguage] || [];
-          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
-          this.initTemplateDesc = lanObj.description || '--';
-        }
+        const languages = res[region]?.languages?.[this.initLanguage] || [];
+        const lanObj = languages.find(item => item.display_name === this.initTemplateType);
+        this.initTemplateDesc = lanObj?.description || '';
       } catch (res) {
         this.$paasMessage({
           limit: 1,

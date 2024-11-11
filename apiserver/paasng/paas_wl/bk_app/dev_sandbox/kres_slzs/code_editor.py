@@ -63,7 +63,8 @@ class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
             "ports": [{"containerPort": port_pair.target_port} for port_pair in CODE_SVC_PORT_PAIRS],
             "readinessProbe": {
                 "httpGet": {"port": settings.CODE_EDITOR_PORT, "path": "/healthz"},
-                "initialDelaySeconds": 2,
+                # 主要为了解决服务就绪，ingress 未就绪的问题
+                "successThreshold": 3,
             },
         }
 

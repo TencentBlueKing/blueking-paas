@@ -63,7 +63,8 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "ports": [{"containerPort": port_pair.target_port} for port_pair in DEV_SANDBOX_SVC_PORT_PAIRS],
             "readinessProbe": {
                 "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
-                "initialDelaySeconds": 2,
+                # 主要为了解决服务就绪，ingress 未就绪的问题
+                "successThreshold": 3,
             },
         }
 

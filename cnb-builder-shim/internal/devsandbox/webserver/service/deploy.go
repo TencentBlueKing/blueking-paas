@@ -24,10 +24,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
-	"github.com/google/uuid"
 )
 
 // deployStepOpts 表示 Deploy 的步骤选项. 为 true 表示需要执行该步骤

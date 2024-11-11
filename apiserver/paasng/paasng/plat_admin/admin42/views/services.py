@@ -94,14 +94,15 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 
     @staticmethod
     def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
-        service_slz = ServiceObjSLZ(rel.get_service()).data
-        del service_slz["specifications"]
+        service_data = ServiceObjSLZ(rel.get_service()).data
+        # 该字段会导致无法序列化，同时该字段不随当前 API 操作改变，故删除
+        del service_data["specifications"]
 
         return DataDetail(
             type=DataType.RAW_DATA,
             data={
                 "instance": ServiceInstanceSLZ(rel.get_instance()).data,
-                "service": service_slz,
+                "service": service_data,
                 "plan": PlanObjSLZ(rel.get_plan()).data,
             },
         )

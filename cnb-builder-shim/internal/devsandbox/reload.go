@@ -74,8 +74,9 @@ type HotReloadManager struct {
 func (m HotReloadManager) Rebuild(reloadID string) error {
 	// 重新构建前，将所有进程停止，主要解决两个问题
 	// 1. 构建完后，supervisor 重启进程会失败，导致只 kill 主进程而子进程变成僵尸进程
-	// 2. 构建时，supervisor 会收到信号关闭进程，又开启进程，导致 /app/v3logs 目录权限在 cnb or root
-	// 间横跳，导致构建时遇到 v3logs 文件夹权限错误而构建失败
+	// 2. 构建时，supervisor 会因 terminated by SIGSEGV 发生预期之外进程退出，
+	// 然后本身的托管能力又会拉起进程，导致 /app/v3logs 目录权限在 cnb or root
+	// 间横跳，从而使构建时遇到 v3logs 文件夹权限错误而构建失败
 	cmd := phase.MakeLauncherCmd(stopSubCommand)
 	err := m.runCmd(reloadID, cmd)
 	if err != nil {

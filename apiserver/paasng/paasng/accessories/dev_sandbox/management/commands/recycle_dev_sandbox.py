@@ -25,7 +25,7 @@ Examples:
     python manage.py recycle_dev_sandbox
 
     # 全量回收沙箱
-    python manage.py recycle_dev_sandbox --only_expired false
+    python manage.py recycle_dev_sandbox --all
 """
 
 from django.core.management.base import BaseCommand

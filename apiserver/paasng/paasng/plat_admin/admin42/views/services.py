@@ -123,6 +123,22 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("当前环境不存在未分配的增强服务实例"))
 
         rel.provision()
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.PROVISION_INSTANCE,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=dict(
+                    instance=rel.get_instance(),
+                    service=rel.get_service(),
+                    plan=rel.get_plan(),
+                ),
+            ),
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     @atomic
@@ -144,6 +160,21 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 
         if instance_rel.is_provisioned():
             instance_rel.recycle_resource()
+            add_admin_audit_record(
+                user=request.user.pk,
+                operation=OperationEnum.RECYCLE_RESOURCE,
+                target=OperationTarget.APP,
+                app_code=code,
+                module_name=module_name,
+                data_before=DataDetail(
+                    type=DataType.RAW_DATA,
+                    data=dict(
+                        instance=instance_rel.get_instance(),
+                        service=instance_rel.get_service(),
+                        plan=instance_rel.get_plan(),
+                    ),
+                ),
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

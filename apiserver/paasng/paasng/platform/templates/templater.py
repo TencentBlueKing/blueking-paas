@@ -53,7 +53,7 @@ class Templater:
         try:
             tmpl: Template = Template.objects.get(name=tmpl_name, type=type)
         except ObjectDoesNotExist:
-            raise TmplNotExists(f"Template<{tmpl_name}>, Type<{type}> does not exists")
+            raise TmplNotExists(f"Template <{tmpl_name}>, Type<{type}> does not exists")
         else:
             if region not in tmpl.enabled_regions:
                 raise TmplRegionNotSupported(f"Template <{tmpl.name}> does not support this region<{region}>")

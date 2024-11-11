@@ -19,23 +19,20 @@
 package subcmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "dev-launcher",
-	Short: "dev-launcher cli",
-	Long:  `Manage processes defined by app_desc, including reload, stop, getting status.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("dev-launcher manages processes defined by app_desc")
+var stopCmd = &cobra.Command{
+	Use:   "stop",
+	Short: "stop process.",
+	Long:  "stop process.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return launch.NewSupervisorCtl().Stop()
 	},
 }
 
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+func init() {
+	rootCmd.AddCommand(stopCmd)
 }

@@ -181,7 +181,7 @@ func (m DeployManager) generateProcfile(appDir string) error {
 //	oldDir string - the directory where old build dependent files are located
 //	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile"}
+	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile", "app_desc.yaml"}
 	rebuild := false
 
 	for _, fileName := range buildDependentFiles {

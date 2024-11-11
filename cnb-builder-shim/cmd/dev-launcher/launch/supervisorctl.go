@@ -79,6 +79,16 @@ if [ -S "$socket_file" ]; then
 fi
 `, supervisorDir, confFilePath)
 
+var stopScript = fmt.Sprintf(`#!/bin/bash
+
+socket_file="%[1]s/supervisor.sock"
+# 检查 supervisor 的 socket 文件是否存在
+if [ -S "$socket_file" ]; then
+  echo "stop all processes..."
+  supervisorctl -c %[2]s stop all
+fi
+`, supervisorDir, confFilePath)
+
 // ProcessConf is a process config
 type ProcessConf struct {
 	Process
@@ -135,7 +145,6 @@ func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
-
 	if err := ctl.refreshConf(conf); err != nil {
 		return err
 	}
@@ -176,6 +185,18 @@ func (ctl *SupervisorCtl) Status() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(statusScript)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+// stop all processes by running 'supervisorctl stop all'.
+func (ctl *SupervisorCtl) Stop() error {
+	cmd := exec.Command("bash")
+
+	cmd.Env = os.Environ()
+	cmd.Stdin = bytes.NewBufferString(stopScript)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 

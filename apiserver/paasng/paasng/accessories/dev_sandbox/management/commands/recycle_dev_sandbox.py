@@ -53,6 +53,6 @@ class Command(BaseCommand):
                 dev_sandbox_code=dev_sandbox.code,
                 owner=dev_sandbox.owner,
             )
-            if all or dev_sandbox.is_expired():
+            if all or dev_sandbox.should_recycle():
                 controller.delete()
                 dev_sandbox.delete()

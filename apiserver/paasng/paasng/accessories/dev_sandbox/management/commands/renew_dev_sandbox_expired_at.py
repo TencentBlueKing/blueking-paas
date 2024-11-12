@@ -47,7 +47,7 @@ class Command(BaseCommand):
             url = detail.urls.code_editor_health_url
             # 沙箱相关域名无法确定协议，因此全部遍历 http 和 https
             if check_alive(f"http://{url}") or check_alive(f"https://{url}"):
-                dev_sandbox.renew_expire_at()
+                dev_sandbox.renew_expired_at()
 
 
 # 通过 code_editor_health_url 检查沙箱是否存活

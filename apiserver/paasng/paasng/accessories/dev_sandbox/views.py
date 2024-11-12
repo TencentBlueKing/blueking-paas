@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict
 
 from bkpaas_auth.models import User
+from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -98,6 +99,9 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
         """部署开发沙箱"""
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
+
         app = self.get_application()
         module = self.get_module_via_path()
 
@@ -126,7 +130,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             code=dev_sandbox_code,
         )
         # 更新过期时间
-        dev_sandbox.renew_expire_at()
+        dev_sandbox.renew_expired_at()
 
         # 生成代码编辑器密码
         password = generate_password()
@@ -164,9 +168,12 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
+            # 除了沙箱已存在的情况，其它创建异常情况下，清理沙箱资源
+            controller.delete()
             dev_sandbox.delete()
             raise
 
@@ -246,6 +253,15 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
 
         return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
+
+    @swagger_auto_schema(tags=["开发沙箱"])
+    def pre_deploy_check(self, request, code):
+        """部署前确认是否可以部署"""
+        # 判断开发沙箱数量是否超过限制
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            return Response(data={"result": False})
+
+        return Response(data={"result": True})
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

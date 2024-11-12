@@ -214,7 +214,7 @@ class TestSvcDiscoveryFieldMultiManagers:
         sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
-            fieldmgr.ManagerType.WEB_FORM,
+            fieldmgr.FieldMgrName.WEB_FORM,
         )
         assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
 
@@ -316,7 +316,7 @@ class TestDomainResolutionFieldMultiManagers:
         sync_domain_resolution(
             bk_module,
             DomainResolutionEntity(nameservers=["8.8.8.8"], host_aliases=[]),
-            fieldmgr.ManagerType.WEB_FORM,
+            fieldmgr.FieldMgrName.WEB_FORM,
         )
         assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
 

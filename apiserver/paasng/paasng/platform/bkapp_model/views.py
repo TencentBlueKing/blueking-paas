@@ -126,7 +126,7 @@ class BkAppModelManifestsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         update_app_resource(application, module, manifest)
         try:
-            import_manifest(module, manifest, fieldmgr.ManagerType.APP_DESC)
+            import_manifest(module, manifest, fieldmgr.FieldMgrName.APP_DESC)
         except Exception as e:
             raise error_codes.IMPORT_MANIFEST_FAILED.f(str(e))
 
@@ -285,7 +285,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         svc_disc.refresh_from_db()
         # Set the field manager using the default module
         fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_SVC_DISCOVERY).set(
-            fieldmgr.ManagerType.WEB_FORM
+            fieldmgr.FieldMgrName.WEB_FORM
         )
 
         data = SvcDiscConfigSLZ(svc_disc).data
@@ -338,7 +338,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         domain_resolution.refresh_from_db()
         # Set the field manager using the default module
         fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_DOMAIN_RESOLUTION).set(
-            fieldmgr.ManagerType.WEB_FORM
+            fieldmgr.FieldMgrName.WEB_FORM
         )
 
         data = DomainResolutionSLZ(domain_resolution).data

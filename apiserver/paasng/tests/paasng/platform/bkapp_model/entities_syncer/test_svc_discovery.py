@@ -32,7 +32,7 @@ class Test__sync_svc_discovery:
         ret = sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api")]),
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
         svc_disc = SvcDiscConfigDB.objects.get(application=bk_module.application)
@@ -52,7 +52,7 @@ class Test__sync_svc_discovery:
                     SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api3"),
                 ]
             ),
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 3
@@ -67,7 +67,7 @@ class Test__sync_svc_discovery:
         ret = sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[]),
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert ret.deleted_num == 1
@@ -77,14 +77,14 @@ class Test__sync_svc_discovery:
         sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")]),
-            manager=fieldmgr.ManagerType.WEB_FORM,
+            manager=fieldmgr.FieldMgrName.WEB_FORM,
         )
         assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 1
 
         # Nothing happens when the value is notset and manager is different
-        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.ManagerType.APP_DESC)
+        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.FieldMgrName.APP_DESC)
         assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 1
 
         # The data should has been deleted
-        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.ManagerType.WEB_FORM)
+        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.FieldMgrName.WEB_FORM)
         assert not SvcDiscConfigDB.objects.filter(application=bk_module.application).exists()

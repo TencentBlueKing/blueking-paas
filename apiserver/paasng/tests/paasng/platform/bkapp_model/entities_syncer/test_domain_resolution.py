@@ -30,7 +30,7 @@ class Test__sync_domain_resolution:
         ret = sync_domain_resolution(
             bk_module,
             DomainResolution(nameservers=["127.0.0.1"], host_aliases=[HostAlias(ip="1.1.1.1", hostnames=["foo.com"])]),
-            fieldmgr.ManagerType.APP_DESC,
+            fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert ret.created_num == 1
@@ -54,7 +54,7 @@ class Test__sync_domain_resolution:
             DomainResolution(
                 nameservers=["8.8.8.8"], host_aliases=[HostAlias(ip="192.168.1.1", hostnames=["bar.com"])]
             ),
-            fieldmgr.ManagerType.APP_DESC,
+            fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert ret.created_num == 0
@@ -76,7 +76,7 @@ class Test__sync_domain_resolution:
         ret = sync_domain_resolution(
             bk_module,
             DomainResolution(nameservers=[], host_aliases=[]),
-            fieldmgr.ManagerType.APP_DESC,
+            fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert ret.deleted_num == 1

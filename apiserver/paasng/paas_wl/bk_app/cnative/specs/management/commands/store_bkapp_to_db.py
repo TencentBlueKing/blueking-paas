@@ -26,7 +26,7 @@ from rest_framework.serializers import ValidationError
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.management.base import BaseAppModelResourceCommand
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
-from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.bkapp_model.importer import import_manifest_yaml
 from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 from paasng.platform.modules.models import Module
@@ -112,4 +112,4 @@ class Command(BaseAppModelResourceCommand):
                 )
             )
         if not dry_run:
-            import_manifest_yaml(module=module, input_yaml_data=input_data, manager=fieldmgr.ManagerType.APP_DESC)
+            import_manifest_yaml(module=module, input_yaml_data=input_data, manager=FieldMgrName.APP_DESC)

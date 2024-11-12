@@ -61,7 +61,7 @@ class Test__sync_mounts:
                     source=VolumeSource(config_map=ConfigMapSource(name="nginx-foobar")),
                 )
             ],
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
         assert MountDB.objects.count() == 2
         assert ret.created_num == 1

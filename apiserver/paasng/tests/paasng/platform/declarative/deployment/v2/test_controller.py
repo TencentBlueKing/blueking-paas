@@ -188,7 +188,7 @@ class TestSvcDiscoveryFieldMultiManagers:
         sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
-            fieldmgr.ManagerType.WEB_FORM,
+            fieldmgr.FieldMgrName.WEB_FORM,
         )
         assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
 

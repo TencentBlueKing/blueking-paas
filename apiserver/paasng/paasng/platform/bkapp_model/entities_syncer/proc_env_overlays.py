@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def sync_env_overlays_replicas(
-    module: Module, overlay_replicas: List[ReplicasOverlay] | NotSetType, manager: fieldmgr.ManagerType
+    module: Module, overlay_replicas: List[ReplicasOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync replicas overlay data to db."""
     syncer = OverlayDataSyncer(
@@ -42,7 +42,7 @@ def sync_env_overlays_replicas(
 
 
 def sync_env_overlays_res_quotas(
-    module: Module, overlay_res_quotas: List[ResQuotaOverlay] | NotSetType, manager: fieldmgr.ManagerType
+    module: Module, overlay_res_quotas: List[ResQuotaOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync res_quota overlay data to db."""
     syncer = OverlayDataSyncer(
@@ -54,7 +54,7 @@ def sync_env_overlays_res_quotas(
 
 
 def sync_env_overlays_autoscalings(
-    module: Module, overlay_autoscalings: List[AutoscalingOverlay] | NotSetType, manager: fieldmgr.ManagerType
+    module: Module, overlay_autoscalings: List[AutoscalingOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync autoscaling overlay data to db model"""
 
@@ -113,12 +113,15 @@ class OverlayDataSyncer:
         self,
         module: Module,
         items: Iterable[Union[ReplicasOverlay, ResQuotaOverlay, AutoscalingOverlay]] | NotSetType,
-        manager: fieldmgr.ManagerType,
+        manager: fieldmgr.FieldMgrName,
     ) -> CommonSyncResult:
         """Sync overlay data to the db."""
         ret = CommonSyncResult()
+        respect_not_managed = False
         if isinstance(items, NotSetType):
             items = []
+            # Only consider records are "not-managed" when the input is not set.
+            respect_not_managed = True
 
         # Build the index of existing data first to clean data later.
         # Data structure: {(process name, environment name): pk}, contains not none
@@ -132,7 +135,9 @@ class OverlayDataSyncer:
                     continue
                 existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
 
-        not_managed_envs = self.get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
+        not_managed_envs = set()
+        if respect_not_managed:
+            not_managed_envs = self.get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
 
         for input_p in items:
             proc, env = input_p.process, input_p.env_name
@@ -156,11 +161,14 @@ class OverlayDataSyncer:
                 continue
 
             ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.empty_defaults_value)
+            # If the data is not set and the data has been reset, reset the field manager too.
+            if respect_not_managed:
+                fieldmgr.FieldManager(module, self.field_mgr_key_func(proc, env)).reset()
             ret.deleted_num += 1
         return ret
 
     def get_not_managed_proc_envs(
-        self, module: Module, manager: fieldmgr.ManagerType, proc_envs: List[Tuple[str, str]]
+        self, module: Module, manager: fieldmgr.FieldMgrName, proc_envs: List[Tuple[str, str]]
     ) -> Set[Tuple[str, str]]:
         """Get the environments that is not managed by the current manager."""
         not_managed_envs = set()

@@ -25,13 +25,13 @@ from .result import CommonSyncResult
 
 
 def sync_domain_resolution(
-    module: Module, domain_res: DomainResolution | NotSetType | None, manager: fieldmgr.ManagerType
+    module: Module, domain_res: DomainResolution | NotSetType | None, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync domain resolution relations to db model, existing data that is not in the input list may be removed.
 
     :param module: app module
     :param domain_res: DomainResolution entity
-    :param manger: The manager performing this action
+    :param manager: The manager performing this action
     :return: sync result
     """
 
@@ -45,12 +45,13 @@ def sync_domain_resolution(
     if not field_mgr.is_managed_by(manager) and domain_res == NOTSET:
         return ret
 
-    # Remove the db obj if no valid data is provided
-    if (
-        isinstance(domain_res, NotSetType)
-        or domain_res is None
-        or not (domain_res.nameservers or domain_res.host_aliases)
-    ):
+    # Remove the db obj if the value is not set or empty
+    if isinstance(domain_res, NotSetType):
+        # Reset the field manager when the data is not set
+        field_mgr.reset()
+        ret.deleted_num, _ = DomainResolutionDB.objects.filter(application=module.application).delete()
+        return ret
+    if domain_res is None or not (domain_res.nameservers or domain_res.host_aliases):
         ret.deleted_num, _ = DomainResolutionDB.objects.filter(application=module.application).delete()
         return ret
 

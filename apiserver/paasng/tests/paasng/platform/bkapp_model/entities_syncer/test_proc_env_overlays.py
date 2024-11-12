@@ -18,6 +18,7 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.processes.models import ProcessSpec
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import (
@@ -33,6 +34,7 @@ from paasng.platform.bkapp_model.entities_syncer import (
     sync_env_overlays_res_quotas,
 )
 from paasng.platform.bkapp_model.models import ProcessSpecEnvOverlay
+from paasng.utils.structure import NOTSET
 
 pytestmark = pytest.mark.django_db
 
@@ -58,40 +60,54 @@ def _setup(bk_module, proc_web, proc_celery):
     )
     # Set the record to be manged by APP_DESC
     for proc, env in [(proc_web.name, "stag"), (proc_celery.name, "prod")]:
-        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_replicas(proc, env)).set(fieldmgr.ManagerType.APP_DESC)
-        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_res_quotas(proc, env)).set(fieldmgr.ManagerType.APP_DESC)
-        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_autoscaling(proc, env)).set(fieldmgr.ManagerType.APP_DESC)
+        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_replicas(proc, env)).set(fieldmgr.FieldMgrName.APP_DESC)
+        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_res_quotas(proc, env)).set(fieldmgr.FieldMgrName.APP_DESC)
+        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_autoscaling(proc, env)).set(fieldmgr.FieldMgrName.APP_DESC)
 
 
 class Test__sync_env_overlays_replicas:
-    def test_normal(self, bk_module, proc_web, proc_celery):
+    def test_integrated(self, bk_module, proc_web, proc_celery):
         ret = sync_env_overlays_replicas(
             bk_module,
             [
-                ReplicasOverlay(env_name="prod", process="web", count="2"),
-                ReplicasOverlay(env_name="prod", process="worker", count="2"),
+                ReplicasOverlay(env_name="prod", process="web", count=2),
+                ReplicasOverlay(env_name="prod", process="worker", count=2),
             ],
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
 
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").target_replicas == 2
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").target_replicas == 2
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="stag").target_replicas is None
+        assert get_overlay_obj(proc_web, "prod").target_replicas == 2
+        assert get_overlay_obj(proc_celery, "prod").target_replicas == 2
+        assert get_overlay_obj(proc_web, "stag").target_replicas is None
+
+        # Set "web" process's field to be manged by a different manager and check if
+        # the record should stay intact when getting an `NOTSET` input.
+        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_replicas(proc_web.name, "prod")).set(
+            fieldmgr.FieldMgrName.WEB_FORM
+        )
+        sync_env_overlays_replicas(bk_module, NOTSET, manager=fieldmgr.FieldMgrName.APP_DESC)
+        assert get_overlay_obj(proc_web, "prod").target_replicas == 2
+        assert get_overlay_obj(proc_celery, "prod").target_replicas is None
+        assert get_overlay_obj(proc_web, "stag").target_replicas is None
+
+        # Manually pass an empty list should reset all records
+        sync_env_overlays_replicas(bk_module, [], manager=fieldmgr.FieldMgrName.APP_DESC)
+        assert get_overlay_obj(proc_web, "prod").target_replicas is None
 
     def test_clean_empty(self, bk_module):
         old_cnt = ProcessSpecEnvOverlay.objects.count()
         sync_env_overlays_replicas(
             bk_module,
-            [ReplicasOverlay(env_name="prod", process="web", count="2")],
-            manager=fieldmgr.ManagerType.APP_DESC,
+            [ReplicasOverlay(env_name="prod", process="web", count=2)],
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
         assert ProcessSpecEnvOverlay.objects.count() == old_cnt + 1
 
         # This should reset the "target_replicas" of all records to None
-        sync_env_overlays_replicas(bk_module, [], manager=fieldmgr.ManagerType.APP_DESC)
+        sync_env_overlays_replicas(bk_module, [], manager=fieldmgr.FieldMgrName.APP_DESC)
         clean_empty_overlays(bk_module)
         assert ProcessSpecEnvOverlay.objects.count() == old_cnt
 
@@ -104,21 +120,15 @@ class Test__sync_env_overlays_res_quotas:
                 ResQuotaOverlay(env_name="prod", process="web", plan=ResQuotaPlan.P_4C4G),
                 ResQuotaOverlay(env_name="prod", process="worker", plan=ResQuotaPlan.P_4C4G),
             ],
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
 
-        assert (
-            ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").plan_name
-            == ResQuotaPlan.P_4C4G
-        )
-        assert (
-            ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").plan_name
-            == ResQuotaPlan.P_4C4G
-        )
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="stag").plan_name is None
+        assert get_overlay_obj(proc_web, "prod").plan_name == ResQuotaPlan.P_4C4G
+        assert get_overlay_obj(proc_celery, "prod").plan_name == ResQuotaPlan.P_4C4G
+        assert get_overlay_obj(proc_web, "stag").plan_name is None
 
 
 class Test__sync_env_overlays_autoscalings:
@@ -131,21 +141,26 @@ class Test__sync_env_overlays_autoscalings:
                     env_name="prod", process="worker", min_replicas=2, max_replicas=5, policy="default"
                 ),
             ],
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1
         assert ret.deleted_num == 1
 
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="prod").autoscaling
-        assert ProcessSpecEnvOverlay.objects.get(
-            proc_spec=proc_web, environment_name="prod"
-        ).scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=2, policy="default")
+        assert get_overlay_obj(proc_web, "prod").autoscaling
+        assert get_overlay_obj(proc_web, "prod").scaling_config == AutoscalingConfig(
+            min_replicas=1, max_replicas=2, policy="default"
+        )
 
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_celery, environment_name="prod").autoscaling
-        assert ProcessSpecEnvOverlay.objects.get(
-            proc_spec=proc_celery, environment_name="prod"
-        ).scaling_config == AutoscalingConfig(min_replicas=2, max_replicas=5, policy="default")
+        assert get_overlay_obj(proc_celery, "prod").autoscaling
+        assert get_overlay_obj(proc_celery, "prod").scaling_config == AutoscalingConfig(
+            min_replicas=2, max_replicas=5, policy="default"
+        )
 
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="stag").autoscaling is None
-        assert ProcessSpecEnvOverlay.objects.get(proc_spec=proc_web, environment_name="stag").scaling_config is None
+        assert get_overlay_obj(proc_web, "stag").autoscaling is None
+        assert get_overlay_obj(proc_web, "stag").scaling_config is None
+
+
+def get_overlay_obj(proc_spec: ProcessSpec, env_name: str):
+    """A helper function to get the overlay object."""
+    return ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=env_name)

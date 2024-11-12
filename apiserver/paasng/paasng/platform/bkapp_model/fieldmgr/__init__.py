@@ -20,7 +20,7 @@ sources. It tries to produce the best result for the update by introducing and t
 a "manager" for each field.
 """
 
-from .constants import ManagerType
+from .constants import FieldMgrName
 from .fields import (
     F_DOMAIN_RESOLUTION,
     F_SVC_DISCOVERY,
@@ -32,7 +32,7 @@ from .fields import (
 from .managers import FieldManager
 
 __all__ = [
-    "ManagerType",
+    "FieldMgrName",
     "F_SVC_DISCOVERY",
     "F_DOMAIN_RESOLUTION",
     "FieldManager",

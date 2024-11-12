@@ -15,48 +15,61 @@
 # to the current version of the project delivered to anyone in the future.
 import pytest
 
-from paasng.platform.bkapp_model.fieldmgr.constants import ManagerType
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.fieldmgr.fields import (
     F_DOMAIN_RESOLUTION,
     F_SVC_DISCOVERY,
-    ManagedFields,
-    ManagedFieldsRecord,
+    ManagerFieldsRow,
+    ManagerFieldsRowGroup,
 )
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 
 
 class TestManagedFields:
-    def test_start_from_empty(self, bk_module):
-        mf = ManagedFields(bk_module, [])
+    def test_start_from_empty(self):
+        mf = ManagerFieldsRowGroup([])
         assert mf.get_manager(F_SVC_DISCOVERY) is None
 
         # Set the manager and check
-        mf.set_manager(F_SVC_DISCOVERY, ManagerType.WEB_FORM)
-        assert mf.get_manager(F_SVC_DISCOVERY) == ManagerType.WEB_FORM
-        assert len(mf.get_dirty_records()) == 1
+        mf.set_manager(F_SVC_DISCOVERY, FieldMgrName.WEB_FORM)
+        assert mf.get_manager(F_SVC_DISCOVERY) == FieldMgrName.WEB_FORM
+        assert len(mf.get_updated_rows()) == 1
 
         # Change the manager and check again
-        mf.set_manager(F_SVC_DISCOVERY, ManagerType.APP_DESC)
-        assert mf.get_manager(F_SVC_DISCOVERY) == ManagerType.APP_DESC
-        assert len(mf.get_dirty_records()) == 2
+        mf.set_manager(F_SVC_DISCOVERY, FieldMgrName.APP_DESC)
+        assert mf.get_manager(F_SVC_DISCOVERY) == FieldMgrName.APP_DESC
+        assert len(mf.get_updated_rows()) == 2
 
-    def test_existed_records(self, bk_module):
-        mf = ManagedFields(
-            bk_module,
-            [
-                ManagedFieldsRecord(ManagerType.WEB_FORM, [F_SVC_DISCOVERY]),
-                ManagedFieldsRecord(ManagerType.APP_DESC, [F_DOMAIN_RESOLUTION]),
-            ],
+    # The order of the rows should not matter
+    @pytest.mark.parametrize("reverse_rows", [False, True])
+    def test_existed_rows(self, reverse_rows):
+        rows = [
+            ManagerFieldsRow(FieldMgrName.WEB_FORM, [F_SVC_DISCOVERY]),
+            ManagerFieldsRow(FieldMgrName.APP_DESC, [F_DOMAIN_RESOLUTION]),
+        ]
+        mf = ManagerFieldsRowGroup(
+            rows if not reverse_rows else list(reversed(rows)),
         )
-        assert mf.get_manager(F_SVC_DISCOVERY) == ManagerType.WEB_FORM
-        assert len(mf.get_dirty_records()) == 0
+        assert mf.get_manager(F_SVC_DISCOVERY) == FieldMgrName.WEB_FORM
+        assert len(mf.get_updated_rows()) == 0
 
         # Set the manager to the same value should have no effect
-        mf.set_manager(F_SVC_DISCOVERY, ManagerType.WEB_FORM)
-        assert len(mf.get_dirty_records()) == 0
+        mf.set_manager(F_SVC_DISCOVERY, FieldMgrName.WEB_FORM)
+        assert len(mf.get_updated_rows()) == 0
 
         # Set the manager to a different value
-        mf.set_manager(F_SVC_DISCOVERY, ManagerType.APP_DESC)
-        assert mf.get_manager(F_SVC_DISCOVERY) == ManagerType.APP_DESC
-        assert len(mf.get_dirty_records()) == 2
+        mf.set_manager(F_SVC_DISCOVERY, FieldMgrName.APP_DESC)
+        assert mf.get_manager(F_SVC_DISCOVERY) == FieldMgrName.APP_DESC
+        assert len(mf.get_updated_rows()) == 2
+
+    def test_reset_manager(self):
+        rows = [
+            ManagerFieldsRow(FieldMgrName.WEB_FORM, [F_SVC_DISCOVERY]),
+            ManagerFieldsRow(FieldMgrName.APP_DESC, [F_DOMAIN_RESOLUTION]),
+        ]
+        mf = ManagerFieldsRowGroup(rows)
+        assert mf.get_manager(F_DOMAIN_RESOLUTION) == FieldMgrName.APP_DESC
+
+        mf.reset_manager(F_DOMAIN_RESOLUTION)
+        assert mf.get_manager(F_DOMAIN_RESOLUTION) is None

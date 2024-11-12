@@ -23,9 +23,9 @@ from django.db.transaction import atomic
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paas_wl.bk_app.processes.constants import ProbeType
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import EnvVar, EnvVarOverlay, Process, v1alpha2
 from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -99,7 +99,7 @@ class DeploymentDeclarativeController:
         import_bkapp_spec_entity(
             self.module,
             spec_entity=v1alpha2.BkAppSpec(**sanitize_bkapp_spec_to_dict(desc_obj.spec)),
-            manager=fieldmgr.ManagerType.APP_DESC,
+            manager=FieldMgrName.APP_DESC,
         )
         if hooks := desc_obj.get_deploy_hooks():
             self.deployment.update_fields(hooks=hooks)
@@ -120,7 +120,7 @@ class DeploymentDeclarativeController:
         # 导入服务发现配置
         # Warning: SvcDiscConfig 是 Application 全局的, 多模块配置不一样时会互相覆盖
         # (这与普通应用原来的行为不一致, 但目前暂无更好的解决方案)
-        sync_svc_discovery(module=self.module, svc_disc=desc.spec.svc_discovery, manager=fieldmgr.ManagerType.APP_DESC)
+        sync_svc_discovery(module=self.module, svc_disc=desc.spec.svc_discovery, manager=FieldMgrName.APP_DESC)
 
         # 更新进程探针配置
         self._update_probes(desc.get_processes())

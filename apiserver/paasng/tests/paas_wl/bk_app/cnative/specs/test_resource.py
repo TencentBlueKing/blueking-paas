@@ -147,9 +147,10 @@ class TestBkAppClusterOperator:
         assert metadata.pop.call_count == 1
 
 
+@pytest.mark.skip_when_no_crds()
 class TestBkAppResourceByEnvLister:
-    @pytest.fixture
-    def _apply_bkapp(self, bk_app, bk_stag_env):
+    @pytest.mark.usefixtures("_with_stag_ns")
+    def test_list(self, bk_app, bk_stag_env):
         manifest = {
             "apiVersion": "paas.bk.tencent.com/v1alpha2",
             "kind": "BkApp",
@@ -169,8 +170,6 @@ class TestBkAppResourceByEnvLister:
 
         deploy(bk_stag_env, manifest)
 
-    @pytest.mark.usefixtures("_with_stag_ns", "_apply_bkapp")
-    def test_list(self, bk_app, bk_stag_env):
         res = BkAppResourceByEnvLister(bk_app, bk_stag_env.environment).list()[0]
         assert res.metadata.name == bk_app.code
         assert res.spec.processes[0].name == "web"

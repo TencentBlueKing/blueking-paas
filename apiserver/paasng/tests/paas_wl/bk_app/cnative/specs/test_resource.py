@@ -22,12 +22,9 @@ from unittest import mock
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.cnative.specs.constants import (
-    DeployStatus,
-    MResConditionType,
-    MResPhaseType,
-)
+from paas_wl.bk_app.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.bk_app.cnative.specs.resource import (
+    BkAppResourceByEnvLister,
     MresConditionParser,
     create_or_update_bkapp_with_retries,
     deploy,
@@ -91,7 +88,13 @@ class TestBkAppClusterOperator:
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha2",
             "kind": "BkApp",
-            "metadata": {"name": bk_app.code},
+            "metadata": {
+                "name": bk_app.code,
+                "annotations": {
+                    "bkapp.paas.bk.tencent.com/code": bk_app.code,
+                    "bkapp.paas.bk.tencent.com/module-name": bk_stag_env.module.name,
+                },
+            },
             "spec": {
                 "build": {"image": "nginx:latest"},
                 "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
@@ -142,3 +145,33 @@ class TestBkAppClusterOperator:
 
         assert mocked_create_or_update.call_count == 2
         assert metadata.pop.call_count == 1
+
+
+class TestBkAppResourceByEnvLister:
+    @pytest.fixture
+    def _apply_bkapp(self, bk_app, bk_stag_env):
+        manifest = {
+            "apiVersion": "paas.bk.tencent.com/v1alpha2",
+            "kind": "BkApp",
+            "metadata": {
+                "name": bk_app.code,
+                "annotations": {
+                    "bkapp.paas.bk.tencent.com/code": bk_app.code,
+                    "bkapp.paas.bk.tencent.com/module-name": bk_stag_env.module.name,
+                },
+            },
+            "spec": {
+                "build": {"image": "nginx:latest"},
+                "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
+                "hooks": {"preRelease": {"command": ["/bin/echo"], "args": ["Hello"]}},
+            },
+        }
+
+        deploy(bk_stag_env, manifest)
+
+    @pytest.mark.usefixtures("_with_stag_ns", "_apply_bkapp")
+    def test_list(self, bk_app, bk_stag_env):
+        res = BkAppResourceByEnvLister(bk_app, bk_stag_env.environment).list()[0]
+        assert res.metadata.name == bk_app.code
+        assert res.spec.processes[0].name == "web"
+        assert res.spec.processes[0].resQuotaPlan == "default"

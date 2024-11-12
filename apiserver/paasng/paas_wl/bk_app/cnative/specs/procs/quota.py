@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from attrs import define
 
 from paas_wl.bk_app.cnative.specs.constants import (
@@ -45,6 +46,7 @@ PLAN_TO_LIMIT_QUOTA_MAP = {
 # 资源配额方案到资源请求的映射表
 # CPU REQUEST = 200m
 # MEMORY REQUEST 的计算规则: 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
+# 云原生应用实际的 requests 配置策略在 operator 中实现, 这里的值并非实际生效值
 PLAN_TO_REQUEST_QUOTA_MAP = {
     ResQuotaPlan.P_DEFAULT: ResourceQuota(
         cpu=DEFAULT_PROC_CPU_REQUEST,

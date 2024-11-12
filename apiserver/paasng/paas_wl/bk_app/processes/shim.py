@@ -65,8 +65,9 @@ class _CNativeProcessSpec:
     def __attrs_post_init__(self):
         self.autoscaling = bool(self.scaling_config)
 
-        self.resource_limit = asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(self.plan_name)])
+        # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
         self.resource_requests = asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(self.plan_name)])
+        self.resource_limit = asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(self.plan_name)])
         self.resource_limit_quota = {
             "cpu": int(parse_quantity(self.resource_limit["cpu"]) * 1000),
             "memory": int(parse_quantity(self.resource_limit["memory"]) / (1024 * 1024)),
@@ -214,7 +215,7 @@ class ProcessManager:
             return []
 
         specs = []
-        for spec in _build_cnative_process_specs(res, self.env.environment):
+        for spec in _gen_cnative_process_specs(res, self.env.environment):
             if target_status and spec.target_status != target_status:
                 continue
             specs.append(asdict(spec))
@@ -222,25 +223,25 @@ class ProcessManager:
 
 
 def list_cnative_module_processes_specs(app: Application, environment: str) -> dict[str, list[dict]]:
-    """根据云原生应用的运行环境, 查询其线上进程的 specs
+    """根据云原生应用的运行环境, 查询其线上所有模块的进程 specs
 
     :param app: 应用
     :param environment: 运行环境
-    :return: dict {模块名: 进程 spec 列表}
+    :return: dict {module_name: 进程 specs}
     """
     module_processes_specs = {}
 
     res_list: list[BkAppResource] = BkAppResourceByEnvLister(app, environment).list()
     for res in res_list:
         module_processes_specs[res.metadata.annotations[MODULE_NAME_ANNO_KEY]] = [
-            asdict(spec) for spec in _build_cnative_process_specs(res, environment)
+            asdict(spec) for spec in _gen_cnative_process_specs(res, environment)
         ]
 
     return module_processes_specs
 
 
-def _build_cnative_process_specs(res: BkAppResource, environment: str) -> list[_CNativeProcessSpec]:
-    """解析线上 BkAppResource 模型, 构建云原生应用的进程 spec 列表
+def _gen_cnative_process_specs(res: BkAppResource, environment: str) -> list[_CNativeProcessSpec]:
+    """解析线上 BkAppResource 模型, 生成云原生应用的进程 spec 列表
 
     :param res: 线上的 BkAppResource 模型
     :param environment: 运行环境

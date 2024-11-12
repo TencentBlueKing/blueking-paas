@@ -820,7 +820,7 @@ class StubConfigSLZ(serializers.Serializer):
 
 class OperationRecordSLZ(serializers.ModelSerializer):
     display_text = serializers.CharField(source="get_display_text", read_only=True)
-    operator_username = serializers.CharField(read_only=True)
+    operator = serializers.CharField(source="operator_username", read_only=True)
 
     class Meta:
         model = OperationRecord
@@ -830,7 +830,7 @@ class OperationRecordSLZ(serializers.ModelSerializer):
 class OperationRecordFilterSLZ(serializers.Serializer):
     subject = serializers.ChoiceField(choices=SubjectTypes.get_choices(), help_text="操作对象", required=False)
     action = serializers.ChoiceField(choices=ActionTypes.get_choices(), help_text="操作类型", required=False)
-    operator_username = serializers.CharField(required=False, help_text="操作人")
+    operator = serializers.CharField(required=False, help_text="操作人")
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
     end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
 

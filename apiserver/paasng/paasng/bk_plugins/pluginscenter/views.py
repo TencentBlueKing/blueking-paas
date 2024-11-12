@@ -544,7 +544,7 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
             queryset = queryset.filter(subject=subject)
         if action := query_params.get("action"):
             queryset = queryset.filter(action=action)
-        if operator_username := query_params.get("operator_username"):
+        if operator_username := query_params.get("operator"):
             operator = user_id_encoder.encode(settings.USER_TYPE, operator_username)
             queryset = queryset.filter(operator=operator)
         if start_time := query_params.get("start_time"):

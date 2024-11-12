@@ -99,7 +99,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
         """部署开发沙箱"""
-        if DevSandbox.objects.all().count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
 
         app = self.get_application()
@@ -256,7 +256,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     def pre_deploy_check(self, request, code):
         """部署前确认是否可以部署"""
         # 判断开发沙箱数量是否超过限制
-        if DevSandbox.objects.all().count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             return Response(data={"result": False})
 
         return Response(data={"result": True})

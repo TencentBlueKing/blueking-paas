@@ -281,10 +281,11 @@ export default {
   },
   methods: {
     ensureHttpProtocol(url) {
+      const protocol = window.location.protocol ?? 'http:';
       const protocolPattern = /^(https?:\/\/)/i;
-      // 如果 URL 没有协议，则在添加 "http://"
+      // 如果 URL 没有协议，则根据当前环境协议决定
       if (!protocolPattern.test(url)) {
-        return `http://${url}`;
+        return `${protocol}//${url}`;
       }
       return url;
     },
@@ -384,7 +385,7 @@ export default {
     // 获取当前沙箱进程状态
     async getSandboxStatus() {
       try {
-        const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}processes/status`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}processes/status`);
         const res = await this.executeRequest(url, 'get');
         this.processInfo = res.status || {};
         if (!!Object.keys(this.processInfo).length) {
@@ -402,7 +403,7 @@ export default {
     },
     // 获取沙箱进程列表
     async getSandboxProcesses() {
-      const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}processes/list`);
+      const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}processes/list`);
       const res = await this.executeRequest(url, 'get');
       this.processData = res.processes;
     },
@@ -422,7 +423,7 @@ export default {
       this.buildStatus = '';
       try {
         this.switchLogTab();
-        const url = this.ensureHttpProtocol(`http://${this.sandboxData.urls?.devserver_url}deploys`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}deploys`);
         const res = await this.executeRequest(url, 'post');
         this.deployId = res.deployID;
         // 如果tab为折叠状态时，运行需打开

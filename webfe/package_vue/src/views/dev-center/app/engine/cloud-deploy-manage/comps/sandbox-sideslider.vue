@@ -12,6 +12,7 @@
           <bk-button
             :theme="'primary'"
             text
+            @click="toSandboxGuide"
           >
             {{ $t('沙箱开发指引') }}
             <i class="paasng-icon paasng-jump-link"></i>
@@ -224,6 +225,10 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 沙箱开发指引
+    toSandboxGuide() {
+      window.open(this.GLOBAL.DOC.SANDBOX_DEVELOPMENT_GUIDE, '_blank');
     },
   },
 };

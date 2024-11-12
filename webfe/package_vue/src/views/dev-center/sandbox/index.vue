@@ -68,7 +68,7 @@
             </div>
           </bk-alert>
         </div>
-        <section :class="['sandbox-editor', { collapse: !isCollapse }]">
+        <section :class="['sandbox-editor', { collapse: !isCollapse }, { 'is-footer': isLoadingSandbox }]">
           <bk-resize-layout
             placement="right"
             :min="360"
@@ -343,11 +343,11 @@ export default {
           moduleId: this.module,
         });
         this.sandboxData = res;
-        this.$nextTick(() => {
+        setTimeout(() => {
           if (this.isLoadingSandbox) {
             this.getSandboxStatus();
           }
-        });
+        }, 1000);
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -592,7 +592,10 @@ export default {
       }
     }
     .sandbox-editor {
-      height: calc(100vh - 236px);
+      height: calc(100vh - 192px);
+      &.is-footer {
+        height: calc(100vh - 236px);
+      }
       margin: 0 24px;
       &.collapse {
         margin-right: 0;

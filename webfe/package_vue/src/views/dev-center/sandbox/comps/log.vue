@@ -50,7 +50,9 @@ export default {
   },
   computed: {
     isEmpty() {
-      return !this.buildLog.length && this.runLog === null;
+      const isBuildLogEmpty = this.buildLog.length === 0;
+      const isRunLogEmpty = this.runLog === null || this.runLog === '';
+      return isBuildLogEmpty && isRunLogEmpty;
     },
   },
 };

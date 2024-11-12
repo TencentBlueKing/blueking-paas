@@ -93,7 +93,7 @@ SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 # 沙箱相关配置
 # ---------------
 
-# dev sandbox 中 devserver 的监听地址
+# dev sandbox 中 devserver 的监听端口
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
 # 沙箱镜像
 DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")

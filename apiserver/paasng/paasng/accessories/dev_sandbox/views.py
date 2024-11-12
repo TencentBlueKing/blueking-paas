@@ -168,9 +168,11 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # 开发沙箱已存在,只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
+            # 除了沙箱已存在的情况，其它创建异常情况下，清理沙箱资源
             controller.delete()
             dev_sandbox.delete()
             raise

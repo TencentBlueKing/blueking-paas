@@ -81,7 +81,6 @@ class TestDevSandboxSLZ:
                                     {"containerPort": settings.CONTAINER_PORT},
                                 ],
                                 "readinessProbe": {
-                                    "successThreshold": 3,
                                     "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
                                 },
                                 "resources": {
@@ -130,7 +129,6 @@ class TestDevSandboxSLZ:
                                     {"containerPort": settings.CONTAINER_PORT},
                                 ],
                                 "readinessProbe": {
-                                    "successThreshold": 3,
                                     "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
                                 },
                                 "resources": {
@@ -356,7 +354,6 @@ class TestCodeEditorSLZ:
                                     {"containerPort": settings.CODE_EDITOR_PORT},
                                 ],
                                 "readinessProbe": {
-                                    "successThreshold": 3,
                                     "httpGet": {"port": settings.CODE_EDITOR_PORT, "path": "/healthz"},
                                 },
                                 "resources": {

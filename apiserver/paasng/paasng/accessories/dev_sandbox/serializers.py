@@ -33,11 +33,11 @@ class DevSandboxDetailSLZ(serializers.Serializer):
     token = serializers.CharField(help_text="访问 dev sandbox 中 devserver 服务的 token")
     status = serializers.ChoiceField(choices=HealthPhase.get_django_choices(), help_text="dev sandbox 的运行状态")
 
-    def get_app_url(self, obj):
+    def get_app_url(self, obj) -> str:
         # 拼接 app_url
         return f"{obj['url']}/app/"
 
-    def get_devserver_url(self, obj):
+    def get_devserver_url(self, obj) -> str:
         # 拼接 devserver_url
         return f"{obj['url']}/devserver/"
 

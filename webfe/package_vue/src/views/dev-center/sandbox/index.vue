@@ -281,10 +281,11 @@ export default {
   },
   methods: {
     ensureHttpProtocol(url) {
+      const protocol = window.location.protocol ?? 'http:';
       const protocolPattern = /^(https?:\/\/)/i;
-      // 如果 URL 没有协议，则在添加 "http://"
+      // 如果 URL 没有协议，则根据当前环境协议决定
       if (!protocolPattern.test(url)) {
-        return `http://${url}`;
+        return `${protocol}//${url}`;
       }
       return url;
     },

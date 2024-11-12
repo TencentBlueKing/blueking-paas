@@ -14,7 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from attrs import define
 
 from paas_wl.bk_app.cnative.specs.constants import (

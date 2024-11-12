@@ -20,6 +20,7 @@ import logging
 from typing import Dict, List, Optional
 
 from attrs import define
+from django.utils.functional import cached_property
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
@@ -35,12 +36,14 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.infras.resources.base import base, crd
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.networking.constants import ExposedTypeName
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +209,41 @@ class MresConditionParser:
             if condition.type == type_:
                 return condition
         return None
+
+
+class BkAppResourceByEnvLister:
+    """List the application's model resources"""
+
+    def __init__(self, application: Application, environment: str):
+        self.application = application
+        self.environment = environment
+        self.module_envs = application.envs.filter(environment=environment)
+
+    @cached_property
+    def cluster_name(self):
+        """应用所在集群名
+
+        Note: 云原生应用仅支持部署在单集群下, 否则 paas_wl.bk_app.processes.watch.ProcInstByEnvListWatcher 无法正常 list/watch
+        """
+        for env in self.module_envs:
+            return EnvClusterService(env).get_cluster_name()
+        return None
+
+    @cached_property
+    def namespace(self):
+        """应用所在命名空间
+
+        Note: 云原生应用仅支持部署在单集群下, 否则 paas_wl.bk_app.processes.watch.ProcInstByEnvListWatcher 无法正常 list/watch
+        """
+        for env in self.module_envs:
+            return env.wl_app.namespace
+        return None
+
+    def list(self) -> list[BkAppResource]:
+        """list the application's model resources in given cluster and namespace"""
+        with get_client_by_cluster_name(self.cluster_name) as client:
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).ops_batch.list(namespace=self.namespace)
+        return [BkAppResource(**res) for res in data.items]
 
 
 def _need_exposed_services(res: BkAppResource) -> bool:

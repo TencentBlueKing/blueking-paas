@@ -20,6 +20,8 @@ from typing import Dict, List, Literal
 
 import cattr
 import semver
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from django.db.models import Case, IntegerField, Value, When
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
@@ -531,6 +533,29 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
     def get_queryset(self):
         plugin = self.get_plugin_instance()
         return self.queryset.filter(plugin=plugin)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        slz = serializers.OperationRecordFilterSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
+
+        if subject := query_params.get("subject"):
+            queryset = queryset.filter(subject=subject)
+        if action := query_params.get("action"):
+            queryset = queryset.filter(action=action)
+        if operator_username := query_params.get("operator"):
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator_username)
+            queryset = queryset.filter(operator=operator)
+        if start_time := query_params.get("start_time"):
+            queryset = queryset.filter(created__gte=start_time)
+        if end_time := query_params.get("end_time"):
+            queryset = queryset.filter(created__lte=end_time)
+        return queryset
+
+    @swagger_auto_schema(query_serializer=serializers.OperationRecordFilterSLZ)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 @method_decorator(

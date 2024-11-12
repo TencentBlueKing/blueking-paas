@@ -68,7 +68,7 @@ class RepoController(Protocol):
         :param local_path: 本地路径
         :param version_info: 指定版本信息
         :param try_to_preserve_meta_info: 是否尝试保留源码元信息(.git 文件夹)，RepoController 实现比较多样，例如 gitee 是无法做到保留元信息，
-        因此该参数为 try_to_preserve_meta_info 意为尝试保留，能否保留需要看具体实现是否支持
+        因此该参数为 try_to_preserve_meta_info 意为尝试保留，能否保留需要看具体实现是否支持。暂时主要用途在沙箱开发环境的代码编辑器
         """
 
     def build_url(self, version_info: VersionInfo) -> str:

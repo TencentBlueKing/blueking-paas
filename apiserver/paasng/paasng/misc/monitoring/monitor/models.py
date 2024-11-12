@@ -82,7 +82,7 @@ class AppDashboard(AuditedModel):
     application = models.ForeignKey(
         "applications.Application", on_delete=models.CASCADE, db_constraint=False, related_name="dashboards"
     )
-    name = models.CharField(max_length=64, unique=True, help_text="仪表盘名称，如：bksaas/framework-python")
+    name = models.CharField(max_length=64, help_text="仪表盘名称，如：bksaas/framework-python")
     display_name = models.CharField(max_length=512, help_text="仪表盘展示名称，如：Python 开发框架内置仪表盘")
     template_version = models.CharField(max_length=32, help_text="模板版本更新时，可以根据该字段作为批量刷新仪表盘")
     language = models.CharField(verbose_name="仪表盘所属语言", max_length=32)

@@ -74,6 +74,10 @@ func New(lg *logr.Logger) (*WebServer, error) {
 		AllowCredentials: corsConfig.AllowCredentials, // 凭证共享
 		MaxAge:           12 * time.Hour,              // 预检请求缓存时间
 	}))
+	// 添加健康检查接口，不需要 token 验证
+	r.GET("/healthz", HealthzHandler())
+
+	// 添加 token 验证中间件
 	r.Use(tokenAuthMiddleware(cfg.Token))
 
 	s := &WebServer{
@@ -83,7 +87,6 @@ func New(lg *logr.Logger) (*WebServer, error) {
 		ch:  make(chan devsandbox.AppReloadEvent),
 		env: cfg,
 	}
-
 	mgr := service.NewDeployManager()
 	r.POST("/deploys", DeployHandler(s, mgr))
 	r.GET("/deploys/:deployID/results", ResultHandler(mgr))
@@ -256,6 +259,13 @@ func ProcessListHandler() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"processes": appDesc.Module.Processes})
+	}
+}
+
+// HealthzHandler ...
+func HealthzHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "active"})
 	}
 }
 

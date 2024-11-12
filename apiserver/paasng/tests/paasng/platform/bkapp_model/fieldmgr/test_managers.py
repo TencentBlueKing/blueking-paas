@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 import pytest
 
-from paasng.platform.bkapp_model.fieldmgr.constants import ManagerType
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.fieldmgr.fields import F_SVC_DISCOVERY
 from paasng.platform.bkapp_model.fieldmgr.managers import FieldManager
 
@@ -27,11 +27,14 @@ class TestFieldManager:
         m = FieldManager(bk_module, F_SVC_DISCOVERY)
         assert m.get() is None
 
-        m.set(ManagerType.WEB_FORM)
-        assert m.get() == ManagerType.WEB_FORM
-        assert m.is_managed_by(ManagerType.WEB_FORM)
+        m.set(FieldMgrName.WEB_FORM)
+        assert m.get() == FieldMgrName.WEB_FORM
+        assert m.is_managed_by(FieldMgrName.WEB_FORM)
 
         # Initialize the manager again to check the management status written before
         # is persistent.
         m2 = FieldManager(bk_module, F_SVC_DISCOVERY)
-        assert m2.is_managed_by(ManagerType.WEB_FORM)
+        assert m2.is_managed_by(FieldMgrName.WEB_FORM)
+
+        m2.reset()
+        assert m2.get() is None

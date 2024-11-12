@@ -20,7 +20,6 @@ from typing import Dict
 import yaml
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import v1alpha2 as v1alpha2_entity
 from paasng.platform.bkapp_model.entities_syncer import (
     clean_empty_overlays,
@@ -37,6 +36,7 @@ from paasng.platform.bkapp_model.entities_syncer import (
     sync_processes,
     sync_svc_discovery,
 )
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.bkapp_model.serializers import v1alpha2 as v1alpha2_slz
 from paasng.platform.modules.models import Module
 from paasng.utils.structure import NOTSET, NotSetType
@@ -44,13 +44,13 @@ from paasng.utils.structure import NOTSET, NotSetType
 from .exceptions import ManifestImportError
 
 
-def import_manifest_yaml(module: Module, input_yaml_data: str, manager: fieldmgr.ManagerType):
+def import_manifest_yaml(module: Module, input_yaml_data: str, manager: FieldMgrName):
     """Import a BkApp manifest to the current module in YAML format, see `import_manifest()`."""
     manifest = yaml.safe_load(input_yaml_data)
     return import_manifest(module, manifest, manager)
 
 
-def import_manifest(module: Module, input_data: Dict, manager: fieldmgr.ManagerType):
+def import_manifest(module: Module, input_data: Dict, manager: FieldMgrName):
     """Import a BkApp manifest to the current module, will overwrite existing data.
 
     :param module: The module object.
@@ -68,7 +68,7 @@ def import_manifest(module: Module, input_data: Dict, manager: fieldmgr.ManagerT
     import_bkapp_spec_entity(module, spec_entity, manager)
 
 
-def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppSpec, manager: fieldmgr.ManagerType):
+def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppSpec, manager: FieldMgrName):
     """Import a BkApp spec entity to the current module, will overwrite existing data.
 
     :param module: The module object.

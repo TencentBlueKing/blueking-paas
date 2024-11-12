@@ -20,8 +20,8 @@ from typing import List
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.cnative.specs.models import Mount as MountDB
-from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Mount, MountOverlay
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.modules.models import Module
 from paasng.utils.camel_converter import dict_to_camel
 from paasng.utils.structure import NotSetType
@@ -30,7 +30,7 @@ from .result import CommonSyncResult
 
 
 def sync_mounts(
-    module: Module, mounts: List[Mount], overlay_mounts: List[MountOverlay] | NotSetType, manager: fieldmgr.ManagerType
+    module: Module, mounts: List[Mount], overlay_mounts: List[MountOverlay] | NotSetType, manager: FieldMgrName
 ) -> CommonSyncResult:
     """Sync mount relations to db model, existing data that is not in the input list may be removed.
 

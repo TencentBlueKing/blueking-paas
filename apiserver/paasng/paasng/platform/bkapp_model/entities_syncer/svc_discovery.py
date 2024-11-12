@@ -26,7 +26,7 @@ from .result import CommonSyncResult
 def sync_svc_discovery(
     module: Module,
     svc_disc: SvcDiscConfig | NotSetType | None,
-    manager: fieldmgr.ManagerType,
+    manager: fieldmgr.FieldMgrName,
 ) -> CommonSyncResult:
     """Sync svc discovery relations to db model, existing data that is not in the input list may be removed.
 
@@ -46,7 +46,11 @@ def sync_svc_discovery(
         return ret
 
     # Always force rewrite the value and set the field manager
-    if isinstance(svc_disc, NotSetType) or svc_disc is None or not svc_disc.bk_saas:
+    if isinstance(svc_disc, NotSetType):
+        field_mgr.reset()
+        ret.deleted_num, _ = SvcDiscConfigDB.objects.filter(application=module.application).delete()
+        return ret
+    if svc_disc is None or not svc_disc.bk_saas:
         ret.deleted_num, _ = SvcDiscConfigDB.objects.filter(application=module.application).delete()
         return ret
 

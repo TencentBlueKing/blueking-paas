@@ -20,13 +20,12 @@ from typing import Optional
 from paasng.platform.bkapp_model.models import BkAppManagedFields
 from paasng.platform.modules.models import Module
 
-from .constants import ManagerType
-from .fields import Field, ManagedFields, ManagedFieldsRecord
+from .constants import FieldMgrName
+from .fields import Field, ManagerFieldsRow, ManagerFieldsRowGroup
 
 
 class FieldManager:
-    """This class helps to get and set the management status of an module's
-    bkapp model field.
+    """This class help manage the management status of an module's bkapp model field.
 
     :param module: The module object.
     :param field: The field to be managed.
@@ -35,39 +34,44 @@ class FieldManager:
     def __init__(self, module: Module, field: Field):
         self.module = module
         self.field = field
-        self.mf = self._get_managed_fields(module)
+        self.rows_group = self._get_row_group(module)
 
-    def is_managed_by(self, manager: ManagerType) -> bool:
+    def is_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field is managed by the given manager."""
         return self.get() == manager
 
-    def get(self) -> Optional[ManagerType]:
+    def get(self) -> Optional[FieldMgrName]:
         """Get the manager for the field.
 
         :return: The manager for the field, or None if the field is not managed.
         """
-        return self.mf.get_manager(self.field)
+        return self.rows_group.get_manager(self.field)
 
-    def set(self, manager: ManagerType):
+    def set(self, manager: FieldMgrName):
         """Set the manager for the field.
 
         :param manager: The manager to be set.
         """
-        self.mf.set_manager(self.field, manager)
+        self.rows_group.set_manager(self.field, manager)
+        self._save()
+
+    def reset(self):
+        """Reset the manager to empty for the field."""
+        self.rows_group.reset_manager(self.field)
         self._save()
 
     def _save(self):
-        """Save the changes to the database to make it persistent."""
-        for record in self.mf.get_dirty_records():
+        """Save the changes to the database to make the data persistent."""
+        for record in self.rows_group.get_updated_rows():
             BkAppManagedFields.objects.update_or_create(
                 module=self.module, manager=record.manager, defaults={"fields": record.fields}
             )
-        # Refresh the managed fields instance in memory
-        self.mf = self._get_managed_fields(self.module)
+        # Refresh the rows group instance in memory
+        self.rows_group = self._get_row_group(self.module)
 
     @staticmethod
-    def _get_managed_fields(module: Module) -> ManagedFields:
+    def _get_row_group(module: Module) -> ManagerFieldsRowGroup:
         """Get the managed fields instance of the module."""
-        db_records = module.managed_fields.all()
-        records = [ManagedFieldsRecord(ManagerType(record.manager), record.fields) for record in db_records]
-        return ManagedFields(module, records)
+        db_rows = module.managed_fields.all()
+        rows = [ManagerFieldsRow(FieldMgrName(record.manager), record.fields) for record in db_rows]
+        return ManagerFieldsRowGroup(rows)

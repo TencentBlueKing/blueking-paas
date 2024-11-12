@@ -31,7 +31,7 @@ from paasng.utils.camel_converter import dict_to_camel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
-import_manifest_app_desc = functools.partial(import_manifest, manager=fieldmgr.ManagerType.APP_DESC)
+import_manifest_app_desc = functools.partial(import_manifest, manager=fieldmgr.FieldMgrName.APP_DESC)
 
 
 @pytest.fixture()
@@ -212,7 +212,7 @@ class TestReplicasOverlay:
 
     def test_not_reset_when_manager_different(self, bk_module, base_manifest, base_manifest_with_overlay):
         import_manifest_app_desc(bk_module, base_manifest_with_overlay)
-        import_manifest(bk_module, base_manifest, manager=fieldmgr.ManagerType.WEB_FORM)
+        import_manifest(bk_module, base_manifest, manager=fieldmgr.FieldMgrName.WEB_FORM)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_target_replicas("stag") == 3, "The overlay data should remain as it is"

@@ -17,7 +17,7 @@
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class ManagerType(StrStructuredEnum):
+class FieldMgrName(StrStructuredEnum):
     """Different types of field managers"""
 
     WEB_FORM = EnumField("web_form", label="form in web page")

@@ -19,7 +19,9 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.conf import settings
 
+from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
@@ -115,3 +117,53 @@ class DevSandboxDetail:
     url: str
     envs: Dict[str, str]
     status: str
+
+
+class DevSandboxWithCodeEditorUrls:
+    app_url: str
+    devserver_url: str
+    code_editor_url: str
+    code_editor_health_url: str
+
+    def __init__(self, base_url: str, dev_sandbox_code: str):
+        self.app_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/app/"
+        self.devserver_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/devserver/"
+        self.code_editor_url = (
+            f"{base_url}/dev_sandbox/{dev_sandbox_code}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
+        )
+        self.code_editor_health_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/code-editor/healthz"
+
+
+@dataclass
+class DevSandboxWithCodeEditorDetail:
+    dev_sandbox_env_vars: Dict[str, str]
+    code_editor_env_vars: Dict[str, str]
+    dev_sandbox_status: str
+    code_editor_status: str
+    urls: DevSandboxWithCodeEditorUrls
+
+
+@dataclass
+class SourceCodeConfig:
+    """源码持久化相关配置"""
+
+    # 源码持久化用的 pvc 名称
+    pvc_claim_name: Optional[str] = None
+    # 工作空间，用于读取/存储源码
+    workspace: Optional[str] = None
+    # 源码获取地址
+    source_fetch_url: Optional[str] = None
+    # 源码获取方式
+    source_fetch_method: SourceCodeFetchMethod = SourceCodeFetchMethod.HTTP
+
+
+@dataclass
+class CodeEditorConfig:
+    """代码编辑器相关配置"""
+
+    # 源码持久化用的 pvc 名称
+    pvc_claim_name: Optional[str] = None
+    # 项目目录, 读取项目源码的起始目录
+    start_dir: Optional[str] = None
+    # 登陆密码
+    password: Optional[str] = None

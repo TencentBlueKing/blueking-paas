@@ -66,7 +66,7 @@ class PackageController:
         if not package_storage.relative_path:
             return
 
-        # The source file may have a relative path (e.g. app_code/app.yaml and so on.),
+        # The source file may have a relative path (e.g. app_code/app_desc.yaml and so on.),
         # So we need to move the files in that directory into local_path
         local_path_obj = Path(local_path)
         source_path = local_path_obj / package_storage.relative_path

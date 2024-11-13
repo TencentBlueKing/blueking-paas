@@ -15,8 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import shlex
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Type
 
 import cattr
 from django.conf import settings
@@ -24,17 +23,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
-from paasng.platform.bkapp_model.entities import Addon, v1alpha2
-from paasng.platform.declarative import constants
-from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc
-from paasng.platform.declarative.deployment.resources import DeploymentDesc, ProcfileProc
+from paasng.platform.declarative.application.resources import DisplayOptions
+from paasng.platform.declarative.deployment.resources import ProcfileProc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.utils import get_quota_plan
-from paasng.utils.i18n.serializers import I18NExtend, i18n
-from paasng.utils.serializers import Base64FileField
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
@@ -139,129 +131,6 @@ class LegacyEnvVariableSLZ(serializers.Serializer):
         error_messages={"invalid": _('格式错误，只能以 "BKAPP_" 开头，由大写字母、数字与下划线组成，长度不超过 50。')},
     )
     value = serializers.CharField(required=True, max_length=1000)
-
-
-@i18n
-class SMartV1DescriptionSLZ(serializers.Serializer):
-    """Serializer for parsing the origin version of S-Mart application description"""
-
-    # For some reason, the max length for the `app_code` field uses the legacy value of 16
-    # in the v1 schema, the value is changed to 20 in later versions.
-    app_code = AppIDSMartField(max_length=16)
-    app_name = I18NExtend(AppNameField())
-    version = serializers.RegexField(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$", required=True, help_text="版本")
-    # Celery 相关
-    is_use_celery = serializers.BooleanField(required=True, help_text="是否启用 celery")
-    is_use_celery_with_gevent = serializers.BooleanField(
-        required=False, help_text="是否启用 celery (gevent)模式", default=False
-    )
-    is_use_celery_beat = serializers.BooleanField(required=False, help_text="是否启用 celery beat", default=False)
-    author = serializers.CharField(required=True, help_text="应用作者")
-    introduction = I18NExtend(serializers.CharField(required=True, help_text="简介"))
-
-    # Not required fields
-    category = ProductTagByNameField(required=False, source="tag")
-    language = serializers.CharField(
-        required=False, help_text="开发语言", default=AppLanguage.PYTHON.value, validators=[validate_language]
-    )
-    desktop = DesktopOptionsSLZ(required=False, default=DesktopOptionsSLZ.gen_default_value, help_text="桌面展示选项")
-    env = serializers.ListField(child=LegacyEnvVariableSLZ(), required=False, default=list)
-    container = ContainerSpecSLZ(required=False, allow_null=True, source="package_plan")
-    libraries = serializers.ListField(child=LibrarySLZ(), required=False, default=list)
-    logo_b64data = Base64FileField(required=False, help_text="logo", source="logo")
-
-    def to_internal_value(self, data) -> Tuple[ApplicationDesc, DeploymentDesc]:
-        attrs = super().to_internal_value(data)
-        market_desc = MarketDesc(
-            introduction_en=attrs["introduction_en"],
-            introduction_zh_cn=attrs["introduction_zh_cn"],
-            display_options=attrs.get("desktop"),
-            logo=attrs.get("logo", constants.OMITTED_VALUE),
-        )
-        if attrs.get("tag"):
-            market_desc.tag_id = attrs["tag"].id
-
-        package_plan = get_quota_plan(attrs.get("package_plan")) if attrs.get("package_plan") else None
-        addons = [Addon(name=service) for service in settings.SMART_APP_DEFAULT_SERVICES_CONFIG]
-        processes = [
-            {
-                "name": "web",
-                "args": shlex.split(constants.WEB_PROCESS),
-                "res_quota_plan": package_plan,
-                "replicas": 1,
-                "proc_command": constants.WEB_PROCESS,
-            }
-        ]
-        is_use_celery = False
-        if attrs["is_use_celery"]:
-            is_use_celery = True
-            addons.append(Addon(name="rabbitmq"))
-            processes.append(
-                {
-                    "name": "celery",
-                    "args": shlex.split(constants.CELERY_PROCESS),
-                    "res_quota_plan": package_plan,
-                    "replicas": 1,
-                    "proc_command": constants.CELERY_PROCESS,
-                }
-            )
-        elif attrs["is_use_celery_with_gevent"]:
-            is_use_celery = True
-            addons.append(Addon(name="rabbitmq"))
-            processes.append(
-                {
-                    "name": "celery",
-                    "args": shlex.split(constants.CELERY_PROCESS_WITH_GEVENT),
-                    "res_quota_plan": package_plan,
-                    "replicas": 1,
-                    "proc_command": constants.CELERY_PROCESS_WITH_GEVENT,
-                }
-            )
-
-        if attrs["is_use_celery_beat"]:
-            if not is_use_celery:
-                raise ValueError("Can't use celery beat but not use celery.")
-            processes.append(
-                {
-                    "name": "beat",
-                    "args": shlex.split(constants.CELERY_BEAT_PROCESS),
-                    "res_quota_plan": package_plan,
-                    "replicas": 1,
-                    "proc_command": constants.CELERY_BEAT_PROCESS,
-                }
-            )
-
-        plugins = [
-            dict(type=constants.AppDescPluginType.APP_VERSION, data=attrs["version"]),
-            dict(type=constants.AppDescPluginType.APP_LIBRARIES, data=attrs["libraries"]),
-        ]
-
-        spec = v1alpha2.BkAppSpec(
-            processes=processes,
-            configuration={"env": [{"name": item["key"], "value": item["value"]} for item in attrs.get("env", [])]},
-            addons=addons,
-        )
-        application_desc = ApplicationDesc(
-            spec_version=constants.AppSpecVersion.VER_1,
-            code=attrs["app_code"],
-            name_en=attrs["app_name_en"],
-            name_zh_cn=attrs["app_name_zh_cn"],
-            market=market_desc,
-            modules={
-                "default": {
-                    "name": "default",
-                    "is_default": True,
-                    "services": [{"name": addon.name} for addon in addons],
-                }
-            },
-            plugins=plugins,
-            instance_existed=bool(self.instance),
-        )
-        deployment_desc = cattr.structure(
-            {"spec": spec, "language": attrs.get("language"), "spec_version": constants.AppSpecVersion.VER_1},
-            DeploymentDesc,
-        )
-        return application_desc, deployment_desc
 
 
 def validate_procfile_procs(data: Dict[str, str]) -> List[ProcfileProc]:

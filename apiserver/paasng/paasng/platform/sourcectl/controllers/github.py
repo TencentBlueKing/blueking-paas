@@ -78,7 +78,7 @@ class GitHubRepoController(BaseGitRepoController):
         else:
             return True
 
-    def export(self, local_path: PathLike, version_info: VersionInfo):
+    def export(self, local_path: PathLike, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
         """下载 zip 包并解压到指定路径"""
         target_branch, revision = self.extract_version_info(version_info)
         with generate_temp_file(suffix=".zip") as zip_file:

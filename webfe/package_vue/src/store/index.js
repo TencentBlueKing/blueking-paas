@@ -51,6 +51,7 @@ import observability from './modules/observability';
 import persistentStorage from './modules/persistent-storage';
 import authenticationInfo from './modules/authentication-info';
 import migration from './modules/migration';
+import sandbox from './modules/sandbox';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -254,8 +255,8 @@ const mutations = {
 // 公共 actions
 const actions = {
   /**
-     * 获取用户功能开关详情
-     */
+   * 获取用户功能开关详情
+   */
   getUserFeature({ commit }, config = {}) {
     const url = `${BACKEND_URL}/api/accounts/feature_flags/`;
     return http.get(url, config).then((data) => {
@@ -264,8 +265,8 @@ const actions = {
   },
 
   /**
-     * 获取平台功能开关详情
-     */
+   * 获取平台功能开关详情
+   */
   getPlatformFeature({ commit }, config = {}) {
     const url = `${BACKEND_URL}/api/platform/frontend_features/`;
     return http.get(url, config).then((data) => {
@@ -274,8 +275,8 @@ const actions = {
   },
 
   /**
-     * 获取应用功能开关详情
-     */
+   * 获取应用功能开关详情
+   */
   getAppFeature({ commit }, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/feature_flags/${appCode}/`;
     return http.get(url, config).then((data) => {
@@ -284,16 +285,16 @@ const actions = {
   },
 
   /**
-     * 取消应用收藏
-     */
+   * 取消应用收藏
+   */
   deleteAppMarked({}, { appCode }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/accounts/marked_applications/${appCode}`;
     return http.delete(url, config);
   },
 
   /**
-     * 应用收藏
-     */
+   * 应用收藏
+   */
   addAppMarked({}, { appCode }) {
     const url = `${BACKEND_URL}/api/bkapps/accounts/marked_applications/`;
     return http.post(url, {
@@ -302,10 +303,10 @@ const actions = {
   },
 
   /**
-     * 获取应用信息
-     *
-     * @param {Number} appCode 应用code
-     */
+   * 获取应用信息
+   *
+   * @param {Number} appCode 应用code
+   */
   getAppInfo({ commit }, { appCode, moduleId }) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/`;
     commit('updateAppLoading', true);
@@ -328,19 +329,19 @@ const actions = {
   },
 
   /**
-     * 获取应用列表
-     *
-     * @param {Object} params 参数配置
-     */
+   * 获取应用列表
+   *
+   * @param {Object} params 参数配置
+   */
   getAppList({}, { url }, config = {}) {
     return http.get(url, config);
   },
 
   /**
-     * 对应用进行关注标记
-     *
-     * @param {Object} params 参数，包括appCode, isMarked
-     */
+   * 对应用进行关注标记
+   *
+   * @param {Object} params 参数，包括appCode, isMarked
+   */
   toggleAppMarked({ dispatch }, { appCode, isMarked }) {
     if (isMarked) {
       return dispatch('deleteAppMarked', { appCode });
@@ -349,50 +350,50 @@ const actions = {
   },
 
   /**
-     * 获取应用语言类型数量
-     */
+   * 获取应用语言类型数量
+   */
   getAppsByLang({}, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=false`;
     return http.get(url, config);
   },
 
   /**
-     * 获取应用版本类型数量
-     */
+   * 获取应用版本类型数量
+   */
   getAppsByRegion({}, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=false`;
     return http.get(url, config);
   },
 
   /**
-     * 获取应用类型信息
-     * @param {String} region 应用类型
-     */
+   * 获取应用类型信息
+   * @param {String} region 应用类型
+   */
   getAppRegion({}, region) {
     const url = `${BACKEND_URL}/api/regions/${region}/`;
     return http.get(url, {}, { fromCache: true });
   },
 
   /**
-     * 根据不同的代码库获取git repos列表
-     * @param {String} sourceControlType 源码仓库类型
-     */
+   * 根据不同的代码库获取git repos列表
+   * @param {String} sourceControlType 源码仓库类型
+   */
   getRepoList({}, { sourceControlType }, config = {}) {
     const url = `${BACKEND_URL}/api/sourcectl/${sourceControlType}/repos/`;
     return http.get(url, config);
   },
 
   /**
-     * 获取版本日志
-     */
+   * 获取版本日志
+   */
   getVersionLog({}, config = {}) {
     const url = `${BACKEND_URL}/api/changelogs/`;
     return http.get(url, config);
   },
 
   /**
-     * 切换语言
-     */
+   * 切换语言
+   */
   switchLanguage({}, { data }, config = {}) {
     const url = `${BACKEND_URL}/i18n/setlang/`;
     return http.post(url, data, config);
@@ -436,6 +437,7 @@ export default new Vuex.Store({
     persistentStorage,
     authenticationInfo,
     migration,
+    sandbox,
   },
   state,
   getters,

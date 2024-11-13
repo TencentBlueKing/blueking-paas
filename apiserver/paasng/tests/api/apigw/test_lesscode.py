@@ -98,7 +98,7 @@ class TestModuleSourcePackageViewSet:
             "spec_version": 2,
             "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
         }
-        return {"app.yaml": yaml.safe_dump(app_desc)}
+        return {"app_desc.yaml": yaml.safe_dump(app_desc)}
 
     @pytest.fixture()
     def tar_path(self, contents):

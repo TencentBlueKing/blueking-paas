@@ -20,8 +20,6 @@ import hashlib
 import logging
 import re
 import zipfile
-from dataclasses import dataclass
-from itertools import product
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union
@@ -33,7 +31,7 @@ from rest_framework.exceptions import ValidationError
 from yaml import YAMLError
 
 from paasng.platform.declarative.application.resources import ApplicationDesc
-from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
+from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.services.path import PathProtocol
@@ -48,34 +46,22 @@ from paasng.platform.sourcectl.package.client import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class DetectResult:
+def relative_path_of_app_desc(filepath: str) -> Optional[str]:
+    """Get the relative path of the app description file, if the given path is not
+    a app description file, return None.
     """
-    :param str relative_path: relative_path of the app description file and the version of meta file
-    :param AppSpecVersion version: the version of app description file
-    """
-
-    relative_path: str
-    version: AppSpecVersion
-
-
-class AppYamlDetector:
-    _regexes = {
-        AppSpecVersion.VER_1: r"(^(?<=[/\\\\])?|(?<=[/\\\\]))app\.ya?ml$",
-        AppSpecVersion.VER_2: r"(^(?<=[/\\\\])?|(?<=[/\\\\]))app_desc\.ya?ml$",
-    }
-
-    @classmethod
-    def detect(cls, filepath: str, spec_version: AppSpecVersion = AppSpecVersion.VER_2) -> Optional[DetectResult]:
-        """Detect whether the file path meets the specification of `app.yaml`
-
-        if matched, return DetectResult, else, return None
-        """
-        regex = cls._regexes[spec_version]
-        result = re.split(regex, filepath)
-        if len(result) > 1:
-            return DetectResult(relative_path=result[0], version=spec_version)
-        return None
+    # The pattern acts as a delimiter to help split the relative path of the app
+    # description file. It uses a lookbehind to match the path delimiter before the
+    # filename and the result of re.split() can still have the delimiter.
+    #
+    # Example of split():
+    #  - /path/to/app_desc.yaml -> ['/path/to/', '', '']
+    #
+    desc_pattern = re.compile(r"(^(?<=[/\\\\])?|(?<=[/\\\\]))app_desc\.ya?ml$")
+    parts = desc_pattern.split(filepath)
+    if len(parts) > 1:
+        return parts[0]
+    return None
 
 
 class SourcePackageStatReader:
@@ -92,10 +78,10 @@ class SourcePackageStatReader:
 
     def get_meta_info(self) -> Tuple[str, Dict]:
         """
-        Get package's meta info which was stored in file 'app.yaml'
+        Get package's meta info which was stored in file 'app_desc.yaml'
 
         :returns: Tuple[str, Dict]
-        - the relative path of app.yaml (to the root dir in the tar file), "./" is returned by default
+        - the relative path of app_desc.yaml (to the root dir in the tar file), "./" is returned by default
         - the raw meta info of source package, `{}` is returned by default
         :raises InvalidPackageFileFormatError: The file is not valid, it's content might be corrupt.
         :raises ValidationError: The file content is not valid YAML.
@@ -111,11 +97,10 @@ class SourcePackageStatReader:
                 logger.warning("Unable to list contents in the package file, path: %s.", self.path)
                 return relative_path, {}
 
-            for spec_version, filename in product([AppSpecVersion.VER_2, AppSpecVersion.VER_1], existed_filenames):
-                result = AppYamlDetector.detect(filename, spec_version)
-                if result is not None:
-                    app_filename = filename
-                    relative_path = result.relative_path
+            for filepath in existed_filenames:
+                if (p := relative_path_of_app_desc(filepath)) is not None:
+                    app_filename = filepath
+                    relative_path = p
                     break
             else:
                 # If not description file can be found, return empty info
@@ -244,12 +229,10 @@ class ManifestDetector:
         raise KeyError("Procfile not found.")
 
     def detect_app_desc(self) -> str:
-        """探测源码包中的 app.yaml 的路径"""
+        """探测源码包中的 app_desc.yaml 的路径"""
         possible_keys = [
             self.package_root / self.relative_path / "app_desc.yaml",
             self.package_root / self.relative_path / "app_desc.yml",
-            self.package_root / self.relative_path / "app.yaml",
-            self.package_root / self.relative_path / "app.yml",
         ]
         for key in possible_keys:
             if key.exists():

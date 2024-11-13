@@ -101,11 +101,11 @@ class GetProcfileFormatError(GetProcfileError):
 
 
 class GetAppYamlError(ExceptionWithMessage):
-    """When no valid app.yaml can be found in application directory"""
+    """When no valid app_desc.yaml can be found in application directory"""
 
 
 class GetAppYamlFormatError(GetAppYamlError):
-    """The app.yaml exists but the content format is incorrect"""
+    """The app_desc.yaml exists but the content format is incorrect"""
 
 
 class GetDockerIgnoreError(ExceptionWithMessage):

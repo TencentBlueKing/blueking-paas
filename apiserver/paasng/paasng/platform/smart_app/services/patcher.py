@@ -22,8 +22,6 @@ from typing import TYPE_CHECKING, Dict
 import yaml
 from django.utils.functional import cached_property
 
-from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.declarative.constants import AppDescPluginType
 from paasng.platform.declarative.handlers import get_deploy_desc_by_module, get_desc_handler
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
@@ -62,8 +60,6 @@ class SourceCodePatcher:
         )
         # 尝试添加 Procfile
         patcher.add_procfile()
-        # 尝试添加 requirements.txt
-        patcher.add_requirements_txt()
         # 尝试添加 manifest.yaml
         patcher.add_manifest()
         # 重新压缩源码包
@@ -127,25 +123,6 @@ class SourceCodePatcher:
             return
 
         key.write_text(yaml.safe_dump(procfile))
-
-    def add_requirements_txt(self):
-        """尝试往 Python 类型的应用源码目录创建 requirements.txt 文件, 如果源码已加密, 则注入至应用描述文件目录下"""
-        key = self._make_key("requirements.txt")
-        plugin = self.app_description.get_plugin(AppDescPluginType.APP_LIBRARIES)
-        libraries = (plugin or {}).get("data", [])
-
-        if self.deploy_description.language != AppLanguage.PYTHON:
-            logger.debug("Only handle python app.")
-            return
-
-        if not libraries:
-            logger.warning("Undefined libraries, skip add `requirements.txt`.")
-            return
-
-        if key.exists():
-            logger.warning(f"file<{key}> in package will be overwrite!.")
-
-        key.write_text("\n".join([f"{lib['name']}=={lib['version']}" for lib in libraries]))
 
     def add_manifest(self):
         """尝试往源码根目录添加 manifest"""

@@ -53,10 +53,10 @@ class Templater:
         try:
             tmpl: Template = Template.objects.get(name=tmpl_name, type=type)
         except ObjectDoesNotExist:
-            raise TmplNotExists(f"Template<{tmpl_name}>, Type<{type}> does not exists")
+            raise TmplNotExists(f"Template <{tmpl_name}>, Type <{type}> does not exists")
         else:
             if region not in tmpl.enabled_regions:
-                raise TmplRegionNotSupported(f"Template<{tmpl.name}> does not support this region<{region}>")
+                raise TmplRegionNotSupported(f"Template <{tmpl.name}> does not support this region <{region}>")
         self.tmpl = tmpl
         self.command = EnhancedTemplateCommand(force_executable_files=DEFAULT_EXECUTABLE_FILES)
         self.region = region
@@ -76,7 +76,7 @@ class Templater:
         """Download current app template to a local temp directory"""
         location = self.tmpl.blob_url.get(self.region)
         if location is None:
-            raise TmplRegionNotSupported(f"Template<{self.tmpl.name}> does not support this region<{self.region}>")
+            raise TmplRegionNotSupported(f"Template <{self.tmpl.name}> does not support this region <{self.region}>")
 
         o = urlparse(location)
         scheme, bucket, path = o.scheme.lower(), o.netloc, Path(o.path)

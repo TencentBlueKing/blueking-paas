@@ -19,6 +19,7 @@ from typing import Dict, List
 
 import rest_framework.request
 import xlwt
+from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -28,8 +29,6 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
-from paasng.bk_plugins.pluginscenter.constants import PluginRole
-from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as plugin_members_api
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -54,6 +53,7 @@ from paasng.plat_admin.admin42.serializers.application import (
 )
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.plat_admin.admin42.views.bk_plugins import BKPluginMembersManageViewSet
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
@@ -289,9 +289,13 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
-        kwargs["USER_IS_ADMIN_IN_PLUGIN"] = self.request.user.username in plugin_members_api.fetch_role_members(
-            application.code, PluginRole.ADMINISTRATOR
+        kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"] = (
+            settings.IS_ALLOW_CREATE_BK_PLUGIN_APP and application.is_plugin_app
         )
+        if kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"]:
+            kwargs["USER_IS_ADMIN_IN_PLUGIN"] = BKPluginMembersManageViewSet.is_user_plugin_admin(
+                self.kwargs["code"], self.request.user.username
+            )
         kwargs["cluster_choices"] = [
             {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application.region).list_clusters()

@@ -176,13 +176,20 @@ class BKPluginMembersManageViewSet(ViewSet):
             },
         )
 
+    @staticmethod
+    def is_user_plugin_admin(code: str, username: str):
+        """判断用户是否是插件管理员"""
+        plugin = get_object_or_404(PluginInstance, id=code)
+        roles = members_api.fetch_user_roles(plugin, username)
+        return plugin_constants.PluginRole.ADMINISTRATOR in roles
+
     def update(self, request, code):
         """将用户添加为某个角色的成员"""
         plugin = get_object_or_404(PluginInstance, id=code)
         username, role = request.data["username"], request.data["role"]
-        data_before = self._gen_data_detail(plugin.id, username)
+        data_before = self._gen_data_detail(plugin, username)
 
-        members_api.add_role_members(plugin.id, plugin_constants.PluginRole(role), username)
+        members_api.add_role_members(plugin, plugin_constants.PluginRole(role), username)
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -190,7 +197,7 @@ class BKPluginMembersManageViewSet(ViewSet):
             target=OperationTarget.BKPLUGIN_MEMBER,
             app_code=code,
             data_before=data_before,
-            data_after=self._gen_data_detail(plugin.id, username),
+            data_after=self._gen_data_detail(plugin, username),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -199,9 +206,9 @@ class BKPluginMembersManageViewSet(ViewSet):
         """将用户从某个角色的成员中删除"""
         plugin = get_object_or_404(PluginInstance, id=code)
         username, role = request.data["username"], request.data["role"]
-        data_before = self._gen_data_detail(plugin.id, username)
+        data_before = self._gen_data_detail(plugin, username)
 
-        members_api.delete_role_members(plugin.id, plugin_constants.PluginRole(role), username)
+        members_api.delete_role_members(plugin, plugin_constants.PluginRole(role), username)
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -209,7 +216,7 @@ class BKPluginMembersManageViewSet(ViewSet):
             target=OperationTarget.BKPLUGIN_MEMBER,
             app_code=code,
             data_before=data_before,
-            data_after=self._gen_data_detail(plugin.id, username),
+            data_after=self._gen_data_detail(plugin, username),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -41,7 +41,7 @@
         </bk-container>
     </div>
 
-    <div class="panel" v-if="application.is_plugin_app">
+    <div class="panel" v-if="ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP">
         <h4>蓝鲸应用插件</h4>
         <bk-container :col="2">
             <bk-row>
@@ -176,6 +176,7 @@
     const clusterChoices = {{ cluster_choices | to_json }}
     const envUrls = {{ env_urls | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
+    const ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP = {{ ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP | to_json }}
     const USER_IS_ADMIN_IN_PLUGIN = {{ USER_IS_ADMIN_IN_PLUGIN | to_json }}
 
     const URLRouter = {
@@ -195,6 +196,7 @@
                     clusterChoices: clusterChoices,
                     envUrls: envUrls,
                     USER_IS_ADMIN_IN_APP,
+                    ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP,
                     USER_IS_ADMIN_IN_PLUGIN,
                 }
             },

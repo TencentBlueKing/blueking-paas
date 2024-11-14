@@ -294,7 +294,9 @@ export const PLATFORM_CONFIG = {
         // 令牌使用指引
         ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token',
         // 沙箱开发指引
-        SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro'
+        SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro',
+        // 监控仪表盘指引
+        MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics'
     },
 
     CONFIG: {
@@ -659,6 +661,12 @@ export const PAAS_STATIC_CONFIG = {
                         ],
                         "destRoute": {
                             "name": "cloudAppAnalysis"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("仪表盘"),
+                        "destRoute": {
+                            "name": "dashboards"
                         }
                     }
                 ]

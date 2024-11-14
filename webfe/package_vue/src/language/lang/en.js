@@ -2889,4 +2889,13 @@ export default {
   沙箱资源不足: 'Insufficient Sandbox Resources',
   '沙箱功能正在灰度开放，目前沙箱资源已申请完。如需体验，请联系 BK 助手。': 'The sandbox feature is currently in phased rollout, and all sandbox resources have been allocated. If you wish to experience it, please contact the BK Assistant.',
   平台不支持该增强服务: 'The platform does not support this add-on service',
+  仪表盘: 'Dashboard',
+  查看更多仪表盘: 'View More Dashboards',
+  暂无仪表盘功能: 'No Dashboard Functionality Available',
+  暂无部署应用: 'No Deployed Applications',
+  'Metric 上报指引': 'Metric Reporting Guide',
+  '应用部署成功后，才会内置仪表盘': 'The dashboard will be built-in after the application is successfully deployed',
+  '如需使用该功能，需要部署「蓝鲸监控：监控日志套餐」': 'To use this feature, you need to deploy "BlueKing Monitoring: Monitoring and Logging Package"',
+  '平台内置了开发框架仪表盘，应用需开启 Metric 配置并在代码中上报 Metric 数据后，才可在仪表盘中查看相关数据': 'The platform includes a development framework dashboard. The application must enable Metric configuration and report Metric data in the code before the related data can be viewed in the dashboard',
+  '仪表盘功能为您提供了一个直观的视图，帮助您实时监控和分析应用的性能和健康状态。通过可自定义的图表和指标，您可以轻松查看关键数据，如响应时间、错误率、资源使用情况等。': 'The dashboard feature provides you with an intuitive view that helps you monitor and analyze the performance and health of your application in real-time. With customizable charts and metrics, you can easily view key data such as response times, error rates, and resource usage.',
 };

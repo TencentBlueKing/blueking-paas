@@ -176,13 +176,6 @@ class BKPluginMembersManageViewSet(ViewSet):
             },
         )
 
-    @staticmethod
-    def is_user_plugin_admin(code: str, username: str):
-        """判断用户是否是插件管理员"""
-        plugin = get_object_or_404(PluginInstance, id=code)
-        roles = members_api.fetch_user_roles(plugin, username)
-        return plugin_constants.PluginRole.ADMINISTRATOR in roles
-
     def update(self, request, code):
         """将用户添加为某个角色的成员"""
         plugin = get_object_or_404(PluginInstance, id=code)
@@ -220,3 +213,10 @@ class BKPluginMembersManageViewSet(ViewSet):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def is_user_plugin_admin(code: str, username: str) -> bool:
+    """判断用户是否是插件管理员"""
+    plugin = get_object_or_404(PluginInstance, id=code)
+    roles = members_api.fetch_user_roles(plugin, username)
+    return plugin_constants.PluginRole.ADMINISTRATOR in roles

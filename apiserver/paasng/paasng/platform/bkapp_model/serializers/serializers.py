@@ -25,7 +25,6 @@ from typing_extensions import TypeAlias
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
-from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
@@ -295,19 +294,6 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
         if isinstance(data, str):
             data = {"bk_app_code": data}
         return super().to_internal_value(data)
-
-    def validate(self, attrs):
-        """校验应用和模块存在，否则抛出异常"""
-        try:
-            application = Application.objects.get(code=attrs["bk_app_code"])
-        except Application.DoesNotExist:
-            raise serializers.ValidationError(_("应用{}不存在").format(attrs["bk_app_code"]))
-
-        # Check if module exists when the "module_name" is set
-        if module_name := attrs["module_name"]:  # noqa: SIM102
-            if not application.modules.filter(name=module_name).exists():
-                raise serializers.ValidationError(_("模块{}不存在").format(module_name))
-        return attrs
 
 
 BkSaaSList: TypeAlias = List[Dict[str, Optional[str]]]

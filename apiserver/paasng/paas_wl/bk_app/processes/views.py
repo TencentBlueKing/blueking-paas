@@ -132,6 +132,8 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                     target_replicas = spec["target_replicas"]
                     target_status = spec["target_status"]
                     break
+            else:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
 
         # 审计记录
         add_app_audit_record(

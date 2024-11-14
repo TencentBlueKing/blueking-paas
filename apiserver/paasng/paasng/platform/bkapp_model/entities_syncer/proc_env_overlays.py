@@ -15,8 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import abc
 import logging
-from typing import Callable, Dict, Iterable, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Set, Tuple, Union
 
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
@@ -33,11 +34,7 @@ def sync_env_overlays_replicas(
     module: Module, overlay_replicas: List[ReplicasOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync replicas overlay data to db."""
-    syncer = OverlayDataSyncer(
-        empty_defaults_value={"target_replicas": None},
-        defaults_value_getter=lambda input_p: {"target_replicas": input_p.count},
-        field_mgr_key_func=fieldmgr.f_overlay_replicas,
-    )
+    syncer = OverlayDataSyncer(algo=ReplicasSyncerFieldAlgo())
     return syncer.sync(module, overlay_replicas, manager)
 
 
@@ -45,11 +42,7 @@ def sync_env_overlays_res_quotas(
     module: Module, overlay_res_quotas: List[ResQuotaOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync res_quota overlay data to db."""
-    syncer = OverlayDataSyncer(
-        empty_defaults_value={"plan_name": None},
-        defaults_value_getter=lambda input_p: {"plan_name": input_p.plan},
-        field_mgr_key_func=fieldmgr.f_overlay_res_quotas,
-    )
+    syncer = OverlayDataSyncer(algo=ResQuotasSyncerFieldAlgo())
     return syncer.sync(module, overlay_res_quotas, manager)
 
 
@@ -57,22 +50,7 @@ def sync_env_overlays_autoscalings(
     module: Module, overlay_autoscalings: List[AutoscalingOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
 ) -> CommonSyncResult:
     """Sync autoscaling overlay data to db model"""
-
-    def _value_getter(input_p):
-        return {
-            "autoscaling": True,
-            "scaling_config": {
-                "min_replicas": input_p.min_replicas,
-                "max_replicas": input_p.max_replicas,
-                "policy": input_p.policy,
-            },
-        }
-
-    syncer = OverlayDataSyncer(
-        empty_defaults_value={"autoscaling": None, "scaling_config": None},
-        defaults_value_getter=_value_getter,
-        field_mgr_key_func=fieldmgr.f_overlay_replicas,
-    )
+    syncer = OverlayDataSyncer(algo=AutoscalingSyncerFieldAlgo())
     return syncer.sync(module, overlay_autoscalings, manager)
 
 
@@ -94,20 +72,11 @@ def clean_empty_overlays(module):
 class OverlayDataSyncer:
     """Sync overlay data to db model.
 
-    :param empty_defaults_value: The empty default value, used to reset the data.
-    :param defaults_value_getter: A function to get the default value as a dict for upsert.
-    :param field_mgr_key_func: A function to get the field manager key.
+    :param algo: The algorithm class used for syncing.
     """
 
-    def __init__(
-        self,
-        empty_defaults_value: Dict,
-        defaults_value_getter: Callable,
-        field_mgr_key_func: Callable[[str, str], str],
-    ):
-        self.empty_defaults_value = empty_defaults_value
-        self.defaults_value_getter = defaults_value_getter
-        self.field_mgr_key_func = field_mgr_key_func
+    def __init__(self, algo: "SyncerFieldAlgo"):
+        self.algo = algo
 
     def sync(
         self,
@@ -117,27 +86,11 @@ class OverlayDataSyncer:
     ) -> CommonSyncResult:
         """Sync overlay data to the db."""
         ret = CommonSyncResult()
-        respect_not_managed = False
         if isinstance(items, NotSetType):
-            items = []
-            # Only consider records are "not-managed" when the input is not set.
-            respect_not_managed = True
+            return self._sync_notset(module, manager)
 
         # Build the index of existing data first to clean data later.
-        # Data structure: {(process name, environment name): pk}, contains not none
-        # data on the sub_field.
-        existing_index = {}
-        existing_specs = {}
-        for proc_spec in ModuleProcessSpec.objects.filter(module=module):
-            existing_specs[proc_spec.name] = proc_spec
-            for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
-                if self.is_already_empty(overlay_item):
-                    continue
-                existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
-
-        not_managed_envs = set()
-        if respect_not_managed:
-            not_managed_envs = self.get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
+        existing_specs, existing_index = self._build_specs_and_index(module)
 
         for input_p in items:
             proc, env = input_p.process, input_p.env_name
@@ -146,13 +99,27 @@ class OverlayDataSyncer:
                 continue
 
             _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-                proc_spec=proc_spec, environment_name=input_p.env_name, defaults=self.defaults_value_getter(input_p)
+                proc_spec=proc_spec, environment_name=input_p.env_name, defaults=self.algo.get_values(input_p)
             )
             ret.incr_by_created_flag(created)
 
             # Update the index and set the field manger
             existing_index.pop((proc, env), None)
-            fieldmgr.FieldManager(module, self.field_mgr_key_func(proc, env)).set(manager)
+            fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).set(manager)
+
+        # Reset existing data
+        for pk in existing_index.values():
+            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+            ret.deleted_num += 1
+        return ret
+
+    def _sync_notset(self, module: Module, manager: fieldmgr.FieldMgrName) -> CommonSyncResult:
+        """Sync when the given data is not set."""
+        ret = CommonSyncResult()
+
+        # Build the index of existing data first to clean data later.
+        _, existing_index = self._build_specs_and_index(module)
+        not_managed_envs = self._get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
 
         # Reset existing data
         for (proc, env), pk in existing_index.items():
@@ -160,24 +127,102 @@ class OverlayDataSyncer:
             if (proc, env) in not_managed_envs:
                 continue
 
-            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.empty_defaults_value)
-            # If the data is not set and the data has been reset, reset the field manager too.
-            if respect_not_managed:
-                fieldmgr.FieldManager(module, self.field_mgr_key_func(proc, env)).reset()
+            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+            # Reset the field manager too.
+            fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
             ret.deleted_num += 1
         return ret
 
-    def get_not_managed_proc_envs(
+    def _build_specs_and_index(
+        self, module: Module
+    ) -> Tuple[Dict[str, ModuleProcessSpec], Dict[Tuple[str, str], int]]:
+        """Build the specs and index for the module.
+
+        The index's structure: {(process name, environment name): pk}, entries whose
+        value is already empty are ignored.
+
+        :return: a tuple of (specs, index)
+        """
+        existing_specs = {}
+        existing_index = {}
+        for proc_spec in ModuleProcessSpec.objects.filter(module=module):
+            existing_specs[proc_spec.name] = proc_spec
+            for overlay_item in ProcessSpecEnvOverlay.objects.filter(proc_spec=proc_spec):
+                if self._is_already_empty(overlay_item):
+                    continue
+                existing_index[(proc_spec.name, overlay_item.environment_name)] = overlay_item.pk
+        return existing_specs, existing_index
+
+    def _get_not_managed_proc_envs(
         self, module: Module, manager: fieldmgr.FieldMgrName, proc_envs: List[Tuple[str, str]]
     ) -> Set[Tuple[str, str]]:
         """Get the environments that is not managed by the current manager."""
         not_managed_envs = set()
         for process, env_name in proc_envs:
-            mgr = fieldmgr.FieldManager(module, self.field_mgr_key_func(process, env_name))
+            mgr = fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(process, env_name))
             if not mgr.is_managed_by(manager):
                 not_managed_envs.add((process, env_name))
         return not_managed_envs
 
-    def is_already_empty(self, overlay_item: ProcessSpecEnvOverlay) -> bool:
+    def _is_already_empty(self, overlay_item: ProcessSpecEnvOverlay) -> bool:
         """Check if the overlay item is already empty."""
-        return all(getattr(overlay_item, key) == value for key, value in self.empty_defaults_value.items())
+        return all(getattr(overlay_item, key) == value for key, value in self.algo.get_empty_values().items())
+
+
+class SyncerFieldAlgo(abc.ABC):
+    """The algorithm to sync the overlay data to the db model."""
+
+    @abc.abstractmethod
+    def get_empty_values(self) -> Dict:
+        """Return the empty values for resetting the field."""
+
+    @abc.abstractmethod
+    def get_values(self, input_p) -> Dict:
+        """Return the values for update or creating the field.
+
+        :param input_p: an object has "process" and "env_name" properties.
+        """
+
+    @abc.abstractmethod
+    def get_field_mgr_key(self, process: str, env: str) -> str:
+        """Get the key for updating field manager."""
+
+
+class ReplicasSyncerFieldAlgo(SyncerFieldAlgo):
+    def get_empty_values(self) -> Dict:
+        return {"target_replicas": None}
+
+    def get_values(self, input_p) -> Dict:
+        return {"target_replicas": input_p.count}
+
+    def get_field_mgr_key(self, process: str, env: str) -> str:
+        return fieldmgr.f_overlay_replicas(process, env)
+
+
+class ResQuotasSyncerFieldAlgo(SyncerFieldAlgo):
+    def get_empty_values(self) -> Dict:
+        return {"plan_name": None}
+
+    def get_values(self, input_p) -> Dict:
+        return {"plan_name": input_p.plan}
+
+    def get_field_mgr_key(self, process: str, env: str) -> str:
+        return fieldmgr.f_overlay_res_quotas(process, env)
+
+
+class AutoscalingSyncerFieldAlgo(SyncerFieldAlgo):
+    def get_empty_values(self) -> Dict:
+        return {"autoscaling": None, "scaling_config": None}
+
+    def get_values(self, input_p) -> Dict:
+        return {
+            "autoscaling": True,
+            "scaling_config": {
+                "min_replicas": input_p.min_replicas,
+                "max_replicas": input_p.max_replicas,
+                "policy": input_p.policy,
+            },
+        }
+
+    def get_field_mgr_key(self, process: str, env: str) -> str:
+        return fieldmgr.f_overlay_autoscaling(process, env)

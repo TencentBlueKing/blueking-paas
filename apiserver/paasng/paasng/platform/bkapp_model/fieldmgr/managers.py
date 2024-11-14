@@ -34,7 +34,7 @@ class FieldManager:
     def __init__(self, module: Module, field: Field):
         self.module = module
         self.field = field
-        self.rows_group = self._get_row_group(module)
+        self.row_group = self._get_row_group(module)
 
     def is_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field is managed by the given manager."""
@@ -45,29 +45,29 @@ class FieldManager:
 
         :return: The manager for the field, or None if the field is not managed.
         """
-        return self.rows_group.get_manager(self.field)
+        return self.row_group.get_manager(self.field)
 
     def set(self, manager: FieldMgrName):
         """Set the manager for the field.
 
         :param manager: The manager to be set.
         """
-        self.rows_group.set_manager(self.field, manager)
+        self.row_group.set_manager(self.field, manager)
         self._save()
 
     def reset(self):
         """Reset the manager to empty for the field."""
-        self.rows_group.reset_manager(self.field)
+        self.row_group.reset_manager(self.field)
         self._save()
 
     def _save(self):
         """Save the changes to the database to make the data persistent."""
-        for record in self.rows_group.get_updated_rows():
+        for record in self.row_group.get_updated_rows():
             BkAppManagedFields.objects.update_or_create(
                 module=self.module, manager=record.manager, defaults={"fields": record.fields}
             )
         # Refresh the rows group instance in memory
-        self.rows_group = self._get_row_group(self.module)
+        self.row_group = self._get_row_group(self.module)
 
     @staticmethod
     def _get_row_group(module: Module) -> ManagerFieldsRowGroup:

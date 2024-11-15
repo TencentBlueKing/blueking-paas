@@ -232,8 +232,8 @@
                     this.$http.post(
                         URLRouter.pluginMemberManage,
                         {
-                            // 管理员
-                            username: '{{ request.user.username }}',
+                            // 成为管理员
+                            action: 'add',
                             role: 2
                         }
                     ).then(resp => {
@@ -241,11 +241,11 @@
                     })
                 },
                 beNotPluginAdmin: function () {
-                    this.$http.delete(
+                    this.$http.post(
                         URLRouter.pluginMemberManage,
                         {
-                            // 管理员
-                            username: '{{ request.user.username }}',
+                            // 取消成为管理员
+                            action: 'delete',
                             role: 2
                         }
                     ).then(resp => {

@@ -31,7 +31,11 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit import constants
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
+from paasng.plat_admin.admin42.serializers.bk_plugins import (
+    BkPluginDistributorSLZ,
+    BKPluginMembersManageReqSLZ,
+    BKPluginTagSLZ,
+)
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
 
@@ -177,12 +181,20 @@ class BKPluginMembersManageViewSet(ViewSet):
         )
 
     def update(self, request, code):
-        """将用户添加为某个角色的成员"""
+        """将用户添加或取消为某个角色的成员"""
+        slz = BKPluginMembersManageReqSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        username = request.user.username
         plugin = get_object_or_404(PluginInstance, id=code)
-        username, role = request.data["username"], request.data["role"]
+
         data_before = self._gen_data_detail(plugin, username)
 
-        members_api.add_role_members(plugin, plugin_constants.PluginRole(role), username)
+        if data["action"] == "add":
+            members_api.add_role_members(plugin, plugin_constants.PluginRole(data["role"]), [username])
+        if data["action"] == "delete":
+            members_api.delete_role_members(plugin, plugin_constants.PluginRole(data["role"]), [username])
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -193,26 +205,7 @@ class BKPluginMembersManageViewSet(ViewSet):
             data_after=self._gen_data_detail(plugin, username),
         )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def destroy(self, request, code):
-        """将用户从某个角色的成员中删除"""
-        plugin = get_object_or_404(PluginInstance, id=code)
-        username, role = request.data["username"], request.data["role"]
-        data_before = self._gen_data_detail(plugin, username)
-
-        members_api.delete_role_members(plugin, plugin_constants.PluginRole(role), username)
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.MODIFY,
-            target=OperationTarget.BKPLUGIN_MEMBER,
-            app_code=code,
-            data_before=data_before,
-            data_after=self._gen_data_detail(plugin, username),
-        )
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_200_OK)
 
 
 def is_user_plugin_admin(code: str, username: str) -> bool:

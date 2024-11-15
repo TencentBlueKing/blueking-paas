@@ -606,19 +606,10 @@ class UserMarkedApplication(OwnerTimestampedModel):
 
 
 class ApplicationDeploymentModuleOrder(models.Model):
-    app = models.ForeignKey(Application, on_delete=models.CASCADE, verbose_name="应用")
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, verbose_name="应用")
     module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块")
-    module_name = models.CharField(verbose_name="模块名称", max_length=20)
     order = models.IntegerField(verbose_name="顺序")
 
     class Meta:
-        unique_together = ("app", "module")
+        unique_together = ("application", "module")
         verbose_name = "模块顺序"
-
-
-class ApplicationDeploymentModuleOrderRecord(models.Model):
-    operator = BkUserField(verbose_name="操作人")
-    app = models.ForeignKey(Application, on_delete=models.DO_NOTHING, verbose_name="应用")
-    before_order = models.JSONField(default=dict, verbose_name="排序前顺序")
-    after_order = models.JSONField(default=dict, verbose_name="排序后顺序")
-    created_at = models.DateTimeField(auto_now_add=True)

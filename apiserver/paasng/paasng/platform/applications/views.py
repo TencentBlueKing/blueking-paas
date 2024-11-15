@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
-import json
 import logging
 import random
 import string
@@ -73,8 +72,9 @@ from paasng.infras.iam.helpers import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.service import add_app_audit_record
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -88,7 +88,6 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
     ApplicationDeploymentModuleOrder,
-    ApplicationDeploymentModuleOrderRecord,
     ApplicationEnvironment,
     JustLeaveAppManager,
     UserApplicationFilter,
@@ -1522,9 +1521,8 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
         # 记录排序操作日志
         # 操作前
         old_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
+            ApplicationDeploymentModuleOrder.objects.filter(application=application).values("module__name", "order")
         )
-        old_module_orders_json = json.dumps(old_module_orders)
 
         # 更新或创建模块排序
         for module in modules:
@@ -1532,9 +1530,8 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
                 # 过滤掉模块名称不存在的
                 if item["module_name"] == module.name:
                     ApplicationDeploymentModuleOrder.objects.update_or_create(
-                        app=application,
+                        application=application,
                         module=module,
-                        module_name=item["module_name"],
                         defaults={
                             "order": item["order"],
                         },
@@ -1542,30 +1539,34 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
 
         # 操作后
         new_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(app=application).values("module_name", "order")
+            ApplicationDeploymentModuleOrder.objects.filter(application=application).values("module__name", "order")
         )
-        new_module_orders_json = json.dumps(new_module_orders)
 
-        if old_module_orders_json == new_module_orders_json:
+        if old_module_orders == new_module_orders:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        record = ApplicationDeploymentModuleOrderRecord(
-            operator=request.user.pk,
-            app=application,
-            before_order=old_module_orders_json,
-            after_order=new_module_orders_json,
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.MODULE,
+            result_code=ResultCode.SUCCESS,
+            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=old_module_orders),
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=new_module_orders),
         )
-        record.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
     def list(self, request, code):
         """获取模块的排序"""
         application = self.get_application()
-        data = (
-            ApplicationDeploymentModuleOrder.objects.filter(app=application)
+        result = (
+            ApplicationDeploymentModuleOrder.objects.filter(application=application)
             .order_by("order")
-            .values("module_name", "order")
+            .values("module__name", "order")
         )
-        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(data, many=True)
+        # 'module__name' rename to 'module_name'
+        renamed_result = [{"module_name": item["module__name"], "order": item["order"]} for item in result]
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(renamed_result, many=True)
         return Response(serializer.data)

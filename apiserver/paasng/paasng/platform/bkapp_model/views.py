@@ -249,6 +249,7 @@ class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 module.deploy_hooks.enable_hook(type_=data["type"], proc_command=proc_command)
             else:
                 module.deploy_hooks.enable_hook(type_=data["type"], command=data["command"], args=data["args"])
+            fieldmgr.FieldManager(module, fieldmgr.F_HOOKS).set(fieldmgr.FieldMgrName.WEB_FORM)
         else:
             module.deploy_hooks.disable_hook(type_=data["type"])
         return Response(ModuleDeployHookSLZ(module.deploy_hooks.get_by_type(data["type"])).data)

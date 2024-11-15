@@ -23,6 +23,7 @@ a "manager" for each field.
 from .constants import FieldMgrName
 from .fields import (
     F_DOMAIN_RESOLUTION,
+    F_HOOKS,
     F_SVC_DISCOVERY,
     f_overlay_autoscaling,
     f_overlay_mounts,
@@ -33,8 +34,9 @@ from .managers import FieldManager
 
 __all__ = [
     "FieldMgrName",
-    "F_SVC_DISCOVERY",
     "F_DOMAIN_RESOLUTION",
+    "F_HOOKS",
+    "F_SVC_DISCOVERY",
     "FieldManager",
     "f_overlay_autoscaling",
     "f_overlay_mounts",

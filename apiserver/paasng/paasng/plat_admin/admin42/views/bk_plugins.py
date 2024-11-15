@@ -208,8 +208,14 @@ class BKPluginMembersManageViewSet(ViewSet):
         return Response(status=status.HTTP_200_OK)
 
 
+def is_plugin_instance_exist(code: str) -> bool:
+    return PluginInstance.objects.filter(id=code).exists()
+
+
 def is_user_plugin_admin(code: str, username: str) -> bool:
     """判断用户是否是插件管理员"""
-    plugin = get_object_or_404(PluginInstance, id=code)
+    plugin = PluginInstance.objects.filter(id=code).first()
+    if not plugin:
+        return False
     roles = members_api.fetch_user_roles(plugin, username)
     return plugin_constants.PluginRole.ADMINISTRATOR in roles

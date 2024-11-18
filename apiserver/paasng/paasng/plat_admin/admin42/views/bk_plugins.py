@@ -15,18 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor, BkPluginTag
+from paasng.bk_plugins.pluginscenter import constants as plugin_constants
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
+from paasng.bk_plugins.pluginscenter.models import PluginInstance
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.misc.audit import constants
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_admin.admin42.serializers.bk_plugins import BkPluginDistributorSLZ, BKPluginTagSLZ
+from paasng.plat_admin.admin42.serializers.bk_plugins import (
+    BkPluginDistributorSLZ,
+    BKPluginMembersManageReqSLZ,
+    BKPluginTagSLZ,
+)
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 
 
@@ -151,3 +160,62 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BKPluginMembersManageViewSet(ViewSet):
+    """插件成员管理接口"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    @staticmethod
+    def _gen_data_detail(code: str, username: str) -> DataDetail:
+        return DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [
+                    plugin_constants.PluginRole(role).name.lower()
+                    for role in members_api.fetch_user_roles(code, username)
+                ],
+            },
+        )
+
+    def update(self, request, code):
+        """将用户添加或取消为某个角色的成员"""
+        slz = BKPluginMembersManageReqSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        username = request.user.username
+        plugin = get_object_or_404(PluginInstance, id=code)
+
+        data_before = self._gen_data_detail(plugin, username)
+
+        if data["action"] == "add":
+            members_api.add_role_members(plugin, plugin_constants.PluginRole(data["role"]), [username])
+        if data["action"] == "delete":
+            members_api.delete_role_members(plugin, plugin_constants.PluginRole(data["role"]), [username])
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.BKPLUGIN_MEMBER,
+            app_code=code,
+            data_before=data_before,
+            data_after=self._gen_data_detail(plugin, username),
+        )
+
+        return Response(status=status.HTTP_200_OK)
+
+
+def is_plugin_instance_exist(code: str) -> bool:
+    return PluginInstance.objects.filter(id=code).exists()
+
+
+def is_user_plugin_admin(code: str, username: str) -> bool:
+    """判断用户是否是插件管理员"""
+    plugin = PluginInstance.objects.filter(id=code).first()
+    if not plugin:
+        return False
+    roles = members_api.fetch_user_roles(plugin, username)
+    return plugin_constants.PluginRole.ADMINISTRATOR in roles

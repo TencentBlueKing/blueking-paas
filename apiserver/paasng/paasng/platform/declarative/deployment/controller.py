@@ -80,7 +80,6 @@ class DeploymentDeclarativeController:
 
         # 总是将本次解析的进程数据保存到当前 deployment 对象中
         self.deployment.update_fields(processes=desc.get_proc_tmpls())
-        # TODO: 弄清楚为什么非得在这里把 hooks 保存到 deployment 对象中
         if hooks := desc_obj.get_deploy_hooks():
             self.deployment.update_fields(hooks=hooks)
 

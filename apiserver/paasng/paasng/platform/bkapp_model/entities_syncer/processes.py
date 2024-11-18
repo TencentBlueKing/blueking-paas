@@ -25,12 +25,12 @@ from paasng.platform.modules.models import Module
 from .result import CommonSyncResult
 
 
-def sync_processes(module: Module, processes: List[Process], use_proc_command: bool = False) -> CommonSyncResult:
+def sync_processes(module: Module, processes: List[Process], skip_command_args: bool = False) -> CommonSyncResult:
     """sync processes data to ModuleProcessSpec(db model)
 
     :param module: app module
     :param processes: processes list
-    :param use_proc_command: only update the "proc_command" field, ignore "command"
+    :param skip_command_args: only update the "proc_command" field, ignore "command"
         and "args", when the processes data is provided by legacy desc file, this
         argument should be set to True.
     :return: sync result
@@ -52,7 +52,7 @@ def sync_processes(module: Module, processes: List[Process], use_proc_command: b
             "probes": process.probes,
             "services": process.services,
         }
-        if not use_proc_command:
+        if not skip_command_args:
             defaults.update({"command": process.command, "args": process.args})
 
         # When the replicas value is None, only update the data if the process appears

@@ -99,13 +99,13 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     sync_processes(module, processes=spec_entity.processes)
     if build := spec_entity.build:
         sync_build(module, build)
-    if hooks := spec_entity.hooks:
-        sync_hooks(module, hooks)
-    if env_vars or overlay_env_vars:
-        # sync_env_vars doesn't need to use manager parameter because the data will
-        # only be manged by a single manger.
-        # TODO: Use preset env vars instead / always call even if the value is None or NOTSET
-        sync_env_vars(module, env_vars, overlay_env_vars)
+
+    sync_hooks(module, spec_entity.hooks, manager)
+
+    # sync_env_vars doesn't need to use manager parameter because the data will
+    # only be manged by a single manger.
+    sync_env_vars(module, env_vars, overlay_env_vars)
+
     if addons := spec_entity.addons:
         sync_addons(module, addons)
     if mounts or overlay_mounts:
@@ -113,7 +113,6 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
 
     sync_svc_discovery(module, spec_entity.svc_discovery, manager)
     sync_domain_resolution(module, spec_entity.domain_resolution, manager)
-
     sync_observability(module, spec_entity.observability)
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
@@ -121,4 +120,44 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     sync_env_overlays_res_quotas(module, overlay_res_quotas, manager)
     sync_env_overlays_autoscalings(module, overlay_autoscaling, manager)
 
+    clean_empty_overlays(module)
+
+
+def import_bkapp_spec_entity_non_cnative(
+    module: Module, spec_entity: v1alpha2_entity.BkAppSpec, manager: FieldMgrName
+):
+    """Import a BkApp spec entity to the current module, will overwrite existing data.
+
+    This function is for non-cnative(legacy) applications and only import a subset of
+    all fields. The fields include:
+
+    - processes
+    - hooks
+    - env_vars
+    - overlay(env_vars only)
+    - svc_discovery
+
+    :param module: The module object.
+    :param spec_entity: BkApp spec entity.
+    :param manager: The manager performing this action.
+    """
+    env_vars = []
+    if configuration := spec_entity.configuration:
+        env_vars = configuration.env or []
+
+    overlay_env_vars: NotSetType | list = NOTSET
+    if not isinstance(spec_entity.env_overlay, NotSetType):
+        eo = spec_entity.env_overlay
+        if eo:
+            overlay_env_vars = eo.env_variables or []
+
+    # Run sync functions
+    sync_processes(module, processes=spec_entity.processes, use_proc_command=True)
+    sync_hooks(module, spec_entity.hooks, manager, use_proc_command=True)
+
+    # sync_env_vars doesn't need to use manager parameter because the data will
+    # only be manged by a single manger.
+    sync_env_vars(module, env_vars, overlay_env_vars)
+
+    sync_svc_discovery(module, spec_entity.svc_discovery, manager)
     clean_empty_overlays(module)

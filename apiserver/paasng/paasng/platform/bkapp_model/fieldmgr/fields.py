@@ -26,6 +26,7 @@ Field: TypeAlias = str
 # Some predefined fields and factories
 F_SVC_DISCOVERY: Field = "spec.svcDiscovery"
 F_DOMAIN_RESOLUTION: Field = "spec.domainResolution"
+F_HOOKS: Field = "spec.hooks"
 
 
 def f_overlay_replicas(process: str, env_name: str) -> Field:

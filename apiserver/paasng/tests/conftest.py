@@ -921,15 +921,3 @@ def _mock_sync_developers_to_sentry():
         "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
     ):
         yield
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _mock_delete_process_probe(request):
-    skip_patch = request.param if hasattr(request, "param") else False
-
-    if not skip_patch:
-        # 避免所有单元测试会执行删除 ProcessProbe 操作
-        with mock.patch("paasng.platform.declarative.deployment.controller.delete_process_probes"):
-            yield
-    else:
-        yield

@@ -68,7 +68,7 @@ class BkAppSpec(AllowNotsetModel):
 
     build: Optional[AppBuildConfig] = None
     processes: List[Process] = Field(default_factory=list)
-    hooks: Optional[Hooks] = None
+    hooks: Hooks | NotSetType | None = NOTSET
     addons: List[Addon] = Field(default_factory=list)
     mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)

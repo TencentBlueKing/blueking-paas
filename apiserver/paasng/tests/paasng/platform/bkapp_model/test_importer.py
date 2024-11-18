@@ -26,7 +26,7 @@ from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, SvcD
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, SvcDiscConfig
-from paasng.platform.engine.models.config_var import ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.utils.camel_converter import dict_to_camel
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -114,7 +114,7 @@ class TestEnvVars:
         base_manifest["spec"]["envOverlay"] = {"envVariables": [{"envName": "stag", "name": "KEY2", "value": "foo"}]}
 
         import_manifest_app_desc(bk_module, base_manifest)
-        assert ConfigVar.objects.count() == 2
+        assert PresetEnvVariable.objects.count() == 2
 
 
 class TestAddons:

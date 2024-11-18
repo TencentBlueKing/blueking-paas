@@ -63,6 +63,8 @@ python manage.py migrate
 初始化增强服务的套餐信息：
 
 ```python
+python manage.py shell
+
 import json
 from paas_service.models import Service
 from paas_service.models import Plan
@@ -136,6 +138,8 @@ SERVICE_REMOTE_ENDPOINTS:
 SpecDefinition 用于描述规格的元信息，Specification 表示一个具体的 SpecDefinition 记录对应的值，可绑定到多个 Plan 上。
 
 ```python
+python manage.py shell
+
 import json
 from paas_service.models import Service
 from paas_service.models import SpecDefinition, Specification

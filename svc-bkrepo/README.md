@@ -63,6 +63,8 @@ python manage.py migrate
 初始化增强服务的套餐信息：
 
 ```python
+python manage.py shell
+
 import json
 from paas_service.models import Service
 from paas_service.models import Plan

@@ -28,7 +28,7 @@
     name: dj2_with_auth
     type: 'normal'
     display_name_zh_cn: 蓝鲸应用开发框架（Django3.x）
-    display_name_en: BlueKing App framework(Django3.x)
+    display_name_en: BlueKing APP framework(Django3.x)
     description_zh_cn: Python + Django3.x，集成用户鉴权、日志处理等基础功能模块
     description_en: Python + Django3.x, integrated user authentication, log processing, etc.
     language: Python
@@ -118,7 +118,7 @@
     name: golang-gin-v2
     type: 'normal'
     display_name_zh_cn: 蓝鲸应用开发框架（Gin）
-    display_name_en: BlueKing App framework（Gin）
+    display_name_en: BlueKing APP framework (Gin)
     description_zh_cn: 全新 Go 开发框架，基于 Go 1.22 + Gin 1.10
     description_en: New Go development framework, based on Go 1.22 + Gin 1.10.
     language: Go

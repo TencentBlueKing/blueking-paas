@@ -96,7 +96,7 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
             overlay_mounts = eo.mounts or []
 
     # Run sync functions
-    sync_processes(module, processes=spec_entity.processes)
+    sync_processes(module, processes=spec_entity.processes, manager=manager)
     if build := spec_entity.build:
         sync_build(module, build)
 
@@ -152,7 +152,7 @@ def import_bkapp_spec_entity_non_cnative(
             overlay_env_vars = eo.env_variables or []
 
     # Run sync functions
-    sync_processes(module, processes=spec_entity.processes, use_proc_command=True)
+    sync_processes(module, processes=spec_entity.processes, manager=manager, use_proc_command=True)
     sync_hooks(module, spec_entity.hooks, manager, use_proc_command=True)
 
     # sync_env_vars doesn't need to use manager parameter because the data will

@@ -24,6 +24,7 @@ from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.engine.models.deployment import ProcessTmpl
+from paasng.utils.structure import NotSetType
 
 
 @define
@@ -131,11 +132,16 @@ class DeploymentDesc:
     @staticmethod
     def to_proc_tmpl(process: Process) -> ProcessTmpl:
         """Turn a Process object into a ProcessTmpl object."""
+        # Turn "notset" value to None
+        if isinstance(process.replicas, NotSetType):
+            replicas = None
+        else:
+            replicas = process.replicas
         return cattr.structure(
             {
                 "name": process.name,
                 "command": process.get_proc_command(),
-                "replicas": process.replicas,
+                "replicas": replicas,
                 "plan": process.res_quota_plan,
                 "probes": process.probes,
                 # FIXME: 是否需要补充 services 和 scaling_config 等字段，要弄明白增加

@@ -39,6 +39,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.importer import import_manifest
 from paasng.platform.bkapp_model.manifest import get_manifest
 from paasng.platform.bkapp_model.models import (
@@ -203,7 +204,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             for proc_spec in proc_specs
         ]
 
-        sync_processes(module, processes)
+        sync_processes(module, processes, manager=FieldMgrName.WEB_FORM)
 
         # 更新环境覆盖&更新可观测功能配置
         metrics = []

@@ -43,6 +43,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.models import ObservabilityConfig, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
@@ -290,7 +291,7 @@ class ModuleInitializer:
             for proc_spec in bkapp_spec["processes"]
         ]
 
-        sync_processes(self.module, processes)
+        sync_processes(self.module, processes, manager=FieldMgrName.WEB_FORM)
 
         # 更新环境覆盖&更新可观测功能配置
         metrics = []

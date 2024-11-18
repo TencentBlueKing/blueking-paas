@@ -15,21 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.modules.models import Module
+from paasng.utils.structure import NOTSET, NotSetType
 
 from .result import CommonSyncResult
 
 
-def sync_processes(module: Module, processes: List[Process], use_proc_command: bool = False) -> CommonSyncResult:
+def sync_processes(
+    module: Module, processes: List[Process], manager: fieldmgr.FieldMgrName, use_proc_command: bool = False
+) -> CommonSyncResult:
     """sync processes data to ModuleProcessSpec(db model)
 
     :param module: app module
     :param processes: processes list
+    :param manager: the manager performing the sync action.
     :param use_proc_command: only update the "proc_command" field, ignore "command"
         and "args", when the processes data is provided by legacy desc file, this
         argument should be set to True.
@@ -43,6 +49,10 @@ def sync_processes(module: Module, processes: List[Process], use_proc_command: b
     for proc_spec in ModuleProcessSpec.objects.filter(module=module):
         existing_index[proc_spec.name] = proc_spec.pk
 
+    managed_values = ManagedFieldValues(module, processes, manager, set(existing_index.keys()))
+    target_replicas_map = managed_values.get_target_replicas()
+    autoscaling_map = managed_values.get_autoscaling()
+
     # Update or create data
     for process in processes:
         defaults: Dict[str, Any] = {
@@ -54,17 +64,11 @@ def sync_processes(module: Module, processes: List[Process], use_proc_command: b
         }
         if not use_proc_command:
             defaults.update({"command": process.command, "args": process.args})
-
-        # When the replicas value is None, only update the data if the process appears
-        # for the first time in the module.
-        if process.replicas is None:
-            if not ModuleProcessSpec.objects.filter(module=module, name=process.name).exists():
-                defaults["target_replicas"] = 1
-        else:
-            defaults["target_replicas"] = process.replicas
-
-        if process.autoscaling:
-            defaults.update({"autoscaling": True, "scaling_config": process.autoscaling})
+        if process.name in target_replicas_map:
+            defaults.update({"target_replicas": target_replicas_map[process.name]})
+        if process.name in autoscaling_map:
+            as_config = autoscaling_map[process.name]
+            defaults.update({"autoscaling": bool(as_config), "scaling_config": as_config})
 
         _, created = ModuleProcessSpec.objects.update_or_create(module=module, name=process.name, defaults=defaults)
 
@@ -74,4 +78,74 @@ def sync_processes(module: Module, processes: List[Process], use_proc_command: b
 
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
+
+    # Set field managers
+    managed_values.set_field_mgr_target_replicas(target_replicas_map.keys())
+    managed_values.set_field_mgr_autoscaling(autoscaling_map.keys())
     return ret
+
+
+class ManagedFieldValues:
+    """This class helps get the values of the fields that might be managed by other managers."""
+
+    default_replicas = 1
+
+    def __init__(
+        self, module: Module, processes: List[Process], manager: fieldmgr.FieldMgrName, existing_procs: set[str]
+    ):
+        self.module = module
+        self.processes = processes
+        self.manager = manager
+        self.existing_procs = existing_procs
+
+    def get_target_replicas(self) -> dict[str, int]:
+        """Get the target replicas for each process.
+
+        :return: A dict of process name to replicas.
+        """
+        results: dict[str, int] = {}
+        for process in self.processes:
+            name = process.name
+            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_replicas(name))
+            if (
+                not replicas_mgr.is_managed_by(self.manager)
+                and process.replicas == NOTSET
+                and name in self.existing_procs
+            ):
+                continue
+            results[name] = (
+                process.replicas
+                if not isinstance(process.replicas, NotSetType) and process.replicas is not None
+                else self.default_replicas
+            )
+        return results
+
+    def set_field_mgr_target_replicas(self, names: Iterable[str]):
+        """Set the field manager for the target replicas field."""
+        for name in names:
+            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_replicas(name))
+            replicas_mgr.set(self.manager)
+
+    def get_autoscaling(self) -> dict[str, AutoscalingConfig | None]:
+        """Get the autoscaling config for each process.
+
+        :return: A dict of process name to autoscaling config.
+        """
+        results: dict[str, AutoscalingConfig | None] = {}
+        for process in self.processes:
+            name = process.name
+            autoscaling_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_autoscaling(name))
+            if isinstance(process.autoscaling, NotSetType) and not autoscaling_mgr.is_managed_by(self.manager):
+                continue
+
+            if isinstance(process.autoscaling, NotSetType):
+                results[name] = None
+            else:
+                results[name] = process.autoscaling
+        return results
+
+    def set_field_mgr_autoscaling(self, names: Iterable[str]):
+        """Set the field manager for the autoscaling field."""
+        for name in names:
+            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_autoscaling(name))
+            replicas_mgr.set(self.manager)

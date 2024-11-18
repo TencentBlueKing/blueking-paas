@@ -53,7 +53,7 @@ class EnvVariableSLZ(serializers.Serializer):
 
 class ProcessSLZ(serializers.Serializer):
     command = serializers.CharField(help_text="进程启动指令")
-    replicas = serializers.IntegerField(default=None, help_text="进程副本数", allow_null=True)
+    replicas = serializers.IntegerField(default=NOTSET, help_text="进程副本数", allow_null=True)
     plan = serializers.CharField(help_text="资源方案名称", required=False, allow_blank=True, allow_null=True)
     probes = ProbeSetSLZ(default=None, help_text="探针集合", required=False)
 

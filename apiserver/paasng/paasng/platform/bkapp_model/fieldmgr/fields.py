@@ -29,6 +29,14 @@ F_DOMAIN_RESOLUTION: Field = "spec.domainResolution"
 F_HOOKS: Field = "spec.hooks"
 
 
+def f_proc_replicas(process: str) -> Field:
+    return f"spec.processes.replicas[{process}]"
+
+
+def f_proc_autoscaling(process: str) -> Field:
+    return f"spec.processes.autoscaling[{process}]"
+
+
 def f_overlay_replicas(process: str, env_name: str) -> Field:
     return f"spec.envOverlay.replicas[{process}:{env_name}]"
 

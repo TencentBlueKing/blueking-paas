@@ -109,8 +109,6 @@ class PatchFeatures:
 DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
 
 pymysql.install_as_MySQLdb()
-# Patch version info to force pass Django client check
-setattr(pymysql, "version_info", (1, 4, 6, "final", 0))
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥

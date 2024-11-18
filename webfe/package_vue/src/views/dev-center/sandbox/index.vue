@@ -164,7 +164,10 @@
       </section>
     </paas-content-loader>
     <!-- 密码获取 -->
-    <password-request-dialog :show.sync="isDialogVisible" />
+    <password-request-dialog
+      :show.sync="isDialogVisible"
+      :passwrod="sandboxPassword"
+    />
     <!-- 立即运行二次确认 -->
     <run-sandbox-dialog
       :show.sync="isRunSandboxVisible"
@@ -213,6 +216,7 @@ export default {
       processInfo: {},
       processData: {},
       isRunSandboxVisible: false,
+      sandboxPassword: '',
     };
   },
   computed: {
@@ -289,7 +293,32 @@ export default {
       }
       return url;
     },
+    // 沙箱删除处理
+    sandboxDeletionHandled() {
+      // 沙箱已经被删除
+      this.isDialogVisible = false;
+      clearInterval(this.sandboxIntervalId);
+      this.back();
+    },
+    // 获取沙箱密码
+    async getSandboxPassword() {
+      try {
+        const res = await this.$store.dispatch('sandbox/getSandboxPassword', {
+          appCode: this.code,
+          moduleId: this.module,
+        });
+        this.sandboxPassword = res.password;
+      } catch (e) {
+        if (e.code === 'DEV_SANDBOX_NOT_FOUND') {
+          this.sandboxDeletionHandled();
+          return;
+        }
+        this.catchErrorHandler(e);
+      }
+    },
     showRequestDialog() {
+      this.sandboxPassword = '';
+      this.getSandboxPassword();
       this.isDialogVisible = true;
     },
     rightTabChange(name) {
@@ -343,13 +372,17 @@ export default {
           appCode: this.code,
           moduleId: this.module,
         });
-        this.sandboxData = res;
         setTimeout(() => {
+          this.sandboxData = res;
           if (this.isLoadingSandbox) {
             this.getSandboxStatus();
           }
         }, 1000);
       } catch (e) {
+        if (e.code === 'DEV_SANDBOX_NOT_FOUND') {
+          this.sandboxDeletionHandled();
+          return;
+        }
         this.catchErrorHandler(e);
       }
     },
@@ -378,6 +411,10 @@ export default {
         });
         return response.data;
       } catch (e) {
+        // 沙箱相关接口报错，通过获取密码接口判定沙箱是否已删除
+        if (e.code === 'ERR_NETWORK') {
+          this.getSandboxPassword();
+        }
         this.catchErrorHandler(e);
         return e;
       }

@@ -117,6 +117,7 @@ export default {
       curRefreshTime: '5s',
       curRunLogType: '',
       isCollapsed: false,
+      ansiUp: null,
     };
   },
   computed: {
@@ -127,11 +128,8 @@ export default {
       return this.type === 'build';
     },
     displayLogs() {
-      if (this.isBuildLog) {
-        return this.logs || '';
-      }
-      // 运行日志
-      return this.logs[this.curRunLogType] || '';
+      const curLogs = this.isBuildLog ? this.logs ?? '' : this.logs[this.curRunLogType] ?? '';
+      return this.ansiUp ? this.ansiUp.ansi_to_html(curLogs) : curLogs;
     },
     logTypeList() {
       if (!this.isBuildLog && this.logs !== null) {
@@ -165,6 +163,10 @@ export default {
         }
       }
     },
+  },
+  created() {
+    const AU = require('ansi_up');
+    this.ansiUp = new AU.default();
   },
   methods: {
     dropdownShow() {

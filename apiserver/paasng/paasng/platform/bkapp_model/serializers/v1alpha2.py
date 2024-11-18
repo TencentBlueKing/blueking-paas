@@ -287,7 +287,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     configuration = ConfigurationInputSLZ(required=False)
     addons = serializers.ListField(child=AddonInputSLZ(), required=False, allow_empty=True)
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)
-    hooks = HooksInputSLZ(allow_null=True, default=None)
+    hooks = HooksInputSLZ(allow_null=True, default=NOTSET)
     envOverlay = EnvOverlayInputSLZ(source="env_overlay", default=NOTSET)
     svcDiscovery = ServiceDiscoveryInputSLZ(source="svc_discovery", default=NOTSET)
     domainResolution = DomainResolutionInputSLZ(source="domain_resolution", default=NOTSET)

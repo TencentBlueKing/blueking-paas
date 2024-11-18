@@ -25,11 +25,14 @@ from paasng.platform.modules.models import Module
 from .result import CommonSyncResult
 
 
-def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult:
+def sync_processes(module: Module, processes: List[Process], use_proc_command: bool = False) -> CommonSyncResult:
     """sync processes data to ModuleProcessSpec(db model)
 
     :param module: app module
     :param processes: processes list
+    :param use_proc_command: only update the "proc_command" field, ignore "command"
+        and "args", when the processes data is provided by legacy desc file, this
+        argument should be set to True.
     :return: sync result
     """
     ret = CommonSyncResult()
@@ -43,14 +46,14 @@ def sync_processes(module: Module, processes: List[Process]) -> CommonSyncResult
     # Update or create data
     for process in processes:
         defaults: Dict[str, Any] = {
-            "command": process.command,
-            "args": process.args,
             "proc_command": process.proc_command,
             "port": process.target_port,
             "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
             "probes": process.probes,
             "services": process.services,
         }
+        if not use_proc_command:
+            defaults.update({"command": process.command, "args": process.args})
 
         # When the replicas value is None, only update the data if the process appears
         # for the first time in the module.

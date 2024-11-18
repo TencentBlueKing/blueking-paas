@@ -20,6 +20,7 @@ from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.entities import HookCmd, Hooks
 from paasng.platform.bkapp_model.entities_syncer import sync_hooks
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.models import DeployHookType, ModuleDeployHook
 
 pytestmark = pytest.mark.django_db
@@ -27,7 +28,7 @@ pytestmark = pytest.mark.django_db
 
 class Test__sync_hooks:
     def test_create(self, bk_module):
-        ret = sync_hooks(bk_module, Hooks(pre_release=HookCmd(command=["foo", "bar"])))
+        ret = sync_hooks(bk_module, Hooks(pre_release=HookCmd(command=["foo", "bar"])), FieldMgrName.APP_DESC)
         assert ret.created_num == 1
         assert ModuleDeployHook.objects.filter(module=bk_module).count() == 1
         hook = ModuleDeployHook.objects.get(module=bk_module)
@@ -37,7 +38,7 @@ class Test__sync_hooks:
         G(ModuleDeployHook, module=bk_module, type=DeployHookType.PRE_RELEASE_HOOK)
         assert ModuleDeployHook.objects.filter(module=bk_module).count() == 1
 
-        ret = sync_hooks(bk_module, Hooks(pre_release=HookCmd(command=["foo", "bar"])))
+        ret = sync_hooks(bk_module, Hooks(pre_release=HookCmd(command=["foo", "bar"])), FieldMgrName.APP_DESC)
         assert ret.updated_num == 1
         assert ModuleDeployHook.objects.filter(module=bk_module).count() == 1
         hook = ModuleDeployHook.objects.get(module=bk_module)
@@ -47,6 +48,6 @@ class Test__sync_hooks:
         G(ModuleDeployHook, module=bk_module, type=DeployHookType.PRE_RELEASE_HOOK)
         assert ModuleDeployHook.objects.filter(module=bk_module).count() == 1
 
-        ret = sync_hooks(bk_module, Hooks())
+        ret = sync_hooks(bk_module, Hooks(), FieldMgrName.APP_DESC)
         assert ret.deleted_num == 1
         assert ModuleDeployHook.objects.filter(module=bk_module).count() == 0

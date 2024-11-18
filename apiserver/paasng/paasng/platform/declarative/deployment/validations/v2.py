@@ -73,7 +73,7 @@ class DeploymentDescSLZ(serializers.Serializer):
     env_variables = serializers.ListField(child=EnvVariableSLZ(), required=False)
     processes = serializers.DictField(help_text="key: 进程名称, value: 进程信息", default=dict, child=ProcessSLZ())
     svc_discovery = SvcDiscConfigSLZ(help_text="应用所需服务发现配置", default=NOTSET)
-    scripts = serializers.DictField(help_text="key: 脚本名称, value: 脚本指令内容", default=dict)
+    scripts = serializers.DictField(help_text="key: 脚本名称, value: 脚本指令内容", default=NOTSET)
     bkmonitor = BluekingMonitorSLZ(help_text="SaaS 监控采集配置", required=False, source="bk_monitor")
 
     def to_internal_value(self, data) -> DeploymentDesc:
@@ -97,10 +97,10 @@ class DeploymentDescSLZ(serializers.Serializer):
                 }
             )
         # scripts -> BkAppHooks
-        hooks = {}
-        if pre_release_hook := attrs["scripts"].get("pre_release_hook"):
+        hooks: NotSetType | dict = NOTSET
+        if attrs["scripts"] and (pre_release_hook := attrs["scripts"].get("pre_release_hook")):
             # 镜像已保证 entrypoint 是 /runner/init
-            hooks["pre_release"] = {"command": None, "args": shlex.split(pre_release_hook)}
+            hooks = {"pre_release": {"command": None, "args": shlex.split(pre_release_hook)}}
 
         # env_variables -> BkAppConfiguration
         global_vars = []

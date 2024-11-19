@@ -142,6 +142,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					HostAliases:      buildHostAliases(app),
 					Containers:       buildContainers(proc, envVars, image, pullPolicy, resReq, useCNB),
 					ImagePullSecrets: BuildImagePullSecrets(app),
+					NodeSelector:     buildNodeSelector(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
 					AutomountServiceAccountToken: lo.ToPtr(false),
 				},
@@ -268,4 +269,11 @@ func getSerializedBkApp(bkapp *paasv1alpha2.BkApp) (string, error) {
 	data, _ = sjson.Delete(data, "status")
 	data, _ = sjson.Delete(data, "metadata.managedFields")
 	return data, nil
+}
+
+func buildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
+	if annoKey, ok := app.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey]; ok {
+		return map[string]string{annoKey: "1"}
+	}
+	return nil
 }

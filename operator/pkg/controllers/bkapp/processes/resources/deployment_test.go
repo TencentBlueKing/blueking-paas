@@ -462,4 +462,18 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			Expect(err).To(Not(HaveOccurred()))
 		})
 	})
+
+	Context("Test egress", func() {
+		It("no egress", func() {
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(web.Spec.Template.Spec.NodeSelector).To(BeNil())
+		})
+
+		It("normal case", func() {
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
+			web, _ := BuildProcDeployment(bkapp, "web")
+			Expect(web.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"eng-cstate-test": "1"}))
+		})
+
+	})
 })

@@ -25,7 +25,7 @@ from .fields import Field, ManagerFieldsRow, ManagerFieldsRowGroup
 
 
 class FieldManager:
-    """This class help manage the management status of an module's bkapp model field.
+    """This class helps manage the management status of an module's bkapp model field.
 
     :param module: The module object.
     :param field: The field to be managed.
@@ -34,7 +34,7 @@ class FieldManager:
     def __init__(self, module: Module, field: Field):
         self.module = module
         self.field = field
-        self.row_group = self._get_row_group(module)
+        self.store = RowGroupStore(module)
 
     def is_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field is managed by the given manager."""
@@ -45,33 +45,65 @@ class FieldManager:
 
         :return: The manager for the field, or None if the field is not managed.
         """
-        return self.row_group.get_manager(self.field)
+        return self.store.row_group.get_manager(self.field)
 
     def set(self, manager: FieldMgrName):
         """Set the manager for the field.
 
         :param manager: The manager to be set.
         """
-        self.row_group.set_manager(self.field, manager)
-        self._save()
+        self.store.row_group.set_manager(self.field, manager)
+        self.store.save()
 
     def reset(self):
         """Reset the manager to empty for the field."""
-        self.row_group.reset_manager(self.field)
-        self._save()
+        self.store.row_group.reset_manager(self.field)
+        self.store.save()
 
-    def _save(self):
+
+class MultiFieldsManager:
+    """This class helps manage the management status of an module's bkapp model field,
+    It's able to manage multiple fields at the same time.
+
+    :param module: The module object.
+    """
+
+    def __init__(self, module: Module):
+        self.module = module
+        self.store = RowGroupStore(module)
+
+    def set_many(self, fields: list[Field], manager: FieldMgrName):
+        """Set the manager for many fields.
+
+        :param fields: The fields to be managed.
+        :param manager: The manager to be set.
+        """
+        for f in fields:
+            self.store.row_group.set_manager(f, manager)
+        self.store.save()
+
+
+class RowGroupStore:
+    """The managed fields row group store.
+
+    :param module: The module object.
+    """
+
+    def __init__(self, module: Module):
+        self.module = module
+        self.row_group = self._get_row_group()
+
+    def save(self):
         """Save the changes to the database to make the data persistent."""
         for record in self.row_group.get_updated_rows():
             BkAppManagedFields.objects.update_or_create(
                 module=self.module, manager=record.manager, defaults={"fields": record.fields}
             )
         # Refresh the rows group instance in memory
-        self.row_group = self._get_row_group(self.module)
+        self.row_group = self._get_row_group()
 
-    @staticmethod
-    def _get_row_group(module: Module) -> ManagerFieldsRowGroup:
+    def _get_row_group(self) -> ManagerFieldsRowGroup:
         """Get the managed fields instance of the module."""
-        db_rows = module.managed_fields.all()
+        db_rows = self.module.managed_fields.all()
         rows = [ManagerFieldsRow(FieldMgrName(record.manager), record.fields) for record in db_rows]
         return ManagerFieldsRowGroup(rows)

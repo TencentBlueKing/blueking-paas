@@ -210,7 +210,7 @@ class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
-    replicas = serializers.IntegerField(min_value=0, allow_null=True, default=None)
+    replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
     resQuotaPlan = serializers.ChoiceField(
         choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
     )
@@ -225,7 +225,7 @@ class ProcessInputSLZ(serializers.Serializer):
     command = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     args = serializers.ListField(child=serializers.CharField(), allow_null=True, default=None)
     procCommand = serializers.CharField(allow_null=True, required=False, source="proc_command")
-    autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=None)
+    autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=NOTSET)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
 

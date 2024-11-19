@@ -178,6 +178,10 @@ const monitorAlarm = () => import(/* webpackChunkName: 'app-engine' */'@/views/d
   window.showDeployTip(error);
 });
 
+const dashboards = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/dashboards').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const codeReview = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/code-review').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -862,6 +866,11 @@ const router = new Router({
           path: ':id/:moduleId/alerts',
           component: monitorAlarm,
           name: 'monitorAlarm',
+        },
+        {
+          path: ':id/:moduleId/dashboards',
+          component: dashboards,
+          name: 'dashboards',
         },
         // 普通应用访问统计路由配置
         {

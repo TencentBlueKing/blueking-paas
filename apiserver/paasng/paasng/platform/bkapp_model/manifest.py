@@ -142,9 +142,9 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
         )
 
         # Set the annotation to inform operator what the image pull secret name is
-        model_res.metadata.annotations[
-            IMAGE_CREDENTIALS_REF_ANNO_KEY
-        ] = f"{generate_bkapp_name(module)}--dockerconfigjson"
+        model_res.metadata.annotations[IMAGE_CREDENTIALS_REF_ANNO_KEY] = (
+            f"{generate_bkapp_name(module)}--dockerconfigjson"
+        )
 
 
 class BuildConfigManifestConstructor(ManifestConstructor):
@@ -566,12 +566,20 @@ def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleE
 
     :param model_res: The bkapp model resource object.
     :param env: The environment object.
-
-    # 说明: 现阶段通过设置注解 bkapp.paas.bk.tencent.com/proc-services-feature-enabled, 在 operator 侧完成对应功能.
-    # TODO 后续处理: 当 implicit_needed 为 True 时, 创建并注入 process services 配置, 并且统一设置注解值为 true
     """
     flag, _ = ProcessServicesFlag.objects.get_or_create(app_environment=env, defaults={"implicit_needed": False})
-    if not flag.implicit_needed:
-        model_res.set_proc_services_annotation("true")
-    else:
-        model_res.set_proc_services_annotation("false")
+    model_res.set_proc_services_annotation("true")
+    if flag.implicit_needed:
+        for process in model_res.spec.processes:
+            if process.name != "web":
+                service = crd.ProcService(name=process.name, targetPort=5000, protocol="TCP", port=80)
+                if not process.services:
+                    process.services = []
+                process.services.append(service)
+            else:
+                service = crd.ProcService(
+                    name=process.name, targetPort=5000, protocol="TCP", port=80, exposedType=crd.ExposedType()
+                )
+                if not process.services:
+                    process.services = []
+                process.services.append(service)

@@ -173,7 +173,7 @@ def list_cnative_module_processes_specs(app: Application, environment: str) -> d
 
 
 def gen_cnative_process_specs(res: BkAppResource, environment: str) -> list[CNativeProcessSpec]:
-    """通过线上 BkAppResource 模型, 生成云原生应用的进程 spec 列表
+    """由线上 BkAppResource 模型, 生成云原生应用的进程 spec 列表
 
     :param res: 线上的 BkAppResource 模型
     :param environment: 运行环境

@@ -15,13 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import typing
 from collections import OrderedDict
 
 import yaml
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from yaml.scanner import ScannerError
@@ -30,11 +28,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.utils.error_codes import error_codes
 
-from .serializers import FileUploadSLZ
-from .service import transform_spec2_to_spec3
-
-if typing.TYPE_CHECKING:
-    from rest_framework.request import Request
+from .app_sepc import transform_app_desc_spec2_to_spec3
 
 
 class IndentDumper(yaml.Dumper):
@@ -42,30 +36,35 @@ class IndentDumper(yaml.Dumper):
         return super(IndentDumper, self).increase_indent(flow, False)
 
 
-class AppSpecVersionTransformApiView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
+class AppDescTransformApiView(APIView):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(
-        request_body=FileUploadSLZ,
-        operation_description="Upload a file",
         tags=["应用描述文件版本转换"],
     )
-    def post(self, request: "Request"):
-        try:
-            serializer = FileUploadSLZ(data=request.FILES)
-            serializer.is_valid(raise_exception=True)
-            spec2_data = yaml.safe_load(serializer.validated_data["file"])
-        except ScannerError:
-            raise error_codes.NOT_YAML_FILE
+    def post(self, request):
+        if request.content_type == "application/yaml":
+            try:
+                yaml_data = request.body.decode("utf-8")
+                spec2_data = yaml.safe_load(yaml_data)
+            except ScannerError:
+                raise error_codes.NOT_YAML_FILE
 
-        spec3_data = transform_spec2_to_spec3(spec2_data)
+            spec3_data = transform_app_desc_spec2_to_spec3(spec2_data)
 
-        yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
-        output_yaml = yaml.dump(
-            spec3_data, Dumper=IndentDumper, default_flow_style=False, allow_unicode=True, sort_keys=False, indent=2
-        )
+            yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
+            output_yaml = yaml.dump(
+                spec3_data,
+                Dumper=IndentDumper,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
+                width=1000,
+            )
 
-        response = HttpResponse(output_yaml, content_type="application/x-yaml")
-        response["Content-Disposition"] = 'attachment; filename="app_sepc_3.yaml"'
-        return response
+            response = HttpResponse(output_yaml, content_type="application/yaml")
+            return response
+
+        else:
+            return HttpResponseBadRequest("Only yaml content are allowed")

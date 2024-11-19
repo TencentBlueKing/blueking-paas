@@ -22,8 +22,8 @@ from . import views
 
 urlpatterns = [
     re_path(
-        r"^api/app_spec/version/transform/",
-        views.AppSpecVersionTransformApiView.as_view(),
-        name="api.app_spec.version.transform",
+        r"^api/tools/app_desc/transform/",
+        views.AppDescTransformApiView.as_view(),
+        name="api.tools.app_desc.transform",
     )
 ]

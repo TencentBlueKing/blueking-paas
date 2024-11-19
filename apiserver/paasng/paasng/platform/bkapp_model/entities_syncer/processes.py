@@ -86,7 +86,10 @@ def sync_processes(
 
 
 class ManagedFieldValues:
-    """This class helps get the values of the fields that might be managed by other managers."""
+    """This class helps to get the values of the fields that respects the field management
+    status, for example, if the "replicas" field is managed by managers other than "APP_DESC"
+    and the input is NOTSET, current class will skip the process when producing values.
+    """
 
     default_replicas = 1
 

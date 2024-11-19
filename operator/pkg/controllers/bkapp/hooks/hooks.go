@@ -72,18 +72,12 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 		switch {
 		case current.TimeoutExceededProgressing(hookres.HookExecuteTimeoutThreshold):
-			// 删除超时的 pod
-			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.WithError(errors.WithStack(hookres.ErrExecuteTimeout))
-			}
-			return r.Result.WithError(errors.WithStack(hookres.ErrExecuteTimeout))
+			// Pod 执行超时之后，终止调和循环
+			return r.Result.End()
 		case current.TimeoutExceededFailed(hookres.HookExecuteFailedTimeoutThreshold):
-			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.WithError(errors.WithStack(hookres.ErrPodEndsUnsuccessfully))
-			}
 			// Pod 在超时时间内一直失败, 终止调和循环
 			log.Error(errors.WithStack(hookres.ErrPodEndsUnsuccessfully), "execute timeout")
-			// 不能调用 WithError 否则不会停止调和循环(Result 协议保持与 controller-runtime 的协议一致)
+			// 不能调用 WithError 否则不会停止调和循环（Result 协议保持与 controller-runtime 的协议一致）
 			// ref: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile#Reconciler
 			return r.Result.End()
 		case current.Progressing():

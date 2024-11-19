@@ -193,10 +193,7 @@ class CNativeProcController:
 
     def start(self, proc_type: str):
         """Start a process"""
-        try:
-            module_process_spec = ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
-        except ModuleProcessSpec.DoesNotExist:
-            raise ProcessNotFound("module process spec not found")
+        module_process_spec = self._get_module_process_spec(proc_type)
 
         try:
             BkAppProcScaler(self.env).set_replicas(
@@ -249,13 +246,9 @@ class CNativeProcController:
 
     def disable_autoscaling_if_enabled(self, proc_type: str):
         """Disable autoscaling if it's enabled."""
-        try:
-            module_process_spec = ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
-        except ModuleProcessSpec.DoesNotExist:
-            raise ProcessNotFound("module process spec not found")
-        else:
-            if module_process_spec.get_autoscaling(self.env.environment):
-                self.scale_auto(proc_type, False)
+        module_process_spec = self._get_module_process_spec(proc_type)
+        if module_process_spec.get_autoscaling(self.env.environment):
+            self.scale_auto(proc_type, False)
 
     def scale_auto(self, proc_type: str, enabled: bool, scaling_config: Optional[AutoscalingConfig] = None):
         """Update autoscaling config for the given process."""
@@ -270,13 +263,11 @@ class CNativeProcController:
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         # Use the old config value when the scaling config is not provided.
-        try:
-            module_process_spec = ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
-        except ModuleProcessSpec.DoesNotExist:
-            raise ProcessNotFound("module process spec not found")
-        scaling_config = scaling_config or module_process_spec.get_scaling_config(self.env.environment)
         if not scaling_config:
-            raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
+            module_process_spec = self._get_module_process_spec(proc_type)
+            scaling_config = module_process_spec.get_scaling_config(self.env.environment)
+            if not scaling_config:
+                raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
         ModuleProcessSpecManager(self.env.module).set_autoscaling(
             proc_type, self.env.environment, True, scaling_config
@@ -286,6 +277,12 @@ class CNativeProcController:
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
+
+    def _get_module_process_spec(self, proc_type: str):
+        try:
+            return ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
+        except ModuleProcessSpec.DoesNotExist:
+            raise ProcessNotFound("module process spec not found")
 
 
 class ProcSpecUpdater:

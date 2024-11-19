@@ -20,7 +20,6 @@ import logging
 from typing import Dict, List, Optional
 
 from attrs import define
-from django.utils.functional import cached_property
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
@@ -211,39 +210,19 @@ class MresConditionParser:
         return None
 
 
-class BkAppResourceByEnvLister:
-    """List the application's model resources"""
+def list_mres_by_env(application: Application, environment: str) -> list[BkAppResource]:
+    """list the application's model resources by running environment"""
+    cluster_namespace_pairs: dict[str, str] = {}
+    for env in application.envs.filter(environment=environment):
+        cluster_namespace_pairs[EnvClusterService(env).get_cluster_name()] = env.wl_app.namespace
 
-    def __init__(self, application: Application, environment: str):
-        self.application = application
-        self.environment = environment
-        self.module_envs = application.envs.filter(environment=environment)
+    res_list: list[BkAppResource] = []
+    for cluster_name, namespace in cluster_namespace_pairs.items():
+        with get_client_by_cluster_name(cluster_name) as client:
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).ops_batch.list(namespace=namespace)
+        res_list.extend([BkAppResource(**res) for res in data.items])
 
-    @cached_property
-    def cluster_name(self):
-        """应用所在集群名
-
-        Note: 云原生应用仅支持部署在单集群下, 否则 paas_wl.bk_app.processes.watch.ProcInstByEnvListWatcher 无法正常 list/watch
-        """
-        for env in self.module_envs:
-            return EnvClusterService(env).get_cluster_name()
-        return None
-
-    @cached_property
-    def namespace(self):
-        """应用所在命名空间
-
-        Note: 云原生应用仅支持部署在单集群下, 否则 paas_wl.bk_app.processes.watch.ProcInstByEnvListWatcher 无法正常 list/watch
-        """
-        for env in self.module_envs:
-            return env.wl_app.namespace
-        return None
-
-    def list(self) -> list[BkAppResource]:
-        """list the application's model resources in given cluster and namespace"""
-        with get_client_by_cluster_name(self.cluster_name) as client:
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).ops_batch.list(namespace=self.namespace)
-        return [BkAppResource(**res) for res in data.items]
+    return res_list
 
 
 def _need_exposed_services(res: BkAppResource) -> bool:

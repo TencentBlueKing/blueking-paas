@@ -23,7 +23,7 @@ from rest_framework.request import Request
 
 from paas_wl.apis.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class

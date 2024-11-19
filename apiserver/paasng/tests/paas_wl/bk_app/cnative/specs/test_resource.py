@@ -24,11 +24,11 @@ from kubernetes.client.exceptions import ApiException
 
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.bk_app.cnative.specs.resource import (
-    BkAppResourceByEnvLister,
     MresConditionParser,
     create_or_update_bkapp_with_retries,
     deploy,
     get_mres_from_cluster,
+    list_mres_by_env,
 )
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res, with_conds
@@ -148,7 +148,7 @@ class TestBkAppClusterOperator:
 
 
 @pytest.mark.skip_when_no_crds()
-class TestBkAppResourceByEnvLister:
+class Test__list_mres_by_env:
     @pytest.mark.usefixtures("_with_stag_ns")
     def test_list(self, bk_app, bk_stag_env):
         manifest = {
@@ -170,7 +170,7 @@ class TestBkAppResourceByEnvLister:
 
         deploy(bk_stag_env, manifest)
 
-        res = BkAppResourceByEnvLister(bk_app, bk_stag_env.environment).list()[0]
+        res = list_mres_by_env(bk_app, bk_stag_env.environment)[0]
         assert res.metadata.name == bk_app.code
         assert res.spec.processes[0].name == "web"
         assert res.spec.processes[0].resQuotaPlan == "default"

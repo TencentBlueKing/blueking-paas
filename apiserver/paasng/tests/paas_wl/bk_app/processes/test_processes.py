@@ -20,9 +20,9 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.processes.shim import (
+from paas_wl.bk_app.processes.processes import (
     ProcessManager,
-    _gen_cnative_process_specs,
+    gen_cnative_process_specs,
     list_cnative_module_processes_specs,
 )
 from paas_wl.infras.resources.base.kres import KPod
@@ -33,7 +33,7 @@ pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.
 
 
 def testlist_gen_cnative_process_specs():
-    specs = _gen_cnative_process_specs(
+    specs = gen_cnative_process_specs(
         BkAppResource(
             metadata={"name": "test"},
             spec={
@@ -84,9 +84,10 @@ def testlist_gen_cnative_process_specs():
     assert specs[1].target_status == "stop"
 
 
+@pytest.mark.usefixtures("bk_stag_wl_app")
 def test_list_cnative_module_processes_specs(bk_cnative_app):
     with mock.patch(
-        "paas_wl.bk_app.cnative.specs.resource.BkAppResourceByEnvLister.list",
+        "paas_wl.bk_app.processes.processes.list_mres_by_env",
         return_value=[
             BkAppResource(
                 metadata={
@@ -105,7 +106,6 @@ def test_list_cnative_module_processes_specs(bk_cnative_app):
         ],
     ):
         specs = list_cnative_module_processes_specs(bk_cnative_app, "stag")
-
         assert specs["default"] == [
             {
                 "name": "web",
@@ -159,7 +159,7 @@ class TestProcessManager:
     @pytest.mark.usefixtures("bk_stag_wl_app")
     def test_list_cnative_processes_specs(self, bk_cnative_app, bk_stag_env):
         with mock.patch(
-            "paas_wl.bk_app.processes.shim.get_mres_from_cluster",
+            "paas_wl.bk_app.processes.processes.get_mres_from_cluster",
             return_value=BkAppResource(metadata={"name": bk_cnative_app.code}, spec={"processes": [{"name": "foo"}]}),
         ):
             specs = ProcessManager(bk_stag_env).list_processes_specs()

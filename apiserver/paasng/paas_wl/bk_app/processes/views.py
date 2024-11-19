@@ -41,6 +41,7 @@ from paas_wl.bk_app.processes.exceptions import (
     ScaleProcessError,
 )
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.bk_app.processes.processes import ProcessManager, list_cnative_module_processes_specs
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
     ListProcessesQuerySLZ,
@@ -53,7 +54,6 @@ from paas_wl.bk_app.processes.serializers import (
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
-from paas_wl.bk_app.processes.shim import ProcessManager, list_cnative_module_processes_specs
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.infras.resources.base.kres import KDeployment, KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app

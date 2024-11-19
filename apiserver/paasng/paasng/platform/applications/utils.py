@@ -23,7 +23,7 @@ from typing import Optional
 from django.db import transaction
 
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig

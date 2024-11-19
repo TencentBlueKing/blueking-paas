@@ -28,6 +28,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
+    ActionTypes,
     LogTimeChoices,
     PluginReleaseStatus,
     PluginReleaseType,
@@ -36,6 +37,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     PluginRole,
     ReleaseStrategy,
     SemverAutomaticType,
+    SubjectTypes,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
@@ -818,10 +820,19 @@ class StubConfigSLZ(serializers.Serializer):
 
 class OperationRecordSLZ(serializers.ModelSerializer):
     display_text = serializers.CharField(source="get_display_text", read_only=True)
+    operator = serializers.CharField(source="operator_username", read_only=True)
 
     class Meta:
         model = OperationRecord
         fields = "__all__"
+
+
+class OperationRecordFilterSLZ(serializers.Serializer):
+    subject = serializers.ChoiceField(choices=SubjectTypes.get_choices(), help_text="操作对象", required=False)
+    action = serializers.ChoiceField(choices=ActionTypes.get_choices(), help_text="操作类型", required=False)
+    operator = serializers.CharField(required=False, help_text="操作人")
+    start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
 
 
 class CodeCommitSearchSLZ(serializers.Serializer):

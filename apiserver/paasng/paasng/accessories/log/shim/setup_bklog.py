@@ -138,7 +138,7 @@ def update_or_create_es_search_config(
         builtinFilters={},
         builtinExcludes={},
         filedMatcher="message|levelname|pathname|funcName|otelSpanID"
-        r"|otelServiceName|otelTraceID|environment|process_id|stream|__ext_json\..*",
+        r"|otelServiceName|otelTraceID|requestID|environment|process_id|stream|__ext_json\..*",
     )
 
     if application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_CLIENT):
@@ -291,6 +291,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
             make_string_field(6, "otelSpanID", is_analyzed=False),
             make_string_field(7, "otelServiceName", is_analyzed=False),
             make_string_field(8, "otelTraceID", is_analyzed=False),
+            make_string_field(9, "requestID", is_analyzed=False),
         ]
 
         etl_config = ETLConfig(

@@ -56,4 +56,9 @@ class TestDevSandboxViewSet:
             )
             response = api_client.get(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/dev_sandbox/")
             assert response.status_code == 200
-            assert response.data == {"url": "http://bkpaas.devcontainer.com", "token": token, "status": "Healthy"}
+            assert response.data == {
+                "devserver_url": "http://bkpaas.devcontainer.com/devserver/",
+                "app_url": "http://bkpaas.devcontainer.com/app/",
+                "token": token,
+                "status": "Healthy",
+            }

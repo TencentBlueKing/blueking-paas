@@ -16,9 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import random
 import string
-from collections import MutableMapping
+from collections.abc import MutableMapping
 
 from pydantic import BaseModel
 
@@ -32,7 +33,7 @@ def generate_password(length=10):
     password_chars = [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
     password_chars.append(random.choice(string.digits))
     random.shuffle(password_chars)
-    return ''.join(password_chars)
+    return "".join(password_chars)
 
 
 class BaseFancyModel(BaseModel, MutableMapping):

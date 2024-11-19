@@ -303,7 +303,9 @@ class ProcSpecUpdater:
         """Set the process to "stop" state."""
         proc_spec = self.spec_object
         proc_spec.target_status = ProcessTargetStatus.STOP.value
-        proc_spec.save(update_fields=["target_status", "updated"])
+        # 确保停止进程 / 下架时候的副本数不会超过套餐允许的最大副本数
+        proc_spec.target_replicas = min(proc_spec.target_replicas, proc_spec.plan.max_replicas)
+        proc_spec.save(update_fields=["target_status", "target_replicas", "updated"])
 
     def change_replicas(self, target_replicas: int):
         """Change the target_replicas value."""

@@ -90,7 +90,7 @@
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.region ]</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="编程语言" prop="language">
+        <bk-table-column label="编程语言" prop="language" :filters="languageFilters" :filter-multiple="false" :filter-method="filterMethod">
             <template slot-scope="props">
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.language ]</span>
             </template>
@@ -217,8 +217,7 @@
                     </bk-col>
                     <bk-col :span="7">
                         <bk-form-item label="是否隐藏">
-                            <bk-switcher v-model="dialog.form.is_hidden"
-                                         :disabled="dialog.type === 'detail'"></bk-switcher>
+                            <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -416,6 +415,20 @@
                         size: 'medium'
                     },
                     typeFilters: typeFilters,
+                    languageFilters: [
+                        {
+                            text: 'Python',
+                            value: 'Python',
+                        },
+                        {
+                            text: 'Go',
+                            value: 'Go',
+                        },
+                        {
+                            text: 'NodeJS',
+                            value: 'NodeJS',
+                        },
+                    ],
                     isHiddenFilters: [
                         {
                             text: '是',

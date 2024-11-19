@@ -35,6 +35,7 @@ from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
 logger = logging.getLogger(__name__)
@@ -368,9 +369,7 @@ class PluginReleaseStage(AuditedModel):
     @cached_property
     def has_post_command(self):
         stage_definition = find_stage_by_id(self.release.plugin.pd, self.release, self.stage_id)
-        if stage_definition and stage_definition.api and stage_definition.api.postCommand:
-            return True
-        return False
+        return bool(stage_definition and stage_definition.api and stage_definition.api.postCommand)
 
 
 class PluginReleaseStrategy(AuditedModel):
@@ -520,6 +519,12 @@ class OperationRecord(AuditedModel):
         if self.specific:
             return f"{username} {action_text} {self.specific} {subject_text}"
         return f"{username} {action_text}{subject_text}"
+
+    @property
+    def operator_username(self) -> str:
+        if self.operator:
+            return get_username_by_bkpaas_user_id(self.operator)
+        return ""
 
 
 def is_release_strategy_organization_changed(release: PluginRelease) -> bool:

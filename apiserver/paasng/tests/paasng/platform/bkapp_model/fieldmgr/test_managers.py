@@ -16,8 +16,8 @@
 import pytest
 
 from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
-from paasng.platform.bkapp_model.fieldmgr.fields import F_SVC_DISCOVERY
-from paasng.platform.bkapp_model.fieldmgr.managers import FieldManager
+from paasng.platform.bkapp_model.fieldmgr.fields import F_DOMAIN_RESOLUTION, F_SVC_DISCOVERY
+from paasng.platform.bkapp_model.fieldmgr.managers import FieldManager, MultiFieldsManager
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 
@@ -38,3 +38,12 @@ class TestFieldManager:
 
         m2.reset()
         assert m2.get() is None
+
+
+class TestMultiFieldsManager:
+    def test_integrated(self, bk_module):
+        m = MultiFieldsManager(bk_module)
+        m.set_many([F_SVC_DISCOVERY, F_DOMAIN_RESOLUTION], FieldMgrName.WEB_FORM)
+
+        assert FieldManager(bk_module, F_SVC_DISCOVERY).is_managed_by(FieldMgrName.WEB_FORM)
+        assert FieldManager(bk_module, F_DOMAIN_RESOLUTION).is_managed_by(FieldMgrName.WEB_FORM)

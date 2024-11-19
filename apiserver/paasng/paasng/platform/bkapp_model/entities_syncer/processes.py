@@ -122,9 +122,9 @@ class ManagedFieldValues:
 
     def set_field_mgr_target_replicas(self, names: Iterable[str]):
         """Set the field manager for the target replicas field."""
-        for name in names:
-            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_replicas(name))
-            replicas_mgr.set(self.manager)
+        fieldmgr.MultiFieldsManager(self.module).set_many(
+            [fieldmgr.f_proc_replicas(name) for name in names], self.manager
+        )
 
     def get_autoscaling(self) -> dict[str, AutoscalingConfig | None]:
         """Get the autoscaling config for each process.
@@ -146,6 +146,6 @@ class ManagedFieldValues:
 
     def set_field_mgr_autoscaling(self, names: Iterable[str]):
         """Set the field manager for the autoscaling field."""
-        for name in names:
-            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_autoscaling(name))
-            replicas_mgr.set(self.manager)
+        fieldmgr.MultiFieldsManager(self.module).set_many(
+            [fieldmgr.f_proc_autoscaling(name) for name in names], self.manager
+        )

@@ -32,10 +32,11 @@ from .fields import (
     f_proc_autoscaling,
     f_proc_replicas,
 )
-from .managers import FieldManager
+from .managers import FieldManager, MultiFieldsManager
 
 __all__ = [
     "FieldMgrName",
+    "MultiFieldsManager",
     "F_DOMAIN_RESOLUTION",
     "F_HOOKS",
     "F_SVC_DISCOVERY",

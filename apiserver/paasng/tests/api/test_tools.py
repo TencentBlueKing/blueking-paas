@@ -22,7 +22,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def app_desc_data():
+def app_desc_yaml():
     return """
     spec_version: 2
     app_version: "1.0"
@@ -138,6 +138,6 @@ class TestAppDescTransform:
         assert output_data["specVersion"] == 3
         assert output_data["appVersion"] == input_data["app_version"]
         assert output_data["modules"][0]["name"] == list(input_data["modules"].keys())[0]
-        assert output_data["modules"][0]["sepc"]["processes"][0]["name"] == "web"
+        assert output_data["modules"][0]["spec"]["processes"][0]["name"] == "web"
         assert output_data["modules"][1]["name"] == list(input_data["modules"].keys())[1]
-        assert output_data["modules"][1]["sepc"]["hooks"]["preRelease"]["procCommand"] == "python manage.py migrate"
+        assert output_data["modules"][1]["spec"]["hooks"]["preRelease"]["procCommand"] == "python manage.py migrate"

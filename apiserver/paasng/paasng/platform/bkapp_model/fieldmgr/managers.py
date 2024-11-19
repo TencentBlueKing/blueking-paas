@@ -82,6 +82,15 @@ class MultiFieldsManager:
             self.store.row_group.set_manager(f, manager)
         self.store.save()
 
+    def reset_many(self, fields: list[Field]):
+        """Reset the manager for many fields.
+
+        :param fields: The fields to be managed.
+        """
+        for f in fields:
+            self.store.row_group.reset_manager(f)
+        self.store.save()
+
 
 class RowGroupStore:
     """The managed fields row group store.

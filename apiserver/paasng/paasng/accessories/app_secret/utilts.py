@@ -21,7 +21,7 @@ from typing import List, Optional
 
 from django.conf import settings
 
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppInfoBuiltinEnv
 from paasng.platform.engine.utils.query import DeploymentGetter

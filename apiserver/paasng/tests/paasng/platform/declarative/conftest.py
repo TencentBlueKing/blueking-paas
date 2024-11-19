@@ -34,7 +34,7 @@ def _setup_mocks():
             "sub_path_domains": [],
             "app_root_domains": [{"name": "bkapps.example.com"}],
         }
-    ), mock.patch("paas_wl.bk_app.processes.shim.ProcessManager.sync_processes_specs"):
+    ), mock.patch("paas_wl.bk_app.processes.processes.ProcessManager.sync_processes_specs"):
         yield
 
 

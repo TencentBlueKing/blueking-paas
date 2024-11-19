@@ -38,6 +38,7 @@ from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -191,18 +192,18 @@ class CNativeProcController:
         self.app = env.wl_app
 
     def start(self, proc_type: str):
-        """Start a process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
-        spec_updater.set_start()
+        """Start a process"""
+        module_process_spec = self._get_module_process_spec(proc_type)
+
         try:
-            BkAppProcScaler(self.env).set_replicas(proc_type, spec_updater.spec_object.target_replicas)
+            BkAppProcScaler(self.env).set_replicas(
+                proc_type, module_process_spec.get_target_replicas(self.env.environment)
+            )
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
 
     def stop(self, proc_type: str):
         """Stop a process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
-        spec_updater.set_stop()
         try:
             BkAppProcScaler(self.env).set_replicas(proc_type, 0)
         except ProcNotFoundInRes as e:
@@ -235,7 +236,6 @@ class CNativeProcController:
         if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
             raise ValueError(f"target_replicas can't be greater than {DEFAULT_CNATIVE_MAX_REPLICAS}")
 
-        ProcSpecUpdater(self.env, proc_type).change_replicas(target_replicas)
         # Update the module specs also to keep the bkapp model in sync.
         ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
 
@@ -246,14 +246,13 @@ class CNativeProcController:
 
     def disable_autoscaling_if_enabled(self, proc_type: str):
         """Disable autoscaling if it's enabled."""
-        if ProcSpecUpdater(self.env, proc_type).spec_object.autoscaling:
+        module_process_spec = self._get_module_process_spec(proc_type)
+        if module_process_spec.get_autoscaling(self.env.environment):
             self.scale_auto(proc_type, False)
 
     def scale_auto(self, proc_type: str, enabled: bool, scaling_config: Optional[AutoscalingConfig] = None):
         """Update autoscaling config for the given process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
         if not enabled:
-            spec_updater.set_autoscaling(False)
             ModuleProcessSpecManager(self.env.module).set_autoscaling(proc_type, self.env.environment, False)
             BkAppProcScaler(self.env).set_autoscaling(proc_type, False, None)
             return
@@ -264,11 +263,12 @@ class CNativeProcController:
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         # Use the old config value when the scaling config is not provided.
-        scaling_config = scaling_config or spec_updater.spec_object.scaling_config
         if not scaling_config:
-            raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
+            module_process_spec = self._get_module_process_spec(proc_type)
+            scaling_config = module_process_spec.get_scaling_config(self.env.environment)
+            if not scaling_config:
+                raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
-        spec_updater.set_autoscaling(True, scaling_config)
         ModuleProcessSpecManager(self.env.module).set_autoscaling(
             proc_type, self.env.environment, True, scaling_config
         )
@@ -277,6 +277,12 @@ class CNativeProcController:
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
+
+    def _get_module_process_spec(self, proc_type: str):
+        try:
+            return ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
+        except ModuleProcessSpec.DoesNotExist:
+            raise ProcessNotFound("module process spec not found")
 
 
 class ProcSpecUpdater:

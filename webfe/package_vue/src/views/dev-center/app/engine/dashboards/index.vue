@@ -36,7 +36,7 @@
             type="empty"
             scene="part"
           >
-            <p class="title">{{ $t('暂无部署应用') }}</p>
+            <p class="title">{{ $t('暂无仪表盘') }}</p>
             <p class="tips">{{ $t('应用部署成功后，才会内置仪表盘') }}</p>
             <bk-button
               :theme="'primary'"

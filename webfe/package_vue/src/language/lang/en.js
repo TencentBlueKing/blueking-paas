@@ -2892,7 +2892,7 @@ export default {
   仪表盘: 'Dashboard',
   查看更多仪表盘: 'View More Dashboards',
   暂无仪表盘功能: 'No Dashboard Functionality Available',
-  暂无部署应用: 'No Deployed Applications',
+  暂无仪表盘: 'No Dashboard',
   'Metric 上报指引': 'Metric Reporting Guide',
   '应用部署成功后，才会内置仪表盘': 'The dashboard will be built-in after the application is successfully deployed',
   '如需使用该功能，需要部署「蓝鲸监控：监控日志套餐」': 'To use this feature, you need to deploy "BlueKing Monitoring: Monitoring and Logging Package"',

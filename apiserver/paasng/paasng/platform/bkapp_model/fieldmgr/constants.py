@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,25 +14,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
-import logging
-
-from celery import shared_task
-
-from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
-from paasng.platform.applications.models import Application
-
-logger = logging.getLogger(__name__)
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-@shared_task
-def import_builtin_dashboards(app_code: str):
-    """导入内置仪表盘，普通应用和插件应用分别导入各自的仪表盘
+class FieldMgrName(StrStructuredEnum):
+    """Different types of field managers"""
 
-    Note: 这里只做初始化导入，仪表盘版本升级在单独的脚本里面按需执行
-    """
-    try:
-        dashboard_manager = bk_dashboard_manager_cls(Application.objects.get(code=app_code))
-        dashboard_manager.init_builtin_dashboard()
-    except Exception:
-        logger.exception(f"Unable to import builtin dashboards after release app(code: {app_code})")
+    WEB_FORM = EnumField("web_form", label="form in web page")
+    APP_DESC = EnumField("app_desc", label="application description file in source repository")

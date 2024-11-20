@@ -48,9 +48,15 @@ def env_overlay_getter_factory(field_name: str):
 
     def func(self: "ModuleProcessSpec", environment_name: str):
         try:
-            return getattr(self.env_overlays.get(environment_name=environment_name), field_name)
+            val = getattr(self.env_overlays.get(environment_name=environment_name), field_name)
         except ObjectDoesNotExist:
             return getattr(self, field_name)
+
+        # When the value defined in the overlay object is None, which means the value
+        # is absent, ignore it and return the value defined in the base module object.
+        if val is None:
+            return getattr(self, field_name)
+        return val
 
     return func
 
@@ -376,3 +382,18 @@ class ObservabilityConfig(TimestampedModel):
             return []
 
         return [metric.process for metric in self.last_monitoring.metrics]
+
+
+class BkAppManagedFields(TimestampedModel):
+    """This model stores the management status of the fields of a module's bkapp model, it's
+    helpful for resolve conflicts when some fields are managed by multiple managers.
+    """
+
+    module = models.ForeignKey(
+        "modules.Module", on_delete=models.CASCADE, related_name="managed_fields", db_constraint=False
+    )
+    manager = models.CharField(help_text="管理者类型", max_length=20)
+    fields = models.JSONField(help_text="所管理的字段", default=[])
+
+    class Meta:
+        unique_together = ("module", "manager")

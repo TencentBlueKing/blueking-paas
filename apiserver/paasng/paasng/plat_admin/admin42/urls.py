@@ -377,6 +377,11 @@ urlpatterns = [
         applications.ApplicationMembersManageViewSet.as_view({"delete": "destroy"}),
         name="admin.applications.detail.base_info.members.api",
     ),
+    re_path(
+        r"^api/applications/(?P<code>[^/]+)/base_info/plugin/memberships/$",
+        bk_plugins.BKPluginMembersManageViewSet.as_view({"post": "update"}),
+        name="admin.applications.detail.base_info.plugin.members.api",
+    ),
     # 应用详情-特性管理
     re_path(
         r"^applications/(?P<code>[^/]+)/base_info/feature_flags/$",

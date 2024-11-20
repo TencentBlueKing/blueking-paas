@@ -76,7 +76,8 @@
                   @click="switchLanguage(item.id)"
                   :key="item.id"
                 >
-                  <i :class="['bk-icon', 'lang-icon', item.icon]" />{{ item.text }}
+                  <i :class="['bk-icon', 'lang-icon', item.icon]" />
+                  {{ item.text }}
                 </li>
               </ul>
             </template>
@@ -364,7 +365,7 @@ export default {
     userFeature: {
       handler(val) {
         if (!val.ALLOW_PLUGIN_CENTER) {
-          this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter(e => e.text !== this.$t('插件开发'));
+          this.headerStaticInfo.list.nav = this.headerStaticInfo.list.nav.filter((e) => e.text !== this.$t('插件开发'));
         }
       },
       deep: true,
@@ -433,14 +434,14 @@ export default {
       if (this.$route.name === 'index' || this.$route.name === 'home') {
         noteIndex = 0;
       }
-      if (this.$route.path.indexOf('/developer-center/app') !== -1) {
+      if (this.$route.path.indexOf('/developer-center/app') !== -1 || this.$route.path.indexOf('/sandbox') !== -1) {
         noteIndex = 1;
       }
       if (this.$route.path.indexOf('/plugin-center') !== -1) {
         noteIndex = 2;
       }
       if (this.$route.path.indexOf('/developer-center/service') !== -1) {
-        noteIndex = this.displayNavList.findIndex(v => v.text === this.$t('服务')) || 3;
+        noteIndex = this.displayNavList.findIndex((v) => v.text === this.$t('服务')) || 3;
       }
       if (noteIndex !== -1) {
         this.backgroundHidden = false;
@@ -450,37 +451,44 @@ export default {
       }
     },
     logout() {
-      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(window.location.href)}`;
+      window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(
+        window.location.href
+      )}`;
     },
     async switchLanguage(language) {
       const data = new URLSearchParams();
       data.append('language', language);
-      this.$http.post(`${BACKEND_URL}/i18n/setlang/`, data, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }).then((res) => {
-        this.$i18n.locale = language;
-        this.$store.commit('updateLocalLanguage', language);
-        // 设置cookies持续化
-        if (window.BK_COMPONENT_API_URL) {
-          ajaxRequest({
-            url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
-            jsonp: `callback${uuid()}`,
-            data: Object.assign({ language }),
-            success: () => {
+      this.$http
+        .post(`${BACKEND_URL}/i18n/setlang/`, data, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        })
+        .then(
+          (res) => {
+            this.$i18n.locale = language;
+            this.$store.commit('updateLocalLanguage', language);
+            // 设置cookies持续化
+            if (window.BK_COMPONENT_API_URL) {
+              ajaxRequest({
+                url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
+                jsonp: `callback${uuid()}`,
+                data: Object.assign({ language }),
+                success: () => {
+                  this.$router.go(0);
+                },
+              });
+            } else {
               this.$router.go(0);
-            },
-          });
-        } else {
-          this.$router.go(0);
-        }
-      }, (e) => {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      });
+            }
+          },
+          (e) => {
+            this.$paasMessage({
+              theme: 'error',
+              message: e.detail || e.message || this.$t('接口异常'),
+            });
+          }
+        );
     },
     handlerLogVersion() {
       this.showLogVersion = true;
@@ -532,7 +540,7 @@ export default {
       });
       // 应用开关过滤插件开发
       if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-        return navList.filter(e => e.name !== 'pluginDevelopment');
+        return navList.filter((e) => e.name !== 'pluginDevelopment');
       }
       return navList;
     },

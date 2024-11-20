@@ -19,6 +19,7 @@ from typing import Dict, List
 
 import rest_framework.request
 import xlwt
+from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -52,6 +53,7 @@ from paasng.plat_admin.admin42.serializers.application import (
 )
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.plat_admin.admin42.views.bk_plugins import is_plugin_instance_exist, is_user_plugin_admin
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
@@ -287,6 +289,13 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
+        kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"] = (
+            settings.IS_ALLOW_CREATE_BK_PLUGIN_APP
+            and application.is_plugin_app
+            and is_plugin_instance_exist(self.kwargs["code"])
+        )
+        if kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"]:
+            kwargs["USER_IS_ADMIN_IN_PLUGIN"] = is_user_plugin_admin(self.kwargs["code"], self.request.user.username)
         kwargs["cluster_choices"] = [
             {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
             for cluster in RegionClusterService(application.region).list_clusters()

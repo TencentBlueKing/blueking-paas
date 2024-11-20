@@ -20,7 +20,13 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
+from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
+from paasng.platform.bkapp_model.entities_syncer.hooks import sync_hooks
+from paasng.platform.bkapp_model.entities_syncer.svc_discovery import sync_svc_discovery
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, SvcDiscConfig, get_svc_disc_as_env_variables
 from paasng.platform.declarative.deployment.controller import DeploymentDeclarativeController
 from paasng.platform.declarative.deployment.svc_disc import BkSaaSEnvVariableFactory
 from paasng.platform.declarative.deployment.validations.v2 import DeploymentDescSLZ
@@ -65,6 +71,7 @@ class TestProcessesField:
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         web = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        print(web.__dict__)
         assert web.get_proc_command() == command
         assert web.command is None
         assert web.args is None
@@ -165,63 +172,144 @@ class TestSvcDiscoveryField:
             }
 
 
+class TestSvcDiscoveryFieldMultiManagers:
+    def test_notset_should_reset(self, bk_app, bk_deployment):
+        json_data = {"svc_discovery": {"bk_saas": [{"bk_app_code": bk_app.code}]}, "language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery
+        json_data = {"language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert not SvcDiscConfig.objects.filter(application=bk_app).exists()
+
+    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+        # Insert the data using "web_form" manager
+        sync_svc_discovery(
+            bk_module,
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
+            fieldmgr.FieldMgrName.WEB_FORM,
+        )
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+        # Re-apply the data without svc_discovery, the data should stay because it's
+        # managed by a different manager.
+        json_data = {"language": "python"}
+        controller = DeploymentDeclarativeController(bk_deployment)
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+
+
 class TestHookField:
-    @pytest.mark.parametrize(
-        ("json_data", "expected"),
-        [
-            ({"language": "python"}, HookList()),
-            (
-                {"language": "python", "scripts": {"pre_release_hook": "echo 1;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "1;"]}, Hook)]),
-            ),
-        ],
-    )
-    def test_hooks(self, bk_deployment, json_data, expected):
+    def test_field_not_set(self, bk_module, bk_deployment):
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
-        assert desc_obj.get_deploy_hooks() == expected
-        assert bk_deployment.get_deploy_hooks() == expected
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"language": "python"}))
 
-    @pytest.mark.parametrize(
-        ("json_data", "expected"),
-        [
-            (
-                {"language": "python"},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": "echo 1;"}, Hook)]),
-            ),
-            (
-                {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2;"]}, Hook)]),
-            ),
-        ],
-    )
-    def test_hooks_override(self, bk_deployment, json_data, expected):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1;")
+        assert len(bk_deployment.get_deploy_hooks()) == 0
+        self.assert_hook_not_exist(bk_module, bk_deployment)
+
+    def test_field_set(self, bk_module, bk_deployment):
+        controller = DeploymentDeclarativeController(bk_deployment)
+
+        controller.perform_action(
+            desc=validate_desc(
+                DeploymentDescSLZ,
+                {"language": "python", "scripts": {"pre_release_hook": "echo 1"}},
+            )
+        )
+
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+
+    @pytest.mark.parametrize("hook_disabled", [True, False])
+    def test_not_set_should_not_touch_deployment(self, hook_disabled, bk_module, bk_deployment):
+        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
+        if hook_disabled:
+            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
         bk_deployment.save()
-
         controller = DeploymentDeclarativeController(bk_deployment)
+
+        json_data = {"language": "python"}
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        assert bk_deployment.get_deploy_hooks() == expected
+        # The deployment's hook should stay the same
+        deploy_hooks = bk_deployment.get_deploy_hooks()
+        if hook_disabled:
+            assert len(deploy_hooks) == 0
+        else:
+            assert len(deploy_hooks) == 1
+            assert deploy_hooks[0].command == "echo 1"
 
-    @pytest.mark.parametrize(
-        ("json_data", "expected"),
-        [
-            ({"language": "python"}, HookList()),
-            (
-                {"language": "python", "scripts": {"pre_release_hook": "echo 2;"}},
-                HookList([cattr.structure({"type": "pre-release-hook", "command": [], "args": ["echo", "2;"]}, Hook)]),
-            ),
-        ],
-    )
-    def test_disable_hooks(self, bk_deployment, json_data, expected):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1;")
-        bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
+        self.assert_hook_not_exist(bk_module, bk_deployment)
+
+    @pytest.mark.parametrize("hook_disabled", [True, False])
+    def test_rewrite_the_hook(self, hook_disabled, bk_module, bk_deployment):
+        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
+        if hook_disabled:
+            # The hook's enabled status should not affect the result
+            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
         bk_deployment.save()
+        controller = DeploymentDeclarativeController(bk_deployment)
+
+        json_data = {"language": "python", "scripts": {"pre_release_hook": "echo 2"}}
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+        # The hook should has been modified
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "2"], "echo 2")
+
+    def test_not_set_should_reset(self, bk_module, bk_deployment):
+        controller = DeploymentDeclarativeController(bk_deployment)
+
+        controller.perform_action(
+            desc=validate_desc(
+                DeploymentDescSLZ,
+                {"language": "python", "scripts": {"pre_release_hook": "echo 1"}},
+            )
+        )
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"language": "python"}))
+        self.assert_hook_not_exist(bk_module, bk_deployment)
+
+    def test_not_set_with_different_mgr_should_keep(self, bk_module, bk_deployment):
+        sync_hooks(
+            bk_module,
+            Hooks(pre_release=HookCmd(command=["echo"])),
+            FieldMgrName.WEB_FORM,
+            use_proc_command=True,
+        )
+        module_hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert module_hook.proc_command == "echo"
 
         controller = DeploymentDeclarativeController(bk_deployment)
-        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-        bk_deployment.refresh_from_db()
-        assert bk_deployment.get_deploy_hooks() == expected
+        controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"language": "python"}))
+
+        # The hook should stay the same because it's managed by a different manager
+        module_hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert module_hook.proc_command == "echo"
+
+    # Helper methods start
+
+    def assert_hook_not_exist(self, module, deployment):
+        """A helper to assert the hook doesn't exist."""
+        desc_obj = DeploymentDescription.objects.get(deployment=deployment)
+        assert desc_obj.get_deploy_hooks() == HookList()
+        module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert module_hook is None
+
+    def assert_one_hook_with_command(self, module, deployment, command, args, proc_command):
+        """A helper to assert there is one hook with the given command."""
+        desc_obj = DeploymentDescription.objects.get(deployment=deployment)
+
+        hook_list = HookList([cattr.structure({"type": "pre-release-hook", "command": command, "args": args}, Hook)])
+        assert desc_obj.get_deploy_hooks() == hook_list
+        assert deployment.get_deploy_hooks() == hook_list
+
+        # The module deploy hook always use proc_command instead of command/args
+        module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
+        assert module_hook.proc_command == proc_command

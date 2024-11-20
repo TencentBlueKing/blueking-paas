@@ -28,7 +28,7 @@
     name: dj2_with_auth
     type: 'normal'
     display_name_zh_cn: 蓝鲸应用开发框架（Django3.x）
-    display_name_en: BlueKing App framework(Django3.x)
+    display_name_en: BlueKing APP framework(Django3.x)
     description_zh_cn: Python + Django3.x，集成用户鉴权、日志处理等基础功能模块
     description_en: Python + Django3.x, integrated user authentication, log processing, etc.
     language: Python
@@ -110,3 +110,26 @@
     tags: []
     repo_url: ''
     runtime_type: buildpack
+- model: templates.template
+  pk: 6
+  fields:
+    created: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    updated: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    name: golang-gin-v2
+    type: 'normal'
+    display_name_zh_cn: 蓝鲸应用开发框架（Gin）
+    display_name_en: BlueKing APP framework (Gin)
+    description_zh_cn: 全新 Go 开发框架，基于 Go 1.22 + Gin 1.10
+    description_en: New Go development framework, based on Go 1.22 + Gin 1.10.
+    language: Go
+    market_ready: True
+    preset_services_config:
+      mysql: {}
+    blob_url:
+      default: bkrepo://bkpaas3-apps-tmpls/open/golang-gin-v2.tar.gz
+    enabled_regions:
+      - default
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: ''

@@ -20,10 +20,8 @@ from typing import Dict
 
 from bkpaas_auth.models import User
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -33,10 +31,7 @@ from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandb
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
-from paasng.infras.accounts.constants import FunctionType
-from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
@@ -104,6 +99,9 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
         """部署开发沙箱"""
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
+
         app = self.get_application()
         module = self.get_module_via_path()
 
@@ -131,6 +129,8 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             version_info=version_info,
             code=dev_sandbox_code,
         )
+        # 更新过期时间
+        dev_sandbox.renew_expired_at()
 
         # 生成代码编辑器密码
         password = generate_password()
@@ -168,9 +168,12 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
+            # 除了沙箱已存在的情况，其它创建异常情况下，清理沙箱资源
+            controller.delete()
             dev_sandbox.delete()
             raise
 
@@ -230,7 +233,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         )
         return Response(data=serializer.data)
 
-    @swagger_auto_schema(tags=["鉴权信息"], request_body=VerificationCodeSLZ)
+    @swagger_auto_schema(tags=["开发沙箱"])
     def get_password(self, request, code, module_name):
         """验证验证码查看代码编辑器密码"""
         module = self.get_module_via_path()
@@ -239,18 +242,6 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
         except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
-        if settings.ENABLE_VERIFICATION_CODE:
-            serializer = VerificationCodeSLZ(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            verifier = make_verifier(request.session, FunctionType.GET_CODE_EDITOR_PASSWORD.value)
-            is_valid = verifier.validate(serializer.data["verification_code"])
-            if not is_valid:
-                raise ValidationError({"verification_code": [_("验证码错误")]})
-        else:
-            logger.warning("Verification code is not currently supported, return app secret directly")
 
         return Response({"password": dev_sandbox.code_editor.password})
 
@@ -262,6 +253,15 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
 
         return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
+
+    @swagger_auto_schema(tags=["开发沙箱"])
+    def pre_deploy_check(self, request, code):
+        """部署前确认是否可以部署"""
+        # 判断开发沙箱数量是否超过限制
+        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
+            return Response(data={"result": False})
+
+        return Response(data={"result": True})
 
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:

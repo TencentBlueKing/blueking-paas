@@ -29,6 +29,7 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import HookList
 from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
+from paasng.utils.structure import NotSetType
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,8 @@ class DeploymentDescription(TimestampedModel):
         """
         hooks = HookList()
         if self.spec is not None:
-            if (_hooks := self.spec.hooks) and (pre_release_hook := _hooks.pre_release):
+            _hooks = self.spec.hooks
+            if _hooks and not isinstance(_hooks, NotSetType) and (pre_release_hook := _hooks.pre_release):
                 hooks.upsert(
                     type_=DeployHookType.PRE_RELEASE_HOOK,
                     command=pre_release_hook.command or [],

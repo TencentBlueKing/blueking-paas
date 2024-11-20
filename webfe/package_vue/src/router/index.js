@@ -29,6 +29,10 @@ const devCenterIndex = () => import(/* webpackChunkName: 'dev-center-index' */'@
   window.showDeployTip(error);
 });
 
+const sandboxIndex = () => import(/* webpackChunkName: 'sandbox-index' */'@/views/dev-center/sandbox/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const monitorIndex = () => import(/* webpackChunkName: 'monitor-index' */'@/views/dev-center/monitor').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -171,6 +175,10 @@ const appLog = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-cen
 });
 
 const monitorAlarm = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/monitor-alarm').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const dashboards = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/dashboards').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -399,6 +407,15 @@ const router = new Router({
       component: devCenterIndex,
       meta: {
         isDefaultBackgroundColor: true,
+      },
+    },
+    {
+      path: '/developer-center/sandbox/',
+      name: 'sandbox',
+      component: sandboxIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+        sandboxPage: true,
       },
     },
     {
@@ -849,6 +866,11 @@ const router = new Router({
           path: ':id/:moduleId/alerts',
           component: monitorAlarm,
           name: 'monitorAlarm',
+        },
+        {
+          path: ':id/:moduleId/dashboards',
+          component: dashboards,
+          name: 'dashboards',
         },
         // 普通应用访问统计路由配置
         {

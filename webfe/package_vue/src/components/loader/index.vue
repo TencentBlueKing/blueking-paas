@@ -1,13 +1,13 @@
 <template lang="html">
   <div
-    :class="[{ 'paas-loading-content': isLoaderShow, 'loading': localLoading, 'fadeout': !localLoading }]"
+    :class="[{ 'paas-loading-content': isLoaderShow, loading: localLoading, fadeout: !localLoading }]"
     :style="styleObject"
   >
     <div
       :class="[
         'loading-placeholder',
-        { 'hide': !isLoaderShow },
-        { 'transition': !isTransition },
+        { hide: !isLoaderShow },
+        { transition: !isTransition },
         { 'customize-width': isCustomizeWidth },
       ]"
       :style="{ 'background-color': backgroundColor }"
@@ -26,7 +26,8 @@
   </div>
 </template>
 
-<script>import ByUserLoading from './loading/by-user';
+<script>
+import ByUserLoading from './loading/by-user';
 import LogLoading from './loading/log';
 import ProcessLoading from './loading/process';
 import IndexLoading from './loading/index';
@@ -90,6 +91,8 @@ import ProcessServiceLoading from './loading/process-service.vue';
 import PluinVersionListLoading from './loading/pluin-version-list.vue';
 import PersistentStorageLoading from './loading/persistent-storage.vue';
 import VisibleRangeLoading from './loading/visible-range.vue';
+import SandboxLoading from './loading/sandbox.vue';
+import DashboardLoading from './loading/dashboard.vue';
 export default {
   components: {
     ByUserLoading,
@@ -156,6 +159,8 @@ export default {
     PluinVersionListLoading,
     PersistentStorageLoading,
     VisibleRangeLoading,
+    SandboxLoading,
+    DashboardLoading,
   },
   props: {
     isLoading: {
@@ -263,30 +268,6 @@ export default {
   methods: {
     initContentWidth() {
       const winWidth = window.innerWidth;
-      // this.baseWidth = 1180;
-      // this.contentWidth = 1180;
-      // if (winWidth < 1180) {
-      //     this.baseWidth = 980;
-      //     this.contentWidth = 980;
-      //     console.log('11111111')
-      // } else if (winWidth < 1680) {
-      //     this.baseWidth = 1080;
-      //     this.contentWidth = 1080;
-      //     console.log('2222222')
-      // } else if (winWidth < 1920) {
-      //     this.baseWidth = 1180;
-      //     this.contentWidth = 1180;
-      //     console.log('33333333')
-      // } else if (winWidth < 2450) {
-      //     this.baseWidth = 1420;  //1420
-      //     this.contentWidth = 1680;
-      //     console.log('444444')
-      // } else {
-      //     this.baseWidth = 1920;
-      //     this.contentWidth = 1920;
-      //     console.log('65555')
-      // }
-
       if (winWidth < 1440) {
         this.contentWidth = 980;
       } else if (winWidth < 1680) {
@@ -303,82 +284,80 @@ export default {
 </script>
 
 <style lang="scss">
-  .paas-loading-content {
-    position: relative;
-    overflow: hidden;
+.paas-loading-content {
+  position: relative;
+  overflow: hidden;
 
-    &.loading {
-      * {
-        opacity: 0 !important;
-      }
-    }
-
-    &.fadeout {
-      .loading-placeholder {
-        opacity: 0 !important;
-      }
-    }
-
-    .loading-placeholder {
-      opacity: 1 !important;
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      z-index: 100;
-      transition: opacity ease 0.5s;
-      padding: 0 24px;
-      margin-top: 14px;
-
-      &.hide {
-        z-index: -1;
-      }
-
-      &.transition {
-        transition: none;
-      }
-
-      svg {
-        width: 1180px;
-      }
-
-      * {
-        opacity: 1 !important;
-      }
+  &.loading {
+    * {
+      opacity: 0 !important;
     }
   }
+
+  &.fadeout {
+    .loading-placeholder {
+      opacity: 0 !important;
+    }
+  }
+
+  .loading-placeholder {
+    opacity: 1 !important;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: opacity ease 0.5s;
+    padding: 0 24px;
+    margin-top: 14px;
+
+    &.hide {
+      z-index: -1;
+    }
+
+    &.transition {
+      transition: none;
+    }
+
+    svg {
+      width: 1180px;
+    }
+
+    * {
+      opacity: 1 !important;
+    }
+  }
+}
 
 @media (min-width: 1280px) {
-    .paas-loading-content .loading-placeholder {
-        width: auto;
-        svg {
-          width: 100%;
-        }
-        &.customize-width {
-          svg {
-            width: calc(100% - 48px);
-          }
-        }
+  .paas-loading-content .loading-placeholder {
+    width: auto;
+    svg {
+      width: 100%;
     }
-}
-@media screen and (min-width: 1680px) {
-
-}
-@media screen and (min-width: 1920px) {
-
-}
-@media screen and (min-width: 2450px) {
-    .paas-loading-content .loading-placeholder {
-      width: auto;
+    &.customize-width {
       svg {
-        width: 100%;
+        width: calc(100% - 48px);
       }
     }
-}
-  .hide {
-    display: none;
   }
+}
+@media screen and (min-width: 1680px) {
+}
+@media screen and (min-width: 1920px) {
+}
+@media screen and (min-width: 2450px) {
+  .paas-loading-content .loading-placeholder {
+    width: auto;
+    svg {
+      width: 100%;
+    }
+  }
+}
+.hide {
+  display: none;
+}
 </style>

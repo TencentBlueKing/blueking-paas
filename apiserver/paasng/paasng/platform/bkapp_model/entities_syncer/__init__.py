@@ -32,7 +32,12 @@ from .env_vars import sync_env_vars
 from .hooks import sync_hooks
 from .mounts import sync_mounts
 from .observability import sync_observability
-from .proc_env_overlays import sync_proc_env_overlays
+from .proc_env_overlays import (
+    clean_empty_overlays,
+    sync_env_overlays_autoscalings,
+    sync_env_overlays_replicas,
+    sync_env_overlays_res_quotas,
+)
 from .processes import sync_processes
 from .svc_discovery import sync_svc_discovery
 
@@ -40,11 +45,14 @@ __all__ = [
     "sync_addons",
     "sync_build",
     "sync_domain_resolution",
-    "sync_proc_env_overlays",
     "sync_env_vars",
     "sync_hooks",
     "sync_mounts",
     "sync_processes",
     "sync_svc_discovery",
     "sync_observability",
+    "sync_env_overlays_autoscalings",
+    "sync_env_overlays_replicas",
+    "sync_env_overlays_res_quotas",
+    "clean_empty_overlays",
 ]

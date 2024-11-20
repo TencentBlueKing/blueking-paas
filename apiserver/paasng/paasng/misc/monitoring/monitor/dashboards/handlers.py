@@ -19,11 +19,10 @@ import logging
 
 from django.dispatch import receiver
 
-from paasng.platform.applications.models import ApplicationEnvironment
+from paasng.misc.monitoring.monitor.dashboards.manager import bk_dashboard_manager_cls
+from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.signals import post_appenv_deploy
-
-from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -33,4 +32,9 @@ def import_dashboard_after_deploy(sender: ApplicationEnvironment, deployment: De
     if not deployment.has_succeeded():
         return
 
-    tasks.import_builtin_dashboards.delay(sender.application.code)
+    app_code = sender.application.code
+    try:
+        dashboard_manager = bk_dashboard_manager_cls(Application.objects.get(code=app_code))
+        dashboard_manager.init_builtin_dashboard()
+    except Exception:
+        logger.exception(f"Unable to import builtin dashboards after release app(code: {app_code})")

@@ -580,7 +580,7 @@ def dummy_gitlab_spec():
         "attrs": {
             "name": "dft_gitlab",
             "server_config": {"api_url": "http://127.0.0.1:8080/"},
-            "oauth_credentials": {
+            "oauth_backend_config": {
                 "client_id": "client_id",
                 "client_secret": "client_secret",
                 "authorization_base_url": "http://127.0.0.1:8080/owner/repo.git",
@@ -920,16 +920,4 @@ def _mock_sync_developers_to_sentry():
     with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
         "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
     ):
-        yield
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _mock_delete_process_probe(request):
-    skip_patch = request.param if hasattr(request, "param") else False
-
-    if not skip_patch:
-        # 避免所有单元测试会执行删除 ProcessProbe 操作
-        with mock.patch("paasng.platform.declarative.deployment.controller.delete_process_probes"):
-            yield
-    else:
         yield

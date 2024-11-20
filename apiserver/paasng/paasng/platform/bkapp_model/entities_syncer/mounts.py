@@ -21,19 +21,25 @@ from paas_wl.bk_app.cnative.specs.constants import MountEnvName
 from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.cnative.specs.models import Mount as MountDB
 from paasng.platform.bkapp_model.entities import Mount, MountOverlay
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.modules.models import Module
 from paasng.utils.camel_converter import dict_to_camel
+from paasng.utils.structure import NotSetType
 
 from .result import CommonSyncResult
 
 
-def sync_mounts(module: Module, mounts: List[Mount], overlay_mounts: List[MountOverlay]) -> CommonSyncResult:
+def sync_mounts(
+    module: Module, mounts: List[Mount], overlay_mounts: List[MountOverlay] | NotSetType, manager: FieldMgrName
+) -> CommonSyncResult:
     """Sync mount relations to db model, existing data that is not in the input list may be removed.
 
     :param mounts: The mount relations that available for all environments.
     :param overlay_mounts: The environment-specified mount relations.
+    :param manager: The manager performing this action.
     :return: sync result.
     """
+    # TODO: handle fields manager related logic
     existing_mounts = MountDB.objects.filter(module_id=module.id)
     existing_index = {(m.mount_path, m.environment_name): m.id for m in existing_mounts}
 
@@ -50,6 +56,8 @@ def sync_mounts(module: Module, mounts: List[Mount], overlay_mounts: List[MountO
         # Remove it from index if it already exists
         existing_index.pop((mount.mount_path, MountEnvName.GLOBAL.value), None)
 
+    if isinstance(overlay_mounts, NotSetType):
+        overlay_mounts = []
     for overlay_mount in overlay_mounts:
         source_config = bk_app.VolumeSource(**dict_to_camel(overlay_mount.source.dict()))
         _, created = MountDB.objects.update_or_create(

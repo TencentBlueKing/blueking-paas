@@ -96,8 +96,7 @@ def yaml_content_after_change():
 
 
 class TestSaasProbes:
-    def test_saas_probes(self, bk_module, bk_deployment, yaml_content):
-        """验证 saas 应用探针对象 ProcessProbe 成功创建"""
+    def test_process_spec_should_have_probes(self, bk_module, bk_deployment, yaml_content):
         get_handler(yaml_content).handle(bk_deployment)
 
         spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
@@ -105,8 +104,9 @@ class TestSaasProbes:
         assert spec.probes.liveness.exec.command == ["cat", "/tmp/healthy"]
         assert spec.probes.readiness.tcp_socket.port == "${PORT}"
 
-    @pytest.mark.parametrize("_mock_delete_process_probe", [True], indirect=True)
-    def test_saas_probes_changes(self, bk_module, bk_deployment, yaml_content, yaml_content_after_change):
+    def test_probes_changes_after_handling_new_yaml(
+        self, bk_module, bk_deployment, yaml_content, yaml_content_after_change
+    ):
         """验证 saas 应用探针对象 ProcessProbe 成功修改"""
         # bk_deployment.app_environment  外键未实例化，补全
         name = bk_deployment.app_environment.engine_app.name

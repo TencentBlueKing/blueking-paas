@@ -8,11 +8,10 @@
     :auto-close="false"
     render-directive="if"
     :title="$t('获取沙箱环境密码')"
-    @value-change="handleValueChange"
   >
     <div slot="footer">
       <span
-        v-copy="sandboxPassword"
+        v-copy="passwrod"
         ref="copyRef"
       ></span>
       <bk-button
@@ -34,10 +33,10 @@
       <div class="password-box">
         <p class="mb6">{{ $t('沙箱环境密码') }}</p>
         <div class="password">
-          <span>{{ sandboxPassword || '--' }}</span>
+          <span>{{ passwrod || '--' }}</span>
           <i
             class="paasng-icon paasng-general-copy"
-            v-copy="sandboxPassword"
+            v-copy="passwrod"
           ></i>
         </div>
         <p class="tips">{{ $t('获取密码后，请在 “Welcome to code-server” 界面的 PASSWORD 处输入') }}</p>
@@ -54,11 +53,10 @@ export default {
       type: Boolean,
       default: false,
     },
-  },
-  data() {
-    return {
-      sandboxPassword: '',
-    };
+    passwrod: {
+      type: String,
+      default: '',
+    },
   },
   computed: {
     dialogVisible: {
@@ -69,38 +67,14 @@ export default {
         this.$emit('update:show', val);
       },
     },
-    code() {
-      return this.$route.query.code;
-    },
-    module() {
-      return this.$route.query.module;
-    },
   },
   methods: {
     handleConfirm() {
-      if (!this.sandboxPassword) {
+      if (!this.passwrod) {
         return;
       }
       this.$refs.copyRef.click();
       this.dialogVisible = false;
-    },
-    // 获取密码
-    async getSandboxPassword() {
-      try {
-        const res = await this.$store.dispatch('sandbox/getSandboxPassword', {
-          appCode: this.code,
-          moduleId: this.module,
-        });
-        this.sandboxPassword = res.password;
-      } catch (e) {
-        this.catchErrorHandler(e);
-      }
-    },
-    handleValueChange(flag) {
-      if (flag) {
-        this.getSandboxPassword();
-      }
-      this.sandboxPassword = '';
     },
   },
 };

@@ -55,9 +55,9 @@ RESOURCE_TYPE_KEY = "bkapp.paas.bk.tencent.com/resource-type"
 USE_CNB_ANNO_KEY = "bkapp.paas.bk.tencent.com/use-cnb"
 # 注解中存储日志采集类型相关的键名
 LOG_COLLECTOR_TYPE_ANNO_KEY = "bkapp.paas.bk.tencent.com/log-collector-type"
-# 注解中存储 egress 相关的键名,存储 RegionClusterState 中的 name
+# 注解中存储 egress 相关的键名，存储 RegionClusterState 中的 name
 # 在集群中，作为出口 ip 的节点被打上了 {RegionClusterState.name: "1"} 的标签
-# 并且通过 nodeSelector 将开启了出口 ip 功能的应用调度到相应(拥有该标签)的节点
+# 并且通过 nodeSelector 将开启了出口 ip 功能的应用调度到相应（拥有该标签）的节点
 EGRESS_CLUSTER_STATE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/egress-cluster-state-name"
 
 # 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败

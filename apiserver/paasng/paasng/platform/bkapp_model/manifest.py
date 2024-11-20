@@ -588,9 +588,8 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
     :param model_res: The model resource object, it will be modified in-place.
     :param env: The environment object.
     """
-    wl_app = env.wl_app
     try:
-        binding = RCStateAppBinding.objects.get(app=wl_app)
+        binding = RCStateAppBinding.objects.get(app=env.wl_app)
     except RCStateAppBinding.DoesNotExist:
         pass
     else:

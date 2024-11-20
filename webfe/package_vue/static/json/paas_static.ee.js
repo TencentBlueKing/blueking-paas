@@ -873,6 +873,12 @@ export const PAAS_STATIC_CONFIG = {
                         "destRoute": {
                           "name": "pluginRoles"
                         }
+                    },
+                    {
+                        "name": staticI18n.$t("操作记录"),
+                        "destRoute": {
+                          "name": "pluginOperationRecords"
+                        }
                     }
                 ]
             },

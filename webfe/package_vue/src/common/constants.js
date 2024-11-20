@@ -358,3 +358,34 @@ export const APP_DATAILS_STATUS = {
   undeploy: '未部署',
   misconfigured: '配置不当',
 };
+
+/**
+ * 插件-操作记录-操作对象
+ */
+export const PLUGIN_SUBJECT = {
+  plugin: '插件',
+  test_version: '测试版本',
+  version: '版本',
+  basic_info: '基本信息',
+  logo: 'logo',
+  market_info: '市场信息',
+  config_info: '配置信息',
+  visible_range: '可见范围',
+  publisher: '发布者',
+  release_strategy: '发布策略',
+};
+
+/**
+ * 插件-操作记录-操作类型
+ */
+export const PLUGIN_ACTION = {
+  create: '创建',
+  add: '新建',
+  re_release: '重新发布',
+  terminate: '终止发布',
+  modify: '修改',
+  delete: '删除',
+  archive: '下架',
+  reactivate: '重新上架',
+  rollback: '回滚',
+};

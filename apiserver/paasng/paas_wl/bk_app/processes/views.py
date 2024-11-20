@@ -180,10 +180,14 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # Set the field manager when it's a scale operation
         if operate_type == ProcessUpdateType.SCALE:
-            m = module_env.module
             # Set both the replicas and autoscaling fields at the same time
-            fieldmgr.FieldManager(m, fieldmgr.f_proc_replicas(process_type)).set(fieldmgr.FieldMgrName.WEB_FORM)
-            fieldmgr.FieldManager(m, fieldmgr.f_proc_autoscaling(process_type)).set(fieldmgr.FieldMgrName.WEB_FORM)
+            fieldmgr.MultiFieldsManager(module_env.module).set_many(
+                [
+                    fieldmgr.f_overlay_replicas(process_type, module_env.environment),
+                    fieldmgr.f_overlay_autoscaling(process_type, module_env.environment),
+                ],
+                fieldmgr.FieldMgrName.WEB_FORM,
+            )
 
     def restart(self, request, code, module_name, environment, process_name):
         """滚动重启进程"""

@@ -36,6 +36,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
@@ -261,9 +262,30 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()})
     def retrieve(self, request, code):
+        """获取当前应用的服务发现配置。
+
+        #### field_manager 字段说明
+
+        本字段表示当前应用模型字段（指“服务发现”）被哪个输入源所管理。应用模型支持多种输入源，
+        比如表单编辑器、应用描述文件等。在处理多输入源可能导致的数据冲突时，客户端可依赖
+        field_manager 字段来确定处理逻辑。比如在表单编辑器中，发现当前模型字段被应用描述文件（
+        app_desc）所管理时，可以选择隐藏“编辑”按钮并加以提示。
+
+        字段可能的值：
+
+        - `null`：表示模型字段不被任何输入源所管理
+        - `(object)`：值为当前的输入源（管理者），其中 `name` 的可选值包括：web_form（表单编辑器）、
+          app_desc（应用描述文件）
+        """
         application = self.get_application()
 
         svc_disc = get_object_or_404(SvcDiscConfig, application_id=application.id)
+
+        # Set "field_manager" field for rendering
+        svc_disc.field_manager = None
+        if mgr := self._get_field_manager(application).get():
+            svc_disc.field_manager = {"name": mgr.value}
+
         return Response(SvcDiscConfigSLZ(svc_disc).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(responses={200: SvcDiscConfigSLZ()}, request_body=SvcDiscConfigSLZ)
@@ -285,10 +307,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             },
         )
         svc_disc.refresh_from_db()
-        # Set the field manager using the default module
-        fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_SVC_DISCOVERY).set(
-            fieldmgr.FieldMgrName.WEB_FORM
-        )
+        self._get_field_manager(application).set(fieldmgr.FieldMgrName.WEB_FORM)
 
         data = SvcDiscConfigSLZ(svc_disc).data
         add_app_audit_record(
@@ -302,15 +321,29 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         )
         return Response(data, status=status.HTTP_200_OK)
 
+    def _get_field_manager(self, app: Application) -> fieldmgr.FieldManager:
+        # Always use the default module for getting field manager
+        return fieldmgr.FieldManager(app.get_default_module(), fieldmgr.F_SVC_DISCOVERY)
+
 
 class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(responses={200: DomainResolutionSLZ()})
     def retrieve(self, request, code):
+        """获取当前应用的域名解析配置。
+
+        - field_manager 字段说明，参考服务发现 .../svc_disc/ API
+        """
         application = self.get_application()
 
         domain_res = get_object_or_404(DomainResolution, application_id=application.id)
+
+        # Set "field_manager" field for rendering
+        domain_res.field_manager = None
+        if mgr := self._get_field_manager(application).get():
+            domain_res.field_manager = {"name": mgr.value}
+
         return Response(DomainResolutionSLZ(domain_res).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(responses={200: DomainResolutionSLZ()}, request_body=DomainResolutionSLZ)
@@ -338,10 +371,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         )
 
         domain_resolution.refresh_from_db()
-        # Set the field manager using the default module
-        fieldmgr.FieldManager(application.get_default_module(), fieldmgr.F_DOMAIN_RESOLUTION).set(
-            fieldmgr.FieldMgrName.WEB_FORM
-        )
+        self._get_field_manager(application).set(fieldmgr.FieldMgrName.WEB_FORM)
 
         data = DomainResolutionSLZ(domain_resolution).data
         add_app_audit_record(
@@ -354,3 +384,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
             data_after=DataDetail(type=DataType.RAW_DATA, data=data),
         )
         return Response(data, status=status.HTTP_200_OK)
+
+    def _get_field_manager(self, app: Application) -> fieldmgr.FieldManager:
+        # Always use the default module for getting field manager
+        return fieldmgr.FieldManager(app.get_default_module(), fieldmgr.F_DOMAIN_RESOLUTION)

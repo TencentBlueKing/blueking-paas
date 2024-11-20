@@ -299,8 +299,15 @@ class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):
 BkSaaSList: TypeAlias = List[Dict[str, Optional[str]]]
 
 
+class FieldManagerSLZ(serializers.Serializer):
+    """A serializer for the field manager of BkApp model field."""
+
+    name = serializers.CharField(help_text="字段管理者名称")
+
+
 class SvcDiscConfigSLZ(serializers.Serializer):
     bk_saas = serializers.ListField(help_text="服务发现列表", child=SvcDiscEntryBkSaaSSLZ())
+    field_manager = FieldManagerSLZ(help_text="字段管理者，为空时表示暂无管理者", read_only=True)
 
     def validate_bk_saas(self, value: BkSaaSList) -> BkSaaSList:
         seen = set()
@@ -323,6 +330,7 @@ class HostAliasSLZ(serializers.Serializer):
 class DomainResolutionSLZ(serializers.Serializer):
     nameservers = serializers.ListField(help_text="DNS 服务器", child=serializers.IPAddressField(), required=False)
     host_aliases = serializers.ListField(help_text="域名解析列表", child=HostAliasSLZ(), required=False)
+    field_manager = FieldManagerSLZ(help_text="字段管理者，为空时表示暂无管理者", read_only=True)
 
     def validate(self, data):
         nameservers = data.get("nameservers")

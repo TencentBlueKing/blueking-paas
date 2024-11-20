@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,32 +14,37 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import shlex
-from typing import List, Optional
+"""
+The "fieldmgr" is a module that helps to handle bkapp model updates from multiple
+sources. It tries to produce the best result for the update by introducing and tracking
+a "manager" for each field.
+"""
 
-from pydantic import BaseModel, Field
+from .constants import FieldMgrName
+from .fields import (
+    F_DOMAIN_RESOLUTION,
+    F_HOOKS,
+    F_SVC_DISCOVERY,
+    f_overlay_autoscaling,
+    f_overlay_mounts,
+    f_overlay_replicas,
+    f_overlay_res_quotas,
+    f_proc_autoscaling,
+    f_proc_replicas,
+)
+from .managers import FieldManager, MultiFieldsManager
 
-from .utils import set_alias_field
-
-
-class HookCmd(BaseModel):
-    """The HookCmd describes a hook command."""
-
-    command: Optional[List[str]] = Field(default_factory=list)
-    args: Optional[List[str]] = Field(default_factory=list)
-
-    def __init__(self, **data):
-        # FIXME 处理 proc_command 与 command/args 的关系
-        if proc_command := data.get("proc_command"):
-            data["command"] = None
-            data["args"] = shlex.split(proc_command)
-        super().__init__(**data)
-
-
-class Hooks(BaseModel):
-    pre_release: HookCmd | None = None
-
-    def __init__(self, **data):
-        # db 旧数据使用了 camel case
-        data = set_alias_field(data, "preRelease", to="pre_release")
-        super().__init__(**data)
+__all__ = [
+    "FieldMgrName",
+    "MultiFieldsManager",
+    "F_DOMAIN_RESOLUTION",
+    "F_HOOKS",
+    "F_SVC_DISCOVERY",
+    "FieldManager",
+    "f_overlay_autoscaling",
+    "f_overlay_mounts",
+    "f_overlay_replicas",
+    "f_overlay_res_quotas",
+    "f_proc_autoscaling",
+    "f_proc_replicas",
+]

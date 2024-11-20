@@ -18,17 +18,18 @@
 import shlex
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.utils.procfile import generate_bash_command_with_tokens
+from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
 from .probes import ProbeSet
 from .proc_service import ProcService
 from .scaling_config import AutoscalingConfig
 
 
-class Process(BaseModel):
+class Process(AllowNotsetModel):
     """
     模块进程
 
@@ -53,9 +54,9 @@ class Process(BaseModel):
     services: Optional[List[ProcService]] = None
     target_port: Optional[int] = None
 
-    replicas: Optional[int] = None
+    replicas: int | NotSetType | None = NOTSET
     res_quota_plan: Optional[ResQuotaPlan] = None
-    autoscaling: Optional[AutoscalingConfig] = None
+    autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None
 

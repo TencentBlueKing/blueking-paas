@@ -50,8 +50,8 @@ def sync_processes(
         existing_index[proc_spec.name] = proc_spec.pk
 
     managed_values = ManagedFieldValues(module, processes, manager, set(existing_index.keys()))
-    target_replicas_map = managed_values.get_target_replicas()
-    autoscaling_map = managed_values.get_autoscaling()
+    target_replicas_map, r_reset_procs = managed_values.get_target_replicas()
+    autoscaling_map, a_reset_procs = managed_values.get_autoscaling()
 
     # Update or create data
     for process in processes:
@@ -79,9 +79,12 @@ def sync_processes(
     # Remove existing data that is not touched.
     ret.deleted_num, _ = ModuleProcessSpec.objects.filter(module=module, id__in=existing_index.values()).delete()
 
-    # Set field managers
+    # Set and reset field managers
     managed_values.set_field_mgr_target_replicas(target_replicas_map.keys())
+    managed_values.reset_field_mgr_target_replicas(r_reset_procs)
+
     managed_values.set_field_mgr_autoscaling(autoscaling_map.keys())
+    managed_values.reset_field_mgr_autoscaling(a_reset_procs)
     return ret
 
 
@@ -101,12 +104,14 @@ class ManagedFieldValues:
         self.manager = manager
         self.existing_procs = existing_procs
 
-    def get_target_replicas(self) -> dict[str, int]:
+    def get_target_replicas(self) -> tuple[dict[str, int], set[str]]:
         """Get the target replicas for each process.
 
-        :return: A dict of process name to replicas.
+        :return: A tuple, the first item is a dict of process name to replicas, the
+            second item is the process names that have been reset by the NOTSET value.
         """
         results: dict[str, int] = {}
+        reset_procs = set()
         for process in self.processes:
             name = process.name
             replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_replicas(name))
@@ -116,12 +121,13 @@ class ManagedFieldValues:
                 and name in self.existing_procs
             ):
                 continue
-            results[name] = (
-                process.replicas
-                if not isinstance(process.replicas, NotSetType) and process.replicas is not None
-                else self.default_replicas
-            )
-        return results
+
+            if isinstance(process.replicas, NotSetType):
+                reset_procs.add(name)
+                results[name] = self.default_replicas
+            else:
+                results[name] = self.default_replicas if process.replicas is None else process.replicas
+        return results, reset_procs
 
     def set_field_mgr_target_replicas(self, names: Iterable[str]):
         """Set the field manager for the target replicas field."""
@@ -129,12 +135,18 @@ class ManagedFieldValues:
             [fieldmgr.f_proc_replicas(name) for name in names], self.manager
         )
 
-    def get_autoscaling(self) -> dict[str, AutoscalingConfig | None]:
+    def reset_field_mgr_target_replicas(self, names: Iterable[str]):
+        """Reset the field manager for the target replicas field."""
+        fieldmgr.MultiFieldsManager(self.module).reset_many([fieldmgr.f_proc_replicas(name) for name in names])
+
+    def get_autoscaling(self) -> tuple[dict[str, AutoscalingConfig | None], set[str]]:
         """Get the autoscaling config for each process.
 
-        :return: A dict of process name to autoscaling config.
+        :return: A tuple, the first item is a dict of process name to autoscaling config,
+            the second item is the process names that have been reset by the NOTSET value.
         """
         results: dict[str, AutoscalingConfig | None] = {}
+        reset_procs = set()
         for process in self.processes:
             name = process.name
             autoscaling_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_autoscaling(name))
@@ -142,13 +154,18 @@ class ManagedFieldValues:
                 continue
 
             if isinstance(process.autoscaling, NotSetType):
+                reset_procs.add(name)
                 results[name] = None
             else:
                 results[name] = process.autoscaling
-        return results
+        return results, reset_procs
 
     def set_field_mgr_autoscaling(self, names: Iterable[str]):
         """Set the field manager for the autoscaling field."""
         fieldmgr.MultiFieldsManager(self.module).set_many(
             [fieldmgr.f_proc_autoscaling(name) for name in names], self.manager
         )
+
+    def reset_field_mgr_autoscaling(self, names: Iterable[str]):
+        """reset the field manager for the autoscaling field."""
+        fieldmgr.MultiFieldsManager(self.module).reset_many([fieldmgr.f_proc_autoscaling(name) for name in names])

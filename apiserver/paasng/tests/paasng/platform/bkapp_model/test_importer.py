@@ -49,42 +49,50 @@ def base_manifest(bk_app):
 
 
 @pytest.fixture()
-def base_manifest_no_replicas(bk_app):
+def manifest_no_replicas(base_manifest):
     """A very basic manifest that can pass the validation, contains no `replicas` field."""
-    return {
-        "kind": "BkApp",
-        "apiVersion": "paas.bk.tencent.com/v1alpha2",
-        "metadata": {"name": bk_app.code},
-        "spec": {
-            "build": {"image": "nginx:latest"},
-            "processes": [{"name": "web", "resQuotaPlan": "default"}],
-        },
-    }
+    data = copy.deepcopy(base_manifest)
+    del data["spec"]["processes"][0]["replicas"]
+    return data
+
+
+@pytest.fixture()
+def manifest_replicas_3(manifest_no_replicas):
+    data = copy.deepcopy(manifest_no_replicas)
+    data["spec"]["processes"][0]["replicas"] = 3
+    return data
 
 
 class TestProcReplicas:
-    def test_initialization(self, bk_module, base_manifest_no_replicas):
-        import_manifest_app_desc(bk_module, base_manifest_no_replicas)
+    def test_initialization(self, bk_module, manifest_no_replicas):
+        import_manifest_app_desc(bk_module, manifest_no_replicas)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.target_replicas == 1
 
-    def test_notset_dont_overwrite_existed_value(self, bk_module, base_manifest_no_replicas):
-        base_manifest_replicas_3 = copy.deepcopy(base_manifest_no_replicas)
-        base_manifest_replicas_3["spec"]["processes"][0]["replicas"] = 3
+    def test_reset_by_notset(self, bk_module, manifest_no_replicas, manifest_replicas_3):
+        import_manifest_app_desc(bk_module, manifest_replicas_3)
 
-        import_manifest(bk_module, base_manifest_replicas_3, manager=fieldmgr.FieldMgrName.WEB_FORM)
-        import_manifest_app_desc(bk_module, base_manifest_no_replicas)
+        import_manifest_app_desc(bk_module, manifest_no_replicas)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.target_replicas == 1, "The replicas should has been reset"
+        assert fieldmgr.FieldManager(bk_module, fieldmgr.f_proc_replicas("web")).get() is None
+
+    def test_ignore_not_managed_when_notset(self, bk_module, manifest_no_replicas, manifest_replicas_3):
+        import_manifest(bk_module, manifest_replicas_3, manager=fieldmgr.FieldMgrName.WEB_FORM)
+
+        import_manifest_app_desc(bk_module, manifest_no_replicas)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.target_replicas == 3, "The replicas should remain as it is"
 
-    def test_set_to_zero(self, bk_module, base_manifest_no_replicas):
-        import_manifest_app_desc(bk_module, base_manifest_no_replicas)
-        base_manifest_replicas_0 = copy.deepcopy(base_manifest_no_replicas)
-        base_manifest_replicas_0["spec"]["processes"][0]["replicas"] = 0
+    def test_set_to_zero(self, bk_module, manifest_no_replicas):
+        import_manifest_app_desc(bk_module, manifest_no_replicas)
+        manifest_replicas_0 = copy.deepcopy(manifest_no_replicas)
+        manifest_replicas_0["spec"]["processes"][0]["replicas"] = 0
 
-        import_manifest_app_desc(bk_module, base_manifest_replicas_0)
+        import_manifest_app_desc(bk_module, manifest_replicas_0)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.target_replicas == 0, "The replicas should be set to 0"
@@ -113,6 +121,10 @@ class TestProcAutoscaling:
         proc_spec.refresh_from_db()
         assert proc_spec.autoscaling is True
         assert proc_spec.scaling_config.max_replicas == 2
+        assert (
+            fieldmgr.FieldManager(bk_module, fieldmgr.f_proc_autoscaling("web")).get()
+            == fieldmgr.FieldMgrName.APP_DESC
+        )
 
     def test_disable_by_notset(self, bk_module, base_manifest, manifest_autoscaling):
         import_manifest_app_desc(bk_module, manifest_autoscaling)
@@ -120,10 +132,12 @@ class TestProcAutoscaling:
         # When the field is not set, the autoscaling should be disabled.
         import_manifest_app_desc(bk_module, base_manifest)
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+
         assert proc_spec.autoscaling is False
         assert proc_spec.scaling_config is None
+        assert fieldmgr.FieldManager(bk_module, fieldmgr.f_proc_autoscaling("web")).get() is None
 
-    def test_ignore_when_notset(self, bk_module, base_manifest, manifest_autoscaling):
+    def test_ignore_not_managed_when_notset(self, bk_module, base_manifest, manifest_autoscaling):
         import_manifest(bk_module, manifest_autoscaling, manager=fieldmgr.FieldMgrName.WEB_FORM)
 
         # When the field is not set and it's managed by another manager, the autoscaling

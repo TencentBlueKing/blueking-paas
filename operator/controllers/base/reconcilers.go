@@ -22,8 +22,9 @@ import (
 	"context"
 	"time"
 
-	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
 // Reconciler will move the current state of the cluster closer to the desired state.

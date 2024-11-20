@@ -2,16 +2,16 @@
   <div class="deploy-detail">
     <section class="instance-details">
       <div class="instance-item">
-        <span class="label">{{$t('运行实例数')}}：</span>
+        <span class="label">{{ $t('运行实例数') }}：</span>
         <span class="value">{{ runningInstanceLength }}</span>
       </div>
       <div class="instance-item">
-        <span class="label">{{$t('期望实例数')}}：</span>
-        <span class="value">{{deploymentInfo?.total_desired_replicas}}</span>
+        <span class="label">{{ $t('期望实例数') }}：</span>
+        <span class="value">{{ deploymentInfo?.total_desired_replicas }}</span>
       </div>
       <div class="instance-item">
-        <span class="label">{{$t('异常实例数')}}：</span>
-        <span class="value">{{deployData.total_failed}}</span>
+        <span class="label">{{ $t('异常实例数') }}：</span>
+        <span class="value">{{ deployData.total_failed }}</span>
       </div>
     </section>
 
@@ -29,26 +29,37 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5" v-if="!row.autoscaling">
-                {{ (row.instances || []).filter(item => item.ready).length }} / {{ row.available_instance_count }}
+              <span
+                class="ml5"
+                v-if="!row.autoscaling"
+              >
+                {{ (row.instances || []).filter((item) => item.ready).length }} / {{ row.available_instance_count }}
               </span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
-              <div class="icon-expand" v-if="row.instances.length > 1">
+              <div
+                class="icon-expand"
+                v-if="row.instances.length > 1"
+              >
                 <img
                   v-if="row.isExpand"
                   class="image-icon"
                   @click="handleExpand(row)"
                   src="/static/images/tableminus.svg"
-                >
+                />
                 <img
                   v-else
                   class="image-icon"
                   @click="handleExpand(row)"
                   src="/static/images/tableplus.svg"
-                >
+                />
               </div>
             </div>
-            <div class="scaling-dot mt5" v-if="row.autoscaling">{{ $t('自动扩缩容') }}</div>
+            <div
+              class="scaling-dot mt5"
+              v-if="row.autoscaling"
+            >
+              {{ $t('自动扩缩容') }}
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -63,13 +74,26 @@
                 v-for="instance in row.instances"
                 :key="instance.process_name"
               >
-                <div class="text-ellipsis" v-bk-overflow-tips>{{ instance.display_name }}</div>
+                <div
+                  class="text-ellipsis"
+                  v-bk-overflow-tips
+                >
+                  {{ instance.display_name }}
+                </div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container pl30">--</div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container pl30"
+            >
+              --
+            </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
+        <bk-table-column
+          :label="$t('状态')"
+          class-name="table-colum-instance-cls"
+        >
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
@@ -82,11 +106,10 @@
                   <span
                     class="dot"
                     :class="instance.rich_status"
-                  >
-                  </span>
+                  ></span>
                   <span v-bk-tooltips="instance.state_message || ''">
                     <em
-                      v-dashed="{disabled: instance.rich_status === 'Running'}"
+                      v-dashed="{ disabled: instance.rich_status === 'Running' }"
                       class="instance-item-status"
                     >
                       {{ instance.rich_status || '--' }}
@@ -95,14 +118,20 @@
                 </div>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('重启次数')"
           class-name="table-colum-instance-cls"
           width="80"
-          :render-header="$renderHeader">
+          :render-header="$renderHeader"
+        >
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
@@ -114,18 +143,28 @@
                 <span
                   v-bk-tooltips="{
                     content: instance.terminated_info?.reason,
-                    placement: 'bottom', offset: '0, -10',
-                    disabled: !instance.terminated_info?.reason
+                    placement: 'bottom',
+                    offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason,
                   }"
-                  :class="{ tip: instance.terminated_info?.reason }">
+                  :class="{ tip: instance.terminated_info?.reason }"
+                >
                   {{ instance.restart_count }}
                 </span>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
+        <bk-table-column
+          :label="$t('创建时间')"
+          class-name="table-colum-instance-cls"
+        >
           <template slot-scope="{ row }">
             <div v-if="row.instances.length">
               <div
@@ -137,18 +176,22 @@
                 <template v-if="instance.date_time !== 'Invalid date'">
                   <div class="text-ellipsis">{{ $t('创建于') }} {{ instance.date_time }}</div>
                 </template>
-                <template v-else>
-                  --
-                </template>
+                <template v-else>--</template>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column
           label=""
           class-name="table-colum-instance-cls"
-          :width="columWidth">
+          :width="columWidth"
+        >
           <template slot-scope="{ row }">
             <div
               class="instance-item-cls cell-container operation-column"
@@ -160,28 +203,32 @@
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceEvents(instance, row.name)">
-                {{$t('查看事件')}}
+                @click="showInstanceEvents(instance, row.name)"
+              >
+                {{ $t('查看事件') }}
               </bk-button>
               <bk-button
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceLog(instance, row)">
-                {{$t('查看日志')}}
+                @click="showInstanceLog(instance, row)"
+              >
+                {{ $t('查看日志') }}
               </bk-button>
               <bk-button
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceConsole(instance, row)">
-                {{$t('访问控制台')}}
+                @click="showInstanceConsole(instance, row)"
+              >
+                {{ $t('访问控制台') }}
               </bk-button>
               <bk-button
                 :text="true"
                 title="primary"
-                @click="showRestartPopup('instance', instance)">
-                {{$t('重启实例')}}
+                @click="showRestartPopup('instance', instance)"
+              >
+                {{ $t('重启实例') }}
               </bk-button>
             </div>
           </template>
@@ -194,17 +241,18 @@
           <template slot-scope="{ row, $index }">
             <div class="operation">
               <div
-                v-if="!row.autoscaling
-                  && row.instances.length !== row.available_instance_count"
+                v-if="!row.autoscaling && row.instances.length !== row.available_instance_count"
                 class="flex-row align-items-center mr10"
               >
                 <img
                   src="/static/images/btn_loading.gif"
                   class="loading"
+                />
+                <span
+                  class="pl10"
+                  style="white-space: nowrap"
                 >
-                <span class="pl10" style="white-space: nowrap;">
-                  <span
-                    v-if="row.instances.length < row.available_instance_count">
+                  <span v-if="row.instances.length < row.available_instance_count">
                     {{ $t('启动中...') }}
                   </span>
                   <span v-else>{{ $t('停止中...') }}</span>
@@ -217,10 +265,13 @@
                   :content="$t('确认停止该进程？')"
                   width="288"
                   trigger="click"
-                  @confirm="handleUpdateProcess">
-                  <div class="round-wrapper" @click="handleProcessOperation(row)">
-                    <div class="square-icon">
-                    </div>
+                  @confirm="handleUpdateProcess"
+                >
+                  <div
+                    class="round-wrapper"
+                    @click="handleProcessOperation(row)"
+                  >
+                    <div class="square-icon"></div>
                   </div>
                 </bk-popconfirm>
                 <div v-else>
@@ -229,28 +280,46 @@
                     :content="$t('确认启动该进程？')"
                     width="288"
                     trigger="click"
-                    @confirm="handleUpdateProcess">
+                    @confirm="handleUpdateProcess"
+                  >
                     <i
                       class="paasng-icon paasng-play-circle-shape start"
-                      @click="handleProcessOperation(row)"></i>
+                      @click="handleProcessOperation(row)"
+                    ></i>
                   </bk-popconfirm>
                 </div>
               </div>
               <i
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
-                @click="showProcessDetailDialog(row)"></i>
+                @click="showProcessDetailDialog(row)"
+              ></i>
               <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom"
-                :tippy-options="{ 'hideOnClick': false }"
-                :ref="`moreRef${$index}`">
+                :tippy-options="{ hideOnClick: false }"
+                :ref="`moreRef${$index}`"
+              >
                 <i class="paasng-icon paasng-ellipsis more"></i>
-                <div slot="content" class="more-content" style="white-space: normal;">
-                  <div class="option" @click="handleExpansionAndContraction(row, $index)">{{$t('扩缩容')}}</div>
+                <div
+                  slot="content"
+                  class="more-content"
+                  style="white-space: normal"
+                >
+                  <div
+                    class="option"
+                    @click="handleExpansionAndContraction(row, $index)"
+                  >
+                    {{ $t('扩缩容') }}
+                  </div>
                   <!-- 重启进程 -->
-                  <div class="option" @click="showRestartPopup('process', row, $index)">{{$t('滚动重启')}}</div>
+                  <div
+                    class="option"
+                    @click="showRestartPopup('process', row, $index)"
+                  >
+                    {{ $t('滚动重启') }}
+                  </div>
                 </div>
               </bk-popover>
             </div>
@@ -277,11 +346,11 @@
         >
           <bk-form
             form-type="inline"
-            style="float: right;"
+            style="float: right"
           >
             <bk-date-picker
               v-model="initDateTimeRange"
-              style="margin-top: 4px;"
+              style="margin-top: 4px"
               :shortcuts="dateShortCut"
               :shortcuts-type="'relative'"
               :format="'yyyy-MM-dd HH:mm:ss'"
@@ -296,7 +365,7 @@
             >
               <div
                 slot="trigger"
-                style="width: 310px; height: 28px;"
+                style="width: 310px; height: 28px"
                 @click="toggleDatePicker"
               >
                 <button class="action-btn timer fr">
@@ -312,57 +381,68 @@
           v-if="curAppInfo.feature.RESOURCE_METRICS"
           class="chart-box"
         >
-          <strong class="title"> {{ $t('CPU使用') }} <span class="sub-title"> {{ $t('（单位：核）') }} </span></strong>
+          <strong class="title">
+            {{ $t('CPU使用') }}
+            <span class="sub-title">{{ $t('（单位：核）') }}</span>
+          </strong>
           <chart
             ref="cpuLine"
             :options="cpuLine"
             auto-resize
-            style="width: 750px; height: 300px; background: #1e1e21;"
+            style="width: 750px; height: 300px; background: #1e1e21"
           />
         </div>
         <div
           v-if="curAppInfo.feature.RESOURCE_METRICS"
           class="chart-box"
         >
-          <strong class="title"> {{ $t('内存使用') }} <span class="sub-title"> {{ $t('（单位：MB）') }} </span></strong>
+          <strong class="title">
+            {{ $t('内存使用') }}
+            <span class="sub-title">{{ $t('（单位：MB）') }}</span>
+          </strong>
           <chart
             ref="memoryLine"
             :options="memoryLine"
             auto-resize
-            style="width: 750px; height: 300px; background: #1e1e21;"
+            style="width: 750px; height: 300px; background: #1e1e21"
           />
         </div>
         <div class="slider-detail-wrapper">
-          <label class="title"> {{ $t('详细信息') }} </label>
+          <label class="title">{{ $t('详细信息') }}</label>
           <section class="detail-item">
-            <label class="label"> {{ $t('类型：') }} </label>
+            <label class="label">{{ $t('类型：') }}</label>
             <div class="content">
               {{ processPlan.processType }}
             </div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('实例数上限：') }} </label>
+            <label class="label">{{ $t('实例数上限：') }}</label>
             <div class="content">
               {{ processPlan.maxReplicas }}
             </div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('单实例资源配额：') }} </label>
-            <div class="content">
-              {{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}
-            </div>
+            <label class="label">{{ $t('单实例资源配额：') }}</label>
+            <div class="content">{{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}</div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('进程间访问链接：') }} </label>
+            <label class="label">{{ $t('进程间访问链接：') }}</label>
             <div class="content">
               {{ processPlan.clusterLink }}
             </div>
           </section>
-          <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc;">
-            {{ $t('注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考') }} <a
+          <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc">
+            {{
+              $t(
+                '注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考'
+              )
+            }}
+            <a
               target="_blank"
               :href="GLOBAL.DOC.PROCESS_SERVICE"
-            > {{ $t('进程间通信') }} </a>
+            >
+              {{ $t('进程间通信') }}
+            </a>
           </p>
         </div>
       </div>
@@ -392,7 +472,9 @@
           <a
             :href="processRefuseDialog.link"
             target="_blank"
-          > {{ $t('文档：') }} {{ processRefuseDialog.title }}</a>
+          >
+            {{ $t('文档：') }} {{ processRefuseDialog.title }}
+          </a>
         </div>
       </div>
     </bk-dialog>
@@ -403,8 +485,7 @@
       :key="moduleName"
       :ref="`${moduleName}ScaleDialog`"
       @updateStatus="handleProcessStatus"
-    >
-    </scale-dialog>
+    ></scale-dialog>
 
     <!-- 日志弹窗 -->
     <process-log
@@ -414,8 +495,8 @@
       :loading="logConfig.isLoading"
       :time-selection="chartRangeList"
       :params="logConfig.params"
-      @refresh="refreshLogs">
-    </process-log>
+      @refresh="refreshLogs"
+    ></process-log>
   </div>
 </template>
 
@@ -436,8 +517,7 @@ moment.locale('zh-cn');
 // let maxReplicasNum = 0;
 
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
@@ -632,7 +712,7 @@ export default {
     },
     runningInstanceLength() {
       return this.allProcesses.reduce((p, v) => {
-        const readyInstancesCount = v.instances.filter(instance => instance.ready).length;
+        const readyInstancesCount = v.instances.filter((instance) => instance.ready).length;
         return p + readyInstancesCount;
       }, 0);
     },
@@ -661,8 +741,10 @@ export default {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
-        if (JSON.stringify(newVal) !== JSON.stringify(oldVal)
-        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+        if (
+          JSON.stringify(newVal) !== JSON.stringify(oldVal) &&
+          (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)
+        ) {
           this.watchServerPush();
         }
       },
@@ -687,14 +769,14 @@ export default {
       row.isExpand = !row.isExpand;
     },
     handleProcessOperation(row) {
-      this.curUpdateProcess = row;    // 当前点击的进程
+      this.curUpdateProcess = row; // 当前点击的进程
     },
 
     handleUpdateProcess() {
       this.updateProcess();
     },
     handleExpansionAndContraction(row, i) {
-      this.curUpdateProcess = row;    // 当前点击的进程
+      this.curUpdateProcess = row; // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
       this.$refs[`moreRef${i}`].instance?.hide();
@@ -728,7 +810,7 @@ export default {
       const { instances } = processesData;
       // 如果是下架的进程则processesData.proc_specs会有数据
       if (processesData.proc_specs.length) {
-        const processName = processesData.processes.map(e => e.type);
+        const processName = processesData.processes.map((e) => e.type);
         processesData.proc_specs.forEach((e) => {
           if (!processName.includes(e.name)) {
             processesData.processes.push({
@@ -748,7 +830,7 @@ export default {
       }
       processesData.processes.forEach((processItem) => {
         const { type, name } = processItem;
-        const packageInfo = packages.find(item => item.name === type);
+        const packageInfo = packages.find((item) => item.name === type);
 
         const processInfo = {
           ...processItem,
@@ -778,8 +860,8 @@ export default {
           available_instance_count: processInfo.target_status === 'stop' ? 0 : processInfo.target_replicas,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
-          cpuLimit: processInfo.cpu_limit,
-          memLimit: processInfo.memory_limit,
+          cpuLimit: processInfo.resource_limit?.cpu,
+          memLimit: processInfo.resource_limit?.memory,
           clusterLink: processInfo.cluster_link,
           isExpand: true,
           autoscaling: processInfo.autoscaling,
@@ -791,8 +873,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute')
-            .fromNow();
+          item.date_time = moment(item.start_time).startOf('minute').fromNow();
         });
         allProcesses.push(process);
       });
@@ -840,37 +921,41 @@ export default {
         const cpuRef = this.$refs.cpuLine;
         const memRef = this.$refs.memoryLine;
 
-        cpuRef && cpuRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        cpuRef &&
+          cpuRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        memRef && memRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        memRef &&
+          memRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        cpuRef && cpuRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        cpuRef &&
+          cpuRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
-        memRef && memRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        memRef &&
+          memRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
         this.fetchMetric({
           cpuRef,
@@ -884,10 +969,13 @@ export default {
      * 图标侧栏隐藏回调处理
      */
     handlerChartHide() {
-      this.dateParams = Object.assign({}, {
-        start_time: initStartDate,
-        end_time: initEndDate,
-      });
+      this.dateParams = Object.assign(
+        {},
+        {
+          start_time: initStartDate,
+          end_time: initEndDate,
+        }
+      );
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.isDatePickerOpen = false;
       this.clearChart();
@@ -922,7 +1010,6 @@ export default {
     toggleDatePicker() {
       this.isDatePickerOpen = !this.isDatePickerOpen;
     },
-
 
     async fetchMetric(conf) {
       // 请求数据
@@ -968,7 +1055,7 @@ export default {
             }
           });
         });
-        limitDatas && (datas.unshift(limitDatas));
+        limitDatas && datas.unshift(limitDatas);
         return datas;
       };
       try {
@@ -992,55 +1079,57 @@ export default {
     },
 
     /**
-      * 清空图表数据
-    */
+     * 清空图表数据
+     */
     clearChart() {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memoryLine;
 
-      cpuRef && cpuRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      cpuRef &&
+        cpuRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
 
-      memRef && memRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      memRef &&
+        memRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     /**
@@ -1123,7 +1212,6 @@ export default {
       // }
       // process.isActionLoading = true;
 
-
       // // 判断是否已经下架
       // if (this.isAppOfflined) {
       //   return false;
@@ -1181,13 +1269,12 @@ export default {
       }
     },
 
-
     // 监听进程事件流
     watchServerPush() {
       // 停止轮询的标志
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
-      };
+      }
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
 
       const serverProcessEvent = new EventSource(url, {
@@ -1203,10 +1290,10 @@ export default {
         const data = JSON.parse(event.data);
         console.log(this.$t('接受到推送'), data);
         if (data.object_type === 'process') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          if (data.object.module_name !== this.curModuleId) return; // 更新当前模块的进程
           this.updateProcessData(data);
         } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
+          if (data.object.module_name !== this.curModuleId) return; // 更新当前模块的进程
           this.updateInstanceData(data);
         } else if (data.type === 'ERROR') {
           // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
@@ -1258,7 +1345,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
       }
     },
 
@@ -1267,8 +1354,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
-        .fromNow();
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.type === instanceData.process_type) {
           // 新增
@@ -1300,15 +1386,15 @@ export default {
 
     updateProcessStatus(process) {
       /*
-        * 设置进程状态
-        * targetStatus: 进行的操作，start\stop\scale
-        * status: 操作状态，Running\stoped
-        *
-        * 如何判断进程当前是否为操作中（繁忙状态）？
-        * 主要根据 process_packages 里面的 target_status 判断：
-        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-        * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
-        */
+       * 设置进程状态
+       * targetStatus: 进行的操作，start\stop\scale
+       * status: 操作状态，Running\stoped
+       *
+       * 如何判断进程当前是否为操作中（繁忙状态）？
+       * 主要根据 process_packages 里面的 target_status 判断：
+       * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       */
       if (process.targetStatus === 'stop') {
         process.operateIconTitle = this.$t('启动进程');
         process.operateIconTitleCopy = this.$t('启动进程');
@@ -1328,12 +1414,11 @@ export default {
       }
     },
 
-
     /**
      * 展示实例/重启日志弹窗
      * @param {Object} instance  实例对象
      * @param {Object} row
-    */
+     */
     showInstanceLog(instance, row) {
       this.curInstance = instance;
       this.logConfig.visiable = true;
@@ -1384,7 +1469,7 @@ export default {
     /**
      * 显示进程webConsole
      * @param {Object} instance, processes
-    */
+     */
     async showInstanceConsole(instance, processes) {
       this.processRefuseDialog.isLoading = true;
       try {
@@ -1446,7 +1531,7 @@ export default {
         this.serverProcessEvent.close();
         if (this.watchServerTimer) {
           clearTimeout(this.watchServerTimer);
-        };
+        }
       }
     },
 
@@ -1477,7 +1562,6 @@ export default {
       this.logConfig.isLoading = true;
       this.logConfig.logs = [];
     },
-
 
     // 刷新日志
     refreshLogs(data) {
@@ -1565,7 +1649,6 @@ export default {
 
 <style lang="scss" scoped>
 .deploy-detail {
-
   .instance-details {
     display: flex;
   }
@@ -1574,10 +1657,10 @@ export default {
     flex: 1;
     display: flex;
     justify-content: center;
-    border-right: 1px solid #EAEBF0;
+    border-right: 1px solid #eaebf0;
     margin: 12px 0;
     .label {
-      color: #63656E;
+      color: #63656e;
     }
     .value {
       color: #313238;
@@ -1588,7 +1671,7 @@ export default {
     &:last-child {
       border-right: none;
       .value {
-        color: #EA3636;
+        color: #ea3636;
       }
     }
   }
@@ -1610,23 +1693,23 @@ export default {
       cursor: pointer;
     }
     .start {
-      color: #2DCB56;
+      color: #2dcb56;
       font-size: 20px;
     }
     .detail {
-      color: #979BA5;
+      color: #979ba5;
 
       &:hover {
-        color: #63656E;
+        color: #63656e;
       }
     }
     .more {
       transform: rotate(90deg);
       border-radius: 50%;
       padding: 3px;
-      color: #63656E;
+      color: #63656e;
       &:hover {
-        background: #F0F1F5;
+        background: #f0f1f5;
       }
     }
   }
@@ -1639,11 +1722,11 @@ export default {
     margin-right: 8px;
 
     &.faild {
-      background: #EA3636;
+      background: #ea3636;
       border: 3px solid #fce0e0;
     }
     &.running {
-      background: #3FC06D;
+      background: #3fc06d;
       border: 3px solid #daefe4;
     }
   }
@@ -1666,7 +1749,7 @@ export default {
         height: 100%;
         padding: 0;
 
-        .instance-item-cls-empty{
+        .instance-item-cls-empty {
           padding: 0 10px;
         }
 
@@ -1675,9 +1758,9 @@ export default {
           padding-right: 12px;
         }
 
-        .instance-item-cls  {
+        .instance-item-cls {
           border-bottom: 1px solid #dfe0e5;
-          transition: .25s ease;
+          transition: 0.25s ease;
           padding: 0 10px;
 
           &.instance-name {
@@ -1748,10 +1831,10 @@ export default {
         padding: 0 10px;
       }
       &.default-background {
-        background: #FAFBFD;
+        background: #fafbfd;
       }
     }
-    .bk-table-body .table-colum-process-cls  {
+    .bk-table-body .table-colum-process-cls {
       .cell {
         align-items: flex-start;
         flex-direction: column;
@@ -1761,20 +1844,20 @@ export default {
           line-height: 16px;
           padding: 0 4px;
           font-size: 10px;
-          color: #14A568;
-          background: #E4FAF0;
+          color: #14a568;
+          background: #e4faf0;
           border-radius: 2px;
         }
       }
     }
-    .table-colum-process-cls  {
+    .table-colum-process-cls {
       .cell {
         display: block;
         height: 100%;
         display: flex;
       }
       &.default-background {
-        background: #FAFBFD;
+        background: #fafbfd;
       }
     }
   }
@@ -1786,8 +1869,8 @@ export default {
     height: 18px;
     text-align: center;
     line-height: 18px;
-    color: #EA3636;
-    background: #FEEBEA;
+    color: #ea3636;
+    background: #feebea;
     border-radius: 9px;
   }
   .icon-expand {
@@ -1797,7 +1880,7 @@ export default {
     transform: translateY(-50%) translateX(50%);
     z-index: 99;
     cursor: pointer;
-    .image-icon{
+    .image-icon {
       display: block;
       width: 14px;
       height: 14px;
@@ -1810,17 +1893,17 @@ export default {
       margin-top: -2px;
       width: 20px;
       height: 20px;
-      background: #EA3636;
+      background: #ea3636;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .square-icon {
-        width: 8px;
-        height: 8px;
-        background: #fff;
-        border-radius: 1px;
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 1px;
     }
   }
   .dot {
@@ -1834,96 +1917,96 @@ export default {
 
     &.Failed,
     &.Error {
-      background: #EA3636;
+      background: #ea3636;
       border: 3px solid #fce0e0;
     }
     &.interrupted,
     &.Pending,
     &.CrashLoopBackOff {
-      background: #FF9C01;
+      background: #ff9c01;
       border: 3px solid #ffefd6;
     }
     &.Running {
-      background: #3FC06D;
+      background: #3fc06d;
       border: 3px solid #daefe4;
     }
   }
 
   .chart-wrapper {
-      height: 100%;
-      overflow: auto;
-      background: #fafbfd;
+    height: 100%;
+    overflow: auto;
+    background: #fafbfd;
 
-      .chart-box {
-          margin-bottom: 10px;
-          border-top: 1px solid #dde4eb;
-          border-bottom: 1px solid #dde4eb;
+    .chart-box {
+      margin-bottom: 10px;
+      border-top: 1px solid #dde4eb;
+      border-bottom: 1px solid #dde4eb;
 
-          .title {
-              font-size: 14px;
-              display: block;
-              color: #666;
-              font-weight: normal;
-              padding: 10px 20px;
-          }
-
-          .sub-title {
-              font-size: 12px;
-          }
-          background-color: #fff !important;
+      .title {
+        font-size: 14px;
+        display: block;
+        color: #666;
+        font-weight: normal;
+        padding: 10px 20px;
       }
+
+      .sub-title {
+        font-size: 12px;
+      }
+      background-color: #fff !important;
+    }
   }
 
   .slider-detail-wrapper {
-      padding: 0 20px 20px 20px;
+    padding: 0 20px 20px 20px;
+    line-height: 32px;
+    .title {
+      display: block;
+      padding-bottom: 2px;
+      color: #313238;
+      border-bottom: 1px solid #dcdee5;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: flex-start;
       line-height: 32px;
-      .title {
-          display: block;
-          padding-bottom: 2px;
-          color: #313238;
-          border-bottom: 1px solid #dcdee5;
+      .label {
+        color: #313238;
       }
-      .detail-item {
-          display: flex;
-          justify-content: flex-start;
-          line-height: 32px;
-          .label {
-              color: #313238;
-          }
-      }
+    }
   }
 
   .action-btn {
-      position: relative;
+    position: relative;
+    height: 28px;
+    line-height: 28px;
+    min-width: 28px;
+    display: flex;
+    border-radius: 2px;
+    cursor: pointer;
+
+    .text {
+      min-width: 90px;
+      line-height: 28px;
+      text-align: left;
+      color: #63656e;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .left-icon,
+    .right-icon {
+      width: 28px;
       height: 28px;
       line-height: 28px;
-      min-width: 28px;
-      display: flex;
-      border-radius: 2px;
-      cursor: pointer;
+      color: #c4c6cc;
+      display: inline-block;
+      text-align: center;
+    }
 
-      .text {
-          min-width: 90px;
-          line-height: 28px;
-          text-align: left;
-          color: #63656E;
-          font-size: 12px;
-          display: inline-block;
-      }
-
-      .left-icon,
-      .right-icon {
-          width: 28px;
-          height: 28px;
-          line-height: 28px;
-          color: #C4C6CC;
-          display: inline-block;
-          text-align: center;
-      }
-
-      &.refresh {
-          width: 28px;
-      }
+    &.refresh {
+      width: 28px;
+    }
   }
   .action-box {
     position: absolute;
@@ -1933,11 +2016,11 @@ export default {
 }
 
 .process-detail-table {
-  /deep/ .bk-table-body-wrapper .hover-row>td {
-    background: #FFFFFF !important;
+  /deep/ .bk-table-body-wrapper .hover-row > td {
+    background: #ffffff !important;
   }
-  /deep/ .bk-table-body-wrapper .hover-row>.default-background {
-    background: #FAFBFD !important;
+  /deep/ .bk-table-body-wrapper .hover-row > .default-background {
+    background: #fafbfd !important;
   }
 }
 </style>

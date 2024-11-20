@@ -28,7 +28,6 @@ from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
@@ -52,13 +51,12 @@ class BkAppReleaseMgr(DeployStep):
     phase_type = DeployPhaseTypes.RELEASE
 
     def start(self):
+        """启动部署流程
+
+        NOTE: 云原生应用不再使用 paas_wl.bk_app.processes.models.ProcessSpec 来管理进程, 因此不需要像普通应用那样同步进程信息,
+        如 ApplicationReleaseMgr.start 方法中的 proc_mgr.sync_processes_specs(procs)
+        """
         build = Build.objects.get(pk=self.deployment.build_id)
-        with self.procedure("更新进程配置"):
-            # Turn the processes into the corresponding type in paas_wl module
-            procs = self.deployment.get_processes()
-            proc_mgr = ProcessManager(self.engine_app.env)
-            proc_mgr.sync_processes_specs(procs)
-            proc_mgr.sync_processes_probes(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)

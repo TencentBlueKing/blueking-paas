@@ -161,3 +161,9 @@ class ManagerFieldsRowGroup:
             if r.manager in self._updated_managers:
                 results.append(r)
         return results
+
+    def clean_updated(self):
+        """Clean the updated managers, call this method when all "updated" rows
+        have been successfully processed.
+        """
+        self._updated_managers.clear()

@@ -35,6 +35,7 @@ class FieldManager:
         self.module = module
         self.field = field
         self.store = RowGroupStore(module)
+        self.row_group = self.store.get()
 
     def is_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field is managed by the given manager."""
@@ -45,20 +46,20 @@ class FieldManager:
 
         :return: The manager for the field, or None if the field is not managed.
         """
-        return self.store.row_group.get_manager(self.field)
+        return self.row_group.get_manager(self.field)
 
     def set(self, manager: FieldMgrName):
         """Set the manager for the field.
 
         :param manager: The manager to be set.
         """
-        self.store.row_group.set_manager(self.field, manager)
-        self.store.save()
+        self.row_group.set_manager(self.field, manager)
+        self.store.save(self.row_group)
 
     def reset(self):
         """Reset the manager to empty for the field."""
-        self.store.row_group.reset_manager(self.field)
-        self.store.save()
+        self.row_group.reset_manager(self.field)
+        self.store.save(self.row_group)
 
 
 class MultiFieldsManager:
@@ -71,6 +72,7 @@ class MultiFieldsManager:
     def __init__(self, module: Module):
         self.module = module
         self.store = RowGroupStore(module)
+        self.row_group = self.store.get()
 
     def set_many(self, fields: list[Field], manager: FieldMgrName):
         """Set the manager for many fields.
@@ -79,8 +81,8 @@ class MultiFieldsManager:
         :param manager: The manager to be set.
         """
         for f in fields:
-            self.store.row_group.set_manager(f, manager)
-        self.store.save()
+            self.row_group.set_manager(f, manager)
+        self.store.save(self.row_group)
 
     def reset_many(self, fields: list[Field]):
         """Reset the manager for many fields.
@@ -88,8 +90,8 @@ class MultiFieldsManager:
         :param fields: The fields to be managed.
         """
         for f in fields:
-            self.store.row_group.reset_manager(f)
-        self.store.save()
+            self.row_group.reset_manager(f)
+        self.store.save(self.row_group)
 
 
 class RowGroupStore:
@@ -100,19 +102,17 @@ class RowGroupStore:
 
     def __init__(self, module: Module):
         self.module = module
-        self.row_group = self._get_row_group()
 
-    def save(self):
-        """Save the changes to the database to make the data persistent."""
-        for record in self.row_group.get_updated_rows():
-            BkAppManagedFields.objects.update_or_create(
-                module=self.module, manager=record.manager, defaults={"fields": record.fields}
-            )
-        # Refresh the rows group instance in memory
-        self.row_group = self._get_row_group()
-
-    def _get_row_group(self) -> ManagerFieldsRowGroup:
+    def get(self) -> ManagerFieldsRowGroup:
         """Get the managed fields instance of the module."""
         db_rows = self.module.managed_fields.all()
         rows = [ManagerFieldsRow(FieldMgrName(record.manager), record.fields) for record in db_rows]
         return ManagerFieldsRowGroup(rows)
+
+    def save(self, row_group: ManagerFieldsRowGroup):
+        """Save a row_group to make the data persistent."""
+        for record in row_group.get_updated_rows():
+            BkAppManagedFields.objects.update_or_create(
+                module=self.module, manager=record.manager, defaults={"fields": record.fields}
+            )
+        row_group.clean_updated()

@@ -463,7 +463,7 @@ var _ = Describe("Test build deployments from BkApp", func() {
 		})
 	})
 
-	Context("Test egress", func() {
+	Context("Test build deployment with egress config", func() {
 		It("no egress", func() {
 			web, _ := BuildProcDeployment(bkapp, "web")
 			Expect(web.Spec.Template.Spec.NodeSelector).To(BeNil())

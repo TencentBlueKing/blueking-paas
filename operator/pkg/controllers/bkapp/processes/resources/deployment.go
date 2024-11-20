@@ -272,8 +272,8 @@ func getSerializedBkApp(bkapp *paasv1alpha2.BkApp) (string, error) {
 }
 
 func buildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
-	if annoKey, ok := app.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey]; ok {
-		return map[string]string{annoKey: "1"}
+	if egressClusterStateName, ok := app.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey]; ok {
+		return map[string]string{egressClusterStateName: "1"}
 	}
 	return nil
 }

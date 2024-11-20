@@ -43,6 +43,7 @@
       <div class="plugin-overview-main">
         <!-- bk-saas 展示 alert -->
         <bk-alert
+          v-if="isBkSaas"
           type="info"
           class="alert-cls"
           :show-icon="false"

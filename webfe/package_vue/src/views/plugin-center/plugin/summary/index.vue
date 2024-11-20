@@ -1,69 +1,114 @@
 <template>
-  <div class="visible-range">
+  <div class="plugin-overview">
     <paas-plugin-title
       :is-plugin-doc="true"
       :doc-url="curSchemas.plugin_type?.docs"
-    />
+    >
+      <div class="top-box">
+        <span class="title">{{ $t('概览') }}</span>
+        <bk-select
+          v-if="isBkSaas"
+          :clearable="false"
+          :disabled="false"
+          :loading="isDashboardLoading"
+          v-model="curDashboard"
+          style="width: 240px"
+          ext-cls="dashboard-select-cls"
+          ext-popover-cls="dashboard-select-popover"
+          @change="handleChange"
+        >
+          <bk-option
+            v-for="option in dashboardList"
+            :key="option.name"
+            :id="option.name"
+            :name="option.display_name"
+          ></bk-option>
+          <div
+            slot="extension"
+            class="select-extension-cls"
+            @click="redirectPage(dashboardLink)"
+          >
+            <i class="paasng-icon paasng-app-store"></i>
+            {{ $t('查看更多仪表盘') }}
+          </div>
+        </bk-select>
+      </div>
+    </paas-plugin-title>
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="summary-plugin-loading"
       :offset-top="20"
       class="app-container overview-middle"
     >
-      <div class="middle">
-        <div class="overview-main">
-          <div class="visual-display card-style">
-            <div :class="['nav-list', { 'is-iframe': curPluginInfo.overview_page?.bottom_url }]">
-              <div class="nav-list-item">
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-version" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore) || '--' }}</h3>
-                  <span class="text">{{ $t('代码质量') }}</span>
-                  <i
-                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
-                    style="color: #c4c6cc;"
-                    class="paasng-icon paasng-info-line ml5"
-                  />
-                </div>
-              </div>
-              <div class="nav-list-item">
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-alert2" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.resolvedDefectNum) || '--' }}</h3>
-                  <span class="text">{{ $t('已解决缺陷数') }}</span>
-                </div>
-              </div>
-              <div class="nav-list-item">
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-alert" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ (viewInfo.codeCheckInfo && viewInfo.qualityInfo.qualityInterceptionRate) || '--' }}</h3>
-                  <span class="text">{{ $t('质量红线拦截率') }}</span>
-                  <i
-                    v-bk-tooltips="`${$t('拦截次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.interceptionCount || '--'} / ${$t('运行总次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.totalExecuteCount || '--'}`"
-                    style="color: #c4c6cc;"
-                    class="paasng-icon paasng-info-line ml5"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="iframe-margin"></div>
+      <div class="plugin-overview-main">
+        <!-- bk-saas 展示 alert -->
+        <bk-alert
+          type="info"
+          class="alert-cls"
+          :show-icon="false"
+        >
+          <div slot="title">
+            {{
+              $t(
+                '平台内置了开发框架仪表盘，应用需开启 Metric 配置并在代码中上报 Metric 数据后，才可在仪表盘中查看相关数据'
+              )
+            }}
+            <bk-button
+              ext-cls="guidelines-cls"
+              text
+              size="small"
+              @click="redirectPage(`${GLOBAL.DOC.MONITORING_METRICS_GUIDE}#13-蓝鲸应用插件标准运维插件`)"
+            >
+              {{ $t('Metric 上报指引') }}
+              <i class="paasng-icon paasng-jump-link"></i>
+            </bk-button>
+          </div>
+        </bk-alert>
+        <div class="content">
+          <div :class="['visual-display', 'card-style', { exception: isDashboardProvided }]">
+            <!-- 暂不支持仪表盘 -->
+            <FunctionalDependency
+              v-if="isDashboardProvided"
+              class="functional-dependency"
+              mode="page"
+              :title="$t('暂无仪表盘功能')"
+              :functional-desc="
+                $t(
+                  '仪表盘可以提供插件运行指标，如执行次数、执行成功率和失败率等，帮助您了解插件的运行状态。GO 语言的蓝鲸应用插件暂未提供内置仪表盘功能，您可以参考相关指引自行实现该功能。'
+                )
+              "
+              @gotoMore="redirectPage(GLOBAL.DOC.MONITORING_METRICS_GUIDE)"
+            />
             <section
-              v-if="curPluginInfo.overview_page?.bottom_url"
-              class="iframe-container"
+              v-else-if="iframeUrl"
+              :class="['iframe-container', pdId]"
             >
               <!-- 嵌入 iframe -->
               <iframe
                 id="iframe-embed"
-                :src="curPluginInfo.overview_page?.bottom_url"
+                :src="iframeUrl"
                 scrolling="no"
                 frameborder="0"
               />
+            </section>
+            <section
+              class="exception-box"
+              v-else-if="isBkSaas"
+            >
+              <bk-exception
+                class="exception-wrap-item dashboards-exception-part"
+                type="empty"
+                scene="part"
+              >
+                <p class="title">{{ $t('暂无仪表盘') }}</p>
+                <p class="tips">{{ $t('插件发布成功后，才会内置仪表盘') }}</p>
+                <bk-button
+                  :theme="'primary'"
+                  @click="toPublish"
+                >
+                  {{ $t('去发布') }}
+                </bk-button>
+              </bk-exception>
             </section>
             <!-- 默认图表 -->
             <template v-else>
@@ -112,84 +157,10 @@
           </div>
 
           <div class="information-container card-style">
-            <div>
-              <h3>{{ $t('基本信息') }}</h3>
-              <div class="base-info">
-                <p
-                  v-bk-overflow-tips
-                  class="text-ellipsis"
-                >
-                  {{ $t('插件类型：') }}
-                  <span>{{ curPluginInfo.pd_name }}</span>
-                </p>
-                <p
-                  v-bk-overflow-tips
-                  class="text-ellipsis"
-                >
-                  {{ $t('开发语言：') }}
-                  <span>{{ curPluginInfo.language }}</span>
-                </p>
-                <p class="repos">
-                  {{ $t('代码仓库：') }}
-                  <span
-                    v-bk-tooltips.top-end="curPluginInfo.repository"
-                    class="repository-tooltips"
-                  />
-                  <span>{{ curPluginInfo.repository }}</span>
-                  <!-- 复制 -->
-                  <span
-                    v-copy="curPluginInfo.repository"
-                    class="copy-text"
-                  >
-                    <a
-                      :href="curPluginInfo.repository"
-                      target="_blank"
-                      style="color: #979ba5"
-                    >
-                      <i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" />
-                    </a>
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div class="dynamic-wrapper">
-              <div
-                class="fright-middle fright-last"
-                data-test-id="summary_content_noSource"
-              >
-                <h3>{{ $t('最新动态') }}</h3>
-                <ul class="dynamic-list">
-                  <template v-if="operationsList.length">
-                    <li
-                      v-for="(item, itemIndex) in operationsList"
-                      :key="itemIndex"
-                    >
-                      <p
-                        v-bk-overflow-tips
-                        class="dynamic-content"
-                      >
-                        {{ $t('由') }} {{ item.display_text }}
-                      </p>
-                      <p class="dynamic-time">
-                        <span
-                          v-bk-tooltips="{ content: item.updated, allowHTML: true }"
-                          class="tooltip-time"
-                        >
-                          {{ item.created_format }}
-                        </span>
-                      </p>
-                    </li>
-                    <li />
-                  </template>
-                  <template v-else>
-                    <div class="ps-no-result">
-                      <table-empty empty />
-                    </div>
-                  </template>
-                </ul>
-              </div>
-            </div>
+            <!-- 基本信息 -->
+            <base-info :data="curPluginInfo" />
+            <!-- 代码质量 -->
+            <code-quality :view-info="viewInfo" />
           </div>
         </div>
       </div>
@@ -205,16 +176,21 @@ import 'echarts/lib/component/tooltip';
 import chartOption from '@/json/plugin-overview-options';
 import { formatDate } from '@/common/tools';
 import moment from 'moment';
+import CodeQuality from './code-quality.vue';
+import BaseInfo from './base-info.vue';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 export default {
   components: {
     paasPluginTitle,
     chart: ECharts,
+    CodeQuality,
+    BaseInfo,
+    FunctionalDependency,
   },
   mixins: [pluginBaseMixin],
   data() {
     return {
       isLoading: true,
-      operationsList: [],
       chartOption: chartOption.stat,
       renderChartIndex: 0,
       chartDataCache: [],
@@ -237,6 +213,11 @@ export default {
         },
       },
       viewInfo: {},
+      isDashboardLoading: false,
+      curDashboard: '',
+      dashboardList: [],
+      displayDashboardData: {},
+      dashboardLink: '',
       shortcuts: [
         {
           text: this.$t('最近7天'),
@@ -275,6 +256,21 @@ export default {
     curPluginInfo() {
       return this.$store.state.plugin.curPluginInfo;
     },
+    isBkSaas() {
+      return this.pdId === 'bk-saas';
+    },
+    iframeUrl() {
+      if (this.isBkSaas) {
+        return this.displayDashboardData?.dashboard_url;
+      }
+      return this.curPluginInfo.overview_page?.bottom_url;
+    },
+    // 暂未提供仪表盘
+    isDashboardProvided() {
+      const unsupportedLanguage = ['go'];
+      const curLanguage = this.curPluginInfo.language?.toLocaleLowerCase();
+      return this.isBkSaas && unsupportedLanguage.includes(curLanguage);
+    },
   },
   watch: {
     dateRange: {
@@ -291,42 +287,59 @@ export default {
     this.init();
   },
   mounted() {
-    const end = new Date();
-    const start = new Date();
-    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-    this.initDateTimeRange = [start, end];
-
-    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.initTime();
     this.getChartData();
   },
   methods: {
     init() {
+      // 蓝鲸应用插件
+      if (this.isBkSaas) {
+        this.getBuiltinDashboards();
+        this.getAppDashboardInfo();
+      }
       moment.locale(this.localLanguage);
-      this.getPluginOperations();
       this.getStoreOverview();
       this.fetchPluginTypeList();
     },
 
-    // 获取动态
-    async getPluginOperations() {
-      const params = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-      };
+    initTime() {
+      const end = new Date();
+      const start = new Date();
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+      this.initDateTimeRange = [start, end];
+
+      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    },
+
+    // 获取仪表盘数据
+    async getBuiltinDashboards() {
+      this.isDashboardLoading = true;
       try {
-        const res = await this.$store.dispatch('plugin/getPluginOperations', params);
-        this.operationsList = [];
-        for (const item of res.results) {
-          item.created_format = moment(item.created).startOf('minute')
-            .fromNow();
-          this.operationsList.push(item);
+        const res = await this.$store.dispatch('getBuiltinDashboards', {
+          appCode: this.pluginId,
+        });
+        this.dashboardList = res ?? [];
+        if (this.dashboardList.length) {
+          this.displayDashboardData = this.dashboardList[0];
+          this.curDashboard = this.displayDashboardData.name;
         }
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+        this.catchErrorHandler(e);
+      } finally {
+        this.isDashboardLoading = false;
+      }
+    },
+
+    // 获取仪表盘链接
+    async getAppDashboardInfo() {
+      try {
+        const res = await this.$store.dispatch('baseInfo/getAppDashboardInfo', {
+          appCode: this.pluginId,
         });
+        this.dashboardLink = res.dashboard_url || '';
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
 
@@ -365,7 +378,7 @@ export default {
     async fetchPluginTypeList() {
       try {
         const typeList = await this.$store.dispatch('plugin/getPluginsTypeList');
-        this.curSchemas = typeList.find(t => t.plugin_type.id === this.curPluginInfo.pd_id);
+        this.curSchemas = typeList.find((t) => t.plugin_type.id === this.curPluginInfo.pd_id);
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -400,11 +413,13 @@ export default {
         this.chartDataCache = res;
         // 由于API不能同一天的数据，使用默认值
         if (!res.length) {
-          this.chartDataCache = [{
-            commit_count: 0,
-            commit_user_count: 0,
-            day: params.begin_time,
-          }];
+          this.chartDataCache = [
+            {
+              commit_count: 0,
+              commit_user_count: 0,
+              day: params.begin_time,
+            },
+          ];
         }
         this.renderChart();
       } catch (e) {
@@ -503,26 +518,27 @@ export default {
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      chartRef &&
+        chartRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     refresh() {
@@ -544,20 +560,32 @@ export default {
         endTime: date[1],
       };
     },
+    // 切换仪表盘
+    handleChange(name) {
+      this.displayDashboardData = this.data.find((v) => v.name === name);
+    },
+    toPublish() {
+      this.$router.push({
+        name: 'pluginVersionManager',
+      });
+    },
+    redirectPage(url) {
+      window.open(url, '_blank');
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
 
-.visible-range {
+.plugin-overview {
   .desc {
     font-size: 12px;
     color: #979ba5;
   }
 }
 .chart-info {
-  margin: 80px 0 20px;
+  margin: 24px 0 20px;
   .title {
     font-size: 14px;
     font-weight: bold;
@@ -641,105 +669,44 @@ export default {
   }
 }
 .app-container {
-  .overview-main {
-    display: flex;
+  .guidelines-cls {
+    height: auto;
+    line-height: unset;
+  }
+  .alert-cls {
+    margin-bottom: 16px;
+  }
+  .plugin-overview-main {
+    height: calc(100vh - 150px);
+    min-height: 800px;
+    .content {
+      display: flex;
+      height: calc(100% - 40px);
+    }
   }
   .visual-display {
     padding: 24px;
     width: 100%;
     background: #fff;
-  }
-  .nav-list {
-    position: relative;
-    z-index: 99;
-    display: flex;
-    height: 64px;
-    background: #ffffff;
-    border: 1px solid #eaebf0;
-    border-radius: 2px;
-    &.is-iframe {
-      border-radius: 2px 2px 0 0;
-    }
-    .nav-list-item {
+    overflow: hidden;
+    &.exception {
       display: flex;
       align-items: center;
-      position: relative;
-      flex: 1;
-      &::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        width: 1px;
-        height: 48px;
-        background: #eaebf0;
+      .functional-dependency {
+        flex: 1;
       }
-      &:last-child::after {
-        background: transparent;
-      }
-      .item-icon {
-        padding: 0 20px;
-        font-size: 32px;
-        color: #c4c6cc;
-      }
-      .item-info {
-        h3 {
-          font-size: 16px;
-          font-weight: 700;
-          line-height: 24px;
-          color: #313238;
-        }
-        .text {
-          font-size: 12px;
-          color: #63656e;
-          line-height: 20px;
-        }
-        i {
-          transform: translateY(0px);
-        }
-      }
+    }
+    .exception-box {
+      display: flex;
+      align-items: center;
+      height: 100%;
     }
   }
   .information-container {
     width: 280px;
-    max-height: calc(100vh - 143px);
-    min-height: 827px;
-    padding-left: 20px;
+    padding: 12px 16px;
     margin-left: 24px;
     font-size: 12px;
-    border-radius: 2px;
-    color: #63656e;
-    h3 {
-      color: #63656e;
-    }
-    .base-info {
-      margin-right: 15px;
-      p {
-        line-height: 30px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        .copy-text {
-          position: absolute;
-          top: 5px;
-          right: 6px;
-          color: #3a84ff;
-          cursor: pointer;
-        }
-      }
-      .repos {
-        position: relative;
-        padding-right: 30px;
-        .repository-tooltips {
-          position: absolute;
-          width: 140px;
-          height: 100%;
-        }
-      }
-    }
-    .copy-url {
-      color: #3a84ff;
-      cursor: pointer;
-    }
   }
   .chart-container {
     display: flex;
@@ -749,77 +716,6 @@ export default {
       font-weight: 700;
     }
   }
-}
-.dynamic-wrapper {
-  height: 100%;
-}
-.dynamic-list {
-  height: 100%;
-  max-height: calc(100vh - 360px);
-  min-height: 610px;
-  padding-right: 15px;
-  overflow-y: auto;
-  font-size: 12px;
-  color: #63656e;
-  .dynamic-time {
-    margin-top: 5px;
-    line-height: 22px;
-    font-size: 12px;
-    color: #979BA5;
-    cursor: default;
-  }
-  .dynamic-content {
-    font-size: 14px;
-    line-height: 22px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #63656E;
-  }
-  li {
-    padding-bottom: 15px;
-    padding-left: 20px;
-    position: relative;
-  }
-}
-.dynamic-list::-webkit-scrollbar {
-  width: 4px;
-  background-color: hsla(0, 0%, 80%, 0);
-}
-
-.dynamic-list::-webkit-scrollbar-thumb {
-  height: 5px;
-  border-radius: 2px;
-  background-color: #e6e9ea;
-}
-
-.dynamic-list li:before {
-  position: absolute;
-  content: '';
-  width: 9px;
-  height: 9px;
-  top: 3px;
-  left: 1px;
-  border: 2px solid #D8D8D8;
-  border-radius: 50%;
-}
-
-.dynamic-list li:after {
-  position: absolute;
-  content: '';
-  width: 1px;
-  height: 53px;
-  top: 13px;
-  left: 5px;
-  background: #D8D8D8;
-}
-
-.dynamic-list li:last-child:after {
-  background: transparent;
-}
-
-.summary-content {
-  flex: 1;
 }
 
 .http-list-fleft {
@@ -849,17 +745,6 @@ export default {
   background: #fafafa;
 }
 
-.fright-middle {
-  padding: 0 0 24px 0;
-  line-height: 30px;
-  color: #666;
-  border-bottom: solid 1px #e6e9ea;
-}
-
-.fright-middle h3 {
-  padding-bottom: 8px;
-}
-
 .svn-a {
   line-height: 20px;
   padding: 10px 0;
@@ -887,12 +772,6 @@ export default {
   text-overflow: ellipsis;
   overflow: hidden;
 }
-.address-zh-cn {
-  min-width: 46px;
-}
-.address-en {
-  min-width: 66px;
-}
 
 .iframe-margin {
   height: 20px;
@@ -902,23 +781,68 @@ export default {
 }
 
 .iframe-container {
-  transform: translateY(2px);
-  margin-top: -55px;
   /* resize and min-height are optional, allows user to resize viewable area */
   -webkit-resize: vertical;
   -moz-resize: vertical;
   resize: vertical;
-  min-height: 795px;
-
+  height: 100%;
+  &.bk-code-cc-new {
+    transform: translateY(2px);
+    margin-top: -70px;
+  }
   iframe#iframe-embed {
     width: 100%;
+    height: 100%;
     min-height: 795px;
-    height: calc(100vh - 175px);
 
     /* resize seems to inherit in at least Firefox */
     -webkit-resize: none;
     -moz-resize: none;
     resize: none;
+  }
+}
+.dashboards-exception-part {
+  /deep/ .part-img img {
+    height: 200px;
+  }
+  .title {
+    font-size: 24px;
+    color: #4d4f56;
+    line-height: 32px;
+    margin-bottom: 16px;
+  }
+  .tips {
+    font-size: 14px;
+    color: #979ba5;
+    line-height: 22px;
+    margin-bottom: 24px;
+  }
+}
+.top-box {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  .title {
+    margin-right: 24px;
+  }
+  .dashboard-select-cls:not(.is-focus) {
+    background: #f0f1f5;
+    border: none;
+  }
+}
+.dashboard-select-popover {
+  .select-extension-cls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: #4d4f56;
+    i {
+      font-size: 12px;
+      margin-right: 5px;
+      transform: translateY(0px);
+    }
   }
 }
 </style>

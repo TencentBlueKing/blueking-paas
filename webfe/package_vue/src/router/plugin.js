@@ -57,6 +57,10 @@ const pluginRoles = () => import(/* webpackChunkName: 'plugin-config' */'@/views
   window.showDeployTip(error);
 });
 
+const pluginOperationRecords = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/operation-records.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/deploy-env/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -279,6 +283,16 @@ export const pluginRouter = [
         name: 'pluginRoles',
         meta: {
           pathName: i18n.t('成员管理'),
+          capture403Error: false,
+          isPlugin: true,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/operation-records',
+        component: pluginOperationRecords,
+        name: 'pluginOperationRecords',
+        meta: {
+          pathName: i18n.t('操作记录'),
           capture403Error: false,
           isPlugin: true,
         },

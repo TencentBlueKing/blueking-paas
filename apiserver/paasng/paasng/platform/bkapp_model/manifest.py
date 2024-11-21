@@ -568,18 +568,24 @@ def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleE
     :param env: The environment object.
     """
     flag, _ = ProcessServicesFlag.objects.get_or_create(app_environment=env, defaults={"implicit_needed": False})
+
     model_res.set_proc_services_annotation("true")
+
     if flag.implicit_needed:
         for process in model_res.spec.processes:
-            if process.name != "web":
-                service = crd.ProcService(name=process.name, targetPort=5000, protocol="TCP", port=80)
-                if not process.services:
-                    process.services = []
+            if not process.services:
+                process.services = []
+            if process.name == "web":
+                service = crd.ProcService(
+                    name=process.name,
+                    targetPort=settings.CONTAINER_PORT,
+                    protocol="TCP",
+                    port=80,
+                    exposedType=crd.ExposedType(),
+                )
                 process.services.append(service)
             else:
                 service = crd.ProcService(
-                    name=process.name, targetPort=5000, protocol="TCP", port=80, exposedType=crd.ExposedType()
+                    name=process.name, targetPort=settings.CONTAINER_PORT, protocol="TCP", port=80
                 )
-                if not process.services:
-                    process.services = []
                 process.services.append(service)

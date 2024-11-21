@@ -27,6 +27,7 @@ from paasng.platform.bkapp_model.entities import (
     TCPSocketAction,
 )
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 pytestmark = pytest.mark.django_db
@@ -68,6 +69,7 @@ class Test__sync_processes:
                     autoscaling=AutoscalingConfig(min_replicas=2, max_replicas=10, policy="default"),
                 ),
             ],
+            FieldMgrName.APP_DESC,
         )
         assert ret.updated_num == 1
         assert ret.created_num == 1

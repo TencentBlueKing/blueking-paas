@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from attrs import define
+from attrs import asdict, define
 
 from paas_wl.bk_app.cnative.specs.constants import (
     DEFAULT_PROC_CPU,
@@ -24,6 +24,8 @@ from paas_wl.bk_app.cnative.specs.constants import (
     DEFAULT_PROC_MEM_REQUEST,
     ResQuotaPlan,
 )
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paasng.platform.engine.constants import AppEnvName
 
 
 @define
@@ -46,6 +48,7 @@ PLAN_TO_LIMIT_QUOTA_MAP = {
 # 资源配额方案到资源请求的映射表
 # CPU REQUEST = 200m
 # MEMORY REQUEST 的计算规则: 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
+# 云原生应用实际的 requests 配置策略在 operator 中实现, 这里的值并非实际生效值
 PLAN_TO_REQUEST_QUOTA_MAP = {
     ResQuotaPlan.P_DEFAULT: ResourceQuota(
         cpu=DEFAULT_PROC_CPU_REQUEST,
@@ -55,3 +58,52 @@ PLAN_TO_REQUEST_QUOTA_MAP = {
     ResQuotaPlan.P_4C2G: ResourceQuota(cpu="200m", memory="1024Mi"),
     ResQuotaPlan.P_4C4G: ResourceQuota(cpu="200m", memory="2048Mi"),
 }
+
+
+class ResQuotaReader:
+    """Read resQuotaPlan and resQuotas(envOverlay) from app model resource object
+
+    :param res: App model resource object
+    """
+
+    def __init__(self, res: BkAppResource):
+        self.res = res
+
+    def read_all(self, env_name: AppEnvName) -> dict[str, tuple[dict, bool]]:
+        """Read all ResQuota config defined
+
+        :param env_name: Environment name
+        :return: Dict[name of process, (config, whether the config was defined in "envOverlay")],
+          config is {"plan": plan name, "limits": {"cpu":cpu limit, "memory": memory limit},
+          "requests": {"cpu":cpu request, "memory": memory request}}
+        """
+        results: dict[str, tuple[dict, bool]] = {}
+        for p in self.res.spec.processes:
+            plan = p.resQuotaPlan or ResQuotaPlan.P_DEFAULT
+            results[p.name] = (
+                {
+                    "plan": str(plan),
+                    "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
+                    # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
+                    "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
+                },
+                False,
+            )
+
+        if overlay := self.res.spec.envOverlay:
+            quotas_overlay = overlay.resQuotas or []
+        else:
+            quotas_overlay = []
+
+        for quotas in quotas_overlay:
+            if quotas.envName == env_name:
+                results[quotas.process] = (
+                    {
+                        "plan": quotas.plan,
+                        "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(plan)]),
+                        "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(plan)]),
+                    },
+                    True,
+                )
+
+        return results

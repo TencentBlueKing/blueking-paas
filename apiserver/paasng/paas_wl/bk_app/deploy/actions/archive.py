@@ -16,12 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Archive related deploy functions"""
+
 import logging
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import make_bk_monitor_controller
 from paas_wl.bk_app.processes.controllers import get_proc_ctl
 from paas_wl.bk_app.processes.exceptions import ScaleProcessError
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)

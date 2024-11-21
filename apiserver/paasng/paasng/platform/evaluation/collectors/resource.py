@@ -22,7 +22,7 @@ from typing import Callable, Dict, List, Optional
 from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
 from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange

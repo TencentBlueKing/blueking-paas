@@ -19,7 +19,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from paasng.utils.structure import prepare_json_field
+from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType, prepare_json_field
 
 from .addons import Addon
 from .build import AppBuildConfig
@@ -39,18 +39,19 @@ class BkAppConfiguration(BaseModel):
     env: List[EnvVar] = Field(default_factory=list)
 
 
-class BkAppEnvOverlay(BaseModel):
+class BkAppEnvOverlay(AllowNotsetModel):
     """Defines environment specified configs"""
 
-    replicas: Optional[List[ReplicasOverlay]] = None
-    res_quotas: Optional[List[ResQuotaOverlay]] = None
-    env_variables: Optional[List[EnvVarOverlay]] = None
-    autoscaling: Optional[List[AutoscalingOverlay]] = None
-    mounts: Optional[List[MountOverlay]] = None
+    # TODO: Should we stop support `None` as a possible value?
+    replicas: List[ReplicasOverlay] | NotSetType | None = NOTSET
+    res_quotas: List[ResQuotaOverlay] | NotSetType | None = NOTSET
+    env_variables: List[EnvVarOverlay] | NotSetType | None = NOTSET
+    autoscaling: List[AutoscalingOverlay] | NotSetType | None = NOTSET
+    mounts: Optional[List[MountOverlay]] | NotSetType | None = NOTSET
 
 
 @prepare_json_field
-class BkAppSpec(BaseModel):
+class BkAppSpec(AllowNotsetModel):
     """BkAppSpec(snake-case format)
 
     :param build: 构建配置
@@ -67,11 +68,11 @@ class BkAppSpec(BaseModel):
 
     build: Optional[AppBuildConfig] = None
     processes: List[Process] = Field(default_factory=list)
-    hooks: Optional[Hooks] = None
+    hooks: Hooks | NotSetType | None = NOTSET
     addons: List[Addon] = Field(default_factory=list)
     mounts: Optional[List[Mount]] = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
-    domain_resolution: Optional[DomainResolution] = None
-    svc_discovery: Optional[SvcDiscConfig] = None
-    env_overlay: Optional[BkAppEnvOverlay] = None
+    domain_resolution: DomainResolution | NotSetType | None = NOTSET
+    svc_discovery: SvcDiscConfig | NotSetType | None = NOTSET
+    env_overlay: BkAppEnvOverlay | NotSetType | None = NOTSET
     observability: Optional[Observability] = None

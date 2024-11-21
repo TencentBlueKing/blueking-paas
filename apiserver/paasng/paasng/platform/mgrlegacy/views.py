@@ -33,8 +33,8 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
 from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
-from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState

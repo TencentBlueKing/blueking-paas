@@ -23,6 +23,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
   -moz-osx-font-smoothing: grayscale;
 }
 
+.paasng-app-store:before {
+	content: "\e286";
+}
 .paasng-feature-conversion:before {
 	content: "\e21f";
 }

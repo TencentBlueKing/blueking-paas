@@ -35,12 +35,14 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.infras.resources.base import base, crd
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.networking.constants import ExposedTypeName
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +208,21 @@ class MresConditionParser:
             if condition.type == type_:
                 return condition
         return None
+
+
+def list_mres_by_env(application: Application, environment: str) -> list[BkAppResource]:
+    """list the application's model resources by running environment"""
+    cluster_namespace_pairs: dict[str, str] = {}
+    for env in application.envs.filter(environment=environment):
+        cluster_namespace_pairs[EnvClusterService(env).get_cluster_name()] = env.wl_app.namespace
+
+    res_list: list[BkAppResource] = []
+    for cluster_name, namespace in cluster_namespace_pairs.items():
+        with get_client_by_cluster_name(cluster_name) as client:
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).ops_batch.list(namespace=namespace)
+        res_list.extend([BkAppResource(**res) for res in data.items])
+
+    return res_list
 
 
 def _need_exposed_services(res: BkAppResource) -> bool:

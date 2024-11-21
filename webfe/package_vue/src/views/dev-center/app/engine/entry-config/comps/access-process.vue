@@ -11,30 +11,32 @@
           <bk-select
             v-model="curModuleValue"
             :clearable="false"
-            style="width: 180px;"
+            style="width: 180px"
             class="mr10"
             ext-cls="module-select-custom"
             prefix-icon="paasng-icon paasng-project"
-            @change="handleChangeModule">
+            @change="handleChangeModule"
+          >
             <bk-option
               v-for="option in curAppModuleList"
               :key="option.name"
               :id="option.name"
-              :name="option.name">
-            </bk-option>
+              :name="option.name"
+            ></bk-option>
           </bk-select>
           <bk-select
             v-model="curEnvValue"
             :clearable="false"
-            style="width: 150px;"
+            style="width: 150px"
             ext-cls="env-select-custom"
-            @change="handleChangeEnv">
+            @change="handleChangeEnv"
+          >
             <bk-option
               v-for="option in envList"
               :key="option.id"
               :id="option.id"
-              :name="option.name">
-            </bk-option>
+              :name="option.name"
+            ></bk-option>
           </bk-select>
         </section>
         <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
@@ -56,11 +58,11 @@
                 <div class="process-info">
                   <div class="name">{{ process.process_type }}</div>
                   <div class="info">
-                    <span>{{ $t('端口规则：') + process.ports.length + $t('个')}}</span>
+                    <span>{{ $t('端口规则：') + process.ports.length + $t('个') }}</span>
                     <span class="ml20">{{ $t('服务名称：') + process.name }}</span>
                   </div>
                 </div>
-              <!-- <div class="right-tip">{{ $t('已暴露 HTTP 服务') }}</div> -->
+                <!-- <div class="right-tip">{{ $t('已暴露 HTTP 服务') }}</div> -->
               </div>
               <div
                 slot="content"
@@ -70,11 +72,6 @@
                 <div class="process-config-item">
                   <div class="header">
                     <p>{{ $t('端口配置') }}</p>
-                  <!-- 二期 -->
-                  <!-- <div class="edit-container">
-                    <i class="paasng-icon paasng-edit-2 pl10" />
-                    {{ $t('编辑') }}
-                  </div> -->
                   </div>
                   <bk-table
                     :data="process.ports"
@@ -118,7 +115,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   mixins: [appBaseMixin],
@@ -134,7 +132,7 @@ export default {
           ports: [],
         },
       ],
-      curModuleValue: 'default',
+      curModuleValue: '',
       curEnvValue: 'stag',
       envList: [
         { id: 'stag', name: this.$t('预发布环境') },
@@ -143,6 +141,8 @@ export default {
     };
   },
   created() {
+    // 默认取第一项
+    this.curModuleValue = this.curAppModuleList[0]?.name ?? '';
     this.getProcessServiceData();
   },
   methods: {
@@ -283,7 +283,7 @@ export default {
 
 .module-select-custom,
 .env-select-custom {
-  background: #FFF;
+  background: #fff;
 
   /deep/ i.paasng-project {
     color: #a3c5fd;

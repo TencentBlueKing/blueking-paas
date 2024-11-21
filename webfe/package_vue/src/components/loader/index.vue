@@ -92,6 +92,7 @@ import PluinVersionListLoading from './loading/pluin-version-list.vue';
 import PersistentStorageLoading from './loading/persistent-storage.vue';
 import VisibleRangeLoading from './loading/visible-range.vue';
 import SandboxLoading from './loading/sandbox.vue';
+import DashboardLoading from './loading/dashboard.vue';
 export default {
   components: {
     ByUserLoading,
@@ -159,6 +160,7 @@ export default {
     PersistentStorageLoading,
     VisibleRangeLoading,
     SandboxLoading,
+    DashboardLoading,
   },
   props: {
     isLoading: {
@@ -266,30 +268,6 @@ export default {
   methods: {
     initContentWidth() {
       const winWidth = window.innerWidth;
-      // this.baseWidth = 1180;
-      // this.contentWidth = 1180;
-      // if (winWidth < 1180) {
-      //     this.baseWidth = 980;
-      //     this.contentWidth = 980;
-      //     console.log('11111111')
-      // } else if (winWidth < 1680) {
-      //     this.baseWidth = 1080;
-      //     this.contentWidth = 1080;
-      //     console.log('2222222')
-      // } else if (winWidth < 1920) {
-      //     this.baseWidth = 1180;
-      //     this.contentWidth = 1180;
-      //     console.log('33333333')
-      // } else if (winWidth < 2450) {
-      //     this.baseWidth = 1420;  //1420
-      //     this.contentWidth = 1680;
-      //     console.log('444444')
-      // } else {
-      //     this.baseWidth = 1920;
-      //     this.contentWidth = 1920;
-      //     console.log('65555')
-      // }
-
       if (winWidth < 1440) {
         this.contentWidth = 980;
       } else if (winWidth < 1680) {

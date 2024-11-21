@@ -24,6 +24,8 @@ from .utils import set_alias_field
 
 
 class HookCmd(BaseModel):
+    """The HookCmd describes a hook command."""
+
     command: Optional[List[str]] = Field(default_factory=list)
     args: Optional[List[str]] = Field(default_factory=list)
 
@@ -36,7 +38,7 @@ class HookCmd(BaseModel):
 
 
 class Hooks(BaseModel):
-    pre_release: Optional[HookCmd] = None
+    pre_release: HookCmd | None = None
 
     def __init__(self, **data):
         # db 旧数据使用了 camel case

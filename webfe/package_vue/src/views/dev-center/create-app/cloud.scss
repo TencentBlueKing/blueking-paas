@@ -244,3 +244,33 @@
     }
   }
 }
+.cloud-image-credential-box {
+  width: 750px;
+  margin-top: 22px;
+  .image-label {
+    width: 100px;
+    padding-right: 22px;
+    height: 32px;
+    line-height: 32px;
+    text-align: right;
+    font-size: 14px;
+    color: #63656e;
+  }
+  /deep/ .bk-form-item  {
+    flex: 1;
+    margin-top: 0;
+    margin-right: 8px;
+    &:last-child {
+      margin-right: 0;
+    }
+    .bk-form-content {
+      margin-left: 0px !important;
+    }
+  }
+}
+.cloud-image-credential-tips {
+  margin-left: 100px;
+  line-height: 30px;
+  color: #979ba5;
+  font-size: 12px;
+}

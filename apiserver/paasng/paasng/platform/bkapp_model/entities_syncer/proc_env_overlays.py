@@ -108,7 +108,7 @@ class OverlayDataSyncer:
     ) -> CommonSyncResult:
         """Sync overlay data to the db.
 
-        :param proc_value_is_set: A optional dict to indicate if the base value was
+        :param proc_value_is_set: An optional dict to indicate if the base value was
             set on the process object. When the `items` is not set and the value of
             the process object was set, the overlay data will always be reset.
         """

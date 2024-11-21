@@ -116,9 +116,9 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     sync_observability(module, spec_entity.observability)
 
     # NOTE: Must import the processes first to create the ModuleProcessSpec objs
-    sync_env_overlays_replicas(module, overlay_replicas, manager)
-    sync_env_overlays_res_quotas(module, overlay_res_quotas, manager)
-    sync_env_overlays_autoscalings(module, overlay_autoscaling, manager)
+    sync_env_overlays_replicas(module, overlay_replicas, manager, spec_entity.processes)
+    sync_env_overlays_res_quotas(module, overlay_res_quotas, manager, spec_entity.processes)
+    sync_env_overlays_autoscalings(module, overlay_autoscaling, manager, spec_entity.processes)
 
     clean_empty_overlays(module)
 

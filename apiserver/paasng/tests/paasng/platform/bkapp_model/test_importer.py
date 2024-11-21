@@ -240,26 +240,12 @@ class TestReplicasOverlay:
     @pytest.fixture()
     def base_manifest_with_overlay(self, base_manifest):
         d = copy.deepcopy(base_manifest)
-        d["spec"]["envOverlay"] = {
-            "replicas": [
-                {
-                    "envName": "stag",
-                    "process": "web",
-                    "count": "3",
-                }
-            ]
-        }
+        d["spec"]["envOverlay"] = {"replicas": [{"envName": "stag", "process": "web", "count": "3"}]}
         return d
 
     def test_invalid_replicas_input(self, bk_module, base_manifest):
         base_manifest["spec"]["envOverlay"] = {
-            "replicas": [
-                {
-                    "envName": "stag",
-                    "process": "web",
-                    "count": "not_a_number",
-                }
-            ]
+            "replicas": [{"envName": "stag", "process": "web", "count": "not_a_number"}]
         }
         with pytest.raises(ManifestImportError) as e:
             import_manifest_app_desc(bk_module, base_manifest)
@@ -278,12 +264,24 @@ class TestReplicasOverlay:
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_target_replicas("stag") == 1, "The overlay data should be reset"
 
-    def test_not_reset_when_manager_different(self, bk_module, base_manifest, base_manifest_with_overlay):
+    def test_not_reset_when_manager_different(self, bk_module, manifest_no_replicas, base_manifest_with_overlay):
         import_manifest_app_desc(bk_module, base_manifest_with_overlay)
-        import_manifest(bk_module, base_manifest, manager=fieldmgr.FieldMgrName.WEB_FORM)
+        import_manifest(bk_module, manifest_no_replicas, manager=fieldmgr.FieldMgrName.WEB_FORM)
 
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_target_replicas("stag") == 3, "The overlay data should remain as it is"
+
+    def test_proc_replicas_reset_overlay_managed_by_other(self, bk_module, base_manifest, base_manifest_with_overlay):
+        """When the replicas field is set on the process object, the overlay should
+        always be reset even if no overlay data is provided.
+        """
+        import_manifest(bk_module, base_manifest_with_overlay, manager=fieldmgr.FieldMgrName.WEB_FORM)
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_target_replicas("stag") == 3
+
+        import_manifest_app_desc(bk_module, base_manifest)
+        proc_spec.refresh_from_db()
+        assert proc_spec.get_target_replicas("stag") == 1
 
 
 class TestAutoscaling:

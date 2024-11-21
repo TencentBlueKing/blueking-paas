@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Releasing process of an application deployment
-"""
+"""Releasing process of an application deployment"""
+
 import logging
 from typing import Dict, Optional, Tuple
 
@@ -26,7 +26,7 @@ from pydantic import ValidationError as PyDanticValidationError
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables

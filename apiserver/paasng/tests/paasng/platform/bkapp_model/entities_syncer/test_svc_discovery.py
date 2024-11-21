@@ -18,18 +18,21 @@
 import pytest
 from django_dynamic_fixture import G
 
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import SvcDiscConfig, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.entities_syncer import sync_svc_discovery
 from paasng.platform.bkapp_model.models import SvcDiscConfig as SvcDiscConfigDB
+from paasng.utils.structure import NOTSET
 
 pytestmark = pytest.mark.django_db
 
 
-class Test__sync_svc_discoverys:
+class Test__sync_svc_discovery:
     def test_create(self, bk_module):
         ret = sync_svc_discovery(
             bk_module,
             SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api")]),
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
         svc_disc = SvcDiscConfigDB.objects.get(application=bk_module.application)
@@ -49,6 +52,7 @@ class Test__sync_svc_discoverys:
                     SvcDiscEntryBkSaaS(bk_app_code="bk-iam", module_name="api3"),
                 ]
             ),
+            manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
         assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 3
@@ -60,7 +64,27 @@ class Test__sync_svc_discoverys:
     def test_delete(self, bk_module):
         G(SvcDiscConfigDB, application=bk_module.application, bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")])
 
-        ret = sync_svc_discovery(bk_module, SvcDiscConfig(bk_saas=[]))
+        ret = sync_svc_discovery(
+            bk_module,
+            SvcDiscConfig(bk_saas=[]),
+            manager=fieldmgr.FieldMgrName.APP_DESC,
+        )
 
         assert ret.deleted_num == 1
         assert SvcDiscConfigDB.objects.filter(application=bk_module.application).exists() is False
+
+    def test_notset_value_different_manager(self, bk_module):
+        sync_svc_discovery(
+            bk_module,
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code="bk-iam")]),
+            manager=fieldmgr.FieldMgrName.WEB_FORM,
+        )
+        assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 1
+
+        # Nothing happens when the value is notset and manager is different
+        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.FieldMgrName.APP_DESC)
+        assert len(SvcDiscConfigDB.objects.get(application=bk_module.application).bk_saas) == 1
+
+        # The data should has been deleted
+        sync_svc_discovery(bk_module, NOTSET, manager=fieldmgr.FieldMgrName.WEB_FORM)
+        assert not SvcDiscConfigDB.objects.filter(application=bk_module.application).exists()

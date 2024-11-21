@@ -136,17 +136,19 @@ export default {
       return this.$store.state.baseInfo.alarmChartData;
     },
     homeAlarmData() {
+      const totalCount = this.alarmChartData.count;
+      const slowQueryCount = this.alarmChartData.slowQueryCount;
       const data = [
         {
-          value: this.alarmChartData.slowQueryCount,
+          value: slowQueryCount,
           name: this.$t('慢查询告警数'),
           type: 'alarm',
           colorType: 'high',
           color: '#F5876C',
         },
         {
-          value: this.alarmChartData.count,
-          name: this.$t('总告警数'),
+          value: totalCount - slowQueryCount,
+          name: totalCount === 0 || slowQueryCount === 0 ? this.$t('总告警数') : this.$t('其他告警数'),
           type: 'alarm',
           colorType: 'low',
           color: '#FFC685',
@@ -159,24 +161,26 @@ export default {
     },
     // 告警情况图表配置
     homeAlertChartOption() {
-      const colors = this.homeAlarmData.map(v => v.color);
+      const colors = this.homeAlarmData.map((v) => v.color);
       return alertChartOption(this.homeAlarmData, colors);
     },
     appChartData() {
+      const totalAppCount = this.chartAppInfo.total;
+      const idleAppCount = this.appChartInfo.idleAppCount;
       const data = [
         {
-          value: this.appChartInfo.idleAppCount,
+          value: idleAppCount,
           name: this.$t('闲置应用数'),
           type: 'app',
           colorType: 'high',
-          color: '#FFA66B'
+          color: '#FFA66B',
         },
         {
-          value: this.chartAppInfo.total,
-          name: this.$t('总应用数'),
+          value: totalAppCount - idleAppCount,
+          name: totalAppCount === 0 || idleAppCount === 0 ? this.$t('总应用数') : this.$t('活跃应用数'),
           type: 'app',
           colorType: 'low',
-          color: '#3E96C2'
+          color: '#3E96C2',
         },
       ];
       if (data.find((v) => v.colorType === 'high' && v.value === 0)) {
@@ -186,7 +190,7 @@ export default {
     },
     // 应用情况图表配置
     appChartOption() {
-      const colors = this.appChartData.map(v => v.color);
+      const colors = this.appChartData.map((v) => v.color);
       return alertChartOption(this.appChartData, colors);
     },
     platformFeature() {

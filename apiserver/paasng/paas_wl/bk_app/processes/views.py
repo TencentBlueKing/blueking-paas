@@ -41,6 +41,7 @@ from paas_wl.bk_app.processes.exceptions import (
     ScaleProcessError,
 )
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.bk_app.processes.processes import ProcessManager, list_cnative_module_processes_specs
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
     ListProcessesQuerySLZ,
@@ -53,7 +54,6 @@ from paas_wl.bk_app.processes.serializers import (
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
-from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.infras.resources.base.kres import KDeployment, KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
@@ -71,6 +71,7 @@ from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.version import get_env_deployed_version_info
@@ -109,17 +110,31 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         target_replicas = data.get("target_replicas")
         scaling_config = data.get("scaling_config")
 
-        try:
-            judge_operation_frequent(wl_app, process_type, self._operation_interval)
-        except ProcessOperationTooOften as e:
-            raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
+        # TODO 由于云原生应用去除了对 ProcessSpec model 的依赖, 因此暂时不做操作频率限制, 待后续评估后再添加?
+        if wl_app.type == WlAppType.DEFAULT:
+            try:
+                judge_operation_frequent(wl_app, process_type, self._operation_interval)
+            except ProcessOperationTooOften as e:
+                raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
         self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
 
-        try:
-            proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
-        except ProcessSpec.DoesNotExist:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+        if wl_app.type == WlAppType.DEFAULT:
+            try:
+                proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
+            except ProcessSpec.DoesNotExist:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+            else:
+                target_replicas = proc_spec.target_replicas
+                target_status = proc_spec.target_status
+        else:
+            for spec in ProcessManager(module_env).list_processes_specs():
+                if spec["name"] == process_type:
+                    target_replicas = spec["target_replicas"]
+                    target_status = spec["target_status"]
+                    break
+            else:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
 
         # 审计记录
         add_app_audit_record(
@@ -134,7 +149,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
         return Response(
             status=status.HTTP_200_OK,
-            data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
+            data={"target_replicas": target_replicas, "target_status": target_status},
         )
 
     def _perform_update(
@@ -163,6 +178,17 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
+        # Set the field manager when it's a scale operation
+        if operate_type == ProcessUpdateType.SCALE:
+            # Set both the replicas and autoscaling fields at the same time
+            fieldmgr.MultiFieldsManager(module_env.module).set_many(
+                [
+                    fieldmgr.f_overlay_replicas(process_type, module_env.environment),
+                    fieldmgr.f_overlay_autoscaling(process_type, module_env.environment),
+                ],
+                fieldmgr.FieldMgrName.WEB_FORM,
+            )
+
     def restart(self, request, code, module_name, environment, process_name):
         """滚动重启进程"""
         env = self.get_env_via_path()
@@ -187,10 +213,7 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
         module_envs = application.envs.filter(environment=environment)
 
         grouped_data: Dict[str, ModuleScopedData] = {}
-        grouped_proc_specs = {
-            module_env.module.name: ProcessManager(module_env).list_processes_specs() for module_env in module_envs
-        }
-        processes_status = ProcInstByEnvListWatcher(application, environment).list()
+        grouped_proc_specs = list_cnative_module_processes_specs(application, environment)
 
         for module_env in module_envs:
             module = module_env.module
@@ -229,6 +252,8 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if deployment_id := request.query_params.get("deployment_id"):
             deployment_obj = get_object_or_404(Deployment, id=deployment_id)
             bkapp_release_id = deployment_obj.bkapp_release_id
+
+        processes_status = ProcInstByEnvListWatcher(application, environment).list()
 
         for process in processes_status.processes:
             module_name = process.app.module_name
@@ -360,12 +385,8 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 "items": insts,
                 "metadata": {"resource_version": processes_status.rv_inst},
             },
+            "process_packages": ProcessManager(env).list_processes_specs(),
         }
-        processes_specs = ProcessManager(env).list_processes_specs()
-        if wl_app.type == WlAppType.CLOUD_NATIVE:
-            data["cnative_proc_specs"] = processes_specs
-        else:
-            data["process_packages"] = processes_specs
 
         return Response(ListWatcherRespSLZ(data).data)
 

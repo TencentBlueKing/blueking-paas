@@ -7,7 +7,7 @@
         @click="goBack"
       />
       <div class="title">
-        {{ title }}
+        <slot>{{ title }}</slot>
         <template v-if="versionData?.version">
           <div class="versionData-wrapper">
             <div class="detail-bar">
@@ -41,7 +41,12 @@
           {{ $t('插件文档') }}
         </a>
       </div>
-      <span v-if="tips" class="tips">{{ tips }}</span>
+      <span
+        v-if="tips"
+        class="tips"
+      >
+        {{ tips }}
+      </span>
     </div>
     <div class="right-tool flex-row align-items-center">
       <slot name="right"></slot>
@@ -204,7 +209,7 @@ export default {
       .status-wrapper {
         margin-left: 16px;
         font-size: 12px;
-        color: #63656E;
+        color: #63656e;
         .bk-spin-loading {
           transform: translateY(-1px);
         }
@@ -230,16 +235,16 @@ export default {
       }
       .full_approval_in_progress,
       .gray_approval_in_progress {
-        background: #FFE8C3;
-        border: 1px solid #FF9C01;
+        background: #ffe8c3;
+        border: 1px solid #ff9c01;
       }
       .in_gray {
-        background: #E1ECFF;
-        border: 1px solid #699DF4;
+        background: #e1ecff;
+        border: 1px solid #699df4;
       }
       .rolled_back {
-        background: #F0F1F5;
-        border: 1px solid #DCDEE5;
+        background: #f0f1f5;
+        border: 1px solid #dcdee5;
       }
     }
     .icon-cls-back {
@@ -251,7 +256,7 @@ export default {
     .tips {
       margin-left: 16px;
       font-size: 12px;
-      color: #979BA5;
+      color: #979ba5;
     }
   }
 }

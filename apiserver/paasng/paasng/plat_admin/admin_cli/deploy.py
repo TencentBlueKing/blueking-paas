@@ -19,7 +19,7 @@ from typing import Callable, List, Optional
 
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 

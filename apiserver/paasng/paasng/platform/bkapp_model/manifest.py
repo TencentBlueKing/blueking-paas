@@ -31,6 +31,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
@@ -47,6 +48,7 @@ from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -506,6 +508,9 @@ def get_bkapp_resource_for_deploy(
     apply_env_annots(model_res, env, deploy_id=deploy_id)
     apply_builtin_env_vars(model_res, env)
 
+    # 将出口集群信息注入到 model_res 中
+    apply_egress_annotations(model_res, env)
+
     # TODO: Missing parts: "build"
     return model_res
 
@@ -568,7 +573,6 @@ def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleE
     :param env: The environment object.
     """
     flag, _ = ProcessServicesFlag.objects.get_or_create(app_environment=env, defaults={"implicit_needed": False})
-
     model_res.set_proc_services_annotation("true")
 
     if flag.implicit_needed:
@@ -589,3 +593,17 @@ def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleE
                     name=process.name, targetPort=settings.CONTAINER_PORT, protocol="TCP", port=80
                 )
                 process.services.append(service)
+
+
+def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironment):
+    """Apply egress annotations to the resource object.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    :param env: The environment object.
+    """
+    try:
+        binding = RCStateAppBinding.objects.get(app=env.wl_app)
+    except RCStateAppBinding.DoesNotExist:
+        pass
+    else:
+        model_res.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] = binding.state.name

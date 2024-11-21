@@ -354,10 +354,6 @@ class ProcessSpecSLZ(serializers.Serializer):
     autoscaling = serializers.BooleanField()
     scaling_config = ScalingConfigSLZ()
 
-    # deprecated: 兼容旧的 CNativeProcSpecSLZ, 待前端替换取值字段后移除
-    cpu_limit = serializers.CharField(source="plan.limits.cpu")
-    memory_limit = serializers.CharField(source="plan.limits.memory")
-
     def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
         limits = obj.plan.limits
         # 内存的单位为 Mi

@@ -41,6 +41,26 @@
         </bk-container>
     </div>
 
+    <div class="panel" v-if="ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP">
+        <h4>蓝鲸应用插件</h4>
+        <bk-container :col="2">
+            <bk-row>
+                <bk-col>
+                    当前状态: <b>$[ USER_IS_ADMIN_IN_PLUGIN ? '你已是该插件的管理员' : '你不具有管理员权限']</b>
+                    <bk-button :theme="'primary'" type="submit" :title="'成为管理员'" @click="bePluginAdmin" v-if="!USER_IS_ADMIN_IN_PLUGIN">
+                        成为插件管理员
+                    </bk-button>
+                    <bk-button :theme="'danger'" :title="'退出管理员'" @click="beNotPluginAdmin" v-else>
+                        退出插件管理员
+                    </bk-button>
+                </bk-col>
+                <bk-col>
+                    <a :href="appPluginFrontendUrl">访问插件</a>
+                </bk-col>
+            </bk-row>
+        </bk-container>
+    </div>
+
     <div class="panel">
         <h4>应用市场</h4>
         <bk-container :col="2">
@@ -156,11 +176,14 @@
     const clusterChoices = {{ cluster_choices | to_json }}
     const envUrls = {{ env_urls | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
+    const ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP = {{ ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP | to_json }}
+    const USER_IS_ADMIN_IN_PLUGIN = {{ USER_IS_ADMIN_IN_PLUGIN | to_json }}
 
     const URLRouter = {
         memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
         exitApp: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code request.user.username %}"),
-        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
+        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}"),
+        pluginMemberManage: decodeURI("{% url 'admin.applications.detail.base_info.plugin.members.api' application.code %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -173,11 +196,16 @@
                     clusterChoices: clusterChoices,
                     envUrls: envUrls,
                     USER_IS_ADMIN_IN_APP,
+                    ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP,
+                    USER_IS_ADMIN_IN_PLUGIN,
                 }
             },
             computed: {
               appFrontendUrl: function () {
                   return `{{ BKPAAS_URL }}/developer-center/apps/${this.application.code}/`
+              },
+              appPluginFrontendUrl: function () {
+                  return `{{ BKPAAS_URL }}/plugin-center/plugin/bk-saas/${this.application.code}/summary`
               }
             },
             methods: {
@@ -198,6 +226,30 @@
                         URLRouter.exitApp
                     ).then(resp => {
                         this.USER_IS_ADMIN_IN_APP = false
+                    })
+                },
+                bePluginAdmin: function () {
+                    this.$http.post(
+                        URLRouter.pluginMemberManage,
+                        {
+                            // 成为管理员
+                            action: 'add',
+                            role: 2
+                        }
+                    ).then(resp => {
+                        this.USER_IS_ADMIN_IN_PLUGIN = true
+                    })
+                },
+                beNotPluginAdmin: function () {
+                    this.$http.post(
+                        URLRouter.pluginMemberManage,
+                        {
+                            // 取消成为管理员
+                            action: 'delete',
+                            role: 2
+                        }
+                    ).then(resp => {
+                        this.USER_IS_ADMIN_IN_PLUGIN = false
                     })
                 },
                 bindAppEnvCluster: function (module, env, clusterName) {

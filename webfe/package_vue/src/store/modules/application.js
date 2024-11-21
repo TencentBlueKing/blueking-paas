@@ -85,6 +85,14 @@ const actions = {
     const url = `${BACKEND_URL}/api/sourcectl/init_templates/${appCode}/ `;
     return http.post(url, {});
   },
+
+  /**
+   * 获取应用仪表盘数据
+   */
+  getBuiltinDashboards({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/builtin_dashboards/`;
+    return http.get(url);
+  },
 };
 
 export default {

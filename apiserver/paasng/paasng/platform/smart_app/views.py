@@ -46,11 +46,7 @@ from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
-from paasng.platform.smart_app.serializers import (
-    AppDescriptionSLZ,
-    PackageStashRequestSLZ,
-    PackageStashResponseSLZ,
-)
+from paasng.platform.smart_app.serializers import AppDescriptionSLZ, PackageStashRequestSLZ, PackageStashResponseSLZ
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
@@ -227,8 +223,10 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         return Response(data=AppDescriptionSLZ(app_desc).data)
 
     @staticmethod
-    def validate_app_desc(app_desc: ApplicationDesc):
+    def validate_app_desc(app_desc: ApplicationDesc, app_code: str):
         """校验 ApplicationDesc."""
+        if app_desc.code != app_code:
+            raise ValidationError(f"app id: {app_desc.code} not match with {app_code}")
         if not app_desc.instance_existed:
             raise ValidationError(_("应用ID: {appid} 的应用不存在!").format(appid=app_desc.code))
         if app_desc.market is None:
@@ -256,7 +254,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
             stat = SourcePackageStatReader(filepath).read()
             app_desc = get_app_description(stat)
-            self.validate_app_desc(app_desc)
+            self.validate_app_desc(app_desc, code)
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 

@@ -2,7 +2,7 @@
   <div class="deploy-process-config">
     <section
       v-if="isShowPage"
-      style="margin-top: 38px;"
+      style="margin-top: 38px"
     >
       <bk-exception
         class="exception-wrap-item exception-part"
@@ -11,11 +11,16 @@
       >
         <p
           class="mt10"
-          style="color: #979BA5;font-size: 12px;"
+          style="color: #979ba5; font-size: 12px"
         >
           {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
-        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
+        <p
+          class="guide-link mt15"
+          @click="handleViewGuide"
+        >
+          {{ $t('查看使用指南') }}
+        </p>
       </bk-exception>
     </section>
     <template v-else>
@@ -28,7 +33,10 @@
         :offset-left="20"
         class="deploy-action-box"
       >
-        <div class="title-wrapper" v-if="!isCreate">
+        <div
+          class="title-wrapper"
+          v-if="!isCreate"
+        >
           <span class="title">{{ $t('进程配置') }}</span>
           <div
             v-if="!isPageEdit"
@@ -39,9 +47,7 @@
             {{ $t('编辑') }}
           </div>
         </div>
-        <div
-          class="process-container"
-        >
+        <div class="process-container">
           <section>
             <process-service
               :data="panels"
@@ -184,7 +190,10 @@
                   <div class="prcess-servie-item">
                     <!-- 主入口，不能关闭进程服务 -->
                     <bk-switcher
-                      v-bk-tooltips="{ content: $t('取消访问入口后，才可以关闭进程服务'), disabled: !isCurProcessMainEntry }"
+                      v-bk-tooltips="{
+                        content: $t('取消访问入口后，才可以关闭进程服务'),
+                        disabled: !isCurProcessMainEntry,
+                      }"
                       v-model="serviceProcess[formData.name]"
                       theme="primary"
                       :disabled="isCurProcessMainEntry"
@@ -192,11 +201,17 @@
                     ></bk-switcher>
                     <span class="item-tips">
                       <i class="paasng-icon paasng-info-line" />
-                      {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                      {{
+                        $t(
+                          '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                        )
+                      }}
                       <a
                         target="_blank"
                         :href="GLOBAL.DOC.PROCESS_SERVICE"
-                      >{{ $t('进程服务说明') }}</a>
+                      >
+                        {{ $t('进程服务说明') }}
+                      </a>
                     </span>
                   </div>
                 </bk-form-item>
@@ -282,7 +297,10 @@
                             v-if="quotaPlansFlag"
                             class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                           />
-                          <quota-popver v-else :data="stagQuotaData" />
+                          <quota-popver
+                            v-else
+                            :data="stagQuotaData"
+                          />
                         </div>
                       </bk-form-item>
                       <bk-form-item
@@ -306,8 +324,12 @@
                               :value="true"
                               :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
                               v-bk-tooltips="{
-                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                                disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                                content: $t(
+                                  isCreate
+                                    ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
+                                    : '该环境暂不支持自动扩缩容',
+                                ),
+                                disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING,
                               }"
                             >
                               {{ $t('自动调节') }}
@@ -454,7 +476,10 @@
                             v-if="quotaPlansFlag"
                             class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                           />
-                          <quota-popver v-else :data="prodQuotaData" />
+                          <quota-popver
+                            v-else
+                            :data="prodQuotaData"
+                          />
                         </div>
                       </bk-form-item>
                       <bk-form-item
@@ -478,8 +503,12 @@
                               :value="true"
                               :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
                               v-bk-tooltips="{
-                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                                disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                                content: $t(
+                                  isCreate
+                                    ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
+                                    : '该环境暂不支持自动扩缩容',
+                                ),
+                                disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING,
                               }"
                             >
                               {{ $t('自动调节') }}
@@ -604,7 +633,10 @@
             class="form-detail mt20"
             v-else
           >
-            <bk-form :model="formData" :label-width="labelWidth">
+            <bk-form
+              :model="formData"
+              :label-width="labelWidth"
+            >
               <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
               <bk-form-item
                 v-if="!allowMultipleImage"
@@ -619,7 +651,10 @@
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
               <bk-form-item :label="`${$t('启动命令')}：`">
-                <span class="process-tag-cls" v-if="formData.command && formData.command.length">
+                <span
+                  class="process-tag-cls"
+                  v-if="formData.command && formData.command.length"
+                >
                   <bk-tag
                     v-for="item in formData.command"
                     :key="item"
@@ -635,7 +670,10 @@
                 </span>
               </bk-form-item>
               <bk-form-item :label="`${$t('命令参数')}：`">
-                <span class="process-tag-cls" v-if="formData.args && formData.args.length">
+                <span
+                  class="process-tag-cls"
+                  v-if="formData.args && formData.args.length"
+                >
                   <bk-tag
                     v-for="item in formData.args"
                     :key="item"
@@ -658,15 +696,24 @@
                   </span>
                   <span class="item-tips">
                     <i class="paasng-icon paasng-info-line" />
-                    {{ $t('开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。') }}
+                    {{
+                      $t(
+                        '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                      )
+                    }}
                     <a
                       target="_blank"
                       :href="GLOBAL.DOC.PROCESS_SERVICE"
-                    >{{ $t('进程服务说明') }}</a>
+                    >
+                      {{ $t('进程服务说明') }}
+                    </a>
                   </span>
                 </div>
               </bk-form-item>
-              <bk-form-item :label="`${$t('端口映射')}：`" v-if="formData.services?.length">
+              <bk-form-item
+                :label="`${$t('端口映射')}：`"
+                v-if="formData.services?.length"
+              >
                 <div class="port-mapping-wrapper">
                   <port-map-table
                     :services="formData.services"
@@ -690,7 +737,10 @@
                 </bk-button>
               </bk-form-item>
               <!-- Metric 采集 - 查看 -->
-              <bk-form-item :label="`Metric ${$t('采集')}：`" v-if="ifopen">
+              <bk-form-item
+                :label="`Metric ${$t('采集')}：`"
+                v-if="ifopen"
+              >
                 <span :class="['tag', { enable: formData.monitoring }]">
                   {{ formData.monitoring ? $t('已启用') : $t('未启用') }}
                 </span>
@@ -727,13 +777,16 @@
                               v-if="quotaPlansFlag"
                               class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                             />
-                            <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
+                            <quota-popver
+                              v-else
+                              :data="item.value === 'stag' ? stagQuotaData : prodQuotaData"
+                            />
                           </span>
                         </bk-form-item>
 
                         <bk-form-item :label="`${$t('扩缩容方式')}：`">
                           <span class="form-text">
-                            {{formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
+                            {{ formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
                           </span>
                         </bk-form-item>
 
@@ -821,7 +874,10 @@
         :model="processDialog"
         form-type="vertical"
       >
-        <bk-form-item :label="$t('新增类型')" v-if="!isEditPopup">
+        <bk-form-item
+          :label="$t('新增类型')"
+          v-if="!isEditPopup"
+        >
           <div class="process-type-item">
             <bk-radio :checked="true">
               {{ $t('进程') }}
@@ -1062,7 +1118,7 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: v => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
+            validator: (v) => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
             message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
             trigger: 'blur',
           },
@@ -1140,7 +1196,7 @@ export default {
       return this.isMainEntry(this.formData.services);
     },
     curProcessMainEntryData() {
-      return this.panels.find(v => this.isMainEntry(v.services));
+      return this.panels.find((v) => this.isMainEntry(v.services));
     },
     // metric tips
     metricTipsHtml() {
@@ -1189,13 +1245,15 @@ export default {
     if (this.isCreate) {
       if (!this.processData.length) {
         // 默认为访问入口
-        this.formData.services = [{
-          exposed_type: { name: 'bk/http' },
-          name: 'http',
-          protocol: 'TCP',
-          port: 80,
-          target_port: 5000,
-        }];
+        this.formData.services = [
+          {
+            exposed_type: { name: 'bk/http' },
+            name: 'http',
+            protocol: 'TCP',
+            port: 80,
+            target_port: 5000,
+          },
+        ];
         this.processData.push(this.formData);
         this.processDataBackUp = cloneDeep(this.processData);
         this.panels = cloneDeep(this.processData);
@@ -1207,6 +1265,8 @@ export default {
       // 扩缩容FeatureFlag
       this.getAutoScalFlag('stag');
       this.getAutoScalFlag('prod');
+      this.getAppDashboardInfo();
+      this.getEntryList();
     }
     // 镜像需要调用进程配置、且不能是创建应用的时候
     if (this.isCustomImage && !this.isCreate) {
@@ -1214,8 +1274,6 @@ export default {
     }
     // 获取资源配额数据
     await this.getQuotaPlans();
-    this.getEntryList();
-    this.getAppDashboardInfo();
   },
   methods: {
     async init() {
@@ -1261,13 +1319,13 @@ export default {
       if (!processList.length) {
         processList.push(this.formData);
         this.processNameActive = this.formData.name;
-      };
+      }
 
       const firstProcess = processList[0];
       this.$set(this.serviceProcess, firstProcess.name, !!firstProcess.services?.length);
 
       // 数据格式统一
-      processList = processList.map(item => ({
+      processList = processList.map((item) => ({
         ...item,
         services: Array.isArray(item.services) ? item.services : [],
       }));
@@ -1387,7 +1445,8 @@ export default {
       this.processDialog.loading = true;
       try {
         await this.$refs.formDialog.validate(); // 校验进程名
-        if (this.processDialog.index !== -1) { // 编辑进程名
+        if (this.processDialog.index !== -1) {
+          // 编辑进程名
           this.processData[this.processDialog.index].name = this.processDialog.name;
         } else {
           // 新增进程
@@ -1444,7 +1503,7 @@ export default {
         if (this.rules.processName?.length === 2) {
           this.rules.processName.push({
             validator: (v) => {
-              const panelName = this.panels.map(e => e.name);
+              const panelName = this.panels.map((e) => e.name);
               return !panelName.includes(v);
             },
             message: `${this.$t('不允许添加同名进程')}`,
@@ -1472,7 +1531,7 @@ export default {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
         // 默认值
-        this.resQuotaData = res.map(item => item.name);
+        this.resQuotaData = res.map((item) => item.name);
 
         // 资源配额数据
         this.allQuotaList = res;
@@ -1607,9 +1666,9 @@ export default {
     // 资源配额方案change回调
     handleChange(name, env) {
       if (env === 'stag') {
-        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.stagQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
       } else {
-        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.prodQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
       }
     },
     // 设置对应探测数据
@@ -1619,7 +1678,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some(service => service.exposed_type?.name === 'bk/http');
+      return services.some((service) => service.exposed_type?.name === 'bk/http');
     },
     // 启停进程
     toggleServiceProcess(falg) {
@@ -1649,7 +1708,7 @@ export default {
       }
     },
     handleDeleteService(name) {
-      const index = this.formData.services.findIndex(v => v.name === name);
+      const index = this.formData.services.findIndex((v) => v.name === name);
       this.formData.services.splice(index, 1);
     },
     // 切换主入口
@@ -1692,7 +1751,7 @@ export default {
     },
     getEntryNames() {
       if (!this.curProcessMainEntryData) return null;
-      const entry = this.curProcessMainEntryData?.services?.find(v => v.exposed_type?.name === 'bk/http');
+      const entry = this.curProcessMainEntryData?.services?.find((v) => v.exposed_type?.name === 'bk/http');
       return {
         processName: this.curProcessMainEntryData.name,
         servieName: entry.name,
@@ -1710,8 +1769,8 @@ export default {
         const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
           appCode: this.appCode,
         });
-        const module = res.find(module => module.name === this.curModuleId);
-        this.moduleAccessAddress = module?.envs?.prod?.find(env => env.address.type !== 'custom')?.address?.url || '';
+        const module = res.find((module) => module.name === this.curModuleId);
+        this.moduleAccessAddress = module?.envs?.prod?.find((env) => env.address.type !== 'custom')?.address?.url || '';
       } catch (e) {
         this.moduleAccessAddress = '';
       }
@@ -1727,7 +1786,7 @@ export default {
     },
     // 同步metric数据
     handleUpdateMetric(config) {
-      const index = this.processData.findIndex(v => v.name === config.name);
+      const index = this.processData.findIndex((v) => v.name === config.name);
       this.$set(this.processData[index].monitoring.metric, config.key, config.value);
     },
     // 获取仪表盘链接
@@ -1754,12 +1813,12 @@ export default {
     padding: 0;
   }
   .item-tips {
-    color: #63656E;
+    color: #63656e;
     font-size: 12px;
     margin-left: 16px;
     i {
       font-size: 14px;
-      color: #979BA5;
+      color: #979ba5;
       transform: translateY(0px);
     }
     span {
@@ -1869,7 +1928,7 @@ export default {
     display: flex;
     align-items: center;
     font-size: 12px;
-    color: #63656E;
+    color: #63656e;
     .bk-switcher {
       flex-shrink: 0;
     }
@@ -1907,12 +1966,12 @@ export default {
     line-height: 22px;
     padding: 0 8px;
     font-size: 12px;
-    color: #63656E;
-    background: #F0F1F5;
+    color: #63656e;
+    background: #f0f1f5;
     border-radius: 2px;
     &.enable {
-      color: #14A568;
-      background: #E4FAF0;
+      color: #14a568;
+      background: #e4faf0;
     }
   }
 }
@@ -1921,12 +1980,12 @@ export default {
   font-size: 14px;
   height: 32px;
   line-height: 32px;
-  background: #F0F1F5;
+  background: #f0f1f5;
   padding-left: 20px;
 }
 
 .env-item {
-  background: #FAFBFD;
+  background: #fafbfd;
   height: 180px;
   /deep/ .bk-form-item {
     margin-top: 10px;
@@ -1937,7 +1996,7 @@ export default {
   padding-top: 10px;
 }
 .env-container {
-  background: #FAFBFD;
+  background: #fafbfd;
   border-radius: 2px;
   padding: 20px 24px;
 }
@@ -1945,7 +2004,7 @@ export default {
   .env-panel {
     width: 420px;
     /deep/ .env-item {
-      .bk-form-item .bk-label  {
+      .bk-form-item .bk-label {
         padding-right: 0;
       }
     }
@@ -1984,8 +2043,8 @@ export default {
     font-size: 14px;
     color: #313238;
   }
-  .edit-container{
-    color: #3A84FF;
+  .edit-container {
+    color: #3a84ff;
     font-size: 12px;
     cursor: pointer;
     padding-left: 10px;
@@ -2001,15 +2060,15 @@ export default {
   display: flex;
   align-items: center;
   min-height: 40px;
-  background: #E1ECFF;
-  border: 1px solid #3A84FF;
+  background: #e1ecff;
+  border: 1px solid #3a84ff;
   border-radius: 2px;
   padding: 0 12px;
   .tips {
     flex: 1;
     padding-left: 16px;
     font-size: 12px;
-    color: #979BA5;
+    color: #979ba5;
     line-height: 20px;
   }
 }
@@ -2019,6 +2078,6 @@ export default {
 .dividing-line {
   height: 1px;
   margin: 24px;
-  background: #EAEBF0;
+  background: #eaebf0;
 }
 </style>

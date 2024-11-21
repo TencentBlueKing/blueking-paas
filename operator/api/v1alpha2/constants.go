@@ -73,6 +73,11 @@ const (
 	// memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
 	// legacy resource configs in annotations to maintain backward compatibility.
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
+
+	// EgressClusterStateNameAnnoKey 注解中存储 Egress 相关配置的键名
+	// 在集群中，作为出口 ip 的节点被打上了 {EgressClusterStateNameAnnoKey:"1"} 的标签
+	// 并且通过 nodeSelector 将开启了出口 ip 功能的应用调度到相应（拥有该标签）的节点
+	EgressClusterStateNameAnnoKey = "bkapp.paas.bk.tencent.com/egress-cluster-state-name"
 )
 
 // 日志采集相关信息

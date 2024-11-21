@@ -20,7 +20,7 @@ import logging
 from typing import Dict, Iterable, List, Set, Tuple, Union
 
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.entities import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
+from paasng.platform.bkapp_model.entities import AutoscalingOverlay, Process, ReplicasOverlay, ResQuotaOverlay
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
 from paasng.utils.structure import NotSetType
@@ -31,27 +31,48 @@ logger = logging.getLogger(__name__)
 
 
 def sync_env_overlays_replicas(
-    module: Module, overlay_replicas: List[ReplicasOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
+    module: Module,
+    overlay_replicas: List[ReplicasOverlay] | NotSetType,
+    manager: fieldmgr.FieldMgrName,
+    processes: List[Process] | None = None,
 ) -> CommonSyncResult:
     """Sync replicas overlay data to db."""
     syncer = OverlayDataSyncer(algo=ReplicasSyncerFieldAlgo())
-    return syncer.sync(module, overlay_replicas, manager)
+    if processes is None:
+        proc_value_is_set = None
+    else:
+        proc_value_is_set = {p.name: not isinstance(p.replicas, NotSetType) for p in processes}
+    return syncer.sync(module, overlay_replicas, manager, proc_value_is_set)
 
 
 def sync_env_overlays_res_quotas(
-    module: Module, overlay_res_quotas: List[ResQuotaOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
+    module: Module,
+    overlay_res_quotas: List[ResQuotaOverlay] | NotSetType,
+    manager: fieldmgr.FieldMgrName,
+    processes: List[Process] | None = None,
 ) -> CommonSyncResult:
     """Sync res_quota overlay data to db."""
     syncer = OverlayDataSyncer(algo=ResQuotasSyncerFieldAlgo())
-    return syncer.sync(module, overlay_res_quotas, manager)
+    if processes is None:
+        proc_value_is_set = None
+    else:
+        proc_value_is_set = {p.name: not isinstance(p.res_quota_plan, NotSetType) for p in processes}
+    return syncer.sync(module, overlay_res_quotas, manager, proc_value_is_set)
 
 
 def sync_env_overlays_autoscalings(
-    module: Module, overlay_autoscalings: List[AutoscalingOverlay] | NotSetType, manager: fieldmgr.FieldMgrName
+    module: Module,
+    overlay_autoscalings: List[AutoscalingOverlay] | NotSetType,
+    manager: fieldmgr.FieldMgrName,
+    processes: List[Process] | None = None,
 ) -> CommonSyncResult:
     """Sync autoscaling overlay data to db model"""
     syncer = OverlayDataSyncer(algo=AutoscalingSyncerFieldAlgo())
-    return syncer.sync(module, overlay_autoscalings, manager)
+    if processes is None:
+        proc_value_is_set = None
+    else:
+        proc_value_is_set = {p.name: not isinstance(p.autoscaling, NotSetType) for p in processes}
+    return syncer.sync(module, overlay_autoscalings, manager, proc_value_is_set)
 
 
 def clean_empty_overlays(module):
@@ -83,11 +104,17 @@ class OverlayDataSyncer:
         module: Module,
         items: Iterable[Union[ReplicasOverlay, ResQuotaOverlay, AutoscalingOverlay]] | NotSetType,
         manager: fieldmgr.FieldMgrName,
+        proc_value_is_set: dict[str, bool] | None,
     ) -> CommonSyncResult:
-        """Sync overlay data to the db."""
+        """Sync overlay data to the db.
+
+        :param proc_value_is_set: An optional dict to indicate if the base value was
+            set on the process object. When the `items` is not set and the value of
+            the process object was set, the overlay data will always be reset.
+        """
         ret = CommonSyncResult()
         if isinstance(items, NotSetType):
-            return self._sync_notset(module, manager)
+            return self._sync_notset(module, manager, proc_value_is_set)
 
         # Build the index of existing data first to clean data later.
         existing_specs, existing_index = self._build_specs_and_index(module)
@@ -113,7 +140,9 @@ class OverlayDataSyncer:
             ret.deleted_num += 1
         return ret
 
-    def _sync_notset(self, module: Module, manager: fieldmgr.FieldMgrName) -> CommonSyncResult:
+    def _sync_notset(
+        self, module: Module, manager: fieldmgr.FieldMgrName, proc_value_is_set: dict[str, bool] | None
+    ) -> CommonSyncResult:
         """Sync when the given data is not set."""
         ret = CommonSyncResult()
 
@@ -123,8 +152,9 @@ class OverlayDataSyncer:
 
         # Reset existing data
         for (proc, env), pk in existing_index.items():
+            base_value_is_set = proc_value_is_set and proc_value_is_set.get(proc)
             # Do not reset the data if the environment is not managed by the current manager.
-            if (proc, env) in not_managed_envs:
+            if (proc, env) in not_managed_envs and not base_value_is_set:
                 continue
 
             ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())

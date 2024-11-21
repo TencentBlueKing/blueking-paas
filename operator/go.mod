@@ -18,7 +18,6 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/tidwall/sjson v1.2.5
 	go.uber.org/zap v1.19.1
-	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6
 	golang.org/x/net v0.30.0
 	golang.org/x/time v0.7.0
 	gopkg.in/inf.v0 v0.9.1

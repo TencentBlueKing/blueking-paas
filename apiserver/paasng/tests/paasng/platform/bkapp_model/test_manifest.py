@@ -84,7 +84,7 @@ def blank_resource() -> crd.BkAppResource:
 
 
 @pytest.fixture()
-def resource_with_processes() -> crd.BkAppResource:
+def blank_resource_with_processes() -> crd.BkAppResource:
     """A resource object have processes spec."""
     return crd.BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2,
@@ -570,14 +570,14 @@ def test_apply_proc_svc_if_implicit_needed_is_false(blank_resource, bk_stag_env)
     assert blank_resource.get_proc_services_annotation() == "true"
 
 
-def test_apply_proc_svc_if_implicit_needed_is_true(resource_with_processes, bk_stag_env):
+def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource_with_processes, bk_stag_env):
     ProcessServicesFlag.objects.create(app_environment=bk_stag_env, implicit_needed=True)
-    apply_proc_svc_if_implicit_needed(resource_with_processes, bk_stag_env)
-    assert resource_with_processes.get_proc_services_annotation() == "true"
-    assert resource_with_processes.spec.processes[0].services[0].name == "worker"
-    assert resource_with_processes.spec.processes[0].services[0].exposedType is None
-    assert resource_with_processes.spec.processes[1].services[0].name == "web"
-    assert resource_with_processes.spec.processes[1].services[0].exposedType == crd.ExposedType()
+    apply_proc_svc_if_implicit_needed(blank_resource_with_processes, bk_stag_env)
+    assert blank_resource_with_processes.get_proc_services_annotation() == "true"
+    assert blank_resource_with_processes.spec.processes[0].services[0].name == "worker"
+    assert blank_resource_with_processes.spec.processes[0].services[0].exposedType is None
+    assert blank_resource_with_processes.spec.processes[1].services[0].name == "web"
+    assert blank_resource_with_processes.spec.processes[1].services[0].exposedType == crd.ExposedType()
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

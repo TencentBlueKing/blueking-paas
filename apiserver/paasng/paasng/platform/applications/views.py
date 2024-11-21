@@ -28,7 +28,7 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, F
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -1511,39 +1511,36 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
     @swagger_auto_schema(request_body=slzs.ApplicationDeploymentModuleOrderReqSLZ)
     def upsert(self, request, code):
         """设置模块的排序"""
-        serializer = slzs.ApplicationDeploymentModuleOrderReqSLZ(data=request.data)
+        serializer = slzs.ApplicationDeploymentModuleOrderReqSLZ(data=request.data, context={"code": code})
         serializer.is_valid(raise_exception=True)
         module_orders_data = serializer.validated_data["module_orders"]
 
         application = self.get_application()
         modules = Module.objects.filter(application=application)
+        module_name_to_module_dict = {module.name: module for module in modules}
 
-        # 记录排序操作日志
         # 操作前
         old_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(application=application).values("module__name", "order")
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            .order_by("order")
+            .values("order", module_name=F("module__name"))
         )
 
         # 更新或创建模块排序
-        for module in modules:
-            for item in module_orders_data:
-                # 过滤掉模块名称不存在的
-                if item["module_name"] == module.name:
-                    ApplicationDeploymentModuleOrder.objects.update_or_create(
-                        application=application,
-                        module=module,
-                        defaults={
-                            "order": item["order"],
-                        },
-                    )
+        for item in module_orders_data:
+            ApplicationDeploymentModuleOrder.objects.update_or_create(
+                module=module_name_to_module_dict[item["module_name"]],
+                defaults={
+                    "order": item["order"],
+                },
+            )
 
         # 操作后
         new_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(application=application).values("module__name", "order")
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            .order_by("order")
+            .values("order", module_name=F("module__name"))
         )
-
-        if old_module_orders == new_module_orders:
-            return Response(status=status.HTTP_204_NO_CONTENT)
 
         add_app_audit_record(
             app_code=application.code,
@@ -1556,17 +1553,16 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
             data_after=DataDetail(type=constants.DataType.RAW_DATA, data=new_module_orders),
         )
 
-        return Response(status=status.HTTP_201_CREATED)
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(new_module_orders, many=True)
+        return Response(serializer.data)
 
     def list(self, request, code):
         """获取模块的排序"""
         application = self.get_application()
         result = (
-            ApplicationDeploymentModuleOrder.objects.filter(application=application)
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
             .order_by("order")
-            .values("module__name", "order")
+            .values("order", module_name=F("module__name"))
         )
-        # 'module__name' rename to 'module_name'
-        renamed_result = [{"module_name": item["module__name"], "order": item["order"]} for item in result]
-        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(renamed_result, many=True)
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(result, many=True)
         return Response(serializer.data)

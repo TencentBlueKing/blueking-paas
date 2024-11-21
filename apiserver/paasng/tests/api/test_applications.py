@@ -768,8 +768,103 @@ class TestDeploymentModuleOrder:
         )
         initialize_module(module)
 
+        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
+
+        response = api_client.post(
+            url,
+            data={
+                "module_orders": [
+                    {
+                        "module_name": "test1",
+                        "order": 1,
+                    },
+                    {
+                        "module_name": "default",
+                        "order": 3,
+                    },
+                ]
+            },
+        )
+        assert response.data == [
+            {
+                "module_name": "test1",
+                "order": 1,
+            },
+            {
+                "module_name": "default",
+                "order": 3,
+            },
+        ]
+
+        response = api_client.post(
+            url,
+            data={
+                "module_orders": [
+                    {
+                        "module_name": "test1",
+                        "order": 3,
+                    },
+                    {
+                        "module_name": "default",
+                        "order": 2,
+                    },
+                ]
+            },
+        )
+        assert response.data == [
+            {
+                "module_name": "default",
+                "order": 2,
+            },
+            {
+                "module_name": "test1",
+                "order": 3,
+            },
+        ]
+
+        response = api_client.get(url)
+        assert response.data == [
+            {
+                "module_name": "default",
+                "order": 2,
+            },
+            {
+                "module_name": "test1",
+                "order": 3,
+            },
+        ]
+
+    def test_module_order_missing_module(self, api_client, bk_app, bk_user):
+        """
+        测试部署管理-进程列表模块自定义排序, 模块排序少传
+        """
         module = Module.objects.create(
-            application=bk_app, name="test2", language="python", source_init_template="test2", creator=bk_user
+            application=bk_app, name="test1", language="python", source_init_template="test1", creator=bk_user
+        )
+        initialize_module(module)
+
+        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
+
+        response = api_client.post(
+            url,
+            data={
+                "module_orders": [
+                    {
+                        "module_name": "test1",
+                        "order": 1,
+                    }
+                ]
+            },
+        )
+        response_data = response.json()
+        assert response_data["detail"] == "Module default is missing an order."
+
+    def test_module_order_extra_module(self, api_client, bk_app, bk_user):
+        """
+        测试部署管理-进程列表模块自定义排序, 模块排序多传
+        """
+        module = Module.objects.create(
+            application=bk_app, name="test1", language="python", source_init_template="test1", creator=bk_user
         )
         initialize_module(module)
 
@@ -790,34 +885,5 @@ class TestDeploymentModuleOrder:
                 ]
             },
         )
-        assert response.status_code == 201
-
-        response = api_client.post(
-            url,
-            data={
-                "module_orders": [
-                    {
-                        "module_name": "test1",
-                        "order": 3,
-                    },
-                    {
-                        "module_name": "test2",
-                        "order": 1,
-                    },
-                ]
-            },
-        )
-        assert response.status_code == 201
-
-        response = api_client.get(url)
-        expected_data = [
-            {
-                "module_name": "test2",
-                "order": 1,
-            },
-            {
-                "module_name": "test1",
-                "order": 3,
-            },
-        ]
-        assert response.data == expected_data
+        response_data = response.json()
+        assert response_data["detail"] == "No module named as test2."

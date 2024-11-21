@@ -33,6 +33,7 @@ from paasng.platform.applications.signals import application_logo_updated, prepa
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import UserNameField
@@ -505,20 +506,36 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
     module_orders = ApplicationDeploymentModuleOrderSLZ(many=True, required=True)
 
     def validate(self, data):
-        module_names = []
-        orders = []
+        code = self.context.get("code")
+        if not code:
+            raise serializers.ValidationError("Cannot get app code")
 
-        # 模块名和顺序不能重复
+        existing_modules = list(Module.objects.filter(application__code=code).values_list("name", flat=True))
+
+        module_names = set()
+        orders = set()
+
         for module in data["module_orders"]:
             module_name = module["module_name"]
             order = module["order"]
 
+            # Check for duplicate module_name
             if module_name in module_names:
-                raise serializers.ValidationError(f"Duplicate module_name: {module_name}")
+                raise serializers.ValidationError(f"Duplicate module_name: {module_name}.")
+            # Check for duplicate order
             if order in orders:
-                raise serializers.ValidationError(f"Duplicate order: {order}")
+                raise serializers.ValidationError(f"Duplicate order: {order}.")
 
-            module_names.append(module_name)
-            orders.append(order)
+            # check if the app have module in this name
+            if module_name not in existing_modules:
+                raise serializers.ValidationError(f"No module named as {module_name}.")
+
+            module_names.add(module_name)
+            orders.add(order)
+
+        # Check if all modules for the app code have set an order
+        for name in existing_modules:
+            if name not in module_names:
+                raise serializers.ValidationError(f"Module {name} is missing an order.")
 
         return data

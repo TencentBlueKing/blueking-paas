@@ -227,7 +227,9 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     def validate_app_desc(app_desc: ApplicationDesc, app: Application):
         """校验 ApplicationDesc."""
         if app_desc.code != app.code:
-            raise ValidationError(f"app id: {app_desc.code} not match with {app.code}")
+            raise ValidationError(
+                f"The APP ID ({app_desc.code}) declared in the app_desc.yaml does not match the current APP ID ({app.code})"
+            )
         if not app_desc.instance_existed:
             raise ValidationError(_("应用ID: {appid} 的应用不存在!").format(appid=app_desc.code))
         if app_desc.market is None:

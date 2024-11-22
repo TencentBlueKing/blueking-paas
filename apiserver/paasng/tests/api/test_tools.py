@@ -247,7 +247,7 @@ modules:
                         },
                     ],
                 },
-                """specVersion: 3
+                f"""specVersion: 3
 appVersion: '1.0'
 app:
   region: default
@@ -296,7 +296,7 @@ modules:
               protocol: TCP
               exposedType:
                 name: bk/http
-              targetPort: 5000
+              targetPort: {settings.CONTAINER_PORT}
               port: 80
       hooks:
         preRelease:
@@ -351,7 +351,7 @@ modules:
           services:
             - name: server
               protocol: TCP
-              targetPort: 5000
+              targetPort: {settings.CONTAINER_PORT}
               port: 80
       hooks:
         preRelease:
@@ -468,7 +468,7 @@ module:
                         },
                     },
                 },
-                """specVersion: 3
+                f"""specVersion: 3
 appVersion: '1.0'
 app:
   region: default
@@ -516,7 +516,7 @@ module:
             protocol: TCP
             exposedType:
               name: bk/http
-            targetPort: 5000
+            targetPort: {settings.CONTAINER_PORT}
             port: 80
     hooks:
       preRelease:

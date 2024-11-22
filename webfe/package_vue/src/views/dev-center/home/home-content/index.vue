@@ -65,10 +65,8 @@ export default {
   data() {
     return {
       active: 'idle',
-      panels: [
-        { name: 'idle', label: this.$t('闲置应用') },
-        { name: 'alarm', label: this.$t('告警记录') },
-      ],
+      // 初始无数据，防止网络延迟出现的tab延时情况
+      panels: [],
       contentHeight: 0,
       resizeObserver: null,
     };
@@ -136,9 +134,10 @@ export default {
     handlePanelUpdate(data) {
       const { name, length } = data;
       if (length === 0) {
+        if (!this.panels.length) return;
         // 移除对应的 tab 项
         this.panels = this.panels.filter((panel) => panel.name !== name);
-        this.active = this.panels[0].name;
+        this.active = this.panels[0]?.name;
       } else {
         // 确保在 length > 0 时，该 tab 存在于 panels 中
         if (!this.panels.some((panel) => panel.name === name)) {

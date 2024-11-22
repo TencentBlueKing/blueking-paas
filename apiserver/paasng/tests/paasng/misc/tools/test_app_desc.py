@@ -19,8 +19,9 @@ from collections import OrderedDict
 from typing import Any
 
 import pytest
+from django.conf import settings
 
-from paasng.misc.tools.app_sepc import (
+from paasng.misc.tools.app_desc import (
     create_service,
     transform_app_desc_spec2_to_spec3,
     transform_module_spec,
@@ -33,9 +34,15 @@ from paasng.misc.tools.app_sepc import (
     [
         (
             "web",
-            {"name": "web", "protocol": "TCP", "exposedType": {"name": "bk/http"}, "targetPort": 5000, "port": 80},
+            {
+                "name": "web",
+                "protocol": "TCP",
+                "exposedType": {"name": "bk/http"},
+                "targetPort": settings.CONTAINER_PORT,
+                "port": 80,
+            },
         ),
-        ("worker", {"name": "worker", "protocol": "TCP", "targetPort": 5000, "port": 80}),
+        ("worker", {"name": "worker", "protocol": "TCP", "targetPort": settings.CONTAINER_PORT, "port": 80}),
     ],
 )
 def test_create_service(service_input, expected_service_output):
@@ -112,7 +119,7 @@ def test_create_service(service_input, expected_service_output):
                                         "name": "web",
                                         "protocol": "TCP",
                                         "exposedType": {"name": "bk/http"},
-                                        "targetPort": 5000,
+                                        "targetPort": settings.CONTAINER_PORT,
                                         "port": 80,
                                     }
                                 ],
@@ -128,7 +135,14 @@ def test_create_service(service_input, expected_service_output):
                                     "liveness": {"exec": {"command": ["/bin/bash", "-c", "echo ready"]}},
                                     "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
                                 },
-                                "services": [{"name": "worker", "protocol": "TCP", "targetPort": 5000, "port": 80}],
+                                "services": [
+                                    {
+                                        "name": "worker",
+                                        "protocol": "TCP",
+                                        "targetPort": settings.CONTAINER_PORT,
+                                        "port": 80,
+                                    }
+                                ],
                             }
                         ),
                     ]
@@ -247,7 +261,7 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                                                     "name": "web",
                                                     "protocol": "TCP",
                                                     "exposedType": {"name": "bk/http"},
-                                                    "targetPort": 5000,
+                                                    "targetPort": settings.CONTAINER_PORT,
                                                     "port": 80,
                                                 }
                                             ],
@@ -317,7 +331,12 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                                                 "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
                                             },
                                             "services": [
-                                                {"name": "worker", "protocol": "TCP", "targetPort": 5000, "port": 80}
+                                                {
+                                                    "name": "worker",
+                                                    "protocol": "TCP",
+                                                    "targetPort": settings.CONTAINER_PORT,
+                                                    "port": 80,
+                                                }
                                             ],
                                         }
                                     )
@@ -360,7 +379,7 @@ def test_transform_modules_section(modules_data, expected_modules_data):
                             "height": 600,
                             "open_mode": "desktop",
                             "is_win_maximize": False,
-                            "version": True,
+                            "visible": True,
                         },
                     },
                 },
@@ -405,59 +424,54 @@ def test_transform_modules_section(modules_data, expected_modules_data):
                                     "height": 600,
                                     "openMode": "desktop",
                                     "isWinMaximize": False,
-                                    "version": True,
+                                    "visible": True,
                                 },
                             },
                         }
                     ),
-                    "modules": [
-                        OrderedDict(
-                            {
-                                "name": "default",
-                                "isDefault": True,
-                                "sourceDir": "src/frontend",
-                                "language": "NodeJS",
-                                "spec": OrderedDict(
-                                    {
-                                        "addons": [{"name": "mysql"}, {"name": "rabbitmq"}],
-                                        "configuration": {
-                                            "env": [
-                                                {"name": "FOO", "value": "value_of_foo", "description": "环境变量"},
-                                                {"name": "Baa", "value": "value_of_baa", "description": "环境变量"},
-                                            ]
-                                        },
-                                        "processes": [
-                                            OrderedDict(
-                                                {
-                                                    "name": "web",
-                                                    "procCommand": "npm run server",
-                                                    "resQuotaPlan": "4C1G",
-                                                    "replicas": 2,
-                                                    "probes": {
-                                                        "liveness": {"exec": {"command": ["cat"]}},
-                                                        "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
-                                                    },
-                                                    "services": [
-                                                        {
-                                                            "name": "web",
-                                                            "protocol": "TCP",
-                                                            "exposedType": {"name": "bk/http"},
-                                                            "targetPort": 5000,
-                                                            "port": 80,
-                                                        }
-                                                    ],
-                                                }
-                                            )
-                                        ],
-                                        "hooks": {"preRelease": {"procCommand": "bin/pre-release.sh"}},
-                                        "svcDiscovery": {
-                                            "bkSaaS": [{"bkAppCode": "bk-iam"}, {"bkAppCode": "bk-user"}]
-                                        },
-                                    }
-                                ),
-                            }
-                        )
-                    ],
+                    "module": OrderedDict(
+                        {
+                            "name": "default",
+                            "sourceDir": "src/frontend",
+                            "language": "NodeJS",
+                            "spec": OrderedDict(
+                                {
+                                    "addons": [{"name": "mysql"}, {"name": "rabbitmq"}],
+                                    "configuration": {
+                                        "env": [
+                                            {"name": "FOO", "value": "value_of_foo", "description": "环境变量"},
+                                            {"name": "Baa", "value": "value_of_baa", "description": "环境变量"},
+                                        ]
+                                    },
+                                    "processes": [
+                                        OrderedDict(
+                                            {
+                                                "name": "web",
+                                                "procCommand": "npm run server",
+                                                "resQuotaPlan": "4C1G",
+                                                "replicas": 2,
+                                                "probes": {
+                                                    "liveness": {"exec": {"command": ["cat"]}},
+                                                    "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
+                                                },
+                                                "services": [
+                                                    {
+                                                        "name": "web",
+                                                        "protocol": "TCP",
+                                                        "exposedType": {"name": "bk/http"},
+                                                        "targetPort": settings.CONTAINER_PORT,
+                                                        "port": 80,
+                                                    }
+                                                ],
+                                            }
+                                        )
+                                    ],
+                                    "hooks": {"preRelease": {"procCommand": "bin/pre-release.sh"}},
+                                    "svcDiscovery": {"bkSaaS": [{"bkAppCode": "bk-iam"}, {"bkAppCode": "bk-user"}]},
+                                }
+                            ),
+                        }
+                    ),
                 }
             ),
         )

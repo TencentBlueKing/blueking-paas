@@ -22,21 +22,16 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from yaml.scanner import ScannerError
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.utils.error_codes import error_codes
+from paasng.utils.yaml import IndentDumper
 
-from .app_sepc import transform_app_desc_spec2_to_spec3
-
-
-class IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super(IndentDumper, self).increase_indent(flow, False)
+from .app_desc import transform_app_desc_spec2_to_spec3
 
 
-class AppDescTransformApiView(APIView):
+class AppDescTransformAPIView(APIView):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(
@@ -47,7 +42,7 @@ class AppDescTransformApiView(APIView):
             try:
                 yaml_data = request.body.decode("utf-8")
                 spec2_data = yaml.safe_load(yaml_data)
-            except ScannerError:
+            except yaml.YAMLError:
                 raise error_codes.NOT_YAML_FILE
 
             spec3_data = transform_app_desc_spec2_to_spec3(spec2_data)

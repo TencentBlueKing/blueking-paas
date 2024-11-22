@@ -1,5 +1,5 @@
 <template>
-  <div class="record-diff-container">
+  <div :class="['record-diff-container', { 'full-screen': isFullscreen }]">
     <!-- top -->
     <div class="top-title">
       <div class="left item">
@@ -7,9 +7,16 @@
       </div>
       <div class="right item">
         <span>{{ $t('操作后') }}</span>
+        <!-- 全屏 -->
+        <i
+          :title="isFullscreen ? $t('收起') : $t('展开')"
+          :class="['paasng-icon', isFullscreen ? 'paasng-un-full-screen' : 'paasng-full-screen']"
+          @click="toggleFullScreen"
+        ></i>
       </div>
     </div>
     <code-diff
+      ref="codeDiff"
       :old-content="oldCode"
       :new-content="newCode"
     />
@@ -70,7 +77,16 @@ export default {
           color: ['#666666', '#3D4D1F', '#6E963C'],
         },
       ],
+      isFullscreen: false,
     };
+  },
+  methods: {
+    toggleFullScreen() {
+      this.isFullscreen = !this.isFullscreen;
+      this.$nextTick(() => {
+        this.$refs.codeDiff?.layout();
+      });
+    },
   },
 };
 </script>
@@ -81,6 +97,15 @@ export default {
   flex-direction: column;
   height: 100%;
   background: #1d1d1d;
+  &.full-screen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 9999;
+  }
   .top-title {
     flex: 0 0 auto; /* 固定高度，不伸缩 */
     height: 44px;
@@ -93,10 +118,20 @@ export default {
       padding-left: 16px;
       background: #2e2e2e;
       &.right {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         border-left: 1px solid #313238;
         span {
           color: #3fc362;
           background: #144628;
+        }
+        i {
+          margin-right: 24px;
+          cursor: pointer;
+          &:hover {
+            color: #fff;
+          }
         }
       }
       span {

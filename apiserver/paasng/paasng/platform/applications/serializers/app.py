@@ -510,7 +510,7 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
         if not code:
             raise serializers.ValidationError("Cannot get app code")
 
-        existing_modules = list(Module.objects.filter(application__code=code).values_list("name", flat=True))
+        all_module_names = set(Module.objects.filter(application__code=code).values_list("name", flat=True))
 
         module_names = set()
         orders = set()
@@ -526,16 +526,16 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
             if order in orders:
                 raise serializers.ValidationError(f"Duplicate order: {order}.")
 
-            # check if the app have module in this name
-            if module_name not in existing_modules:
+            # check if the module_name is a module of the app
+            if module_name not in all_module_names:
                 raise serializers.ValidationError(f"No module named as {module_name}.")
 
             module_names.add(module_name)
             orders.add(order)
 
         # Check if all modules for the app code have set an order
-        for name in existing_modules:
-            if name not in module_names:
-                raise serializers.ValidationError(f"Module {name} is missing an order.")
+        missing_orders = all_module_names - module_names
+        if missing_orders:
+            raise serializers.ValidationError(f"Modules missing an order: {', '.join(missing_orders)}.")
 
         return data

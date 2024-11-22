@@ -1509,6 +1509,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(request_body=slzs.ApplicationDeploymentModuleOrderReqSLZ)
+    @transaction.atomic
     def upsert(self, request, code):
         """设置模块的排序"""
         serializer = slzs.ApplicationDeploymentModuleOrderReqSLZ(data=request.data, context={"code": code})

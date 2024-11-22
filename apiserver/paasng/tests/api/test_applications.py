@@ -857,7 +857,7 @@ class TestDeploymentModuleOrder:
             },
         )
         response_data = response.json()
-        assert response_data["detail"] == "Module default is missing an order."
+        assert response_data["detail"] == "Modules missing an order: default."
 
     def test_module_order_extra_module(self, api_client, bk_app, bk_user):
         """

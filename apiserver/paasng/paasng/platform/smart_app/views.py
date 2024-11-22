@@ -41,16 +41,13 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
-from paasng.platform.smart_app.serializers import (
-    AppDescriptionSLZ,
-    PackageStashRequestSLZ,
-    PackageStashResponseSLZ,
-)
+from paasng.platform.smart_app.serializers import AppDescriptionSLZ, PackageStashRequestSLZ, PackageStashResponseSLZ
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
@@ -227,8 +224,14 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         return Response(data=AppDescriptionSLZ(app_desc).data)
 
     @staticmethod
-    def validate_app_desc(app_desc: ApplicationDesc):
+    def validate_app_desc(app_desc: ApplicationDesc, app: Application):
         """校验 ApplicationDesc."""
+        if app_desc.code != app.code:
+            raise ValidationError(
+                _("应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）不一致").format(
+                    app_desc_code=app_desc.code, app_code=app.code
+                )
+            )
         if not app_desc.instance_existed:
             raise ValidationError(_("应用ID: {appid} 的应用不存在!").format(appid=app_desc.code))
         if app_desc.market is None:
@@ -256,7 +259,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
             stat = SourcePackageStatReader(filepath).read()
             app_desc = get_app_description(stat)
-            self.validate_app_desc(app_desc)
+            self.validate_app_desc(app_desc, application)
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 

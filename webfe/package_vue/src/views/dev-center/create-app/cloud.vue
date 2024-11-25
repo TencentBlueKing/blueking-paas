@@ -886,12 +886,11 @@ export default {
         ],
         imageCredential: [
           {
-            required: true,
-            message: this.$t('请填写名称'),
-            trigger: 'blur',
-          },
-          {
-            regex: /^[a-zA-Z0-9_]{0,40}$|^$/,
+            validator(val) {
+              if (val === '') return true;
+              const reg = /^[a-zA-Z0-9_]{0,40}$|^$/;
+              return reg.test(val);
+            },
             message: this.$t('以英文字母、数字或下划线(_)组成，不超过40个字'),
             trigger: 'blur',
           },

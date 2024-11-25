@@ -29,8 +29,7 @@ class TestAppDescTransform:
         [
             # Test 1: two modules
             (
-                """
-spec_version: 2
+                """spec_version: 2
 app_version: "1.0"
 app:
   region: default
@@ -365,8 +364,7 @@ modules:
             ),
             # Test 2: one module in the first level
             (
-                """
-spec_version: 2
+                """spec_version: 2
 app_version: "1.0"
 app:
   region: default
@@ -537,5 +535,5 @@ module:
         output_data = yaml.safe_load(response.content)
         assert output_data == expected_spec3_data
 
-        output_yaml = response.content.decode("utf-8")
+        output_yaml = response.content.decode(settings.DEFAULT_CHARSET)
         assert output_yaml == expected_spec3_yaml

@@ -18,6 +18,7 @@
 from collections import OrderedDict
 
 import yaml
+from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
@@ -40,7 +41,7 @@ class AppDescTransformAPIView(APIView):
     def post(self, request):
         if request.content_type == "application/yaml":
             try:
-                yaml_data = request.body.decode("utf-8")
+                yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
                 spec2_data = yaml.safe_load(yaml_data)
             except yaml.YAMLError:
                 raise error_codes.NOT_YAML_FILE

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-11-22 10:33+0800\n"
+"POT-Creation-Date: 2024-11-25 16:17+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -218,7 +218,7 @@ msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
 #: paas_wl/bk_app/cnative/specs/views.py:166
-#: paasng/platform/sourcectl/views.py:443
+#: paasng/platform/sourcectl/views.py:447
 #, python-format
 msgid "%s的仓库信息查询异常"
 msgstr "The warehouse information query of %s is abnormal"
@@ -457,7 +457,7 @@ msgid "内存使用量"
 msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
-#: paasng/platform/applications/views.py:916
+#: paasng/platform/applications/views.py:919
 #: paasng/platform/modules/views.py:335
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
@@ -521,7 +521,7 @@ msgid "当前密钥为内置密钥，不允许删除"
 msgstr "The current secret is built-in and cannot be deleted"
 
 #: paasng/accessories/app_secret/views.py:169
-#: paasng/platform/applications/views.py:1168
+#: paasng/platform/applications/views.py:1171
 #: paasng/platform/sourcectl/views.py:178
 msgid "验证码错误"
 msgstr "Verification code error"
@@ -1331,10 +1331,12 @@ msgid "同名仓库已存在"
 msgstr "A repository with the same name already exists"
 
 #: paasng/bk_plugins/pluginscenter/sourcectl/tencent.py:82
+#: paasng/platform/sourcectl/tc_git/client.py:55
 msgid "工蜂接口请求超时"
 msgstr "Tc_git interface request timeout"
 
 #: paasng/bk_plugins/pluginscenter/sourcectl/tencent.py:85
+#: paasng/platform/sourcectl/tc_git/client.py:58
 msgid "工蜂接口请求异常"
 msgstr "Tc_git interface request exception"
 
@@ -1524,6 +1526,15 @@ msgstr ""
 #: paasng/infras/accounts/models.py:81
 msgid "users"
 msgstr ""
+
+#: paasng/infras/accounts/oauth/backends_ext.py:15
+#: paasng/platform/sourcectl/type_specs.py:141
+msgid "工蜂 Git"
+msgstr "Tc_git"
+
+#: paasng/infras/accounts/oauth/backends_ext.py:17
+msgid "腾讯内部 Git 源码托管系统"
+msgstr "Tencent's internal Git source code hosting system"
 
 #: paasng/infras/accounts/permissions/constants.py:25
 msgid "平台页面查看"
@@ -2327,7 +2338,7 @@ msgid "已上线"
 msgstr "Now online"
 
 #: paasng/plat_admin/numbers/app.py:539
-#: paasng/platform/applications/views.py:1098
+#: paasng/platform/applications/views.py:1101
 msgid "已下架"
 msgstr "Archived"
 
@@ -2365,30 +2376,30 @@ msgstr "APP Name"
 msgid "S-Mart 不可关闭应用描述文件"
 msgstr "S-Mart cannot close the APP description file"
 
-#: paasng/platform/applications/serializers/app.py:59
+#: paasng/platform/applications/serializers/app.py:60
 msgid "应用引擎参数未提供"
 msgstr "APP engine parameters not provided"
 
-#: paasng/platform/applications/serializers/app.py:65
+#: paasng/platform/applications/serializers/app.py:66
 #, fuzzy
 #| msgid "已开启引擎，类型不能为 \"enginess_app\""
 msgid "已开启引擎，类型不能为 \"engineless_app\""
 msgstr "Engine enabled, type cannot be \"enginess_app"
 
-#: paasng/platform/applications/serializers/app.py:97
+#: paasng/platform/applications/serializers/app.py:98
 msgid "该接口只支持创建外链应用"
 msgstr ""
 
-#: paasng/platform/applications/serializers/app.py:139
+#: paasng/platform/applications/serializers/app.py:140
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 
-#: paasng/platform/applications/serializers/app.py:299
+#: paasng/platform/applications/serializers/app.py:300
 #, python-format
 msgid "无效的选项: %s"
 msgstr "Invalid option: %s"
 
-#: paasng/platform/applications/serializers/app.py:334
+#: paasng/platform/applications/serializers/app.py:335
 #, python-format
 msgid "无效的分类选项: %s"
 msgstr "Invalid classification option: %s"
@@ -2434,50 +2445,50 @@ msgstr "{} for {} already exists"
 msgid "不支持修改应用 ID"
 msgstr "Modifying APP ID is not supported"
 
-#: paasng/platform/applications/views.py:452
+#: paasng/platform/applications/views.py:455
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views.py:585
+#: paasng/platform/applications/views.py:588
 #, fuzzy
 #| msgid "{} 为 {} 的应用已存在"
 msgid "code 为 {} 或 name 为 {} 的应用已存在"
 msgstr "{} for {} already exists"
 
-#: paasng/platform/applications/views.py:612
-#: paasng/platform/applications/views.py:695
+#: paasng/platform/applications/views.py:615
+#: paasng/platform/applications/views.py:698
 msgid "你无法使用高级创建选项"
 msgstr "You cannot use the advanced creation option"
 
-#: paasng/platform/applications/views.py:621
-#: paasng/platform/applications/views.py:704
+#: paasng/platform/applications/views.py:624
+#: paasng/platform/applications/views.py:707
 msgid "当前版本下无法创建蓝鲸插件应用"
 msgstr "The  bk-plugin APP cannot be created under the current version"
 
-#: paasng/platform/applications/views.py:798
+#: paasng/platform/applications/views.py:801
 msgid "你无法在所指定的 region 中创建应用"
 msgstr "You cannot create an application in the specified region"
 
-#: paasng/platform/applications/views.py:816
+#: paasng/platform/applications/views.py:819
 #, python-format
 msgid "集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."
 msgstr ""
 
-#: paasng/platform/applications/views.py:1094
+#: paasng/platform/applications/views.py:1097
 msgid "开发中"
 msgstr "Developing"
 
-#: paasng/platform/applications/views.py:1095
+#: paasng/platform/applications/views.py:1098
 #: paasng/platform/engine/constants.py:40
 msgid "预发布环境"
 msgstr " Stag Env "
 
-#: paasng/platform/applications/views.py:1096
+#: paasng/platform/applications/views.py:1099
 #: paasng/platform/engine/constants.py:41
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/applications/views.py:1097
+#: paasng/platform/applications/views.py:1100
 msgid "应用市场"
 msgstr " Market "
 
@@ -3106,6 +3117,50 @@ msgstr "Creating APP objects"
 msgid "同步应用基本信息"
 msgstr "Basic information about the Sync APP"
 
+#: paasng/platform/mgrlegacy/app_migrations/code.py:97
+msgid "变更应用代码"
+msgstr "Change of APP code"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:40
+msgid "部署到预发布环境和生产环境"
+msgstr "Deployment to s'tag and prod env"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:146
+msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
+msgstr ""
+"Older versions of the test environment are not deployed or have been "
+"archive, skip the test environment deployment"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:150
+msgid "开始部署预发布环境"
+msgstr "Start deploying a stag e'nv"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:153
+msgid "预发布环境部署失败"
+msgstr "stag env deployment failure"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:155
+msgid "预发布环境部署成功"
+msgstr "stag env deployed successfully"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:159
+msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
+msgstr ""
+"Older versions of the test environment are not deployed or have been "
+"archive, Skip formal environment deployment"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:161
+msgid "开始部署生产环境"
+msgstr "Start deploying a prod env"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:166
+msgid "生产环境部署失败"
+msgstr "Failure to deploy to a prod env"
+
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:168
+msgid "生产环境部署成功"
+msgstr "Successful deployment in prod env"
+
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:48
 #, python-brace-format
 msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
@@ -3153,6 +3208,26 @@ msgstr "Synchronising environment variables"
 msgid "同步应用市场信息"
 msgstr "Synchronise Market information"
 
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:27
+msgid "迁移权限管理: 用户白名单及IP白名单"
+msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
+
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:38
+msgid "开始迁移白名单"
+msgstr "Start migration whitelist"
+
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:62
+msgid "白名单迁移成功"
+msgstr "Whitelist migration successful"
+
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:69
+msgid "开始回滚白名单"
+msgstr "Start rolling back the whitelist"
+
+#: paasng/platform/mgrlegacy/app_migrations/permission.py:91
+msgid "白名单回滚成功"
+msgstr "Whitelist rollback successful"
+
 #: paasng/platform/mgrlegacy/app_migrations/product.py:35
 msgid "同步产品信息"
 msgstr "Synchronised product information"
@@ -3191,22 +3266,45 @@ msgstr ""
 "The current APP has not been deployed to the prod env, skip creating a "
 "database instance for the prod env."
 
+#: paasng/platform/mgrlegacy/app_migrations/service_mysql_te.py:15
+msgid "同步 MySQL 配置"
+msgstr "Sync MySQL Configuration"
+
 #: paasng/platform/mgrlegacy/app_migrations/service_rabbitmq.py:59
 #, python-brace-format
 msgid "正在为 {environment} 环境创建 RabbitMQ 服务实例..."
 msgstr "Creating RabbitMQ service instance for {environment} environment..."
 
+#: paasng/platform/mgrlegacy/app_migrations/service_rabbitmq_te.py:13
+msgid "同步 RabbitMQ 配置"
+msgstr "Sync the RabbitMQ Configuration"
+
+#: paasng/platform/mgrlegacy/app_migrations/sourcectl_te.py:20
+msgid "同步SVN版本库信息"
+msgstr "Sync SVN repository information"
+
 #: paasng/platform/mgrlegacy/legacy_proxy.py:79
+#: paasng/platform/mgrlegacy/legacy_proxy_te.py:102
 msgid "暂不支持轻应用迁移"
 msgstr " Mini-APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:83
+#: paasng/platform/mgrlegacy/legacy_proxy_te.py:108
 msgid "暂不支持该类型应用迁移"
 msgstr "This type of APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:86
+#: paasng/platform/mgrlegacy/legacy_proxy_te.py:117
 msgid "目前仅支持Python应用迁移"
 msgstr "Previously only supported Python APP migration"
+
+#: paasng/platform/mgrlegacy/legacy_proxy_te.py:121
+msgid "该项目没有trunk分支，请先添加trunk分支"
+msgstr "This project has no trunk branch, please add the trunk branch first"
+
+#: paasng/platform/mgrlegacy/legacy_proxy_te.py:129
+msgid "未知原因, 请联系管理员处理"
+msgstr "No known reason, please contact the administrator"
 
 #: paasng/platform/mgrlegacy/views.py:195
 msgid "已确认后的应用无法回滚"
@@ -3489,6 +3587,14 @@ msgstr ""
 msgid "SVN注册服务异常, 状态码: %s"
 msgstr "SVN registration service exception, status code: %s"
 
+#: paasng/platform/sourcectl/tc_git/client.py:63
+msgid "工蜂接口返回异常，结果解析失败"
+msgstr "The Tc_git interface returns an exception and the result parsing fails"
+
+#: paasng/platform/sourcectl/tc_git/client.py:99
+msgid "工蜂请求失败"
+msgstr "Tc_git request failed"
+
 #: paasng/platform/sourcectl/type_specs.py:49
 msgid "蓝鲸 SVN"
 msgstr "BlueKing SVN"
@@ -3534,10 +3640,6 @@ msgstr "(need to provide account and password information)"
 msgid "SVN 代码库"
 msgstr "SVN repository"
 
-#: paasng/platform/sourcectl/type_specs.py:141
-msgid "工蜂 Git"
-msgstr "Tc_git"
-
 #: paasng/platform/sourcectl/type_specs.py:143
 msgid "腾讯工蜂服务"
 msgstr " tc_git Services"
@@ -3574,39 +3676,45 @@ msgstr ""
 msgid "无引擎应用不支持切换源码类型"
 msgstr "APP do not support switching source code types"
 
-#: paasng/platform/sourcectl/views.py:378
+#: paasng/platform/sourcectl/views.py:380
 msgid "不支持切换到蓝鲸 SVN 仓库"
 msgstr "Switching to Blueking SVN repository is not supported"
 
-#: paasng/platform/sourcectl/views.py:386
+#: paasng/platform/sourcectl/views.py:388
 msgid "请稍候再试"
 msgstr "Please try again later"
 
-#: paasng/platform/sourcectl/views.py:438
-#: paasng/platform/sourcectl/views.py:510
-#: paasng/platform/sourcectl/views.py:575
+#: paasng/platform/sourcectl/views.py:406
+#, fuzzy
+#| msgid "仓库成功更改为 {repo_url}"
+msgid "仓库成功更改为 {}"
+msgstr "Repo successfully changed to {}"
+
+#: paasng/platform/sourcectl/views.py:442
+#: paasng/platform/sourcectl/views.py:514
+#: paasng/platform/sourcectl/views.py:579
 msgid "AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"
 msgstr ""
 "AccessToken does not have permission to access the warehouse, please check "
 "the authorization and its corresponding Scope"
 
-#: paasng/platform/sourcectl/views.py:440
+#: paasng/platform/sourcectl/views.py:444
 msgid "无法获取 SVN 分支信息, 请检查仓库地址和鉴权信息"
 msgstr ""
 "Unable to get SVN branch information, please check the warehouse address and "
 "authentication information"
 
-#: paasng/platform/sourcectl/views.py:513
+#: paasng/platform/sourcectl/views.py:517
 #, python-brace-format
 msgid "仓库信息查询异常: {e}"
 msgstr "Warehouse information query exception: {e}"
 
-#: paasng/platform/sourcectl/views.py:529
+#: paasng/platform/sourcectl/views.py:533
 #, python-brace-format
 msgid "{source_type} 类型源码暂不支持打包操作"
 msgstr "{source_type} source code does not currently support packaging"
 
-#: paasng/platform/sourcectl/views.py:582
+#: paasng/platform/sourcectl/views.py:586
 #, python-brace-format
 msgid "{module} 的仓库信息查询异常"
 msgstr "The warehouse information query of {module} is abnormal"
@@ -3683,6 +3791,28 @@ msgstr ""
 #, python-brace-format
 msgid "模板名称: {tmpl_name}"
 msgstr ""
+
+#: paasng/security/access_control/views.py:94
+msgid "该应用对外网开放，白名单禁止关闭"
+msgstr "The APP is open to the extranet, whitelisting is disabled"
+
+#: paasng/security/access_control/views.py:96
+msgid "白名单禁止关闭"
+msgstr "Whitelist ban off"
+
+#: paasng/security/access_control/views.py:147
+#: paasng/security/access_control/views.py:198
+#: paasng/security/access_control/views.py:266
+msgid "存在相同的策略"
+msgstr "The same strategy exists"
+
+#: paasng/security/access_control/views.py:406
+msgid "已经在审核中,请勿重复申请"
+msgstr "Already under review, please do not repeat your APP"
+
+#: paasng/security/access_control/views.py:409
+msgid "提交申请成功"
+msgstr "Submitted successfully"
 
 #: paasng/settings/__init__.py:871
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
@@ -4167,97 +4297,11 @@ msgstr ""
 msgid "zh-cn"
 msgstr ""
 
-#~ msgid "腾讯内部 Git 源码托管系统"
-#~ msgstr "Tencent's internal Git source code hosting system"
-
 #~ msgid "应用{}不存在"
 #~ msgstr "The application {} cannot be found."
 
 #~ msgid "模块{}不存在"
 #~ msgstr "The module {} cannot be found."
-
-#~ msgid "变更应用代码"
-#~ msgstr "Change of APP code"
-
-#~ msgid "部署到预发布环境和生产环境"
-#~ msgstr "Deployment to s'tag and prod env"
-
-#~ msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
-#~ msgstr ""
-#~ "Older versions of the test environment are not deployed or have been "
-#~ "archive, skip the test environment deployment"
-
-#~ msgid "开始部署预发布环境"
-#~ msgstr "Start deploying a stag e'nv"
-
-#~ msgid "预发布环境部署失败"
-#~ msgstr "stag env deployment failure"
-
-#~ msgid "预发布环境部署成功"
-#~ msgstr "stag env deployed successfully"
-
-#~ msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
-#~ msgstr ""
-#~ "Older versions of the test environment are not deployed or have been "
-#~ "archive, Skip formal environment deployment"
-
-#~ msgid "开始部署生产环境"
-#~ msgstr "Start deploying a prod env"
-
-#~ msgid "生产环境部署失败"
-#~ msgstr "Failure to deploy to a prod env"
-
-#~ msgid "生产环境部署成功"
-#~ msgstr "Successful deployment in prod env"
-
-#~ msgid "迁移权限管理: 用户白名单及IP白名单"
-#~ msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
-
-#~ msgid "开始迁移白名单"
-#~ msgstr "Start migration whitelist"
-
-#~ msgid "白名单迁移成功"
-#~ msgstr "Whitelist migration successful"
-
-#~ msgid "开始回滚白名单"
-#~ msgstr "Start rolling back the whitelist"
-
-#~ msgid "白名单回滚成功"
-#~ msgstr "Whitelist rollback successful"
-
-#~ msgid "同步 MySQL 配置"
-#~ msgstr "Sync MySQL Configuration"
-
-#~ msgid "同步 RabbitMQ 配置"
-#~ msgstr "Sync the RabbitMQ Configuration"
-
-#~ msgid "同步SVN版本库信息"
-#~ msgstr "Sync SVN repository information"
-
-#~ msgid "未知原因, 请联系管理员处理"
-#~ msgstr "No known reason, please contact the administrator"
-
-#~ msgid "工蜂接口返回异常，结果解析失败"
-#~ msgstr ""
-#~ "The Tc_git interface returns an exception and the result parsing fails"
-
-#~ msgid "工蜂请求失败"
-#~ msgstr "Tc_git request failed"
-
-#~ msgid "该应用对外网开放，白名单禁止关闭"
-#~ msgstr "The APP is open to the extranet, whitelisting is disabled"
-
-#~ msgid "白名单禁止关闭"
-#~ msgstr "Whitelist ban off"
-
-#~ msgid "存在相同的策略"
-#~ msgstr "The same strategy exists"
-
-#~ msgid "已经在审核中,请勿重复申请"
-#~ msgstr "Already under review, please do not repeat your APP"
-
-#~ msgid "提交申请成功"
-#~ msgstr "Submitted successfully"
 
 #, python-format
 #~ msgid "创建失败: %s"
@@ -4601,9 +4645,6 @@ msgstr ""
 
 #~ msgid "GitLab 源码托管服务"
 #~ msgstr "GitLab source code hosting service"
-
-#~ msgid "仓库成功更改为 {repo_url}"
-#~ msgstr "Repo successfully changed to {repo_url}"
 
 #~ msgid "关联步骤元信息"
 #~ msgstr "step metas"

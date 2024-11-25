@@ -219,6 +219,15 @@ urlpatterns += [
     ),
 ]
 
+# 部署管理-进程列表 Module 顺序
+urlpatterns += [
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/deployment/module_order/$",
+        views.ApplicationDeploymentModuleOrderViewSet.as_view({"get": "list", "post": "upsert"}),
+        name="api.applications.deployment.module_order",
+    ),
+]
+
 # Multi-editions specific start
 
 try:

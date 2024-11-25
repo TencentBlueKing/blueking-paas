@@ -18,6 +18,7 @@
 import cattr
 import pytest
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
 from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
@@ -45,7 +46,10 @@ from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
 from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.usefixtures("bk_cnative_app"),
+]
 
 
 class TestProcessesField:
@@ -193,38 +197,38 @@ class TestSvcDiscoveryField:
 
 
 class TestSvcDiscoveryFieldMultiManagers:
-    def test_notset_should_reset(self, bk_app, bk_deployment):
+    def test_notset_should_reset(self, bk_cnative_app, bk_deployment):
         json_data = builder.make_module(
             module_name="test",
             module_spec={
-                "svcDiscovery": {"bkSaaS": [{"bkAppCode": bk_app.code}]},
+                "svcDiscovery": {"bkSaaS": [{"bkAppCode": bk_cnative_app.code}]},
                 "processes": [],
             },
         )
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+        assert len(SvcDiscConfig.objects.get(application=bk_cnative_app).bk_saas) == 1
 
         # Re-apply the data without svc_discovery
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
         perform_action(bk_deployment, json_data)
-        assert not SvcDiscConfig.objects.filter(application=bk_app).exists()
+        assert not SvcDiscConfig.objects.filter(application=bk_cnative_app).exists()
 
-    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+    def test_notset_should_skip_when_manager_different(self, bk_cnative_app, bk_module, bk_deployment):
         # Insert the data using "web_form" manager
         sync_svc_discovery(
             bk_module,
-            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_app.code)]),
+            SvcDiscConfig(bk_saas=[SvcDiscEntryBkSaaS(bk_app_code=bk_cnative_app.code)]),
             fieldmgr.FieldMgrName.WEB_FORM,
         )
-        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+        assert len(SvcDiscConfig.objects.get(application=bk_cnative_app).bk_saas) == 1
 
         # Re-apply the data without svc_discovery, the data should stay because it's
         # managed by a different manager.
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
         perform_action(bk_deployment, json_data)
-        assert len(SvcDiscConfig.objects.get(application=bk_app).bk_saas) == 1
+        assert len(SvcDiscConfig.objects.get(application=bk_cnative_app).bk_saas) == 1
 
 
 class TestHookField:
@@ -333,36 +337,49 @@ class TestHookField:
 
 
 class TestDomainResolutionFieldMultiManagers:
-    def test_notset_should_reset(self, bk_app, bk_deployment):
+    def test_notset_should_reset(self, bk_cnative_app, bk_deployment):
         json_data = builder.make_module(
             module_name="test",
             module_spec={"domainResolution": {"nameservers": ["8.8.8.8"]}, "processes": []},
         )
         perform_action(bk_deployment, json_data)
-        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+        assert len(DomainResolution.objects.get(application=bk_cnative_app).nameservers) == 1
 
         # Re-apply the data without svc_discovery
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
         perform_action(bk_deployment, json_data)
-        assert not DomainResolution.objects.filter(application=bk_app).exists()
+        assert not DomainResolution.objects.filter(application=bk_cnative_app).exists()
 
-    def test_notset_should_skip_when_manager_different(self, bk_app, bk_module, bk_deployment):
+    def test_notset_should_skip_when_manager_different(self, bk_cnative_app, bk_module, bk_deployment):
         # Insert the data using "web_form" manager
         sync_domain_resolution(
             bk_module,
             DomainResolutionEntity(nameservers=["8.8.8.8"], host_aliases=[]),
             fieldmgr.FieldMgrName.WEB_FORM,
         )
-        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+        assert len(DomainResolution.objects.get(application=bk_cnative_app).nameservers) == 1
 
         # Re-apply the data without svc_discovery, the data should stay because it's
         # managed by a different manager.
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
         perform_action(bk_deployment, json_data)
-        assert len(DomainResolution.objects.get(application=bk_app).nameservers) == 1
+        assert len(DomainResolution.objects.get(application=bk_cnative_app).nameservers) == 1
 
 
 def perform_action(deployment: Deployment, json_data: dict):
     """A shortcut to perform validation and action on a deployment using the given data."""
     controller = DeploymentDeclarativeController(deployment)
     controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+
+def test_default_app_with_ver_3(bk_cnative_app, bk_module, bk_deployment):
+    bk_cnative_app.type = ApplicationType.DEFAULT
+    bk_cnative_app.save()
+
+    controller = DeploymentDeclarativeController(bk_deployment)
+    with pytest.raises(DescriptionValidationError):
+        controller.perform_action(
+            desc=validate_desc(
+                DeploymentDescSLZ, builder.make_module(module_name="test", module_spec={"processes": []})
+            )
+        )

@@ -29,6 +29,7 @@ from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProcfileProc
 from paasng.platform.declarative.entities import DeployHandleResult
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
@@ -68,12 +69,21 @@ class DeploymentDeclarativeController:
         return DeployHandleResult(desc.spec_version)
 
     def handle_desc(self, desc: DeploymentDesc):
-        """Handle the description object, which was read from the app description file."""
+        """Handle the description object, which was read from the app description file.
+
+        :raise: DescriptionValidationError when non-cloud native application use app_desc.yaml of version(specVersion:3)
+        """
+
+        if self.application.type != ApplicationType.CLOUD_NATIVE and desc.spec_version == AppSpecVersion.VER_3:
+            raise DescriptionValidationError(
+                "Non-cloud native applications do not support app_desc.yaml of version(specVersion: 3)"
+            )
+
         if desc.bk_monitor:
             self._update_bkmonitor(desc.bk_monitor)
 
         desc_obj = self._save_desc_obj(desc)
-        if self._favor_cnative_style(desc):
+        if self.application.type == ApplicationType.CLOUD_NATIVE:
             self._handle_desc_cnative_style(desc_obj.spec)
         else:
             self._handle_desc_normal_style(desc_obj.spec)
@@ -111,12 +121,6 @@ class DeploymentDeclarativeController:
             port=bk_monitor.port,
             target_port=bk_monitor.target_port,  # type: ignore
         )
-
-    def _favor_cnative_style(self, desc: DeploymentDesc) -> bool:
-        """Check if current deployment should favor cnative style to handle the
-        description object.
-        """
-        return desc.spec_version == AppSpecVersion.VER_3 or self.application.type == ApplicationType.CLOUD_NATIVE
 
 
 def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileProc]) -> DeployHandleResult:

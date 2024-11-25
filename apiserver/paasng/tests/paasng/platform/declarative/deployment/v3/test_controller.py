@@ -46,10 +46,7 @@ from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
 from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = [
-    pytest.mark.django_db(databases=["default", "workloads"]),
-    pytest.mark.usefixtures("bk_cnative_app"),
-]
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.usefixtures("bk_cnative_app")]
 
 
 class TestProcessesField:

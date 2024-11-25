@@ -63,4 +63,4 @@ class AppDescTransformAPIView(APIView):
             return response
 
         else:
-            return HttpResponseBadRequest("Only yaml content are allowed")
+            return HttpResponseBadRequest("Invalid content type: only application/yaml are allowed")

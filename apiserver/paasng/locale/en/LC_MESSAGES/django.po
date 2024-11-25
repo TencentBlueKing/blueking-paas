@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-11-22 10:33+0800\n"
+"POT-Creation-Date: 2024-11-25 16:06+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3366,14 +3366,12 @@ msgid "应用描述文件不存在或内容不是有效 YAML 格式"
 msgstr "The content of the app description file is not in valid YAML format"
 
 #: paasng/platform/smart_app/management/commands/smart_tool.py:57
-#: paasng/platform/smart_app/views.py:178
-#: paasng/platform/smart_app/views.py:238
+#: paasng/platform/smart_app/views.py:179
+#: paasng/platform/smart_app/views.py:240
 msgid "缺失应用市场配置（market)!"
 msgstr "Missing  Market  configuration (market)!"
 
 #: paasng/platform/smart_app/management/commands/smart_tool.py:59
-#: paasng/platform/smart_app/views.py:180
-#: paasng/platform/smart_app/views.py:240
 msgid "请检查源码包是否存在 app_desc.yaml 文件"
 msgstr "Please check if the source package has an app_desc.yaml file"
 
@@ -3398,36 +3396,42 @@ msgstr "The content of the app description file is not in valid YAML format"
 msgid "源码包文件格式错误，文件可能已经损坏"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:73 paasng/platform/smart_app/views.py:208
+#: paasng/platform/smart_app/views.py:74 paasng/platform/smart_app/views.py:207
 #: paasng/platform/sourcectl/views.py:291
 msgid "请联系管理员"
 msgstr "Please contact administrator"
 
-#: paasng/platform/smart_app/views.py:84
+#: paasng/platform/smart_app/views.py:85
 msgid "你无法创建 SMart 应用"
 msgstr "You cannot create a S-mart APP"
 
-#: paasng/platform/smart_app/views.py:127
+#: paasng/platform/smart_app/views.py:128
 msgid "你无法创建 S-Mart 应用"
 msgstr "You cannot create a S-mart APP"
 
-#: paasng/platform/smart_app/views.py:138
+#: paasng/platform/smart_app/views.py:139
 msgid "源码文件加载不完整，请重试或联系管理员"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:176
+#: paasng/platform/smart_app/views.py:177
 #, python-brace-format
 msgid "应用ID: {appid} 的应用已存在!"
 msgstr "APP ID: {appid} of the APP already exists!"
 
-#: paasng/platform/smart_app/views.py:231
+#: paasng/platform/smart_app/views.py:230
 #, python-brace-format
 msgid ""
-"应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）不"
-"一致"
-msgstr "The APP ID ({app_desc_code}) declared in the app_desc.yaml does not match the current APP ID ({app_code})"
+"应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）不一"
+"致"
+msgstr ""
+"The APP ID ({app_desc_code}) declared in the app_desc.yaml does not match "
+"the current APP ID ({app_code})"
 
-#: paasng/platform/smart_app/views.py:236
+#: paasng/platform/smart_app/views.py:235
+msgid "非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"
+msgstr "Non-cloud native application, please use the app_desc.yaml with version(spec_version: 2)"
+
+#: paasng/platform/smart_app/views.py:238
 #, python-brace-format
 msgid "应用ID: {appid} 的应用不存在!"
 msgstr "APP ID: {appid} of the APP does not exist!"

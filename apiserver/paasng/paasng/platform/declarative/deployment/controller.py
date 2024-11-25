@@ -76,7 +76,7 @@ class DeploymentDeclarativeController:
 
         if self.application.type != ApplicationType.CLOUD_NATIVE and desc.spec_version == AppSpecVersion.VER_3:
             raise DescriptionValidationError(
-                "Non-cloud native applications do not support app_desc.yaml of version(specVersion: 3)"
+                "Non-cloud native application do not support app_desc.yaml of version(specVersion: 3)"
             )
 
         if desc.bk_monitor:

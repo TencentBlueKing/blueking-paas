@@ -6,7 +6,7 @@
       <template v-if="!isEdit">
         <bk-popconfirm
           v-if="config.isRiskPrompted"
-          :title="$t('确认编辑服务发现？')"
+          :title="$t('确认编辑{t}？', { t: config.title })"
           :content="$t('当前值由应用描述文件 app_desc.yaml 定义！')"
           width="288"
           trigger="click"

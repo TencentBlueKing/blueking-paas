@@ -2904,7 +2904,7 @@ export default {
   数据概览: "Data Overview",
   我已知晓风险: 'I acknowledge the risks',
   应用描述文件介绍: 'Application descriptor introduction',
-  '确认编辑服务发现？': 'Confirm edit service discovery?',
+  '确认编辑{t}？': 'Confirm edit {t}?',
   '由应用描述文件 app_desc.yaml 定义': 'Defined by application descriptor file app_desc.yaml',
   '当前值由应用描述文件 app_desc.yaml 定义！': 'The current value is defined by the application descriptor file app_desc.yaml!',
   '当前值由应用描述文件（app_desc.yaml）定义。如果应用描述文件中的定义没有被删除，在部署时将覆盖您在产品上填写的值。': 'The current value is defined by the application descriptor file (app_desc.yaml). If the definition in the application descriptor file is not removed, it will override the values you filled in the product during deployment.',

@@ -24,7 +24,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.usefixtures("bk_cnative_app")]
 
 
 @pytest.fixture()

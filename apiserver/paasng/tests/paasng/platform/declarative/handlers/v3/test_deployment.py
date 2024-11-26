@@ -31,7 +31,7 @@ from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import get_preset_env_variables
 from paasng.platform.modules.models.module import Module
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.usefixtures("bk_cnative_app")]
 
 
 @pytest.fixture()

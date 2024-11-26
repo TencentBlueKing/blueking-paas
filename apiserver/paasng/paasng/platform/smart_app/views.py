@@ -40,6 +40,7 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.resources import ApplicationDesc
@@ -176,8 +177,6 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=app_desc.code))
         if app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
-        if app_desc.spec_version == AppSpecVersion.VER_1:
-            raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
 
     @staticmethod
     def is_valid_tar_file(filepath: PathLike) -> bool:
@@ -232,12 +231,13 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                     app_desc_code=app_desc.code, app_code=app.code
                 )
             )
+        if app_desc.spec_version == AppSpecVersion.VER_3 and app.type != ApplicationType.CLOUD_NATIVE:
+            raise ValidationError(_("非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"))
+
         if not app_desc.instance_existed:
             raise ValidationError(_("应用ID: {appid} 的应用不存在!").format(appid=app_desc.code))
         if app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
-        if app_desc.spec_version == AppSpecVersion.VER_1:
-            raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
 
     @swagger_auto_schema(
         tags=["源码包管理", "S-Mart"],

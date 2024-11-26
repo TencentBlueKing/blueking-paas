@@ -560,6 +560,7 @@ export default {
         }
       }
       this.isEdit = true;
+      this.isAcknowledged = false;
     },
 
     // 取消

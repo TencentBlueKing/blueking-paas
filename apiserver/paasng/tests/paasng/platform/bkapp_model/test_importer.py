@@ -271,6 +271,22 @@ class TestReplicasOverlay:
         proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert proc_spec.get_target_replicas("stag") == 3, "The overlay data should remain as it is"
 
+    def test_not_reset_when_manager_different_and_overlay_subfield_notset(
+        self, bk_module, manifest_no_replicas, base_manifest_with_overlay
+    ):
+        """When the envOverlay field is set and the replicas subfield is not set,
+        the replicas should not be reset also.
+        """
+        import_manifest_app_desc(bk_module, base_manifest_with_overlay)
+        # Set the envOverlay field with some subfield other than "replicas" to make the
+        # validated `envOverlay` object not be `NOTSET`.
+        m = copy.deepcopy(manifest_no_replicas)
+        m["spec"]["envOverlay"] = {"envVariables": [{"envName": "stag", "name": "KEY", "value": "foo"}]}
+        import_manifest(bk_module, m, manager=fieldmgr.FieldMgrName.WEB_FORM)
+
+        proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert proc_spec.get_target_replicas("stag") == 3, "The overlay data should remain as it is"
+
     def test_proc_replicas_reset_overlay_managed_by_other(self, bk_module, base_manifest, base_manifest_with_overlay):
         """When the replicas field is set on the process object, the overlay should
         always be reset even if no overlay data is provided.

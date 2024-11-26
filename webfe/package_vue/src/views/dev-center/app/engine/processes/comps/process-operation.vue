@@ -1778,6 +1778,7 @@ export default {
         this.watchServerPush();
         this.$emit('data-ready', this.environment);
       } catch (e) {
+        console.error(e);
         // 无法获取进程目前状态
         this.$paasMessage({
           theme: 'error',

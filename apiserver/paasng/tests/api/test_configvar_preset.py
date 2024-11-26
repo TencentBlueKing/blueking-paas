@@ -26,7 +26,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.parametrize(
     "environment_name",
-    [(ConfigVarEnvName.GLOBAL.value,), (ConfigVarEnvName.STAG.value,), (ConfigVarEnvName.PROD.value,)],
+    [ConfigVarEnvName.GLOBAL.value, ConfigVarEnvName.STAG.value, ConfigVarEnvName.PROD.value],
 )
 def test_get_preset_config_var(api_client, bk_module, environment_name):
     G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")

@@ -415,6 +415,13 @@ class ListConfigVarsSLZ(serializers.Serializer):
         return field
 
 
+class PresetEnvVarSLZ(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+    environment_name = serializers.CharField()
+    description = serializers.CharField(default="")
+
+
 class CreateOfflineOperationSLZ(serializers.Serializer):
     pass
 

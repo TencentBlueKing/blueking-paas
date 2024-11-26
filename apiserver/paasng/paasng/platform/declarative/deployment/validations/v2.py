@@ -113,6 +113,14 @@ class DeploymentDescSLZ(serializers.Serializer):
                     {"env_name": env_var["environment_name"], "name": env_var["key"], "value": env_var["value"]}
                 )
 
+        # The only possible member of the `env_overlay` field is `env_variables`, if
+        # there are no env vars then the field should be set to NOTSET.
+        env_overlay: NotSetType | dict
+        if not env_vars:
+            env_overlay = NOTSET
+        else:
+            env_overlay = {"env_variables": env_vars}
+
         # svc_discovery -> SvcDiscConfig
         _svc_discovery_value = attrs.get("svc_discovery")
         svc_discovery: NotSetType | dict[str, list[dict]]
@@ -129,9 +137,7 @@ class DeploymentDescSLZ(serializers.Serializer):
             processes=processes,
             hooks=hooks,
             configuration={"env": global_vars},
-            env_overlay={
-                "env_variables": env_vars,
-            },
+            env_overlay=env_overlay,
             svc_discovery=svc_discovery,
         )
         return cattr.structure(

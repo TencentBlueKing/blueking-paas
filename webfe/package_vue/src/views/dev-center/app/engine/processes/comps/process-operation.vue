@@ -1540,7 +1540,7 @@ export default {
 
       // 遍历进行数据组装
       const extraInfos = processesData.processes.extra_infos;
-      const packages = this.isCloudNative ? processesData.cnative_proc_specs : processesData.process_packages;
+      const packages = processesData.process_packages;
       const instances = processesData.instances.items;
 
       processesData.processes.items.forEach((processItem) => {

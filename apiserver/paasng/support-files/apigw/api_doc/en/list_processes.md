@@ -106,7 +106,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 | instances             | object   | Instances information   |
 | cnative_proc_specs    | object   | Cloud native process specifications   |
 
-#### .processes filed descriptionn
+#### .processes filed description
 
 | Field Name            | Type     | Description                                               |
 |-----------------------|----------|-----------------------------------------------------------|

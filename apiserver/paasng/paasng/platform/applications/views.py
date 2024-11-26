@@ -28,7 +28,7 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, F
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -72,8 +72,9 @@ from paasng.infras.iam.helpers import (
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
-from paasng.misc.audit.service import add_app_audit_record
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
 from paasng.platform.applications.constants import (
@@ -86,6 +87,7 @@ from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIE
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import (
     Application,
+    ApplicationDeploymentModuleOrder,
     ApplicationEnvironment,
     JustLeaveAppManager,
     UserApplicationFilter,
@@ -119,6 +121,7 @@ from paasng.platform.mgrlegacy.constants import LegacyAppState
 from paasng.platform.mgrlegacy.migrate import get_migration_process_status
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from paasng.platform.templates.constants import TemplateType
@@ -1498,3 +1501,69 @@ class SysAppViewSet(viewsets.ViewSet):
             data={"bk_app_code": application.code, "bk_app_secret": secret},
             status=status.HTTP_201_CREATED,
         )
+
+
+class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """部署管理-进程列表，模块的排序"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(request_body=slzs.ApplicationDeploymentModuleOrderReqSLZ)
+    @transaction.atomic
+    def upsert(self, request, code):
+        """设置模块的排序"""
+        serializer = slzs.ApplicationDeploymentModuleOrderReqSLZ(data=request.data, context={"code": code})
+        serializer.is_valid(raise_exception=True)
+        module_orders_data = serializer.validated_data["module_orders"]
+
+        application = self.get_application()
+        modules = Module.objects.filter(application=application)
+        module_name_to_module_dict = {module.name: module for module in modules}
+
+        # 操作前
+        old_module_orders = list(
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            .order_by("order")
+            .values("order", module_name=F("module__name"))
+        )
+
+        # 更新或创建模块排序
+        for item in module_orders_data:
+            ApplicationDeploymentModuleOrder.objects.update_or_create(
+                module=module_name_to_module_dict[item["module_name"]],
+                defaults={
+                    "order": item["order"],
+                },
+            )
+
+        # 操作后
+        new_module_orders = list(
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            .order_by("order")
+            .values("order", module_name=F("module__name"))
+        )
+
+        add_app_audit_record(
+            app_code=application.code,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.MODULE,
+            result_code=ResultCode.SUCCESS,
+            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=old_module_orders),
+            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=new_module_orders),
+        )
+
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(new_module_orders, many=True)
+        return Response(serializer.data)
+
+    def list(self, request, code):
+        """获取模块的排序"""
+        application = self.get_application()
+        result = (
+            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            .order_by("order")
+            .values("order", module_name=F("module__name"))
+        )
+        serializer = slzs.ApplicationDeploymentModuleOrderSLZ(result, many=True)
+        return Response(serializer.data)

@@ -35,6 +35,7 @@ from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models.module import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
@@ -602,3 +603,11 @@ class UserMarkedApplication(OwnerTimestampedModel):
     @property
     def code(self):
         return self.application.code
+
+
+class ApplicationDeploymentModuleOrder(models.Model):
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", unique=True)
+    order = models.IntegerField(verbose_name="顺序")
+
+    class Meta:
+        verbose_name = "模块顺序"

@@ -363,15 +363,17 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = slz.data
         repo_type = data["source_control_type"]
         repo_url = data["source_repo_url"]
-        repe_before = module.get_source_obj()
-        data_before = DataDetail(
-            type=DataType.RAW_DATA,
-            data={
-                "repo_type": repe_before.get_source_type(),
-                "repo_url": repe_before.get_repo_url(),
-                "source_dir": repe_before.get_source_dir(),
-            },
-        )
+
+        data_before = None
+        if source_obj := module.get_source_obj():
+            data_before = DataDetail(
+                type=DataType.RAW_DATA,
+                data={
+                    "repo_type": source_obj.get_source_type(),
+                    "repo_url": source_obj.get_repo_url(),
+                    "source_dir": source_obj.get_source_dir(),
+                },
+            )
 
         if isinstance(get_sourcectl_type(repo_type), BkSvnSourceTypeSpec):
             # 支持用户进行 Svn -> Git 仓库修改, 或Git -> Git 仓库修改, 不支持 Git -> Svn 修改
@@ -400,7 +402,9 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 data={"repo_type": repo_type, "repo_url": repo_url, "source_dir": data["source_dir"]},
             ),
         )
-        return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": repo_type, "repo_url": repo_url})
+        return Response(
+            data={"message": _("仓库成功更改为 {}").format(repo_url), "repo_type": repo_type, "repo_url": repo_url}
+        )
 
     def _modify_image(self, request, code, module_name):
         module = self.get_module_via_path()

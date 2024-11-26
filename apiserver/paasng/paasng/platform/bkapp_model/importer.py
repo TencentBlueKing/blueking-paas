@@ -89,11 +89,12 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     if not isinstance(spec_entity.env_overlay, NotSetType):
         eo = spec_entity.env_overlay
         if eo:
-            overlay_replicas = eo.replicas or []
-            overlay_res_quotas = eo.res_quotas or []
-            overlay_env_vars = eo.env_variables or []
-            overlay_autoscaling = eo.autoscaling or []
-            overlay_mounts = eo.mounts or []
+            # Turn `None` value into empty list
+            overlay_replicas = [] if eo.replicas is None else eo.replicas
+            overlay_res_quotas = [] if eo.res_quotas is None else eo.res_quotas
+            overlay_env_vars = [] if eo.env_variables is None else eo.env_variables
+            overlay_autoscaling = [] if eo.autoscaling is None else eo.autoscaling
+            overlay_mounts = [] if eo.mounts is None else eo.mounts
 
     # Run sync functions
     sync_processes(module, processes=spec_entity.processes, manager=manager)

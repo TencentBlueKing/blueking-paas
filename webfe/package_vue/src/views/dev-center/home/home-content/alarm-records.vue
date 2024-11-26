@@ -6,7 +6,7 @@
       :title="
         $t(
           '您有 {n} 条 MySQL 慢查询告警记录，请尽快处理，以确保应用正常运行。慢查询持续堆积会影响查询效率，严重时会导致应用无法访问。',
-          { n: slowQueryCount }
+          { n: slowQueryCount },
         )
       "
     ></bk-alert>
@@ -184,6 +184,9 @@ export default {
     // 默认值
     this.setDefaultDate();
     this.queryAllAppAlerts();
+  },
+  beforeDestroy() {
+    bus.$off('home-date');
   },
   methods: {
     setDefaultDate() {

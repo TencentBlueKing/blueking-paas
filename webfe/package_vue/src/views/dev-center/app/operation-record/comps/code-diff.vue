@@ -83,6 +83,9 @@ export default {
         this.modifiedModel = null;
       }
     },
+    layout() {
+      this.editor.layout();
+    },
   },
 };
 </script>

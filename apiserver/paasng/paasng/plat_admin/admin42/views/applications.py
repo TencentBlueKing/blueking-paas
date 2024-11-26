@@ -19,7 +19,6 @@ from typing import Dict, List
 
 import rest_framework.request
 import xlwt
-from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -289,10 +288,8 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
-        kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"] = (
-            settings.IS_ALLOW_CREATE_BK_PLUGIN_APP
-            and application.is_plugin_app
-            and is_plugin_instance_exist(self.kwargs["code"])
+        kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"] = application.is_plugin_app and is_plugin_instance_exist(
+            self.kwargs["code"]
         )
         if kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"]:
             kwargs["USER_IS_ADMIN_IN_PLUGIN"] = is_user_plugin_admin(self.kwargs["code"], self.request.user.username)

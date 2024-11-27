@@ -318,14 +318,6 @@ const srvStaticBamboo = () => import(/* webpackChunkName: 'services-info' */'@/v
   window.showDeployTip(error);
 });
 
-const srvStaticMarket = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/market').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const srvStaticFeaturedApps = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/featured-apps').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const docuManagement = () => import(/* webpackChunkName: 'docu-management' */'@/views/dev-center/app/docu-management').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -1051,16 +1043,6 @@ const router = new Router({
           path: 'bamboo',
           component: srvStaticBamboo,
           name: 'serviceBamboo',
-        },
-        {
-          path: 'market',
-          component: srvStaticMarket,
-          name: 'serviceMarket',
-        },
-        {
-          path: 'recommend',
-          component: srvStaticFeaturedApps,
-          name: 'serviceRecommend',
         },
       ],
     },

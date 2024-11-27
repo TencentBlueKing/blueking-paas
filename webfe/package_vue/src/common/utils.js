@@ -119,17 +119,18 @@ class NavDataProcessor {
           type: 'category',
         };
 
-        item.sublist.forEach((subitem) => {
-          if (subitem.visible === false) {
-            return;
-          }
-
-          this.navItems.push({
-            // eslint-disable-next-line no-underscore-dangle
-            ...this._refineItem(subitem),
-            categoryName: navCategory.name,
+        if (item.sublist.length) {
+          item.sublist.forEach((subitem) => {
+            if (subitem.visible === false) {
+              return;
+            }
+            this.navItems.push({
+              // eslint-disable-next-line no-underscore-dangle
+              ...this._refineItem(subitem),
+              categoryName: navCategory.name,
+            });
           });
-        });
+        }
 
         delete navCategory.sublist;
         this.navCategories.push(navCategory);

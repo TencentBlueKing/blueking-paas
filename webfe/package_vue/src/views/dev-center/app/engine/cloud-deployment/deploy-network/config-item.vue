@@ -7,8 +7,8 @@
         <bk-popconfirm
           v-if="config.isRiskPrompted"
           :title="$t('确认编辑{t}？', { t: config.title })"
-          :content="$t('当前值由应用描述文件 app_desc.yaml 定义！')"
-          width="288"
+          :content="$t('当前值由应用描述文件定义，继续编辑可能导致数据冲突，并存在被描述文件覆盖的风险。')"
+          width="320"
           trigger="click"
           @confirm="handleEdit"
         >
@@ -120,11 +120,6 @@
         class="content"
         v-if="dataName === 'serviceFormData'"
       >
-        <!-- 风险提示 -->
-        <risk-tip
-          v-if="config.isRiskPrompted"
-          :doc="config.doc"
-        />
         <!-- 服务发现 -->
         <div class="body">
           <bk-form
@@ -184,13 +179,12 @@
             </div>
           </bk-form>
         </div>
-        <bk-checkbox
+        <!-- 风险提示 -->
+        <risk-tip
           v-if="config.isRiskPrompted"
           v-model="isAcknowledged"
-          ext-cls="risk-confirmation"
-        >
-          {{ $t('我已知晓风险') }}
-        </bk-checkbox>
+          :doc="config.doc"
+        />
       </div>
 
       <!-- 域名解析-编辑态 -->
@@ -198,10 +192,6 @@
         class="content"
         v-if="dataName === 'dnsRuleFormData'"
       >
-        <risk-tip
-          v-if="config.isRiskPrompted"
-          :doc="config.doc"
-        />
         <div class="body">
           <bk-form
             ref="dnsRuleFormData"
@@ -263,13 +253,11 @@
             </div>
           </bk-form>
         </div>
-        <bk-checkbox
+        <risk-tip
           v-if="config.isRiskPrompted"
           v-model="isAcknowledged"
-          ext-cls="risk-confirmation"
-        >
-          {{ $t('我已知晓风险') }}
-        </bk-checkbox>
+          :doc="config.doc"
+        />
       </div>
 
       <!-- DNS 服务器 -->
@@ -277,10 +265,6 @@
         class="content"
         v-if="dataName === 'dnsServerData'"
       >
-        <risk-tip
-          v-if="config.isRiskPrompted"
-          :doc="config.doc"
-        />
         <div class="body">
           <bk-form
             ref="dnsServerData"
@@ -324,26 +308,32 @@
             </div>
           </bk-form>
         </div>
-        <bk-checkbox
+        <risk-tip
           v-if="config.isRiskPrompted"
           v-model="isAcknowledged"
-          ext-cls="risk-confirmation"
-        >
-          {{ $t('我已知晓风险') }}
-        </bk-checkbox>
+          :doc="config.doc"
+        />
       </div>
     </template>
     <div
       class="footer-btn-wrapper"
       v-if="isEdit"
     >
-      <bk-button
-        :theme="'primary'"
-        :disabled="config.isRiskPrompted && !isAcknowledged"
-        @click="handleSave"
+      <span
+        style="display: inline-block"
+        v-bk-tooltips.bottom="{
+          content: $t('请先确认风险后再保存'),
+          disabled: !config.isRiskPrompted || isAcknowledged,
+        }"
       >
-        {{ $t('保存') }}
-      </bk-button>
+        <bk-button
+          :theme="'primary'"
+          :disabled="config.isRiskPrompted && !isAcknowledged"
+          @click="handleSave"
+        >
+          {{ $t('保存') }}
+        </bk-button>
+      </span>
       <bk-button
         :theme="'default'"
         type="submit"

@@ -3,7 +3,7 @@
     <bk-sideslider
       :is-show.sync="sidesliderVisible"
       :quick-close="true"
-      width="625"
+      width="960"
       :title="title"
       @shown="handleShown"
     >
@@ -11,20 +11,6 @@
         class="sideslider-content"
         slot="content"
       >
-        <bk-alert
-          type="info"
-          class="mb10"
-        >
-          <div
-            slot="title"
-            class="guide-alert-content"
-          >
-            <p>{{ $t('建议在代码仓库中的应用描述文件（app_desc.yaml）中定义：') }}</p>
-            <p>{{ $t('优先级：如果页面和 app_desc.yaml 同时定义，以 app_desc.yaml 的定义为准。') }}</p>
-            <p>{{ $t('生效范围：定义后，应用下的所有模块都会生效。') }}</p>
-            <p>{{ $t('多个模块定义：如果多个模块同时定义服务发现，则生效的值将取决于最近部署的模块中的定义。') }}</p>
-          </div>
-        </bk-alert>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div
           class="markdown-body"

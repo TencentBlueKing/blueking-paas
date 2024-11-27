@@ -49,11 +49,12 @@ from paasng.platform.applications.signals import application_default_module_swit
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.configurations.image import generate_image_repository
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import (
@@ -612,12 +613,10 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         procfile = slz.validated_data["procfile"]
 
-        mgr = ModuleProcessSpecManager(module)
-        mgr.sync_from_desc(
-            processes=[
-                ProcessTmpl(name=proc_name, command=proc_command) for proc_name, proc_command in procfile.items()
-            ]
-        )
+        processes = [
+            Process(name=proc_name, proc_command=proc_command) for proc_name, proc_command in procfile.items()
+        ]
+        sync_processes(module, processes, fieldmgr.FieldMgrName.APP_DESC, use_proc_command=True)
 
         return Response(
             ModuleDeployProcfileSLZ(

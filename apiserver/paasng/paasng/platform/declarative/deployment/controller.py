@@ -22,10 +22,11 @@ from django.db.transaction import atomic
 
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppSpec
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
 from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity, import_bkapp_spec_entity_non_cnative
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProcfileProc
 from paasng.platform.declarative.entities import DeployHandleResult
@@ -88,7 +89,7 @@ class DeploymentDeclarativeController:
         else:
             self._handle_desc_normal_style(desc_obj.spec)
 
-        # 总是将本次解析的进程数据保存到当前 deployment 对象中
+        # 总是将本次解析的进程数据保存到当前 deployment 对象中, 用于普通应用的配置同步逻辑 ProcessManager.sync_processes_specs
         self.deployment.update_fields(processes=desc.get_proc_tmpls())
         # TODO: 弄清楚为什么非得在这里把 hooks 保存到 deployment 对象中
         if hooks := desc_obj.get_deploy_hooks():
@@ -131,8 +132,12 @@ def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileP
     :param procfile_procs: The processes defined by Procfile
     """
     module = deployment.app_environment.module
+
+    processes = [Process(name=p.name, proc_command=p.command) for p in procfile_procs]
+    sync_processes(module, processes, FieldMgrName.APP_DESC, use_proc_command=True)
+
+    # 更新 deployment 中的 processes, 用于普通应用的配置同步逻辑 ProcessManager.sync_processes_specs
     proc_tmpls = {p.name: ProcessTmpl(name=p.name, command=p.command) for p in procfile_procs}
-    # Save the process configs to both the module's spec and current deployment object.
-    ModuleProcessSpecManager(module).sync_from_desc(processes=list(proc_tmpls.values()))
     deployment.update_fields(processes=proc_tmpls)
+
     return DeployHandleResult()

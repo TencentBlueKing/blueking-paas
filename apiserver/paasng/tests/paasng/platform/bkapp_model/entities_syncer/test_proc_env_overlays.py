@@ -107,6 +107,7 @@ class Test__sync_env_overlays_replicas:
             manager=fieldmgr.FieldMgrName.APP_DESC,
         )
 
+        # set "web" process's field to be manged by web_form
         fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_replicas(proc_web.name, "prod")).set(
             fieldmgr.FieldMgrName.WEB_FORM
         )
@@ -116,6 +117,7 @@ class Test__sync_env_overlays_replicas:
             [ReplicasOverlay(env_name="prod", process="worker", count=3)],
             manager=fieldmgr.FieldMgrName.APP_DESC,
         )
+        # "web" process's field is manged by web_form, so it should not be updated or empty
         assert get_overlay_obj(proc_web, "prod").target_replicas == 2
         assert get_overlay_obj(proc_celery, "prod").target_replicas == 3
 

@@ -296,7 +296,9 @@ export const PLATFORM_CONFIG = {
         // 沙箱开发指引
         SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro',
         // 监控仪表盘指引
-        MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics'
+        MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics',
+        // 应用描述文件介绍
+        APP_DESC_CNATIVE: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative'
     },
 
     CONFIG: {

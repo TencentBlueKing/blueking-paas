@@ -2,20 +2,49 @@
   <section class="config-item">
     <div class="title">
       <span class="text">{{ config.title }}</span>
-      <div class="edit-container" @click="handleEdit" v-if="!isEdit">
-        <i class="paasng-icon paasng-edit-2 pl10" />
-        {{ $t('编辑') }}
-      </div>
+      <!-- 是否存在风险 -->
+      <template v-if="!isEdit">
+        <bk-popconfirm
+          v-if="config.isRiskPrompted"
+          :title="$t('确认编辑{t}？', { t: config.title === $t('DNS 服务器') ? ` ${config.title}` : config.title })"
+          :content="
+            $t(
+              '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。'
+            )
+          "
+          width="320"
+          trigger="click"
+          @confirm="handleEdit"
+        >
+          <div
+            class="edit-container"
+            v-bk-tooltips="$t('由应用描述文件 app_desc.yaml 定义')"
+          >
+            <i class="paasng-icon paasng-edit-2 pl10" />
+            {{ $t('编辑') }}
+          </div>
+        </bk-popconfirm>
+        <div
+          v-else
+          class="edit-container"
+          @click="handleEdit"
+        >
+          <i class="paasng-icon paasng-edit-2 pl10" />
+          {{ $t('编辑') }}
+        </div>
+      </template>
     </div>
     <p class="tips">
       {{ config.tips }}
-      <a
-        v-if="config.url"
-        :href="GLOBAL.DOC.SERVE_DISCOVERY"
-        target="_blank"
+      <bk-button
+        size="small"
+        :text="true"
+        title="primary"
+        ext-cls="guide-btn-cls"
+        @click="usageGuide"
       >
         {{ $t('使用指南') }}
-      </a>
+      </bk-button>
     </p>
 
     <div
@@ -44,8 +73,18 @@
             :class="`col-${index + 1}`"
           >
             <div class="col">{{ item.key }}</div>
-            <div class="col" v-if="(typeof item.value === 'string')">{{ item.value || '--' }}</div>
-            <div class="col" v-else>{{ item.value.join('; ') || '--' }}</div>
+            <div
+              class="col"
+              v-if="typeof item.value === 'string'"
+            >
+              {{ item.value || '--' }}
+            </div>
+            <div
+              class="col"
+              v-else
+            >
+              {{ item.value.join('; ') || '--' }}
+            </div>
           </div>
         </div>
         <div
@@ -69,7 +108,12 @@
       >
         <div class="row">
           <div class="col">--</div>
-          <div class="col" v-if="dataName !== 'dnsServerData'">--</div>
+          <div
+            class="col"
+            v-if="dataName !== 'dnsServerData'"
+          >
+            --
+          </div>
         </div>
       </div>
     </div>
@@ -80,6 +124,7 @@
         class="content"
         v-if="dataName === 'serviceFormData'"
       >
+        <!-- 服务发现 -->
         <div class="body">
           <bk-form
             ref="serviceFormData"
@@ -138,6 +183,12 @@
             </div>
           </bk-form>
         </div>
+        <!-- 风险提示 -->
+        <risk-tip
+          v-if="config.isRiskPrompted"
+          v-model="isAcknowledged"
+          :doc="config.doc"
+        />
       </div>
 
       <!-- 域名解析-编辑态 -->
@@ -206,6 +257,11 @@
             </div>
           </bk-form>
         </div>
+        <risk-tip
+          v-if="config.isRiskPrompted"
+          v-model="isAcknowledged"
+          :doc="config.doc"
+        />
       </div>
 
       <!-- DNS 服务器 -->
@@ -256,18 +312,32 @@
             </div>
           </bk-form>
         </div>
+        <risk-tip
+          v-if="config.isRiskPrompted"
+          v-model="isAcknowledged"
+          :doc="config.doc"
+        />
       </div>
     </template>
     <div
       class="footer-btn-wrapper"
       v-if="isEdit"
     >
-      <bk-button
-        :theme="'primary'"
-        @click="handleSave"
+      <span
+        style="display: inline-block"
+        v-bk-tooltips.bottom="{
+          content: $t('请先确认风险后再保存'),
+          disabled: !config.isRiskPrompted || isAcknowledged,
+        }"
       >
-        {{ $t('保存') }}
-      </bk-button>
+        <bk-button
+          :theme="'primary'"
+          :disabled="config.isRiskPrompted && !isAcknowledged"
+          @click="handleSave"
+        >
+          {{ $t('保存') }}
+        </bk-button>
+      </span>
       <bk-button
         :theme="'default'"
         type="submit"
@@ -277,13 +347,28 @@
         {{ $t('取消') }}
       </bk-button>
     </div>
+
+    <!-- 指南弹窗 -->
+    <guide-sideslider
+      :show.sync="isShowGuideSideslider"
+      :title="config.title"
+      :md="config.md"
+      :doc="config.doc"
+    />
   </section>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
+import guideSideslider from './guide-sideslider.vue';
 import { cloneDeep } from 'lodash';
+import riskTip from './risk-tip.vue';
 export default {
   mixins: [appBaseMixin],
+  components: {
+    guideSideslider,
+    riskTip,
+  },
   props: {
     data: {
       type: Array,
@@ -315,6 +400,9 @@ export default {
       },
       // 备份数据
       dataBackup: {},
+      isShowGuideSideslider: false,
+      // 是否已知晓风险
+      isAcknowledged: false,
       rules: {
         // 应用ID
         id: [
@@ -466,6 +554,7 @@ export default {
         }
       }
       this.isEdit = true;
+      this.isAcknowledged = false;
     },
 
     // 取消
@@ -528,11 +617,14 @@ export default {
         return;
       }
       // 表单校验
-      this.$refs[this.dataName].validate().then(() => {
-        this.saveExecution();
-      }, (validator) => {
-        console.error(`${validator.field}：${validator.content}`);
-      });
+      this.$refs[this.dataName].validate().then(
+        () => {
+          this.saveExecution();
+        },
+        (validator) => {
+          console.error(`${validator.field}：${validator.content}`);
+        }
+      );
     },
 
     // 调用对用接口
@@ -571,7 +663,7 @@ export default {
 
     // 域名解析数据格式化
     formatdnsRuleData() {
-      return this.dnsRuleFormData.service.map(item => ({
+      return this.dnsRuleFormData.service.map((item) => ({
         ip: item.ip,
         hostnames: item.hostnames,
       }));
@@ -579,7 +671,12 @@ export default {
 
     // DNS服务器数据格式化
     formatdnsServerData() {
-      return this.dnsServerData.service.map(item => item.name);
+      return this.dnsServerData.service.map((item) => item.name);
+    },
+
+    // 使用指南
+    usageGuide() {
+      this.isShowGuideSideslider = true;
     },
   },
 };
@@ -604,8 +701,8 @@ export default {
       font-size: 14px;
       color: #313238;
     }
-    .edit-container{
-      color: #3A84FF;
+    .edit-container {
+      color: #3a84ff;
       font-size: 12px;
       cursor: pointer;
       padding-left: 10px;
@@ -616,10 +713,17 @@ export default {
     font-size: 12px;
     color: #979ba5;
     line-height: 20px;
+    .guide-btn-cls {
+      height: 24px;
+      padding: 0;
+    }
   }
 
   .content {
     margin-top: 14px;
+    .risk-confirmation {
+      margin-top: 12px;
+    }
     .header {
       display: flex;
       .header-item {

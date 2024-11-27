@@ -44,18 +44,27 @@ export default {
         headerCol: [this.$t('应用ID'), this.$t('模块名称')],
         url: true,
         list: [],
+        md: 'svc-discovery.md',
+        doc: `${this.GLOBAL.DOC.APP_DESC_CNATIVE}#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0specsvcdiscovery`,
+        isRiskPrompted: false,
       },
       dnsRuleData: {
         title: this.$t('域名解析规则'),
-        tips: this.$t('应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目)'),
+        tips: this.$t('应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目）'),
         headerCol: ['IP', this.$t('域名')],
         list: [],
+        md: 'host-aliases.md',
+        doc: `${this.GLOBAL.DOC.APP_DESC_CNATIVE}#%E5%9F%9F%E5%90%8D%E8%A7%A3%E6%9E%90specdomainresolution`,
+        isRiskPrompted: false,
       },
       dnsServeData: {
         title: this.$t('DNS 服务器'),
-        tips: this.$t('应用可通过 nameservers 字段来设置 DNS 服务器 (效果等同于配置 /etc/resolv.conf 文件)'),
+        tips: this.$t('应用可通过 nameservers 字段来设置 DNS 服务器 （效果等同于配置 /etc/resolv.conf 文件）'),
         headerCol: ['nameserver'],
         list: [],
+        md: 'nameservers.md',
+        doc: `${this.GLOBAL.DOC.APP_DESC_CNATIVE}#%E5%9F%9F%E5%90%8D%E8%A7%A3%E6%9E%90specdomainresolution`,
+        isRiskPrompted: false,
       },
       serviceFormData: [],
       domainRuleDFormData: [],
@@ -72,9 +81,10 @@ export default {
     async getServiceDiscoveryData() {
       try {
         const res = await this.$store.dispatch('deploy/getServiceDiscoveryData', { appCode: this.appCode });
-        this.serviceData.list = res.bk_saas.map(v => ({ key: v.bk_app_code, value: v.module_name || '--' }));
+        this.serviceData.list = res.bk_saas.map((v) => ({ key: v.bk_app_code, value: v.module_name || '--' }));
         // 服务发现表单数据
         this.serviceFormData = res.bk_saas || [];
+        this.serviceData.isRiskPrompted = res.field_manager?.name === 'app_desc';
       } catch (error) {
         // 该接口404为无数据状态
         this.serviceData.list = [];
@@ -85,12 +95,15 @@ export default {
     async getDomainResolutionData() {
       try {
         const res = await this.$store.dispatch('deploy/getDomainResolutionData', { appCode: this.appCode });
-        this.dnsRuleData.list = res.host_aliases.map(v => ({ key: v.ip, value: v.hostnames }));
+        this.dnsRuleData.list = res.host_aliases.map((v) => ({ key: v.ip, value: v.hostnames }));
         // 域名解析规则表单数据
         this.domainRuleDFormData = res.host_aliases || [];
         this.dnsServeData.list = res.nameservers || [];
         // DNS服务器表单数据
         this.dnsServeFormData = res.nameservers || [];
+        const isRiskPrompted = res.field_manager?.name === 'app_desc';
+        this.dnsRuleData.isRiskPrompted = isRiskPrompted;
+        this.dnsServeData.isRiskPrompted = isRiskPrompted;
       } catch (error) {
         // 404 无数据, 数据重置
         this.dnsRuleData.list = [];

@@ -2436,8 +2436,8 @@ export default {
   域名解析规则: 'Domain resolution rules',
   'DNS 服务器': 'DNS server',
   '通过环境变量或配置文件 获取其他应用的访问地址。': 'Retrieve the access address of other applications through environment variables or configuration files.',
-  '应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目)': 'Applications can use the hostAliases field to add additional domain resolution rules (effectively equivalent to appending entries to the /etc/hosts file).',
-  '应用可通过 nameservers 字段来设置 DNS 服务器 (效果等同于配置 /etc/resolv.conf 文件)': 'Applications can use the nameservers field to set DNS servers (equivalent to configuring the /etc/resolv.conf file).',
+  '应用可通过 hostAliases 字段来添加额外的域名解析规则（效果等同于向 /etc/hosts 文件中追加条目）': 'Applications can use the hostAliases field to add additional domain resolution rules (effectively equivalent to appending entries to the /etc/hosts file).',
+  '应用可通过 nameservers 字段来设置 DNS 服务器 （效果等同于配置 /etc/resolv.conf 文件）': 'Applications can use the nameservers field to set DNS servers (equivalent to configuring the /etc/resolv.conf file).',
   应用ID: 'Application ID',
   '请输入模块名称，不填则默认为主模块': 'Please enter the module name, leave it blank for the default main module.',
   '请输入 IP': 'Please enter the IP',
@@ -2901,5 +2901,11 @@ export default {
   '插件发布成功后，才会内置仪表盘': 'The dashboard will be built-in after the plugin is successfully released',
   '平台内置了开发框架仪表盘，应用需开启 Metric 配置并在代码中上报 Metric 数据后，才可在仪表盘中查看相关数据': 'The platform has a built-in development framework dashboard. Applications need to enable Metric configuration and report Metric data in the code to view related data on the dashboard.',
   '仪表盘可以提供插件运行指标，如执行次数、执行成功率和失败率等，帮助您了解插件的运行状态。GO 语言的蓝鲸应用插件暂未提供内置仪表盘功能，您可以参考相关指引自行实现该功能。': 'The dashboard can provide plugin operation metrics, such as execution times, success rate, and failure rate, helping you understand the plugin\'s operational status. The Blue Whale application plugin in the Go language does not currently offer a built-in dashboard feature. You can refer to the relevant guidelines to implement this feature yourself.',
-  数据概览: "Data Overview"
+  数据概览: "Data Overview",
+  我已知晓风险: 'I acknowledge the risks',
+  应用描述文件介绍: 'Application Description File Overview',
+  请先确认风险后再保存: 'Please confirm the risks before saving',
+  '确认编辑{t}？': 'Confirm edit {t}?',
+  '由应用描述文件 app_desc.yaml 定义': 'Defined by the application description file app_desc.yaml',
+  '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。': 'The current value is defined by the application description file. If you continue to edit, please delete the relevant configurations in the file first, or your changes may be overwritten during redeployment.',
 };

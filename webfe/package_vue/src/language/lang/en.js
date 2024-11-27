@@ -2903,9 +2903,9 @@ export default {
   '仪表盘可以提供插件运行指标，如执行次数、执行成功率和失败率等，帮助您了解插件的运行状态。GO 语言的蓝鲸应用插件暂未提供内置仪表盘功能，您可以参考相关指引自行实现该功能。': 'The dashboard can provide plugin operation metrics, such as execution times, success rate, and failure rate, helping you understand the plugin\'s operational status. The Blue Whale application plugin in the Go language does not currently offer a built-in dashboard feature. You can refer to the relevant guidelines to implement this feature yourself.',
   数据概览: "Data Overview",
   我已知晓风险: 'I acknowledge the risks',
-  应用描述文件介绍: 'Application descriptor introduction',
+  应用描述文件介绍: 'Application Description File Overview',
   请先确认风险后再保存: 'Please confirm the risks before saving',
   '确认编辑{t}？': 'Confirm edit {t}?',
-  '由应用描述文件 app_desc.yaml 定义': 'Defined by application descriptor file app_desc.yaml',
-  '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。': 'The current value is defined by the application descriptor file. If you continue to edit, it is recommended to first remove the relevant configuration from the application descriptor file, otherwise the filled values will be overwritten during re-deployment.',
+  '由应用描述文件 app_desc.yaml 定义': 'Defined by the application description file app_desc.yaml',
+  '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。': 'The current value is defined by the application description file. If you continue to edit, please delete the relevant configurations in the file first, or your changes may be overwritten during redeployment.',
 };

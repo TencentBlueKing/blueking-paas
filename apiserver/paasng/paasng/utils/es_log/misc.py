@@ -18,12 +18,12 @@
 import datetime
 import logging
 import re
+from _operator import attrgetter
 from collections import Counter, defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 import arrow
 import pytz
-from _operator import attrgetter
 from elasticsearch_dsl.response.aggs import FieldBucketData
 from rest_framework.fields import get_attribute
 
@@ -84,7 +84,7 @@ def format_timestamp(
     elif input_format == "timestamp[ns]":
         return int(value) // 1000
     else:
-        return int(arrow.get(value).timestamp)
+        return arrow.get(value).int_timestamp
 
 
 def count_filters_options(logs: List, properties: Dict[str, FieldFilter]) -> List[FieldFilter]:

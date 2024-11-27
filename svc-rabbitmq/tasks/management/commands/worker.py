@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 import random
 import signal
@@ -26,7 +27,7 @@ from time import sleep
 
 from django.conf import settings
 from django.core.cache import cache
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django_q.brokers import get_broker
 from django_q.cluster import Cluster as QCluster
 from django_q.cluster import Sentinel as QSentinel
@@ -64,10 +65,10 @@ class Sentinel(QSentinel):
             self.leader = leader
 
     def guard(self):
-        logger.info(_('{} guarding cluster at {}').format(self.name, self.pid))
+        logger.info(_("{} guarding cluster at {}").format(self.name, self.pid))
         self.start_event.set()
         Stat(self).save()
-        logger.info(_('Q Cluster-{} running.').format(self.parent_pid))
+        logger.info(_("Q Cluster-{} running.").format(self.parent_pid))
         self.schedule()
         counter = 0
         cycle = Conf.GUARD_CYCLE  # guard loop sleep in seconds
@@ -139,11 +140,11 @@ class Command(qcluster.Command):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--run-once',
-            action='store_true',
-            dest='run_once',
+            "--run-once",
+            action="store_true",
+            dest="run_once",
             default=False,
-            help='Run once and then stop.',
+            help="Run once and then stop.",
         )
 
     def handle(self, *args, **options):
@@ -153,5 +154,5 @@ class Command(qcluster.Command):
         signal.signal(signal.SIGTERM, q.sig_handler)
         signal.signal(signal.SIGINT, q.sig_handler)
 
-        if options.get('run_once', False):
+        if options.get("run_once", False):
             q.stop()

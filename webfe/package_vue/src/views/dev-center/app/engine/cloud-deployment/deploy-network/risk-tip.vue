@@ -10,7 +10,9 @@
         class="risk-alert"
       >
         <i class="paasng-icon paasng-paas-remind-fill" />
-        {{ $t('当前值由应用描述文件定义，继续编辑可能导致数据冲突，并存在被描述文件覆盖的风险。') }}
+        {{
+          $t('当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。')
+        }}
       </div>
     </bk-alert>
     <bk-checkbox

@@ -2907,5 +2907,5 @@ export default {
   请先确认风险后再保存: 'Please confirm the risks before saving',
   '确认编辑{t}？': 'Confirm edit {t}?',
   '由应用描述文件 app_desc.yaml 定义': 'Defined by application descriptor file app_desc.yaml',
-  '当前值由应用描述文件定义，继续编辑可能导致数据冲突，并存在被描述文件覆盖的风险。': 'The current value is defined by the application descriptor file. Continuing to edit may lead to data conflicts and there is a risk of being overwritten by the descriptor file.',
+  '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。': 'The current value is defined by the application descriptor file. If you continue to edit, it is recommended to first remove the relevant configuration from the application descriptor file, otherwise the filled values will be overwritten during re-deployment.',
 };

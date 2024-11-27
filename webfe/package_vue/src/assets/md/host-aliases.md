@@ -1,4 +1,4 @@
-本配置项可通过两种方式定义：在线表单或代码仓库中的应用描述文件`app_desc.yaml`，推荐使用应用描述文件定义。
+本配置项可通过两种方式定义：在线表单或应用描述文件，推荐使用应用描述文件。
 
 #### 在线表单
 
@@ -6,7 +6,7 @@
 
 #### 应用描述文件
 
-对于通过源码部署的应用，请在构建目录中的 app_desc.yaml 文件中定义`spec.domainResolution.hostAliases`来添加额外的域名解析规则，效果等同于向 /etc/hosts 文件中追加条目。
+对于通过源码部署的应用，请在构建目录中的`app_desc.yaml`文件中定义`spec.domainResolution.hostAliases`来添加额外的域名解析规则，效果等同于向 /etc/hosts 文件中追加条目。
 
 以下是示例文件：
 ```yaml

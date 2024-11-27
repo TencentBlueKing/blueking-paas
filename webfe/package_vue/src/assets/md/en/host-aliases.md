@@ -1,4 +1,4 @@
-This configuration item can be defined in two ways: through an online form or in the application description file `app_desc.yaml` in the code repository. It is recommended to use the application description file for definition.
+This configuration item can be defined in two ways: through an online form or the application description file. It is recommended to use the application description file for definition.
 
 #### Online Form
 

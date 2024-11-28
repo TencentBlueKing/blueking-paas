@@ -87,17 +87,6 @@ class DeploymentDescription(TimestampedModel):
 
     spec: v1alpha2.BkAppSpec = BkAppSpecField(verbose_name="bkapp.spec", null=True, default=None)
 
-    def get_procfile(self) -> Dict[str, str]:
-        """[Deprecated] get Procfile, should only be used to generate Procfile for buildpack
-
-        Procfile is a dict containing a process type and its corresponding command
-        """
-        if self.spec is not None:
-            return {process.name: process.get_proc_command() for process in self.spec.processes}
-
-        processes = self.runtime.get("processes", {})
-        return {key: process["command"] for key, process in processes.items()}
-
     def get_deploy_hooks(self) -> HookList:
         """从 spec 提取 hook 配置, 用于普通应用部署流程.
 

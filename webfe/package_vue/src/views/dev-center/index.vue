@@ -3,7 +3,7 @@
     class="bk-apps-wrapper"
     :style="{
       'min-height': `${minHeight}px`,
-      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`
+      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
     }"
   >
     <div
@@ -11,21 +11,32 @@
       class="no-app-list-wrap"
     >
       <div class="application-blank">
-        <h2> {{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }} </h2>
-        <p> {{ $t('您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。') }} </p>
+        <h2>{{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }}</h2>
         <p>
-          {{ $t('您可将应用发布到') }} <a
+          {{
+            $t(
+              '您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。'
+            )
+          }}
+        </p>
+        <p>
+          {{ $t('您可将应用发布到') }}
+          <a
             class="blue"
             :href="GLOBAL.LINK.APP_MARKET"
             target="_blank"
-          > {{ $t('蓝鲸应用市场') }} </a> {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }}
+          >
+            {{ $t('蓝鲸应用市场') }}
+          </a>
+          {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }}
         </p>
         <p>
           <router-link
             :to="{ name: 'createApp' }"
             class="paas-operation-icon"
           >
-            <i class="paasng-icon paasng-plus" /> {{ $t('创建应用') }}
+            <i class="paasng-icon paasng-plus" />
+            {{ $t('创建应用') }}
           </router-link>
           <router-link
             v-if="userFeature.MGRLEGACY"
@@ -43,55 +54,71 @@
             <a
               href=""
               target="_blank"
-            > {{ $t('快速开始应用开发') }} </a>
+            >
+              {{ $t('快速开始应用开发') }}
+            </a>
           </h2>
           <div class="application-list-text">
-            <p> {{ $t('新手福利，这里有详细的Step by Step入门指南') }} </p>
+            <p>{{ $t('新手福利，这里有详细的Step by Step入门指南') }}</p>
             <p>
               <a
                 href="javascript:"
                 target="_blank"
-              >[{{ $t('新手入门') }}]</a>
+              >
+                [{{ $t('新手入门') }}]
+              </a>
               <a
                 href="javascript:"
                 target="_blank"
-              >[{{ $t('开发指南') }}]</a>
+              >
+                [{{ $t('开发指南') }}]
+              </a>
             </p>
           </div>
           <a
             href="javascript:"
             target="_blank"
-          ><img src="/static/images/application-list-1.png"></a>
+          >
+            <img src="/static/images/application-list-1.png" />
+          </a>
         </li>
         <li>
           <h2>
             <a
               href="javascript:"
               target="_blank"
-            > {{ $t('使用预发布环境') }} </a>
+            >
+              {{ $t('使用预发布环境') }}
+            </a>
           </h2>
           <div class="application-list-text">
-            <p> {{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }} </p>
+            <p>{{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }}</p>
           </div>
           <a
             href="javascript:"
             target="_blank"
-          ><img src="/static/images/application-list-2.png"></a>
+          >
+            <img src="/static/images/application-list-2.png" />
+          </a>
         </li>
         <li>
           <h2>
             <a
               href="javascript:"
               target="_blank"
-            > {{ $t('发布到应用市场') }} </a>
+            >
+              {{ $t('发布到应用市场') }}
+            </a>
           </h2>
           <div class="application-list-text">
-            <p> {{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }} </p>
+            <p>{{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }}</p>
           </div>
           <a
             href="javascript:"
             target="_blank"
-          ><img src="/static/images/application-list-3.png"></a>
+          >
+            <img src="/static/images/application-list-3.png" />
+          </a>
         </li>
       </ul>
     </div>
@@ -118,7 +145,10 @@
             </div>
             <!-- 全部应用、我创建的 -->
             <section class="application-overview-module">
-              <bk-radio-group v-model="curAppCreationType" @change="handlerAppOverviewChange">
+              <bk-radio-group
+                v-model="curAppCreationType"
+                @change="handlerAppOverviewChange"
+              >
                 <bk-radio-button value="all">
                   <span>{{ $t('全部应用') }}</span>
                   <span class="app-count">{{ appExtraData.all_app_count || 0 }}</span>
@@ -137,14 +167,14 @@
               <div
                 v-for="item in appTypeList"
                 :key="item.key"
-                :class="['filter-item', { 'active': item.key === curAppTypeActive }]"
+                :class="['filter-item', { active: item.key === curAppTypeActive }]"
                 @click="switchAppType(item)"
               >
                 {{ item.text }}
               </div>
             </div>
             <!-- 筛选 -->
-            <section :class="['app-filter-module', { 'en': isEnglishEnv }]">
+            <section :class="['app-filter-module', { en: isEnglishEnv }]">
               <bk-popover
                 theme="light navigation-message"
                 :ext-cls="`app-filter-popover-cls ${isEnglishEnv ? 'en' : ''}`"
@@ -161,7 +191,7 @@
                     <li
                       v-for="item in filterList"
                       :key="item.value"
-                      :class="['nav-item', { 'active': item.text === curFilterValue }]"
+                      :class="['nav-item', { active: item.text === curFilterValue }]"
                       @click="handleFilterApp(item)"
                     >
                       {{ $t(item.text) }}
@@ -170,17 +200,14 @@
                 </template>
               </bk-popover>
               <div
-                :class="[
-                  'filter-right-icon',
-                  { active: filterActive }
-                ]"
+                :class="['filter-right-icon', { active: filterActive }]"
                 v-bk-tooltips="{ content: filterTips }"
                 @click.stop="handleTtogleOrder"
               >
                 <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
               </div>
             </section>
-            <div :class="['app-list-search', { 'en': isEnglishEnv }]">
+            <div :class="['app-list-search', { en: isEnglishEnv }]">
               <bk-input
                 v-model="filterKey"
                 clearable
@@ -205,7 +232,6 @@
               </bk-button>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -222,9 +248,10 @@
         @filter-change="handleFilterChange"
         @page-change="handlePageChange"
         @page-limit-change="handlePageLimitChange"
-        @row-mouse-enter="(index) => curHoverRowIndex = index"
+        @row-mouse-enter="(index) => (curHoverRowIndex = index)"
         @row-mouse-leave="curHoverRowIndex = -1"
-        @cell-click="handleCellClick">
+        @cell-click="handleCellClick"
+      >
         <div slot="empty">
           <table-empty
             :keyword="tableEmptyConf.keyword"
@@ -233,7 +260,10 @@
             @clear-filter="clearFilterKey"
           />
         </div>
-        <bk-table-column label="" :width="50">
+        <bk-table-column
+          label=""
+          :width="50"
+        >
           <template slot-scope="{ row }">
             <div
               :class="['star-wrapper', { 'off-shelf': !row.application.is_active }]"
@@ -248,7 +278,10 @@
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column type="expand" width="0">
+        <bk-table-column
+          type="expand"
+          width="0"
+        >
           <template slot-scope="props">
             <bk-table
               v-if="props.row.application.config_info.engine_enabled"
@@ -256,46 +289,67 @@
               :outer-border="false"
               size="small"
               ext-cls="child-modules-table-cls"
-              :header-cell-style="{background: '#fff', borderRight: 'none'}">
-              <bk-table-column prop="name" :label="$t('模块')">
+              :header-cell-style="{ background: '#fff', borderRight: 'none' }"
+            >
+              <bk-table-column
+                prop="name"
+                :label="$t('模块')"
+              >
                 <template slot-scope="childProps">
-                  <span class="link" @click.stop="toModule(props.row, childProps.row)">
+                  <span
+                    class="link"
+                    @click.stop="toModule(props.row, childProps.row)"
+                  >
                     {{ childProps.row.name }}
                     <span
                       v-if="childProps.row.is_default"
                       style="color: #979ba5"
-                    >({{ $t('主模块') }})</span>
+                    >
+                      ({{ $t('主模块') }})
+                    </span>
                   </span>
                 </template>
               </bk-table-column>
-              <bk-table-column prop="language" :label="$t('语言')">
+              <bk-table-column
+                prop="language"
+                :label="$t('语言')"
+              >
                 <template slot-scope="{ row }">
                   {{ row.language || '--' }}
                 </template>
               </bk-table-column>
-              <bk-table-column prop="created" :label="$t('创建时间')"></bk-table-column>
+              <bk-table-column
+                prop="created"
+                :label="$t('创建时间')"
+              ></bk-table-column>
               <bk-table-column :label="$t('操作')">
                 <template slot-scope="{ row }">
                   <template v-if="Object.keys(props.row.application.deploy_info)?.length">
                     <a
                       href="javascript:void(0);"
                       class="blue"
-                      style="margin-right: 8px;"
+                      style="margin-right: 8px"
                       @click="deploy(props.row, row)"
-                    > {{ $t('部署') }} </a>
+                    >
+                      {{ $t('部署') }}
+                    </a>
                     <!-- props 当前应用项，row 当前应用模块项 -->
                     <a
                       href="javascript:void(0);"
                       class="blue"
                       @click="viewLog(props.row, row)"
-                    > {{ $t('查看日志') }} </a>
+                    >
+                      {{ $t('查看日志') }}
+                    </a>
                   </template>
                   <template v-else>
                     <a
                       href="javascript:void(0);"
                       class="blue"
                       @click="applyCludeApi(props.row)"
-                    > {{ $t('申请 云API 权限') }} </a>
+                    >
+                      {{ $t('申请 云API 权限') }}
+                    </a>
                   </template>
                 </template>
               </bk-table-column>
@@ -303,7 +357,7 @@
             <div class="add-module-cls">
               <bk-button
                 v-if="props.row.creation_allowed"
-                style="margin-left: -13px;"
+                style="margin-left: -13px"
                 theme="primary"
                 icon="plus-circle-shape"
                 text
@@ -314,7 +368,7 @@
               </bk-button>
               <bk-button
                 v-else
-                style="margin-left: -13px;"
+                style="margin-left: -13px"
                 icon="plus-circle-shape"
                 text
                 size="small"
@@ -323,12 +377,18 @@
                 <span
                   v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
                   v-dashed
-                > {{ $t('点击创建新模块') }} </span>
+                >
+                  {{ $t('点击创建新模块') }}
+                </span>
               </bk-button>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('应用')" prop="name" :min-width="280">
+        <bk-table-column
+          :label="$t('应用')"
+          prop="name"
+          :min-width="280"
+        >
           <template slot-scope="{ row }">
             <div :class="['app-name', { 'off-shelf': !row.application.is_active }]">
               <img
@@ -336,23 +396,34 @@
                 class="app-logo"
               />
               <div class="info">
-                <span class="name" @click.stop="toPage(row)">{{ row.application.name }}</span>
+                <span
+                  class="name"
+                  @click.stop="toPage(row)"
+                >
+                  {{ row.application.name }}
+                </span>
                 <span class="code">{{ row.application.code }}</span>
               </div>
             </div>
           </template>
         </bk-table-column>
-        <bk-table-column :label="$t('模块数量')" :width="135">
+        <bk-table-column
+          :label="$t('模块数量')"
+          :width="135"
+        >
           <template slot-scope="{ row, $index }">
             <span
               v-if="row.application.config_info.engine_enabled"
               :class="['module-name', { 'off-shelf': !row.application.is_active }]"
               @click.stop="handleExpandRow(row)"
-            > {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
+            >
+              {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
               <i
                 v-if="expandRowKeys.includes(row.application.code) || $index === curHoverRowIndex"
                 class="paasng-icon unfold-icon"
-                :class="expandRowKeys.includes(row.application.code) ? 'paasng-angle-double-up' : 'paasng-angle-double-down'"
+                :class="
+                  expandRowKeys.includes(row.application.code) ? 'paasng-angle-double-up' : 'paasng-angle-double-down'
+                "
               />
             </span>
             <span v-else>--</span>
@@ -383,10 +454,13 @@
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
               <template v-if="row.application.is_active">
                 <div
-                  v-if="userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)"
+                  v-if="
+                    userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)
+                  "
                   v-bk-tooltips="{
-                    content: row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用'),
-                    allowHTML: true
+                    content:
+                      row.application.type === 'cloud_native' ? $t('查看迁移进度') : $t('点击可迁移为云原生应用'),
+                    allowHTML: true,
                   }"
                   class="migration-wrapper"
                   @click.stop="showAppMigrationDialog(row.application)"
@@ -402,13 +476,16 @@
           :render-header="statusRenderHeader"
         >
           <template slot-scope="{ row }">
-            <i :class="['dot', { 'successful': row.application.is_active }]"></i>
+            <i :class="['dot', { successful: row.application.is_active }]"></i>
             <span :class="{ 'off-shelf': !row.application.is_active }">
               {{ row.application.is_active ? $t('正常') : $t('下架') }}
             </span>
           </template>
         </bk-table-column>
-        <bk-table-column label="" :width="isEnglishEnv ? 440 : 260">
+        <bk-table-column
+          label=""
+          :width="isEnglishEnv ? 440 : 260"
+        >
           <template slot-scope="{ row }">
             <div
               v-if="!Object.keys(row.application.deploy_info).length"
@@ -428,7 +505,7 @@
                 v-bk-tooltips.top="{
                   content: $t('应用未设置访问路径'),
                   disabled: row.market_config.source_tp_url,
-                  allowHTML: true
+                  allowHTML: true,
                 }"
                 class="link-btn-cls right-text"
               >
@@ -459,9 +536,11 @@
                       v-bk-tooltips="{
                         content: $t('应用未部署，不能访问'),
                         placement: 'top',
-                        allowHTML: true
-                      }">
-                      {{ $t('访问预发布环境') }} <i class="paasng-icon paasng-external-link" />
+                        allowHTML: true,
+                      }"
+                    >
+                      {{ $t('访问预发布环境') }}
+                      <i class="paasng-icon paasng-external-link" />
                     </span>
                   </template>
                   <template v-else>
@@ -482,9 +561,11 @@
                       v-bk-tooltips="{
                         content: $t('应用未部署，不能访问'),
                         placement: 'top',
-                        allowHTML: true
-                      }">
-                      {{ $t('访问生产环境') }} <i class="paasng-icon paasng-external-link" />
+                        allowHTML: true,
+                      }"
+                    >
+                      {{ $t('访问生产环境') }}
+                      <i class="paasng-icon paasng-external-link" />
                     </span>
                   </template>
                   <template v-else>
@@ -559,7 +640,8 @@ export default {
       next(async (vm) => {
         if (!userHasApp) {
           vm.isFirstLoading = true;
-          await auth.requestOffApp()
+          await auth
+            .requestOffApp()
             .then((flag) => {
               vm.userHasApp = flag;
             })
@@ -578,7 +660,8 @@ export default {
       next(async () => {
         if (!userHasApp) {
           this.isFirstLoading = true;
-          await auth.requestOffApp()
+          await auth
+            .requestOffApp()
             .then((flag) => {
               this.userHasApp = flag;
             })
@@ -669,7 +752,10 @@ export default {
       },
       PAAS_APP_TYPE,
       curAppCreationType: 'all',
-      versionFilters: [{ text: '内部版', value: '内部版' }, { text: '外部版', value: '外部版' }],
+      versionFilters: [
+        { text: '内部版', value: '内部版' },
+        { text: '外部版', value: '外部版' },
+      ],
       expandRowKeys: [],
       curHoverRowIndex: -1,
       isFilterConditionPresent: false,
@@ -704,7 +790,9 @@ export default {
       return FILTER_TIP[this.sortValue];
     },
     filterActive() {
-      return this.sortValue.includes('code') ? this.sortValue.indexOf('-') !== -1 : !(this.sortValue.indexOf('-') !== -1);
+      return this.sortValue.includes('code')
+        ? this.sortValue.indexOf('-') !== -1
+        : !(this.sortValue.indexOf('-') !== -1);
     },
   },
   watch: {
@@ -718,6 +806,7 @@ export default {
     },
   },
   created() {
+    this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' }, false);
     this.getAppCategory(false);
     if (this.$route.query.include_inactive) {
       this.appFilter.includeInactive = true;
@@ -837,7 +926,7 @@ export default {
         name: routeName,
         params: {
           id: appItem.application.code,
-          moduleId: appItem.application.modules.find(item => item.is_default).name,
+          moduleId: appItem.application.modules.find((item) => item.is_default).name,
         },
       });
     },
@@ -999,10 +1088,10 @@ export default {
       }
       this.tableEmptyConf.keyword = '';
     },
-    handleFilterApp(item) {
+    handleFilterApp(item, isRequest = true) {
       this.curFilterValue = item.text;
       this.sortValue = item.value;
-      this.fetchAppList();
+      isRequest && this.fetchAppList();
     },
     // 切换排序规则
     handleTtogleOrder() {
@@ -1024,7 +1113,7 @@ export default {
     // 模块详情展开处理
     handleExpandRow(row) {
       if (this.expandRowKeys.includes(row.application.code)) {
-        this.expandRowKeys = this.expandRowKeys.filter(item => item !== row.application.code);
+        this.expandRowKeys = this.expandRowKeys.filter((item) => item !== row.application.code);
         return;
       }
       this.expandRowKeys.push(row.application.code);
@@ -1072,7 +1161,7 @@ export default {
 
     handleKeyUp(value, event) {
       // 支持 delete 删除
-      if ((event.key === 'Delete') && this.filterKey !== '') {
+      if (event.key === 'Delete' && this.filterKey !== '') {
         this.filterKey = '';
       }
     },
@@ -1086,490 +1175,490 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    $customize-disabled-color: #C4C6CC;
+$customize-disabled-color: #c4c6cc;
 
-    .app-list-search {
-      width: 320px;
+.app-list-search {
+  width: 320px;
+}
+
+@media (max-width: 1350px) {
+  .app-list-search {
+    width: 300px;
+  }
+  .app-list-search.en {
+    width: 260px;
+  }
+}
+
+@media (max-width: 1300px) {
+  .app-list-search.en {
+    width: 220px;
+  }
+}
+
+.bk-apps-wrapper {
+  width: calc(100% - 48px);
+}
+
+.app-operation-section {
+  position: relative;
+  button {
+    i {
+      position: relative;
+      top: 2px;
+      font-size: 20px;
+      opacity: 0;
     }
-
-    @media (max-width: 1350px) {
-      .app-list-search {
-        width: 300px;
-      }
-      .app-list-search.en {
-        width: 260px;
-      }
+    i.cloud-icon {
+      left: -3px;
     }
+  }
+  .right-text {
+    margin-left: 14px;
+  }
+}
 
-    @media (max-width: 1300px) {
-      .app-list-search.en {
-        width: 220px;
-      }
+.app-type-wrapper {
+  display: flex;
+  align-items: center;
+
+  .migration-wrapper {
+    margin-left: 1px;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    transform: translateY(2px);
+    border-radius: 2px;
+
+    i {
+      font-size: 14px;
+      color: #3a84ff;
     }
-
-    .bk-apps-wrapper {
-        width: calc(100% - 48px);
+    &:hover {
+      background-color: #e1ecff;
     }
+  }
+}
 
-    .app-operation-section {
-        position: relative;
-        button {
-            i {
-                position: relative;
-                top: 2px;
-                font-size: 20px;
-                opacity: 0;
-            }
-            i.cloud-icon {
-                left: -3px;
-            }
-        }
-        .right-text {
-            margin-left: 14px;
-        }
-    }
+.shaixuan,
+.shaixuan input {
+  cursor: pointer;
+}
 
-    .app-type-wrapper {
+.paas-operation-icon {
+  color: #fff;
+  font-size: 14px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 18px;
+  width: 120px;
+  text-align: center;
+  margin-left: 19px;
+  background: #3a84ff;
+  transition: all 0.5s;
+
+  &:hover {
+    background: #4b9cf2;
+  }
+
+  .paasng-icon {
+    margin-right: 5px;
+  }
+}
+
+div.choose-panel {
+  input {
+    appearance: none;
+  }
+}
+
+label {
+  display: inline;
+  cursor: pointer;
+}
+
+.button-holder {
+  display: block;
+  line-height: 30px;
+}
+
+.paas-application-tit {
+  padding: 24px 0 16px;
+  color: #666;
+  line-height: 36px;
+  position: relative;
+  .mr8 {
+    margin-right: 8px;
+  }
+}
+
+.paas-application-tit .fright {
+  width: 100%;
+  .app-title-left {
+    float: left;
+    display: flex;
+  }
+  .app-title-right {
+    float: right;
+    display: flex;
+    .paas-filter-wrapper {
       display: flex;
       align-items: center;
-
-      .migration-wrapper {
-        margin-left: 1px;
-        width: 24px;
-        height: 24px;
+      height: 32px;
+      margin-top: 3px;
+      padding: 4px;
+      background: #eaebf0;
+      color: #63656e;
+      border-radius: 2px;
+      .filter-item {
+        position: relative;
+        font-size: 12px;
         line-height: 24px;
-        text-align: center;
-        transform: translateY(2px);
-        border-radius: 2px;
-
-        i {
-          font-size: 14px;
-          color: #3A84FF;
-        }
+        padding: 0 10px;
         &:hover {
-          background-color: #E1ECFF;
-        }
-      }
-    }
-
-    .shaixuan,
-    .shaixuan input {
-        cursor: pointer;
-    }
-
-    .paas-operation-icon {
-        color: #fff;
-        font-size: 14px;
-        height: 36px;
-        line-height: 36px;
-        border-radius: 18px;
-        width: 120px;
-        text-align: center;
-        margin-left: 19px;
-        background: #3A84FF;
-        transition: all .5s;
-
-        &:hover {
-            background: #4b9cf2;
-        }
-
-        .paasng-icon {
-            margin-right: 5px;
-        }
-    }
-
-    div.choose-panel {
-        input {
-            appearance: none;
-        }
-    }
-
-    label {
-        display: inline;
-        cursor: pointer;
-    }
-
-    .button-holder {
-        display: block;
-        line-height: 30px;
-    }
-
-    .paas-application-tit {
-        padding: 24px 0 16px;
-        color: #666;
-        line-height: 36px;
-        position: relative;
-        .mr8 {
-            margin-right: 8px;
-        }
-    }
-
-    .paas-application-tit .fright {
-        width: 100%;
-        .app-title-left {
-            float: left;
-            display: flex;
-        }
-        .app-title-right {
-            float: right;
-            display: flex;
-            .paas-filter-wrapper {
-                display: flex;
-                align-items: center;
-                height: 32px;
-                margin-top: 3px;
-                padding: 4px;
-                background: #EAEBF0;
-                color: #63656E;
-                border-radius: 2px;
-                .filter-item {
-                  position: relative;
-                    font-size: 12px;
-                    line-height: 24px;
-                    padding: 0 10px;
-                    &:hover {
-                        cursor: pointer;
-                    }
-                    &.active {
-                        background: #fff;
-                        color: #3A84FF;
-                        border-radius: 2px;
-                        z-index: 9;
-                        &::before {
-                          background: transparent
-                        }
-                        & + .filter-item::before {
-                          background: transparent
-                        }
-                    }
-                    &::before {
-                      content: '';
-                      position: absolute;
-                      width: 1px;
-                      height: 12px;
-                      background: #dddfe6;
-                      left: 0;
-                      top: 50%;
-                      transform: translateY(-50%)
-                    }
-                    &:first-child::before {
-                      background: transparent
-                    }
-                }
-            }
-        }
-    }
-
-    .clearfix::after {
-        content: "";
-        display: block;
-        height: 0;
-        clear:both;
-        visibility: hidden;
-    }
-    .clearfix {
-        *zoom: 1;
-    }
-
-    h2.application-title {
-        font-size: 16px;
-        margin-top: 8px;
-        font-weight: normal;
-        color: #313238;
-    }
-
-    .disabledBox .section-button {
-        color: #d7eadf;
-        cursor: not-allowed;
-    }
-
-    .disabledBox .section-button:hover {
-        color: #d7eadf;
-    }
-
-    .disabledBox .section-button img {
-        opacity: .3;
-    }
-
-    .paas-legacy-app {
-        position: absolute;
-        right: 482px;
-    }
-
-    .choose-box {
-        position: absolute;
-        right: -2px;
-        margin-top: 3px;
-        width: 92px;
-        overflow: hidden;
-        height: 30px;
-        border: solid 1px #afbec5;
-        padding: 0;
-        line-height: 30px;
-    }
-
-    .choose {
-        color: #666;
-        font-size: 14px;
-        height: 30px;
-        line-height: 30px;
-        width: 52px;
-        padding-left: 14px;
-    }
-    .application-choose img {
-        position: relative;
-        top: 2px;
-        padding-right: 8px;
-    }
-
-    .application-list {
-        overflow: hidden;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .application-list li {
-        float: left;
-        width: 360px;
-        text-align: center;
-        color: #333;
-        padding-bottom: 5px;
-    }
-
-    .application-list li h2 {
-        width: 100%;
-        height: 64px;
-        overflow: hidden;
-        font-weight: normal;
-    }
-
-    .application-list li h2 a {
-        color: #333;
-        font-size: 18px;
-        line-height: 64px;
-    }
-
-    .application-list-text {
-        height: 48px;
-        overflow: hidden;
-    }
-
-    .application-list-text a {
-        color: #3A84FF;
-        padding: 0 4px;
-    }
-
-    .application-list li img {
-        width: 360px;
-        height: 180px;
-        float: left;
-        margin-top: 24px;
-        box-shadow: 0 3px 5px #e5e5e5;
-        transition: all .5s;
-    }
-
-    .application-list li:hover img {
-        transform: translateY(-4px);
-    }
-
-    .application-blank {
-        background: #fff;
-        padding: 50px 30px;
-        text-align: center;
-        color: #666;
-        box-shadow: 0 2px 5px #e5e5e5;
-        margin-top: 2px;
-    }
-
-    .application-blank h2 {
-        font-size: 18px;
-        color: #333;
-        line-height: 42px;
-        padding: 14px 0;
-        font-weight: normal;
-    }
-
-    .application-blank .paas-operation-icon {
-        width: 140px;
-        margin: 34px auto 30px;
-    }
-
-    .choose-panel {
-        position: absolute;
-        right: 0;
-        top: 60px;
-        width: 228px;
-        border-top: solid 1px #e9edee;
-        box-shadow: 0 2px 5px #e5e5e5;
-        background: #fff;
-        height: auto;
-        overflow: hidden;
-        padding: 5px 0 0 0;
-        z-index: 99;
-        transition: all .5s;
-    }
-
-    .save {
-        width: 20px;
-        height: 24px;
-        vertical-align: middle;
-        background: url(/static/images/save-icon.png) center center no-repeat;
-    }
-
-    .save.on,
-    .save:hover {
-        background: url(/static/images/save-icon2.png) center center no-repeat;
-    }
-
-    .save:hover {
-        opacity: 0.4
-    }
-
-    .save.on:hover {
-        opacity: .65;
-    }
-
-    .overflow {
-        overflow: hidden;
-        padding: 0 20px;
-    }
-
-    .paasng-angle-up,
-    .paasng-angle-down {
-        padding-left: 3px;
-        transition: all .5s;
-        font-size: 12px;
-        font-weight: bold;
-        color: #5bd18b;
-    }
-
-    .open .section-button .paasng-angle-down {
-        position: absolute;
-        top: 8px;
-        right: 12px;
-    }
-
-    .ps-btn-visit-disabled .paasng-angle-down,
-    .ps-btn-visit:disabled .paasng-angle-down,
-    .ps-btn-visit[disabled] .paasng-angle-down {
-        color: #d7eadf !important;
-    }
-    .no-app-list-wrap {
-        width: 1180px;
-        margin: 0 auto;
-    }
-    .wrap {
-        width: 100%;
-        margin: 0 24px 24px;
-    }
-
-    .link-btn-cls {
-        display: inline-block;
-        height: 100%;
-    }
-    .migrate {
-      margin-left: 16px;
-    }
-
-    .app-list-table-cls {
-      .app-name {
-        display: flex;
-        img {
-          width: 32px;
-          height: 32px;
-        }
-        .info {
-          display: flex;
-          flex-flow: column;
-          justify-content: center;
-          margin-left: 8px;
-          font-size: 12px;
-          color: #63656E;
-          .name {
-            font-weight: 700;
-            font-size: 12px;
-            color: #3A84FF;
-            cursor: pointer;
-          }
-        }
-      }
-
-      .module-name {
-        display: inline-block;
-        padding: 5px 5px 5px 0px;
-        user-select: none;
-        color: #3A84FF;
-        cursor: pointer;
-      }
-
-      .star-wrapper {
-        i {
-          color: #979BA5;
-          font-size: 16px;
           cursor: pointer;
-
-          &.paasng-star-cover {
-            color: #FFB848 !important;
-          }
-
-          &:hover {
-            color: #63656E;
-          }
         }
-      }
-      i.dot {
-        display: inline-block;
-        margin-right: 8px;
-        width: 8px;
-        height: 8px;
-        background: #F0F1F5;
-        border: 1px solid $customize-disabled-color;
-        border-radius: 50%;
-
-        &.successful {
-          background: #E5F6EA;
-          border: 1px solid #3FC06D;
-        }
-      }
-
-      .off-shelf {
-        color: $customize-disabled-color;
-        &.app-name .info {
-          .name,
-          .code {
-            color: $customize-disabled-color;
+        &.active {
+          background: #fff;
+          color: #3a84ff;
+          border-radius: 2px;
+          z-index: 9;
+          &::before {
+            background: transparent;
+          }
+          & + .filter-item::before {
+            background: transparent;
           }
         }
-        &.module-name {
-          color: $customize-disabled-color;
+        &::before {
+          content: '';
+          position: absolute;
+          width: 1px;
+          height: 12px;
+          background: #dddfe6;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
         }
-      }
-
-      :deep(.add-module-cls) {
-        border-top: 1px solid #dfe0e5;
-        background-color: #FFF;
-        padding: 8px 16px;
-        button i.bk-icon.left-icon {
-          top: -1px;
+        &:first-child::before {
+          background: transparent;
         }
       }
     }
-    .application-overview-module {
-      .bk-radio-button-input.is-checked + .bk-radio-button-text .app-count {
-        background: #FFFFFF;
-      }
-      .app-count {
-        display: inline-block;
+  }
+}
+
+.clearfix::after {
+  content: '';
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+.clearfix {
+  *zoom: 1;
+}
+
+h2.application-title {
+  font-size: 16px;
+  margin-top: 8px;
+  font-weight: normal;
+  color: #313238;
+}
+
+.disabledBox .section-button {
+  color: #d7eadf;
+  cursor: not-allowed;
+}
+
+.disabledBox .section-button:hover {
+  color: #d7eadf;
+}
+
+.disabledBox .section-button img {
+  opacity: 0.3;
+}
+
+.paas-legacy-app {
+  position: absolute;
+  right: 482px;
+}
+
+.choose-box {
+  position: absolute;
+  right: -2px;
+  margin-top: 3px;
+  width: 92px;
+  overflow: hidden;
+  height: 30px;
+  border: solid 1px #afbec5;
+  padding: 0;
+  line-height: 30px;
+}
+
+.choose {
+  color: #666;
+  font-size: 14px;
+  height: 30px;
+  line-height: 30px;
+  width: 52px;
+  padding-left: 14px;
+}
+.application-choose img {
+  position: relative;
+  top: 2px;
+  padding-right: 8px;
+}
+
+.application-list {
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+}
+
+.application-list li {
+  float: left;
+  width: 360px;
+  text-align: center;
+  color: #333;
+  padding-bottom: 5px;
+}
+
+.application-list li h2 {
+  width: 100%;
+  height: 64px;
+  overflow: hidden;
+  font-weight: normal;
+}
+
+.application-list li h2 a {
+  color: #333;
+  font-size: 18px;
+  line-height: 64px;
+}
+
+.application-list-text {
+  height: 48px;
+  overflow: hidden;
+}
+
+.application-list-text a {
+  color: #3a84ff;
+  padding: 0 4px;
+}
+
+.application-list li img {
+  width: 360px;
+  height: 180px;
+  float: left;
+  margin-top: 24px;
+  box-shadow: 0 3px 5px #e5e5e5;
+  transition: all 0.5s;
+}
+
+.application-list li:hover img {
+  transform: translateY(-4px);
+}
+
+.application-blank {
+  background: #fff;
+  padding: 50px 30px;
+  text-align: center;
+  color: #666;
+  box-shadow: 0 2px 5px #e5e5e5;
+  margin-top: 2px;
+}
+
+.application-blank h2 {
+  font-size: 18px;
+  color: #333;
+  line-height: 42px;
+  padding: 14px 0;
+  font-weight: normal;
+}
+
+.application-blank .paas-operation-icon {
+  width: 140px;
+  margin: 34px auto 30px;
+}
+
+.choose-panel {
+  position: absolute;
+  right: 0;
+  top: 60px;
+  width: 228px;
+  border-top: solid 1px #e9edee;
+  box-shadow: 0 2px 5px #e5e5e5;
+  background: #fff;
+  height: auto;
+  overflow: hidden;
+  padding: 5px 0 0 0;
+  z-index: 99;
+  transition: all 0.5s;
+}
+
+.save {
+  width: 20px;
+  height: 24px;
+  vertical-align: middle;
+  background: url(/static/images/save-icon.png) center center no-repeat;
+}
+
+.save.on,
+.save:hover {
+  background: url(/static/images/save-icon2.png) center center no-repeat;
+}
+
+.save:hover {
+  opacity: 0.4;
+}
+
+.save.on:hover {
+  opacity: 0.65;
+}
+
+.overflow {
+  overflow: hidden;
+  padding: 0 20px;
+}
+
+.paasng-angle-up,
+.paasng-angle-down {
+  padding-left: 3px;
+  transition: all 0.5s;
+  font-size: 12px;
+  font-weight: bold;
+  color: #5bd18b;
+}
+
+.open .section-button .paasng-angle-down {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+}
+
+.ps-btn-visit-disabled .paasng-angle-down,
+.ps-btn-visit:disabled .paasng-angle-down,
+.ps-btn-visit[disabled] .paasng-angle-down {
+  color: #d7eadf !important;
+}
+.no-app-list-wrap {
+  width: 1180px;
+  margin: 0 auto;
+}
+.wrap {
+  width: 100%;
+  margin: 0 24px 24px;
+}
+
+.link-btn-cls {
+  display: inline-block;
+  height: 100%;
+}
+.migrate {
+  margin-left: 16px;
+}
+
+.app-list-table-cls {
+  .app-name {
+    display: flex;
+    img {
+      width: 32px;
+      height: 32px;
+    }
+    .info {
+      display: flex;
+      flex-flow: column;
+      justify-content: center;
+      margin-left: 8px;
+      font-size: 12px;
+      color: #63656e;
+      .name {
+        font-weight: 700;
         font-size: 12px;
-        height: 16px;
-        line-height: 16px;
-        padding: 0 8px;
-        background: #F0F1F5;
-        border-radius: 18px;
-        margin-left: 3px;
-        transform: translateY(-1px);
+        color: #3a84ff;
+        cursor: pointer;
       }
     }
+  }
+
+  .module-name {
+    display: inline-block;
+    padding: 5px 5px 5px 0px;
+    user-select: none;
+    color: #3a84ff;
+    cursor: pointer;
+  }
+
+  .star-wrapper {
+    i {
+      color: #979ba5;
+      font-size: 16px;
+      cursor: pointer;
+
+      &.paasng-star-cover {
+        color: #ffb848 !important;
+      }
+
+      &:hover {
+        color: #63656e;
+      }
+    }
+  }
+  i.dot {
+    display: inline-block;
+    margin-right: 8px;
+    width: 8px;
+    height: 8px;
+    background: #f0f1f5;
+    border: 1px solid $customize-disabled-color;
+    border-radius: 50%;
+
+    &.successful {
+      background: #e5f6ea;
+      border: 1px solid #3fc06d;
+    }
+  }
+
+  .off-shelf {
+    color: $customize-disabled-color;
+    &.app-name .info {
+      .name,
+      .code {
+        color: $customize-disabled-color;
+      }
+    }
+    &.module-name {
+      color: $customize-disabled-color;
+    }
+  }
+
+  :deep(.add-module-cls) {
+    border-top: 1px solid #dfe0e5;
+    background-color: #fff;
+    padding: 8px 16px;
+    button i.bk-icon.left-icon {
+      top: -1px;
+    }
+  }
+}
+.application-overview-module {
+  .bk-radio-button-input.is-checked + .bk-radio-button-text .app-count {
+    background: #ffffff;
+  }
+  .app-count {
+    display: inline-block;
+    font-size: 12px;
+    height: 16px;
+    line-height: 16px;
+    padding: 0 8px;
+    background: #f0f1f5;
+    border-radius: 18px;
+    margin-left: 3px;
+    transform: translateY(-1px);
+  }
+}
 </style>
 
 <style lang="scss">
@@ -1578,7 +1667,7 @@ section.app-filter-module {
   margin: 3px 16px 0;
   width: 117px;
   height: 32px;
-  background: #EAEBF0;
+  background: #eaebf0;
   border-radius: 2px;
   &.en {
     width: 135px;
@@ -1588,10 +1677,9 @@ section.app-filter-module {
     white-space: nowrap;
     display: block;
     .tippy-active {
-      background: #FFFFFF;
-      border: 1px solid #3A84FF;
+      background: #ffffff;
+      border: 1px solid #3a84ff;
       border-radius: 2px 0 0 2px;
-
     }
   }
 
@@ -1599,7 +1687,7 @@ section.app-filter-module {
     position: relative;
     padding: 0 8px;
     font-size: 12px;
-    color: #63656E;
+    color: #63656e;
     flex: 1;
     line-height: 32px;
     cursor: pointer;
@@ -1607,7 +1695,7 @@ section.app-filter-module {
     white-space: nowrap;
     overflow: hidden;
     &:hover {
-      background: #DCDEE5;
+      background: #dcdee5;
       border-radius: 2px 0 0 2px;
     }
   }
@@ -1620,27 +1708,27 @@ section.app-filter-module {
     justify-content: center;
 
     &::before {
-      content: "";
+      content: '';
       position: absolute;
       left: 0;
       top: 50%;
       transform: translateY(-50%);
       height: 14px;
       width: 1px;
-      background-color: #DCDEE5;
+      background-color: #dcdee5;
     }
 
     i {
-      color: #979BA5;
+      color: #979ba5;
     }
 
     &:hover {
-      background: #DCDEE5;
+      background: #dcdee5;
       border-radius: 0 2px 2px 0;
     }
     &.active {
       i {
-        color: #3A84FF;
+        color: #3a84ff;
       }
     }
   }
@@ -1650,8 +1738,8 @@ section.app-filter-module {
 }
 .app-filter-popover-cls {
   width: 87px;
-  background: #FFFFFF;
-  border: 1px solid #DCDEE5;
+  background: #ffffff;
+  border: 1px solid #dcdee5;
   box-shadow: 0 2px 6px 0 #0000001a;
   border-radius: 2px;
   height: 104px;
@@ -1671,29 +1759,29 @@ section.app-filter-module {
       align-items: center;
       height: 32px;
       padding: 12px;
-      background: #FFFFFF;
+      background: #ffffff;
       font-size: 12px;
-      color: #63656E;
+      color: #63656e;
       cursor: pointer;
       &:hover {
-        background: #F5F7FA;
+        background: #f5f7fa;
       }
       &.active {
-        color: #3A84FF;
-        background: #E1ECFF;
+        color: #3a84ff;
+        background: #e1ecff;
       }
     }
   }
 }
 .app-list-table-cls {
   .bk-table-row.expanded .bk-table-column-expand .bk-table-expand-icon i {
-    color: #63656E;
+    color: #63656e;
   }
   // height
-  &>.bk-table-body-wrapper>table tbody>tr {
+  & > .bk-table-body-wrapper > table tbody > tr {
     height: 56px;
 
-    &.hover-row  {
+    &.hover-row {
       td:nth-child(3) {
         cursor: pointer;
       }
@@ -1702,17 +1790,17 @@ section.app-filter-module {
 
   .is-expanded-row td.bk-table-expanded-cell {
     padding: 0 52px !important;
-    background-color: #FAFBFD;
+    background-color: #fafbfd;
   }
   .bk-table-pagination-wrapper {
-    background-color: #FFFFFF;
+    background-color: #ffffff;
   }
 
   .child-modules-table-cls {
     .bk-table-header-wrapper thead tr th {
-      background: #F5F7FA !important;
+      background: #f5f7fa !important;
     }
-    .bk-table-body-wrapper table tbody>tr {
+    .bk-table-body-wrapper table tbody > tr {
       height: 42px !important;
       cursor: default;
       td {
@@ -1721,7 +1809,7 @@ section.app-filter-module {
     }
     .link {
       cursor: pointer;
-      color: #3A84FF;
+      color: #3a84ff;
     }
   }
 }

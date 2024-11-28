@@ -55,7 +55,7 @@ def validate_spec2(spec2):
     if "modules" in spec2 and not isinstance(spec2.get("modules"), dict):
         raise TypeError("'modules' must be a dictionary if present in the input data.")
 
-    if "modules" in spec2 and not isinstance(spec2.get("modules"), dict):
+    if "module" in spec2 and not isinstance(spec2.get("module"), dict):
         raise TypeError("'module' must be a dictionary if present in the input data.")
 
 

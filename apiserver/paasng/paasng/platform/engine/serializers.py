@@ -88,18 +88,25 @@ class CreateDeploymentSLZ(serializers.Serializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
 
-        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_image_digest(attrs.get("revision")):
+        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_expected_revision(attrs.get("revision")):
             # 云原生应用选择已构建的镜像部署时, version_type 传入了 image
             # 这里加上强制校验, 保证 image 类型被正确使用(仅用于云原生应用选择已构建镜像时),
             # 否则会导致 Deployment.get_version_info 抛出 ValueError("unknown version info")
             raise ValidationError(_("version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"))
         return attrs
 
-    @staticmethod
-    def _is_image_digest(revision):
+    def _is_expected_revision(self, revision):
         if not revision:
             return False
 
+        # 由于镜像仓库的原因, 单一的 media_type 可能无法查到镜像的 digest(但镜像是存在的), 因此 revision 可能为 unknown
+        if revision == "unknown":
+            return True
+
+        return self._is_image_digest(revision)
+
+    @staticmethod
+    def _is_image_digest(revision):
         return bool(re.match(r"^sha256:[0-9a-f]{64}$", revision))
 
 
@@ -413,6 +420,13 @@ class ListConfigVarsSLZ(serializers.Serializer):
         if f.name not in self.valid_order_by_fields:
             raise ValidationError(_("无效的排序选项：%s") % f)
         return field
+
+
+class PresetEnvVarSLZ(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+    environment_name = serializers.CharField()
+    description = serializers.CharField(default="")
 
 
 class CreateOfflineOperationSLZ(serializers.Serializer):

@@ -18,8 +18,8 @@
 import datetime
 import logging
 import re
-from _operator import attrgetter
 from collections import Counter, defaultdict
+from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 import arrow

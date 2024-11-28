@@ -97,11 +97,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r"/config_vars/preset/$", include_envs=False),
-        views.PresetConfigVarViewSet.as_view(
-            {
-                "get": "list",
-            }
-        ),
+        views.PresetConfigVarViewSet.as_view({"get": "list"}),
         name="api.preset_config_vars",
     ),
     # deploy

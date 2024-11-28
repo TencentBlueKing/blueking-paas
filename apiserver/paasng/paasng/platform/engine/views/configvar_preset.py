@@ -40,8 +40,7 @@ class PresetConfigVarViewSet(mixins.ListModelMixin, viewsets.GenericViewSet, App
         if environment_name := query_params.get("environment_name"):
             queryset = queryset.filter(environment_name=environment_name)
 
-        queryset = queryset.order_by(query_params["order_by"])
-        return queryset
+        return queryset.order_by(query_params["order_by"])
 
     @swagger_auto_schema(
         query_serializer=ListConfigVarsSLZ(),

@@ -549,7 +549,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """Deprecated: 旧镜像应用的「部署配置」API"""
+    """普通应用的「部署配置」API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     schema = None
@@ -604,7 +604,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         request_body=ModuleDeployProcfileSLZ, response_serializer=ModuleDeployProcfileSLZ, deprecated=True
     )
     def update_procfile(self, request, *args, **kwargs):
-        """更新或创建当前模块的部署配置的启动命令"""
+        """更新或创建当前模块的部署配置的启动命令(目前旧镜像应用在用)"""
         module = self.get_module_via_path()
         if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
             raise ValidationError(_("当前应用不支持配置「启动命令」"))

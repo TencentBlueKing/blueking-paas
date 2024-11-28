@@ -537,3 +537,18 @@ module:
 
         output_yaml = response.content.decode(settings.DEFAULT_CHARSET)
         assert output_yaml == expected_spec3_yaml
+
+    @pytest.mark.parametrize(
+        ("spec2_yaml", "expected_msg"),
+        [
+            ("""    """, "Error parsing YAML content: no content."),
+            ("""spec_version: 2""", "Error parsing YAML content: one of 'modules' or 'module' is required."),
+        ],
+    )
+    def test_app_desc_transform_exception(self, api_client, spec2_yaml, expected_msg):
+        response = api_client.post(
+            reverse("api.tools.app_desc.transform"), data=spec2_yaml, content_type="application/yaml"
+        )
+
+        response_data = response.json()
+        assert response_data["detail"] == expected_msg

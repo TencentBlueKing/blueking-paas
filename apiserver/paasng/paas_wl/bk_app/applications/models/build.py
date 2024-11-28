@@ -174,6 +174,8 @@ class Build(UuidAuditedModel):
             image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
             registry_client = get_app_docker_registry_client()
             ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
+            # 默认的 "application/vnd.docker.distribution.manifest.v2+json" 可能 metadata 为 None, 但镜像已存在
+            # FIXME: 同时带上多种格式的 media_type?
             metadata = ref.get_metadata()
             if metadata:
                 manifest: ManifestSchema2 = ref.get()
@@ -299,10 +301,8 @@ class BuildProcess(UuidAuditedModel):
         """Check if current build process allows interruptions"""
         if self.status in BuildStatus.get_finished_states():
             return False
-        if not self.logs_was_ready_at:
-            return False
 
-        return True
+        return self.logs_was_ready_at is not None
 
     def set_logs_was_ready(self):
         """Mark current build was ready for reading logs from"""

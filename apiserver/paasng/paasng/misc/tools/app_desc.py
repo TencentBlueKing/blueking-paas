@@ -20,7 +20,6 @@ from collections import OrderedDict
 from typing import Any
 
 from django.conf import settings
-from rest_framework.exceptions import ValidationError
 
 from paasng.utils.camel_converter import snake_to_camel
 
@@ -35,7 +34,7 @@ def transform_app_desc_spec2_to_spec3(spec2):
     :rtype: dict
     """
     if not spec2:
-        raise ValidationError("application description have no content.")
+        raise ValueError("no content.")
 
     spec3: OrderedDict[str, Any] = OrderedDict()
 
@@ -54,7 +53,7 @@ def transform_app_desc_spec2_to_spec3(spec2):
         module["name"] = "default"
         spec3["module"] = transform_module(module)
     else:
-        raise ValidationError("Either 'modules' or 'module' must be present")
+        raise ValueError("one of 'modules' or 'module' is required.")
 
     return spec3
 

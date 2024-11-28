@@ -216,22 +216,20 @@ class TestHookField:
 
     def test_field_set(self, bk_module, bk_deployment):
         controller = DeploymentDeclarativeController(bk_deployment)
-
         controller.perform_action(
             desc=validate_desc(
                 DeploymentDescSLZ,
                 {"language": "python", "scripts": {"pre_release_hook": "echo 1"}},
             )
         )
-
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"])
 
     @pytest.mark.parametrize("hook_disabled", [True, False])
     def test_not_set_should_not_touch_deployment(self, hook_disabled, bk_module, bk_deployment):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
+        bk_module.deploy_hooks.enable_hook(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
         if hook_disabled:
-            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        bk_deployment.save()
+            bk_module.deploy_hooks.disable_hook(DeployHookType.PRE_RELEASE_HOOK)
+
         controller = DeploymentDeclarativeController(bk_deployment)
 
         json_data = {"language": "python"}
@@ -245,22 +243,22 @@ class TestHookField:
             assert len(deploy_hooks) == 1
             assert deploy_hooks[0].command == "echo 1"
 
-        self.assert_hook_not_exist(bk_module, bk_deployment)
+        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
+        assert desc_obj.get_deploy_hooks() == HookList()
 
     @pytest.mark.parametrize("hook_disabled", [True, False])
     def test_rewrite_the_hook(self, hook_disabled, bk_module, bk_deployment):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
+        bk_module.deploy_hooks.enable_hook(DeployHookType.PRE_RELEASE_HOOK, command="echo 1")
         if hook_disabled:
-            # The hook's enabled status should not affect the result
-            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        bk_deployment.save()
+            bk_module.deploy_hooks.disable_hook(DeployHookType.PRE_RELEASE_HOOK)
+
         controller = DeploymentDeclarativeController(bk_deployment)
 
         json_data = {"language": "python", "scripts": {"pre_release_hook": "echo 2"}}
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
         # The hook should has been modified
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "2"], "echo 2")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "2"])
 
     def test_not_set_should_reset(self, bk_module, bk_deployment):
         controller = DeploymentDeclarativeController(bk_deployment)
@@ -271,7 +269,7 @@ class TestHookField:
                 {"language": "python", "scripts": {"pre_release_hook": "echo 1"}},
             )
         )
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"])
 
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"language": "python"}))
         self.assert_hook_not_exist(bk_module, bk_deployment)
@@ -302,7 +300,7 @@ class TestHookField:
         module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         assert module_hook is None
 
-    def assert_one_hook_with_command(self, module, deployment, command, args, proc_command):
+    def assert_one_hook_with_command(self, module, deployment, command, args):
         """A helper to assert there is one hook with the given command."""
         desc_obj = DeploymentDescription.objects.get(deployment=deployment)
 
@@ -310,6 +308,6 @@ class TestHookField:
         assert desc_obj.get_deploy_hooks() == hook_list
         assert deployment.get_deploy_hooks() == hook_list
 
-        # The module deploy hook always use proc_command instead of command/args
         module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
-        assert module_hook.proc_command == proc_command
+        assert module_hook.command == command
+        assert module_hook.args == args

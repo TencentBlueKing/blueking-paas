@@ -101,7 +101,7 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     if build := spec_entity.build:
         sync_build(module, build)
 
-    sync_hooks(module, spec_entity.hooks, manager)
+    sync_hooks(module, spec_entity.hooks, manager, use_proc_command=False)
 
     # sync_env_vars doesn't need to use manager parameter because the data will
     # only be manged by a single manger.
@@ -154,7 +154,8 @@ def import_bkapp_spec_entity_non_cnative(
 
     # Run sync functions
     sync_processes(module, processes=spec_entity.processes, manager=manager, use_proc_command=True)
-    sync_hooks(module, spec_entity.hooks, manager, use_proc_command=True)
+    # v2.DeploymentDescSLZ.to_internal_value 已对 scripts.pre_release_hook 做了 command/args 的转换
+    sync_hooks(module, spec_entity.hooks, manager, use_proc_command=False)
 
     # sync_env_vars doesn't need to use manager parameter because the data will
     # only be manged by a single manger.

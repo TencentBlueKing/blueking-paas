@@ -32,7 +32,7 @@ class HookCmd(BaseModel):
     def __init__(self, **data):
         # FIXME 处理 proc_command 与 command/args 的关系
         if proc_command := data.get("proc_command"):
-            data["command"] = None
+            data["command"] = []
             data["args"] = shlex.split(proc_command)
         super().__init__(**data)
 

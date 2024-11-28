@@ -32,7 +32,7 @@ from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
-from paasng.platform.modules.models.deploy_config import Hook, HookList
+from paasng.platform.modules.models.deploy_config import HookList
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
@@ -277,6 +277,8 @@ class Deployment(OperationVersionBase):
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:
+        """获取部署钩子. 目前仅用于普通应用的钩子部署"""
+
         # Warning: 目前的策略是如果同时允许产品上配置, 则优先使用产品上配置
         # 因此 app_desc 中声明的 hooks 会被覆盖产品上已填写的 hooks 覆盖
         try:
@@ -284,18 +286,8 @@ class Deployment(OperationVersionBase):
         except Exception:
             hooks = HookList()
 
-        module_hooks = HookList(
-            Hook(
-                type=hook.type,
-                command=hook.proc_command,
-                enabled=hook.enabled,
-            )
-            for hook in self.app_environment.module.deploy_hooks.all()
-        )
-
-        for hook in module_hooks:
-            if hook.enabled:
-                hooks.upsert(hook.type, command=hook.command, args=hook.args)
+        for hook in self.app_environment.module.deploy_hooks.filter(enabled=True):
+            hooks.upsert(hook.type, command=hook.get_command(), args=hook.get_args())
         return hooks
 
     def get_processes(self) -> List[ProcessTmpl]:

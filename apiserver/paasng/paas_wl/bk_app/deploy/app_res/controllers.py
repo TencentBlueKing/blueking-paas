@@ -615,7 +615,9 @@ class CommandHandler(PodScheduleHandler):
 
     @staticmethod
     def get_pod_timeout(pod: Command) -> arrow.Arrow:
-        return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
+        # 注意：如果 Pod StartTime 为空，则不会超时（保留现场）
+        start_time = arrow.get(pod.start_time) if pod.start_time else arrow.now()
+        return start_time + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
 
 
 class ProcAutoscalingHandler(ResourceHandlerBase):

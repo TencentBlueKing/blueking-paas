@@ -138,7 +138,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	for _, reconciler := range []base.Reconciler{
 		// NOTE: The order of these reconcilers is important.
 		bkappctrl.NewBkappFinalizer(r.client),
-		// Check if a new deploy action has been issued.
+		// Check if a new deployment action has been issued.
 		bkappctrl.NewDeployActionReconciler(r.client),
 		// Make sure the "pre-release" hook has been finished if specified.
 		hooks.NewHookReconciler(r.client),

@@ -206,16 +206,6 @@ spec:
             description: PlatformConfig contains the config for interacting with other
               service
             properties:
-              bkAPIGatewayURL:
-                description: BlueKing's component API address, the gateway SDK depends
-                  on this configuration
-                type: string
-              bkAppCode:
-                description: Authentication information for calling BlueKing APIs
-                  (components, BkOAuth services, etc.)
-                type: string
-              bkAppSecret:
-                type: string
               customDomainIngressClassName:
                 description: |-
                   CustomDomainIngressClassName works the same as IngressClassName, but only for ingress with custom domains.
@@ -231,9 +221,6 @@ spec:
                   be dropped if unset
                 type: string
             required:
-            - bkAPIGatewayURL
-            - bkAppCode
-            - bkAppSecret
             - customDomainIngressClassName
             - ingressClassName
             - sentryDSN

@@ -25,11 +25,6 @@ import (
 
 // PlatformConfig contains the config for interacting with other service
 type PlatformConfig struct {
-	// Authentication information for calling BlueKing APIs (components, BkOAuth services, etc.)
-	BkAppCode   string `json:"bkAppCode"`
-	BkAppSecret string `json:"bkAppSecret"`
-	// BlueKing's component API address, the gateway SDK depends on this configuration
-	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
 	// sentry server dsn, all events waiting for report will be dropped if unset
 	SentryDSN string `json:"sentryDSN"`
 	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations

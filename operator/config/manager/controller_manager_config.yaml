@@ -14,9 +14,6 @@ leaderElection:
 zapOpts:
   zapDevel: false
 platform:
-  bkAppCode: "bk_paas3"
-  bkAppSecret: ""
-  bkAPIGatewayURL: ""
   sentryDSN: ""
   ingressClassName: ""
 ingressPlugin:

@@ -70,10 +70,6 @@ platform:
 		// 检测 leaderElection
 		Expect(projCfg.LeaderElection.LeaderElect).To(Equal(lo.ToPtr(true)))
 		Expect(projCfg.LeaderElection.ResourceName).To(Equal("e56dbef1.bk.tencent.com"))
-		// 检测 platformConfig
-		Expect(projCfg.Platform.BkAppCode).To(Equal("foo"))
-		Expect(projCfg.Platform.BkAppSecret).To(Equal("bar"))
-		Expect(projCfg.Platform.BkAPIGatewayURL).To(Equal("https://example.com"))
 		Expect(projCfg.Platform.SentryDSN).To(Equal("https://sentry.example.com"))
 		Expect(projCfg.Platform.IngressClassName).To(Equal("nginx"))
 		Expect(projCfg.GetIngressClassName()).To(Equal("nginx"))

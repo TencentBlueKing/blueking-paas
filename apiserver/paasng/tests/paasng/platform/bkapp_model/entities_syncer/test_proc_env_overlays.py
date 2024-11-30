@@ -97,6 +97,30 @@ class Test__sync_env_overlays_replicas:
         sync_env_overlays_replicas(bk_module, [], manager=fieldmgr.FieldMgrName.APP_DESC)
         assert get_overlay_obj(proc_web, "prod").target_replicas is None
 
+    def test_integrated_with_different_manager(self, bk_module, proc_web, proc_celery):
+        sync_env_overlays_replicas(
+            bk_module,
+            [
+                ReplicasOverlay(env_name="prod", process="web", count=2),
+                ReplicasOverlay(env_name="prod", process="worker", count=2),
+            ],
+            manager=fieldmgr.FieldMgrName.APP_DESC,
+        )
+
+        # set "web" process's field to be manged by web_form
+        fieldmgr.FieldManager(bk_module, fieldmgr.f_overlay_replicas(proc_web.name, "prod")).set(
+            fieldmgr.FieldMgrName.WEB_FORM
+        )
+
+        sync_env_overlays_replicas(
+            bk_module,
+            [ReplicasOverlay(env_name="prod", process="worker", count=3)],
+            manager=fieldmgr.FieldMgrName.APP_DESC,
+        )
+        # "web" process's field is manged by web_form, so it should not be updated or empty
+        assert get_overlay_obj(proc_web, "prod").target_replicas == 2
+        assert get_overlay_obj(proc_celery, "prod").target_replicas == 3
+
     def test_clean_empty(self, bk_module):
         old_cnt = ProcessSpecEnvOverlay.objects.count()
         sync_env_overlays_replicas(

@@ -29,7 +29,7 @@ from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSU
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet, ProcService
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
 from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
@@ -91,7 +91,6 @@ class ProcessTmpl:
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
     probes: Optional[ProbeSet] = None
-    services: Optional[List[ProcService]] = None
 
     def __post_init__(self):
         self.name = self.name.lower()

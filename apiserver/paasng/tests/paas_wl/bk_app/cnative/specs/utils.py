@@ -53,7 +53,7 @@ def create_cnative_deploy(
         resource = create_app_resource(app.name, "nginx:latest")
 
     if not AppModelResource.objects.filter(module_id=str(module.id)).exists():
-        model_res = AppModelResource.objects.create_from_resource(app.region, str(app.id), str(module.id), resource)
+        model_res = AppModelResource.objects.create_from_resource(str(app.id), str(module.id), resource)
     else:
         # If the model resource already exists, use it directly and update the revision
         model_res = AppModelResource.objects.get(module_id=str(module.id))

@@ -1172,7 +1172,7 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         else:
             logger.warning("Verification code is not currently supported, return app secret directly")
 
-        client_secret = get_oauth2_client_secret(application.code, application.region)
+        client_secret = get_oauth2_client_secret(application.code)
         return Response({"app_code": application.code, "app_secret": client_secret})
 
 
@@ -1496,7 +1496,7 @@ class SysAppViewSet(viewsets.ViewSet):
         application = create_third_app(data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator)
 
         # 返回应用的密钥信息
-        secret = get_oauth2_client_secret(application.code, application.region)
+        secret = get_oauth2_client_secret(application.code)
         return Response(
             data={"bk_app_code": application.code, "bk_app_secret": secret},
             status=status.HTTP_201_CREATED,

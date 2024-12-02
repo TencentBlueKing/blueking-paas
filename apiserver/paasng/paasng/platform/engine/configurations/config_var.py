@@ -116,7 +116,7 @@ def generate_env_vars_for_app(app: "Application", config_vars_prefix: str) -> Di
     # Query oauth2 client to get app secret, if the client does not exist yet, use an empty
     # string instead.
     try:
-        app_secret = get_oauth2_client_secret(app.code, app.region)
+        app_secret = get_oauth2_client_secret(app.code)
     except BkOauthClientDoesNotExist:
         app_secret = ""
 

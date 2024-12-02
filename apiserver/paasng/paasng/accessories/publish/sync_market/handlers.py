@@ -37,7 +37,6 @@ from paasng.accessories.publish.sync_market.managers import (
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.region.models import get_region
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.signals import (
@@ -257,17 +256,6 @@ def register_application_with_default(region, code, name):
         except Exception:
             logger.exception("同步应用开发者信息至桌面失败!")
     return app
-
-
-@receiver(post_save, sender=OAuth2Client)
-@run_required_db_console_config
-def application_oauth_handler(sender, instance, created, raw, using, update_fields, *args, **kwargs):
-    """监听App权限信息初始化, 同步写secrete key到console db"""
-    with console_db.session_scope() as session:
-        if instance.client_secret:
-            AppManger(session).sync_oauth(
-                region=instance.region, code=instance.client_id, secret=instance.client_secret
-            )
 
 
 @receiver(module_environment_offline_success)

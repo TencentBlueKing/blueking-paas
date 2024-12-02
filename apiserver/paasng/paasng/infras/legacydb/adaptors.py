@@ -32,7 +32,6 @@ from paasng.accessories.publish.sync_market.constant import SaaSPackageInfo
 from paasng.accessories.publish.sync_market.models import TagData
 from paasng.infras.legacydb import models as legacy_models
 from paasng.infras.legacydb.entities import EnvItem
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.mgrlegacy.constants import LegacyAppState
@@ -178,30 +177,6 @@ class AppAdaptor:
                     raise
             else:
                 raise
-
-        # 注册应用完成后，同步 oauth 信息
-        try:
-            oauth = OAuth2Client.objects.get(client_id=code)
-        except OAuth2Client.DoesNotExist:
-            logger.info(f"APP(code:{code}) oauth information does not exist, skip oauth synchronization")
-        else:
-            self.sync_oauth("", code, oauth.client_secret)
-        return app
-
-    def sync_oauth(self, region: str, code: str, secret: str) -> "legacy_models.LApplication":
-        """必须在注册完成应用后再执行"""
-        # 企业版 secret 以明文存储
-        app = self.get(code)
-        if not app:
-            logger.info(f"APP(code:{code}) does not exist, skip oauth synchronization")
-            return None
-
-        self.update(
-            code,
-            {
-                "auth_token": secret,
-            },
-        )
         return app
 
     def get_saas_package_info(self, app_id: str) -> Optional["SaaSPackageInfo"]:

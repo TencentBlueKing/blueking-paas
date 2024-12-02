@@ -14,35 +14,30 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+from datetime import datetime
 from unittest import mock
 
 import pytest
-from blue_krill.contextlib import nullcontext as does_not_raise
-from django.test.utils import override_settings
 
-from paasng.infras.oauth2.exceptions import BkOauthApiException
-from paasng.infras.oauth2.models import OAuth2Client
+from paasng.infras.oauth2.api import BkAppSecret
 from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
 
 pytestmark = pytest.mark.django_db
 
 
-@mock.patch("paasng.infras.oauth2.api.BkOauthClient")
 class TestBkOauthClient:
-    @pytest.mark.parametrize(
-        ("enable_bk_oauth", "ctx"), [(True, pytest.raises(BkOauthApiException)), (False, does_not_raise())]
-    )
-    def test_create_client(self, mocked_client, bk_oauth_client_id, bk_oauth_client_key, enable_bk_oauth, ctx):
-        mocked_client().get_default_app_secret.return_value = bk_oauth_client_key
+    def test_create_client(self, bk_oauth_client_id, bk_oauth_client_key):
+        secret_obj = BkAppSecret(
+            id=1,
+            bk_app_code=bk_oauth_client_id,
+            bk_app_secret=bk_oauth_client_key,
+            enabled=True,
+            created_at=datetime.strptime("2021-10-21T07:56:16Z", "%Y-%m-%dT%H:%M:%SZ"),
+        )
 
-        with override_settings(ENABLE_BK_OAUTH=enable_bk_oauth):
-            region = "default"
-            with ctx:
-                create_oauth2_client(bk_oauth_client_id, region)
-                client_secret = get_oauth2_client_secret(bk_oauth_client_id, region)
-                if enable_bk_oauth:
-                    assert client_secret == bk_oauth_client_key
-                else:
-                    client_secret_in_db = OAuth2Client.objects.get(client_id=bk_oauth_client_id).client_secret
-                    assert client_secret == client_secret_in_db
+        with mock.patch("paasng.infras.oauth2.utils.get_app_secret_in_env_var", return_value=secret_obj), mock.patch(
+            "paasng.infras.oauth2.utils.create_oauth2_client", return_value=secret_obj
+        ):
+            create_oauth2_client(bk_oauth_client_id)
+            client_secret = get_oauth2_client_secret(bk_oauth_client_id)
+            assert client_secret == bk_oauth_client_key

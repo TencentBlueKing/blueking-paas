@@ -15,12 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf import settings
 from django.utils.crypto import get_random_string
 
 from paasng.infras.oauth2.api import BkAppSecret, BkOauthClient
-from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.infras.oauth2.models import BkAppSecretInEnvVar, OAuth2Client
+from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 
 
 def get_random_secret_key():
@@ -31,15 +29,9 @@ def get_random_secret_key():
     return get_random_string(50, chars)
 
 
-def create_oauth2_client(bk_app_code: str, region: str) -> bool:
+def create_oauth2_client(bk_app_code: str) -> bool:
     """Create oauth2 client for application"""
-    if settings.ENABLE_BK_OAUTH:
-        return BkOauthClient().create_client(bk_app_code)
-
-    OAuth2Client.objects.get_or_create(
-        region=region, client_id=bk_app_code, defaults={"client_secret": get_random_secret_key()}
-    )
-    return True
+    return BkOauthClient().create_client(bk_app_code)
 
 
 def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:
@@ -62,13 +54,6 @@ def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:
     return client.get_default_app_secret(bk_app_code)
 
 
-def get_oauth2_client_secret(bk_app_code: str, region: str) -> str:
+def get_oauth2_client_secret(bk_app_code: str) -> str:
     """获取应用的 OAuth 默认密钥"""
-    if settings.ENABLE_BK_OAUTH:
-        return get_app_secret_in_env_var(bk_app_code).bk_app_secret
-
-    try:
-        client_secret = OAuth2Client.objects.get(region=region, client_id=bk_app_code).client_secret
-    except OAuth2Client.DoesNotExist:
-        raise BkOauthClientDoesNotExist(f"Bk Oauth client({bk_app_code}) not exist")
-    return client_secret
+    return get_app_secret_in_env_var(bk_app_code).bk_app_secret

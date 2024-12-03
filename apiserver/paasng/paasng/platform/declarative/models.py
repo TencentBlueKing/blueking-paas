@@ -81,28 +81,13 @@ class DeploymentDescription(TimestampedModel):
     )
     env_variables = JSONField(verbose_name="environment variables", blank=True, default=[])
     runtime = JSONField(verbose_name="runtime config", blank=True, default={})
-    scripts = JSONField(verbose_name="scripts", blank=True, default={})
     environments = JSONField(verbose_name="environment specified configs", blank=True, default={})
     plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
 
     spec: v1alpha2.BkAppSpec = BkAppSpecField(verbose_name="bkapp.spec", null=True, default=None)
 
-    def get_procfile(self) -> Dict[str, str]:
-        """[Deprecated] get Procfile, should only be used to generate Procfile for buildpack
-
-        Procfile is a dict containing a process type and its corresponding command
-        """
-        if self.spec is not None:
-            return {process.name: process.get_proc_command() for process in self.spec.processes}
-
-        processes = self.runtime.get("processes", {})
-        return {key: process["command"] for key, process in processes.items()}
-
     def get_deploy_hooks(self) -> HookList:
-        """从 spec 提取 hook 配置, 用于普通应用部署流程.
-
-        > 存量的旧版本数据使用 `scripts` 字段
-        """
+        """从 spec 提取 hook 配置, 用于普通应用部署流程."""
         hooks = HookList()
         if self.spec is not None:
             _hooks = self.spec.hooks
@@ -112,15 +97,6 @@ class DeploymentDescription(TimestampedModel):
                     command=pre_release_hook.command or [],
                     args=pre_release_hook.args or [],
                 )
-            return hooks
-
-        for key, value in self.scripts.items():
-            try:
-                type_ = DeployHookType(key)
-            except ValueError:
-                continue
-            if value:
-                hooks.upsert(type_, command=value)
         return hooks
 
     @property

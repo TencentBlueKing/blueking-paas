@@ -43,7 +43,7 @@ class TestApplicationPreReleaseExecutor:
 
     @pytest.fixture()
     def _setup_empty_command_hook(self, bk_module_full):
-        bk_module_full.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="")
+        bk_module_full.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, command=[], args=[])
 
     @pytest.fixture()
     def hook(self, request, bk_module_full):
@@ -59,7 +59,8 @@ class TestApplicationPreReleaseExecutor:
         else:
             assert deployment.get_deploy_hooks().get_hook(DeployHookType.PRE_RELEASE_HOOK) == Hook(
                 type=hook.type,
-                command=hook.get_proc_command(),
+                command=hook.get_command(),
+                args=hook.get_args(),
                 enabled=hook.enabled,
             )
 

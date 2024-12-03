@@ -104,39 +104,6 @@ class TestApplicationReleaseMgr:
             ProcessTmpl(name="worker", command="start worker", replicas=None, plan=None),
         ]
 
-    def test_sync_specs_from_procfile(self, bk_deployment):
-        bk_deployment.procfile = {"web": "start web", "worker": "start worker"}
-        bk_deployment.save()
-        bk_deployment.refresh_from_db()
-        with mock.patch("paasng.platform.engine.utils.output.RedisChannelStream"), mock.patch(
-            "paasng.platform.engine.deploy.release.legacy.release_to_k8s"
-        ) as mocked_create_release, mock.patch(
-            "paasng.platform.engine.deploy.release.legacy.update_image_runtime_config"
-        ), mock.patch("paasng.platform.engine.workflow.flow.EngineDeployClient"), mock.patch(
-            "paasng.platform.engine.configurations.ingress.AppDefaultDomains.sync"
-        ), mock.patch("paasng.platform.engine.configurations.ingress.AppDefaultSubpaths.sync"), mock.patch(
-            "paasng.platform.engine.deploy.release.legacy.ProcessManager"
-        ) as fake_process_manager:
-            faked_release_id = uuid.uuid4().hex
-            mocked_create_release.return_value = mock.Mock(uuid=faked_release_id, version=1)
-
-            release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
-            release_mgr.start()
-
-        # Validate deployment data
-        deployment = Deployment.objects.get(pk=bk_deployment.id)
-        assert deployment.release_id.hex == faked_release_id
-        assert deployment.status == JobStatus.PENDING.value
-        assert deployment.err_detail is None
-
-        # Validate sync specs data
-        assert fake_process_manager().sync_processes_specs.called
-        (processes,) = fake_process_manager().sync_processes_specs.call_args[0]
-        assert processes == [
-            ProcessTmpl(name="web", command="start web", replicas=None, plan=None),
-            ProcessTmpl(name="worker", command="start worker", replicas=None, plan=None),
-        ]
-
 
 class TestReleaseResultHandler:
     """Tests for ReleaseResultHandler"""

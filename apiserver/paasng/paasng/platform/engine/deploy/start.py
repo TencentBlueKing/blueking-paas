@@ -30,7 +30,6 @@ from paasng.platform.engine.signals import pre_appenv_deploy
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
-from paasng.platform.modules.models.deploy_config import Hook, HookList
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
@@ -74,14 +73,6 @@ def initialize_deployment(
         model_resource, _ = AppModelResource.objects.get_or_create_by_module(module)
         bkapp_revision_id = model_resource.revision.id
 
-    hooks = HookList(
-        Hook(
-            type=hook.type,
-            command=hook.proc_command,
-            enabled=hook.enabled,
-        )
-        for hook in module.deploy_hooks.all()
-    )
     deployment = Deployment.objects.create(
         region=module.region,
         operator=operator,
@@ -95,7 +86,6 @@ def initialize_deployment(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
         ),
-        hooks=hooks,
         bkapp_revision_id=bkapp_revision_id,
     )
     deployment.refresh_from_db()

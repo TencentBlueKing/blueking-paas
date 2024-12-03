@@ -91,9 +91,6 @@ class DeploymentDeclarativeController:
 
         # 总是将本次解析的进程数据保存到当前 deployment 对象中, 用于普通应用的进程配置同步(ProcessManager.sync_processes_specs)
         self.deployment.update_fields(processes=desc.get_proc_tmpls())
-        # TODO: 弄清楚为什么非得在这里把 hooks 保存到 deployment 对象中
-        if hooks := desc_obj.get_deploy_hooks():
-            self.deployment.update_fields(hooks=hooks)
 
     def _handle_desc_cnative_style(self, spec_obj: BkAppSpec):
         """适用于：云原生应用或采用了 version 3 版本的应用描述文件"""

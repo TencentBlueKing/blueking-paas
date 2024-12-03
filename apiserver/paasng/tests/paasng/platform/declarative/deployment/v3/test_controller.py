@@ -244,14 +244,14 @@ class TestHookField:
         )
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"])
 
     @pytest.mark.parametrize("hook_disabled", [True, False])
     def test_not_set_should_not_touch_deployment(self, hook_disabled, bk_module, bk_deployment):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
+        bk_module.deploy_hooks.enable_hook(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
         if hook_disabled:
-            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        bk_deployment.save()
+            bk_module.deploy_hooks.disable_hook(DeployHookType.PRE_RELEASE_HOOK)
+
         controller = DeploymentDeclarativeController(bk_deployment)
 
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
@@ -264,14 +264,15 @@ class TestHookField:
             assert len(deploy_hooks) == 1
             assert deploy_hooks[0].args == ["echo", "1"]
 
-        self.assert_hook_not_exist(bk_module, bk_deployment)
+        desc_obj = DeploymentDescription.objects.get(deployment=bk_deployment)
+        assert desc_obj.get_deploy_hooks() == HookList()
 
     @pytest.mark.parametrize("hook_disabled", [True, False])
     def test_rewrite_the_hook(self, hook_disabled, bk_module, bk_deployment):
-        bk_deployment.hooks.upsert(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
+        bk_module.deploy_hooks.enable_hook(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
         if hook_disabled:
-            bk_deployment.hooks.disable(DeployHookType.PRE_RELEASE_HOOK)
-        bk_deployment.save()
+            bk_module.deploy_hooks.disable_hook(DeployHookType.PRE_RELEASE_HOOK)
+
         controller = DeploymentDeclarativeController(bk_deployment)
 
         json_data = builder.make_module(
@@ -280,7 +281,7 @@ class TestHookField:
         )
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "2"], "echo 2")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "2"])
 
     def test_not_set_should_reset(self, bk_module, bk_deployment):
         controller = DeploymentDeclarativeController(bk_deployment)
@@ -290,7 +291,7 @@ class TestHookField:
             module_spec={"hooks": {"preRelease": {"command": [], "args": ["echo", "1"]}}, "processes": []},
         )
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
-        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"], "echo 1")
+        self.assert_one_hook_with_command(bk_module, bk_deployment, [], ["echo", "1"])
 
         json_data = builder.make_module(module_name="test", module_spec={"processes": []})
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
@@ -320,7 +321,7 @@ class TestHookField:
         module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         assert module_hook is None
 
-    def assert_one_hook_with_command(self, module, deployment, command, args, proc_command):
+    def assert_one_hook_with_command(self, module, deployment, command, args):
         desc_obj = DeploymentDescription.objects.get(deployment=deployment)
 
         hook_list = HookList([cattr.structure({"type": "pre-release-hook", "command": command, "args": args}, Hook)])
@@ -330,7 +331,6 @@ class TestHookField:
         module_hook = module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
         assert module_hook.command == command
         assert module_hook.args == args
-        assert module_hook.proc_command is None
 
 
 class TestDomainResolutionFieldMultiManagers:

@@ -33,6 +33,9 @@ def transform_app_desc_spec2_to_spec3(spec2):
     :return: Transformed application description in specVersion 3 format.
     :rtype: dict
     """
+    if not spec2:
+        raise ValueError("no content.")
+
     spec3: OrderedDict[str, Any] = OrderedDict()
 
     spec3["specVersion"] = 3
@@ -49,6 +52,8 @@ def transform_app_desc_spec2_to_spec3(spec2):
         module = spec2["module"]
         module["name"] = "default"
         spec3["module"] = transform_module(module)
+    else:
+        raise ValueError("one of 'modules' or 'module' is required.")
 
     return spec3
 

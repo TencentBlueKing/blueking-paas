@@ -4,7 +4,7 @@
       <div class="overview">
         <div
           class="overview-main"
-          :style="{ 'min-height': `${minHeight}px` }"
+          :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
         >
           <div class="overview-fleft">
             <paasNav

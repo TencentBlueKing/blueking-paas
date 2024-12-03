@@ -281,6 +281,10 @@ const srvVCSMain = () => import(/* webpackChunkName: 'services' */'@/views/servi
   window.showDeployTip(error);
 });
 
+const descriptionFileConversion = () => import(/* webpackChunkName: 'services' */'@/views/services/description-file-conversion').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvV3Services = () => import(/* webpackChunkName: 'services' */'@/views/services/v3-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -993,6 +997,14 @@ const router = new Router({
           path: 'code',
           component: srvVCSMain,
           name: 'serviceCode',
+        },
+        {
+          path: 'file-conversion',
+          component: descriptionFileConversion,
+          name: 'descriptionFileConversion',
+          meta: {
+            notMinHeight: true,
+          },
         },
         {
           path: 'magicbox',

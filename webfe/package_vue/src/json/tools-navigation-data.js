@@ -33,6 +33,17 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'devTools',
+    name: 'descriptionFileConversion',
+    label: i18n.t('应用描述文件转换'),
+    iconfontName: 'wenjianzhuanhuan',
+    matchRouters: ['descriptionFileConversion'],
+    destRoute: {
+      name: 'descriptionFileConversion',
+    },
+    sublist: [],
+  },
+  {
     name: 'serviceAPIGateway',
     label: i18n.t('API 网关'),
     iconfontName: 'cloudapi',

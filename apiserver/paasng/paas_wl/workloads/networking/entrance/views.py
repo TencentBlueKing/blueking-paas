@@ -27,21 +27,15 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance import serializers as slzs
-from paas_wl.workloads.networking.entrance.addrs import URL, Address
-from paas_wl.workloads.networking.entrance.allocator.domains import SubDomainAllocator
-from paas_wl.workloads.networking.entrance.allocator.subpaths import SubPathAllocator
-from paas_wl.workloads.networking.entrance.constants import AddressType
 from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
-from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 
@@ -211,47 +205,3 @@ class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         all_entrances = get_entrances(application)
         return Response(data=slzs.ModuleEntrancesSLZ(all_entrances, many=True).data)
-
-    @swagger_auto_schema(response_serializer=slzs.AvailableEntranceSLZ(many=True), tags=["访问入口"])
-    def list_module_available_entrances(self, request, code, module_name):
-        """查看将 module_name 模块作为默认访问模块时可选的入口
-
-        - 平台内置短地址
-        - 独立域名
-        """
-        application = self.get_application()
-        module = application.get_module(module_name)
-        prod_env = module.get_envs("prod")
-        ingress_config = EnvClusterService(prod_env).get_cluster().ingress_config
-        region = get_region(application.region)
-        default_entrance: Address
-        if region.entrance_config.exposed_url_type == ExposedURLType.SUBDOMAIN:
-            domain = SubDomainAllocator(code, ingress_config.port_map).for_default_module_prod_env(
-                ingress_config.app_root_domains[-1]
-            )
-            default_entrance = Address(
-                type=AddressType.SUBDOMAIN,
-                url=domain.as_url().as_address(),
-            )
-        elif region.entrance_config.exposed_url_type == ExposedURLType.SUBPATH:
-            subpath = SubPathAllocator(code, ingress_config.port_map).for_default_module_prod_env(
-                ingress_config.app_root_domains[-1]
-            )
-            default_entrance = Address(
-                type=AddressType.SUBPATH,
-                url=subpath.as_url().as_address(),
-            )
-        else:
-            raise NotImplementedError
-        custom_domains_qs = Domain.objects.filter(environment_id=prod_env.id)
-        custom_domains = []
-        for d in custom_domains_qs:
-            port = ingress_config.port_map.get_port_num(d.protocol)
-            custom_domains.append(
-                Address(
-                    type=AddressType.CUSTOM,
-                    url=URL(d.protocol, hostname=d.name, port=port, path=d.path_prefix).as_address(),
-                    id=d.id,
-                )
-            )
-        return Response(data=slzs.AvailableEntranceSLZ([default_entrance, *custom_domains], many=True).data)

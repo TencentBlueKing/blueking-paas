@@ -27,6 +27,7 @@ Other modules which have similar purpose:
 
 These modules will be refactored in the future.
 """
+
 from typing import Dict, List, NamedTuple, Optional, Union
 from uuid import UUID
 
@@ -110,9 +111,7 @@ def create_cnative_app_model_resource(
         args=args,
         target_port=target_port,
     )
-    model_resource = AppModelResource.objects.create_from_resource(
-        application.region, str(application.id), str(module.id), resource
-    )
+    model_resource = AppModelResource.objects.create_from_resource(str(application.id), str(module.id), resource)
     return {
         "application_id": model_resource.application_id,
         "module_id": model_resource.module_id,

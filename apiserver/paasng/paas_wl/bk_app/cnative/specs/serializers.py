@@ -123,7 +123,6 @@ class MountSLZ(serializers.ModelSerializer):
         model = Mount
         fields = (
             "id",
-            "region",
             "created",
             "updated",
             "module_id",

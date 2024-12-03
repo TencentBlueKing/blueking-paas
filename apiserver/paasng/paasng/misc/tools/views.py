@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import yaml
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -40,18 +40,18 @@ class AppDescTransformAPIView(APIView):
     )
     def post(self, request):
         if request.content_type != "application/yaml":
-            return HttpResponseBadRequest("Invalid content type: only application/yaml is allowed")
+            raise ValidationError("Invalid content type: only application/yaml is allowed")
 
-        yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
+        yaml_content = request.body.decode(settings.DEFAULT_CHARSET)
         try:
-            spec2_data = yaml.safe_load(yaml_data)
+            spec2_data = yaml.safe_load(yaml_content)
         except yaml.YAMLError as e:
-            return HttpResponseBadRequest(f"Error parsing YAML content: {str(e)}")
+            raise ValidationError(f"Error parsing YAML content: {e}")
 
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(spec2_data)
         except (ValueError, TypeError) as e:
-            raise ValidationError(f"Error parsing YAML content: {str(e)}")
+            raise ValidationError(f"Error parsing YAML content: {e}")
 
         yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
         output_yaml = yaml.dump(

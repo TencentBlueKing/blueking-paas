@@ -541,6 +541,13 @@ module:
     @pytest.mark.parametrize(
         ("spec2_yaml", "expected_exception_detail"),
         [
+            (
+                """modules:
+             - name: default
+             - name: web
+             """,
+                "Error parsing YAML content: 'modules' should be a dictionary.",
+            ),
             ("""    """, "Error parsing YAML content: no content."),
             ("""spec_version: 2""", "Error parsing YAML content: one of 'modules' or 'module' is required."),
         ],

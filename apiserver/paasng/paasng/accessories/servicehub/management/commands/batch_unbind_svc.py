@@ -131,7 +131,7 @@ class Command(BaseCommand):
         try:
             service = mixed_service_mgr.find_by_name(name, region)
         except ServiceObjNotFound:
-            self.stdout.write(self.style.WARNING(f"Addon service(name:{name},region:{region}) does not exist, skip"))
+            self.stdout.write(self.style.WARNING(f"Addon service(name:{name}, region:{region}) does not exist, skip"))
             return
 
         to_del_data = self.handle_input_data(source)

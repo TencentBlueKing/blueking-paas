@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Shared service across modules"""
+
 import logging
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -175,7 +176,7 @@ def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedS
         return None
 
     return SharedServiceInfo(
-        service=mixed_service_mgr.get(referenced_rel.service_id, attachment.region),
+        service=mixed_service_mgr.get(referenced_rel.service_id),
         module=attachment.module,
         ref_module=referenced_rel.module,
     )

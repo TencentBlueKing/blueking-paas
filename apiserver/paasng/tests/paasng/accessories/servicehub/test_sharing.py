@@ -70,12 +70,12 @@ def local_service(request):
         G(Plan, name="ha", service=service)
     else:
         G(Plan, name=generate_random_string(), service=service)
-    return mixed_service_mgr.get(service.uuid, region=_region_name)
+    return mixed_service_mgr.get(service.uuid)
 
 
 @pytest.fixture()
 def remote_service(_faked_remote_services):
-    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region=_region_name)
+    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"])
 
 
 def pick_different_category(service_obj: ServiceObj) -> int:

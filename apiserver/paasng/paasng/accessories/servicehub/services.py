@@ -15,15 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The universal services module, handles both services from database and remote REST API
-"""
+"""The universal services module, handles both services from database and remote REST API"""
+
 import logging
 import uuid
 import weakref
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List, Mapping, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Mapping, Optional, Type
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -284,7 +284,7 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, uuid: str, region: str) -> ServiceObj:
+    def get(self, uuid: str) -> ServiceObj:
         raise NotImplementedError
 
     @abstractmethod
@@ -312,23 +312,6 @@ class BasePlanMgr:
 
     def delete_plan(self, service: ServiceObj, plan_id: str):
         raise NotImplementedError
-
-
-@dataclass
-class ServicePlansHelper:
-    """Hepler work for plans"""
-
-    plans: List["PlanObj"]
-
-    @classmethod
-    def from_service(cls, service: "ServiceObj") -> "ServicePlansHelper":
-        return cls(service.get_plans())
-
-    def get_by_region(self, region: "str") -> "Iterable[PlanObj]":
-        """"""
-        for p in self.plans:
-            if p.region == region:
-                yield p
 
 
 @dataclass

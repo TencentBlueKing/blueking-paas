@@ -420,7 +420,7 @@ class TestRemoteMgr:
         for env in bk_app.envs.all():
             assert list(mgr.list_unprovisioned_rels(env.engine_app)) == []
 
-        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        svc = mgr.get(id_of_first_service)
         rel_pk = mgr.bind_service(svc, bk_module)
         assert rel_pk is not None
         assert list(mgr.list_binded(bk_module)) == [svc]
@@ -436,7 +436,7 @@ class TestRemoteMgr:
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
 
-        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        svc = mgr.get(id_of_first_service)
         mgr.bind_service(svc, bk_module)
         env = bk_app.envs.first()
         for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -458,7 +458,7 @@ class TestRemoteMgr:
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
 
-        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        svc = mgr.get(id_of_first_service)
         mgr.bind_service(svc, bk_module)
         for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -491,7 +491,7 @@ class TestRemoteMgr:
     ):
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        svc = mgr.get(id_of_first_service)
         mgr.bind_service(svc, bk_module)
         for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -515,27 +515,11 @@ class TestRemoteMgr:
 
                 assert mixed_service_mgr.get_env_vars(env.engine_app, filter_enabled=True) == {}
 
-    # TODO: 重构单元测试
-    # def test_module_rebind_with_specs(self):
-    #     mgr = RemoteServiceMgr(store=self.store)
-    #     svc = mgr.get(id_of_first_service, region=self.module.region)
-    #
-    #     versions = ["1", "2"]
-    #     for v in versions:
-    #         mgr.bind_service(svc, self.module, {"version": v, "engine": "x1"})
-    #         assert mgr.module_is_bound_with(svc, self.module) is True
-    #
-    #         for env in self.module.envs.all():
-    #             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, svc):
-    #                 plan = rel.get_plan()
-    #                 assert plan.specifications["version"] == v
-    #                 assert plan.specifications["engine"] == "x1"
-
     def test_get_attachment_by_instance_id(self, store, bk_module):
         expect_obj: Dict[uuid.UUID, RemoteServiceEngineAppAttachment] = {}
 
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(id_of_first_service, region=bk_module.region)
+        svc = mgr.get(id_of_first_service)
 
         # 绑定服务并创建服务实例
         mgr.bind_service(svc, bk_module)
@@ -572,13 +556,13 @@ class TestLegacyRemoteMgr:
 
     def test_bind_service(self, store, bk_module):
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(self.uuid, region=bk_module.region)
+        svc = mgr.get(self.uuid)
         mgr.bind_service(svc, bk_module)
         assert mgr.module_is_bound_with(svc, bk_module) is True
 
     def test_bind_service_wrong_region(self, store, bk_module):
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(self.uuid, region=bk_module.region)
+        svc = mgr.get(self.uuid)
 
         # Re-query another module object to avoid conflict
         module = Module.objects.get(pk=bk_module.pk)
@@ -592,7 +576,7 @@ class TestLegacyRemoteMgr:
         for env in bk_app.envs.all():
             assert list(mgr.list_unprovisioned_rels(env.engine_app)) == []
 
-        svc = mgr.get(self.uuid, region=bk_module.region)
+        svc = mgr.get(self.uuid)
         assert mgr.bind_service(svc, bk_module) is not None
         assert list(mgr.list_binded(bk_module)) == [svc]
         for env in bk_app.envs.all():
@@ -600,7 +584,7 @@ class TestLegacyRemoteMgr:
 
     def test_module_rebind(self, store, bk_module):
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(self.uuid, region=bk_module.region)
+        svc = mgr.get(self.uuid)
 
         assert mgr.module_is_bound_with(svc, bk_module) is False
 
@@ -613,7 +597,7 @@ class TestLegacyRemoteMgr:
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
     def test_module_rebind_failed_after_provision(self, mock_provision_instance, store, bk_module):
         mgr = RemoteServiceMgr(store=store)
-        svc = mgr.get(self.uuid, region=bk_module.region)
+        svc = mgr.get(self.uuid)
 
         mgr.bind_service(svc, bk_module)
         assert bk_module.envs.count() > 1

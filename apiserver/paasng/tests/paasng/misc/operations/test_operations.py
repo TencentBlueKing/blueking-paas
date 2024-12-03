@@ -41,7 +41,6 @@ class TestOperationObj:
             application=bk_app,
             type=OperationType.MODIFY_PRODUCT_ATTRIBUTES.value,
             user=bk_user,
-            region=bk_app.region,
             source_object_id=bk_app.id.hex,
             extra_values={},
         )
@@ -62,7 +61,6 @@ class TestProcessOperationObj:
             application=bk_app,
             type=type_.value,
             user=bk_user,
-            region=bk_app.region,
             source_object_id=bk_app.id.hex,
             extra_values=extra_values,
             module_name="default",

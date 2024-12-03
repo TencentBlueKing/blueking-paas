@@ -64,7 +64,7 @@ class TestMixedMgr:
         assert len(services) == 3
 
     def test_get_remote_found(self):
-        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region="r1")
+        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"])
         assert obj is not None
 
     def test_get_local_found(self):
@@ -72,12 +72,12 @@ class TestMixedMgr:
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         svc = G(Service, category=category, region="r1", logo_b64="dummy")
 
-        obj = mixed_service_mgr.get(str(svc.uuid), region="r1")
+        obj = mixed_service_mgr.get(str(svc.uuid))
         assert obj is not None
 
     def test_get_not_found(self):
         with pytest.raises(ServiceObjNotFound):
-            mixed_service_mgr.get(uuid="f" * 64, region="r1")
+            mixed_service_mgr.get(uuid="f" * 64)
 
     def test_find_by_name_local_found(self):
         # Add a service in database
@@ -154,13 +154,13 @@ class TestLocalMgr:
 
     def test_bind_service(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         rel_pk = mgr.bind_service(service, bk_module)
         assert rel_pk is not None
 
     def test_list_binded(self, svc, bk_app, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         assert list(mgr.list_binded(bk_module)) == []
         for env in bk_app.envs.all():
             assert list(mgr.list_unprovisioned_rels(env.engine_app)) == []
@@ -177,7 +177,7 @@ class TestLocalMgr:
         mocked_method.side_effect = [instance_factory(), instance_factory()]
 
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         mgr.bind_service(service, bk_module)
         for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -189,7 +189,7 @@ class TestLocalMgr:
     def test_instance_has_create_time_attr(self, mocked_method, instance_factory, svc, bk_app, bk_module):
         mocked_method.side_effect = [instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         mgr.bind_service(service, bk_module)
         env = bk_app.envs.first()
         for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -202,7 +202,7 @@ class TestLocalMgr:
     def test_get_instance(self, mocked_method, instance_factory, svc, bk_app, bk_module):
         mocked_method.side_effect = [instance_factory(), instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         mgr.bind_service(service, bk_module)
         for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -231,7 +231,7 @@ class TestLocalMgr:
 
     def test_module_is_bound_with(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
         assert mgr.module_is_bound_with(service, bk_module) is False
 
         mgr.bind_service(service, bk_module)
@@ -269,7 +269,7 @@ class TestLocalRabbitMQMgr:
 
     def test_bind_service(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        service = mgr.get(svc.uuid, region=bk_module.region)
+        service = mgr.get(svc.uuid)
 
         with pytest.raises(BindServiceNoPlansError):
             mgr.bind_service(service, bk_module)

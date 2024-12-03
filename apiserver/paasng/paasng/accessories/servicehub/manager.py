@@ -38,7 +38,7 @@ from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteSe
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.region.models import get_all_regions, set_service_categories_loader
+from paasng.core.region.models import set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -118,13 +118,13 @@ class MixedServiceMgr:
         store = get_remote_store()
         self.mgr_instances = [LocalServiceMgr(), RemoteServiceMgr(store)]
 
-    def get(self, uuid: str, region: str) -> ServiceObj:
+    def get(self, uuid: str) -> ServiceObj:
         for mgr in self.mgr_instances:
             try:
-                return mgr.get(uuid, region)
+                return mgr.get(uuid)
             except ServiceObjNotFound:
                 continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} in region {region} was not found")
+        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
 
     def find_by_name(self, name: str, region: str, include_invisible: bool = False) -> ServiceObj:
         for mgr in self.mgr_instances:
@@ -135,15 +135,6 @@ class MixedServiceMgr:
             except ServiceObjNotFound:
                 continue
         raise ServiceObjNotFound(f"service with name {name} in region {region} was not found")
-
-    def get_without_region(self, uuid: str) -> ServiceObj:
-        """Get a service without any region info"""
-        for region in get_all_regions():
-            try:
-                return self.get(uuid, region)
-            except ServiceObjNotFound:
-                continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
 
     def get_or_404(self, *args, **kwargs) -> ServiceObj:
         """Get a ServiceObj object or raise 404

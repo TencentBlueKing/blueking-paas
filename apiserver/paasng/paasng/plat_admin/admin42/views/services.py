@@ -229,7 +229,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
         return Response(data=ServiceObjSLZ(mixed_service_mgr.list(), many=True).data)
 
     def destroy(self, request, pk):
-        service = mixed_service_mgr.get_without_region(uuid=pk)
+        service = mixed_service_mgr.get(uuid=pk)
         data_before = DataDetail(type=DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
         try:
             mixed_service_mgr.destroy(service)
@@ -247,7 +247,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
     def update(self, request, pk):
         try:
-            service = mixed_service_mgr.get_without_region(uuid=pk)
+            service = mixed_service_mgr.get(uuid=pk)
         except ServiceObjNotFound:
             raise Http404("ServiceObjNotFound")
 
@@ -265,7 +265,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        service = mixed_service_mgr.get_without_region(uuid=pk)
+        service = mixed_service_mgr.get(uuid=pk)
         data_after = ServiceObjSLZ(service).data
         del data_after["specifications"]
         del data_after["logo"]
@@ -314,7 +314,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
 
         try:
             mixed_plan_mgr.create(service, plan_data=data)
@@ -334,7 +334,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         return Response(data=PlanObjSLZ(mixed_plan_mgr.list(), many=True).data)
 
     def destroy(self, request, service_id, plan_id):
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要删除的 plan
         plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
@@ -359,7 +359,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要更新的 plan
         plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)

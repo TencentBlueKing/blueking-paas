@@ -18,6 +18,7 @@
 """
 A command for importing PreCreatedInstance.
 """
+
 import argparse
 
 import yaml
@@ -57,7 +58,7 @@ class Command(BaseCommand):
 
     def handle(self, service_name: str, file_, **options):
         region, name = service_name.split(":")
-        svc = Service.objects.get_by_natural_key(region, name)
+        svc = Service.objects.get(region=region, name=name)
 
         with file_ as fh:
             data = list(yaml.safe_load_all(fh))

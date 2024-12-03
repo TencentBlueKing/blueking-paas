@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 
 class Operation(models.Model):
-    region = models.CharField(max_length=32, help_text="部署区域")
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     user = BkUserField()
     application = models.ForeignKey(
@@ -248,7 +247,6 @@ class AppOfflineOperationObj(OperationObj):
             application=application,
             type=cls.get_operation_type(offline_instance).value,
             user=offline_instance.operator,
-            region=application.region,
             source_object_id=offline_instance.id.hex,
             module_name=module_name,
         )

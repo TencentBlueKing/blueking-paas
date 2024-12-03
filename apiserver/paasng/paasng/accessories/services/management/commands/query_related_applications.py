@@ -18,6 +18,7 @@
 """
 A command for Query  relationship between PreCreatedInstance and Application(Module, Env)
 """
+
 import json
 from typing import Dict, Optional
 
@@ -78,7 +79,7 @@ class Command(BaseCommand):
     def handle(self, service_name: str, credentials_str: str, **options):
         credentials = json.loads(credentials_str)
         region, name = service_name.split(":")
-        svc = Service.objects.get_by_natural_key(region, name)
+        svc = Service.objects.get(region=region, name=name)
         qs = PreCreatedInstance.objects.filter(plan__in=svc.plan_set.all())
         self.stdout.write("\n")
         for item in qs.all():

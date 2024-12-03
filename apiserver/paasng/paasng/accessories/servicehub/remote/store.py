@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Storage for remote services
-"""
+"""Storage for remote services"""
+
 import copy
 import json
 import logging
@@ -82,7 +82,7 @@ class StoreMixin:
                 result.append(copy.deepcopy(service))
         return result
 
-    def bulk_get(self, uuids: List[str], region: str) -> List[Dict]:
+    def bulk_get(self, uuids: List[str]) -> List[Dict]:
         """Get multiple service instances by a list of uuids
 
         :returns: a list of service object, if a service can not be found by given uuid, use
@@ -91,7 +91,7 @@ class StoreMixin:
         items = []
         for uuid in uuids:
             try:
-                items.append(self.get(uuid, region))
+                items.append(self.get(uuid))
             except ServiceNotFound:
                 logger.warning(f"bulk_get: can not find a service by uuid {uuid}")
                 items.append(None)
@@ -131,14 +131,10 @@ class MemoryStore(StoreMixin):
         """Get the source remote svc config by service uuid"""
         return self._map_id_to_config[uuid]
 
-    def get(self, uuid: str, region: str) -> Dict:
+    def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         try:
-            item = copy.deepcopy(self._map_id_to_service[uuid])
-            if not self._svc_supports_region(item, region):
-                raise RuntimeError("service does not contains a plan in given region")
-            else:
-                return item
+            return copy.deepcopy(self._map_id_to_service[uuid])
         except KeyError:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
@@ -209,16 +205,13 @@ class RedisStore(StoreMixin):
             raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
         return RemoteSvcConfig.from_json(_loads(config))
 
-    def get(self, uuid: str, region: str) -> Dict:
+    def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         result = self.redis.get(self._make_svc_info_key(uuid))
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
-        item = _loads(result)
-        if not self._svc_supports_region(item, region):
-            raise RuntimeError("service does not contains a plan in given region")
-        return item
+        return _loads(result)
 
     def all(self) -> List[Dict]:
         """List all services"""

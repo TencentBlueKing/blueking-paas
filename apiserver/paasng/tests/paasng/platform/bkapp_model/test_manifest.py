@@ -88,7 +88,7 @@ def local_service(bk_app):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
-    return mixed_service_mgr.get(service.uuid, region=bk_app.region)
+    return mixed_service_mgr.get(service.uuid)
 
 
 @pytest.fixture()

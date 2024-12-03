@@ -45,11 +45,11 @@ class TestRemoteStore:
 
     def test_get_non_exists(self, store):
         with pytest.raises(ServiceNotFound):
-            store.get("invalid-uuid", region="r1")
+            store.get("invalid-uuid")
 
     def test_get_normal(self, store):
         uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
-        obj = store.get(uuid, region="r1")
+        obj = store.get(uuid)
         assert obj is not None
 
     def test_list_all(self, store):
@@ -62,11 +62,6 @@ class TestRemoteStore:
     def test_get_source_config(self, config, store):
         uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
         assert store.get_source_config(uuid) == config
-
-    def test_get_by_unsupported_region(self, store):
-        uuid = data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]
-        with pytest.raises(RuntimeError):
-            store.get(uuid, "neverland")
 
     def test_bulk_get(self, store):
         uuids = [
@@ -86,11 +81,6 @@ class TestRemoteStore:
         assert len(services) == 2
         assert services[0]["uuid"] == uuids[0]
         assert services[1] is None
-
-    def test_bulk_get_by_unsupported_region(self, store):
-        uuids = [data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"]]
-        with pytest.raises(RuntimeError):
-            store.bulk_get(uuids, "neverland")
 
     def test_all(self, store):
         uuids = {i["uuid"] for i in store.all()}

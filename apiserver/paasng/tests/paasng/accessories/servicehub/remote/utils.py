@@ -26,7 +26,6 @@ from ..utils import SERVICE_COMMON_ARGS
 def gen_service(region: str, specifications: list):
     name = generate_random_string()
     return RemoteServiceObj.from_data(
-        region=region,
         service=dict(
             uuid=str(uuid.uuid4()),
             name=name,

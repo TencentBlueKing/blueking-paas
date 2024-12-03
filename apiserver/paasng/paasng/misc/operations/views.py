@@ -137,10 +137,7 @@ class LatestApplicationsViewSet(APIView):
         serializer = QueryRecentOperatedApplications(data=request.GET)
         serializer.is_valid(raise_exception=True)
 
-        records_queryset = self.get_queryset(serializer.data["limit"])
-        data = {
-            "results": records_queryset,
-        }
+        data = {"results": self.get_queryset(serializer.data["limit"])}
         serializer = RecentOperationsByAppSLZ(data)
         return Response(serializer.data)
 

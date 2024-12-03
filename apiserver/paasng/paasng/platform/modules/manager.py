@@ -471,7 +471,7 @@ class ModuleCleaner:
                 logger.info(f"service<{rel.db_obj.service_id}-{rel.db_obj.service_instance_id}> deleted. ")
 
                 # Put related services into collection
-                service = mixed_service_mgr.get(rel.db_obj.service_id, self.module.region)
+                service = mixed_service_mgr.get(rel.db_obj.service_id)
                 services.append(service)
 
         # Clear all related shared services

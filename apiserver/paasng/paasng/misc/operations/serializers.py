@@ -31,11 +31,11 @@ class OperationSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Operation
-        fields = ("application", "id", "region", "at", "operate", "operate_type", "operator")
+        fields = ("application", "id", "at", "operate", "operate_type", "operator")
         lookup_field = "id"
 
 
-class OperationForRencentApp(OperationSLZ):
+class OperationForRecentApp(OperationSLZ):
     application = ApplicationSLZ4Record(read_only=True)
     at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created")
     operate = serializers.ReadOnlyField(source="get_operate_display", help_text="操作名称")
@@ -49,7 +49,7 @@ class OperationForRencentApp(OperationSLZ):
 
 
 class RecentOperationsByAppSLZ(serializers.Serializer):
-    results = OperationForRencentApp(many=True)
+    results = OperationForRecentApp(many=True)
 
 
 class ApplicationOperationSLZ(serializers.ModelSerializer):
@@ -65,7 +65,6 @@ class ApplicationOperationSLZ(serializers.ModelSerializer):
         fields = (
             "application",
             "id",
-            "region",
             "at",
             "operate",
             "operate_type",

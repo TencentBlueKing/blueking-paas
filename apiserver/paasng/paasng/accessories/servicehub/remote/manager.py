@@ -52,7 +52,6 @@ from paasng.accessories.servicehub.services import (
     PlanObj,
     ServiceInstanceObj,
     ServiceObj,
-    ServicePlansHelper,
     ServiceSpecificationDefinition,
     ServiceSpecificationHelper,
 )
@@ -130,13 +129,19 @@ class RemoteServiceObj(ServiceObj):
     category_id = None
 
     @classmethod
-    def from_data(cls, service: Dict, region=None) -> "RemoteServiceObj":
+    def from_data(cls, service: Dict) -> "RemoteServiceObj":
         field_names = list(cls.__dataclass_fields__.keys())  # type: ignore
         fields: Dict[str, Any] = {k: service.get(k) for k in field_names if k in service}
-        fields["region"] = region
 
         fields["specifications"] = [ServiceSpecificationDefinition(**i) for i in fields.get("specifications") or ()]
         fields["plans"] = [RemotePlanObj.from_data(i) for i in fields.get("plans") or ()]
+
+        # 改为从 plans 中取 region FIXME 这里是有问题的，远程增强服务 PLAN 不止一种 region
+        if plan_regions := {plan.region for plan in fields["plans"] if plan.region}:
+            if len(plan_regions) != 1:
+                raise RuntimeError("RemoteServiceObj: plans must have same region")
+
+            fields["region"] = plan_regions.pop()
 
         # Set up meta info
         meta_info_data = service.get("_meta_info")
@@ -209,7 +214,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         self.region = self.db_application.region
 
     def get_service(self) -> RemoteServiceObj:
-        return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        return self.mgr.get(str(self.db_obj.service_id))
 
     def is_provisioned(self) -> bool:
         return self.db_obj.service_instance_id is not None
@@ -348,7 +353,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         if plan_id == str(constants.LEGACY_PLAN_ID):
             return RemotePlanObj.from_data(constants.LEGACY_PLAN_INSTANCE)
 
-        svc_data = self.store.get(str(self.db_obj.service_id), region=self.db_application.region)
+        svc_data = self.store.get(str(self.db_obj.service_id))
         for d in svc_data["plans"]:
             if d["uuid"] == plan_id:
                 return RemotePlanObj.from_data(d)
@@ -371,7 +376,7 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
         self.remote_client = self.get_remote_client()
 
     def get_service(self) -> RemoteServiceObj:
-        return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        return self.mgr.get(str(self.db_obj.service_id))
 
     def get_remote_client(self):
         remote_config = self.mgr.store.get_source_config(str(self.db_obj.service_id))
@@ -472,16 +477,16 @@ class RemoteServiceMgr(BaseServiceMgr):
     def __init__(self, store: RemoteServiceStore):
         self.store = store
 
-    def get(self, uuid: str, region: str) -> RemoteServiceObj:
+    def get(self, uuid: str) -> RemoteServiceObj:
         """Get a single service by given uuid
 
         :raises: ServiceObjNotFound
         """
         try:
-            obj = self.store.get(uuid, region)
+            obj = self.store.get(uuid)
         except (ServiceNotFound, RuntimeError) as e:
             raise exceptions.ServiceObjNotFound(f"Service with id={uuid} not found in remote") from e
-        return RemoteServiceObj.from_data(obj, region=region)
+        return RemoteServiceObj.from_data(obj)
 
     def find_by_name(self, name: str, region: str) -> RemoteServiceObj:
         """Find a single service by service name
@@ -492,7 +497,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         if not objs:
             raise exceptions.ServiceObjNotFound(f"Service with name={name} not found in remote")
         # Use the first matched services objects
-        return RemoteServiceObj.from_data(objs[0], region=region)
+        return RemoteServiceObj.from_data(objs[0])
 
     def list_by_category(
         self, region: str, category_id: int, include_hidden=False
@@ -500,7 +505,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         """query a list of services by category"""
         items = self.store.filter(region, conditions={"category": category_id})
         for svc in items:
-            obj = RemoteServiceObj.from_data(svc, region=region)
+            obj = RemoteServiceObj.from_data(svc)
             # Ignore services which is_visible field is False
             if not include_hidden and not svc["is_visible"]:
                 continue
@@ -514,13 +519,13 @@ class RemoteServiceMgr(BaseServiceMgr):
             if not include_hidden and not svc["is_visible"]:
                 continue
 
-            yield RemoteServiceObj.from_data(svc, region=region)
+            yield RemoteServiceObj.from_data(svc)
 
     def list(self) -> Generator[ServiceObj, None, None]:
         """query all list of services"""
         items = self.store.all()
         for svc in items:
-            yield RemoteServiceObj.from_data(svc, region=None)
+            yield RemoteServiceObj.from_data(svc)
 
     def _handle_service_data(self, data: Dict) -> Dict:
         # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
@@ -528,7 +533,7 @@ class RemoteServiceMgr(BaseServiceMgr):
 
         # 远程增强服务的 specification 中的 display_name 是 TranslatedField
         # 但本地增强服务并无 specification 字段, 仅将这些额外属性存储在 config 字段中
-        # specification.displayname 的国际化目前是由前端来处理
+        # specification.display_name 的国际化目前是由前端来处理
         data["specifications"] = RemoteSpecDefinitionUpdateSLZ(data["specifications"], many=True).data
         return data
 
@@ -553,9 +558,9 @@ class RemoteServiceMgr(BaseServiceMgr):
         """List application's bound services"""
         attachments = RemoteServiceModuleAttachment.objects.filter(module=module).values("service_id")
         service_ids = [str(obj["service_id"]) for obj in attachments]
-        for svc in self.store.bulk_get(service_ids, region=module.region):
+        for svc in self.store.bulk_get(service_ids):
             if svc:
-                obj = RemoteServiceObj.from_data(svc, region=module.region)
+                obj = RemoteServiceObj.from_data(svc)
                 if category_id and category_id != obj.category_id:
                     continue
                 yield obj
@@ -738,7 +743,7 @@ class RemoteServiceBinder:
         """
         specs_helper = ServiceSpecificationHelper(
             self.service.specifications,
-            list(ServicePlansHelper.from_service(self.service).get_by_region(module.region)),
+            self.service.get_plans(),
         )
         plans = specs_helper.filter_plans(specs)
 

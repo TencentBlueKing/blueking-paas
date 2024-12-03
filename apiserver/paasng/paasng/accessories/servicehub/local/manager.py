@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Local services manager
-"""
+"""Local services manager"""
+
 import json
 import logging
 import uuid
@@ -195,13 +195,13 @@ class LocalServiceMgr(BaseServiceMgr):
 
     service_obj_cls = LocalServiceObj
 
-    def get(self, uuid: str, region: str) -> LocalServiceObj:
+    def get(self, uuid: str) -> LocalServiceObj:
         """Get a single service by given uuid
 
         :raises: ServiceObjNotFound
         """
         try:
-            obj = Service.objects.get(uuid=uuid, region=region)
+            obj = Service.objects.get(uuid=uuid)
         except (Service.DoesNotExist, ValidationError) as e:
             raise ServiceObjNotFound(f"Service with id={uuid} not found in database") from e
         return LocalServiceObj.from_db_object(obj)

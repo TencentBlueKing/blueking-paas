@@ -45,11 +45,6 @@ class ServiceCategory(models.Model):
         return self.name
 
 
-class ServiceManager(models.Manager):
-    def get_by_natural_key(self, region, name):
-        return self.get(region=region, name=name)
-
-
 class Service(UuidAuditedModel):
     """
     Service model for PaaS
@@ -72,13 +67,8 @@ class Service(UuidAuditedModel):
     # index page. But an already existed binding relationship won't be affected.
     is_visible = models.BooleanField(verbose_name="是否可见", default=True)
 
-    objects = ServiceManager()
-
     class Meta:
         unique_together = ("region", "name")
-
-    def natural_key(self):
-        return (self.region, self.name)
 
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)

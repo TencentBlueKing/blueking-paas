@@ -45,7 +45,7 @@ from paasng.accessories.servicehub.remote.manager import (
     get_app_by_instance_name,
 )
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
+from paasng.accessories.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
@@ -104,10 +104,6 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
 
-    @staticmethod
-    def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
-
     def _get_application_by_code(self, application_code):
         application = get_object_or_404(Application, code=application_code)
         # NOTE: 必须检查是否具有操作 app 的权限
@@ -125,7 +121,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = serializer.data
         specs = data["specs"]
         application = self._get_application_by_code(data["code"])
-        service_obj = self.get_service(data["service_id"], application)
+        service_obj = mixed_service_mgr.get_or_404(data["service_id"])
         module = application.get_module(data.get("module_name", None))
 
         try:
@@ -170,9 +166,8 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @app_action_required(AppAction.BASIC_DEVELOP)
     def retrieve(self, request, code, module_name, service_id):
         """查看应用模块与增强服务的绑定关系详情"""
-        application = self.get_application()
         module = self.get_module_via_path()
-        service = self.get_service(service_id, application)
+        service = mixed_service_mgr.get_or_404(service_id)
 
         # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
         if not mixed_service_mgr.module_is_bound_with(service, module):
@@ -198,9 +193,8 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @app_action_required(AppAction.BASIC_DEVELOP)
     def retrieve_specs(self, request, code, module_name, service_id):
         """获取应用已绑定的服务规格"""
-        application = self.get_application()
         module = self.get_module_via_path()
-        service = self.get_service(service_id, application)
+        service = mixed_service_mgr.get_or_404(service_id)
 
         # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
         if not mixed_service_mgr.module_is_bound_with(service, module):
@@ -228,7 +222,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
         module = application.get_module(module_name)
-        service = self.get_service(service_id, application)
+        service = mixed_service_mgr.get_or_404(service_id)
 
         # Check if application was protected
         raise_if_protected(application, ProtectedRes.SERVICES_MODIFICATIONS)
@@ -290,7 +284,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def retrieve(self, request, service_id):
         """获取服务详细信息"""
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         serializer = self.serializer_class(service)
         return Response({"result": serializer.data})
 
@@ -345,7 +339,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         param = serializer.data
         application_ids = list(Application.objects.filter_by_user(request.user).values_list("id", flat=True))
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(
             param["order_by"]
         )
@@ -578,10 +572,9 @@ class ServicePlanViewSet(viewsets.ViewSet):
     def retrieve_specifications(self, request, service_id, region):
         """获取一个增强服务的规格组合"""
 
-        service = mixed_service_mgr.get_or_404(service_id, region=region)
-        plan_helper = ServicePlansHelper.from_service(service)
+        service = mixed_service_mgr.get_or_404(service_id)
         definitions = service.public_specifications
-        helper = ServiceSpecificationHelper(definitions, list(plan_helper.get_by_region(region)))
+        helper = ServiceSpecificationHelper(definitions, service.get_plans())
         slz = slzs.ServiceSpecificationSLZ(
             dict(
                 definitions=definitions,
@@ -598,10 +591,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated]
 
-    @staticmethod
-    def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
-
     @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
     @app_action_required(AppAction.BASIC_DEVELOP)
     def list_shareable(self, request, code, module_name, service_id):
@@ -609,7 +598,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         客户端可通过该接口，获取当前应用下所有可供共享的模块列表。
         """
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         module = self.get_module_via_path()
         modules = ServiceSharingManager(module).list_shareable(service_obj)
         return Response(MinimalModuleSLZ(modules, many=True).data)
@@ -638,7 +627,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 _("模块 {ref_module_name} 不存在").format(ref_module_name=ref_module_name)
             )
 
-        service_obj = self.get_service(service_id, application)
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         module = self.get_module_via_path()
         try:
             ServiceSharingManager(module).create(service_obj, ref_module)
@@ -659,7 +648,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         客户端可通过该信息跳转被共享的服务实例（`ref_module`）页面。如果无法找到共享关系，接口将返回 404。
         """
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         module = self.get_module_via_path()
         info = ServiceSharingManager(module).get_shared_info(service_obj)
         if not info:
@@ -673,7 +662,7 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         客户端在需要删除模块共享关系时，调用该接口。
         """
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         module = self.get_module_via_path()
         ServiceSharingManager(module).destroy(service_obj)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -684,10 +673,6 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @staticmethod
-    def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
-
     @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
     def list_related_modules(self, request, code, module_name, service_id):
         """查看模块增强服务被共享引用情况
@@ -695,7 +680,7 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         查看当前模块的增强服务绑定关系，被哪些模块引用。 客户端应该在用户删除增强服务前调用该接口，
         检查待删除的增强服务是否被其他模块共享。假如有其他模块在共享该服务，应该弹出二次确认提醒用户。
         """
-        service_obj = self.get_service(service_id, self.get_application())
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         module = self.get_module_via_path()
         modules = SharingReferencesManager(module).list_related_modules(service_obj)
         return Response(MinimalModuleSLZ(modules, many=True).data)

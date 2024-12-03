@@ -154,9 +154,13 @@ class EnvDeploySummarySLZ(serializers.Serializer):
 
     def get_latest_deployed_at(self, obj: Dict[str, Any]) -> str:
         return (
-            arrow.get(obj["latest_deployed_at"])
-            .astimezone(tz=pytz.timezone(settings.TIME_ZONE))
-            .strftime("%Y-%m-%d %H:%M:%S")
+            (
+                arrow.get(obj["latest_deployed_at"])
+                .astimezone(tz=pytz.timezone(settings.TIME_ZONE))
+                .strftime("%Y-%m-%d %H:%M:%S")
+            )
+            if obj.get("latest_deployed_at")
+            else "--"
         )
 
 

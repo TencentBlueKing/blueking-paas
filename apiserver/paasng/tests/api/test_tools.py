@@ -546,10 +546,10 @@ module:
              - name: default
              - name: web
              """,
-                "Error parsing YAML content: 'modules' should be a dictionary.",
+                "Error parsing spec_version 2 content: 'modules' should be a dictionary.",
             ),
-            ("""    """, "Error parsing YAML content: no content."),
-            ("""spec_version: 2""", "Error parsing YAML content: one of 'modules' or 'module' is required."),
+            ("""    """, "Error parsing spec_version 2 content: no content."),
+            ("""spec_version: 2""", "Error parsing spec_version 2 content: one of 'modules' or 'module' is required."),
         ],
     )
     def test_app_desc_transform_exception(self, api_client, spec2_yaml, expected_exception_detail):

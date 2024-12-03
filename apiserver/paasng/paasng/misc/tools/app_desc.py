@@ -44,17 +44,17 @@ def transform_app_desc_spec2_to_spec3(spec2):
 
     if "app" in spec2:
         if not isinstance(spec2["app"], dict):
-            raise ValueError("'app' should be a dictionary.")
+            raise TypeError("'app' should be a dictionary.")
         spec3["app"] = transform_app_section(spec2["app"])
 
     if "modules" in spec2:
         if not isinstance(spec2["modules"], dict):
-            raise ValueError("'modules' should be a dictionary.")
+            raise TypeError("'modules' should be a dictionary.")
         spec3["modules"] = transform_modules_section(spec2["modules"])
     elif "module" in spec2:
         # 只有一个 module 时, module 字典在第一层
         if not isinstance(spec2["module"], dict):
-            raise ValueError("'module' should be a dictionary.")
+            raise TypeError("'module' should be a dictionary.")
         module = spec2["module"]
         module["name"] = "default"
         spec3["module"] = transform_module(module)

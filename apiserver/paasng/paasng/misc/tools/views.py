@@ -51,7 +51,7 @@ class AppDescTransformAPIView(APIView):
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(spec2_data)
         except (ValueError, TypeError) as e:
-            raise ValidationError(f"Error parsing YAML content: {e}")
+            raise ValidationError(f"Error parsing spec_version 2 content: {e}")
 
         yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
         output_yaml = yaml.dump(

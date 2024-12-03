@@ -112,6 +112,12 @@ urlpatterns = [
         views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
         name="api.services.credentials_enabled",
     ),
+    # List unbound engine_app attachment instances, and recycle instance
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/service/attachment/instances/unbound/$",
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list", "post": "recycle_instance"}),
+        name="api.services.attachment.unbound",
+    ),
     # Service sharing APIs
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/shareable_modules/$", include_envs=False),

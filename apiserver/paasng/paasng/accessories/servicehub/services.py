@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The universal services module, handles both services from database and remote REST API
-"""
+"""The universal services module, handles both services from database and remote REST API"""
+
 import logging
 import uuid
 import weakref
@@ -200,7 +200,7 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
         raise NotImplementedError
 
     def delete(self):
-        """include delete rel & real resource recycle"""
+        """include delete rel, mark_unbound & real resource recycle"""
         if self.is_provisioned():
             self.recycle_resource()
         logger.info("going to delete remote service attachment from db")
@@ -210,6 +210,30 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
     @abstractmethod
     def recycle_resource(self):
         """Recycle resources but do not unbind the service"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def mark_unbound(self):
+        """Add to unbound instances, which is unbound with engine app, could be recycled later"""
+        raise NotImplementedError
+
+
+class UnboundEngineAppInstanceRel(metaclass=ABCMeta):
+    """A provinsioned instance which is unbound with engine app"""
+
+    db_obj: Any
+
+    @abstractmethod
+    def is_unbound(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_recycled(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def recycle_resource(self):
+        """Recycle resources"""
         raise NotImplementedError
 
 
@@ -293,6 +317,10 @@ class BaseServiceMgr(metaclass=ABCMeta):
 
     @abstractmethod
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         raise NotImplementedError
 
 
@@ -475,3 +503,10 @@ class ModuleSpecificationsHelper:
             method = getattr(self, f"fill_spec_{name}", None)
             if callable(method):
                 method()
+
+
+@dataclass
+class BaseUnboundEngineAppInstanceMgr:
+    @abstractmethod
+    def list_by_app_code(self, app_code: str) -> Generator[ServiceObj, None, None]:
+        raise NotImplementedError

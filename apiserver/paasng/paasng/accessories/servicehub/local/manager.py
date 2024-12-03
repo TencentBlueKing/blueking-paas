@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Local services manager
-"""
+"""Local services manager"""
+
 import json
 import logging
 import uuid
@@ -31,14 +31,20 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.servicehub import constants
+from paasng.accessories.servicehub.constants import ServiceUnboundStatus
 from paasng.accessories.servicehub.exceptions import (
     BindServiceNoPlansError,
     CanNotModifyPlan,
     ProvisionInstanceError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
-from paasng.accessories.servicehub.models import ServiceEngineAppAttachment, ServiceModuleAttachment
+from paasng.accessories.servicehub.models import (
+    ServiceEngineAppAttachment,
+    ServiceModuleAttachment,
+    UnboundServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.services import (
     NOTSET,
     BasePlanMgr,
@@ -50,8 +56,9 @@ from paasng.accessories.servicehub.services import (
     ServiceObj,
     ServiceSpecificationDefinition,
     ServiceSpecificationHelper,
+    UnboundEngineAppInstanceRel,
 )
-from paasng.accessories.services.models import Plan, Service
+from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -165,7 +172,20 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         ).inc()
 
     def recycle_resource(self):
+        if self.db_obj.service.prefer_async_delete:
+            self.mark_unbound()
         self.db_obj.clean_service_instance()
+
+    def mark_unbound(self):
+        db_env = ModuleEnvironment.objects.get(engine_app=self.db_obj.engine_app)
+        UnboundServiceEngineAppAttachment.objects.create(
+            application=db_env.application,
+            module=db_env.module,
+            environment=db_env.environment,
+            engine_app=self.db_obj.engine_app,
+            service=self.db_obj.service,
+            service_instance=self.db_obj.service_instance,
+        )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
@@ -386,6 +406,17 @@ class LocalServiceMgr(BaseServiceMgr):
         except ServiceEngineAppAttachment.DoesNotExist as e:
             raise SvcAttachmentDoesNotExist from e
 
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        try:
+            instance = UnboundServiceEngineAppAttachment.objects.get(
+                service_id=service.uuid,
+                service_instance__uuid=service_instance_id,
+                status=ServiceUnboundStatus.Unbound,
+            )
+        except UnboundServiceEngineAppAttachment.DoesNotExist as e:
+            raise UnboundSvcAttachmentDoesNotExist from e
+        return LocalUnboundEngineAppInstanceRel(instance)
+
 
 class LocalPlanMgr(BasePlanMgr):
     """Local in-database plans manager"""
@@ -448,6 +479,30 @@ class LocalPlanMgr(BasePlanMgr):
         # Plan 的 config 属性不是 JsonField, 因此需要 json.dumps
         data["config"] = json.dumps(data["config"])
         return data
+
+
+class LocalUnboundEngineAppInstanceRel(UnboundEngineAppInstanceRel):
+    """A unbound relationship between EngineApp and Provisioned instance"""
+
+    def __init__(self, db_obj: UnboundServiceEngineAppAttachment):
+        self.db_obj = db_obj
+
+    def is_unbound(self):
+        return self.db_obj.status == ServiceUnboundStatus.Unbound
+
+    def is_recycled(self):
+        return not ServiceInstance.objects.filter(uuid=self.db_obj.service_instance_id).exists()
+
+    def recycle_resource(self):
+        if not self.is_unbound():
+            raise UnboundSvcAttachmentDoesNotExist("service instance is not unbound")
+
+        if self.is_recycled():
+            self.db_obj.status = constants.ServiceUnboundStatus.Recycled
+            self.db_obj.save()
+            return
+
+        self.db_obj.clean_service_instance()
 
 
 class LocalPlainInstanceMgr(PlainInstanceMgr):

@@ -49,7 +49,6 @@ def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:
         secret_in_db = client.get_secret_by_id(bk_app_code, secret_in_db)
         if secret_in_db:
             return secret_in_db
-
     # 平台中没有记录，则从 bkAuth 返回的 API 中选择默认的密钥: 已启用且创建时间最早的
     return client.get_default_app_secret(bk_app_code)
 

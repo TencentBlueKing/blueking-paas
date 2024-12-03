@@ -32,6 +32,7 @@ var BK_SHARED_RES_URL = process.env.BK_SHARED_RES_URL || ''
 var BK_TCGIT_COPILOT_URL = process.env.BK_TCGIT_COPILOT_URL  || ''
 var BK_PAAS_DOCS_VER = process.env.BK_PAAS_DOCS_VER || ''
 var BK_APIGW_DOCS_VER = process.env.BK_APIGW_DOCS_VER || ''
+var BK_ANALYSIS_SITE_NAME = process.env.BK_ANALYSIS_SITE_NAME || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
 var PAAS_DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/${BK_PAAS_DOCS_VER}` // PaaS 产品文档前缀

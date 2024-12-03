@@ -503,10 +503,3 @@ class ModuleSpecificationsHelper:
             method = getattr(self, f"fill_spec_{name}", None)
             if callable(method):
                 method()
-
-
-@dataclass
-class BaseUnboundEngineAppInstanceMgr:
-    @abstractmethod
-    def list_by_app_code(self, app_code: str) -> Generator[ServiceObj, None, None]:
-        raise NotImplementedError

@@ -498,8 +498,7 @@ class LocalUnboundEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             raise UnboundSvcAttachmentDoesNotExist("service instance is not unbound")
 
         if self.is_recycled():
-            self.db_obj.status = constants.ServiceUnboundStatus.Recycled
-            self.db_obj.save()
+            self.db_obj.delete()
             return
 
         self.db_obj.clean_service_instance()

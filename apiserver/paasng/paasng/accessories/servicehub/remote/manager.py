@@ -42,6 +42,7 @@ from paasng.accessories.servicehub.remote.client import RemoteServiceClient
 from paasng.accessories.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
 from paasng.accessories.servicehub.remote.exceptions import (
     GetClusterEgressInfoError,
+    RClientResponseError,
     ServiceNotFound,
     UnsupportedOperationError,
 )
@@ -721,9 +722,15 @@ class RemoteUnboundEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         return self.db_obj.status == constants.ServiceUnboundStatus.Unbound
 
     def is_recycled(self):
-        instance_data = self.remote_client.retrieve_instance(str(self.db_obj.service_instance_id))
-        # TODO: More data validations
-        return instance_data.get("uuid") != str(self.db_obj.service_instance_id)
+        try:
+            self.remote_client.retrieve_instance(str(self.db_obj.service_instance_id))
+        except RClientResponseError as e:
+            # if not find service instance with this id, remote response http status code 404
+            if e.status_code == 404:
+                return True
+            raise
+
+        return False
 
     def recycle_resource(self):
         if not self.is_unbound():
@@ -735,7 +742,9 @@ class RemoteUnboundEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             return
 
         try:
-            self.remote_client.delete_instance(instance_id=str(self.db_obj.service_instance_id))
+            self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
+            self.db_obj.status = constants.ServiceUnboundStatus.Recycled
+            self.db_obj.save()
         except Exception as e:
             logger.exception("Error occurs during recycling")
             raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e

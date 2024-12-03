@@ -279,17 +279,16 @@ class TestHookField:
             bk_module,
             Hooks(pre_release=HookCmd(command=["echo"])),
             FieldMgrName.WEB_FORM,
-            use_proc_command=True,
         )
         module_hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
-        assert module_hook.proc_command == "echo"
+        assert module_hook.proc_command is None
 
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, {"language": "python"}))
 
         # The hook should stay the same because it's managed by a different manager
         module_hook = bk_module.deploy_hooks.get_by_type(DeployHookType.PRE_RELEASE_HOOK)
-        assert module_hook.proc_command == "echo"
+        assert module_hook.proc_command is None
 
     # Helper methods start
 

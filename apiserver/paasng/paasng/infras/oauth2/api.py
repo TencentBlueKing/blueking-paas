@@ -97,6 +97,10 @@ class BkOauthClient:
             "bk_app_code": bk_app_code,
             # BKAuth 未提供修改 name 的 API，name 也必须唯一，故 name 的值也是用 bk_app_code
             "name": bk_app_code,
+            "bk_tenant": {
+                "mode": "global",    # mode=global/id="" 全租户； mode=single/id="xxx" 单租户；
+                "id": ""
+            }
         }
         with wrap_request_exc():
             resp = requests.post(url, json=data, headers=self.headers)

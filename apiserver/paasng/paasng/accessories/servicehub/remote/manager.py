@@ -285,12 +285,13 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
     def recycle_resource(self):
         """对于 remote service 我们默认其已经具备了回收的能力"""
         if self.is_provisioned():
-            self.mark_unbound()
             try:
                 self.remote_client.delete_instance(instance_id=str(self.db_obj.service_instance_id))
             except Exception as e:
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+            if not self.db_obj.prefer_async_delete:
+                self.mark_unbound()
         self.db_obj.service_instance_id = None
         self.db_obj.save()
 
@@ -729,7 +730,6 @@ class RemoteUnboundEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             if e.status_code == 404:
                 return True
             raise
-
         return False
 
     def recycle_resource(self):

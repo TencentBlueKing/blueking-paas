@@ -1,15 +1,7 @@
 <template>
   <div class="right-main description-file-conversion">
-    <div class="ps-top-bar flex-row align-items-center">
+    <div class="ps-top-bar">
       <h2>{{ $t('应用描述文件转换') }}</h2>
-      <a
-        :href="GLOBAL.DOC.APP_DESC_CNATIVE"
-        target="_blank"
-        class="introduce"
-      >
-        <i class="paasng-icon paasng-process-file"></i>
-        {{ $t('应用描述文件介绍') }}
-      </a>
     </div>
     <div class="content">
       <title-bar />
@@ -21,11 +13,10 @@
           <p>
             {{
               $t(
-                '如果您的应用描述文件版本是 spec_version: 2 且应用为云原生应用： 直接将描述文件转换为 specVersion: 3 后即可部署。'
+                '如果您的应用描述文件版本是 spec_version: 2 且应用为云原生应用：直接将描述文件转换为 specVersion: 3 后即可部署。如果您的应用是普通应用：需要先将应用迁移到云原生应用，再更新描述文件版本'
               )
             }}
           </p>
-          <p>{{ $t('如果您的应用是普通应用：需要先将应用迁移到云原生应用，再更新描述文件版本') }}</p>
         </div>
       </bk-alert>
       <!-- 文件转换 -->
@@ -49,12 +40,11 @@
         <div
           class="icon-box flex-row flex-column align-items-center justify-content-center"
           :style="{ height: `${editorHeight + 40}px` }"
-          @click="getDescriptionFileConversion"
         >
           <div
             class="conversion-icon flex-row align-items-center justify-content-center"
             :class="{ loading: isLoading }"
-            v-bk-tooltips="$t('点击转换')"
+            @click="getDescriptionFileConversion"
           >
             <div
               class="loading-icon flex-row"
@@ -169,6 +159,10 @@ export default {
           this.targetCode = buffer;
         }
         this.conversionStatus = 'success';
+        this.$bkMessage({
+          theme: 'success',
+          message: this.$t('转换成功'),
+        });
       } catch (e) {
         // 兼容两种错误处理
         const errroMsg = typeof e.response?.data === 'string' ? e.response?.data : e.detail;
@@ -198,18 +192,6 @@ export default {
 
 <style lang="scss" scoped>
 .description-file-conversion {
-  .ps-top-bar {
-    h2 {
-      margin: 0;
-    }
-    .introduce {
-      color: #3a84ff;
-      font-size: 14px;
-      i {
-        font-size: 16px;
-      }
-    }
-  }
   .content {
     margin: 16px 24px;
     display: flex;

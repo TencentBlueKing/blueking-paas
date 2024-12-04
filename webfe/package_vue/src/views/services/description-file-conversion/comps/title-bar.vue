@@ -4,7 +4,17 @@
       <i class="paasng-icon paasng-process-file"></i>
     </div>
     <div class="info">
-      <p class="sub-title">{{ $t('app_desc.yaml 是描述蓝鲸应用的配置文件。') }}</p>
+      <p class="sub-title">
+        {{ $t('app_desc.yaml 是描述蓝鲸应用的配置文件。') }}
+        <a
+          :href="GLOBAL.DOC.APP_DESC_CNATIVE"
+          target="_blank"
+          class="introduce"
+        >
+          <i class="paasng-icon paasng-process-file"></i>
+          {{ $t('应用描述文件介绍') }}
+        </a>
+      </p>
       <p>
         {{ $t('specVersion: 3 是针对云原生应用设计的最新规范，可以定义进程服务、可观测性等所有云原生应用的功能。') }}
       </p>
@@ -39,6 +49,9 @@ export default {
     font-size: 14px;
     color: #313238;
     line-height: 26px;
+    .introduce i {
+      font-size: 16px;
+    }
   }
 }
 </style>

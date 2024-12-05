@@ -52,12 +52,6 @@ class DevSandbox(OwnerTimestampedModel):
         self.expired_at = timezone.now() + timezone.timedelta(hours=2)
         self.save(update_fields=["expired_at"])
 
-    def should_recycle(self) -> bool:
-        """检查是否应该被回收"""
-        if self.expired_at:
-            return self.expired_at <= timezone.now()
-        return False
-
     class Meta:
         unique_together = ("module", "owner")
 
@@ -68,4 +62,4 @@ class CodeEditor(UuidAuditedModel):
     dev_sandbox = models.OneToOneField(
         DevSandbox, on_delete=models.CASCADE, db_constraint=False, related_name="code_editor"
     )
-    password = EncryptField(max_length=32, verbose_name="登陆密码", help_text="登陆密码")
+    password = EncryptField(max_length=32, verbose_name="登录密码", help_text="登录密码")

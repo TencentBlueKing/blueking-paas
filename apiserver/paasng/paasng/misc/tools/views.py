@@ -47,7 +47,7 @@ class AppDescTransformAPIView(APIView):
         try:
             spec2_data = yaml.safe_load(yaml_data)
         except yaml.YAMLError as e:
-            return HttpResponseBadRequest(f"Error parsing YAML file: {str(e)}")
+            return HttpResponseBadRequest(f"Error parsing YAML content: {str(e)}")
 
         serializer = AppDescSpec2Serializer(data=spec2_data)
         serializer.is_valid(raise_exception=True)

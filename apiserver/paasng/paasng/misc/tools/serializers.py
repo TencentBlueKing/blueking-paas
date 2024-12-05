@@ -125,7 +125,9 @@ class SvcDiscoverySerializer(serializers.Serializer):
                 continue
             if isinstance(item, dict):
                 if "bk_app_code" not in item:
-                    raise serializers.ValidationError("dictionary in bk_saas must contain 'bk_app_code'.")
+                    raise serializers.ValidationError(
+                        "If bk_saas item is a dictionary, it must contain 'bk_app_code'."
+                    )
             else:
                 raise serializers.ValidationError("Each item in 'bk_saas' must be either a string or a dictionary.")
 
@@ -154,6 +156,6 @@ class AppDescSpec2Serializer(serializers.Serializer):
     def validate(self, value):
         if "spec_version" in value and value.get("spec_version") != 2:
             raise serializers.ValidationError("spec_version must be 2.")
-        if "modules" not in value and "module" not in value:
+        if ("modules" not in value and "module" not in value) or ("modules" in value and "module" in value):
             raise serializers.ValidationError("one of 'modules' or 'module' is required.")
         return value

@@ -55,9 +55,7 @@ class AppDescTransformAPIView(APIView):
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(serializer.validated_data)
         except Exception as e:
-            return HttpResponseBadRequest(
-                f"Error occurred during transformation: {str(e)}",
-            )
+            return HttpResponseBadRequest(f"Error occurred during transformation: {str(e)}")
 
         try:
             yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))

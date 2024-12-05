@@ -2914,7 +2914,8 @@ export default {
   应用描述文件转换: 'App Descriptor File Conversion',
   '支持上传 .yaml 和 .yml 格式的文件': 'Supports uploading files in .yaml and .yml formats.',
   'app_desc.yaml 是描述蓝鲸应用的配置文件。': 'app_desc.yaml is the configuration file describing the Blue Whale application.',
-  'specVersion: 3 是针对云原生应用设计的最新规范，可以定义进程服务、可观测性等所有云原生应用的功能。': 'specVersion: 3 is the latest specification designed for cloud-native applications, allowing the definition of all cloud-native application features such as process services and observability.',
   '请先在左侧输入 `spec_version: 2` 版本的应用描述文件，点击转换后将自动生成新版本': 'Please first enter the application descriptor file with `spec_version: 2` on the left side. After clicking convert, a new version will be generated automatically.',
-  '如果您的应用描述文件版本是 spec_version: 2 且应用为云原生应用： 直接将描述文件转换为 specVersion: 3 后即可部署。如果您的应用是普通应用：需要先将应用迁移到云原生应用，再更新描述文件版本': 'If your application descriptor file version is spec_version: 2 and the application is cloud-native, you can directly convert the descriptor file to specVersion: 3 and deploy it. If your application is a traditional application, you need to first migrate it to a cloud-native application and then update the descriptor file version.'
+  '如果您的应用描述文件版本为 spec_version: 2，并且应用是云原生应用，请直接将描述文件转换为 specVersion: 3 后进行重新部署。': 'If your application descriptor file version is spec_version: 2 and the application is cloud-native, please directly convert the descriptor file to specVersion: 3 and redeploy it.',
+  '普通应用请勿使用本工具。请先将应用迁移到云原生应用，再更新描述文件版本。': 'Do not use this tool for traditional applications. Please first migrate the application to a cloud-native application and then update the descriptor file version.',
+  'specVersion: 3 是针对云原生应用设计的最新规范，可以定义进程服务、可观测性等所有云原生应用的功能。本工具可以帮助您将旧版描述文件转换为新版。': 'specVersion: 3 is the latest specification designed for cloud-native applications, capable of defining all cloud-native application features such as process services and observability. This tool can help you convert older descriptor files to the new version.',
 };

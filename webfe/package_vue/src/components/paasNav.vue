@@ -67,6 +67,7 @@
 </template>
 
 <script>
+import { cloneDeep } from 'lodash';
 export default {
   props: {
     navCategories: {
@@ -112,8 +113,8 @@ export default {
   },
   watch: {
     navItems() {
-      const categories = JSON.parse(JSON.stringify(this.navCategories));
-      const navItems = JSON.parse(JSON.stringify(this.navItems));
+      const categories = cloneDeep(this.navCategories);
+      const navItems = cloneDeep(this.navItems);
 
       categories.forEach((category) => {
         category.children = [];
@@ -162,36 +163,36 @@ export default {
         category.isExpanded = false;
         category.hasChildSelected = false;
 
-        // 如果有子导航
-        if (category.children && category.children.length) {
-          for (const nav of category.children) {
-            // 如果子导航有其中一个是选中，则父激活并展开
-            if (nav.matchRouters.includes(routeName)) {
-              category.isActived = true;
-              category.isExpanded = true;
-              category.hasChildSelected = true;
-
-              // 如果有匹配参数
-              if (nav.matchRouterParams && routeParams) {
-                // 对参数和路由传入的参数对比，如果都相同则匹配上
-                const keys = Object.keys(nav.matchRouterParams);
-                nav.isSelected = true;
-                for (const key of keys) {
-                  if (nav.matchRouterParams[key] !== String(routeParams[key])) {
-                    nav.isSelected = false;
-                  }
-                }
-              } else {
-                nav.isSelected = true;
-              }
-            } else {
-              nav.isSelected = false;
-            }
-          }
-        } else {
+        if (!category.children?.length) {
           // 没有子导航，但匹配则激活
           if (category.matchRouters && category.matchRouters.includes(routeName)) {
             category.isActived = true;
+          }
+          continue;
+        }
+        // 如果有子导航
+        for (const nav of category.children) {
+          // 如果子导航有其中一个是选中，则父激活并展开
+          if (nav.matchRouters.includes(routeName)) {
+            category.isActived = true;
+            category.isExpanded = true;
+            category.hasChildSelected = true;
+
+            // 如果有匹配参数
+            if (nav.matchRouterParams && routeParams) {
+              // 对参数和路由传入的参数对比，如果都相同则匹配上
+              const keys = Object.keys(nav.matchRouterParams);
+              nav.isSelected = true;
+              for (const key of keys) {
+                if (nav.matchRouterParams[key] !== String(routeParams[key])) {
+                  nav.isSelected = false;
+                }
+              }
+            } else {
+              nav.isSelected = true;
+            }
+          } else {
+            nav.isSelected = false;
           }
         }
       }

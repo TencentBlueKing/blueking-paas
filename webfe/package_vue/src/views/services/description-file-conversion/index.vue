@@ -13,10 +13,11 @@
           <p>
             {{
               $t(
-                '如果您的应用描述文件版本是 spec_version: 2 且应用为云原生应用：直接将描述文件转换为 specVersion: 3 后即可部署。如果您的应用是普通应用：需要先将应用迁移到云原生应用，再更新描述文件版本'
+                '如果您的应用描述文件版本为 spec_version: 2，并且应用是云原生应用，请直接将描述文件转换为 specVersion: 3 后进行重新部署。'
               )
             }}
           </p>
+          <p>{{ $t('普通应用请勿使用本工具。请先将应用迁移到云原生应用，再更新描述文件版本。') }}</p>
         </div>
       </bk-alert>
       <!-- 文件转换 -->
@@ -170,7 +171,7 @@ export default {
         this.conversionStatus = 'failed';
         this.$bkMessage({
           theme: 'error',
-          message: this.$t('转换错误'),
+          message: this.$t('转换失败'),
         });
       } finally {
         setTimeout(() => {

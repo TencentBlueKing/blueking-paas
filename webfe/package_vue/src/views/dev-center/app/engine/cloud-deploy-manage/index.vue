@@ -59,8 +59,7 @@ export default {
   },
   watch: {
     $route() {
-      // eslint-disable-next-line no-plusplus
-      this.routeIndex++;
+      this.routeIndex += 1;
     },
   },
   created() {

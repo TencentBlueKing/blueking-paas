@@ -12,7 +12,7 @@
       v-else
       class="ps-top-bar"
     >
-      <h2 class="box-shadow">
+      <h2>
         {{ $t('访问管理') }}
       </h2>
     </div>
@@ -60,7 +60,8 @@
   </div>
 </template>
 
-<script>import visitConfig from './comps/visit-config';
+<script>
+import visitConfig from './comps/visit-config';
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
@@ -88,7 +89,7 @@ export default {
   computed: {
     accessControl() {
       return this.$store.state.region?.access_control
-        ? this.$store.state.region?.access_control?.module?.map(e => e)
+        ? this.$store.state.region?.access_control?.module?.map((e) => e)
         : [];
     },
     panels() {
@@ -104,13 +105,16 @@ export default {
       if (this.curAppInfo.role.name === 'developer') {
         return panelsData;
       }
-      if (this.accessControl.includes('user_access_control')) {   // 用户限制
+      if (this.accessControl.includes('user_access_control')) {
+        // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });
       }
-      if (this.accessControl.includes('ip_access_control')) {   // IP限制
+      if (this.accessControl.includes('ip_access_control')) {
+        // IP限制
         panelsData.push({ name: 'ip_access_control', label: this.$t('IP限制') });
       }
-      if (this.accessControl.includes('approval')) {   // 单据审批
+      if (this.accessControl.includes('approval')) {
+        // 单据审批
         panelsData.push({ name: 'approval', label: this.$t('单据审批') });
       }
       return panelsData;

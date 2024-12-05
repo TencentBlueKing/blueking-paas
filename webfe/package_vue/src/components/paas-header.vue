@@ -1,7 +1,7 @@
 <template>
   <div
     v-en-class="'en-header-cls'"
-    :class="['ps-header', 'clearfix', 'top-bar-wrapper', { 'bk-header-static': is_static }]"
+    :class="['ps-header', 'clearfix', 'top-bar-wrapper', { 'bk-header-static': isStatic }]"
   >
     <div class="ps-header-visible">
       <section class="nav-left-wrapper">
@@ -24,9 +24,7 @@
           <li
             v-for="(item, index) in displayNavList"
             :key="index"
-            :class="{ active: curpage === index }"
-            @mouseover.stop.prevent="showSubNav(index, item)"
-            @mouseout.stop.prevent="hideSubNav"
+            :class="{ active: curActiveName === item.name }"
           >
             <router-link
               v-if="item.type === 'router-link'"
@@ -40,10 +38,6 @@
               :target="item.target"
             >
               {{ item.text }}
-              <i
-                v-show="item.showIcon"
-                class="paasng-icon paasng-angle-down"
-              />
             </a>
           </li>
         </ul>
@@ -164,116 +158,6 @@
         </bk-popover>
       </ul>
     </div>
-    <div
-      :class="[
-        'ps-header-invisible',
-        'invisible1',
-        'clearfix',
-        { hoverStatus2: navText === $t('服务'), hoverStatus3: navText === $t('文档与支持') },
-      ]"
-      @mouseover.stop.prevent="showSubNav(navIndex)"
-      @mouseout.stop.prevent="hideSubNav"
-    >
-      <dl v-for="colitem in curSubNav">
-        <template v-if="colitem.hasOwnProperty('title')">
-          <dt>{{ colitem.title }}</dt>
-          <!-- 给有三级导航的dd添加sub-native类 -->
-          <dd
-            v-for="sitem in colitem.items"
-            class="sub-native"
-          >
-            <a
-              v-if="sitem.navs"
-              href="javascript:;"
-            >
-              {{ sitem.text }}
-              <i
-                v-if="sitem.navs"
-                class="paasng-icon paasng-angle-right"
-              />
-            </a>
-            <template v-else>
-              <a
-                v-if="sitem.url.startsWith('http')"
-                :href="sitem.url"
-                target="_blank"
-              >
-                {{ sitem.text }}
-              </a>
-              <a
-                v-else
-                href="javascript:;"
-                @click="goRouter(sitem)"
-              >
-                {{ sitem.text }}
-              </a>
-            </template>
-            <dl v-if="sitem.navs">
-              <dd v-for="minItem in sitem.navs">
-                <a
-                  :href="minItem.url"
-                  target="_blank"
-                >
-                  {{ minItem.text }}
-                  <span class="white">{{ minItem.eName }}</span>
-                </a>
-              </dd>
-            </dl>
-          </dd>
-        </template>
-
-        <template
-          v-for="subColitem in colitem.items"
-          v-else
-        >
-          <dt>{{ subColitem.title }}</dt>
-          <!-- 给有三级导航的dd添加sub-native类 -->
-          <dd
-            v-for="sitem in subColitem.items"
-            class="sub-native"
-          >
-            <a
-              v-if="sitem.navs"
-              href="javascript:;"
-            >
-              {{ sitem.text }}
-              <i
-                v-if="sitem.navs"
-                class="paasng-icon paasng-angle-right"
-              />
-            </a>
-            <template v-else>
-              <a
-                v-if="sitem.url.startsWith('http')"
-                :href="sitem.url"
-                target="_blank"
-              >
-                {{ sitem.text }}
-              </a>
-              <a
-                v-else
-                href="javascript:;"
-                @click="goRouter(sitem)"
-              >
-                {{ sitem.text }}
-              </a>
-            </template>
-            <dl v-if="sitem.navs">
-              <dd v-for="minItem in sitem.navs">
-                <a
-                  :href="minItem.url"
-                  target="_blank"
-                >
-                  {{ minItem.text }}
-                  <span class="white">{{ minItem.eName }}</span>
-                </a>
-              </dd>
-            </dl>
-          </dd>
-        </template>
-        <dd class="last" />
-      </dl>
-    </div>
     <log-version :dialog-show.sync="showLogVersion" />
   </div>
 </template>
@@ -301,11 +185,8 @@ export default {
     return {
       userInitialized: false,
       avatars: defaultUserLogo,
-      curpage: -1, // 当前页导航底部线标志控制
-      is_static: false, // 头部导航背景色块控制
-      navIndex: 0,
-      curSubNav: [],
-      loginFlag: false,
+      curActiveName: '',
+      isStatic: false, // 头部导航背景色块控制
       user,
       backgroundHidden: false,
       navHideController: 0,
@@ -314,19 +195,6 @@ export default {
       enableSearchApp: true, // 是否开启搜索APP功能
       currenSearchPanelIndex: -1,
       showLogVersion: false,
-      searchComponentList: [
-        {
-          title: this.$t('蓝鲸应用'),
-          component: 'searchAppList',
-          max: 4,
-          params: {
-            include_inactive: true,
-          },
-        },
-      ],
-      // eslint-disable-next-line comma-dangle
-      link: this.GLOBAL.LINK.APIGW_INDEX,
-      navText: '',
       languageList: [
         { icon: 'icon-chinese', id: 'zh-cn', text: this.$t('中文') },
         { icon: 'icon-english', id: 'en', text: this.$t('英文') },
@@ -339,9 +207,6 @@ export default {
     },
     userFeature() {
       return this.$store.state.userFeature;
-    },
-    curAppInfo() {
-      return this.$store.state.curAppInfo;
     },
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
@@ -397,58 +262,32 @@ export default {
           path: to,
         });
       }
-      this.hideSubNav();
     },
     // 监听滚动事件（滚动是头部样式切换）
     handleScroll() {
-      if (window.scrollY > 0) {
-        this.is_static = true;
-      } else {
-        this.is_static = false;
-      }
-    },
-    hideSubNav() {
-      clearTimeout(this.navShowController);
-      this.navHideController = setTimeout(() => {
-        this.navIndex = 0;
-        this.navText = '';
-      }, 300);
-    },
-    // 二级导航mouseover
-    showSubNav(index, item) {
-      clearTimeout(this.navHideController);
-      if (item?.showIcon) {
-        if (!item) return;
-        this.navShowController = setTimeout(() => {
-          this.navIndex = index;
-          this.navText = item.text;
-          this.curSubNav = this.headerStaticInfo.list.subnav_service;
-        }, 500);
-      } else {
-        this.navIndex = index;
-      }
+      this.isStatic = window.scrollY > 0;
     },
     // 路由页面重定向时导航标记
     checkRouter() {
-      let noteIndex = -1;
-      if (this.$route.name === 'index' || this.$route.name === 'home') {
-        noteIndex = 0;
+      const routeConfig = [
+        { names: ['index', 'home'], active: 'homePage' },
+        { paths: ['/developer-center/app', '/sandbox'], active: 'appDevelopment' },
+        { paths: ['/plugin-center'], active: 'pluginDevelopment' },
+        { paths: ['/developer-center/service'], active: 'tools' },
+      ];
+      // 默认高亮
+      let active = 'homePage';
+      // 遍历配置对象，检查当前路由是否匹配
+      for (const config of routeConfig) {
+        if (
+          (config.names && config.names.includes(this.$route.name)) ||
+          (config.paths && config.paths.some((path) => this.$route.path.includes(path)))
+        ) {
+          active = config.active;
+          break;
+        }
       }
-      if (this.$route.path.indexOf('/developer-center/app') !== -1 || this.$route.path.indexOf('/sandbox') !== -1) {
-        noteIndex = 1;
-      }
-      if (this.$route.path.indexOf('/plugin-center') !== -1) {
-        noteIndex = 2;
-      }
-      if (this.$route.path.indexOf('/developer-center/service') !== -1) {
-        noteIndex = this.displayNavList.findIndex((v) => v.text === this.$t('服务')) || 3;
-      }
-      if (noteIndex !== -1) {
-        this.backgroundHidden = false;
-        this.curpage = noteIndex;
-      } else {
-        this.curpage = -1;
-      }
+      this.curActiveName = active;
     },
     logout() {
       window.location = `${window.GLOBAL_CONFIG.LOGIN_SERVICE_URL}/?is_from_logout=1&c_url=${encodeURIComponent(
@@ -495,49 +334,23 @@ export default {
     },
     // 重组导航数据
     transformNavData(navData) {
+      const navConfig = {
+        homePage: { type: 'router-link', to: { name: 'index' } },
+        appDevelopment: { type: 'router-link', to: { name: 'myApplications' } },
+        pluginDevelopment: { type: 'router-link', to: { name: 'plugin' } },
+        apiGateway: { type: 'external-link', href: this.GLOBAL.LINK.APIGW_INDEX, target: '_blank' },
+        tools: { type: 'router-link', to: { name: 'serviceCode' } },
+      };
       const navList = navData.map((item) => {
-        let transformedItem = {
-          text: item.text,
-          type: 'external-link', // 默认为外部链接
-          href: 'javascript:;',
-          target: '_self',
-          showIcon: true,
+        const { text, name } = item;
+        const config = navConfig[name];
+        return {
+          text,
+          name,
+          ...config,
         };
-        switch (item.name) {
-          case 'homePage':
-            transformedItem = {
-              ...transformedItem,
-              type: 'router-link',
-              to: { name: 'index' },
-              showIcon: false,
-            };
-            break;
-          case 'appDevelopment':
-            transformedItem = {
-              ...transformedItem,
-              type: 'router-link',
-              to: { name: 'myApplications' },
-              showIcon: false,
-            };
-            break;
-          case 'pluginDevelopment':
-            transformedItem = {
-              ...transformedItem,
-              type: 'router-link',
-              to: { name: 'plugin' },
-              showIcon: false,
-            };
-            break;
-          case 'apiGateway':
-            transformedItem = {
-              ...transformedItem,
-              showIcon: false,
-              href: this.link,
-            };
-            break;
-        }
-        return transformedItem;
       });
+
       // 应用开关过滤插件开发
       if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
         return navList.filter((e) => e.name !== 'pluginDevelopment');
@@ -760,40 +573,6 @@ export default {
   border-color: #3976e4;
 }
 
-.ps-header-invisible {
-  width: 100%;
-  background: #262634;
-  color: #fff;
-  overflow: hidden;
-  padding-left: 372px;
-  position: relative;
-  box-sizing: border-box;
-}
-
-.invisible1 {
-  top: -1px;
-  height: 0px !important;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0s;
-}
-
-.invisible2 {
-  top: -1px;
-  height: 0px !important;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0s;
-}
-
-.hoverStatus {
-  top: -1px;
-  height: 207px !important;
-  opacity: 1;
-  visibility: visible;
-  transition: all 0.5s;
-}
-
 .hoverStatus2 {
   top: -1px;
   height: 406px !important;
@@ -808,106 +587,6 @@ export default {
   opacity: 1;
   visibility: visible;
   transition: all 0.5s;
-}
-
-.ps-header-invisible.pl {
-  padding-left: 512px;
-}
-
-.ps-header-invisible > dl {
-  width: 139px;
-  min-height: 400px;
-  float: left;
-  line-height: 32px;
-  border-left: solid 1px #30303d;
-  padding: 5px 0 62px 0;
-}
-.en-header-cls .ps-header-invisible > dl {
-  width: 145px;
-}
-
-.ps-header-invisible > dl:last-child {
-  border-right: solid 1px #30303d;
-}
-
-.ps-header-invisible dt {
-  color: #ffffff;
-  font-weight: bold;
-  padding-bottom: 14px;
-
-  margin-top: 20px;
-}
-
-.ps-header-invisible dt,
-.ps-header-invisible dd {
-  padding: 0 10px 0 20px;
-}
-
-.ps-header-invisible dd:hover {
-  background: #191929;
-}
-
-.ps-header-invisible dd a {
-  color: #9394a3;
-  width: 100%;
-  position: relative;
-}
-
-.ps-header-invisible dd i.paasng-angle-right {
-  display: inline-block;
-  width: 5px;
-  height: 8px;
-  position: absolute;
-  top: 12px;
-  right: 10px;
-  font-size: 12px;
-}
-
-.sub-native dl {
-  display: none;
-  width: auto;
-  min-width: 220px;
-  background: #191929;
-  position: absolute;
-  left: -6px;
-  margin-left: 1072px;
-  top: 0;
-  padding-top: 23px;
-  padding-bottom: 999px;
-}
-
-.sub-native:hover dl {
-  display: block;
-}
-
-.ps-header-invisible .sub-native dd a {
-  font-weight: normal;
-}
-
-.ps-header-invisible .sub-native dd a:hover {
-  color: #3a84ff;
-  font-weight: normal;
-}
-
-.sub-native dd a span,
-.sub-native dd:hover span {
-  color: #767b87;
-  font-size: 12px;
-}
-
-.ps-header-invisible dd.last {
-  height: 62px;
-  background: none;
-}
-
-.ps-header-invisible.pl dd.last {
-  height: 28px;
-  background: none;
-}
-
-.ps-header-invisible dd.last:hover,
-.ps-header-invisible.pl dd.last:hover {
-  background: none;
 }
 
 .ps-head-right li a.link-text {

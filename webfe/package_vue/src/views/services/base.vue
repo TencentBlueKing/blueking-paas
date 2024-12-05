@@ -4,18 +4,9 @@
       <div class="overview">
         <div
           class="overview-main"
-          :style="{ 'min-height': `${minHeight}px` }"
+          :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
         >
           <div class="overview-fleft">
-            <div class="overview-tit">
-              <div class="title service-title">
-                <img
-                  src="/static/images/service-pic1.png"
-                  class="overview-title-pic fleft"
-                >
-                <span class="overview-title-text f16"> {{ $t('服务') }} </span>
-              </div>
-            </div>
             <paasNav
               :nav-categories="navCategories"
               :nav-items="navItems"
@@ -34,6 +25,7 @@
 import paasNav from '@/components/paasNav';
 import { processNavData } from '@/common/utils';
 import { psServiceNavInfo } from '@/mixins/ps-static-mixin';
+import toolsNavigationData from '@/json/tools-navigation-data';
 
 export default {
   components: {
@@ -53,8 +45,7 @@ export default {
     },
   },
   mounted() {
-    const resData = this.serviceNavStaticInfo.list;
-    const result = processNavData(resData);
+    const result = processNavData(toolsNavigationData);
     this.navCategories = result.navCategories;
     this.navItems = result.navItems;
 
@@ -74,16 +65,15 @@ export default {
     document.body.className = '';
   },
 };
-
 </script>
 
 <style lang="scss" scoped>
-    .service-title {
-        line-height: 50px;
-    }
+.service-title {
+  line-height: 50px;
+}
 
-    .service-title .overview-title-pic {
-        margin: 14px 14px 10px 20px;
-        height: auto;
-    }
+.service-title .overview-title-pic {
+  margin: 14px 14px 10px 20px;
+  height: auto;
+}
 </style>

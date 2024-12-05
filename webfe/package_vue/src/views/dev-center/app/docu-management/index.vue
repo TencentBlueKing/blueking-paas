@@ -1,7 +1,7 @@
 <template>
   <div class="right-main paas-docu-manager-wrapper">
     <div class="ps-top-bar">
-      <h2 class="box-shadow">
+      <h2>
         {{ $t('文档管理') }}
         <a
           v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"

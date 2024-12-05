@@ -281,6 +281,10 @@ const srvVCSMain = () => import(/* webpackChunkName: 'services' */'@/views/servi
   window.showDeployTip(error);
 });
 
+const descriptionFileConversion = () => import(/* webpackChunkName: 'services' */'@/views/services/description-file-conversion').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvV3Services = () => import(/* webpackChunkName: 'services' */'@/views/services/v3-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -315,14 +319,6 @@ const srvStaticAppEngine = () => import(/* webpackChunkName: 'services-info' */'
 });
 
 const srvStaticBamboo = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/bamboo').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const srvStaticMarket = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/market').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const srvStaticFeaturedApps = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/featured-apps').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -1003,6 +999,14 @@ const router = new Router({
           name: 'serviceCode',
         },
         {
+          path: 'file-conversion',
+          component: descriptionFileConversion,
+          name: 'descriptionFileConversion',
+          meta: {
+            notMinHeight: true,
+          },
+        },
+        {
           path: 'magicbox',
           component: srvStaticMagicBox,
           name: 'serviceMagicBox',
@@ -1051,16 +1055,6 @@ const router = new Router({
           path: 'bamboo',
           component: srvStaticBamboo,
           name: 'serviceBamboo',
-        },
-        {
-          path: 'market',
-          component: srvStaticMarket,
-          name: 'serviceMarket',
-        },
-        {
-          path: 'recommend',
-          component: srvStaticFeaturedApps,
-          name: 'serviceRecommend',
         },
       ],
     },

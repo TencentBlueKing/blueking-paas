@@ -1052,6 +1052,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-diff-4:before {
 	content: "\e270";
 }
+.paasng-fx:before {
+	content: "\e290";
+}
 .paasng-cronjob:before {
 	content: "\e280";
 }
@@ -1069,4 +1072,31 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-caozuojilu:before {
 	content: "\e285";
+}
+.paasng-daimaku:before {
+	content: "\e289";
+}
+.paasng-kaifakuangjia:before {
+	content: "\e288";
+}
+.paasng-liuchengfuwu:before {
+	content: "\e28c";
+}
+.paasng-qianduanzujianku:before {
+	content: "\e28b";
+}
+.paasng-wenjianzhuanhuan:before {
+	content: "\e287";
+}
+.paasng-yingyongmoxing:before {
+	content: "\e28a";
+}
+.paasng-yunweikaifa:before {
+	content: "\e28d";
+}
+.paasng-zengqiangfuwu:before {
+	content: "\e28e";
+}
+.paasng-zhuanhuan:before {
+	content: "\e28f";
 }

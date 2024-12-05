@@ -52,6 +52,7 @@ import persistentStorage from './modules/persistent-storage';
 import authenticationInfo from './modules/authentication-info';
 import migration from './modules/migration';
 import sandbox from './modules/sandbox';
+import tool from './modules/tool';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -438,6 +439,7 @@ export default new Vuex.Store({
     authenticationInfo,
     migration,
     sandbox,
+    tool,
   },
   state,
   getters,

@@ -596,7 +596,7 @@ module:
       - "bk-iam"
       - "bk-user"
                 """,
-                """Validation error: {'module': {'processes': {'web': {'probes': {'readiness': {'http_get': {'http_headers': [ErrorDetail(string="Each item in http_headers must be one key: value pair.", code='invalid')]}}}}}}}""",
+                """Validation error: {'module': {'processes': {'web': {'probes': {'readiness': {'http_get': {'http_headers': [ErrorDetail(string='Each item in http_headers must be one key: value pair.', code='invalid')]}}}}}}}""",
             ),
         ],
     )

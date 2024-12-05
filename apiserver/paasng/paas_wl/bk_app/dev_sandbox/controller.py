@@ -376,15 +376,12 @@ class _DevWlAppCreator:
 
     def _make_dev_wl_app_name(self) -> str:
         """参考 make_engine_app_name 规则, 生成 dev 环境的 WlApp name"""
+        suffix = f"{self.dev_sandbox_code}-dev" if self.dev_sandbox_code else "dev"
+
         if self.module_name == ModuleName.DEFAULT.value:
-            wl_app_name = f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
-        else:
-            wl_app_name = f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-dev"
+            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{suffix}"
 
-        if self.dev_sandbox_code:
-            wl_app_name = f"{wl_app_name}-{self.dev_sandbox_code}"
-
-        return wl_app_name
+        return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-{suffix}"
 
     def _make_namespace_name(self) -> str:
         """生成 namespace_name"""

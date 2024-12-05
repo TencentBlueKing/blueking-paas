@@ -543,9 +543,9 @@ module:
         [
             (
                 """modules:
-             - name: default
-             - name: web
-             """,
+                - name: default
+                - name: web
+                """,
                 "Validation error: {'modules': [ErrorDetail(string='期望是包含类目的字典，得到类型为 “list”。', code='not_a_dict')]}",
             ),
             (
@@ -555,6 +555,48 @@ module:
             (
                 """spec_version: 2""",
                 """Validation error: {'non_field_errors': [ErrorDetail(string="one of 'modules' or 'module' is required.", code='invalid')]}""",
+            ),
+            (
+                """
+module:
+  source_dir: src/frontend
+  language: NodeJS
+  services: # 增强服务配置仅对 Smart 应用生效
+    - name: mysql
+    - name: rabbitmq
+  env_variables:
+    - key: FOO
+      value: value_of_foo
+      description: 环境变量描述文件
+  processes:
+    web:
+      command: npm run server
+      plan: 4C1G5R
+      replicas: 2 # 副本数不能超过 plan 中定义的值
+      probes:
+        liveness:
+          exec:
+            command:
+              - cat
+        readiness:
+          http_get:
+            path: /healthz
+            port: 80
+        readiness:
+          http_get:
+            path: /healthz
+            port: 80
+            http_headers:
+              - name: Content-Type
+                value: application/json
+  scripts:
+    pre_release_hook: bin/pre-release.sh
+  svc_discovery:
+    bk_saas:
+      - "bk-iam"
+      - "bk-user"
+                """,
+                """Validation error: {'module': {'processes': {'web': {'probes': {'readiness': {'http_get': {'http_headers': [ErrorDetail(string="Each item in http_headers must be one key: value pair.", code='invalid')]}}}}}}}""",
             ),
         ],
     )

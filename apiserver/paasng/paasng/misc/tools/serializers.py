@@ -61,8 +61,10 @@ class HTTPGetProbeSerializer(serializers.Serializer):
     def validate_http_headers(self, value):
         if value:
             for item in value:
+                if len(item) != 1:
+                    raise serializers.ValidationError("Each item in http_headers must be one key: value pair.")
                 if "name" not in item and "value" not in item:
-                    raise serializers.ValidationError("If http_headers provided, must be 'name' or 'value'")
+                    raise serializers.ValidationError("http_headers item key should be 'name' or 'value'.")
         return value
 
 

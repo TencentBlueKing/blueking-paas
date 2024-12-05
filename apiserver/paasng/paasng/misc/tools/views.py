@@ -89,7 +89,7 @@ class AppDescTransformAPIView(APIView):
         except yaml.YAMLError as e:
             return Response(
                 f"Error generating YAML output: {str(e)}",
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         return HttpResponse(output_yaml, content_type="application/yaml")

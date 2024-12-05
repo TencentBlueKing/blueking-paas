@@ -38,7 +38,6 @@ class RegionClusterState(AuditedModel):
     - What are their IP addresses?
     """
 
-    region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32, null=True)
     name = models.CharField("informative name of state", max_length=64)
     nodes_digest = models.CharField(max_length=64, db_index=True)
@@ -53,7 +52,7 @@ class RegionClusterState(AuditedModel):
         return {self.name: "1"}
 
     class Meta:
-        unique_together = ("region", "cluster_name", "name")
+        unique_together = ("cluster_name", "name")
         get_latest_by = "created"
         ordering = ["-created"]
 

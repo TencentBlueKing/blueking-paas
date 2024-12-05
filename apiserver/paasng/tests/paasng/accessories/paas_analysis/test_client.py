@@ -49,8 +49,7 @@ class TestSiteMetricsClient:
             ("foo", 2),
         ],
     )
-    def test_get_site_config(self, pa_client_class, site, page_view_config, region, expected_dimension_size):
-        site.region = region
+    def test_get_site_config(self, pa_client_class, site, page_view_config, expected_dimension_size):
         pa_client_class().get_site_pv_config.return_value = page_view_config
         client = SiteMetricsClient(site, MetricSourceType.USER_TRACKER)
         site_config = client.get_site_pv_config()

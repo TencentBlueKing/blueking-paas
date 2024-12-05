@@ -497,7 +497,7 @@ class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
 
         rcs_bindings = None
         if app_rcs_bindings:
-            state = RegionClusterState.objects.filter(region=app.region, cluster_name=cnative_cluster.name).latest()
+            state = RegionClusterState.objects.filter(cluster_name=cnative_cluster.name).latest()
             node_ip_addresses = RegionClusterStateSLZ(state).data["node_ip_addresses"]
             rcs_bindings = {
                 # 当前应用绑定的出口 IP 信息

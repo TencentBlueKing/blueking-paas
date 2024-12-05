@@ -26,7 +26,7 @@ def site_name(bk_app, bk_module):
 
 @pytest.fixture()
 def site(site_name, bk_app):
-    return Site(region=bk_app.region, type="app", id=1, name=site_name)
+    return Site(type="app", id=1, name=site_name)
 
 
 @pytest.fixture()

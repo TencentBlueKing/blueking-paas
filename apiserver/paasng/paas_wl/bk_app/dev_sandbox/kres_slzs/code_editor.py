@@ -22,7 +22,7 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import CODE_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.conf import CODE_EDITOR_SVC_PORT_PAIRS
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Resources, Runtime, Status
 from paas_wl.bk_app.dev_sandbox.kres_slzs.sandbox import get_code_editor_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
@@ -60,7 +60,7 @@ class CodeEditorSerializer(AppEntitySerializer["CodeEditor"]):
             "image": obj.runtime.image,
             "env": [{"name": str(key), "value": str(value)} for key, value in obj.runtime.envs.items()],
             "imagePullPolicy": obj.runtime.image_pull_policy,
-            "ports": [{"containerPort": port_pair.target_port} for port_pair in CODE_SVC_PORT_PAIRS],
+            "ports": [{"containerPort": port_pair.target_port} for port_pair in CODE_EDITOR_SVC_PORT_PAIRS],
             "readinessProbe": {
                 "httpGet": {"port": settings.CODE_EDITOR_PORT, "path": "/healthz"},
             },

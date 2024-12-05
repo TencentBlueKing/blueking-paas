@@ -343,8 +343,8 @@ export const PAAS_STATIC_CONFIG = {
                     "name": "apiGateway",
                 },
                 {
-                  "text": staticI18n.$t("服务"),
-                  "name": "services",
+                    "text": staticI18n.$t("工具"),
+                    "name": "tools",
                 }
             ],
             "api_subnav_service": [
@@ -358,82 +358,6 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": staticI18n.$t("API 文档"),
                             "url": BK_APIGW_DOC_URL + "/apigw-api"
-                        }
-                    ]
-                }
-            ],
-            "subnav_service": [
-                {
-                    "title": staticI18n.$t("开发"),
-                    "items": [
-                        {
-                            "text": staticI18n.$t("代码库管理"),
-                            "url": "code",
-                            "explain": staticI18n.$t("支持代码仓库 OAuth 授权")
-                        },
-                        {
-                            "text": staticI18n.$t("API 网关"),
-                            "url": "apigateway",
-                            "explain": staticI18n.$t("蓝鲸API网关服务")
-                        },
-                        {
-                            "text": staticI18n.$t("开发框架"),
-                            "url": "framework",
-                            "explain": staticI18n.$t("蓝鲸应用统一开发框架，集成基础功能模块及功能样例")
-                        },
-                        {
-                            "text": staticI18n.$t("前端组件库"),
-                            "url": "magicbox",
-                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
-                        },
-                        {
-                            "text": staticI18n.$t("运维开发工具"),
-                            "url": "lesscode",
-                            "explain": staticI18n.$t("蓝鲸智云运维开发工具平台提供了前端页面在线可视化拖拽组装、配置编辑、源码生成、二次开发等能力。旨在帮助用户通过尽量少的手写代码的方式快速设计和开发 SaaS")
-                        }
-                    ]
-                },
-                {
-                    "items": [
-                        {
-                            "title": staticI18n.$t("计算"),
-                            "items": [
-                                {
-                                    "text": staticI18n.$t("应用引擎"),
-                                    "url": "app-engine",
-                                    "explain": staticI18n.$t("提供弹性、便捷的应用部署服务，支持Python、Go 等多种语言")
-                                }
-                            ]
-                        },
-                        {
-                            "title": staticI18n.$t("增强服务"),
-                            "items": [
-                                {
-                                    "text": staticI18n.$t("数据存储"),
-                                    "url": "vas/1",
-                                    "explain": staticI18n.$t("蓝鲸提供的数据存储类服务集合")
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "title": staticI18n.$t("流程引擎"),
-                    "items": [
-                        {
-                            "text": "Bamboo",
-                            "url": "bamboo",
-                            "explain": staticI18n.$t("标准运维V3使用的分布式的流程定义、管理、调度引擎")
-                        }
-                    ]
-                },
-                {
-                    "title": staticI18n.$t("推广"),
-                    "items": [
-                        {
-                            "text": staticI18n.$t("应用市场"),
-                            "url": "market",
-                            "explain": staticI18n.$t("蓝鲸提供的官方应用市场，用户可以在市场中搜索并使用您开发的应用")
                         }
                     ]
                 }
@@ -1055,105 +979,4 @@ export const PAAS_STATIC_CONFIG = {
             }
         ]
     },
-    "bk_service": {
-        "message": staticI18n.$t("蓝鲸服务导航文案"),
-        "list": [
-            {
-                "name": "development",
-                "label": staticI18n.$t("开发"),
-                "iconfontName": "window-source-code",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("代码库管理"),
-                        "destRoute": {
-                          "name": "serviceCode"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("API 网关"),
-                        "destRoute": {
-                            "name": "serviceAPIGateway"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("开发框架"),
-                        "destRoute": {
-                            "name": "serviceFramework"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("前端组件库"),
-                        "destRoute": {
-                            "name": "serviceMagicBox"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("运维开发工具"),
-                        "destRoute": {
-                          "name": "serviceLesscode"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "computing",
-                "label": staticI18n.$t("计算"),
-                "iconfontName": "chip",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("应用引擎"),
-                        "destRoute": {
-                            "name": "serviceAppEngine"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "appServices",
-                "label": staticI18n.$t("增强服务"),
-                "iconfontName": "diamond",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("数据存储"),
-                        "matchRouters": [
-                            "serviceVas",
-                            "serviceInnerPage"
-                        ],
-                        "destRoute": {
-                            "name": "serviceVas",
-                            "params": {
-                                "category_id": "1"
-                            }
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "workflow",
-                "label": staticI18n.$t("流程引擎"),
-                "iconfontName": "dashboard",
-                "sublist": [
-                    {
-                        "name": "Bamboo",
-                        "destRoute": {
-                            "name": "serviceBamboo"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "marketing",
-                "label": staticI18n.$t("推广"),
-                "iconfontName": "volumn",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("应用市场"),
-                        "destRoute": {
-                            "name": "serviceMarket"
-                        }
-                    }
-                ]
-            }
-        ]
-    }
 }

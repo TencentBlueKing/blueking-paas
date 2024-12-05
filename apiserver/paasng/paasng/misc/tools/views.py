@@ -19,11 +19,9 @@ from collections import OrderedDict
 
 import yaml
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -42,33 +40,23 @@ class AppDescTransformAPIView(APIView):
     )
     def post(self, request):
         if request.content_type != "application/yaml":
-            return Response(
-                "Invalid content type: only application/yaml is allowed", status=status.HTTP_400_BAD_REQUEST
-            )
+            return HttpResponseBadRequest("Invalid content type: only application/yaml is allowed")
 
         yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
 
         try:
             spec2_data = yaml.safe_load(yaml_data)
         except yaml.YAMLError as e:
-            return Response(
-                f"Error parsing YAML file: {str(e)}",
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return HttpResponseBadRequest(f"Error parsing YAML file: {str(e)}")
 
         serializer = AppDescSpec2Serializer(data=spec2_data)
-        if not serializer.is_valid():
-            return Response(
-                f"Validation error: {serializer.errors}",
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
 
         try:
             spec3_data = transform_app_desc_spec2_to_spec3(serializer.validated_data)
         except Exception as e:
-            return Response(
+            return HttpResponseBadRequest(
                 f"Error occurred during transformation: {str(e)}",
-                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -83,9 +71,6 @@ class AppDescTransformAPIView(APIView):
                 width=1000,
             )
         except yaml.YAMLError as e:
-            return Response(
-                f"Error generating YAML output: {str(e)}",
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return HttpResponseBadRequest(f"Error generating YAML output: {str(e)}")
 
         return HttpResponse(output_yaml, content_type="application/yaml")

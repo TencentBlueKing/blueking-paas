@@ -546,15 +546,15 @@ module:
                 - name: default
                 - name: web
                 """,
-                "Validation error: {'modules': [ErrorDetail(string='期望是包含类目的字典，得到类型为 “list”。', code='not_a_dict')]}",
+                "modules: 期望是包含类目的字典，得到类型为 “list”。",
             ),
             (
                 """    """,
-                "Validation error: {'non_field_errors': [ErrorDetail(string='No data provided', code='null')]}",
+                "No data provided",
             ),
             (
                 """spec_version: 2""",
-                """Validation error: {'non_field_errors': [ErrorDetail(string="one of 'modules' or 'module' is required.", code='invalid')]}""",
+                "one of 'modules' or 'module' is required.",
             ),
             (
                 """
@@ -589,14 +589,8 @@ module:
             http_headers:
               - name: Content-Type
                 value: application/json
-  scripts:
-    pre_release_hook: bin/pre-release.sh
-  svc_discovery:
-    bk_saas:
-      - "bk-iam"
-      - "bk-user"
                 """,
-                """Validation error: {'module': {'processes': {'web': {'probes': {'readiness': {'http_get': {'http_headers': [ErrorDetail(string='Each item in http_headers must be one key: value pair.', code='invalid')]}}}}}}}""",
+                "module.processes.web.probes.readiness.http_get.http_headers: Each item in http_headers must be one key: value pair.",
             ),
         ],
     )
@@ -606,4 +600,4 @@ module:
         )
 
         response_data = response.json()
-        assert response_data == expected_exception_detail
+        assert response_data["detail"] == expected_exception_detail

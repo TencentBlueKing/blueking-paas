@@ -42,15 +42,11 @@ class AppDescTransformAPIView(APIView):
     )
     def post(self, request):
         if request.content_type != "application/yaml":
-            Response("Invalid content type: only application/yaml is allowed", status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
-        except UnicodeDecodeError as e:
             return Response(
-                f"Error decoding request body: {str(e)}",
-                status=status.HTTP_400_BAD_REQUEST,
+                "Invalid content type: only application/yaml is allowed", status=status.HTTP_400_BAD_REQUEST
             )
+
+        yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
 
         try:
             spec2_data = yaml.safe_load(yaml_data)

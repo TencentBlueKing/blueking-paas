@@ -21,8 +21,9 @@ import yaml
 from django.conf import settings
 from django.http import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.exceptions import ValidationError
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -30,6 +31,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.utils.yaml import IndentDumper
 
 from .app_desc import transform_app_desc_spec2_to_spec3
+from .serializers import AppDescSpec2Serializer
 
 
 class AppDescTransformAPIView(APIView):
@@ -40,29 +42,54 @@ class AppDescTransformAPIView(APIView):
     )
     def post(self, request):
         if request.content_type != "application/yaml":
-            raise ValidationError("Invalid content type: only application/yaml is allowed")
+            Response("Invalid content type: only application/yaml is allowed", status=status.HTTP_400_BAD_REQUEST)
 
-        yaml_content = request.body.decode(settings.DEFAULT_CHARSET)
         try:
-            spec2_data = yaml.safe_load(yaml_content)
+            yaml_data = request.body.decode(settings.DEFAULT_CHARSET)
+        except UnicodeDecodeError as e:
+            return Response(
+                f"Error decoding request body: {str(e)}",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            spec2_data = yaml.safe_load(yaml_data)
         except yaml.YAMLError as e:
-            raise ValidationError(f"Error parsing YAML content: {e}")
+            return Response(
+                f"Error parsing YAML file: {str(e)}",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = AppDescSpec2Serializer(data=spec2_data)
+        if not serializer.is_valid():
+            return Response(
+                f"Validation error: {serializer.errors}",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            spec3_data = transform_app_desc_spec2_to_spec3(spec2_data)
-        except (ValueError, TypeError) as e:
-            raise ValidationError(f"Error parsing spec_version 2 content: {e}")
+            spec3_data = transform_app_desc_spec2_to_spec3(serializer.validated_data)
+        except Exception as e:
+            return Response(
+                f"Error occurred during transformation: {str(e)}",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
-        output_yaml = yaml.dump(
-            spec3_data,
-            Dumper=IndentDumper,
-            default_flow_style=False,
-            allow_unicode=True,
-            sort_keys=False,
-            indent=2,
-            width=1000,
-        )
+        try:
+            yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_dict(data.items()))
+            output_yaml = yaml.dump(
+                spec3_data,
+                Dumper=IndentDumper,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
+                width=1000,
+            )
+        except yaml.YAMLError as e:
+            return Response(
+                f"Error generating YAML output: {str(e)}",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        response = HttpResponse(output_yaml, content_type="application/yaml")
-        return response
+        return HttpResponse(output_yaml, content_type="application/yaml")

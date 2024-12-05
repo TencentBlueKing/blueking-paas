@@ -110,7 +110,7 @@ modules:
                 - name: Content-Type
                 - value: application/json
           startup:
-            tcpscoket:
+            tcp_socket:
               port: 8000
               host: app.host.com
             initial_delay_seconds: 0
@@ -220,7 +220,7 @@ modules:
                                                 }
                                             },
                                             "startup": {
-                                                "tcpscoket": {"port": 8000, "host": "app.host.com"},
+                                                "tcpSocket": {"port": 8000, "host": "app.host.com"},
                                                 "initialDelaySeconds": 0,
                                                 "timeoutSeconds": 1,
                                                 "periodSeconds": 10,
@@ -339,7 +339,7 @@ modules:
                   - name: Content-Type
                   - value: application/json
             startup:
-              tcpscoket:
+              tcpSocket:
                 port: 8000
                 host: app.host.com
               initialDelaySeconds: 0
@@ -546,10 +546,16 @@ module:
              - name: default
              - name: web
              """,
-                "Error parsing spec_version 2 content: 'modules' should be a dictionary.",
+                "Validation error: {'modules': [ErrorDetail(string='期望是包含类目的字典，得到类型为 “list”。', code='not_a_dict')]}",
             ),
-            ("""    """, "Error parsing spec_version 2 content: no content."),
-            ("""spec_version: 2""", "Error parsing spec_version 2 content: one of 'modules' or 'module' is required."),
+            (
+                """    """,
+                "Validation error: {'non_field_errors': [ErrorDetail(string='No data provided', code='null')]}",
+            ),
+            (
+                """spec_version: 2""",
+                """Validation error: {'non_field_errors': [ErrorDetail(string="one of 'modules' or 'module' is required.", code='invalid')]}""",
+            ),
         ],
     )
     def test_app_desc_transform_exception(self, api_client, spec2_yaml, expected_exception_detail):
@@ -558,4 +564,4 @@ module:
         )
 
         response_data = response.json()
-        assert response_data["detail"] == expected_exception_detail
+        assert response_data == expected_exception_detail

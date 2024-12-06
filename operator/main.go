@@ -21,8 +21,6 @@ package main
 import (
 	"context"
 	"flag"
-	"net/http"
-	"net/url"
 	"os"
 	"time"
 
@@ -32,7 +30,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
-	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,8 +49,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
-	"bk.tencent.com/paas-app-operator/pkg/platform/external"
-
 	//+kubebuilder:scaffold:imports
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -125,11 +120,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = initExtensionClient(); err != nil {
-		setupLog.Error(err, "unable to init extension client")
-		os.Exit(1)
-	}
-
 	initIngressPlugins()
 
 	setupCtx := context.Background()
@@ -183,28 +173,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func initExtensionClient() error {
-	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
-
-	if cfgObj.Platform.BkAPIGatewayURL != "" {
-		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.Platform.BkAPIGatewayURL)
-		if err != nil {
-			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
-		}
-		external.SetDefaultClient(
-			external.NewClient(
-				bkpaasGatewayBaseURL,
-				cfgObj.Platform.BkAppCode,
-				cfgObj.Platform.BkAppSecret,
-				http.DefaultClient,
-			),
-		)
-	} else {
-		setupLog.Info("PlatformConfig.BkAPIGateWayURL is not configured, some of Platform-related functionality will be limited")
-	}
-	return nil
 }
 
 func initIngressPlugins() {

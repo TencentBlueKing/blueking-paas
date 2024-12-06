@@ -38,6 +38,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
+from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.manifest import (
     DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
@@ -66,7 +67,6 @@ from paasng.platform.bkapp_model.models import (
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
 from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
-from paasng.platform.engine.models.deployment import ProcService
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
@@ -80,6 +80,21 @@ def blank_resource() -> crd.BkAppResource:
     """A blank resource object."""
     return crd.BkAppResource(
         apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=crd.BkAppSpec()
+    )
+
+
+@pytest.fixture()
+def blank_resource_with_processes() -> crd.BkAppResource:
+    """A resource object have processes spec."""
+    return crd.BkAppResource(
+        apiVersion=ApiVersion.V1ALPHA2,
+        metadata=ObjectMetadata(name="a-blank-resource"),
+        spec=crd.BkAppSpec(
+            processes=[
+                crd.BkAppProcess(name="worker"),
+                crd.BkAppProcess(name="web"),
+            ]
+        ),
     )
 
 
@@ -555,10 +570,14 @@ def test_apply_proc_svc_if_implicit_needed_is_false(blank_resource, bk_stag_env)
     assert blank_resource.get_proc_services_annotation() == "true"
 
 
-def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource, bk_stag_env):
+def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource_with_processes, bk_stag_env):
     ProcessServicesFlag.objects.create(app_environment=bk_stag_env, implicit_needed=True)
-    apply_proc_svc_if_implicit_needed(blank_resource, bk_stag_env)
-    assert blank_resource.get_proc_services_annotation() == "false"
+    apply_proc_svc_if_implicit_needed(blank_resource_with_processes, bk_stag_env)
+    assert blank_resource_with_processes.get_proc_services_annotation() == "true"
+    assert blank_resource_with_processes.spec.processes[0].services[0].name == "worker"
+    assert blank_resource_with_processes.spec.processes[0].services[0].exposedType is None
+    assert blank_resource_with_processes.spec.processes[1].services[0].name == "web"
+    assert blank_resource_with_processes.spec.processes[1].services[0].exposedType == crd.ExposedType()
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

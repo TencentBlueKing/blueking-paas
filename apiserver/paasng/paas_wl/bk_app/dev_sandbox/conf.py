@@ -48,7 +48,7 @@ _code_editor_ingress_service_conf = [
     },
 ]
 
-CODE_SVC_PORT_PAIRS: List[ServicePortPair] = [
+CODE_EDITOR_SVC_PORT_PAIRS: List[ServicePortPair] = [
     ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
     for conf in _code_editor_ingress_service_conf
 ]

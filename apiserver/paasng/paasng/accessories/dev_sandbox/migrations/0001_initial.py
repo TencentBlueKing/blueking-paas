@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
                 ('uuid', models.UUIDField(auto_created=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True, verbose_name='UUID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
-                ('password', blue_krill.models.fields.EncryptField(help_text='登陆密码', max_length=32, verbose_name='登陆密码')),
+                ('password', blue_krill.models.fields.EncryptField(help_text='登录密码', max_length=32, verbose_name='登录密码')),
                 ('dev_sandbox', models.OneToOneField(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='code_editor', to='dev_sandbox.devsandbox')),
             ],
             options={

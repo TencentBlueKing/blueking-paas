@@ -43,10 +43,18 @@ class CodeEditor(AppEntity):
 
     @classmethod
     def create(
-        cls, dev_wl_app: WlApp, runtime: Runtime, config: CodeEditorConfig, resources: Optional[Resources] = None
+        cls,
+        dev_wl_app: WlApp,
+        runtime: Runtime,
+        config: CodeEditorConfig,
+        resources: Optional[Resources] = None,
     ) -> "CodeEditor":
         return cls(
-            app=dev_wl_app, name=get_code_editor_name(dev_wl_app), config=config, runtime=runtime, resources=resources
+            app=dev_wl_app,
+            name=get_code_editor_name(dev_wl_app),
+            config=config,
+            runtime=runtime,
+            resources=resources,
         )
 
     def construct_envs(self):

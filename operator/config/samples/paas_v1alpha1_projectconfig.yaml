@@ -12,9 +12,6 @@ leaderElection:
   leaderElect: true
   resourceName: e56dbef1.bk.tencent.com
 platformConfig:
-  bkAppCode: ""
-  bkAppSecret: ""
-  bkAPIGatewayURL: ""
   sentryDSN: ""
   ## when there are multiple ingress controllers in your cluster, setting the ingressClassName is necessary.
   ingressClassName: ""

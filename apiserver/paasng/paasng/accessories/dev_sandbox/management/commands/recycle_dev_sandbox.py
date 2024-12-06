@@ -28,31 +28,38 @@ Examples:
     python manage.py recycle_dev_sandbox --all
 """
 
+import logging
+
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxWithCodeEditorController
 from paasng.accessories.dev_sandbox.models import DevSandbox
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
     help = "回收沙箱"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--all",
-            dest="all",
-            action="store_true",
-            help="recycle all dev sandboxes",
-        )
+        parser.add_argument("--all", dest="all", action="store_true", help="recycle all dev sandboxes")
 
     def handle(self, all, *args, **options):
-        for dev_sandbox in DevSandbox.objects.all():
+        dev_sandboxes = DevSandbox.objects.all()
+        if not all:
+            dev_sandboxes = dev_sandboxes.filter(expired_at__lte=timezone.now())
+
+        if not dev_sandboxes.exists():
+            logger.info("No expired dev sandboxes to recycle")
+            return
+
+        logger.info("Recycling %d expired dev sandboxes", dev_sandboxes.count())
+        for ds in dev_sandboxes:
+            mod = ds.module
+            logger.info("Recycle dev sandbox: %s (app: %s, module: %s)", ds.code, mod.application.code, mod.name)
             controller = DevSandboxWithCodeEditorController(
-                app=dev_sandbox.module.application,
-                module_name=dev_sandbox.module.name,
-                dev_sandbox_code=dev_sandbox.code,
-                owner=dev_sandbox.owner,
+                app=mod.application, module_name=mod.name, dev_sandbox_code=ds.code, owner=ds.owner
             )
-            if all or dev_sandbox.should_recycle():
-                controller.delete()
-                dev_sandbox.delete()
+            controller.delete()
+            ds.delete()

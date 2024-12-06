@@ -152,9 +152,7 @@ class TestCloudNative:
             args=None,
             target_port=None,
         )
-        return AppModelResource.objects.create_from_resource(
-            bk_cnative_app.region, bk_cnative_app.id, bk_module_full.id, resource
-        )
+        return AppModelResource.objects.create_from_resource(bk_cnative_app.id, bk_module_full.id, resource)
 
     def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
         # Replace the deploy desc handler to skip the metadata reading action

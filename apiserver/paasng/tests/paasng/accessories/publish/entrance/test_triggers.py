@@ -19,6 +19,8 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.handlers import sync_default_entrances_for_cnative_module_switching
 from paas_wl.workloads.networking.entrance.handlers import sync_default_entrances_for_module_switching
 
 pytestmark = pytest.mark.django_db
@@ -30,3 +32,13 @@ def test_sync_default_entrances_for_module_switching(mocker_subpath, mocker_doma
     sync_default_entrances_for_module_switching(None, bk_app, bk_module, bk_module)
     assert mocker_domain.called, "should refresh domains"
     assert mocker_subpath.called, "should refresh subpaths"
+
+
+@mock.patch("paas_wl.bk_app.cnative.specs.handlers.sync_networking")
+def test_sync_default_entrances_for_cnative_module_switching(sync_networking, bk_cnative_app, bk_module):
+    with mock.patch(
+        "paas_wl.bk_app.cnative.specs.handlers.get_mres_from_cluster",
+        return_value=BkAppResource(metadata={"name": "foo"}, spec={}),
+    ):
+        sync_default_entrances_for_cnative_module_switching(None, bk_cnative_app, bk_module, bk_module)
+        assert sync_networking.called, "should sync networking"

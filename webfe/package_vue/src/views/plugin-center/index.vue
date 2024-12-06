@@ -15,15 +15,19 @@
         >
           {{ $t('创建插件') }}
         </bk-button>
-        <bk-input
-          v-model="filterKey"
-          class="paas-plugin-input"
-          :placeholder="$t('输入插件ID、插件名称，按Enter搜索')"
-          :clearable="true"
-          :right-icon="'paasng-icon paasng-search'"
-          @enter="handleSearch"
-          @right-icon-click="handleSearch"
-        />
+        <!-- 过滤参数 -->
+        <div class="flex-row justify-content-between">
+          <filter-select @change="handleFiltersChange" />
+          <bk-input
+            v-model="filterKey"
+            class="paas-plugin-input"
+            :placeholder="$t('输入插件ID、插件名称，按Enter搜索')"
+            :clearable="true"
+            :right-icon="'paasng-icon paasng-search'"
+            @enter="handleSearch"
+            @right-icon-click="handleSearch"
+          />
+        </div>
       </div>
       <bk-table
         ref="pluginTable"
@@ -86,7 +90,6 @@
         <bk-table-column
           :label="$t('创建时间')"
           prop="created"
-          sortable
           :render-header="$renderHeader"
         >
           <template #default="{ row }">
@@ -195,7 +198,9 @@
 <script>
 import { PLUGIN_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
+import filterSelect from './comps/filter-select.vue';
 export default {
+  components: { filterSelect },
   data() {
     return {
       loading: true,
@@ -238,6 +243,7 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      orderBy: '-updated',
     };
   },
   computed: {
@@ -275,7 +281,7 @@ export default {
         const pageParams = {
           limit: this.pagination.limit,
           offset: this.pagination.limit * (curPage - 1),
-          order_by: 'id',
+          order_by: this.orderBy,
           search_term: this.filterKey,
         };
         const statusParams = this.formatFilterParams('filterStatus', 'status');
@@ -471,6 +477,12 @@ export default {
         return;
       }
       this.tableEmptyConf.keyword = '';
+    },
+
+    // 插件列表过滤参数变化
+    handleFiltersChange(orderBy) {
+      this.orderBy = orderBy;
+      this.fetchPluginsList();
     },
   },
 };

@@ -474,6 +474,5 @@ var _ = Describe("Test build deployments from BkApp", func() {
 			web, _ := BuildProcDeployment(bkapp, "web")
 			Expect(web.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"eng-cstate-test": "1"}))
 		})
-
 	})
 })

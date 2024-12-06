@@ -1,8 +1,11 @@
 <template>
   <div class="right-main">
     <!-- 部署历史 -->
-    <div class="ps-top-bar" v-if="isDeployHistory">
-      <div class="top-title flex-row align-items-center box-shadow">
+    <div
+      class="ps-top-bar"
+      v-if="isDeployHistory"
+    >
+      <div class="top-title flex-row align-items-center">
         <i
           class="paasng-icon paasng-arrows-left icon-cls-back mr5"
           @click="goBack"
@@ -21,7 +24,10 @@
       @right-config-click="toDeployHistory"
     />
     <div class="router-container m20">
-      <router-view :key="routeIndex" :environment="active"></router-view>
+      <router-view
+        :key="routeIndex"
+        :environment="active"
+      ></router-view>
     </div>
   </div>
 </template>
@@ -52,9 +58,8 @@ export default {
     },
   },
   watch: {
-    '$route'() {
-      // eslint-disable-next-line no-plusplus
-      this.routeIndex++;
+    $route() {
+      this.routeIndex += 1;
     },
   },
   created() {
@@ -67,7 +72,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find(item => item.name === name);
+      const curEnv = this.panels.find((item) => item.name === name);
       this.$router.push({
         name: curEnv.routeName,
       });
@@ -101,20 +106,20 @@ export default {
       font-weight: 400;
       margin-left: 4px;
     }
-    .icon-cls-back{
-      color: #3A84FF;
+    .icon-cls-back {
+      color: #3a84ff;
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;
     }
   }
 }
-.cloud-deploy-management{
+.cloud-deploy-management {
   padding-top: 0px;
   margin: 0;
   margin-top: 0 !important;
 }
-.router-container{
+.router-container {
   height: 100%;
 }
 </style>

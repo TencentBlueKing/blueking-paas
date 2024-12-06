@@ -40,7 +40,7 @@ class BaseEnvVarFields(serializers.Serializer):
     """Base fields for validating EnvVar."""
 
     name = field_env_var_key()
-    value = serializers.CharField(allow_blank=False)
+    value = serializers.CharField(allow_blank=True)
 
 
 class EnvVarInputSLZ(BaseEnvVarFields):

@@ -100,7 +100,7 @@ class DeploymentDescSLZ(serializers.Serializer):
         hooks: NotSetType | dict = NOTSET
         if attrs["scripts"] and (pre_release_hook := attrs["scripts"].get("pre_release_hook")):
             # 镜像已保证 entrypoint 是 /runner/init
-            hooks = {"pre_release": {"command": None, "args": shlex.split(pre_release_hook)}}
+            hooks = {"pre_release": {"command": [], "args": shlex.split(pre_release_hook)}}
 
         # env_variables -> BkAppConfiguration
         global_vars = []

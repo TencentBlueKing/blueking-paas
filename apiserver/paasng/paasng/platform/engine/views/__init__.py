@@ -17,6 +17,7 @@
 
 from .build import BuildProcessViewSet, ImageArtifactViewSet
 from .configvar import ConfigVarBuiltinViewSet, ConfigVarImportExportViewSet, ConfigVarViewSet
+from .configvar_preset import PresetConfigVarViewSet
 from .deploy import DeploymentViewSet, DeployPhaseViewSet
 from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
 from .release import ReleasedInfoViewSet, ReleasesViewset
@@ -34,4 +35,5 @@ __all__ = [
     "ProcessResourceMetricsViewset",
     "ReleasedInfoViewSet",
     "ReleasesViewset",
+    "PresetConfigVarViewSet",
 ]

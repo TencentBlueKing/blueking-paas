@@ -49,11 +49,12 @@ from paasng.platform.applications.signals import application_default_module_swit
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.configurations.image import generate_image_repository
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.exceptions import BPNotFound
 from paasng.platform.modules.helpers import (
@@ -548,7 +549,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """Deprecated: 旧镜像应用的「部署配置」API"""
+    """普通应用的「部署配置」API"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     schema = None
@@ -603,7 +604,7 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         request_body=ModuleDeployProcfileSLZ, response_serializer=ModuleDeployProcfileSLZ, deprecated=True
     )
     def update_procfile(self, request, *args, **kwargs):
-        """更新或创建当前模块的部署配置的启动命令"""
+        """更新或创建当前模块的部署配置的启动命令(目前旧镜像应用在用)"""
         module = self.get_module_via_path()
         if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
             raise ValidationError(_("当前应用不支持配置「启动命令」"))
@@ -612,12 +613,10 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         procfile = slz.validated_data["procfile"]
 
-        mgr = ModuleProcessSpecManager(module)
-        mgr.sync_from_desc(
-            processes=[
-                ProcessTmpl(name=proc_name, command=proc_command) for proc_name, proc_command in procfile.items()
-            ]
-        )
+        processes = [
+            Process(name=proc_name, proc_command=proc_command) for proc_name, proc_command in procfile.items()
+        ]
+        sync_processes(module, processes, fieldmgr.FieldMgrName.APP_DESC, use_proc_command=True)
 
         return Response(
             ModuleDeployProcfileSLZ(

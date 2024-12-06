@@ -376,22 +376,20 @@ class _DevWlAppCreator:
 
     def _make_dev_wl_app_name(self) -> str:
         """参考 make_engine_app_name 规则, 生成 dev 环境的 WlApp name"""
+        suffix = f"{self.dev_sandbox_code}-dev" if self.dev_sandbox_code else "dev"
+
         if self.module_name == ModuleName.DEFAULT.value:
-            if self.dev_sandbox_code:
-                return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.dev_sandbox_code}-dev"
-            else:
-                return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
-        elif self.dev_sandbox_code:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-{self.dev_sandbox_code}-dev"
-        else:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-dev"
+            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{suffix}"
+
+        return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-m-{self.module_name}-{suffix}"
 
     def _make_namespace_name(self) -> str:
         """生成 namespace_name"""
+        ns = f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
         if self.dev_sandbox_code:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{self.dev_sandbox_code}-dev"
-        else:
-            return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
+            ns = f"{ns}-{self.dev_sandbox_code}"
+
+        return ns
 
 
 def get_pvc_name(dev_wl_app: WlApp) -> str:

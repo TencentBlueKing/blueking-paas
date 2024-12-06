@@ -5,7 +5,7 @@
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
- *	http://opensource.org/licenses/MIT
+ *     http://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under
  * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -16,9 +16,23 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package external
+/*
+* 工具
+*/
+import http from '@/api';
 
-import "time"
-
-// DefaultTimeout ...
-const DefaultTimeout = 30 * time.Second
+export default {
+  namespaced: true,
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {
+    /**
+     * 获取应用描述文件转换内容
+     */
+    getDescriptionFileConversion({}, { data, config }) {
+      const url = `${BACKEND_URL}/api/tools/app_desc/transform/`;
+      return http.post(url, data, config);
+    },
+  },
+};

@@ -179,6 +179,9 @@ class AppAdaptor:
                 raise
         return app
 
+    def sync_oauth(self, region: str, code: str, secret: str) -> "legacy_models.LApplication":
+        """接入 bkAuth 后，不需要再往 PaaS2.0 的表中同步应用密钥信息"""
+
     def get_saas_package_info(self, app_id: str) -> Optional["SaaSPackageInfo"]:
         """获取SaaS应用的源码包信息
         注意：目前只获取正式环境部署的包信息

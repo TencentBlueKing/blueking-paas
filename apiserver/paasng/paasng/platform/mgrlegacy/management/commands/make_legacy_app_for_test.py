@@ -130,6 +130,7 @@ class Command(BaseCommand):
         if not dry_run:
             with console_db.session_scope() as session:
                 AppDeveloperManger(session)._create_developer_by_username(username)
+                AppManger(session).sync_oauth(deploy_ver, code=code, secret=secret_key)
                 # TODO: 检查以下流程
                 #  1. 是否使用 mysql 数据库?
                 #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)

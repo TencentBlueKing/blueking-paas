@@ -81,8 +81,8 @@ class TestCnativeAppDescriptionHandler:
 
             handler.handle(bk_deployment)
 
-            assert bk_deployment.hooks[0].command == []
-            assert bk_deployment.hooks[0].args == ["python", "manage.py", "migrate"]
+            assert bk_deployment.get_deploy_hooks()[0].command == []
+            assert bk_deployment.get_deploy_hooks()[0].args == ["python", "manage.py", "migrate"]
 
             assert get_preset_env_variables(bk_deployment.app_environment) == {"FOO": "1"}
             assert get_svc_disc_as_env_variables(bk_deployment.app_environment) == {

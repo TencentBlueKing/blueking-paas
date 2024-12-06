@@ -115,7 +115,7 @@ def init_model_resource(bk_app, bk_module, resource_name):
         args=None,
         target_port=None,
     )
-    return AppModelResource.objects.create_from_resource(bk_app.region, bk_app.id, bk_module.id, resource)
+    return AppModelResource.objects.create_from_resource(bk_app.id, bk_module.id, resource)
 
 
 class TestAppModelDeploy:

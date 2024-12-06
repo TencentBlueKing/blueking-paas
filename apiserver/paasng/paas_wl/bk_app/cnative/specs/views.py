@@ -216,7 +216,6 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 environment_name=validated_data["environment_name"],
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
-                region=application.region,
                 source_name=validated_data.get("source_name"),
             )
         except IntegrityError:

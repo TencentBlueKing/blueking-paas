@@ -1,7 +1,7 @@
 <template>
   <div class="operation-record-container">
     <section class="ps-top-bar">
-      <h2 class="box-shadow">
+      <h2>
         {{ $t('操作记录') }}
       </h2>
     </section>

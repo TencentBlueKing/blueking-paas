@@ -21,6 +21,7 @@ from django.dispatch import receiver
 
 from paas_wl.core.env import env_is_running
 from paas_wl.workloads.networking.ingress.shim import sync_subdomains, sync_subpaths
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.modules.models import Module
 
@@ -29,7 +30,10 @@ logger = logging.getLogger(__name__)
 
 @receiver(application_default_module_switch)
 def sync_default_entrances_for_module_switching(sender, application, new_module, old_module, **kwargs):
-    """sync module's default domains and subpaths after switching default module"""
+    """sync module's default domains and subpaths after switching default module for non cloud native app"""
+    if application.type == ApplicationType.CLOUD_NATIVE:
+        return
+
     for module in [old_module, new_module]:
         try:
             logger.info(f"Refreshing domains and subpaths for {application.code}/{module.name}...")

@@ -28,6 +28,7 @@ from django_dynamic_fixture import G
 from paasng.platform.declarative.constants import WEB_PROCESS
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
 from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import ConsoleStream
 from paasng.platform.engine.utils.source import (
     TypeProcesses,
@@ -103,10 +104,17 @@ class TestDownloadSourceToDir:
             yield
 
     def make_deploy_desc(self, bk_deployment, source_dir: str = "", processes: Optional[Dict[str, Dict]] = None):
+        if processes:
+            bk_deployment.update_fields(
+                processes={
+                    name: ProcessTmpl(name=name, command=command["command"]) for name, command in processes.items()
+                }
+            )
+
         return G(
             DeploymentDescription,
             deployment=bk_deployment,
-            runtime={"processes": processes or {}, "source_dir": source_dir},
+            runtime={"source_dir": source_dir},
         )
 
     def test_no_patch(self, bk_module, bk_deployment):

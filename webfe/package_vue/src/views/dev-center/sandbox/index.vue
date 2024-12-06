@@ -144,6 +144,7 @@
             <bk-button
               :theme="'primary'"
               :loading="isRunNowLoading"
+              bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"
               @click="showRunSandboxDialog"
             >
               <i class="paasng-icon paasng-right-shape"></i>

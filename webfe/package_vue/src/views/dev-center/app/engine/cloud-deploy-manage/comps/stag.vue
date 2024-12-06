@@ -37,6 +37,7 @@
         </div>
       </div>
       <bk-button
+        bk-trace="{id: 'sandbox', action: 'view', category: '云原生应用'}"
         class="sandbox-btn"
         :loading="isSandboxLoading"
         @click="handleSandboxDev"

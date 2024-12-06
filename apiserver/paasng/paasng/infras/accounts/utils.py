@@ -59,7 +59,7 @@ class ForceAllowAuthedApp:
 
 def create_app_oauth_backend(application: Application, env_name: str = settings.AUTH_ENV_NAME):
     """使用指定的应用的身份"""
-    app_secret = get_oauth2_client_secret(application.code, application.region)
+    app_secret = get_oauth2_client_secret(application.code)
     return get_bkapp_oauth_backend_cls()(
         auth_url=settings.TOKEN_AUTH_ENDPOINT,
         refresh_url=settings.TOKEN_REFRESH_ENDPOINT,

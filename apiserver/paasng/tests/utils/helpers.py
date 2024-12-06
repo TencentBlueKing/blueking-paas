@@ -58,7 +58,7 @@ except ImportError:
 def initialize_application(application, *args, **kwargs):
     """Initialize an application"""
     module = create_default_module(application)
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code)
 
     initialize_module(module, *args, **kwargs)
 
@@ -516,7 +516,7 @@ def create_cnative_app(
         name=name,
         name_en=name,
     )
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code)
 
     # First try Svn, then GitLab, then Default
     if not repo_type:

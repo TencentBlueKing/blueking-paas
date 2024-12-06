@@ -18,15 +18,11 @@
 from collections import defaultdict
 from typing import List
 
-from django.conf import settings
-from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.models import WlApp
-from paasng.accessories.publish.sync_market.handlers import application_oauth_handler
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import add_role_members
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.cleaner import ApplicationCleaner
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.handlers import turn_on_bk_log_feature
@@ -163,25 +159,11 @@ class MainInfoMigration(BaseMigration):
         else:
             self.add_engine_app()
 
-        # 由 bk-oauth 服务纳管应用信息后，则不需要再往 OAuth2Client 表中同步数据
-        if not settings.ENABLE_BK_OAUTH:
-            # Disable signal to avoid data sync
-            post_save.disconnect(receiver=application_oauth_handler, sender=OAuth2Client)
-            OAuth2Client.objects.get_or_create(
-                region=self.context.app.region,
-                client_id=self.context.app.code,
-                defaults={"client_secret": self.context.legacy_app_proxy.get_secret_key()},
-            )
-            post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
-
         # 添加应用成员
         app_members = self.context.legacy_app_proxy.get_app_members(self.context.owner)
         self.add_application_role(app_members)
 
     def rollback(self):
-        # rollback oauth2
-        OAuth2Client.objects.filter(client_id=self.context.app.code).delete()
-
         # rollback application service attachment
         for env in self.context.app.envs.all():
             env.engine_app.service_attachment.all().delete()

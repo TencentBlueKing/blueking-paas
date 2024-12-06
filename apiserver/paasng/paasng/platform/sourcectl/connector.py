@@ -343,7 +343,7 @@ def generate_downloadable_app_template(module: Module, context: Optional[Dict[st
     application = module.application
     if context is None:
         # generate default context
-        client_secret = get_oauth2_client_secret(application.code, application.region)
+        client_secret = get_oauth2_client_secret(application.code)
         context = {
             "region": application.region,
             "owner_username": get_username_by_bkpaas_user_id(application.owner),

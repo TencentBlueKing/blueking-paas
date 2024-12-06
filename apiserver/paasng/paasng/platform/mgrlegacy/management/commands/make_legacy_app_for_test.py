@@ -19,9 +19,11 @@ import logging
 import random
 from argparse import ArgumentParser
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.decorators import method_decorator
 
+from paasng.accessories.publish.sync_market.constant import RegionConverter
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger, AppTagManger
 from paasng.accessories.publish.sync_market.models import TagMap, market_models
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
@@ -130,7 +132,8 @@ class Command(BaseCommand):
         if not dry_run:
             with console_db.session_scope() as session:
                 AppDeveloperManger(session)._create_developer_by_username(username)
-                AppManger(session).sync_oauth(deploy_ver, code=code, secret=secret_key)
+                region = RegionConverter.to_new(deploy_ver) if deploy_ver else settings.DEFAULT_REGION_NAME
+                AppManger(session).sync_oauth(region, code=code, secret=secret_key)
                 # TODO: 检查以下流程
                 #  1. 是否使用 mysql 数据库?
                 #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)

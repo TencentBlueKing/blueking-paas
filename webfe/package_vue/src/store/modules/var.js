@@ -20,6 +20,7 @@
     环境变量
 */
 import http from '@/api';
+import { json2Query } from '@/common/tools';
 
 export default {
   namespaced: true,
@@ -121,6 +122,14 @@ export default {
      */
     getConfigVarKeys({}, { appCode, moduleId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/config_var_keys/`;
+      return http.get(url, {});
+    },
+
+    /**
+     * 获取预设环境变量
+     */
+    getConfigVarPreset({}, { appCode, moduleId, params }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/preset/?${json2Query(params)}`;
       return http.get(url, {});
     },
   },

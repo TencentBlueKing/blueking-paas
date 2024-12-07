@@ -126,12 +126,11 @@ class DevSandboxWithCodeEditorUrls:
     code_editor_health_url: str
 
     def __init__(self, base_url: str, dev_sandbox_code: str):
-        self.app_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/app/"
-        self.devserver_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/devserver/"
-        self.code_editor_url = (
-            f"{base_url}/dev_sandbox/{dev_sandbox_code}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
-        )
-        self.code_editor_health_url = f"{base_url}/dev_sandbox/{dev_sandbox_code}/code-editor/healthz"
+        url_prefix = f"{base_url}/dev_sandbox/{dev_sandbox_code}"
+        self.app_url = f"{url_prefix}/app/"
+        self.devserver_url = f"{url_prefix}/devserver/"
+        self.code_editor_url = f"{url_prefix}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
+        self.code_editor_health_url = f"{url_prefix}/code-editor/healthz"
 
 
 @dataclass

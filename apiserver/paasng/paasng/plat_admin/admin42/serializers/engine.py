@@ -88,4 +88,4 @@ class DeploymentForListSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Deployment
-        exclude = ("procfile", "processes", "hooks")
+        exclude = ["processes"]

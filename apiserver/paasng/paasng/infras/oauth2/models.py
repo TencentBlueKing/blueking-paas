@@ -25,6 +25,7 @@
 
 采用数据库 trigger 方式，将新数据往旧数据表中同步。
 """
+
 from blue_krill.models.fields import EncryptField
 from django.db import models
 
@@ -32,9 +33,9 @@ from paasng.utils.models import TimestampedModel
 
 
 class OAuth2Client(TimestampedModel):
-    """OAuth2 体系中的基本单位：Client
+    """【已废弃】OAuth2 体系中的基本单位：Client
 
-    settings.ENABLE_BK_OAUTH 为 True 时，则不再使用该表，Auth 相关的数据直接调用 BKAuth 服务提供的 API。
+    应用的密钥信息已全面接入到 bkAuth，不再需要在开发者中心、桌面存储应用密钥信息，该表已完全废弃
     """
 
     client_id = models.CharField(verbose_name="应用编码", max_length=20, unique=True)

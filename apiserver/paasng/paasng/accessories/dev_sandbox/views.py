@@ -33,6 +33,7 @@ from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_de
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
@@ -99,12 +100,15 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
         """部署开发沙箱"""
+
+        # 同时支持的开发沙箱数量是有上限的
         if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
 
         app = self.get_application()
         module = self.get_module_via_path()
 
+        # 同一用户同一环境只能有一个运行中的沙箱
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
@@ -112,9 +116,8 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 
-        # 仅支持 vcs 类型的源码获取方式
-        source_origin = module.get_source_origin()
-        if source_origin != SourceOrigin.AUTHORIZED_VCS:
+        # 目前仅支持 vcs 类型的源码获取方式
+        if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
         # 获取版本信息
@@ -157,7 +160,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
             # 获取环境变量（复用 stag 环境）
             envs = generate_envs(app, module)
-            stag_envs = get_env_variables(module.get_envs("stag"))
+            stag_envs = get_env_variables(module.get_envs(AppEnvironment.STAGING))
             envs.update(stag_envs)
 
             controller.deploy(

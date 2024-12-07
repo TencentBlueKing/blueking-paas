@@ -14,3 +14,31 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from datetime import datetime
+
+from paasng.infras.oauth2.api import BkAppSecret
+
+
+class StubBkOauthClient:
+    """bkAuth 提供的 API（仅供单元测试使用）"""
+
+    def create_client(self, bk_app_code: str): ...
+
+    def create_app_secret(self, bk_app_code: str): ...
+
+    def del_app_secret(self, bk_app_code: str, bk_app_secret_id: int): ...
+
+    def toggle_app_secret(self, bk_app_code: str, bk_app_secret_id: int, enabled: bool): ...
+
+    def get_app_secret_list(self, bk_app_code: str): ...
+
+    def get_default_app_secret(self, bk_app_code: str):
+        return BkAppSecret(
+            id=1,
+            bk_app_code=bk_app_code,
+            bk_app_secret="xxxxxxx",
+            enabled=True,
+            created_at=datetime.strptime("2021-10-21T07:56:16Z", "%Y-%m-%dT%H:%M:%SZ"),
+        )
+
+    def get_secret_by_id(self, bk_app_code: str, bk_app_secret_id: int): ...

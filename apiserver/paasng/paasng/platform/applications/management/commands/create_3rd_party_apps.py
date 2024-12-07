@@ -21,18 +21,15 @@ import os
 from dataclasses import dataclass
 
 import yaml
-from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError as DjangoIntegrityError
-from django.db.models.signals import post_save
 from django.db.transaction import atomic
 
 from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.publish.sync_market.handlers import (
-    application_oauth_handler,
     market_config_update_handler,
     sync_external_url_to_market,
 )
@@ -40,7 +37,6 @@ from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
@@ -112,26 +108,11 @@ class Command(BaseCommand):
             return legacy_app.auth_token
         return ""
 
-    def create_oauth_client_by_code(self, code: str, region: str):
+    def create_oauth_client_by_code(self, code: str):
         secret_key = self.get_app_secret_key(code)
-        # secret_key 已经存在，则使用已有的值
-        if secret_key:
-            # 由 bk-oauth 服务纳管应用信息后，则不需要再往 OAuth2Client 表中同步数据
-            if not settings.ENABLE_BK_OAUTH:
-                try:
-                    # Disable signal to avoid data sync
-                    post_save.disconnect(receiver=application_oauth_handler, sender=OAuth2Client)
-                    OAuth2Client.objects.get_or_create(
-                        region=region,
-                        client_id=code,
-                        defaults={"client_secret": secret_key},
-                    )
-                finally:
-                    post_save.connect(receiver=application_oauth_handler, sender=OAuth2Client)
-                    logger.info("create oauth app(code:%s) with an existing key", code)
-        else:
-            # secret_key 不存在，则生成一个新的
-            create_oauth2_client(code, region)
+        # secret_key 不存在，则生成一个新的
+        if not secret_key:
+            create_oauth2_client(code)
             logger.info("create oauth app(code:%s) with a new randomly generated key", code)
 
     def create_3rd_app(self, app_desc: Simple3rdAppDesc, already_in_paas2: bool):
@@ -174,7 +155,7 @@ class Command(BaseCommand):
 
         if created:
             module = create_default_module(application)
-            self.create_oauth_client_by_code(app_desc.code, app_desc.region)
+            self.create_oauth_client_by_code(app_desc.code)
         else:
             module = application.get_default_module()
 

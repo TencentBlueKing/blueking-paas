@@ -41,9 +41,4 @@ urlpatterns = [
         views.AppEntranceViewSet.as_view({"get": "list_all_entrances"}),
         name="api.applications.entrances.all_entrances",
     ),
-    re_path(
-        r"api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/entrances/$",
-        views.AppEntranceViewSet.as_view({"get": "list_module_available_entrances"}),
-        name="api.applications.entrances.all_module_entrances",
-    ),
 ]

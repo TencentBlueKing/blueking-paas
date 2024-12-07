@@ -13,6 +13,7 @@
       <bk-button
         theme="primary"
         :loading="dialogLoading"
+        bk-trace="{id: 'sandbox', action: 'new', category: '云原生应用'}"
         @click="handleConfirm"
       >
         {{ $t('确定') }}

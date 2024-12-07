@@ -280,7 +280,6 @@ class MountManager:
         environment_name: str,
         mount_path: str,
         source_type: str,
-        region: str,
         source_name: Optional[str] = None,
     ) -> Mount:
         source_config_name = source_name or generate_source_config_name(app_code=app_code)
@@ -293,7 +292,6 @@ class MountManager:
             environment_name=environment_name,
             mount_path=mount_path,
             source_type=source_type,
-            region=region,
             source_config=source_config,
         )
 

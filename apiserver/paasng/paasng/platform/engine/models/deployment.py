@@ -20,21 +20,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-import cattr
 from attrs import define
 from django.db import models
-from jsonfield import JSONField
 
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet, ProcService
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
 from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
-from paasng.platform.modules.models.deploy_config import HookList, HookListField
+from paasng.platform.modules.models.deploy_config import HookList
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
@@ -91,7 +89,6 @@ class ProcessTmpl:
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
     probes: Optional[ProbeSet] = None
-    services: Optional[List[ProcService]] = None
 
     def __post_init__(self):
         self.name = self.name.lower()
@@ -129,15 +126,10 @@ class Deployment(OperationVersionBase):
     err_detail = models.TextField("部署异常原因", null=True, blank=True)
     advanced_options: AdvancedOptions = AdvancedOptionsField("高级选项", null=True)
 
-    procfile = JSONField(
-        default=dict,
-        help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile",
-    )
     processes = DeclarativeProcessField(
         default=dict,
         help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec",
     )
-    hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
     # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
     # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
@@ -284,6 +276,8 @@ class Deployment(OperationVersionBase):
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:
+        """获取部署钩子. 目前仅用于普通应用的钩子部署"""
+
         # Warning: 目前的策略是如果同时允许产品上配置, 则优先使用产品上配置
         # 因此 app_desc 中声明的 hooks 会被覆盖产品上已填写的 hooks 覆盖
         try:
@@ -291,20 +285,16 @@ class Deployment(OperationVersionBase):
         except Exception:
             hooks = HookList()
 
-        for hook in self.hooks:
-            if hook.enabled:
-                hooks.upsert(hook.type, command=hook.command, args=hook.args)
+        for hook in self.app_environment.module.deploy_hooks.filter(enabled=True):
+            hooks.upsert(hook.type, command=hook.get_command(), args=hook.get_args())
         return hooks
 
     def get_processes(self) -> List[ProcessTmpl]:
         """获取本次部署所使用的进程配置列表。"""
         if self.processes:
             return list(self.processes.values())
-        # 兼容旧字段 procfile
-        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas,scaling_config
-        elif self.procfile:
-            return cattr.structure(
-                [{"name": name, "command": command} for name, command in self.procfile.items()],
-                List[ProcessTmpl],
-            )
         return []
+
+    def get_procfile(self) -> Dict[str, str]:
+        """Procfile is a dict containing a process type and its corresponding command"""
+        return {proc.name: proc.command for proc in self.get_processes()}

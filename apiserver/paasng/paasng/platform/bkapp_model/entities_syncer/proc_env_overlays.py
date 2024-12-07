@@ -119,6 +119,15 @@ class OverlayDataSyncer:
         # Build the index of existing data first to clean data later.
         existing_specs, existing_index = self._build_specs_and_index(module)
 
+        # 空列表时, 表示主动置空所有
+        if not items:
+            for (proc, env), pk in existing_index.items():
+                ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+                # Reset the field manager too.
+                fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
+                ret.deleted_num += 1
+            return ret
+
         for input_p in items:
             proc, env = input_p.process, input_p.env_name
             if not (proc_spec := existing_specs.get(proc)):
@@ -135,8 +144,15 @@ class OverlayDataSyncer:
             fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).set(manager)
 
         # Reset existing data
-        for pk in existing_index.values():
+        not_managed_envs = self._get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
+        for (proc, env), pk in existing_index.items():
+            base_value_is_set = proc_value_is_set and proc_value_is_set.get(proc)
+            # Do not reset the data if the environment is not managed by the current manager.
+            if (proc, env) in not_managed_envs and not base_value_is_set:
+                continue
+
             ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+            fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
             ret.deleted_num += 1
         return ret
 

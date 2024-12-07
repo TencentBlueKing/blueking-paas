@@ -951,7 +951,6 @@ DEFAULT_REGION_TEMPLATE = {
 REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAULT_REGION_TEMPLATE)]})
 
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
-ENABLE_BK_OAUTH = settings.get("ENABLE_BK_OAUTH", False)
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
 # --------

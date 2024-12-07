@@ -49,17 +49,15 @@ class AppModelResourceManager(models.Manager):
         """Get the JSON value of app model resource by application"""
         return AppModelResource.objects.get(application_id=application.id, module_id=module.id).revision.json_value
 
-    def create_from_resource(self, region: str, application_id: str, module_id: str, resource: "BkAppResource"):
+    def create_from_resource(self, application_id: str, module_id: str, resource: "BkAppResource"):
         """Create a model resource object from `BkAppResource` object
 
-        :param region: Application region
         :param application_id: ID of bk application object
         :param module_id: ID of Module object
         :param resource: `BkAppResource` object
         """
         json_value = resource.to_deployable()
         revision = AppModelRevision.objects.create(
-            region=region,
             application_id=application_id,
             module_id=module_id,
             version=resource.apiVersion,
@@ -67,7 +65,7 @@ class AppModelResourceManager(models.Manager):
             yaml_value=yaml.dump(json_value, allow_unicode=True, default_flow_style=False),
         )
         model_resource = AppModelResource.objects.create(
-            region=region, application_id=application_id, module_id=module_id, revision=revision
+            application_id=application_id, module_id=module_id, revision=revision
         )
         return model_resource
 
@@ -78,7 +76,7 @@ class AppModelResourceManager(models.Manager):
             # 原逻辑: 创建云原生应用的模块时, 会创建 AppModelResource 用于占位
             res_name = generate_bkapp_name(module)
             resource = create_app_resource(res_name, image="stub")
-            return self.create_from_resource(module.region, module.application.id, module.id, resource), True
+            return self.create_from_resource(module.application.id, module.id, resource), True
 
 
 class AppModelResource(TimestampedModel):
@@ -101,7 +99,6 @@ class AppModelResource(TimestampedModel):
         """
         json_value = resource.to_deployable()
         self.revision = AppModelRevision.objects.create(
-            region=self.region,
             application_id=self.application_id,
             module_id=self.module_id,
             version=resource.apiVersion,

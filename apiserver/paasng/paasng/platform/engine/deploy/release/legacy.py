@@ -164,12 +164,12 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
 
     deployment_id: Optional[str]
     if deployment:
-        procfile = {p.name: p.command for p in deployment.get_processes()}
+        procfile = deployment.get_procfile()
         deployment_id = str(deployment.id)
     else:
         # NOTE: 更新环境变量时的 Pod 滚动时没有 deployment, 需要从 engine 中查询 procfile
         previous_deployment: Deployment = Deployment.objects.filter(build_id=build_id).latest_succeeded()
-        procfile = {p.name: p.command for p in previous_deployment.get_processes()}
+        procfile = previous_deployment.get_procfile()
         deployment_id = None
 
     extra_envs = get_env_variables(env)

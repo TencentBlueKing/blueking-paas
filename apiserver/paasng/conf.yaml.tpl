@@ -341,8 +341,6 @@
 ## Region 配置
 # REGION_CONFIGS: {}
 
-## 启用 BK OAuth 服务
-# ENABLE_BK_OAUTH: false
 ## 蓝鲸 OAuth 服务地址
 # BK_OAUTH_API_URL: http://localhost:8080
 

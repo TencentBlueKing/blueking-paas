@@ -38,6 +38,7 @@
       }
       var BKPAAS_BUILD_VERSION = decodeURIComponent('<%= process.env.BK_PAAS_BUILD_VERSION %>' || '')
       var BK_MAX_PACKAGE_SIZE = '<%= process.env.BK_MAX_PACKAGE_SIZE %>' || ''
+      var BK_ANALYSIS_SITE_NAME = '<%= process.env.BK_ANALYSIS_SITE_NAME %>' || ''
 
       // 控制台输出版本信息
       if (BKPAAS_BUILD_VERSION !== '') {
@@ -48,29 +49,24 @@
           'background-color: #3A84FF; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold;margin-left: 16px;',
         );
       }
+      if (APP_VERSION === 'te') {
+        GLOBAL_CONFIG.USERS_URL = '';
+      }
     </script>
     <% if (process.env.BK_APP_VERSION === 'te'){ %>
     <!-- BK Analytics start -->
     <!-- start及end之间的内部代码会在企业版本出包时删除 -->
+    <script src="<%= process.env.BK_ANALYSIS_JS %>" charset="utf-8"></script>
+    <% if (process.env.BK_ANALYSIS_SITE_NAME !== '') { %>
     <script>
-      document.write('<scr'+'ipt src="'+BK_ANALYSIS_JS+'"></scr'+'ipt>');
-      document.addEventListener('DOMContentLoaded', () => {
-        const analysisScript = document.createElement('script');
-        analysisScript.src = BK_ANALYSIS_JS;
-        document.body.appendChild(analysisScript);
-      });
-      GLOBAL_CONFIG.USERS_URL = ''
-    </script>
-    <% if (process.env.NODE_ENV !== 'development') { %>
-    <script>
-        if (window.NODE_ENV !== 'development') {
-          if(BKANALYSIS) {
-            BKANALYSIS.init({
-              // siteName 是网站的唯一标识，请不要修改
-              siteName: 'custom:paasv3cli:default:default',
-            })
-          }
+      if (window.NODE_ENV !== 'development') {
+        if (BKANALYSIS) {
+          BKANALYSIS.init({
+            // siteName 是网站的唯一标识，请不要修改
+            siteName: '<%= process.env.BK_ANALYSIS_SITE_NAME %>',
+          })
         }
+      }
     </script>
     <% } %>
     <!-- End BK Analytics end -->

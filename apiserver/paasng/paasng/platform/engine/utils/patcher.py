@@ -62,11 +62,7 @@ class SourceCodePatcherWithDBDriver:
             # dockerfile 类型的构建方式不需要注入 procfile
             raise SkipPatchCode("Dockerfile-type builds do not require a Procfile")
 
-        try:
-            procfile = self.deploy_description.get_procfile()
-        except DeploymentDescription.DoesNotExist:
-            raise SkipPatchCode("DeploymentDescription does not exist, skip the injection process")
-
+        procfile = self.deployment.get_procfile()
         if not procfile:
             raise SkipPatchCode("Procfile is undefined")
 
@@ -80,11 +76,7 @@ class SourceCodePatcherWithDBDriver:
 
     def _add_procfile_for_default_app(self):
         """「普通应用」尝试往应用源码目录创建 Procfile 文件"""
-        try:
-            procfile = self.deploy_description.get_procfile()
-        except DeploymentDescription.DoesNotExist:
-            raise SkipPatchCode("DeploymentDescription does not exist, skip the injection process")
-
+        procfile = self.deployment.get_procfile()
         if not procfile:
             raise SkipPatchCode("Procfile is undefined")
 

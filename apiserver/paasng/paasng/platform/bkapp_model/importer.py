@@ -154,7 +154,7 @@ def import_bkapp_spec_entity_non_cnative(
 
     # Run sync functions
     sync_processes(module, processes=spec_entity.processes, manager=manager, use_proc_command=True)
-    sync_hooks(module, spec_entity.hooks, manager, use_proc_command=True)
+    sync_hooks(module, spec_entity.hooks, manager)
 
     # sync_env_vars doesn't need to use manager parameter because the data will
     # only be manged by a single manger.

@@ -123,7 +123,6 @@ class NavDataProcessor {
           if (subitem.visible === false) {
             return;
           }
-
           this.navItems.push({
             // eslint-disable-next-line no-underscore-dangle
             ...this._refineItem(subitem),

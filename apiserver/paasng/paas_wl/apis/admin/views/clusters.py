@@ -154,11 +154,11 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         if not Cluster.objects.filter(region=region, name=cluster_name).exists():
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        logger.info(f"will generate state for [{region}/{cluster_name}]...")
+        logger.info(f"will generate state for [{cluster_name}]...")
         client = get_client_by_cluster_name(cluster_name=cluster_name)
 
-        logger.info(f"generating state for [{region}/{cluster_name}]...")
-        state = generate_state(region, cluster_name, client, data["ignore_labels"])
+        logger.info(f"generating state for [{cluster_name}]...")
+        state = generate_state(cluster_name, client, data["ignore_labels"])
 
         logger.info("syncing the state to nodes...")
         sync_state_to_nodes(client, state)

@@ -31,8 +31,8 @@ from .models import RegionClusterState
 logger = logging.getLogger(__name__)
 
 
-def generate_state(region: str, cluster_name: str, client, ignore_labels: List) -> RegionClusterState:
-    """Generate region state for a single region"""
+def generate_state(cluster_name: str, client, ignore_labels: List) -> RegionClusterState:
+    """Generate region state for a single cluster"""
 
     nodes = get_nodes(client)
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))
@@ -40,11 +40,11 @@ def generate_state(region: str, cluster_name: str, client, ignore_labels: List) 
     nodes_digest = get_digest_of_nodes_name(nodes_name)
 
     # Use a shorter version of the digest as name, cstate -> "Cluster State"
-    next_version = RegionClusterState.objects.filter(region=region, cluster_name=cluster_name).count() + 1
+    next_version = RegionClusterState.objects.filter(cluster_name=cluster_name).count() + 1
     name = "eng-cstate-{}-{}".format(nodes_digest[:8], next_version)
 
     try:
-        state = RegionClusterState.objects.get(region=region, cluster_name=cluster_name, nodes_digest=nodes_digest)
+        state = RegionClusterState.objects.get(cluster_name=cluster_name, nodes_digest=nodes_digest)
         logger.info("legacy state found in database, current cluster state has already been recorded")
     except RegionClusterState.DoesNotExist:
         pass
@@ -52,7 +52,6 @@ def generate_state(region: str, cluster_name: str, client, ignore_labels: List) 
         return state
 
     return RegionClusterState.objects.create(
-        region=region,
         cluster_name=cluster_name,
         name=name,
         nodes_digest=nodes_digest,

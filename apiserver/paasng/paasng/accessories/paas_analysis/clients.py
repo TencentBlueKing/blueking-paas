@@ -315,7 +315,7 @@ class SiteMetricsClient:
         resp = self.pa_client.get_site_pv_config(
             site_name=self.site.name, metric_source_type=self.metric_source_type.value
         )
-        slz = slzs.PageViewConfigSLZ(data=resp, context={"region": self.site.region})
+        slz = slzs.PageViewConfigSLZ(data=resp)
         slz.is_valid(raise_exception=True)
         return slz.validated_data
 

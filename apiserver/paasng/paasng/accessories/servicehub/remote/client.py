@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Client for remote services
-"""
+"""Client for remote services"""
+
 import json
 import logging
 from contextlib import contextmanager
@@ -245,6 +245,18 @@ class RemoteServiceClient:
             url = self.config.async_delete_instance_url.format(instance_id=instance_id)
         else:
             url = self.config.delete_instance_url.format(instance_id=instance_id)
+
+        with wrap_request_exc(self):
+            resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)
+            self.validate_resp(resp)
+            return
+
+    def delete_instance_synchronously(self, instance_id: str):
+        """Delete a provisioned instance synchronously
+
+        We assume the remote service is already able to recycle resources
+        """
+        url = self.config.delete_instance_url.format(instance_id=instance_id)
 
         with wrap_request_exc(self):
             resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)

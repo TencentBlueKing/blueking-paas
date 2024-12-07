@@ -17,6 +17,7 @@
 
 import logging
 import operator
+import uuid
 from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTuple, Optional, TypeVar, cast
 
 from django.db.models import QuerySet
@@ -27,6 +28,7 @@ from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.local.manager import LocalPlanMgr, LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.models import (
@@ -272,6 +274,16 @@ class MixedServiceMgr:
             except SvcAttachmentDoesNotExist:
                 continue
         raise SvcAttachmentDoesNotExist(f"engine_app<{engine_app}> has no attachment with service<{service.uuid}>")
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        for mgr in self.mgr_instances:
+            try:
+                return mgr.get_unbound_instance_rel_by_instance_id(service, service_instance_id)
+            except UnboundSvcAttachmentDoesNotExist:
+                continue
+        raise UnboundSvcAttachmentDoesNotExist(
+            f"service<{ServiceObj}> has no attachment with service_instance_id<{service_instance_id}>"
+        )
 
 
 class MixedPlanMgr:

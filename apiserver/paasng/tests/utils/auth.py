@@ -21,10 +21,24 @@ from bkpaas_auth.core.token import LoginToken
 from bkpaas_auth.models import User
 from django.conf import settings
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID, set_tenant
 
-def create_user(username: Optional[str] = None):
-    from tests.utils.helpers import generate_random_string
+from .basic import generate_random_string
 
+
+def create_op_tenant_user(username: Optional[str] = None) -> User:
+    """Create an user which belongs to an operation tenant."""
+    return create_user(username=username, tenant_id=OP_TYPE_TENANT_ID)
+
+
+def create_user(username: Optional[str] = None, tenant_id: str | None = None) -> User:
+    """Create a user.
+
+    :param username: The user's username, use random value when not given.
+    :param tenant_id: The user's tenant id, use a random tenant id when not given.
+    """
     username = username or generate_random_string(length=6)
     token = LoginToken(login_token="any_token", expires_in=86400)
-    return User(token=token, provider_type=settings.USER_TYPE, username=username)
+    u = User(token=token, provider_type=settings.USER_TYPE, username=username)
+    set_tenant(u, tenant_id or generate_random_string(length=6))
+    return u

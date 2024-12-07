@@ -8,7 +8,7 @@ authors = ["blueking <blueking@tencent.com>"]
 python = ">=3.11,<3.12"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.7.0"
+ruff = "^0.8.0"
 
 [tool.ruff]
 line-length = 119

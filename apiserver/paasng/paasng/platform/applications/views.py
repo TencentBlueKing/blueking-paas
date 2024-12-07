@@ -52,9 +52,10 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.user import Tenant, get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
-from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
+from paasng.infras.accounts.models import AccountFeatureFlag, User, make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
@@ -129,6 +130,7 @@ from paasng.platform.templates.models import Template
 from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
+from tests.api.test_applications import AppTenantMode
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -691,6 +693,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
+        app_tenant_mode, app_tenant_id, tenant = self._validate_app_tenant_params(
+            request.user, params["app_tenant_mode"]
+        )
+
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
         if advanced_options:
@@ -724,6 +730,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
             is_plugin_app=params["is_plugin_app"],
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant.id,
         )
         module = create_default_module(application, **module_src_cfg)
 
@@ -917,6 +926,27 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
+
+    @staticmethod
+    def _validate_app_tenant_params(user: User, app_tenant_mode_p: int | None) -> Tuple[AppTenantMode, str, Tenant]:
+        """Validate the params related with multi-tenant feature.
+
+        :param user: The user who is creating the application.
+        :param app_tenant_mode_p: The app tenant mode in params.
+        :returns: A tuple, the items: (app_tenant_mode, app_tenant_id, tenant).
+        """
+        tenant = get_tenant(user)
+        app_tenant_mode: AppTenantMode
+        if tenant.is_stub:
+            app_tenant_mode = AppTenantMode.GLOBAL
+        else:
+            # The default tenant mode is SINGLE when multi-tenant mode is enabled
+            app_tenant_mode = AppTenantMode.SINGLE if not app_tenant_mode_p else AppTenantMode(app_tenant_mode_p)
+            if app_tenant_mode == AppTenantMode.GLOBAL and not tenant.is_op_type:
+                raise ValidationError(_("当前不允许创建全租户可用的应用"))
+
+        app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
+        return app_tenant_mode, app_tenant_id, tenant
 
 
 class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):

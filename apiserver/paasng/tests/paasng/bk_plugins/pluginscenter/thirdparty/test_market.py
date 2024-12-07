@@ -23,7 +23,7 @@ from translated_fields import to_attribute
 from paasng.bk_plugins.pluginscenter.models import PluginMarketInfo
 from paasng.bk_plugins.pluginscenter.serializers import PluginMarketInfoSLZ
 from paasng.bk_plugins.pluginscenter.thirdparty import market
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

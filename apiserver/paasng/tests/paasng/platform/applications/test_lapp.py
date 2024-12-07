@@ -20,7 +20,8 @@ from django.conf import settings
 
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from tests.conftest import check_legacy_enabled
-from tests.utils.helpers import adaptive_lapplicationtag_fields, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import adaptive_lapplicationtag_fields
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, legacy_models

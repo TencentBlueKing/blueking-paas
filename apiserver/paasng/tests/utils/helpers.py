@@ -17,7 +17,6 @@
 
 import copy
 import datetime
-import random
 import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
@@ -47,7 +46,8 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
-from .auth import create_user
+from . import auth
+from .basic import generate_random_string
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationTag
@@ -141,9 +141,9 @@ def create_app(
         additional_modules = []
 
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
 
     region = region or settings.DEFAULT_REGION_NAME
 
@@ -335,21 +335,6 @@ def configure_regions(regions: List[str]):
     load_regions_from_settings()
 
 
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
-
-
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable OAuth token
-
-    OAuth (1 and 2) does not specify the format of tokens except that they
-    should be strings of random characters. Tokens should not be guessable
-    and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
-    """
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
-
-
 # Stores pending actions related with workloads during app creation
 _faked_wl_apps = {}
 _faked_env_metadata = {}
@@ -374,17 +359,20 @@ def _mock_wl_services_in_creation():
         else:
             _faked_env_metadata[env.id].update(metadata_part)
 
-    with mock.patch(
-        "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
-    ), mock.patch(
-        "paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env
-    ), mock.patch(
-        "paasng.platform.bkapp_model.services.update_metadata_by_env", new=fake_update_metadata_by_env
-    ), mock.patch("paasng.platform.modules.manager.EnvClusterService"), mock.patch(
-        "paasng.platform.bkapp_model.services.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
-    ), mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"), mock.patch(
-        "paasng.platform.bkapp_model.services.EnvClusterService"
-    ), mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log:
+    with (
+        mock.patch(
+            "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
+        ),
+        mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
+        mock.patch("paasng.platform.bkapp_model.services.update_metadata_by_env", new=fake_update_metadata_by_env),
+        mock.patch("paasng.platform.modules.manager.EnvClusterService"),
+        mock.patch(
+            "paasng.platform.bkapp_model.services.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
+        ),
+        mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"),
+        mock.patch("paasng.platform.bkapp_model.services.EnvClusterService"),
+        mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
+    ):
         fake_log().get_cluster().has_feature_flag.return_value = False
         yield
 
@@ -496,9 +484,9 @@ def create_cnative_app(
     :param owner_username: username of owner
     """
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
     region = region or settings.DEFAULT_REGION_NAME
 
     # Create the Application object

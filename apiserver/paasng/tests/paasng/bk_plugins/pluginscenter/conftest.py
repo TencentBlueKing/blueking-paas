@@ -47,7 +47,7 @@ from paasng.bk_plugins.pluginscenter.models import (
 )
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 def make_api_resource(path: str = ""):

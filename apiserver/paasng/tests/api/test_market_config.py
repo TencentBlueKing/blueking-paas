@@ -29,7 +29,7 @@ from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from tests.conftest import mark_skip_if_console_not_configured
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = [
     mark_skip_if_console_not_configured(),

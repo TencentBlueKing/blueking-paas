@@ -46,7 +46,8 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 from tests.conftest import mark_skip_if_console_not_configured
-from tests.utils.helpers import create_app, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_app
 
 pytestmark = [
     mark_skip_if_console_not_configured(),

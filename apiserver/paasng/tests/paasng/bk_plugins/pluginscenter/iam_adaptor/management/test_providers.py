@@ -27,7 +27,7 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.definitions import gen_iam_reso
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.providers import PluginProvider
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

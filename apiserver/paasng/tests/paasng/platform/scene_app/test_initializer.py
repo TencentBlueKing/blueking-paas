@@ -22,7 +22,7 @@ from django.conf import settings
 
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from tests.utils import mock
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
@@ -33,15 +33,19 @@ class TestSceneAPPInitializer:
         from tests.utils.helpers import create_scene_tmpls
 
         create_scene_tmpls()
-        with mock.patch(
-            "paasng.platform.declarative.application.controller.initialize_smart_module",
-            return_value={},
-        ), mock.patch(
-            "paasng.platform.scene_app.initializer.create_oauth2_client",
-            return_value="test_app_secret",
-        ), mock.patch(
-            "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
-            return_value="test_app_secret",
+        with (
+            mock.patch(
+                "paasng.platform.declarative.application.controller.initialize_smart_module",
+                return_value={},
+            ),
+            mock.patch(
+                "paasng.platform.scene_app.initializer.create_oauth2_client",
+                return_value="test_app_secret",
+            ),
+            mock.patch(
+                "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
+                return_value="test_app_secret",
+            ),
         ):
             yield
 

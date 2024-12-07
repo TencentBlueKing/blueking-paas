@@ -25,7 +25,7 @@ from django.urls import reverse
 
 from paasng.platform.sourcectl.models import SvnAccount
 from paasng.utils.notification_plugins import BaseComponentAPIPlugin
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db

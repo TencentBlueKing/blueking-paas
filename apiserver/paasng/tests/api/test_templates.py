@@ -23,7 +23,7 @@ from django_dynamic_fixture import G
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

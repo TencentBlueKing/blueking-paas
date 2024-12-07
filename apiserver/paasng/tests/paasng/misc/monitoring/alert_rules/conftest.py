@@ -30,7 +30,7 @@ from paasng.misc.monitoring.monitor.alert_rules.ascode.client import AsCodeClien
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.config.entities import AlertCode
 from paasng.misc.monitoring.monitor.models import AppAlertRule
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 random_vhost = generate_random_string()
 random_cluster_id = generate_random_string()

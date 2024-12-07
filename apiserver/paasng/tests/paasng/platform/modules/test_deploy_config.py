@@ -18,7 +18,7 @@
 import pytest
 
 from paasng.platform.modules.constants import DeployHookType
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

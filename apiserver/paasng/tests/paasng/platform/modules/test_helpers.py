@@ -26,7 +26,7 @@ from paasng.platform.modules.helpers import (
     get_module_clusters,
     get_module_prod_env_root_domains,
 )
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])

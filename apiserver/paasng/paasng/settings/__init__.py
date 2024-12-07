@@ -645,6 +645,9 @@ UNIQUE_ID_GEN_FUNC = "paasng.accessories.services.utils.gen_unique_id"
 BK_APP_CODE = settings.get("BK_APP_CODE", "bk_paas3")
 BK_APP_SECRET = settings.get("BK_APP_SECRET", "")
 
+# 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
+ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
+
 # PaaS 2.0 在权限中心注册的系统ID （并非是平台的 Code）
 IAM_SYSTEM_ID = settings.get("IAM_SYSTEM_ID", default="bk_paas")
 

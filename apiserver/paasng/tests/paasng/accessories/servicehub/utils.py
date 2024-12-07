@@ -15,14 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Unit tests for ceph provider
-"""
+"""Unit tests for ceph provider"""
+
 import string
 import uuid
 from typing import Optional
 
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj, ServiceSpecificationDefinition
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 SERVICE_COMMON_ARGS: dict = dict(
     logo="http://logo.com/my.jpg",

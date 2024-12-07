@@ -70,7 +70,7 @@ from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, 
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models import BuildConfig
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

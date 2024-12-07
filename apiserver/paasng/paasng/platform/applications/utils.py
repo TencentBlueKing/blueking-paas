@@ -28,6 +28,8 @@ from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exp
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.region.models import get_region
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -80,6 +82,9 @@ def create_application(
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
+    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
+    app_tenant_id: str = "",
+    tenant_id: str = DEFAULT_TENANT_ID,
 ):
     """创建 Application 模型"""
     application = Application.objects.create(
@@ -92,6 +97,9 @@ def create_application(
         name_en=name_en,
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
+        app_tenant_mode=app_tenant_mode.value,
+        app_tenant_id=app_tenant_id,
+        tenant_id=tenant_id,
     )
     create_oauth2_client(application.code, application.region)
 

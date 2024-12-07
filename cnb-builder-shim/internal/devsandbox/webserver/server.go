@@ -35,6 +35,7 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/filediffer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
@@ -93,6 +94,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/app_logs", AppLogHandler())
 	r.GET("/processes/status", ProcessStatusHandler())
 	r.GET("/processes/list", ProcessListHandler())
+	r.GET("/diffs", DiffsHandler())
 
 	return s, nil
 }
@@ -139,41 +141,56 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			// 创建临时文件夹
 			tmpDir, err := os.MkdirTemp("", "source-*")
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())},
+				)
 				return
 			}
 			defer os.RemoveAll(tmpDir)
 
 			file, err := c.FormFile("file")
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())},
+				)
 				return
 			}
 
 			fileName := filepath.Base(file.Filename)
 			dst := path.Join(s.env.UploadDir, fileName)
 			if len(dst) > 0 && dst[len(dst)-1] == '.' {
-				c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)})
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)},
+				)
 				return
 			}
 
 			if err = c.SaveUploadedFile(file, dst); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())},
+				)
 				return
 			}
 			// 解压文件到临时目录
 			if err = utils.Unzip(dst, tmpDir); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())},
+				)
 				return
 			}
 			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
 		case config.BK_REPO:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
-			return
+			fallthrough
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)})
+			errMsg := fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)
+			c.JSON(http.StatusBadRequest, gin.H{"message": errMsg})
 			return
 		}
 
@@ -184,7 +201,11 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 		}
 
 		select {
-		case s.ch <- devsandbox.AppReloadEvent{ID: status.DeployID, Rebuild: status.StepOpts.Rebuild, Relaunch: status.StepOpts.Relaunch}:
+		case s.ch <- devsandbox.AppReloadEvent{
+			ID:       status.DeployID,
+			Rebuild:  status.StepOpts.Rebuild,
+			Relaunch: status.StepOpts.Relaunch,
+		}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:
 			c.JSON(
@@ -259,6 +280,40 @@ func ProcessListHandler() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"processes": appDesc.Module.Processes})
+	}
+}
+
+// DiffsHandler 提供文件变更信息
+func DiffsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持 TODO 后续重构时需要统一
+		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},
+			)
+			return
+		}
+
+		differ := filediffer.New()
+		// 初始化
+		if err := differ.Prepare(config.G.SourceCode.Workspace); err != nil {
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("file differ prepare failed: %s", err)},
+			)
+			return
+		}
+		// 获取文件变更信息
+		files, err := differ.Diff()
+		if err != nil {
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("failed to diff files: %s", err)},
+			)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": files})
 	}
 }
 

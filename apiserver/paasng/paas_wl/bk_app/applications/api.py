@@ -51,7 +51,7 @@ def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> Cr
     """Create an WlApp object, if the object already exists, return it directly. The object's type
     will be set to the given type.
     """
-    obj, _ = WlApp.objects.update_or_create(region=region, name=name, defaults={"type": type_.value})
+    obj, _ = WlApp.objects.update_or_create(name=name, defaults={"type": type_.value, "region": region})
     return CreatedAppInfo(obj.uuid, obj.name, WlAppType(obj.type))
 
 

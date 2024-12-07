@@ -36,17 +36,17 @@ urlpatterns = [
         name="wl_api.process_spec_plan_by_id",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/plan",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/plan",
         processes.ProcessSpecManageViewSet.as_view({"put": "switch_process_plan"}),
         name="wl_api.application.process_plan",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/scale",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/scale",
         processes.ProcessSpecManageViewSet.as_view({"put": "scale"}),
         name="wl_api.application.process_scale",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/instances/<str:instance_name>/",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/instances/<str:instance_name>/",
         processes.ProcessInstanceViewSet.as_view({"get": "retrieve"}),
         name="wl_api.application.process_instance",
     ),

@@ -34,13 +34,10 @@ class App(UuidAuditedModel):
 
     owner = models.CharField(max_length=64)
     region = models.CharField(max_length=32)
-    name = models.SlugField(max_length=64, validators=[validate_app_name])
+    name = models.SlugField(max_length=64, validators=[validate_app_name], unique=True)
     # deprecated field
     structure = JSONField(default={}, blank=True, validators=[validate_app_structure])
     type = models.CharField(verbose_name="应用类型", max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
-
-    class Meta:
-        unique_together = ("region", "name")
 
     @cached_property
     def scheduler_safe_name(self):

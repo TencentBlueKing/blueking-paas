@@ -63,7 +63,7 @@ class EngineApp(OwnerTimestampedModel):
 
     def to_wl_obj(self) -> "WlApp":
         """Return the corresponding WlApp object in the workloads module"""
-        return WlApp.objects.get(region=self.region, name=self.name)
+        return WlApp.objects.get(name=self.name)
 
 
 class MarkStatusMixin:

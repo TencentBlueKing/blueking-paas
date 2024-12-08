@@ -30,12 +30,17 @@ import (
 
 // FileDiffer 文件变更对比器
 type FileDiffer struct {
-	srcPath string
+	srcPath     string
+	withContent bool
 }
 
 // New ...
-func New() *FileDiffer {
-	return &FileDiffer{}
+func New(opts ...Option) *FileDiffer {
+	differ := &FileDiffer{}
+	for _, opt := range opts {
+		opt(differ)
+	}
+	return differ
 }
 
 // Prepare 准备步骤
@@ -48,15 +53,14 @@ func (d *FileDiffer) Prepare(srcPath string) error {
 		return nil
 	}
 
-	// 没有 .git 目录（使用子目录部署的情况），执行以下命令以初始化
-	// 1. git init
-	// 2. git add .
-	// 3. git commit --author="bkpaas <bkpaas@example.com>" -m "init"
+	// 没有 .git 目录（使用子目录部署的情况），执行若干命令以初始化
 	if os.IsNotExist(err) {
 		commands := [][]string{
 			{"init"},
 			{"add", "."},
-			{"commit", "--author=bkpaas <bkpaas@example.com>", "-m", "init"},
+			{"config", "user.name", "bkpaas"},
+			{"config", "user.email", "bkpaas@example.com"},
+			{"commit", "-m", "init"},
 		}
 		for _, cmd := range commands {
 			if _, err = d.runGitCommand(cmd...); err != nil {
@@ -108,7 +112,7 @@ func (d *FileDiffer) Diff() ([]File, error) {
 
 		var content string
 		// 如果是删除操作，不加载文件
-		if action != FileActionDeleted {
+		if d.withContent && action != FileActionDeleted {
 			if content, err = d.loadFileContent(fields[1]); err != nil {
 				return nil, err
 			}
@@ -156,4 +160,14 @@ func (d *FileDiffer) mustIgnoreFile(filepath string) bool {
 		}
 	}
 	return false
+}
+
+// Option Differ 选项
+type Option func(*FileDiffer)
+
+// WithContent Diff 时是否加载文件内容
+func WithContent() Option {
+	return func(d *FileDiffer) {
+		d.withContent = true
+	}
 }

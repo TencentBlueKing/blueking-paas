@@ -66,7 +66,7 @@ var _ = Describe("Test Differ", func() {
 
 	// 初始化临时目录 & 文件
 	BeforeEach(func() {
-		tmpDir, _ = os.MkdirTemp("", "filediffer")
+		tmpDir, _ = os.MkdirTemp("", "file-differ")
 		for _, filename := range []string{"example.txt", "example.py", "example.go"} {
 			Expect(initFile(tmpDir, filename, path.Ext(filename))).To(BeNil())
 		}
@@ -80,9 +80,11 @@ var _ = Describe("Test Differ", func() {
 		It("with .git", func() {
 			Expect(runGitCommand(tmpDir, "init")).To(BeNil())
 			Expect(runGitCommand(tmpDir, "add", ".")).To(BeNil())
-			Expect(runGitCommand(tmpDir, "commit", "--author=bkpaas <bkpaas@example.com>", "-m", "init")).To(BeNil())
+			Expect(runGitCommand(tmpDir, "config", "user.name", "bkpaas")).To(BeNil())
+			Expect(runGitCommand(tmpDir, "config", "user.email", "bkpaas@example.com")).To(BeNil())
+			Expect(runGitCommand(tmpDir, "commit", "-m", "init")).To(BeNil())
 
-			differ := New()
+			differ := New(WithContent())
 			Expect(differ.Prepare(tmpDir)).To(BeNil())
 
 			files, err := differ.Diff()
@@ -119,7 +121,7 @@ var _ = Describe("Test Differ", func() {
 		})
 
 		It("without .git", func() {
-			differ := New()
+			differ := New(WithContent())
 			Expect(differ.Prepare(tmpDir)).To(BeNil())
 
 			files, err := differ.Diff()
@@ -148,7 +150,7 @@ var _ = Describe("Test Differ", func() {
 		})
 
 		It("with ignore", func() {
-			differ := New()
+			differ := New(WithContent())
 			Expect(differ.Prepare(tmpDir)).To(BeNil())
 
 			_ = initFile(path.Join(tmpDir, "webfe/templates"), "example.html", ".html")

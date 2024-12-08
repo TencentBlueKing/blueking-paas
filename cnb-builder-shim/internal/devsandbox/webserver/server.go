@@ -295,7 +295,7 @@ func DiffsHandler() gin.HandlerFunc {
 			return
 		}
 
-		differ := filediffer.New()
+		differ := filediffer.New(filediffer.WithContent())
 		// 初始化
 		if err := differ.Prepare(config.G.SourceCode.Workspace); err != nil {
 			c.JSON(

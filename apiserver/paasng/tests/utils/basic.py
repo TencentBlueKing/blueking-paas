@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,18 +13,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import random
 
-import pytest
-
-from tests.utils.basic import generate_random_string
-
-
-@pytest.fixture()
-def bk_oauth_client_id():
-    # 首字母必须是字母
-    return f"a{generate_random_string(15)}"
+DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
 
 
-@pytest.fixture()
-def bk_oauth_client_key():
-    return generate_random_string(36)
+def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
+    """Generates a non-guessable random string."""
+    rand = random.SystemRandom()
+    return "".join(rand.choice(chars) for x in range(length))

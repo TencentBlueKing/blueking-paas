@@ -24,7 +24,7 @@ from django.urls import reverse
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.templates.constants import TemplateType
 from tests.utils import mock
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
@@ -50,12 +50,16 @@ class TestSceneApp:
 
     @pytest.fixture()
     def _mock_create_scene_app(self):
-        with mock.patch(
-            "paasng.platform.applications.views.SourceOrigin.get_default_origins",
-            return_value=[SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
-        ), mock.patch("paasng.platform.declarative.application.controller.initialize_smart_module"), mock.patch(
-            "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
-            return_value="test_app_secret",
+        with (
+            mock.patch(
+                "paasng.platform.applications.views.SourceOrigin.get_default_origins",
+                return_value=[SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
+            ),
+            mock.patch("paasng.platform.declarative.application.controller.initialize_smart_module"),
+            mock.patch(
+                "paasng.platform.scene_app.initializer.get_oauth2_client_secret",
+                return_value="test_app_secret",
+            ),
         ):
             yield
 

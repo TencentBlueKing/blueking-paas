@@ -167,5 +167,23 @@ var _ = Describe("Test Differ", func() {
 				{Action: FileActionAdded, Path: "webfe/templates/example.html", Content: ".html"},
 			}))
 		})
+
+		It("without content", func() {
+			differ := New()
+			Expect(differ.Prepare(tmpDir)).To(BeNil())
+
+			_ = initFile(path.Join(tmpDir, "webfe/static"), "example.css", "css")
+			_ = initFile(path.Join(tmpDir, "v3logs"), "celery.log", "celery is running...")
+			_ = editFile(tmpDir, "example.py", "python")
+			_ = os.Remove(path.Join(tmpDir, "example.go"))
+
+			files, err := differ.Diff()
+			Expect(err).To(BeNil())
+			Expect(files).To(Equal([]File{
+				{Action: FileActionDeleted, Path: "example.go", Content: ""},
+				{Action: FileActionModified, Path: "example.py", Content: ""},
+				{Action: FileActionAdded, Path: "webfe/static/example.css", Content: ""},
+			}))
+		})
 	})
 })

@@ -286,7 +286,8 @@ func ProcessListHandler() gin.HandlerFunc {
 // DiffsHandler 提供文件变更信息
 func DiffsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持 TODO 后续重构时需要统一
+		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
+		// TODO 后续重构时需要统一
 		if config.G.SourceCode.FetchMethod != config.BK_REPO {
 			c.JSON(
 				http.StatusBadRequest,
@@ -295,8 +296,13 @@ func DiffsHandler() gin.HandlerFunc {
 			return
 		}
 
-		differ := filediffer.New(filediffer.WithContent())
 		// 初始化
+		opts := []filediffer.Option{}
+		if c.Query("content") == "true" {
+			opts = append(opts, filediffer.WithContent())
+		}
+		differ := filediffer.New(opts...)
+
 		if err := differ.Prepare(config.G.SourceCode.Workspace); err != nil {
 			c.JSON(
 				http.StatusInternalServerError,

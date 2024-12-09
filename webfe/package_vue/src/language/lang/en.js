@@ -2918,4 +2918,9 @@ export default {
   '如果您的应用描述文件版本为 spec_version: 2，并且应用是云原生应用，请直接将描述文件转换为 specVersion: 3 后进行重新部署。': 'If your APP descriptor file version is spec_version: 2 and the application is cloud-native, please directly convert the descriptor file to specVersion: 3 and redeploy it.',
   '普通应用请勿使用本工具。请先将应用迁移到云原生应用，再更新描述文件版本。': 'Do not use this tool for traditional applications. Please first migrate the application to a cloud-native application and then update the descriptor file version.',
   'specVersion: 3 是针对云原生应用设计的最新规范，可以定义进程服务、可观测性等所有云原生应用的功能。本工具可以帮助您将旧版描述文件转换为新版。': 'specVersion: 3 is the latest specification designed for cloud-native applications, capable of defining all cloud-native application features such as process services and observability. This tool can help you convert older descriptor files to the new version.',
+  '由应用描述文件 app_desc.yaml 定义': 'Defined by the application description file app_desc.yaml',
+  '当前值由应用描述文件定义，如果继续编辑，建议先删除应用描述文件的相关配置，否则重新部署时会覆盖填写的值。': 'The current value is defined by the application description file. If you continue to edit, please delete the relevant configurations in the file first, or your changes may be overwritten during redeployment.',
+  来自应用描述文件: 'From the APP description file',
+  '应用描述文件中定义的环境变量无法在页面上修改，但可以在页面上添加同名变量以覆盖其值': 'The environment variables defined in the APP description file cannot be modified on the page, but you can add variables with the same name on the page to override their values.',
+  '环境变量已失效，因为页面上新增了同名的环境变量': 'The environment variable has become invalid because a variable with the same name was added on the page.',
 };

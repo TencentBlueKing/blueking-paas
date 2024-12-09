@@ -31,6 +31,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
+from paasng.accessories.servicehub.constants import ServiceUnboundStatus
 from paasng.accessories.servicehub.exceptions import (
     BindServiceNoPlansError,
     ReferencedAttachmentNotFound,
@@ -38,7 +39,11 @@ from paasng.accessories.servicehub.exceptions import (
     SharedAttachmentAlreadyExists,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceSetGroupByName
+from paasng.accessories.servicehub.models import (
+    ServiceSetGroupByName,
+    UnboundRemoteServiceEngineAppAttachment,
+    UnboundServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.remote.manager import (
     RemoteServiceInstanceMgr,
     RemoteServiceMgr,
@@ -224,6 +229,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({"results": slz.data})
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
+    @transaction.atomic
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
@@ -247,6 +253,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DESTROY_SERVICE.f(f"{e}")
 
         module_attachment.delete()
+
         add_app_audit_record(
             app_code=code,
             user=request.user.pk,
@@ -753,3 +760,45 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
             results.append(attachment)
 
         return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)
+
+
+class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def list(self, request, code):
+        """查看已解绑但未回收增强服务"""
+        app = self.get_application()
+        remote_intsances = UnboundRemoteServiceEngineAppAttachment.objects.filter(
+            application=app, status=ServiceUnboundStatus.Unbound
+        )
+        local_instances = UnboundServiceEngineAppAttachment.objects.filter(
+            application=app, status=ServiceUnboundStatus.Unbound
+        )
+
+        results = []
+        for instance in remote_intsances + local_instances:
+            service_obj = mixed_service_mgr.get_or_404(instance.service_id, app.region)
+            results.append(
+                {
+                    "module_id": instance.module,
+                    "environment": instance.environment,
+                    "service": service_obj,
+                    "service_instance_id": instance.service_instance_id,
+                }
+            )
+
+        return Response(slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True).data)
+
+    def recycle_instance(self, request, code):
+        """回收已解绑增强服务"""
+        serializer = slzs.RecycleUnboundServiceEngineAppAttachmentSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        service_obj = mixed_service_mgr.get_or_404(data.service_id, self.get_application().region)
+        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+            service_obj, data.service_instance_id
+        )
+        unbound_instance.recycle_instance()
+
+        return Response()

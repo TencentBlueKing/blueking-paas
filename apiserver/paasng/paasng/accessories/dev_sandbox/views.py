@@ -99,8 +99,10 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
-        """部署开发沙箱"""
+        """部署开发沙箱
 
+        FIXME（沙箱重构）这个函数太长了，职责不清晰，重构时需要做拆分
+        """
         # 同时支持的开发沙箱数量是有上限的
         if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
@@ -112,16 +114,22 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
-        serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
-
         # 目前仅支持 vcs 类型的源码获取方式
         if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
-        # 获取版本信息
-        version_info = self._get_version_info(request.user, module, params)
+        serializer = CreateDevSandboxWithCodeEditorSLZ(
+            data=request.data, context={"module": module, "operator": request.user.pk}
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        # 代码版本信息
+        version_info = VersionInfo(
+            version_type=data["version_type"],
+            version_name=data["version_name"],
+            revision=data["revision"],
+        )
 
         dev_sandbox_code = gen_dev_sandbox_code()
         dev_sandbox = DevSandbox.objects.create(
@@ -137,10 +145,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         # 生成代码编辑器密码
         password = generate_password()
-        CodeEditor.objects.create(
-            dev_sandbox=dev_sandbox,
-            password=password,
-        )
+        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password)
 
         controller = DevSandboxWithCodeEditorController(
             app=app,
@@ -228,6 +233,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "urls": detail.urls,
+                # FIXME（沙箱重构） token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,

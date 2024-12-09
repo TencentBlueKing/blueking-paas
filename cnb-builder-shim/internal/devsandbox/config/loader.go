@@ -48,14 +48,13 @@ func loadCORSConfigFromEnv() (CORSConfig, error) {
 		AllowCredentials: allowCredentials,
 	}, nil
 }
+
 func loadServiceConfigFromEnv() (ServiceConfig, error) {
 	corsConfig, err := loadCORSConfigFromEnv()
 	if err != nil {
 		return ServiceConfig{}, err
 	}
-	return ServiceConfig{
-		CORS: corsConfig,
-	}, nil
+	return ServiceConfig{CORS: corsConfig}, nil
 }
 
 func loadConfigFromEnv() (*Config, error) {

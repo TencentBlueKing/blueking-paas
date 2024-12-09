@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/filediffer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -167,6 +168,11 @@ func initializeSourceCode() error {
 		}
 	case config.GIT:
 		return fmt.Errorf("TODO: clone git from revision")
+	}
+
+	// 初始化文件对比器
+	if err = filediffer.New().Prepare(workspace); err != nil {
+		return errors.Wrap(err, "file differ preparing")
 	}
 	return nil
 }

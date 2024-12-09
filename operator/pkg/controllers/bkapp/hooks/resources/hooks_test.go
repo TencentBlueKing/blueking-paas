@@ -142,5 +142,10 @@ var _ = Describe("HookUtils", func() {
 			By("test Args is unchanged")
 			Expect(c.Args).To(Equal(bkapp.Spec.Hooks.PreRelease.Args))
 		})
+		It("test build pre-release hook for egress config", func() {
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
+			hook := BuildPreReleaseHook(bkapp, nil)
+			Expect(hook.Pod.Spec.NodeSelector).To(Equal(map[string]string{"eng-cstate-test": "1"}))
+		})
 	})
 })

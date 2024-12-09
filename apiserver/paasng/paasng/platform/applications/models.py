@@ -285,6 +285,20 @@ class Application(OwnerTimestampedModel):
     name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
+    # app_tenant_mode 和 app_tenant_id 字段共同控制了应用的“可用范围”，可能的组合包括：
+    #
+    # - app_tenant_mode: "global", app_tenant_id: ""，表示应用在全租户范围内可用。
+    # - app_tenant_mode: "single", app_tenant_id: "foo"，表示应用仅在 foo 租户范围内可用。
+    #
+    # 应用的“可用范围”将影响对应租户的用户是否可在桌面上看到此应用，以及是否能通过应用链接访问
+    # 应用（不在“可用范围”内的用户请求将被拦截）。
+    #
+    # ## app_tenant_id 和 tenant_id 字段的区别
+    #
+    # 虽然这两个字段都存储“租户”，且值可能相同，但二者有本质区别。tenant_id 是系统级字段，值
+    # 总是等于当前这条数据的所属租户，它确定了数据的所有权。而 app_tenant_id 是业务功能层面的
+    # 字段，它和 app_tenant_mode 共同控制前面提到的业务功能——应用“可用范围”。
+    #
     app_tenant_mode = models.CharField(
         verbose_name="应用租户模式",
         max_length=16,
@@ -331,7 +345,13 @@ class Application(OwnerTimestampedModel):
         options={"quality": 95},
         null=True,
     )
-    tenant_id = models.CharField(verbose_name="租户 ID", max_length=32, db_index=True, null=True)
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        null=True,
+        help_text="本条数据的所属租户",
+    )
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()

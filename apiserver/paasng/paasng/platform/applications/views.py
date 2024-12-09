@@ -928,11 +928,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
     @staticmethod
-    def _validate_app_tenant_params(user: User, app_tenant_mode_p: int | None) -> Tuple[AppTenantMode, str, Tenant]:
+    def _validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> Tuple[AppTenantMode, str, Tenant]:
         """Validate the params related with multi-tenant feature.
 
         :param user: The user who is creating the application.
-        :param app_tenant_mode_p: The app tenant mode in params.
+        :param raw_app_tenant_mode: The app tenant mode in params.
         :returns: A tuple, the items: (app_tenant_mode, app_tenant_id, tenant).
         """
         tenant = get_tenant(user)
@@ -941,7 +941,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             app_tenant_mode = AppTenantMode.GLOBAL
         else:
             # The default tenant mode is SINGLE when multi-tenant mode is enabled
-            app_tenant_mode = AppTenantMode.SINGLE if not app_tenant_mode_p else AppTenantMode(app_tenant_mode_p)
+            app_tenant_mode = AppTenantMode.SINGLE if not raw_app_tenant_mode else AppTenantMode(raw_app_tenant_mode)
             if app_tenant_mode == AppTenantMode.GLOBAL and not tenant.is_op_type:
                 raise ValidationError(_("当前不允许创建全租户可用的应用"))
 

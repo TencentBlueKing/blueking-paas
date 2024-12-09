@@ -285,8 +285,11 @@ class Application(OwnerTimestampedModel):
     name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
-    app_tenant_mode = models.SmallIntegerField(
-        verbose_name="应用租户模式", null=True, help_text="应用在租户层面的可用范围，可选值：全租户、指定租户"
+    app_tenant_mode = models.CharField(
+        verbose_name="应用租户模式",
+        max_length=16,
+        null=True,
+        help_text="应用在租户层面的可用范围，可选值：全租户、指定租户",
     )
     app_tenant_id = models.CharField(
         verbose_name="应用租户 ID",

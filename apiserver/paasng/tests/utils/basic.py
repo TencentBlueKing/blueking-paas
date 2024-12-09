@@ -19,12 +19,6 @@ DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
 
 
 def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable OAuth token
-
-    OAuth (1 and 2) does not specify the format of tokens except that they
-    should be strings of random characters. Tokens should not be guessable
-    and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
-    """
+    """Generates a non-guessable random string."""
     rand = random.SystemRandom()
     return "".join(rand.choice(chars) for x in range(length))

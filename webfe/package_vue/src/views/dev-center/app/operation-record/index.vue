@@ -196,6 +196,7 @@
       >
         <cloud-api-detail
           v-if="!detailLoading"
+          type="gateway"
           :cur-record="curCloudApiRecord"
         />
       </div>
@@ -291,6 +292,7 @@ export default {
   watch: {
     $route() {
       this.isLoading = true;
+      this.pagination.current = 1;
       this.getRecords();
     },
   },

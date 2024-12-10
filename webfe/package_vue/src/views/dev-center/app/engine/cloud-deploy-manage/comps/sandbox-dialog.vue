@@ -207,7 +207,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.formData.module,
         });
-        this.branchList = res.results;
+        this.branchList = res.results.filter((item) => item.type === 'branch');
       } catch (e) {
         this.branchList = [];
         this.catchErrorHandler(e);

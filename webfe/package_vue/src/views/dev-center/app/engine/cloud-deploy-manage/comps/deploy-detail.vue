@@ -174,7 +174,7 @@
                 :key="instance.process_name"
               >
                 <template v-if="instance.date_time !== 'Invalid date'">
-                  <div class="text-ellipsis">{{ $t('创建于') }} {{ instance.date_time }}</div>
+                  <div class="text-ellipsis">{{ instance.date_time }}</div>
                 </template>
                 <template v-else>--</template>
               </div>

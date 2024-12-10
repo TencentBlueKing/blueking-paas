@@ -20,7 +20,7 @@ import pytest
 from paas_wl.infras.cluster.models import Domain as ClusterDomain
 from paas_wl.infras.cluster.models import PortMap
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
-from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses, get_legacy_url
+from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath, Domain
 from tests.paas_wl.utils.release import create_release
@@ -86,10 +86,5 @@ class TestEnvAddresses:
                 "http://foo-custom.example.com:8080/",
                 False,
                 id=Domain.objects.get(environment_id=bk_stag_env.id).id,
-            ),
-            Address(
-                AddressType.LEGACY,
-                get_legacy_url(bk_stag_env) or "",
-                False,
             ),
         ]

@@ -165,8 +165,6 @@ class LegacyAppManager:
             "migration_finished_date": self.get_migration_finished_date(),
             "is_prod_deployed": self.legacy_app_proxy.is_prod_deployed(),  # 用于展示是否已上架
             "has_prod_deployed_before_migration": self.has_prod_deployed_before_migration(),  # 用于控制迁移完成回滚
-            "stag_exposed_link": self.get_stag_exposed_link(),
-            "prod_exposed_link": self.get_prod_exposed_link(),
             "region": self.region(),
             "legacy_url": self.legacy_app_proxy.legacy_url(),
         }
@@ -188,36 +186,6 @@ class LegacyAppManager:
             return self.migration_process.confirmed_date
 
         return None
-
-    def get_stag_exposed_link(self):
-        # NOTE: 只使用 `link_engine_app` 去暴露 App
-        # 因为在未确认迁移时, 市场页面访问的仍然是v2环境的应用
-        try:
-            region_name = self.legacy_app_proxy.to_paasv3_region()
-        except ValueError:
-            return ""
-        region = get_region(region_name)
-        tmpl = region.basic_info.link_engine_app
-
-        # WARNING: not compatible with multiple modules
-        name = "bkapp-%s-%s" % (self.legacy_app.code, "stag")
-        context = dict(region=region_name, name=name)
-        return tmpl.format(**context)
-
-    def get_prod_exposed_link(self):
-        # NOTE: 只使用 `link_engine_app` 去暴露 App
-        # 因为在未确认迁移时, 市场页面访问的仍然是v2环境的应用
-        try:
-            region_name = self.legacy_app_proxy.to_paasv3_region()
-        except ValueError:
-            return ""
-        region = get_region(region_name)
-        tmpl = region.basic_info.link_engine_app
-
-        # WARNING: not compatible with multiple modules
-        name = "bkapp-%s-%s" % (self.legacy_app.code, "prod")
-        context = dict(region=region_name, name=name)
-        return tmpl.format(**context)
 
 
 def get_cnative_target_cluster(region: str) -> Cluster:

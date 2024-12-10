@@ -36,11 +36,7 @@ class RegionSerializer:
         data["services"] = {"categories": ServiceCategorySLZ(self.region.service_categories, many=True).data}
         data["module_mobile_config"] = ModuleMobileConfigSLZ(self.region.module_mobile_config).data
         data["mul_modules_config"] = MulModulesConfigConfigSLZ(self.region.mul_modules_config).data
-
-        # Patch entrance_config to provide "app_root_domain" field
-        # TODO: Remove this field because it's app related instead of region
-        entrance_config = self.region.entrance_config
-        data["entrance_config"] = EntranceConfigSLZ(entrance_config).data
+        data["entrance_config"] = {"manually_upgrade_to_subdomain_allowed": True}
         return data
 
 
@@ -62,7 +58,3 @@ class ModuleMobileConfigSLZ(serializers.Serializer):
 
 class MulModulesConfigConfigSLZ(serializers.Serializer):
     creation_allowed = serializers.BooleanField()
-
-
-class EntranceConfigSLZ(serializers.Serializer):
-    manually_upgrade_to_subdomain_allowed = serializers.BooleanField()

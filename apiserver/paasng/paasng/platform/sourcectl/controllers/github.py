@@ -26,7 +26,14 @@ from django.utils.functional import cached_property
 
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.github.client import GitHubApiClient
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.sourcectl.utils import generate_temp_file
@@ -129,6 +136,10 @@ class GitHubRepoController(BaseGitRepoController):
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
+        """github 不支持该功能"""
+        raise NotImplementedError
+
+    def batch_commit_files(self, commit_info: CommitInfo) -> None:
         """github 不支持该功能"""
         raise NotImplementedError
 

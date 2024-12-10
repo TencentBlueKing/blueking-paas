@@ -606,8 +606,10 @@ class UserMarkedApplication(OwnerTimestampedModel):
 
 
 class ApplicationDeploymentModuleOrder(models.Model):
-    module = models.OneToOneField(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
+    user = BkUserField()
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
     order = models.IntegerField(verbose_name="顺序")
 
     class Meta:
         verbose_name = "模块顺序"
+        unique_together = ("user", "module")

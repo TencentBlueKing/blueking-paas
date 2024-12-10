@@ -280,6 +280,8 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
 
 class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     @swagger_auto_schema(
         tags=["开发沙箱"],
         operation_description="提交变更的代码",

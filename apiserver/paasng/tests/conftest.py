@@ -358,6 +358,16 @@ def bk_user(request):
 
 
 @pytest.fixture(autouse=True)
+def _mock_bk_auth():
+    from tests.utils.mocks.bkauth import StubBkOauthClient
+
+    with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
+        "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
+    ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _mock_iam():
     def mock_user_has_app_action_perm(user, application, action) -> bool:
         from paasng.infras.iam.constants import APP_DEFAULT_ROLES

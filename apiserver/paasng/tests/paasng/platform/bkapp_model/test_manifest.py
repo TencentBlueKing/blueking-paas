@@ -33,6 +33,7 @@ from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -586,7 +587,8 @@ def test_apply_egress_annotations(blank_resource, bk_stag_env):
     call_command(
         "region_gen_state", region=settings.DEFAULT_REGION_NAME, no_input=True, ignore_labels=["kind-node=true"]
     )
-    state = RegionClusterState.objects.filter(region=settings.DEFAULT_REGION_NAME).latest()
+    cluster_names = Cluster.objects.filter(region=settings.DEFAULT_REGION_NAME).values_list("name", flat=True)
+    state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
     RCStateAppBinding.objects.create(app=bk_stag_env.wl_app, state=state)
 
     apply_egress_annotations(blank_resource, bk_stag_env)

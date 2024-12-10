@@ -21,6 +21,7 @@ Examples:
 
     python manage.py create_rc_state_binding --code app-code-1 --module default --env stag
 """
+
 from django.core.management.base import BaseCommand
 from django.db.utils import IntegrityError
 
@@ -44,7 +45,7 @@ class Command(BaseCommand):
 
         cluster = get_cluster_by_app(wl_app)
         try:
-            state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
+            state = RegionClusterState.objects.filter(cluster_name=cluster.name).latest()
             RCStateAppBinding.objects.create(app=wl_app, state=state)
         except RegionClusterState.DoesNotExist:
             print("Cluster data is not initialized, please try again later")

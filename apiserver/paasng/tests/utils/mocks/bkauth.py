@@ -15,29 +15,30 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 from datetime import datetime
-from unittest import mock
-
-import pytest
 
 from paasng.infras.oauth2.api import BkAppSecret
-from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
-
-pytestmark = pytest.mark.django_db
 
 
-class TestBkOauthClient:
-    def test_create_client(self, bk_oauth_client_id, bk_oauth_client_key):
-        secret_obj = BkAppSecret(
+class StubBkOauthClient:
+    """bkAuth 提供的 API（仅供单元测试使用）"""
+
+    def create_client(self, bk_app_code: str): ...
+
+    def create_app_secret(self, bk_app_code: str): ...
+
+    def del_app_secret(self, bk_app_code: str, bk_app_secret_id: int): ...
+
+    def toggle_app_secret(self, bk_app_code: str, bk_app_secret_id: int, enabled: bool): ...
+
+    def get_app_secret_list(self, bk_app_code: str): ...
+
+    def get_default_app_secret(self, bk_app_code: str):
+        return BkAppSecret(
             id=1,
-            bk_app_code=bk_oauth_client_id,
-            bk_app_secret=bk_oauth_client_key,
+            bk_app_code=bk_app_code,
+            bk_app_secret="xxxxxxx",
             enabled=True,
             created_at=datetime.strptime("2021-10-21T07:56:16Z", "%Y-%m-%dT%H:%M:%SZ"),
         )
 
-        with mock.patch("paasng.infras.oauth2.utils.get_app_secret_in_env_var", return_value=secret_obj), mock.patch(
-            "paasng.infras.oauth2.utils.create_oauth2_client", return_value=secret_obj
-        ):
-            create_oauth2_client(bk_oauth_client_id)
-            client_secret = get_oauth2_client_secret(bk_oauth_client_id)
-            assert client_secret == bk_oauth_client_key
+    def get_secret_by_id(self, bk_app_code: str, bk_app_secret_id: int): ...

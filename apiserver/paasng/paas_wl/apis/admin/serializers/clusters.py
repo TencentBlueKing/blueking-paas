@@ -76,7 +76,7 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
 
     def get_nodes(self, obj: Cluster) -> List[str]:
         """获取集群拥有的 Node 信息（根据 RegionClusterState 表查询，若有新增节点需要先更新状态）"""
-        state = RegionClusterState.objects.filter(region=obj.region, cluster_name=obj.name).first()
+        state = RegionClusterState.objects.filter(cluster_name=obj.name).first()
         if not state:
             return []
         return state.nodes_name

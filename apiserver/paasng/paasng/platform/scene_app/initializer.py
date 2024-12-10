@@ -49,8 +49,8 @@ class SceneAPPInitializer:
         self.app_code = app_code
         self.region = region
         self.engine_params = engine_params or {}
-        create_oauth2_client(self.app_code, self.region)
-        self.app_secret = get_oauth2_client_secret(self.app_code, self.region)
+        create_oauth2_client(self.app_code)
+        self.app_secret = get_oauth2_client_secret(self.app_code)
 
     def execute(self) -> Tuple[Application, SourceSyncResult]:
         with generate_temp_dir() as source_dir:

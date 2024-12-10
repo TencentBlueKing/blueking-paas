@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """API Gateway related functionalities"""
+
 import logging
 from typing import Collection, Dict, List, Optional, Tuple
 
@@ -110,17 +111,13 @@ def set_distributors(plugin_app: Application, distributors: Collection[BkPluginD
 class PluginApiGWClient(Protocol):
     """Describes protocols of calling API Gateway management service"""
 
-    def sync_api(self, *args, **kwargs) -> Dict:
-        ...
+    def sync_api(self, *args, **kwargs) -> Dict: ...
 
-    def grant_permissions(self, *args, **kwargs) -> Dict:
-        ...
+    def grant_permissions(self, *args, **kwargs) -> Dict: ...
 
-    def revoke_permissions(self, *args, **kwargs) -> Dict:
-        ...
+    def revoke_permissions(self, *args, **kwargs) -> Dict: ...
 
-    def update_gateway_status(self, *args, **kwargs) -> Dict:
-        ...
+    def update_gateway_status(self, *args, **kwargs) -> Dict: ...
 
 
 class PluginDefaultAPIGateway:
@@ -230,5 +227,5 @@ class PluginDefaultAPIGateway:
 
     def _get_credentials(self) -> Tuple[str, str]:
         """Get the application's (code, secret) pair"""
-        secret = get_oauth2_client_secret(self.plugin_app.code, self.plugin_app.region)
+        secret = get_oauth2_client_secret(self.plugin_app.code)
         return self.plugin_app.code, secret

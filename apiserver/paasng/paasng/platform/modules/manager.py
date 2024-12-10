@@ -176,7 +176,7 @@ class ModuleInitializer:
             )
             return {"code": "OK", "extra_info": {}, "dest_type": "null"}
 
-        client_secret = get_oauth2_client_secret(self.application.code, self.application.region)
+        client_secret = get_oauth2_client_secret(self.application.code)
         context = {
             "region": self.application.region,
             "owner_username": get_username_by_bkpaas_user_id(self.application.owner),

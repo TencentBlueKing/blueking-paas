@@ -21,6 +21,7 @@ Examples:
 
     python manage.py region_gen_state --region your-region --cluster-name=your-cluster-name
 """
+
 import logging
 import sys
 
@@ -106,7 +107,7 @@ class Command(BaseCommand):
                 if cluster_name and cluster.name != cluster_name:
                     continue
 
-                logger.info(f"Will generate state for [{region}/{cluster.name}]...")
+                logger.info(f"Will generate state for [{cluster.name}]...")
                 if not options.get("no_input") and input("Confirm? (y/n, default: n) ").lower() != "y":
                     continue
 
@@ -114,7 +115,7 @@ class Command(BaseCommand):
                     client = get_client_by_cluster_name(cluster_name=cluster.name)
 
                     logger.info(f"Generating state for [{region} - {cluster.name}]...")
-                    state = generate_state(region, cluster.name, client, ignore_labels=ignore_labels)
+                    state = generate_state(cluster.name, client, ignore_labels=ignore_labels)
 
                     logger.info("Syncing the state to nodes...")
                     sync_state_to_nodes(client, state)

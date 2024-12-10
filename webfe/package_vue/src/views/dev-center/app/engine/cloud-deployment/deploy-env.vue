@@ -21,19 +21,33 @@
           </span>
         </bk-alert>
         <div class="flex-row align-items-center justify-content-between mt20">
-          <div class="left-filter">
-            <ul class="filter-action-list" v-if="!isBatchEdit">
-              <li
-                @click="handleFilterEnv('all')"
-                :class="{ 'active': activeEnvValue === 'all' }"
-              >{{ $t('全部') }}</li>
-              <li
-                v-for="item in envSelectList"
-                :key="item.value"
-                @click="handleFilterEnv(item.value)"
-                :class="{ 'active': activeEnvValue === item.value }"
-              >{{ item.text }}</li>
-            </ul>
+          <div class="left-filter flex-row align-items-center">
+            <template v-if="!isBatchEdit">
+              <bk-button
+                :theme="'primary'"
+                class="mr8"
+                @click="handleAddSingleVariable"
+              >
+                <i class="paasng-icon paasng-plus-thick" />
+                {{ $t('新增环境变量') }}
+              </bk-button>
+              <ul class="filter-action-list">
+                <li
+                  @click="handleFilterEnv('all')"
+                  :class="{ active: activeEnvValue === 'all' }"
+                >
+                  {{ $t('全部') }}
+                </li>
+                <li
+                  v-for="item in envSelectList"
+                  :key="item.value"
+                  @click="handleFilterEnv(item.value)"
+                  :class="{ active: activeEnvValue === item.value }"
+                >
+                  {{ item.text }}
+                </li>
+              </ul>
+            </template>
           </div>
           <div class="right flex-row align-items-center">
             <bk-button
@@ -101,13 +115,25 @@
           @sort-change="handleSortChange"
         >
           <!-- 新建环境变量 -->
-          <template slot="append" v-if="!isPageEdit">
-            <div class="add-wrapper">
-              <span class="add-single-variable" @click.self="handleAddSingleVariable()">
-                <i class="paasng-icon paasng-plus-thick" />
-                {{ $t('新增环境变量') }}
-              </span>
-            </div>
+          <template
+            slot="append"
+            v-if="!isPageEdit"
+          >
+            <bk-exception
+              v-if="!envVarList.length"
+              class="exception-wrap-cls"
+              type="empty"
+              scene="part"
+            >
+              <span>{{ $t('暂无数据') }}</span>
+            </bk-exception>
+            <!-- 应用描述文件 -->
+            <app-description-file
+              v-if="showChild"
+              :env-vars="envLocalVarList"
+              :active-env="activeEnvValue"
+              :order-by="curSortKey"
+            />
           </template>
           <bk-table-column
             :render-header="handleRenderHander"
@@ -150,9 +176,9 @@
                     class="paasng-icon paasng-remind"
                     v-bk-tooltips="{
                       content: $t('环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突', { s: row.conflictingService }),
-                      width: 200
-                    }">
-                  </i>
+                      width: 200,
+                    }"
+                  ></i>
                 </template>
               </div>
             </template>
@@ -273,7 +299,12 @@
               <!-- 单个编辑 -->
               <div v-else>
                 <template v-if="!row.isEdit">
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleEdit(row)">
+                  <bk-button
+                    :text="true"
+                    title="primary"
+                    class="mr10"
+                    @click="handleSingleEdit(row)"
+                  >
                     {{ $t('编辑') }}
                   </bk-button>
                   <bk-popconfirm
@@ -287,16 +318,28 @@
                         <div class="content-text">{{ $t('确认删除该环境变量？') }}</div>
                       </div>
                     </div>
-                    <bk-button :text="true" title="primary">
+                    <bk-button
+                      :text="true"
+                      title="primary"
+                    >
                       {{ $t('删除') }}
                     </bk-button>
                   </bk-popconfirm>
                 </template>
                 <template v-else>
-                  <bk-button :text="true" title="primary" class="mr10" @click="handleSingleSave(row)">
+                  <bk-button
+                    :text="true"
+                    title="primary"
+                    class="mr10"
+                    @click="handleSingleSave(row)"
+                  >
                     {{ $t('保存') }}
                   </bk-button>
-                  <bk-button :text="true" title="primary" @click="handleSingleCancel(row)">
+                  <bk-button
+                    :text="true"
+                    title="primary"
+                    @click="handleSingleCancel(row)"
+                  >
                     {{ $t('取消') }}
                   </bk-button>
                 </template>
@@ -379,8 +422,8 @@
             v-if="exportDialog.count"
             style="line-height: 20px"
           >
-            【{{ curSelectModuleName }}】 {{ $t('模块共有') }}
-            {{ exportDialog.count }} {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
+            【{{ curSelectModuleName }}】 {{ $t('模块共有') }} {{ exportDialog.count }}
+            {{ $t('个环境变量，将增量更新到当前') }} 【{{ curModuleId }} 】{{ $t('模块') }}
           </p>
           <p v-else>【{{ curSelectModuleName }}】 {{ $t('模块暂无环境变量，请选择其它模块') }}</p>
         </div>
@@ -414,10 +457,14 @@
         slot="header"
         class="header"
       >
-        {{ $t('从文件导入环境变量到') }}【<span
+        {{ $t('从文件导入环境变量到') }}【
+        <span
           class="title"
           :title="curModuleId"
-        >{{ curModuleId }}</span> 】{{ $t('模块') }}
+        >
+          {{ curModuleId }}
+        </span>
+        】{{ $t('模块') }}
       </div>
       <div>
         <div class="download-tips">
@@ -492,9 +539,10 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
 import { ENV_ENUM } from '@/common/constants';
 import builtInEnvVarDisplay from '@/components/builtIn-env-var-display';
+import AppDescriptionFile from './app-description-file.vue';
 
 export default {
-  components: { builtInEnvVarDisplay },
+  components: { builtInEnvVarDisplay, AppDescriptionFile },
   mixins: [appBaseMixin],
   props: {
     // 组件内部按钮操作
@@ -527,8 +575,9 @@ export default {
           },
           {
             validator: () => {
-              const flag = this.envVarList.filter(item => item.key === this.curItem.key
-              && item.environment_name === this.curItem.environment_name);
+              const flag = this.envVarList.filter(
+                (item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name
+              );
               if (flag.length <= 1) {
                 // 如果符合要求需要清除错误
                 this.envVarList.forEach((e, i) => {
@@ -585,7 +634,7 @@ export default {
         { value: 'stag', text: this.$t('预发布环境') },
         { value: 'prod', text: this.$t('生产环境') },
       ],
-      curSortKey: '',
+      curSortKey: 'created',
       exportDialog: {
         visiable: false,
         width: 480,
@@ -608,6 +657,7 @@ export default {
       isBatchEdit: false,
       activeEnvValue: 'all',
       builtInEnvVars: {},
+      showChild: false,
     };
   },
   computed: {
@@ -624,7 +674,7 @@ export default {
     },
 
     addedModuleList() {
-      return this.curAppModuleList.filter(item => item.name !== this.curModuleId);
+      return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
     },
   },
   created() {
@@ -655,33 +705,41 @@ export default {
     },
     getEnvVarList(isUpdate = true) {
       this.isTableLoading = true;
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`).then((response) => {
-        if (isUpdate) this.envVarList = [...response];
-        // 添加自定义属性
-        this.envVarList.forEach((v) => {
-          this.$set(v, 'isEdit', false);
-          const { flag, services } = this.isEnvVarAlreadyExists(v.key);
-          this.$set(v, 'isPresent', flag);
-          this.$set(v, 'conflictingService', services);
-          if (!v.id) {
-            const id = response.find(item => item.key === v.key)?.id;
-            this.$set(v, 'id', id);
+      this.$http
+        .get(
+          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`
+        )
+        .then(
+          (response) => {
+            if (isUpdate) this.envVarList = [...response];
+            // 添加自定义属性
+            this.envVarList.forEach((v) => {
+              this.$set(v, 'isEdit', false);
+              const { flag, services } = this.isEnvVarAlreadyExists(v.key);
+              this.$set(v, 'isPresent', flag);
+              this.$set(v, 'conflictingService', services);
+              if (!v.id) {
+                const id = response.find((item) => item.key === v.key)?.id;
+                this.$set(v, 'id', id);
+              }
+            });
+            this.envLocalVarList = cloneDeep(this.envVarList);
+            if (isUpdate) {
+              this.handleFilterEnv(this.activeEnvValue);
+            } else {
+              this.$store.commit('cloudApi/updatePageEdit', false);
+            }
+          },
+          (errRes) => {
+            const errorMsg = errRes.message;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+            });
           }
-        });
-        this.envLocalVarList = cloneDeep(this.envVarList);
-        if (isUpdate) {
-          this.handleFilterEnv(this.activeEnvValue);
-        } else {
-          this.$store.commit('cloudApi/updatePageEdit', false);
-        }
-      }, (errRes) => {
-        const errorMsg = errRes.message;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-        });
-      })
+        )
         .finally(() => {
+          this.showChild = true;
           this.isTableLoading = false;
           this.isLoading = false;
         });
@@ -825,7 +883,11 @@ export default {
           delete v.conflictingService;
         });
 
-        await this.$store.dispatch('envVar/saveEnvItem', { appCode: this.appCode, moduleId: this.curModuleId, data: params });
+        await this.$store.dispatch('envVar/saveEnvItem', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data: params,
+        });
         // 操作对应tips
         let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
         if (this.envVarList.length === this.envLocalVarList.length) {
@@ -937,7 +999,7 @@ export default {
 
     // 新增一条数据
     handleEnvTableListData(v, row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
+      const index = this.envVarList.findIndex((v) => v.key === row.key && v.environment_name === row.environment_name);
       if (v === 'add') {
         this.envVarList.push({
           key: '',
@@ -954,7 +1016,9 @@ export default {
     // 选中环境
     handleEnvChange(row) {
       this.curItem = row;
-      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name && v.isEdit);
+      const index = this.envVarList.findIndex(
+        (v) => v.key === row.key && v.environment_name === row.environment_name && v.isEdit
+      );
       if (index !== -1) {
         // 如果符合要求需要清除错误
         this.$refs[`envRefKey${index}`].clearError();
@@ -984,7 +1048,9 @@ export default {
       this.curSelectModuleName = name;
       this.exportDialog.isLoading = true;
       this.$http
-        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`)
+        .get(
+          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`
+        )
         .then(
           (response) => {
             this.exportDialog.count = (response || []).length;
@@ -995,7 +1061,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          },
+          }
         )
         .finally(() => {
           this.exportDialog.isLoading = false;
@@ -1019,19 +1085,27 @@ export default {
           let messageText = '';
           switch (numStr) {
             case '111':
-              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t('个变量，更新')}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增 ')}${createNum}${this.$t(
+                '个变量，更新'
+              )}${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '110':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                '个变量，更新'
+              )} ${overwritedNum} ${this.$t('个变量')}`;
               break;
             case '100':
               messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
               break;
             case '101':
-              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                '个变量，忽略'
+              )} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '011':
-              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+              messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
+                '个变量，忽略'
+              )} ${ignoreNum} ${this.$t('个变量')}`;
               break;
             case '010':
               messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -1096,7 +1170,7 @@ export default {
               theme: 'error',
               message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
             });
-          },
+          }
         )
         .finally(() => {
           this.exportLoading = false;
@@ -1120,7 +1194,7 @@ export default {
             theme: 'error',
             message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
           });
-        },
+        }
       );
     },
 
@@ -1155,23 +1229,33 @@ export default {
             const ignoreNum = response.ignore_num;
             this.isEdited = createNum > 0 || overwritedNum > 0;
             const message = (() => {
-              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
+                Boolean(ignoreNum)
+              )}`;
               let messageText = '';
               switch (numStr) {
                 case '111':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个变量，更新'
+                  )} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '110':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，更新')} ${overwritedNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个变量，更新'
+                  )} ${overwritedNum} ${this.$t('个变量')}`;
                   break;
                 case '100':
                   messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量')}`;
                   break;
                 case '101':
-                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个变量，忽略'
+                  )} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '011':
-                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量，忽略')} ${ignoreNum} ${this.$t('个变量')}`;
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
+                    '个变量，忽略'
+                  )} ${ignoreNum} ${this.$t('个变量')}`;
                   break;
                 case '010':
                   messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个变量')}`;
@@ -1196,7 +1280,7 @@ export default {
               theme: 'error',
               message: `${this.$t('从文件导入环境变量失败')}，${errorMsg}`,
             });
-          },
+          }
         )
         .finally(() => {
           this.importFileDialog.loading = false;
@@ -1241,24 +1325,21 @@ export default {
         default:
           break;
       }
-      return h(
-        'span', { class: 'custom-header-cls flex-row align-items-center' },
-        [
-          h('span', null, columnName),
-          h('span', { class: 'header-required' }, '*'),
-        ],
-      );
+      return h('span', { class: 'custom-header-cls flex-row align-items-center' }, [
+        h('span', null, columnName),
+        h('span', { class: 'header-required' }, '*'),
+      ]);
     },
 
     // 单个环境编辑
     handleSingleEdit(row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
+      const index = this.envVarList.findIndex((v) => v.key === row.key && v.environment_name === row.environment_name);
       this.envVarList[index].isEdit = true;
     },
 
     // 删除单个环境变量
     async handleSingleDelete(row) {
-      const deleteEnvVarData = this.envVarList.find(v => v.id === row.id);
+      const deleteEnvVarData = this.envVarList.find((v) => v.id === row.id);
       const varId = deleteEnvVarData.id;
       try {
         await this.$store.dispatch('envVar/deleteEnvVariable', {
@@ -1281,10 +1362,12 @@ export default {
 
     // 单个环境编辑保存
     handleSingleSave(row) {
-      const index = this.envVarList.findIndex(v => v.key === row.key && v.environment_name === row.environment_name);
-      if (this.envVarList[index].isAdd) { // 新建
+      const index = this.envVarList.findIndex((v) => v.key === row.key && v.environment_name === row.environment_name);
+      if (this.envVarList[index].isAdd) {
+        // 新建
         this.singleValidate(index, 'add');
-      } else { // 编辑
+      } else {
+        // 编辑
         this.singleValidate(index, 'update');
       }
     },
@@ -1292,7 +1375,7 @@ export default {
     // 新建环境变量模板
     handleAddSingleVariable() {
       const curEnvVarLength = this.envVarList.length + 1;
-      if ((curEnvVarLength - this.envLocalVarList.length) <= 1) {
+      if (curEnvVarLength - this.envLocalVarList.length <= 1) {
         this.envVarList.push({
           key: '',
           value: '',
@@ -1307,9 +1390,9 @@ export default {
     // 单个环境编辑取消
     handleSingleCancel(row) {
       // 区分编辑、新建
-      const index = this.envVarList.findIndex(v => (
-        v.key === row.key && v.environment_name === row.environment_name && (row.isAdd ? !v.id : true)
-      ));
+      const index = this.envVarList.findIndex(
+        (v) => v.key === row.key && v.environment_name === row.environment_name && (row.isAdd ? !v.id : true)
+      );
       this.envVarList[index].isEdit = false;
       // 添加数据未保存，点击取消直接删除
       if (!this.envLocalVarList[index]) {
@@ -1331,14 +1414,13 @@ export default {
         this.envVarList = cloneDeep(this.envLocalVarList);
         return;
       }
-      this.envVarList = this.envLocalVarList.filter(v => v.environment_name === value);
+      this.envVarList = this.envLocalVarList.filter((v) => v.environment_name === value);
     },
 
     handleSortChange({ order, prop }) {
-      if (prop === 'key') {
-        this.curSortKey = order === 'ascending' ? 'key' : '-key';
-        this.getEnvVarList();
-      }
+      const orderBy = prop === 'key' ? (order === 'ascending' ? 'key' : '-key') : 'created';
+      this.curSortKey = orderBy;
+      this.getEnvVarList();
     },
 
     // 获取增强服务内置环境变量
@@ -1830,21 +1912,11 @@ a.is-disabled {
 .env-btn-wrapper {
   margin-top: 24px;
 }
-.add-wrapper {
-  height: 42px;
-  .add-single-variable {
-    display: inline-block;
-    height: 42px;
-    line-height: 42px;
-    padding: 0 15px;
-    color: #3a84ff;
-    cursor: pointer;
-    i {
-      font-size: 16px;
-      margin-right: 3px;
-      transform: translateY(0px);
-    }
-  }
+.exception-wrap-cls {
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .variable-table-cls {
   /deep/ .bk-table-empty-block {
@@ -1856,7 +1928,7 @@ a.is-disabled {
     i {
       margin-left: 5px;
       font-size: 14px;
-      color: #EA3636;
+      color: #ea3636;
       transform: translateY(0);
     }
     .var-key {
@@ -1881,7 +1953,7 @@ a.is-disabled {
   height: 32px;
   padding: 4px;
   border-radius: 2px;
-  background: #F0F1F5;
+  background: #f0f1f5;
 
   li {
     position: relative;
@@ -1889,10 +1961,9 @@ a.is-disabled {
     height: 100%;
     line-height: 24px;
     font-size: 12px;
-    color: #63656E;
+    color: #63656e;
     padding: 0 15px;
     cursor: pointer;
-
 
     &::before {
       position: absolute;
@@ -1902,8 +1973,8 @@ a.is-disabled {
       width: 1px;
       height: 12px;
       margin-top: -6px;
-      background: #DCDEE5;
-      content: "";
+      background: #dcdee5;
+      content: '';
     }
     &:first-child::before {
       height: 0;

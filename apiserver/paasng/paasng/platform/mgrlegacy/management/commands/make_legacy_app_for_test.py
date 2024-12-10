@@ -78,7 +78,7 @@ class Command(BaseCommand):
             default=None,
         )
         parser.add_argument(
-            "--region",
+            "--deploy_ver",
             type=str,
             dest="deploy_ver",
             help="legacy region for app",
@@ -132,8 +132,6 @@ class Command(BaseCommand):
         if not dry_run:
             with console_db.session_scope() as session:
                 AppDeveloperManger(session)._create_developer_by_username(username)
-
-                # 创建对象 LAppSecureInfo -> 表 paas_app_secure_info
                 region = RegionConverter.to_new(deploy_ver) if deploy_ver else settings.DEFAULT_REGION_NAME
                 AppManger(session).sync_oauth(region, code=code, secret=secret_key)
                 # TODO: 检查以下流程

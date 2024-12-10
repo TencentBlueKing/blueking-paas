@@ -106,7 +106,7 @@ class AppDeclarativeController:
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
         )
-        create_oauth2_client(application.code, application.region)
+        create_oauth2_client(application.code)
         self.sync_modules(application, desc.modules)
         default_module = application.get_default_module()
 

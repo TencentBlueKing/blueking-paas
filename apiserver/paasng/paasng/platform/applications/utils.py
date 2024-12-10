@@ -93,7 +93,7 @@ def create_application(
         is_plugin_app=is_plugin_app,
         is_ai_agent_app=is_ai_agent_app,
     )
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code)
 
     return application
 

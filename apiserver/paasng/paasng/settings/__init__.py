@@ -574,6 +574,14 @@ CSRF_COOKIE_NAME = "bk_paas3_csrftoken"
 FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME")
 CSRF_COOKIE_DOMAIN = settings.get("CSRF_COOKIE_DOMAIN")
 SESSION_COOKIE_DOMAIN = settings.get("SESSION_COOKIE_DOMAIN")
+# Django 4.0 会参考 Origin Header，如果使用了 CSRF_COOKIE_NAME，就需要在 settings 中额外配置 CSRF_TRUSTED_ORIGINS
+# 且必须配置协议和域名
+# https://docs.djangoproject.com/en/dev/releases/4.0/#format-change
+BK_COOKIE_DOMAIN = settings.get("BK_COOKIE_DOMAIN")
+# 正式环境 CSRF_COOKIE_DOMAIN 并未设置，所以默认值直接用通配符
+CSRF_TRUSTED_ORIGINS = settings.get(
+    "CSRF_TRUSTED_ORIGINS", [f"http://*{BK_COOKIE_DOMAIN}", f"https://*{BK_COOKIE_DOMAIN}"]
+)
 
 # 蓝鲸登录票据在 Cookie 中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
@@ -951,7 +959,6 @@ DEFAULT_REGION_TEMPLATE = {
 REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAULT_REGION_TEMPLATE)]})
 
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
-ENABLE_BK_OAUTH = settings.get("ENABLE_BK_OAUTH", False)
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
 # --------

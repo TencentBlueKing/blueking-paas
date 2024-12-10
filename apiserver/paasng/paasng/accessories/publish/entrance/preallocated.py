@@ -22,8 +22,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from paas_wl.infras.cluster.shim import Cluster, RegionClusterService
-from paas_wl.workloads.networking.entrance.addrs import URL, EnvExposedURL
-from paas_wl.workloads.networking.entrance.utils import get_legacy_url
+from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -75,9 +74,9 @@ def get_preallocated_urls(module_env: ModuleEnvironment) -> List[EnvExposedURL]:
     elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         domains = get_preallocated_domains_by_env(module_env)
         return [EnvExposedURL(url=d.as_url(), provider_type="subdomain") for d in domains]
-    elif module.exposed_url_type is None:
-        if url := get_legacy_url(module_env):
-            return [EnvExposedURL(url=URL.from_address(url), provider_type="legacy")]
+    else:
+        # The "exposed_url_type" is None. This should not happen in normal cases.
+        logger.warning("The exposed_url_type is None when getting preallocated urls, module: %s", module)
     return []
 
 

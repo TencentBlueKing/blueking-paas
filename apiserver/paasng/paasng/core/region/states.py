@@ -56,9 +56,9 @@ def load_regions_from_settings():
         region = Region(
             name=name,
             display_name=display_name,
-            basic_info=cattrs.unstructure(cfg.pop("basic_info"), RegionBasicInfo),
+            basic_info=cattrs.structure(cfg.pop("basic_info"), RegionBasicInfo),
             module_mobile_config=module_mobile_config,
-            entrance_config=cattrs.unstructure(cfg.pop("entrance_config"), RegionEntranceConfig),
+            entrance_config=cattrs.structure(cfg.pop("entrance_config"), RegionEntranceConfig),
             mul_modules_config=RegionMulModulesConfig(**cfg.pop("mul_modules_config")),
             enabled_feature_flags=set(cfg.pop("enabled_feature_flags", [])),
             provide_env_vars_platform=cfg.pop("provide_env_vars_platform", None),

@@ -16,9 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 import logging
 from pathlib import Path
-from typing import Dict
 
-from bkpaas_auth.models import User
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -38,10 +36,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.module import Module
-from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
@@ -271,27 +266,3 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             return Response(data={"result": False})
 
         return Response(data={"result": True})
-
-    @staticmethod
-    def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:
-        """Get VersionInfo from user inputted params"""
-        version_name = params["version_name"]
-        version_type = params["version_type"]
-        revision = params.get("revision")
-        try:
-            # 尝试根据获取最新的 revision
-            version_service = get_version_service(module, operator=user.pk)
-            revision = version_service.extract_smart_revision(f"{version_type}:{version_name}")
-        except GitLabBranchNameBugError as e:
-            raise error_codes.CANNOT_GET_REVISION.f(str(e))
-        except NotImplementedError:
-            logger.debug(
-                "The current source code system does not support parsing the version unique ID from the version name"
-            )
-        except Exception:
-            logger.exception("Failed to parse version information.")
-
-        # 如果前端没有提供 revision 信息, 就报错
-        if not revision:
-            raise error_codes.CANNOT_GET_REVISION
-        return VersionInfo(revision, version_name, version_type)

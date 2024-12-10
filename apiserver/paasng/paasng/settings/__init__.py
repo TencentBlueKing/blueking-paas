@@ -941,11 +941,6 @@ DEFAULT_REGION_TEMPLATE = {
             },
         },
     },
-    "entrance_config": {
-        # - 1: 子路径模式
-        # - 2: 子域名模式
-        "exposed_url_type": 1,
-    },
     "mul_modules_config": {"creation_allowed": True},
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量

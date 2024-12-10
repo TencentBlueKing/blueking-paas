@@ -106,11 +106,6 @@ class RegionMobileConfig:
 
 
 @dataclass
-class RegionEntranceConfig:
-    exposed_url_type: str
-
-
-@dataclass
 class RegionMulModulesConfig:
     creation_allowed: bool
 
@@ -141,7 +136,6 @@ class Region:
     name: str
     display_name: str
     basic_info: RegionBasicInfo
-    entrance_config: RegionEntranceConfig
     mul_modules_config: RegionMulModulesConfig
     enabled_feature_flags: Set[str] = field(default_factory=set)
     module_mobile_config: Optional[RegionMobileConfig] = None

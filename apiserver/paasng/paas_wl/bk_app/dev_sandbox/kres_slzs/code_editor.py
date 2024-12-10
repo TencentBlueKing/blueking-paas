@@ -134,7 +134,7 @@ class CodeEditorDeserializer(AppEntityDeserializer["CodeEditor"]):
         volume = get_items(deployment_dict, "spec.template.spec.volumes", [{}])[0]
         volume_mounts = get_items(main_container_dict, "volumeMounts", [{}])[0]
         env_list = get_items(main_container_dict, "env", [{}])
-        envs = {env["name"]: env["value"] for env in env_list}
+        envs = {env["name"]: env.get("value", "") for env in env_list}
         config = cattr.structure(
             {
                 "pvc_claim_name": get_items(volume, "persistentVolumeClaim.claimName"),

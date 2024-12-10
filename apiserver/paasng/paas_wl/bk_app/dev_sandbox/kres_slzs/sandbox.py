@@ -138,7 +138,7 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
         volume_mounts = get_items(main_container_dict, "volumeMounts", [{}])[0]
         # 获取环境变量
         env_list = get_items(main_container_dict, "env", [{}])
-        envs = {env["name"]: env["value"] for env in env_list}
+        envs = {env["name"]: env.get("value", "") for env in env_list}
         source_code_config = cattr.structure(
             {
                 "pvc_claim_name": get_items(volume, "persistentVolumeClaim.claimName"),

@@ -18,12 +18,15 @@
 from dataclasses import asdict
 from typing import Dict
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.fields import SerializerMethodField
 
 from paas_wl.bk_app.dev_sandbox.entities import HealthPhase
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
+from paasng.platform.sourcectl.version_services import get_version_service
 
 
 class DevSandboxDetailSLZ(serializers.Serializer):
@@ -44,21 +47,27 @@ class DevSandboxDetailSLZ(serializers.Serializer):
 
 
 class CreateDevSandboxWithCodeEditorSLZ(serializers.Serializer):
-    """Serializer for create dev sandbox"""
+    """创建带代码编辑器的沙箱"""
 
-    version_type = serializers.ChoiceField(
-        choices=VersionType.get_choices(),
-        required=True,
-        error_messages={"invalid_choice": f"Invalid choice. Valid choices are {VersionType.get_values()}"},
-        help_text="版本类型, 如 branch/tag/trunk",
-    )
-    version_name = serializers.CharField(
-        required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
-    )
-    revision = serializers.CharField(
-        required=False,
-        help_text="版本信息, 如 hash(git版本)/version(源码包); 如果根据 smart_revision 能查询到 revision, 则不使用该值",
-    )
+    version_type = serializers.CharField(help_text="版本类型，目前只能是分支")
+    version_name = serializers.CharField(help_text="分支名称")
+    revision = serializers.CharField(help_text="版本信息, 如 32 位 hash")
+
+    def validate(self, attrs: Dict[str, str]) -> Dict[str, str]:
+        if attrs["version_type"] != VersionType.BRANCH:
+            raise ValidationError(_("目前仅支持使用代码分支来创建沙箱"))
+
+        version_service = get_version_service(self.context["module"], operator=self.context["operator"])
+        # 逐个检查，确保指定的版本信息的合法性
+        for ver in version_service.list_alternative_versions():
+            if (
+                ver.type == VersionType.BRANCH
+                and attrs["version_name"] == ver.name
+                and attrs["revision"] == ver.revision
+            ):
+                return attrs
+
+        raise ValidationError(_("版本信息错误，请选择正确的仓库分支"))
 
 
 class DevSandboxWithCodeEditorUrlsSLZ(serializers.Serializer):

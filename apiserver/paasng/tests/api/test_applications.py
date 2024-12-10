@@ -761,7 +761,7 @@ class TestListEvaluation:
 
 class TestDeploymentModuleOrder:
     @pytest.fixture
-    def bk_app_test(self, bk_app, bk_user) -> Application:
+    def bk_app(self, bk_app, bk_user) -> Application:
         """
         创建 bk_app 的第二个 module
         """
@@ -771,9 +771,9 @@ class TestDeploymentModuleOrder:
         return bk_app
 
     @pytest.fixture
-    def api_client_test(self, bk_app_test) -> APIClient:
+    def api_client_1(self, bk_app) -> APIClient:
         """
-        创建第二个用户, 和APIClient, 并添加用户组
+        创建第二个用户, 和APIClient, 并添加到应用的用户组
         """
         from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
         from paasng.infras.iam.members.models import ApplicationUserGroup
@@ -783,16 +783,15 @@ class TestDeploymentModuleOrder:
         api_client_1 = APIClient()
         api_client_1.force_authenticate(user=bk_user_1)
 
-        user_group = ApplicationUserGroup.objects.get(app_code=bk_app_test.code, role=ApplicationRole.DEVELOPER)
-
+        user_group = ApplicationUserGroup.objects.get(app_code=bk_app.code, role=ApplicationRole.DEVELOPER)
         StubBKIAMClient().add_user_group_members(user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS)
         return api_client_1
 
-    def test_module_order(self, api_client, bk_app_test, api_client_test):
+    def test_module_order(self, api_client, bk_app, api_client_1):
         """
         测试部署管理-进程列表模块自定义排序, 2个用户取得各自的排序
         """
-        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app_test.code})
+        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
         response = api_client.post(
             url,
@@ -820,7 +819,7 @@ class TestDeploymentModuleOrder:
             },
         ]
 
-        response = api_client_test.post(
+        response = api_client_1.post(
             url,
             data={
                 "module_orders": [
@@ -872,7 +871,7 @@ class TestDeploymentModuleOrder:
             },
         ]
 
-        response = api_client_test.get(url)
+        response = api_client_1.get(url)
         assert response.data == [
             {
                 "module_name": "default",
@@ -896,11 +895,11 @@ class TestDeploymentModuleOrder:
             },
         ]
 
-    def test_module_order_missing_module(self, api_client, bk_app_test):
+    def test_module_order_missing_module(self, api_client, bk_app):
         """
         测试部署管理-进程列表模块自定义排序, 模块排序少传
         """
-        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app_test.code})
+        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
         response = api_client.post(
             url,
@@ -916,12 +915,12 @@ class TestDeploymentModuleOrder:
         response_data = response.json()
         assert response_data["detail"] == "Modules missing an order: default."
 
-    def test_module_order_extra_module(self, api_client, bk_app_test):
+    def test_module_order_extra_module(self, api_client, bk_app):
         """
         测试部署管理-进程列表模块自定义排序, 模块排序多传
         """
 
-        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app_test.code})
+        url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
         response = api_client.post(
             url,

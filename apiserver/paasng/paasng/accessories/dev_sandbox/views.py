@@ -15,18 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import logging
+import os
 from pathlib import Path
+from typing import Dict, List
 
 import requests
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
+from paas_wl.bk_app.dev_sandbox.entities import DevSandboxWithCodeEditorDetail
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
@@ -51,6 +54,7 @@ from .serializers import (
     DevSandboxSLZ,
     DevSandboxWithCodeEditorDetailSLZ,
 )
+from ...platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +158,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
         )
         try:
+            # FIXME（沙箱重构）这里获取部署目录的逻辑过于冗余了，实际上无需考虑源码包的情况？
             # 获取构建目录相对路径
             source_dir = get_source_dir(module, request.user.pk, version_info)
             relative_source_dir = Path(source_dir)
@@ -176,6 +181,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # FIXME（沙箱重构）为啥删除 model 不清理资源？
             # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
@@ -272,23 +278,30 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response(data={"result": True})
 
-    @swagger_auto_schema(tags=["开发沙箱"])
-    def commit(self, request, code, module_name):
-        """获取版本信息"""
+
+class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
+    @swagger_auto_schema(
+        tags=["开发沙箱"],
+        operation_description="提交变更的代码",
+        request_body=DevSandboxCommitInputSLZ(),
+        responses={status.HTTP_200_OK: DevSandboxCommitOutputSLZ()},
+    )
+    def post(self, request, *args, **kwargs):
         slz = DevSandboxCommitInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         app = self.get_application()
         module = self.get_module_via_path()
+        operator = request.user.pk
 
         try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
+            dev_sandbox = DevSandbox.objects.get(owner=operator, module=module)
         except DevSandbox.DoesNotExist:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         controller = DevSandboxWithCodeEditorController(
-            app=app, module_name=module.name, dev_sandbox_code=dev_sandbox.code, owner=request.user.pk
+            app=app, module_name=module.name, dev_sandbox_code=dev_sandbox.code, owner=operator
         )
         try:
             detail = controller.get_detail()
@@ -296,27 +309,50 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         # 1. 调用 devserver api 获取代码差异信息
+        diffs = self._fetch_dev_sandbox_diffs(detail)
+        # 2. 构建提交信息（CommitInfo）
+        commit_info = self._build_commit_info(module, dev_sandbox, diffs, data["message"])
+        # 3. 调用代码库 API 提交代码
+        repo_url = self._commit_to_repository(module, dev_sandbox, operator, commit_info)
+
+        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}))
+
+    @staticmethod
+    def _fetch_dev_sandbox_diffs(detail: DevSandboxWithCodeEditorDetail) -> List[Dict]:
+        """从沙箱获取代码变更文件"""
         resp = requests.get(
-            f"{detail.urls.devserver_url}/diffs",
+            # FIXME（沙箱重构）这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
+            f"http://{detail.urls.devserver_url}diffs",
             # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
-            headers={"Authorization": f"Token {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
+            headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
             params={"content": "true"},
         )
         if resp.status_code != status.HTTP_200_OK:
             raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)
 
-        commit_info = CommitInfo(branch=dev_sandbox.version_info.version_name, message=data["message"])
+        return resp.json()["data"]
+
+    @staticmethod
+    def _build_commit_info(module: Module, dev_sandbox: DevSandbox, diffs: List[Dict], commit_msg: str) -> CommitInfo:
+        """根据变更的文件构建提交信息"""
+        # 代码部署目录
+        source_dir = module.get_source_obj().get_source_dir()
+
+        commit_info = CommitInfo(branch=dev_sandbox.version_info.version_name, message=commit_msg)
         mapping = {
             FileChangeType.ADDED: commit_info.add_files,
             FileChangeType.MODIFIED: commit_info.edit_files,
             FileChangeType.DELETED: commit_info.delete_files,
         }
-        for item in resp.json()["data"]:
-            mapping[item["action"]].append(ChangedFile(item["path"], item["content"]))
+        for item in diffs:
+            path = os.path.join(source_dir, item["path"]) if source_dir else item["path"]
+            mapping[item["action"]].append(ChangedFile(path, item["content"]))
 
-        # 2. 调用代码库 API 提交代码
-        repo_ctrl = get_repo_controller(module, request.user.pk)
+        return commit_info
+
+    @staticmethod
+    def _commit_to_repository(module: Module, dev_sandbox: DevSandbox, operator: str, commit_info: CommitInfo) -> str:
+        """提交代码到代码库"""
+        repo_ctrl = get_repo_controller(module, operator)
         repo_ctrl.batch_commit_files(commit_info)
-        repo_url = repo_ctrl.build_url(dev_sandbox.version_info)
-
-        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}))
+        return repo_ctrl.build_url(dev_sandbox.version_info)

@@ -30,6 +30,7 @@ from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.gitlab.client import GitLabApiClient
 from paasng.platform.sourcectl.models import (
     AlternativeVersion,
+    CommitInfo,
     CommitLog,
     DiffChange,
     GitProject,
@@ -179,6 +180,10 @@ class GitlabRepoController(BaseGitRepoController):
             if compare["commit"]
             else []
         )
+
+    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+        """gitlab 不支持该功能"""
+        raise NotImplementedError
 
     @error_converter
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:

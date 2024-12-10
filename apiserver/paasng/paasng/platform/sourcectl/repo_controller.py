@@ -26,7 +26,14 @@ from typing_extensions import Protocol
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl import exceptions
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 
 if TYPE_CHECKING:
@@ -98,6 +105,9 @@ class RepoController(Protocol):
 
     def get_diff_commit_logs(self, from_revision: str, to_revision: str, rel_filepath=None) -> List[CommitLog]:
         """读取 from_revision 至 to_revision 关于 rel_filepath 的所有 commit 日志条目"""
+
+    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+        """批量提交文件"""
 
     @abc.abstractmethod
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:

@@ -115,3 +115,15 @@ class DevSandboxSLZ(serializers.ModelSerializer):
 
     def get_version_info_dict(self, obj: DevSandbox) -> dict:
         return asdict(obj.version_info)
+
+
+class DevSandboxCommitInputSLZ(serializers.Serializer):
+    """沙箱开发环境代码提交"""
+
+    message = serializers.CharField(help_text="代码提交（Commit）信息")
+
+
+class DevSandboxCommitOutputSLZ(serializers.Serializer):
+    """沙箱开发环境代码提交"""
+
+    repo_url = serializers.CharField(help_text="代码仓库地址")

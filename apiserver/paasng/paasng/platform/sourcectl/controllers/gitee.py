@@ -26,7 +26,14 @@ from django.utils.functional import cached_property
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.git.client import GitClient
 from paasng.platform.sourcectl.gitee.client import GiteeApiClient
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 
@@ -116,6 +123,10 @@ class GiteeRepoController(BaseGitRepoController):
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
+        """gitee 不支持该功能"""
+        raise NotImplementedError
+
+    def batch_commit_files(self, commit_info: CommitInfo) -> None:
         """gitee 不支持该功能"""
         raise NotImplementedError
 

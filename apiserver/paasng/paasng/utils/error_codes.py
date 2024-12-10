@@ -185,6 +185,7 @@ class ErrorCodes:
     DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)
     DEV_SANDBOX_NOT_FOUND = ErrorCode("dev sandbox not found")
     DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode("dev sandbox count over limit")
+    DEV_SANDBOX_API_ERROR = ErrorCode("dev sandbox's api return error", status_code=500)
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

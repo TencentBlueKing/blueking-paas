@@ -17,6 +17,7 @@
 import logging
 from pathlib import Path
 
+import requests
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -36,12 +37,16 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.sourcectl.models import VersionInfo
+from paasng.platform.sourcectl.constants import FileChangeType
+from paasng.platform.sourcectl.models import ChangedFile, CommitInfo, VersionInfo
+from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
 from .serializers import (
     CreateDevSandboxWithCodeEditorSLZ,
+    DevSandboxCommitInputSLZ,
+    DevSandboxCommitOutputSLZ,
     DevSandboxDetailSLZ,
     DevSandboxSLZ,
     DevSandboxWithCodeEditorDetailSLZ,
@@ -228,7 +233,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "urls": detail.urls,
-                # FIXME（沙箱重构） token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
+                # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
@@ -249,7 +254,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response({"password": dev_sandbox.code_editor.password})
 
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})
+    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxSLZ(many=True)})
     def list_app_dev_sandbox(self, request, code):
         """获取该应用下用户的开发沙箱"""
         app = self.get_application()
@@ -266,3 +271,52 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             return Response(data={"result": False})
 
         return Response(data={"result": True})
+
+    @swagger_auto_schema(tags=["开发沙箱"])
+    def commit(self, request, code, module_name):
+        """获取版本信息"""
+        slz = DevSandboxCommitInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        app = self.get_application()
+        module = self.get_module_via_path()
+
+        try:
+            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
+        except DevSandbox.DoesNotExist:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        controller = DevSandboxWithCodeEditorController(
+            app=app, module_name=module.name, dev_sandbox_code=dev_sandbox.code, owner=request.user.pk
+        )
+        try:
+            detail = controller.get_detail()
+        except DevSandboxResourceNotFound:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 1. 调用 devserver api 获取代码差异信息
+        resp = requests.get(
+            f"{detail.urls.devserver_url}/diffs",
+            # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
+            headers={"Authorization": f"Token {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
+            params={"content": "true"},
+        )
+        if resp.status_code != status.HTTP_200_OK:
+            raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)
+
+        commit_info = CommitInfo(branch=dev_sandbox.version_info.version_name, message=data["message"])
+        mapping = {
+            FileChangeType.ADDED: commit_info.add_files,
+            FileChangeType.MODIFIED: commit_info.edit_files,
+            FileChangeType.DELETED: commit_info.delete_files,
+        }
+        for item in resp.json()["data"]:
+            mapping[item["action"]].append(ChangedFile(item["path"], item["content"]))
+
+        # 2. 调用代码库 API 提交代码
+        repo_ctrl = get_repo_controller(module, request.user.pk)
+        repo_ctrl.batch_commit_files(commit_info)
+        repo_url = repo_ctrl.build_url(dev_sandbox.version_info)
+
+        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}))

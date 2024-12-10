@@ -24,7 +24,7 @@ from blue_krill.data_types.url import MutableURL
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repository, VersionInfo
+from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
 if TYPE_CHECKING:
@@ -143,6 +143,9 @@ class BareGitRepoController:
         raise NotImplementedError
 
     def get_diff_commit_logs(self, from_revision, to_revision, rel_filepath=None) -> List[CommitLog]:
+        raise NotImplementedError
+
+    def batch_commit_files(self, commit_info: CommitInfo) -> None:
         raise NotImplementedError
 
     def read_file(self, file_path, version_info: VersionInfo) -> bytes:

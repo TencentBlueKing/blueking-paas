@@ -119,14 +119,12 @@
             slot="append"
             v-if="!isPageEdit"
           >
-            <bk-exception
+            <div
               v-if="!envVarList.length"
               class="exception-wrap-cls"
-              type="empty"
-              scene="part"
             >
-              <span>{{ $t('暂无数据') }}</span>
-            </bk-exception>
+              {{ $t('暂无数据') }}
+            </div>
             <!-- 应用描述文件 -->
             <app-description-file
               v-if="showChild"
@@ -1913,10 +1911,12 @@ a.is-disabled {
   margin-top: 24px;
 }
 .exception-wrap-cls {
-  height: 280px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 12px;
+  color: #979ba5;
 }
 .variable-table-cls {
   /deep/ .bk-table-empty-block {

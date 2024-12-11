@@ -949,6 +949,9 @@ DEFAULT_REGION_TEMPLATE = {
         "manually_upgrade_to_subdomain_allowed": False,
     },
     "mul_modules_config": {"creation_allowed": True},
+    # 是否允许用户添加独立域名(自定义访问地址)，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
+    "allow_user_modify_custom_domain": True,
+    # "custom_domain_config": {"allow_user_modifications": True},
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,

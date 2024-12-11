@@ -19,11 +19,10 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paasng.utils.views import allow_resp_patch
 
 from .models import get_all_regions
-from .serializers import ModuleCustomDomainSLZ, RegionSerializer
+from .serializers import RegionSerializer
 
 
 class RegionBaseViewSet(viewsets.ViewSet):
@@ -46,6 +45,4 @@ class RegionViewSet(RegionBaseViewSet):
         region_object.load_dynamic_infos()
 
         resp = RegionSerializer(region_object).serialize()
-        # Attach region settings from workloads
-        resp["module_custom_domain"] = ModuleCustomDomainSLZ(get_custom_domain_config(region)).data()
         return Response(resp)

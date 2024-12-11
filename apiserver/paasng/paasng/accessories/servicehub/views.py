@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from collections import defaultdict
 from typing import Any, Dict, List
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -794,7 +795,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         application = self.get_application()
         module = self.get_module_via_path()
 
-        categorized_rels: Dict[str, List[Dict]] = {}
+        categorized_rels = defaultdict(list)
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
                 try:
@@ -804,11 +805,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
                     continue
                 plan = rel.get_plan()
 
-                service_id = rel.db_obj.service_id
-                if service_id not in categorized_rels:
-                    categorized_rels[service_id] = []
-
-                categorized_rels[service_id].append(
+                categorized_rels[str(rel.db_obj.service_id)].append(
                     {
                         "service_instance": instance,
                         "environment": env.environment,

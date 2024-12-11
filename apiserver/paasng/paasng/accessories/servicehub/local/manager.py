@@ -171,7 +171,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         ).inc()
 
     def recycle_resource(self):
-        if self.db_obj.service.prefer_async_delete:
+        if self.is_provisioned() and self.db_obj.service.prefer_async_delete:
             self.mark_unbound()
         self.db_obj.clean_service_instance()
 
@@ -400,7 +400,7 @@ class LocalServiceMgr(BaseServiceMgr):
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
         """Return all unbound engine_app <-> local service instances by specified service (None for all)"""
-        qs = engine_app.service_attachment.exclude(service_instance__isnull=True)
+        qs = engine_app.unbound_service_attachment
         if service:
             qs = qs.filter(service_id=service.uuid)
         for attachment in qs:

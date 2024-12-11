@@ -127,7 +127,12 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
     """Local service instance which is unbound with engine app"""
 
     engine_app = models.ForeignKey(
-        "engine.EngineApp", on_delete=models.CASCADE, null=True, db_constraint=False, verbose_name="蓝鲸引擎应用"
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        null=True,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_service_attachment",
     )
     service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="增强服务")
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)

@@ -23,7 +23,6 @@ from rest_framework.exceptions import ValidationError
 from paasng.accessories.servicehub.remote.exceptions import ServiceConfigNotFound
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.services.models import ServiceCategory
-from paasng.platform.modules.models import Module
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 
 
@@ -262,23 +261,9 @@ class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 
 class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
-    module_id = serializers.CharField(write_only=True, help_text="模块 id")
-    module_name = serializers.SerializerMethodField(help_text="模块名")
-    environment = serializers.CharField(help_text="运行环境")
     service = ServiceMinimalSLZ(help_text="增强服务信息")
-    service_instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    unbound_instances = ServiceInstanceInfoSLZ(many=True, help_text="已解绑增强服务实例")
+    count = serializers.SerializerMethodField(help_text="数量")
 
-    def get_module_name(self, obj):
-        module_id = obj.get("module_id")
-        if module_id:
-            try:
-                module = Module.objects.get(id=module_id)
-            except Module.DoesNotExist:
-                return None
-            return module.name
-        return None
-
-
-class RecycleUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
-    service_id = serializers.UUIDField(help_text="增强服务 id", required=True)
-    service_instance_id = serializers.UUIDField(help_text="增强服务实例 id", required=True)
+    def get_count(self, obj):
+        return len(obj.get("unbound_instances") or [])

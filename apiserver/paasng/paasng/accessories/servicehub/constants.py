@@ -58,13 +58,3 @@ class ServiceBindingType(IntStructuredEnum):
 
     NORMAL = 1
     SHARING = 2
-
-
-class ServiceUnboundStatus:
-    Unbound = 1
-    Recycled = 2
-
-    CHOICES = (
-        (Unbound, "Unbound service instance with engine app"),
-        (Recycled, "Recycled service instance"),
-    )

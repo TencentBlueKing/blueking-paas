@@ -38,7 +38,12 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteServiceMgr, RemoteServiceObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import (
+    EngineAppInstanceRel,
+    PlanObj,
+    ServiceObj,
+    UnboundEngineAppInstanceRel,
+)
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions, set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
@@ -220,6 +225,9 @@ class MixedServiceMgr:
     )
     list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
+    list_unbound_instance_rels = cast(
+        Callable[..., Iterable[UnboundEngineAppInstanceRel]], _proxied_chained_generator("list_unbound_instance_rels")
+    )
 
     # Proxied generator methods end
 

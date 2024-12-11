@@ -22,7 +22,7 @@ from typing import Collection, Dict, List
 
 from django.db import models
 
-from paasng.accessories.servicehub.constants import ServiceType, ServiceUnboundStatus
+from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.platform.applications.models import ApplicationEnvironment
@@ -126,28 +126,18 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
     """Local service instance which is unbound with engine app"""
 
-    application = models.ForeignKey(
-        "applications.Application", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸应用"
-    )
-    module = models.ForeignKey(
-        "modules.Module", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸应用模块"
-    )
-    environment = models.CharField(verbose_name="部署环境", max_length=16)
     engine_app = models.ForeignKey(
-        "engine.EngineApp", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸引擎应用"
+        "engine.EngineApp", on_delete=models.CASCADE, null=True, db_constraint=False, verbose_name="蓝鲸引擎应用"
     )
     service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="增强服务")
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     service_instance = models.ForeignKey(
         ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, verbose_name="增强服务实例"
     )
-    status = models.IntegerField(
-        choices=ServiceUnboundStatus.CHOICES,
-        default=ServiceUnboundStatus.Unbound,
-        verbose_name="解绑状态",
-        help_text="1 已解绑; 2 已回收;",
-    )
+    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
+        unique_together = ("service", "engine_app")
         verbose_name = "本地已解绑增强服务"
 
     def clean_service_instance(self):
@@ -186,26 +176,20 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     """Remote service instance which is unbound with engine app"""
 
-    application = models.ForeignKey(
-        "applications.Application", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸应用"
-    )
-    module = models.ForeignKey(
-        "modules.Module", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸应用模块"
-    )
-    environment = models.CharField(verbose_name="部署环境", max_length=16)
     engine_app = models.ForeignKey(
-        "engine.EngineApp", on_delete=models.SET_NULL, null=True, db_constraint=False, verbose_name="蓝鲸引擎应用"
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_remote_service_attachment",
     )
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
+    plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
     service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
-    status = models.IntegerField(
-        choices=ServiceUnboundStatus.CHOICES,
-        default=ServiceUnboundStatus.Unbound,
-        verbose_name="解绑状态",
-        help_text="1 已解绑; 2 已回收;",
-    )
+    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
+        unique_together = ("service_id", "engine_app")
         verbose_name = "远程已解绑增强服务"
 
 

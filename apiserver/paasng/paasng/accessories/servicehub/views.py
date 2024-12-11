@@ -31,19 +31,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
-from paasng.accessories.servicehub.constants import ServiceUnboundStatus
 from paasng.accessories.servicehub.exceptions import (
     BindServiceNoPlansError,
     ReferencedAttachmentNotFound,
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
+    SvcInstanceNotFound,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import (
-    ServiceSetGroupByName,
-    UnboundRemoteServiceEngineAppAttachment,
-    UnboundServiceEngineAppAttachment,
-)
+from paasng.accessories.servicehub.models import ServiceSetGroupByName
 from paasng.accessories.servicehub.remote.manager import (
     RemoteServiceInstanceMgr,
     RemoteServiceMgr,
@@ -187,6 +183,34 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
                 instance = rel.get_instance()
+                plan = rel.get_plan()
+                results.append(
+                    {
+                        "service_instance": instance,
+                        "environment": env.environment,
+                        "environment_name": AppEnvName.get_choice_label(env.environment),
+                        "service_specs": plan.specifications,
+                        "usage": "{}",
+                    }
+                )
+        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
+        return Response({"count": len(results), "results": serializer.data})
+
+    @app_action_required(AppAction.BASIC_DEVELOP)
+    def retrieve_unbound_instances(self, request, code, module_name, service_id):
+        """查看应用模块与增强服务已解绑实例详情"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = self.get_service(service_id, application)
+
+        results = []
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app, service=service):
+                try:
+                    instance = rel.get_instance()
+                except SvcInstanceNotFound:
+                    # 如果已经回收了，获取不到 instance，跳过
+                    continue
                 plan = rel.get_plan()
                 results.append(
                     {
@@ -765,40 +789,48 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
 class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    def list(self, request, code):
-        """查看已解绑但未回收增强服务"""
-        app = self.get_application()
-        remote_intsances = UnboundRemoteServiceEngineAppAttachment.objects.filter(
-            application=app, status=ServiceUnboundStatus.Unbound
-        )
-        local_instances = UnboundServiceEngineAppAttachment.objects.filter(
-            application=app, status=ServiceUnboundStatus.Unbound
-        )
+    def list(self, request, code, module_name):
+        """查看模块已解绑增强服务，按 service 分类"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+
+        categorized_rels: Dict[str, List[Dict]] = {}
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
+                try:
+                    instance = rel.get_instance()
+                except SvcInstanceNotFound:
+                    # 如果已经回收了，获取不到 instance，跳过
+                    continue
+                plan = rel.get_plan()
+
+                service_id = rel.db_obj.service_id
+                if service_id not in categorized_rels:
+                    categorized_rels[service_id] = []
+
+                categorized_rels[service_id].append(
+                    {
+                        "service_instance": instance,
+                        "environment": env.environment,
+                        "environment_name": AppEnvName.get_choice_label(env.environment),
+                        "service_specs": plan.specifications,
+                        "usage": "{}",
+                    }
+                )
 
         results = []
-        for instance in remote_intsances + local_instances:
-            service_obj = mixed_service_mgr.get_or_404(instance.service_id, app.region)
+        for service_id, rels in categorized_rels.items():
             results.append(
-                {
-                    "module_id": instance.module,
-                    "environment": instance.environment,
-                    "service": service_obj,
-                    "service_instance_id": instance.service_instance_id,
-                }
+                {"service": mixed_service_mgr.get_or_404(service_id, application.region), "unbound_instances": rels}
             )
 
-        return Response(slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True).data)
+        serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
+        return Response(serializer.data)
 
-    def recycle_instance(self, request, code):
+    def recycle(self, request, code, module_name, service_id, service_instance_id):
         """回收已解绑增强服务"""
-        serializer = slzs.RecycleUnboundServiceEngineAppAttachmentSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        service_obj = mixed_service_mgr.get_or_404(data.service_id, self.get_application().region)
-        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
-            service_obj, data.service_instance_id
-        )
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, service_instance_id)
         unbound_instance.recycle_instance()
 
         return Response()

@@ -24,6 +24,7 @@ REGION = "(?P<region>[a-z0-9_-]{1,32})"
 SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
 APP_UUID = "(?P<application_id>[0-9a-f-]{32,36})"
 CATEGORY_ID = r"(?P<category_id>[\d]+)"
+SERVICE_INTANCE_ID = "(?P<service_instance_id>[0-9a-f-]{32,36})"
 
 urlpatterns = [
     # service APIs
@@ -100,6 +101,11 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
     ),
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"get": "retrieve_unbound_instances"}),
+        name="api.services.list_unbound_instance",
+    ),
     # Manager service attachments (from services side)
     re_path(
         r"^api/services/service-attachments/$",
@@ -112,11 +118,17 @@ urlpatterns = [
         views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
         name="api.services.credentials_enabled",
     ),
-    # List unbound engine_app attachment instances, and recycle instance
+    # List unbound engine_app attachment instances
     re_path(
-        r"^api/bkapps/applications/(?P<code>[^/]+)/service/attachment/instances/unbound/$",
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list", "post": "recycle_instance"}),
+        make_app_pattern("/services/attachments/unbound/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list"}),
         name="api.services.attachment.unbound",
+    ),
+    # Recycle unbound instance
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound/{SERVICE_INTANCE_ID}/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "recycle"}),
+        name="api.services.attachment.unbound.recycle",
     ),
     # Service sharing APIs
     re_path(

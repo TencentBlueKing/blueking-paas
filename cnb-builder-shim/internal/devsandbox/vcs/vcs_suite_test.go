@@ -16,26 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package filediffer
+package vcs_test
 
-// 强制忽略的文件路径前缀
-var forceIgnoreFilePathPrefixes = []string{"v3logs"}
+import (
+	"testing"
 
-// FileAction 文件操作类型
-type FileAction string
-
-const (
-	// FileActionAdded 文件增加
-	FileActionAdded FileAction = "added"
-	// FileActionModified 文件变更
-	FileActionModified FileAction = "modified"
-	// FileActionDeleted 文件删除
-	FileActionDeleted FileAction = "deleted"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// File 文件详情
-type File struct {
-	Action  FileAction `json:"action"`
-	Path    string     `json:"path"`
-	Content string     `json:"content"`
+func TestVCS(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "VCS Suite")
 }

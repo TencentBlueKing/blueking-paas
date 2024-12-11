@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package filediffer
+package vcs
 
 import (
 	"os"
@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Test Differ", func() {
+var _ = Describe("Test VersionController", func() {
 	var tmpDir string
 
 	var initFile = func(dir, filename, content string) error {
@@ -66,7 +66,7 @@ var _ = Describe("Test Differ", func() {
 
 	// 初始化临时目录 & 文件
 	BeforeEach(func() {
-		tmpDir, _ = os.MkdirTemp("", "file-differ")
+		tmpDir, _ = os.MkdirTemp("", "vcs")
 		for _, filename := range []string{"example.txt", "example.py", "example.go"} {
 			Expect(initFile(tmpDir, filename, path.Ext(filename))).To(BeNil())
 		}
@@ -76,7 +76,7 @@ var _ = Describe("Test Differ", func() {
 		Expect(os.RemoveAll(tmpDir)).To(BeNil())
 	})
 
-	Context("Test FileDiffer", func() {
+	Context("Test VersionController", func() {
 		It("with .git", func() {
 			Expect(runGitCommand(tmpDir, "init")).To(BeNil())
 			Expect(runGitCommand(tmpDir, "add", ".")).To(BeNil())
@@ -84,36 +84,36 @@ var _ = Describe("Test Differ", func() {
 			Expect(runGitCommand(tmpDir, "config", "user.email", "bkpaas@example.com")).To(BeNil())
 			Expect(runGitCommand(tmpDir, "commit", "-m", "init")).To(BeNil())
 
-			differ := New(WithContent())
-			Expect(differ.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(WithContent())
+			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
 
-			files, err := differ.Diff()
+			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
 			Expect(files).To(HaveLen(0))
 
 			_ = initFile(tmpDir, "example.html", ".html")
 			_ = initFile(tmpDir, "example.js", ".js")
 
-			files, err = differ.Diff()
+			files, err = verCtrl.Diff()
 			Expect(err).To(BeNil())
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionAdded, Path: "example.html", Content: ".html"},
 				{Action: FileActionAdded, Path: "example.js", Content: ".js"},
 			}))
 
 			_ = os.Remove(path.Join(tmpDir, "example.html"))
 			_ = os.Remove(path.Join(tmpDir, "example.py"))
-			files, err = differ.Diff()
+			files, err = verCtrl.Diff()
 			Expect(err).To(BeNil())
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionAdded, Path: "example.js", Content: ".js"},
 				{Action: FileActionDeleted, Path: "example.py", Content: ""},
 			}))
 
 			_ = editFile(tmpDir, "example.go", "gogo")
-			files, err = differ.Diff()
+			files, err = verCtrl.Diff()
 			Expect(err).To(BeNil())
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionModified, Path: "example.go", Content: "gogo"},
 				{Action: FileActionAdded, Path: "example.js", Content: ".js"},
 				{Action: FileActionDeleted, Path: "example.py", Content: ""},
@@ -121,10 +121,10 @@ var _ = Describe("Test Differ", func() {
 		})
 
 		It("without .git", func() {
-			differ := New(WithContent())
-			Expect(differ.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(WithContent())
+			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
 
-			files, err := differ.Diff()
+			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
 			Expect(files).To(HaveLen(0))
 
@@ -137,10 +137,10 @@ var _ = Describe("Test Differ", func() {
 			_ = editFile(path.Join(tmpDir, "webfe/static"), "example.js", "js-js")
 			_ = editFile(tmpDir, "example.txt", "txt no.1")
 
-			files, err = differ.Diff()
+			files, err = verCtrl.Diff()
 			Expect(err).To(BeNil())
 			Expect(files).To(HaveLen(5))
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionModified, Path: "example.go", Content: "gogo"},
 				{Action: FileActionDeleted, Path: "example.py", Content: ""},
 				{Action: FileActionModified, Path: "example.txt", Content: "txt no.1"},
@@ -150,8 +150,8 @@ var _ = Describe("Test Differ", func() {
 		})
 
 		It("with ignore", func() {
-			differ := New(WithContent())
-			Expect(differ.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(WithContent())
+			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
 
 			_ = initFile(path.Join(tmpDir, "webfe/templates"), "example.html", ".html")
 			_ = initFile(path.Join(tmpDir, "v3logs"), "celery.log", "celery is running...")
@@ -159,9 +159,9 @@ var _ = Describe("Test Differ", func() {
 			_ = editFile(tmpDir, "example.txt", "txt no.1")
 			_ = os.Remove(path.Join(tmpDir, "example.go"))
 
-			files, err := differ.Diff()
+			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionDeleted, Path: "example.go", Content: ""},
 				{Action: FileActionModified, Path: "example.txt", Content: "txt no.1"},
 				{Action: FileActionAdded, Path: "webfe/templates/example.html", Content: ".html"},
@@ -169,20 +169,37 @@ var _ = Describe("Test Differ", func() {
 		})
 
 		It("without content", func() {
-			differ := New()
-			Expect(differ.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New()
+			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
 
 			_ = initFile(path.Join(tmpDir, "webfe/static"), "example.css", "css")
 			_ = initFile(path.Join(tmpDir, "v3logs"), "celery.log", "celery is running...")
 			_ = editFile(tmpDir, "example.py", "python")
 			_ = os.Remove(path.Join(tmpDir, "example.go"))
 
-			files, err := differ.Diff()
+			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
-			Expect(files).To(Equal([]File{
+			Expect(files).To(Equal(Files{
 				{Action: FileActionDeleted, Path: "example.go", Content: ""},
 				{Action: FileActionModified, Path: "example.py", Content: ""},
 				{Action: FileActionAdded, Path: "webfe/static/example.css", Content: ""},
+			}))
+		})
+
+		It("with special chars", func() {
+			verCtrl := New(WithContent())
+			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+
+			_ = initFile(tmpDir, "example space.css", "css 代码")
+			_ = initFile(tmpDir, "example——中文.js", "js 代码")
+			_ = initFile(tmpDir, "example.tab.html", "html 代码")
+
+			files, err := verCtrl.Diff()
+			Expect(err).To(BeNil())
+			Expect(files).To(Equal(Files{
+				{Action: FileActionAdded, Path: "example space.css", Content: "css 代码"},
+				{Action: FileActionAdded, Path: "example.tab.html", Content: "html 代码"},
+				{Action: FileActionAdded, Path: "example——中文.js", Content: "js 代码"},
 			}))
 		})
 	})

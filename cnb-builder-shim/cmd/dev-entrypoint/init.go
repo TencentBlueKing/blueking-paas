@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/filediffer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -171,8 +171,8 @@ func initializeSourceCode() error {
 	}
 
 	// 初始化文件对比器
-	if err = filediffer.New().Prepare(workspace); err != nil {
-		return errors.Wrap(err, "file differ preparing")
+	if err = vcs.New().Prepare(workspace); err != nil {
+		return errors.Wrap(err, "version controller preparing")
 	}
 	return nil
 }
@@ -183,7 +183,7 @@ func ensureWorkspace(workspace string) (err error) {
 	if _, err = os.Stat(workspace); os.IsNotExist(err) {
 		// 文件夹不存在，创建文件夹
 		logger.Info("create workspace directory")
-		if err := os.MkdirAll(workspace, 0750); err != nil {
+		if err = os.MkdirAll(workspace, 0750); err != nil {
 			return errors.Wrap(err, "create workspace directory")
 		}
 		return nil

@@ -19,11 +19,11 @@
 package main
 
 import (
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver"
 	"os"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 

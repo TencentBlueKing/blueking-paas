@@ -20,6 +20,8 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"net/http"
 	"os"
 	"path"
@@ -33,9 +35,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/filediffer"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
@@ -297,21 +297,21 @@ func DiffsHandler() gin.HandlerFunc {
 		}
 
 		// 初始化
-		opts := []filediffer.Option{}
+		opts := []vcs.Option{}
 		if c.Query("content") == "true" {
-			opts = append(opts, filediffer.WithContent())
+			opts = append(opts, vcs.WithContent())
 		}
-		differ := filediffer.New(opts...)
+		verCtrl := vcs.New(opts...)
 
-		if err := differ.Prepare(config.G.SourceCode.Workspace); err != nil {
+		if err := verCtrl.Prepare(config.G.SourceCode.Workspace); err != nil {
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message": fmt.Sprintf("file differ prepare failed: %s", err)},
+				gin.H{"message": fmt.Sprintf("vcs prepare failed: %s", err)},
 			)
 			return
 		}
 		// 获取文件变更信息
-		files, err := differ.Diff()
+		files, err := verCtrl.Diff()
 		if err != nil {
 			c.JSON(
 				http.StatusInternalServerError,
@@ -319,7 +319,13 @@ func DiffsHandler() gin.HandlerFunc {
 			)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"data": files})
+		// 如果指定 tree 为 true，则返回目录树格式
+		if c.Query("tree") == "true" {
+			c.JSON(http.StatusOK, gin.H{"total": len(files), "tree": files.AsTree()})
+			return
+		}
+		// 默认返回变更文件列表
+		c.JSON(http.StatusOK, gin.H{"total": len(files), "files": files})
 	}
 }
 

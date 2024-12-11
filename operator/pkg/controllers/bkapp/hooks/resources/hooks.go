@@ -164,7 +164,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 				// TODO: 挂载卷
 				Volumes: nil,
 				// TODO: 亲和性、污点
-				NodeSelector: paasv1alpha2.BuildEgressNodeSelector(bkapp),
+				NodeSelector: common.BuildNodeSelector(bkapp),
 				Tolerations:  nil,
 				// 镜像拉取凭证
 				ImagePullSecrets: common.BuildImagePullSecrets(bkapp),

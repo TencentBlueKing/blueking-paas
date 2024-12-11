@@ -16,10 +16,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package v1alpha2
+package common
 
-func BuildEgressNodeSelector(app *BkApp) map[string]string {
-	if egressClusterStateName, ok := app.Annotations[EgressClusterStateNameAnnoKey]; ok {
+import (
+	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+)
+
+// BuildNodeSelector ...
+func BuildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
+	// build the node selector from egress config
+	return buildEgressNodeSelector(app)
+}
+
+// buildEgressNodeSelector build the node selector from egress config
+func buildEgressNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
+	if egressClusterStateName, ok := app.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey]; ok {
 		return map[string]string{egressClusterStateName: "1"}
 	}
 	return nil

@@ -119,18 +119,31 @@
             slot="append"
             v-if="!isPageEdit"
           >
-            <div
-              v-if="!envVarList.length"
-              class="exception-wrap-cls"
-            >
-              {{ $t('暂无数据') }}
-            </div>
+            <template v-if="!envVarList.length">
+              <!-- 存在预设环境变量空状态 -->
+              <div
+                v-if="varPresetlLength"
+                class="exception-wrap-cls file"
+              >
+                {{ $t('暂无数据') }}
+              </div>
+              <!-- 无预设环境变量空状态 -->
+              <bk-exception
+                v-else
+                class="exception-wrap-cls"
+                type="empty"
+                scene="part"
+              >
+                <span>{{ $t('暂无数据') }}</span>
+              </bk-exception>
+            </template>
             <!-- 应用描述文件 -->
             <app-description-file
               v-if="showChild"
               :env-vars="envLocalVarList"
               :active-env="activeEnvValue"
               :order-by="curSortKey"
+              @var-preset-length="varPresetlLength = $event"
             />
           </template>
           <bk-table-column
@@ -656,6 +669,7 @@ export default {
       activeEnvValue: 'all',
       builtInEnvVars: {},
       showChild: false,
+      varPresetlLength: 0,
     };
   },
   computed: {
@@ -1911,12 +1925,16 @@ a.is-disabled {
   margin-top: 24px;
 }
 .exception-wrap-cls {
-  height: 42px;
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: #979ba5;
+  &.file {
+    height: 42px;
+    font-size: 12px;
+    color: #979ba5;
+    border-bottom: 1px solid #dfe0e5;
+  }
 }
 .variable-table-cls {
   /deep/ .bk-table-empty-block {

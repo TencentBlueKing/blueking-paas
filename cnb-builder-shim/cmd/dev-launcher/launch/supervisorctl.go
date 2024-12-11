@@ -103,7 +103,7 @@ type SupervisorConf struct {
 }
 
 // MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
+func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.EnvV2) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
 	}
@@ -207,7 +207,7 @@ func (ctl *SupervisorCtl) Stop() error {
 //
 // see detail environment conf in http://supervisord.org/configuration.html
 // char " and % in environment value will cause supervisord to fail
-func validateEnvironment(procEnvs []appdesc.Env) error {
+func validateEnvironment(procEnvs []appdesc.EnvV2) error {
 	invalidChars := `"%`
 	invalidEnvNames := []string{}
 	for _, env := range procEnvs {

@@ -47,13 +47,13 @@ var _ = Describe("Test supervisorctl", func() {
 
 	DescribeTable(
 		"Test MakeSupervisorConf with invalid environment variables",
-		func(processes []Process, procEnv []appdesc.Env, expectedErrorStr string) {
+		func(processes []Process, procEnv []appdesc.EnvV2, expectedErrorStr string) {
 			_, err := MakeSupervisorConf(processes, procEnv...)
 			Expect(err.Error()).To(Equal(expectedErrorStr))
 		}, Entry(
 			"invalid with (%)",
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
-			[]appdesc.Env{
+			[]appdesc.EnvV2{
 				{Key: "FOO", Value: `%abc`},
 				{Key: "BAR", Value: `ab%c`},
 			},
@@ -62,7 +62,7 @@ var _ = Describe("Test supervisorctl", func() {
 		Entry(
 			"invalid with (%)",
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
-			[]appdesc.Env{
+			[]appdesc.EnvV2{
 				{Key: "FOO", Value: `%abc`},
 				{Key: "BAR", Value: `abc`},
 			},
@@ -71,7 +71,7 @@ var _ = Describe("Test supervisorctl", func() {
 		Entry(
 			`invalid with ("%)`,
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
-			[]appdesc.Env{
+			[]appdesc.EnvV2{
 				{Key: "FOO_TEST", Value: `http://abc.com/cc`},
 				{Key: "FOO", Value: `%abc`},
 				{Key: "BAR", Value: `ab"c`},
@@ -80,7 +80,7 @@ var _ = Describe("Test supervisorctl", func() {
 		),
 	)
 
-	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
+	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.EnvV2, expectedConfContent string) {
 		conf, _ := MakeSupervisorConf(processes, procEnv...)
 		Expect(ctl.refreshConf(conf)).To(BeNil())
 
@@ -90,7 +90,7 @@ var _ = Describe("Test supervisorctl", func() {
 		[]Process{
 			{ProcType: "web", CommandPath: "/cnb/processes/web"},
 			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
-		}, []appdesc.Env{},
+		}, []appdesc.EnvV2{},
 		fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
@@ -119,7 +119,7 @@ redirect_stderr = true
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
 				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 			},
-			[]appdesc.Env{
+			[]appdesc.EnvV2{
 				{Key: "DJANGO_SETTINGS_MODULE", Value: "settings"},
 				{Key: "WHITENOISE_STATIC_PREFIX", Value: "/static/"},
 			}, fmt.Sprintf(`[unix_http_server]

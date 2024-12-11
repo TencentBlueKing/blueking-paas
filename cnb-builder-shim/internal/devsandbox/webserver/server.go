@@ -258,7 +258,7 @@ func ProcessListHandler() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"processes": appDesc.Module.Processes})
+		c.JSON(http.StatusOK, gin.H{"processes": appDesc.GetProcesses()})
 	}
 }
 

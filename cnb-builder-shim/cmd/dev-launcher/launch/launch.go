@@ -44,19 +44,19 @@ type Process struct {
 type metaProcesses []launch.Process
 
 // Run launches the given launch.Process list and app desc.
-func Run(mdProcesses metaProcesses, desc *appdesc.AppDesc) error {
+func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 	processes, err := symlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
 
-	if releaseHook := desc.Module.Scripts.PreReleaseHook; releaseHook != "" {
-		if err = runPreReleaseHook(releaseHook, desc.Module.ProcEnvs); err != nil {
+	if releaseHook := desc.GetPreReleaseHook(); releaseHook != "" {
+		if err = runPreReleaseHook(releaseHook, desc.GetEnvs()); err != nil {
 			return errors.Wrap(err, "run pre release hook")
 		}
 	}
 
-	if err = reloadProcesses(processes, desc.Module.ProcEnvs); err != nil {
+	if err = reloadProcesses(processes, desc.GetEnvs()); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
@@ -104,7 +104,7 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	return processes, nil
 }
 
-func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
+func runPreReleaseHook(releaseHook string, runEnvs []appdesc.EnvV2) error {
 	cmd := exec.Command(launch.LauncherPath, releaseHook)
 	cmd.Dir = DefaultAppDir
 	cmd.Stderr = os.Stderr
@@ -118,7 +118,7 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 	return cmd.Run()
 }
 
-func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
+func reloadProcesses(processes []Process, procEnvs []appdesc.EnvV2) error {
 	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
 		return err
 	} else {

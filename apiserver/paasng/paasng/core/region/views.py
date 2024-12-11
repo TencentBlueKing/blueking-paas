@@ -14,9 +14,6 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from dataclasses import asdict
-
 from django.http import Http404
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -26,7 +23,7 @@ from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paasng.utils.views import allow_resp_patch
 
 from .models import get_all_regions
-from .serializers import RegionSerializer
+from .serializers import ModuleCustomDomainSLZ, RegionSerializer
 
 
 class RegionBaseViewSet(viewsets.ViewSet):
@@ -50,5 +47,5 @@ class RegionViewSet(RegionBaseViewSet):
 
         resp = RegionSerializer(region_object).serialize()
         # Attach region settings from workloads
-        resp["module_custom_domain"] = asdict(get_custom_domain_config(region))
+        resp["module_custom_domain"] = ModuleCustomDomainSLZ(get_custom_domain_config(region)).data()
         return Response(resp)

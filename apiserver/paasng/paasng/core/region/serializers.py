@@ -66,3 +66,12 @@ class MulModulesConfigConfigSLZ(serializers.Serializer):
 
 class EntranceConfigSLZ(serializers.Serializer):
     manually_upgrade_to_subdomain_allowed = serializers.BooleanField()
+
+
+class ModuleCustomDomainSLZ(serializers.Serializer):
+    """Serializer for application custom domain"""
+
+    enabled = serializers.BooleanField()
+    allow_user_modifications = serializers.BooleanField()
+    # TODO：兼容前端的处理逻辑，前端访问管理页面去掉后缀判断的相关逻辑后，可以去掉该参数
+    valid_domain_suffixes = serializers.ListField(default=[])

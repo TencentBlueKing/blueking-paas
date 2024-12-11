@@ -212,8 +212,6 @@ CUSTOM_DOMAIN_CONFIG = settings.get(
     "CUSTOM_DOMAIN_CONFIG",
     {
         "enabled": True,
-        # 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-        "valid_domain_suffixes": settings.get("VALID_CUSTOM_DOMAIN_SUFFIXES", []),
         # 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
         "allow_user_modifications": True,
     },

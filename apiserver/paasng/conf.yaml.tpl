@@ -892,14 +892,8 @@ BK_AUDIT_ENDPOINT = ""
 # CUSTOM_DOMAIN_CONFIG:
   ## 是否允许使用独立域名
   # enabled: true
-  ## 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-  # valid_domain_suffixes: []
   ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
   # allow_user_modifications: true
-
-## 独立域名简化版配置，表示允许用户配置的独立域名后缀列表，为空表示允许任意域名
-## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
-# VALID_CUSTOM_DOMAIN_SUFFIXES: []
 
 ## ---------------------------------------- Egress 配置 ----------------------------------------
 

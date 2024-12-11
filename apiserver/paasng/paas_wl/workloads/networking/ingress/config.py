@@ -16,8 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 
 from paasng.utils.configs import get_region_aware
 
@@ -29,13 +28,11 @@ class CustomDomainConfig:
     """Config object for application custom domain
 
     :param enabled: whether this module is enabled
-    :param valid_domain_suffixes: if given, only allow domains ends with those suffixes
     :param allow_user_modifications: allow user modify custom domain config or not, default to True
     :param scheme: Domain name scheme
     """
 
     enabled: bool = False
-    valid_domain_suffixes: List = field(default_factory=list)
     allow_user_modifications: bool = True
 
 

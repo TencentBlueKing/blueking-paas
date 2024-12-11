@@ -38,7 +38,7 @@ var _ = Describe("Test Types", func() {
 				{Action: FileActionModified, Path: "docs/example.txt"},
 			}
 
-			excepted := DirTree{
+			excepted := &DirTree{
 				Name: "/",
 				Dirs: []*DirTree{
 					{
@@ -75,6 +75,70 @@ var _ = Describe("Test Types", func() {
 				},
 				Files: Files{
 					{Action: FileActionAdded, Path: "README.md"},
+				},
+			}
+			Expect(files.AsTree()).To(Equal(excepted))
+		})
+
+		It("AsTree with compress", func() {
+			files := Files{
+				{Action: FileActionAdded, Path: "webfe/static/example.css"},
+				{Action: FileActionAdded, Path: "webfe/static/example.js"},
+				{Action: FileActionDeleted, Path: "api/main.py"},
+				{Action: FileActionDeleted, Path: "api/utils/stringx.py"},
+				{Action: FileActionModified, Path: "backend/cmd/main.go"},
+				{Action: FileActionModified, Path: "backend/pkg/types.go"},
+				{Action: FileActionModified, Path: "docs/common/example.txt"},
+				{Action: FileActionDeleted, Path: "mako/templates/mako/about_us.mako"},
+			}
+
+			excepted := &DirTree{
+				Name: "/",
+				Dirs: []*DirTree{
+					{
+						Name: "api",
+						Dirs: []*DirTree{
+							{
+								Name: "utils", Files: Files{
+									{Action: FileActionDeleted, Path: "stringx.py"},
+								},
+							},
+						},
+						Files: Files{
+							{Action: FileActionDeleted, Path: "main.py"},
+						},
+					},
+					{
+						Name: "backend", Dirs: []*DirTree{
+							{
+								Name: "cmd", Files: Files{
+									{Action: FileActionModified, Path: "main.go"},
+								},
+							},
+							{
+								Name: "pkg", Files: Files{
+									{Action: FileActionModified, Path: "types.go"},
+								},
+							},
+						},
+					},
+					{
+						Name: "docs/common", Files: Files{
+							{Action: FileActionModified, Path: "example.txt"},
+						},
+					},
+					{
+						Name: "mako/templates/mako",
+						Files: Files{
+							{Action: FileActionDeleted, Path: "about_us.mako"},
+						},
+					},
+					{
+						Name: "webfe/static", Files: Files{
+							{Action: FileActionAdded, Path: "example.css"},
+							{Action: FileActionAdded, Path: "example.js"},
+						},
+					},
 				},
 			}
 			Expect(files.AsTree()).To(Equal(excepted))

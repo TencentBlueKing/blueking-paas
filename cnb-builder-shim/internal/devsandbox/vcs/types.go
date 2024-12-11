@@ -20,6 +20,7 @@
 package vcs
 
 import (
+	"path"
 	"slices"
 	"strings"
 )
@@ -49,15 +50,8 @@ type File struct {
 // Files 文件列表
 type Files []File
 
-// DirTree 目录树
-type DirTree struct {
-	Name  string     `json:"name"`
-	Dirs  []*DirTree `json:"dirs"`
-	Files Files      `json:"files"`
-}
-
 // AsTree 转换成目录树形式
-func (files Files) AsTree() DirTree {
+func (files Files) AsTree() *DirTree {
 	// 按照文件路径排序
 	slices.SortFunc(files, func(a, b File) int {
 		return strings.Compare(a.Path, b.Path)
@@ -90,5 +84,32 @@ func (files Files) AsTree() DirTree {
 		f.Path = parts[len(parts)-1]
 		cur.Files = append(cur.Files, f)
 	}
-	return root
+
+	// 压缩目录树，避免过多的嵌套层级
+	return root.Compress()
+}
+
+// DirTree 目录树
+type DirTree struct {
+	Name  string     `json:"name"`
+	Dirs  []*DirTree `json:"dirs"`
+	Files Files      `json:"files"`
+}
+
+// Compress 压缩
+func (t *DirTree) Compress() *DirTree {
+	// 根目录不需要压缩，只有子目录需要
+	for idx, dt := range t.Dirs {
+		t.Dirs[idx] = dt.compress(dt.Name)
+	}
+	return t
+}
+
+func (t *DirTree) compress(prefix string) *DirTree {
+	if len(t.Files) == 0 && len(t.Dirs) == 1 {
+		subDir := t.Dirs[0]
+		subDir.Name = path.Join(prefix, subDir.Name)
+		return subDir.compress(subDir.Name)
+	}
+	return t
 }

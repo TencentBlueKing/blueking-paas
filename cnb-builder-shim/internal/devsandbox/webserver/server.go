@@ -20,8 +20,6 @@ package webserver
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"net/http"
 	"os"
 	"path"
@@ -35,7 +33,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
@@ -95,6 +95,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/processes/status", ProcessStatusHandler())
 	r.GET("/processes/list", ProcessListHandler())
 	r.GET("/diffs", DiffsHandler())
+	r.GET("/commit", CommitHandler())
 
 	return s, nil
 }
@@ -326,6 +327,36 @@ func DiffsHandler() gin.HandlerFunc {
 		}
 		// 默认返回变更文件列表
 		c.JSON(http.StatusOK, gin.H{"total": len(files), "files": files})
+	}
+}
+
+// CommitHandler 提交文件变更
+func CommitHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
+		// TODO 后续重构时需要统一
+		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},
+			)
+			return
+		}
+
+		commitMsg := c.Query("message")
+		if commitMsg == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "commit message is empty"})
+			return
+		}
+		// 提交变更
+		if err := vcs.New().Commit(commitMsg); err != nil {
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("failed to commit files: %s", err)},
+			)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	}
 }
 

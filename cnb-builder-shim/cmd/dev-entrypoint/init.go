@@ -20,7 +20,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -170,7 +170,7 @@ func initializeSourceCode() error {
 		return fmt.Errorf("TODO: clone git from revision")
 	}
 
-	// 初始化文件对比器
+	// 初始化版本控制器
 	if err = vcs.New().Prepare(workspace); err != nil {
 		return errors.Wrap(err, "version controller preparing")
 	}

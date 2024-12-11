@@ -114,6 +114,12 @@ func (v *VersionController) Diff() (Files, error) {
 	return files, nil
 }
 
+// Commit 提交变更
+func (v *VersionController) Commit(message string) error {
+	_, err := v.runGitCommand("commit", "-m", message)
+	return err
+}
+
 // 执行 Git 命令
 func (v *VersionController) runGitCommand(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)

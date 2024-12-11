@@ -341,13 +341,6 @@
 ## Region 配置
 # REGION_CONFIGS: {}
 
-## 应用独立域名相关配置
-# CUSTOM_DOMAIN_CONFIG:
-  ## 是否允许使用独立域名
-  # enabled: true
-  ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-  # allow_user_modifications: true
-
 ## 蓝鲸 OAuth 服务地址
 # BK_OAUTH_API_URL: http://localhost:8080
 

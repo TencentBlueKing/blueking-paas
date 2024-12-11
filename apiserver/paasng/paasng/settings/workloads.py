@@ -207,16 +207,6 @@ ENABLE_MODERN_INGRESS_SUPPORT = settings.get("ENABLE_MODERN_INGRESS_SUPPORT", Tr
 # 是否开启终端色彩
 COLORFUL_TERMINAL_OUTPUT = True
 
-# # 应用独立域名相关配置
-# CUSTOM_DOMAIN_CONFIG = settings.get(
-#     "CUSTOM_DOMAIN_CONFIG",
-#     {
-#         "enabled": True,
-#         # 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-#         "allow_user_modifications": True,
-#     },
-# )
-
 # ---------------
 # egress 配置
 # ---------------

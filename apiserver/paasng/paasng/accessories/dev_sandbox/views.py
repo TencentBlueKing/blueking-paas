@@ -40,7 +40,9 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.constants import FileChangeType
+from paasng.platform.sourcectl.exceptions import CallGitApiFailed
 from paasng.platform.sourcectl.models import ChangedFile, CommitInfo, VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
@@ -54,7 +56,6 @@ from .serializers import (
     DevSandboxSLZ,
     DevSandboxWithCodeEditorDetailSLZ,
 )
-from ...platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
@@ -316,23 +317,26 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
         commit_info = self._build_commit_info(module, dev_sandbox, diffs, data["message"])
         # 3. 调用代码库 API 提交代码
         repo_url = self._commit_to_repository(module, dev_sandbox, operator, commit_info)
+        # 4. 在沙箱中也进行一次 commit，否则无法重复提交
+        self._commit_in_dev_sandbox(detail, data["message"])
 
-        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}))
+        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data)
 
     @staticmethod
     def _fetch_dev_sandbox_diffs(detail: DevSandboxWithCodeEditorDetail) -> List[Dict]:
         """从沙箱获取代码变更文件"""
+        # FIXME（沙箱重构）
+        #  1. 这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
+        #  2. token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
         resp = requests.get(
-            # FIXME（沙箱重构）这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
             f"http://{detail.urls.devserver_url}diffs",
-            # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
             headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
             params={"content": "true"},
         )
         if resp.status_code != status.HTTP_200_OK:
             raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)
 
-        return resp.json()["data"]
+        return resp.json()["files"]
 
     @staticmethod
     def _build_commit_info(module: Module, dev_sandbox: DevSandbox, diffs: List[Dict], commit_msg: str) -> CommitInfo:
@@ -356,5 +360,21 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
     def _commit_to_repository(module: Module, dev_sandbox: DevSandbox, operator: str, commit_info: CommitInfo) -> str:
         """提交代码到代码库"""
         repo_ctrl = get_repo_controller(module, operator)
-        repo_ctrl.batch_commit_files(commit_info)
+        try:
+            repo_ctrl.batch_commit_files(commit_info)
+        except CallGitApiFailed as e:
+            raise error_codes.CANNOT_COMMIT_TO_REPO.f(str(e))
+
         return repo_ctrl.build_url(dev_sandbox.version_info)
+
+    @staticmethod
+    def _commit_in_dev_sandbox(detail: DevSandboxWithCodeEditorDetail, commit_msg: str) -> None:
+        """在沙箱本地执行一次 commit"""
+        # FIXME（沙箱重构）同上
+        resp = requests.get(
+            f"http://{detail.urls.devserver_url}commit",
+            headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
+            params={"message": commit_msg},
+        )
+        if resp.status_code != status.HTTP_200_OK:
+            raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)

@@ -336,7 +336,11 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
         if resp.status_code != status.HTTP_200_OK:
             raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)
 
-        return resp.json()["files"]
+        resp_data = resp.json()
+        if not resp_data["total"]:
+            raise error_codes.CANNOT_COMMIT_TO_REPO.f("no diff files found")
+
+        return resp_data["files"]
 
     @staticmethod
     def _build_commit_info(module: Module, dev_sandbox: DevSandbox, diffs: List[Dict], commit_msg: str) -> CommitInfo:

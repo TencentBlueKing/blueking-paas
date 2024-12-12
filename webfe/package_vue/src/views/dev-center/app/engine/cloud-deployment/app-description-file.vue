@@ -143,6 +143,7 @@ export default {
           },
         });
         this.data = this.formatVarPreset(this.envVars, result);
+        this.$emit('var-preset-length', this.data.length);
       } catch (e) {
         this.catchErrorHandler(e);
       }

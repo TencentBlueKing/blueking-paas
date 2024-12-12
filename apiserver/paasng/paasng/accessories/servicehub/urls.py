@@ -24,6 +24,7 @@ REGION = "(?P<region>[a-z0-9_-]{1,32})"
 SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
 APP_UUID = "(?P<application_id>[0-9a-f-]{32,36})"
 CATEGORY_ID = r"(?P<category_id>[\d]+)"
+SERVICE_INTANCE_ID = "(?P<service_instance_id>[0-9a-f-]{32,36})"
 
 urlpatterns = [
     # service APIs
@@ -99,6 +100,24 @@ urlpatterns = [
         make_app_pattern(f"/services/{SERVICE_UUID}/$", include_envs=False),
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
+    ),
+    # retrieve unbound instances by module and service_id
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"get": "retrieve_unbound_instances"}),
+        name="api.services.list_unbound_instance",
+    ),
+    # List unbound instances by module
+    re_path(
+        make_app_pattern("/services/attachments/unbound/$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"get": "list_unbound_instances_by_module"}),
+        name="api.services.attachment.unbound",
+    ),
+    # Recycle unbound instance
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound/{SERVICE_INTANCE_ID}/$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
+        name="api.services.attachment.unbound.recycle",
     ),
     # Manager service attachments (from services side)
     re_path(

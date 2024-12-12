@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Local services manager
-"""
+"""Local services manager"""
+
 import json
 import logging
 import uuid
@@ -37,8 +37,13 @@ from paasng.accessories.servicehub.exceptions import (
     ProvisionInstanceError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
-from paasng.accessories.servicehub.models import ServiceEngineAppAttachment, ServiceModuleAttachment
+from paasng.accessories.servicehub.models import (
+    ServiceEngineAppAttachment,
+    ServiceModuleAttachment,
+    UnboundServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.services import (
     NOTSET,
     BasePlanMgr,
@@ -50,8 +55,9 @@ from paasng.accessories.servicehub.services import (
     ServiceObj,
     ServiceSpecificationDefinition,
     ServiceSpecificationHelper,
+    UnboundEngineAppInstanceRel,
 )
-from paasng.accessories.services.models import Plan, Service
+from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -165,7 +171,18 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         ).inc()
 
     def recycle_resource(self):
+        if self.is_provisioned() and self.db_obj.service.prefer_async_delete:
+            self.mark_unbound()
         self.db_obj.clean_service_instance()
+
+    def mark_unbound(self):
+        UnboundServiceEngineAppAttachment.objects.create(
+            engine_app=self.db_obj.engine_app,
+            service=self.db_obj.service,
+            plan=self.db_obj.plan,
+            service_instance=self.db_obj.service_instance,
+            credentials_enabled=self.db_obj.credentials_enabled,
+        )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
@@ -179,6 +196,47 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
 
         return ServiceInstanceObj(
             uuid=str(self.db_obj.service_instance_id),
+            credentials=json.loads(self.db_obj.service_instance.credentials),
+            config=self.db_obj.service_instance.config,
+            should_hidden_fields=should_hidden_fields,
+            should_remove_fields=should_remove_fields,
+            create_time=self.db_obj.created,
+        )
+
+    def get_plan(self) -> LocalPlanObj:
+        return LocalPlanObj.from_db(self.db_obj.plan)
+
+
+class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
+    """A unbound relationship between EngineApp and Provisioned instance"""
+
+    def __init__(self, db_obj: UnboundServiceEngineAppAttachment):
+        self.db_obj = db_obj
+
+    def get_service(self) -> LocalServiceObj:
+        return LocalServiceObj.from_db_object(self.db_obj.service)
+
+    def is_recycled(self) -> bool:
+        if not ServiceInstance.objects.filter(uuid=self.db_obj.service_instance).exists():
+            self.db_obj.delete()
+            return True
+        return False
+
+    def recycle_resource(self) -> None:
+        if self.is_recycled():
+            return
+
+        self.db_obj.clean_service_instance()
+
+    def get_instance(self) -> ServiceInstanceObj:
+        """Get service instance object"""
+        # All local service instance's credentials was prefixed with service name
+        service_name = self.db_obj.service.name
+        should_hidden_fields = constants.SERVICE_HIDDEN_FIELDS.get(service_name, [])
+        should_remove_fields = constants.SERVICE_SENSITIVE_FIELDS.get(service_name, [])
+
+        return ServiceInstanceObj(
+            uuid=str(self.db_obj.service_instance),
             credentials=json.loads(self.db_obj.service_instance.credentials),
             config=self.db_obj.service_instance.config,
             should_hidden_fields=should_hidden_fields,
@@ -338,6 +396,16 @@ class LocalServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_unbound_instance_rels(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
+        """Return all unbound engine_app <-> local service instances by specified service (None for all)"""
+        qs = engine_app.unbound_service_attachment
+        if service:
+            qs = qs.filter(service_id=service.uuid)
+        for attachment in qs:
+            yield UnboundLocalEngineAppInstanceRel(attachment)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return ServiceEngineAppAttachment.objects.get(
@@ -385,6 +453,16 @@ class LocalServiceMgr(BaseServiceMgr):
             return ServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
         except ServiceEngineAppAttachment.DoesNotExist as e:
             raise SvcAttachmentDoesNotExist from e
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        try:
+            instance = UnboundServiceEngineAppAttachment.objects.get(
+                service_id=service.uuid,
+                service_instance__uuid=service_instance_id,
+            )
+        except UnboundServiceEngineAppAttachment.DoesNotExist as e:
+            raise UnboundSvcAttachmentDoesNotExist from e
+        return UnboundLocalEngineAppInstanceRel(instance)
 
 
 class LocalPlanMgr(BasePlanMgr):

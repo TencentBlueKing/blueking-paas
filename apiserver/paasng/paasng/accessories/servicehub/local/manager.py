@@ -400,7 +400,7 @@ class LocalServiceMgr(BaseServiceMgr):
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
         """Return all unbound engine_app <-> local service instances by specified service (None for all)"""
-        qs = engine_app.unbound_service_attachment
+        qs = engine_app.unbound_service_attachment.all()
         if service:
             qs = qs.filter(service_id=service.uuid)
         for attachment in qs:

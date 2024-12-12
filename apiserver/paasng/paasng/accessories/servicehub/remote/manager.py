@@ -294,7 +294,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             except Exception as e:
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
-            if self.db_obj.prefer_async_delete:
+            if self.remote_client.config.prefer_async_delete:
                 self.mark_unbound()
         self.db_obj.service_instance_id = None
         self.db_obj.save()
@@ -714,7 +714,7 @@ class RemoteServiceMgr(BaseServiceMgr):
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundRemoteEngineAppInstanceRel, None, None]:
         """Return all unbound engine_app <-> remote service instances"""
-        qs = engine_app.unbound_remote_service_attachment
+        qs = engine_app.unbound_remote_service_attachment.all()
         if service:
             qs = qs.filter(service_id=service.uuid)
         for attachment in qs:

@@ -198,34 +198,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({"count": len(results), "results": serializer.data})
 
     @app_action_required(AppAction.BASIC_DEVELOP)
-    def retrieve_unbound_instances(self, request, code, module_name, service_id):
-        """查看应用模块与增强服务已解绑实例详情"""
-        application = self.get_application()
-        module = self.get_module_via_path()
-        service = self.get_service(service_id, application)
-
-        results = []
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app, service=service):
-                try:
-                    instance = rel.get_instance()
-                except SvcInstanceNotFound:
-                    # 如果已经回收了，获取不到 instance，跳过
-                    continue
-                plan = rel.get_plan()
-                results.append(
-                    {
-                        "service_instance": instance,
-                        "environment": env.environment,
-                        "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "service_specs": plan.specifications,
-                        "usage": "{}",
-                    }
-                )
-        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
-
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def retrieve_specs(self, request, code, module_name, service_id):
         """获取应用已绑定的服务规格"""
         application = self.get_application()
@@ -305,6 +277,78 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 **mixed_service_mgr.get_enabled_env_keys(env.engine_app),
             }
         return Response(data=env_key_dict)
+
+    @app_action_required(AppAction.BASIC_DEVELOP)
+    def retrieve_unbound_instances(self, request, code, module_name, service_id):
+        """查看应用模块与增强服务已解绑实例详情"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = self.get_service(service_id, application)
+
+        results = []
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app, service=service):
+                try:
+                    instance = rel.get_instance()
+                except SvcInstanceNotFound:
+                    # 如果已经回收了，获取不到 instance，跳过
+                    continue
+                plan = rel.get_plan()
+                results.append(
+                    {
+                        "service_instance": instance,
+                        "environment": env.environment,
+                        "environment_name": AppEnvName.get_choice_label(env.environment),
+                        "service_specs": plan.specifications,
+                        "usage": "{}",
+                    }
+                )
+        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
+        return Response({"count": len(results), "results": serializer.data})
+
+    @app_action_required(AppAction.BASIC_DEVELOP)
+    def list_unbound_instances_by_module(self, request, code, module_name):
+        """查看模块所有已解绑增强服务实例，按增强服务归类"""
+        application = self.get_application()
+        module = self.get_module_via_path()
+
+        categorized_rels = defaultdict(list)
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
+                try:
+                    instance = rel.get_instance()
+                except SvcInstanceNotFound:
+                    # 如果已经回收了，获取不到 instance，跳过
+                    continue
+                plan = rel.get_plan()
+
+                categorized_rels[str(rel.db_obj.service_id)].append(
+                    {
+                        "service_instance": instance,
+                        "environment": env.environment,
+                        "environment_name": AppEnvName.get_choice_label(env.environment),
+                        "service_specs": plan.specifications,
+                        "usage": "{}",
+                    }
+                )
+
+        results = []
+        for service_id, rels in categorized_rels.items():
+            results.append(
+                {"service": mixed_service_mgr.get_or_404(service_id, application.region), "unbound_instances": rels}
+            )
+
+        serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
+        return Response(serializer.data)
+
+    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
+    def recycle_unbound_instance(self, request, code, module_name, service_id, service_instance_id):
+        """回收已解绑增强服务"""
+        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, service_instance_id)
+        unbound_instance.recycle_instance()
+
+        return Response()
 
 
 class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -785,49 +829,3 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
             results.append(attachment)
 
         return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)
-
-
-class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    def list(self, request, code, module_name):
-        """查看模块已解绑增强服务，按 service 分类"""
-        application = self.get_application()
-        module = self.get_module_via_path()
-
-        categorized_rels = defaultdict(list)
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
-                try:
-                    instance = rel.get_instance()
-                except SvcInstanceNotFound:
-                    # 如果已经回收了，获取不到 instance，跳过
-                    continue
-                plan = rel.get_plan()
-
-                categorized_rels[str(rel.db_obj.service_id)].append(
-                    {
-                        "service_instance": instance,
-                        "environment": env.environment,
-                        "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "service_specs": plan.specifications,
-                        "usage": "{}",
-                    }
-                )
-
-        results = []
-        for service_id, rels in categorized_rels.items():
-            results.append(
-                {"service": mixed_service_mgr.get_or_404(service_id, application.region), "unbound_instances": rels}
-            )
-
-        serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
-        return Response(serializer.data)
-
-    def recycle(self, request, code, module_name, service_id, service_instance_id):
-        """回收已解绑增强服务"""
-        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
-        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, service_instance_id)
-        unbound_instance.recycle_instance()
-
-        return Response()

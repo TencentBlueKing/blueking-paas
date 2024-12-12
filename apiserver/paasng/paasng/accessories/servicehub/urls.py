@@ -101,10 +101,23 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "retrieve", "delete": "unbind"}),
         name="api.services.list_by_application",
     ),
+    # retrieve unbound instances by module and service_id
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/unbound$", include_envs=False),
         views.ModuleServicesViewSet.as_view({"get": "retrieve_unbound_instances"}),
         name="api.services.list_unbound_instance",
+    ),
+    # List unbound instances by module
+    re_path(
+        make_app_pattern("/services/attachments/unbound/$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"get": "list_unbound_instances_by_module"}),
+        name="api.services.attachment.unbound",
+    ),
+    # Recycle unbound instance
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound/{SERVICE_INTANCE_ID}/$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
+        name="api.services.attachment.unbound.recycle",
     ),
     # Manager service attachments (from services side)
     re_path(
@@ -117,18 +130,6 @@ urlpatterns = [
         make_app_pattern(f"/services/{SERVICE_UUID}/credentials_enabled/$", include_envs=False),
         views.ServiceEngineAppAttachmentViewSet.as_view({"get": "list", "put": "update"}),
         name="api.services.credentials_enabled",
-    ),
-    # List unbound engine_app attachment instances
-    re_path(
-        make_app_pattern("/services/attachments/unbound/$", include_envs=False),
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list"}),
-        name="api.services.attachment.unbound",
-    ),
-    # Recycle unbound instance
-    re_path(
-        make_app_pattern(f"/services/{SERVICE_UUID}/unbound/{SERVICE_INTANCE_ID}/$", include_envs=False),
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "recycle"}),
-        name="api.services.attachment.unbound.recycle",
     ),
     # Service sharing APIs
     re_path(

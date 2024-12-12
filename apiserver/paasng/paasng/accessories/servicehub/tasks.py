@@ -73,6 +73,10 @@ def check_is_unbound_remote_service_instance_recycled():
                 # if not find service instance with this id, remote response http status code 404
                 if e.status_code == 404:
                     instance.delete()
-                    logger.info(f"unbound instance<{instance.service_instance_id}> recycled. ")
+                    logger.info(f"unbound service instance<{instance.service_instance_id}> is recycled.")
                     continue
-                logger.warning(f"retrive remote instance<{instance.service_instance_id}> failed.")
+                logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
+            except Exception as e:
+                logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
+            else:
+                logger.info(f"unbound service instance<{instance.service_instance_id}> is not recycled.")

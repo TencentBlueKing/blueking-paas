@@ -80,7 +80,7 @@ class TestReleaseStages:
             ("0.0.1", "failed", 201, ""),
         ],
     )
-    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
     def test_create_canry_release_version(
         self,
         test_release,
@@ -139,7 +139,7 @@ class TestReleaseStages:
             ("prod", "foo", "0.0.2", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
         ],
     )
-    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
     def test_create_release_version(
         self,
         test_release,
@@ -179,7 +179,7 @@ class TestReleaseStages:
             if status_code != 201:
                 assert resp.json()["code"] == resp_code
 
-    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
     def test_release_version(self, thirdparty_client, pd, plugin, api_client, iam_policy_client):
         # 当前插件没有正在执行的正式版本，可创建新的正式版本
         assert (

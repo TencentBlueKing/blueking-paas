@@ -21,6 +21,7 @@ from unittest import mock
 import pytest
 from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from django.conf import settings
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
@@ -45,8 +46,6 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginReleaseStrategy,
     PluginVisibleRangeDefinition,
 )
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from tests.utils.helpers import generate_random_string
 
 
@@ -271,8 +270,9 @@ def iam_policy_client():
 
 
 @pytest.fixture()
-def _setup_bk_user(bk_user):
-    AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)
+def _enable_plugin_center():
+    with override_settings(IS_ALLOW_PLUGIN_CENTER=True):
+        yield
 
 
 @pytest.fixture()

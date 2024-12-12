@@ -52,7 +52,7 @@ class BaseGitApiClient(abc.ABC):
     session: requests.Session
     token_holder: Optional[Oauth2TokenHolder]
 
-    AUTH_HEADER_KEY: str = "Authorization"
+    auth_header_key: str = "Authorization"
 
     @abc.abstractmethod
     def list_repo(self, **kwargs) -> List[Dict]:
@@ -108,7 +108,7 @@ class BaseGitApiClient(abc.ABC):
         """统计贡献"""
 
     @abc.abstractmethod
-    def batch_commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
+    def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
         """批量提交修改文件"""
 
     def _fetch_all_items(self, target_url: str, params: Optional[Dict] = None) -> Generator[Dict, None, None]:
@@ -176,7 +176,7 @@ class BaseGitApiClient(abc.ABC):
         """尝试 refresh token，失败时抛出异常（异常信息应该直接反馈到前端）"""
 
         # 没有 access_token 就不能 refresh，直接报错
-        if self.AUTH_HEADER_KEY not in self.session.headers:
+        if self.auth_header_key not in self.session.headers:
             raise exceptions.AccessTokenMissingError("access_token not found")
 
         # 没有 token holder 也不能 refresh，直接报错
@@ -192,4 +192,4 @@ class BaseGitApiClient(abc.ABC):
             raise exceptions.AccessTokenRefreshError("fail to refresh token")
 
         # 更新 OAuth token 后更新请求头
-        self.session.headers[self.AUTH_HEADER_KEY] = f"token {self.token_holder.access_token}"
+        self.session.headers[self.auth_header_key] = f"token {self.token_holder.access_token}"

@@ -329,7 +329,7 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
         #  1. 这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
         #  2. token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
         resp = requests.get(
-            f"http://{detail.urls.devserver_url}diffs",
+            f"http://{detail.urls.devserver_url}codes/diffs",
             headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
             params={"content": "true"},
         )
@@ -344,7 +344,19 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
 
     @staticmethod
     def _build_commit_info(module: Module, dev_sandbox: DevSandbox, diffs: List[Dict], commit_msg: str) -> CommitInfo:
-        """根据变更的文件构建提交信息"""
+        """根据变更的文件构建提交信息
+
+        :param module: 模块对象
+        :param dev_sandbox: 开发沙箱对象
+        :param diffs: 变更的文件列表，格式如：
+            [
+                {"path": "webfe/app.js", "action": "added", "content": "..."},
+                {"path": "api/main.py", "action": "modified", "content": "..."},
+                {"path": "backend/cmd/main.go", "action": "deleted", "content": "..."},
+            ]
+        :param commit_msg: 提交信息
+        :return: 提交详细信息
+        """
         # 代码部署目录
         source_dir = module.get_source_obj().get_source_dir()
 
@@ -362,10 +374,13 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
 
     @staticmethod
     def _commit_to_repository(module: Module, dev_sandbox: DevSandbox, operator: str, commit_info: CommitInfo) -> str:
-        """提交代码到代码库"""
+        """提交代码到代码库
+
+        :return: 代码库访问地址
+        """
         repo_ctrl = get_repo_controller(module, operator)
         try:
-            repo_ctrl.batch_commit_files(commit_info)
+            repo_ctrl.commit_files(commit_info)
         except CallGitApiFailed as e:
             raise error_codes.CANNOT_COMMIT_TO_REPO.f(str(e))
 
@@ -376,7 +391,7 @@ class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
         """在沙箱本地执行一次 commit"""
         # FIXME（沙箱重构）同上
         resp = requests.get(
-            f"http://{detail.urls.devserver_url}commit",
+            f"http://{detail.urls.devserver_url}codes/commit",
             headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
             params={"message": commit_msg},
         )

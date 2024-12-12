@@ -145,7 +145,7 @@ class BareGitRepoController:
     def get_diff_commit_logs(self, from_revision, to_revision, rel_filepath=None) -> List[CommitLog]:
         raise NotImplementedError
 
-    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+    def commit_files(self, commit_info: CommitInfo) -> None:
         raise NotImplementedError
 
     def read_file(self, file_path, version_info: VersionInfo) -> bytes:

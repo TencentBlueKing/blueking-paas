@@ -181,7 +181,7 @@ class GitlabRepoController(BaseGitRepoController):
             else []
         )
 
-    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """gitlab 不支持该功能"""
         raise NotImplementedError
 

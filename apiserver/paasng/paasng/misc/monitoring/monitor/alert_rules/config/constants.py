@@ -62,6 +62,6 @@ DEFAULT_RULE_CONFIGS = {
     AlertCode.GCS_MYSQL_SLOW_QUERY.value: {
         "display_name": _("GCS-MySQL 慢查询新增"),
         "metric_label_names": ["gcs_mysql_user"],
-        "threshold_expr": "> 0",  # 慢查询增长超过 0
+        "threshold_expr": "> 5",  # 慢查询增长超过 5
     },
 }

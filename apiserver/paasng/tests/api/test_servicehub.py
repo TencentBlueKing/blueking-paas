@@ -16,10 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import uuid
 from unittest import mock
 
 import pytest
 from django_dynamic_fixture import G
+from rest_framework import status
 
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
 from paasng.accessories.servicehub.services import ServiceInstanceObj
@@ -94,3 +96,40 @@ class TestServiceEngineAppAttachmentViewSet:
         assert set(response.data[service.display_name]) == {"a", "b"}
         # 增强服务环境变量设置为不写入则不返回
         assert credentials_disabled_service.display_name not in return_svc_names
+
+
+class TestUnboundServiceEngineAppAttachmentViewSet:
+    def create_mock_rel(self, service, credentials_enabled, create_time, **credentials):
+        rel = mock.MagicMock()
+        rel.get_instance.return_value = ServiceInstanceObj(
+            uuid=str(uuid.uuid4()), credentials=credentials, config={}, create_time=create_time
+        )
+        rel.get_plan.return_value = mock.MagicMock(spec=["specifications"])
+        rel.get_plan.return_value.specifications = {"name": "version"}
+        rel.get_service.return_value = service
+        rel.db_obj.credentials_enabled = credentials_enabled
+        return rel
+
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
+    def test_retrieve_unbound_service_instances(
+        self, mock_get_or_404, mock_list_unbound_instance_rels, api_client, bk_app, bk_module
+    ):
+        service = G(Service)
+        mock_get_or_404.return_value = service
+
+        mock_rel1 = self.create_mock_rel(service, True, datetime.datetime(2020, 1, 1), a=1, b=2)
+        mock_rel2 = self.create_mock_rel(service, False, datetime.datetime(2020, 1, 1), c=3)
+        mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2]
+
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{str(service.uuid)}/attachments/unbound/"
+
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        print(response_data)
+        assert response_data["count"] == 4
+        assert len(response_data["results"]) == 4
+        assert response_data["results"][0]["service_instance"]["credentials"] == '{"a": 1, "b": 2}'
+        assert response_data["results"][3]["service_specs"] == {"name": "version"}

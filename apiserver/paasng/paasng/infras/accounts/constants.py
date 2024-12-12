@@ -65,13 +65,11 @@ class AccountFeatureFlag(ChoicesEnum):
     ALLOW_ADVANCED_CREATION_OPTIONS = "ALLOW_ADVANCED_CREATION_OPTIONS"
     ENABLE_WEB_CONSOLE = "ENABLE_WEB_CONSOLE"
     ALLOW_CREATE_SMART_APP = "ALLOW_CREATE_SMART_APP"
-    ALLOW_PLUGIN_CENTER = "ALLOW_PLUGIN_CENTER"
 
     _choices_labels = [
         (ALLOW_ADVANCED_CREATION_OPTIONS, _("允许创建模块时使用高级选项")),
         (ENABLE_WEB_CONSOLE, _("允许打开控制台")),
         (ALLOW_CREATE_SMART_APP, _("允许创建 SMart 应用")),
-        (ALLOW_PLUGIN_CENTER, _("允许使用插件开发者中心")),
     ]
 
     _defaults = skip(
@@ -79,7 +77,6 @@ class AccountFeatureFlag(ChoicesEnum):
             ALLOW_ADVANCED_CREATION_OPTIONS: False,
             ENABLE_WEB_CONSOLE: False,
             ALLOW_CREATE_SMART_APP: settings.IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT,
-            ALLOW_PLUGIN_CENTER: settings.IS_ALLOW_PLUGIN_CENTER,
         }
     )
 

@@ -20,23 +20,16 @@ from typing import Dict, Optional, Type
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import UniqueTogetherValidator
 
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.models import Application
 
 
 # Custom Domain(end-user) serializers start
 class DomainEditableMixin(serializers.Serializer):
-    """A collection of editable fields for Domain
-
-    Context options:
-
-    - "valid_domain_suffixes": if given, validate domain_name with given suffixes
-    """
+    """A collection of editable fields for Domain"""
 
     path_prefix = serializers.RegexField(
         r"^/[^/]*/?$",
@@ -71,16 +64,6 @@ class DomainEditableMixin(serializers.Serializer):
             return "/"
         return value.rstrip("/") + "/"
 
-    def validate_domain_name(self, value: str):
-        """Validate domain name field"""
-        if self.context.get("valid_domain_suffixes") and not any(
-            value.endswith(suffix) for suffix in self.context["valid_domain_suffixes"]
-        ):
-            raise ValidationError(
-                "当前域名后缀非法，合法后缀：{}".format(" / ".join(self.context["valid_domain_suffixes"]))
-            )
-        return value
-
 
 class DomainSLZ(DomainEditableMixin):
     """For creation and representation"""
@@ -94,14 +77,6 @@ class DomainSLZ(DomainEditableMixin):
 
 class DomainForUpdateSLZ(DomainEditableMixin):
     """For updating Domain"""
-
-
-class ModuleCustomDomainSLZ(serializers.Serializer):
-    """Serializer for application custom domain"""
-
-    enabled = serializers.BooleanField()
-    valid_domain_suffixes = serializers.ListField()
-    allow_user_modifications = serializers.BooleanField()
 
 
 def validate_domain_payload(
@@ -119,9 +94,6 @@ def validate_domain_payload(
     serializer = serializer_cls(
         data=data,
         instance=instance,
-        context={
-            "valid_domain_suffixes": get_custom_domain_config(application.region).valid_domain_suffixes,
-        },
     )
     serializer.is_valid(raise_exception=True)
     return serializer.validated_data

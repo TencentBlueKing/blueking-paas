@@ -28,9 +28,9 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
-from paas_wl.workloads.networking.ingress.config import get_custom_domain_config
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -192,8 +192,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def allow_modifications(region) -> bool:
         """Whether modifying custom_domain is allowed"""
-        conf = get_custom_domain_config(region)
-        return conf.allow_user_modifications
+        return get_region(region).allow_user_modify_custom_domain
 
 
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):

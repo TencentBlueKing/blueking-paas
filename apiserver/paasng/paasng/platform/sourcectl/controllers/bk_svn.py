@@ -100,7 +100,7 @@ class SvnRepoController:
             for commit in self.svn_client.get_commit_logs(from_revision, to_revision, rel_filepath)
         ]
 
-    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """bk_svn 不支持该功能"""
         raise NotImplementedError
 

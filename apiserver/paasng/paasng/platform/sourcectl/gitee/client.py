@@ -140,7 +140,7 @@ class GiteeApiClient(BaseGitApiClient):
             "user_commit_nums": "unsupported",
         }
 
-    def batch_commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
+    def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
         """批量提交修改文件"""
         raise NotImplementedError("Gitee don't support batch commit currently")
 

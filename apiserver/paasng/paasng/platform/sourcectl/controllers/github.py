@@ -139,7 +139,7 @@ class GitHubRepoController(BaseGitRepoController):
         """github 不支持该功能"""
         raise NotImplementedError
 
-    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """github 不支持该功能"""
         raise NotImplementedError
 

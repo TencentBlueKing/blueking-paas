@@ -106,7 +106,7 @@ class RepoController(Protocol):
     def get_diff_commit_logs(self, from_revision: str, to_revision: str, rel_filepath=None) -> List[CommitLog]:
         """读取 from_revision 至 to_revision 关于 rel_filepath 的所有 commit 日志条目"""
 
-    def batch_commit_files(self, commit_info: CommitInfo) -> None:
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """批量提交文件"""
 
     @abc.abstractmethod

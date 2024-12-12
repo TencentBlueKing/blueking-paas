@@ -94,8 +94,8 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/app_logs", AppLogHandler())
 	r.GET("/processes/status", ProcessStatusHandler())
 	r.GET("/processes/list", ProcessListHandler())
-	r.GET("/diffs", DiffsHandler())
-	r.GET("/commit", CommitHandler())
+	r.GET("/codes/diffs", CodeDiffsHandler())
+	r.GET("/codes/commit", CodeCommitHandler())
 
 	return s, nil
 }
@@ -284,8 +284,8 @@ func ProcessListHandler() gin.HandlerFunc {
 	}
 }
 
-// DiffsHandler 提供文件变更信息
-func DiffsHandler() gin.HandlerFunc {
+// CodeDiffsHandler 提供文件变更信息
+func CodeDiffsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一
@@ -330,8 +330,8 @@ func DiffsHandler() gin.HandlerFunc {
 	}
 }
 
-// CommitHandler 提交文件变更
-func CommitHandler() gin.HandlerFunc {
+// CodeCommitHandler 提交文件变更
+func CodeCommitHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一

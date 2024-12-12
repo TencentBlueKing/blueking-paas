@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Utilities related with ingress"""
+
 from typing import Dict, List
 
 from django.conf import settings
@@ -22,7 +23,6 @@ from django.conf import settings
 from paas_wl.workloads.networking.entrance.allocator.domains import Domain, ModuleEnvDomains
 from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths, Subpath
 from paas_wl.workloads.networking.ingress.shim import sync_subdomains, sync_subpaths
-from paasng.core.region.models import get_region
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
@@ -39,9 +39,8 @@ class AppDefaultDomains:
 
     def initialize_domains(self):
         """calculate and store app's default subdomains"""
-        region = get_region(self.engine_app.region)
-        # get domains only if current region was configured to use "SUBDOMAIN" type entrance
-        if region.entrance_config.exposed_url_type == ExposedURLType.SUBDOMAIN:
+        # get domains only if the module was configured to use "SUBDOMAIN" type entrance
+        if self.env.module.exposed_url_type == ExposedURLType.SUBDOMAIN:
             # calculate default subdomains
             self.domains = ModuleEnvDomains(self.env).all()
 

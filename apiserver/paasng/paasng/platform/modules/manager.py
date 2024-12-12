@@ -34,7 +34,7 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
@@ -155,6 +155,12 @@ class ModuleInitializer:
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
+
+        # Also set the module's exposed_url_type by the cluster
+        self.module.exposed_url_type = get_exposed_url_type(
+            region=self.application.region, cluster_name=cluster_name
+        ).value
+        self.module.save(update_fields=["exposed_url_type"])
 
     def initialize_vcs_with_template(
         self,

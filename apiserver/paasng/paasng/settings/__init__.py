@@ -927,7 +927,6 @@ DEFAULT_REGION_TEMPLATE = {
     "basic_info": {
         "description": "默认版",
         "link_production_app": BK_CONSOLE_URL + "?app={code}",
-        "link_engine_app": "http://example.com/{region}-{name}/",
         "extra_logo_bucket_info": {},
         "deploy_ver_for_update_svn_account": "default",
         "legacy_deploy_version": "default",
@@ -941,12 +940,6 @@ DEFAULT_REGION_TEMPLATE = {
                 "prod": "http://example.com/static_api/",
             },
         },
-    },
-    "entrance_config": {
-        # - 1: 子路径模式
-        # - 2: 子域名模式
-        "exposed_url_type": 1,
-        "manually_upgrade_to_subdomain_allowed": False,
     },
     "mul_modules_config": {"creation_allowed": True},
     "enabled_feature_flags": [],

@@ -525,6 +525,77 @@ module:
         - bkAppCode: bk-user
 """,
             ),
+            # Test 3: simple template without module.source_dir
+            (
+                """spec_version: 2
+module:
+  language: Python
+  processes:
+    web:
+      command: gunicorn wsgi -w 4 -b [::]:${PORT}
+    worker:
+      command: celery -A app -l info
+""",
+                {
+                    "specVersion": 3,
+                    "module": {
+                        "name": "default",
+                        "language": "Python",
+                        "spec": {
+                            "processes": [
+                                {
+                                    "name": "web",
+                                    "procCommand": "gunicorn wsgi -w 4 -b [::]:${PORT}",
+                                    "services": [
+                                        {
+                                            "name": "web",
+                                            "protocol": "TCP",
+                                            "exposedType": {"name": "bk/http"},
+                                            "targetPort": settings.CONTAINER_PORT,
+                                            "port": 80,
+                                        }
+                                    ],
+                                },
+                                {
+                                    "name": "worker",
+                                    "procCommand": "celery -A app -l info",
+                                    "services": [
+                                        {
+                                            "name": "worker",
+                                            "protocol": "TCP",
+                                            "targetPort": settings.CONTAINER_PORT,
+                                            "port": 80,
+                                        }
+                                    ],
+                                },
+                            ]
+                        },
+                    },
+                },
+                f"""specVersion: 3
+module:
+  name: default
+  language: Python
+  spec:
+    processes:
+      - name: web
+        procCommand: gunicorn wsgi -w 4 -b [::]:${{PORT}}
+        services:
+          - name: web
+            protocol: TCP
+            exposedType:
+              name: bk/http
+            targetPort: {settings.CONTAINER_PORT}
+            port: 80
+      - name: worker
+        procCommand: celery -A app -l info
+        services:
+          - name: worker
+            protocol: TCP
+            targetPort: {settings.CONTAINER_PORT}
+            port: 80
+""",
+            ),
         ],
     )
     def test_app_desc_transform(self, api_client, spec2_yaml, expected_spec3_data, expected_spec3_yaml):

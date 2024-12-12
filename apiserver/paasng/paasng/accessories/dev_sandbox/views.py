@@ -16,9 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 import logging
 from pathlib import Path
-from typing import Dict
 
-from bkpaas_auth.models import User
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -38,10 +36,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.module import Module
-from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
@@ -99,8 +94,10 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
-        """部署开发沙箱"""
+        """部署开发沙箱
 
+        FIXME（沙箱重构）这个函数太长了，职责不清晰，重构时需要做拆分
+        """
         # 同时支持的开发沙箱数量是有上限的
         if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
@@ -112,16 +109,22 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
-        serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
-
         # 目前仅支持 vcs 类型的源码获取方式
         if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
-        # 获取版本信息
-        version_info = self._get_version_info(request.user, module, params)
+        serializer = CreateDevSandboxWithCodeEditorSLZ(
+            data=request.data, context={"module": module, "operator": request.user.pk}
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        # 代码版本信息
+        version_info = VersionInfo(
+            version_type=data["version_type"],
+            version_name=data["version_name"],
+            revision=data["revision"],
+        )
 
         dev_sandbox_code = gen_dev_sandbox_code()
         dev_sandbox = DevSandbox.objects.create(
@@ -137,10 +140,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         # 生成代码编辑器密码
         password = generate_password()
-        CodeEditor.objects.create(
-            dev_sandbox=dev_sandbox,
-            password=password,
-        )
+        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password)
 
         controller = DevSandboxWithCodeEditorController(
             app=app,
@@ -228,6 +228,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "urls": detail.urls,
+                # FIXME（沙箱重构） token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
@@ -265,27 +266,3 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             return Response(data={"result": False})
 
         return Response(data={"result": True})
-
-    @staticmethod
-    def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:
-        """Get VersionInfo from user inputted params"""
-        version_name = params["version_name"]
-        version_type = params["version_type"]
-        revision = params.get("revision")
-        try:
-            # 尝试根据获取最新的 revision
-            version_service = get_version_service(module, operator=user.pk)
-            revision = version_service.extract_smart_revision(f"{version_type}:{version_name}")
-        except GitLabBranchNameBugError as e:
-            raise error_codes.CANNOT_GET_REVISION.f(str(e))
-        except NotImplementedError:
-            logger.debug(
-                "The current source code system does not support parsing the version unique ID from the version name"
-            )
-        except Exception:
-            logger.exception("Failed to parse version information.")
-
-        # 如果前端没有提供 revision 信息, 就报错
-        if not revision:
-            raise error_codes.CANNOT_GET_REVISION
-        return VersionInfo(revision, version_name, version_type)

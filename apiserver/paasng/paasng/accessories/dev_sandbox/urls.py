@@ -17,7 +17,7 @@
 
 from paasng.utils.basic import make_app_pattern, re_path
 
-from .views import DevSandboxViewSet, DevSandboxWithCodeEditorViewSet
+from .views import DevSandboxCommitApi, DevSandboxViewSet, DevSandboxWithCodeEditorViewSet
 
 urlpatterns = [
     re_path(
@@ -27,6 +27,10 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/user/dev_sandbox_with_code_editor/$", include_envs=False),
         DevSandboxWithCodeEditorViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_detail"}),
+    ),
+    re_path(
+        make_app_pattern(r"/user/dev_sandbox_with_code_editor/commit/$", include_envs=False),
+        DevSandboxCommitApi.as_view(),
     ),
     re_path(
         r"api/bkapps/applications/(?P<code>[^/]+)/user/dev_sandbox_with_code_editors/pre_deploy_check/$",

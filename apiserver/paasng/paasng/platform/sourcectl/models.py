@@ -552,6 +552,25 @@ class GitProject:
         return f"{self.namespace}/{self.name}"
 
 
+@dataclass
+class ChangedFile:
+    """被修改的文件详情"""
+
+    path: str
+    content: str
+
+
+@dataclass
+class CommitInfo:
+    """提交数据"""
+
+    branch: str
+    message: str
+    add_files: List[ChangedFile] = field(default_factory=list)
+    edit_files: List[ChangedFile] = field(default_factory=list)
+    delete_files: List[ChangedFile] = field(default_factory=list)
+
+
 class BasicAuthHolderManager(models.Manager):
     def exists_by_repo(self, module: "Module", repo_obj: RepositoryInstance) -> bool:
         return bool(self.filter(repo_id=repo_obj.get_identity(), repo_type=repo_obj.get_source_type(), module=module))

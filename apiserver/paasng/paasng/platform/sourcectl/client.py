@@ -16,18 +16,19 @@
 # to the current version of the project delivered to anyone in the future.
 
 import abc
+import datetime
 import itertools
 import logging
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Union
 
+import arrow
 import requests
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
 from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.platform.sourcectl import exceptions
-from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.models import CommitInfo, GitProject
 
 logger = logging.getLogger(__name__)
 
@@ -43,34 +44,15 @@ DEFAULT_REPO_REF = "master"
 RETRY_TIME = 3
 
 
-class GitRepoProvider(StrStructuredEnum):
-    """Git 仓库服务提供方"""
-
-    GitHub = EnumField("github", label="GitHub")
-    Gitee = EnumField("gitee", label="Gitee")
-    GitLab = EnumField("gitlab", label="GitLab")
-
-
 class BaseGitApiClient(abc.ABC):
     """Git 基础 API SDK"""
 
-    repo_provider: Optional[str] = None
+    api_url: str
+    access_token: str
+    session: requests.Session
+    token_holder: Optional[Oauth2TokenHolder]
 
-    def __init__(self, api_url: str, **kwargs):
-        self.api_url = api_url
-        self.session = requests.session()
-
-        headers = {}
-        if "oauth_token" in kwargs:
-            self.access_token = kwargs["oauth_token"]
-            # GitHub token use Authorization
-            if self.repo_provider == GitRepoProvider.GitHub:
-                headers["Authorization"] = f"token {self.access_token}"
-        else:
-            raise exceptions.AccessTokenMissingError("oauth_token required")
-        self.session.headers.update(headers)
-
-        self.__token_holder: Optional[Oauth2TokenHolder] = kwargs.get("__token_holder")
+    auth_header_key: str = "Authorization"
 
     @abc.abstractmethod
     def list_repo(self, **kwargs) -> List[Dict]:
@@ -116,8 +98,18 @@ class BaseGitApiClient(abc.ABC):
         """获取全量 commit 信息"""
 
     @abc.abstractmethod
-    def calculate_user_contribution(self, **kwargs) -> Dict:
+    def calculate_user_contribution(
+        self,
+        username: str,
+        project: GitProject,
+        begin_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+        end_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+    ) -> Dict:
         """统计贡献"""
+
+    @abc.abstractmethod
+    def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
+        """批量提交修改文件"""
 
     def _fetch_all_items(self, target_url: str, params: Optional[Dict] = None) -> Generator[Dict, None, None]:
         for cur_page in itertools.count(start=PAGE_START_AT):
@@ -142,12 +134,6 @@ class BaseGitApiClient(abc.ABC):
         :param kwargs: 请求参数
         :return: response.json()
         """
-        # Gitee token use query_params
-        if self.repo_provider == GitRepoProvider.Gitee:
-            params = kwargs.get("params") or {}
-            params["access_token"] = self.access_token
-            kwargs["params"] = params
-
         kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
         for __ in range(RETRY_TIME):
             raw_resp = self.session.get(target_url, **kwargs)
@@ -188,19 +174,22 @@ class BaseGitApiClient(abc.ABC):
 
     def _refresh_token(self):
         """尝试 refresh token，失败时抛出异常（异常信息应该直接反馈到前端）"""
+
         # 没有 access_token 就不能 refresh，直接报错
-        if "Authorization" not in self.session.headers:
+        if self.auth_header_key not in self.session.headers:
             raise exceptions.AccessTokenMissingError("access_token not found")
+
         # 没有 token holder 也不能 refresh，直接报错
-        if not self.__token_holder:
+        if not self.token_holder:
             raise exceptions.AccessTokenRefreshError("token holder unset")
-        # 假设是 OAUTH-TOKEN 过期, 尝试 refresh token
-        holder = self.__token_holder
-        logger.info(f"try to refresh token for {holder.user.username}")
+
+        # 假设是 OAuth token 过期, 尝试 refresh token
+        logger.info(f"try to refresh token for {self.token_holder.user.username}")
         try:
-            holder.refresh()
+            self.token_holder.refresh()
         except OAuth2Error:
-            logger.error(f"failed to refresh token for {holder.user.username}")  # noqa: TRY400
+            logger.error(f"failed to refresh token for {self.token_holder.user.username}")  # noqa: TRY400
             raise exceptions.AccessTokenRefreshError("fail to refresh token")
-        # 更新 token 后更新请求头
-        self.session.headers["Authorization"] = f"token {holder.access_token}"
+
+        # 更新 OAuth token 后更新请求头
+        self.session.headers[self.auth_header_key] = f"token {self.token_holder.access_token}"

@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Analyze all app's deploy status, highlight problematic stats
-"""
+"""Analyze all app's deploy status, highlight problematic stats"""
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -235,7 +235,7 @@ class AppProcess:
 
         :raises ValueError: when given manifest was not managed by engine app
         """
-        labels = pod.metadata.get("labels", {})
+        labels = pod.metadata.get("labels") or {}
         app_code = labels.get("app_code")
         if not app_code:
             raise ValueError("Pod isn't a valid app resource, no 'app_code' can be found in metadata.labels")

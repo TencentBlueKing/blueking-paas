@@ -42,35 +42,6 @@
               :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
             ></bk-input>
           </bk-form-item>
-          <bk-form-item
-            v-if="platformFeature.REGION_DISPLAY"
-            :label="$t('应用版本')"
-            :required="true"
-            error-display-type="'normal'"
-          >
-            <div
-              v-for="region in regionChoices"
-              :key="region.key"
-              class="form-group-flex-radio"
-            >
-              <div class="form-group-radio">
-                <bk-radio-group
-                  v-model="formData.region"
-                  style="width: 72px"
-                >
-                  <bk-radio
-                    :key="region.key"
-                    :value="region.key"
-                  >
-                    {{ region.value }}
-                  </bk-radio>
-                </bk-radio-group>
-                <p class="item-tips">
-                  {{ region.description }}
-                </p>
-              </div>
-            </div>
-          </bk-form-item>
         </bk-form>
       </div>
     </div>
@@ -106,8 +77,8 @@
       v-if="createLoading"
       class="form-loading"
     >
-      <img src="/static/images/create-app-loading.svg">
-      <p> {{ $t('应用创建中，请稍候') }} </p>
+      <img src="/static/images/create-app-loading.svg" />
+      <p>{{ $t('应用创建中，请稍候') }}</p>
     </div>
     <div
       v-else
@@ -134,14 +105,12 @@
   </div>
 </template>
 <script>
-import { forEachRight } from 'lodash';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {
   mixins: [sidebarDiffMixin],
   data() {
     return {
       createLoading: false,
-      regionChoices: [],
       // 基本信息
       formData: {
         code: '',
@@ -182,7 +151,8 @@ export default {
           {
             validator(val) {
               if (val === '') return true;
-              const reg = /^(https?|ftp|rtsp|mms):\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/[A-Za-z0-9.+&@#/%=~_|-]*)*$/;
+              const reg =
+                /^(https?|ftp|rtsp|mms):\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/[A-Za-z0-9.+&@#/%=~_|-]*)*$/;
               return reg.test(val);
             },
             message: this.$t('地址格式不正确'),
@@ -191,11 +161,6 @@ export default {
         ],
       },
     };
-  },
-  computed: {
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
   },
   created() {
     this.fetchSpecsByRegion();
@@ -215,13 +180,16 @@ export default {
     // 处理创建应用
     handleCreateApp() {
       // 表单校验
-      Promise.all([this.$refs.baseInfoForm.validate(), this.$refs.appMarketForm.validate()]).then(() => {
-        const params = this.formatParams();
-        this.createLoading = true;
-        this.submitCreateForm(params);
-      }, (validator) => {
-        console.error(validator);
-      });
+      Promise.all([this.$refs.baseInfoForm.validate(), this.$refs.appMarketForm.validate()]).then(
+        () => {
+          const params = this.formatParams();
+          this.createLoading = true;
+          this.submitCreateForm(params);
+        },
+        (validator) => {
+          console.error(validator);
+        }
+      );
     },
     // 提交表单
     async submitCreateForm(params) {
@@ -249,23 +217,18 @@ export default {
       }
     },
     // 获取应用版本
-    fetchSpecsByRegion() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/regions/specs`).then((resp) => {
-        const allRegionsSpecs = resp;
-        forEachRight(allRegionsSpecs, (value, key) => {
-          this.regionChoices.push({
-            key,
-            value: value.display_name,
-            description: value.description,
-          });
-        });
-        this.formData.region = this.regionChoices[0].key;
+    async fetchSpecsByRegion() {
+      try {
+        const res = await this.$store.dispatch('module/getLanguageInfo');
+        this.formData.region = Object.keys(res)[0] || 'default';
         // 收集初始依赖
         this.$nextTick(() => {
           const data = this.formatParams();
           this.initSidebarFormData(data);
         });
-      });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
     async back() {
       // 内容变更输入弹窗提示

@@ -123,8 +123,18 @@ func (v *VersionController) Commit(message string) error {
 		return err
 	}
 
-	_, err := v.runGitCommand("commit", "-m", message)
-	return err
+	commands := [][]string{
+		{"add", "."},
+		{"config", "user.name", "bkpaas"},
+		{"config", "user.email", "bkpaas@example.com"},
+		{"commit", "-m", message},
+	}
+	for _, cmd := range commands {
+		if _, err := v.runGitCommand(cmd...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // 执行 Git 命令

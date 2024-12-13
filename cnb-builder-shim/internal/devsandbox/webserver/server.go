@@ -302,15 +302,8 @@ func CodeDiffsHandler() gin.HandlerFunc {
 		if c.Query("content") == "true" {
 			opts = append(opts, vcs.WithContent())
 		}
-		verCtrl := vcs.New(opts...)
+		verCtrl := vcs.New(config.G.SourceCode.Workspace, opts...)
 
-		if err := verCtrl.Prepare(config.G.SourceCode.Workspace); err != nil {
-			c.JSON(
-				http.StatusInternalServerError,
-				gin.H{"message": fmt.Sprintf("vcs prepare failed: %s", err)},
-			)
-			return
-		}
 		// 获取文件变更信息
 		files, err := verCtrl.Diff()
 		if err != nil {
@@ -349,7 +342,7 @@ func CodeCommitHandler() gin.HandlerFunc {
 			return
 		}
 		// 提交变更
-		if err := vcs.New().Commit(commitMsg); err != nil {
+		if err := vcs.New(config.G.SourceCode.Workspace).Commit(commitMsg); err != nil {
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{"message": fmt.Sprintf("failed to commit files: %s", err)},

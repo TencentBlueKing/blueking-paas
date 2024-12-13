@@ -171,7 +171,7 @@ func initializeSourceCode() error {
 	}
 
 	// 初始化版本控制器
-	if err = vcs.New().Prepare(workspace); err != nil {
+	if err = vcs.New(workspace).Prepare(); err != nil {
 		return errors.Wrap(err, "version controller preparing")
 	}
 	return nil

@@ -36,8 +36,10 @@ type VersionController struct {
 }
 
 // New ...
-func New(opts ...Option) *VersionController {
-	v := &VersionController{}
+func New(srcPath string, opts ...Option) *VersionController {
+	v := &VersionController{
+		srcPath: srcPath,
+	}
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -45,9 +47,7 @@ func New(opts ...Option) *VersionController {
 }
 
 // Prepare 准备步骤
-func (v *VersionController) Prepare(srcPath string) error {
-	v.srcPath = srcPath
-
+func (v *VersionController) Prepare() error {
 	_, err := os.Stat(path.Join(v.srcPath, ".git"))
 	// 如果对应目录下存在 .git 目录，跳过
 	if err == nil {
@@ -77,6 +77,9 @@ func (v *VersionController) Prepare(srcPath string) error {
 
 // Diff 对比输出文件变更信息
 func (v *VersionController) Diff() (Files, error) {
+	if err := v.Prepare(); err != nil {
+		return nil, err
+	}
 	// 将所有文件添加到暂存区
 	if _, err := v.runGitCommand("add", "."); err != nil {
 		return nil, err
@@ -116,6 +119,10 @@ func (v *VersionController) Diff() (Files, error) {
 
 // Commit 提交变更
 func (v *VersionController) Commit(message string) error {
+	if err := v.Prepare(); err != nil {
+		return err
+	}
+
 	_, err := v.runGitCommand("commit", "-m", message)
 	return err
 }

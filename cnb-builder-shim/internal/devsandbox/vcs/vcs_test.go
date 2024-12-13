@@ -84,8 +84,8 @@ var _ = Describe("Test VersionController", func() {
 			Expect(runGitCommand(tmpDir, "config", "user.email", "bkpaas@example.com")).To(BeNil())
 			Expect(runGitCommand(tmpDir, "commit", "-m", "init")).To(BeNil())
 
-			verCtrl := New(WithContent())
-			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(tmpDir, WithContent())
+			Expect(verCtrl.Prepare()).To(BeNil())
 
 			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
@@ -121,8 +121,8 @@ var _ = Describe("Test VersionController", func() {
 		})
 
 		It("without .git", func() {
-			verCtrl := New(WithContent())
-			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(tmpDir, WithContent())
+			Expect(verCtrl.Prepare()).To(BeNil())
 
 			files, err := verCtrl.Diff()
 			Expect(err).To(BeNil())
@@ -150,8 +150,8 @@ var _ = Describe("Test VersionController", func() {
 		})
 
 		It("with ignore", func() {
-			verCtrl := New(WithContent())
-			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(tmpDir, WithContent())
+			Expect(verCtrl.Prepare()).To(BeNil())
 
 			_ = initFile(path.Join(tmpDir, "webfe/templates"), "example.html", ".html")
 			_ = initFile(path.Join(tmpDir, "v3logs"), "celery.log", "celery is running...")
@@ -169,8 +169,8 @@ var _ = Describe("Test VersionController", func() {
 		})
 
 		It("without content", func() {
-			verCtrl := New()
-			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(tmpDir)
+			Expect(verCtrl.Prepare()).To(BeNil())
 
 			_ = initFile(path.Join(tmpDir, "webfe/static"), "example.css", "css")
 			_ = initFile(path.Join(tmpDir, "v3logs"), "celery.log", "celery is running...")
@@ -187,8 +187,8 @@ var _ = Describe("Test VersionController", func() {
 		})
 
 		It("with special chars", func() {
-			verCtrl := New(WithContent())
-			Expect(verCtrl.Prepare(tmpDir)).To(BeNil())
+			verCtrl := New(tmpDir, WithContent())
+			Expect(verCtrl.Prepare()).To(BeNil())
 
 			_ = initFile(tmpDir, "example space.css", "css 代码")
 			_ = initFile(tmpDir, "example——中文.js", "js 代码")

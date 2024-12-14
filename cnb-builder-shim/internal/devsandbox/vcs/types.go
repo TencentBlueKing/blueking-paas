@@ -99,8 +99,8 @@ type DirTree struct {
 // Compress 压缩
 func (t *DirTree) Compress() *DirTree {
 	// 根目录不需要压缩，只有子目录需要
-	for idx, dt := range t.Dirs {
-		t.Dirs[idx] = dt.compress(dt.Name)
+	for idx, d := range t.Dirs {
+		t.Dirs[idx] = d.compress(d.Name)
 	}
 	return t
 }
@@ -110,6 +110,10 @@ func (t *DirTree) compress(prefix string) *DirTree {
 		subDir := t.Dirs[0]
 		subDir.Name = path.Join(prefix, subDir.Name)
 		return subDir.compress(subDir.Name)
+	}
+
+	for idx, d := range t.Dirs {
+		t.Dirs[idx] = d.compress(d.Name)
 	}
 	return t
 }

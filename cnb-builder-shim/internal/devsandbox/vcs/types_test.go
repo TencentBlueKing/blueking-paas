@@ -90,6 +90,10 @@ var _ = Describe("Test Types", func() {
 				{Action: FileActionModified, Path: "backend/pkg/types.go"},
 				{Action: FileActionModified, Path: "docs/common/example.txt"},
 				{Action: FileActionDeleted, Path: "mako/templates/mako/about_us.mako"},
+				{Action: FileActionDeleted, Path: "example/templates/example/home/templates/home/home.html"},
+				{Action: FileActionDeleted, Path: "example/templates/example/home/app.js"},
+				{Action: FileActionDeleted, Path: "example/templates/example/home.html"},
+				{Action: FileActionDeleted, Path: "example/apps.py"},
 			}
 
 			excepted := &DirTree{
@@ -125,6 +129,36 @@ var _ = Describe("Test Types", func() {
 					{
 						Name: "docs/common", Files: Files{
 							{Action: FileActionModified, Path: "example.txt"},
+						},
+					},
+					{
+						Name: "example",
+						Dirs: []*DirTree{
+							{
+								Name: "templates/example",
+								Dirs: []*DirTree{
+									{
+										Name: "home",
+										Dirs: []*DirTree{
+											{
+												Name: "templates/home",
+												Files: Files{
+													{Action: FileActionDeleted, Path: "home.html"},
+												},
+											},
+										},
+										Files: Files{
+											{Action: FileActionDeleted, Path: "app.js"},
+										},
+									},
+								},
+								Files: Files{
+									{Action: FileActionDeleted, Path: "home.html"},
+								},
+							},
+						},
+						Files: Files{
+							{Action: FileActionDeleted, Path: "apps.py"},
 						},
 					},
 					{

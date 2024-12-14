@@ -120,7 +120,7 @@ class DevSandboxSLZ(serializers.ModelSerializer):
 class DevSandboxCommitInputSLZ(serializers.Serializer):
     """沙箱开发环境代码提交"""
 
-    message = serializers.CharField(help_text="代码提交（Commit）信息")
+    message = serializers.CharField(min_length=1, max_length=256, help_text="代码提交（Commit）信息")
 
 
 class DevSandboxCommitOutputSLZ(serializers.Serializer):

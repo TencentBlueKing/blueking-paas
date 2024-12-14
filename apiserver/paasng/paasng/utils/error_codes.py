@@ -75,7 +75,7 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_("源码包已存在"), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_("缺失版本信息"), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
-    CANNOT_COMMIT_TO_REPO = ErrorCode(_("代码提交失败"), code_num=4312012)
+    CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志

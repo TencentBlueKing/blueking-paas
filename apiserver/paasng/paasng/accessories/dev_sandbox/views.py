@@ -14,23 +14,22 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import logging
-import os
-from pathlib import Path
-from typing import Dict, List
 
-import requests
+import logging
+from pathlib import Path
+
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import generics, status
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
-from paas_wl.bk_app.dev_sandbox.entities import DevSandboxWithCodeEditorDetail
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
+from paasng.accessories.dev_sandbox.commit import DevSandboxCommitor
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -40,14 +39,11 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models import Module
-from paasng.platform.sourcectl.constants import FileChangeType
-from paasng.platform.sourcectl.exceptions import CallGitApiFailed
-from paasng.platform.sourcectl.models import ChangedFile, CommitInfo, VersionInfo
-from paasng.platform.sourcectl.repo_controller import get_repo_controller
+from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
+from .exceptions import CannotCommitToRepository, DevSandboxApiException
 from .serializers import (
     CreateDevSandboxWithCodeEditorSLZ,
     DevSandboxCommitInputSLZ,
@@ -279,121 +275,35 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response(data={"result": True})
 
-
-class DevSandboxCommitApi(generics.CreateAPIView, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
     @swagger_auto_schema(
         tags=["开发沙箱"],
         operation_description="提交变更的代码",
         request_body=DevSandboxCommitInputSLZ(),
         responses={status.HTTP_200_OK: DevSandboxCommitOutputSLZ()},
     )
-    def post(self, request, *args, **kwargs):
+    def commit(self, request, code, module_name):
         slz = DevSandboxCommitInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        app = self.get_application()
         module = self.get_module_via_path()
         operator = request.user.pk
 
+        # 初始化提交器
         try:
-            dev_sandbox = DevSandbox.objects.get(owner=operator, module=module)
-        except DevSandbox.DoesNotExist:
+            commitor = DevSandboxCommitor(module, operator)
+        except (ObjectDoesNotExist, DevSandboxResourceNotFound):
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        controller = DevSandboxWithCodeEditorController(
-            app=app, module_name=module.name, dev_sandbox_code=dev_sandbox.code, owner=operator
-        )
+        # 沙箱代码提交
         try:
-            detail = controller.get_detail()
-        except DevSandboxResourceNotFound:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
+            repo_url = commitor.commit(data["message"])
+        except DevSandboxApiException as e:
+            raise error_codes.DEV_SANDBOX_API_ERROR.f(str(e))
+        except CannotCommitToRepository as e:
+            raise error_codes.CANNOT_COMMIT_TO_REPOSITORY.f(str(e))
 
-        # 1. 调用 devserver api 获取代码差异信息
-        diffs = self._fetch_dev_sandbox_diffs(detail)
-        # 2. 构建提交信息（CommitInfo）
-        commit_info = self._build_commit_info(module, dev_sandbox, diffs, data["message"])
-        # 3. 调用代码库 API 提交代码
-        repo_url = self._commit_to_repository(module, dev_sandbox, operator, commit_info)
-        # 4. 在沙箱中也进行一次 commit，否则无法重复提交
-        self._commit_in_dev_sandbox(detail, data["message"])
-
-        return Response(status=status.HTTP_200_OK, data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data)
-
-    @staticmethod
-    def _fetch_dev_sandbox_diffs(detail: DevSandboxWithCodeEditorDetail) -> List[Dict]:
-        """从沙箱获取代码变更文件"""
-        # FIXME（沙箱重构）
-        #  1. 这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
-        #  2. token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
-        resp = requests.get(
-            f"http://{detail.urls.devserver_url}codes/diffs",
-            headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
-            params={"content": "true"},
+        return Response(
+            status=status.HTTP_200_OK,
+            data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data,
         )
-        if resp.status_code != status.HTTP_200_OK:
-            raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)
-
-        resp_data = resp.json()
-        if not resp_data["total"]:
-            raise error_codes.CANNOT_COMMIT_TO_REPO.f("no diff files found")
-
-        return resp_data["files"]
-
-    @staticmethod
-    def _build_commit_info(module: Module, dev_sandbox: DevSandbox, diffs: List[Dict], commit_msg: str) -> CommitInfo:
-        """根据变更的文件构建提交信息
-
-        :param module: 模块对象
-        :param dev_sandbox: 开发沙箱对象
-        :param diffs: 变更的文件列表，格式如：
-            [
-                {"path": "webfe/app.js", "action": "added", "content": "..."},
-                {"path": "api/main.py", "action": "modified", "content": "..."},
-                {"path": "backend/cmd/main.go", "action": "deleted", "content": "..."},
-            ]
-        :param commit_msg: 提交信息
-        :return: 提交详细信息
-        """
-        # 代码部署目录
-        source_dir = module.get_source_obj().get_source_dir()
-
-        commit_info = CommitInfo(branch=dev_sandbox.version_info.version_name, message=commit_msg)
-        mapping = {
-            FileChangeType.ADDED: commit_info.add_files,
-            FileChangeType.MODIFIED: commit_info.edit_files,
-            FileChangeType.DELETED: commit_info.delete_files,
-        }
-        for item in diffs:
-            path = os.path.join(source_dir, item["path"]) if source_dir else item["path"]
-            mapping[item["action"]].append(ChangedFile(path, item["content"]))
-
-        return commit_info
-
-    @staticmethod
-    def _commit_to_repository(module: Module, dev_sandbox: DevSandbox, operator: str, commit_info: CommitInfo) -> str:
-        """提交代码到代码库
-
-        :return: 代码库访问地址
-        """
-        repo_ctrl = get_repo_controller(module, operator)
-        try:
-            repo_ctrl.commit_files(commit_info)
-        except CallGitApiFailed as e:
-            raise error_codes.CANNOT_COMMIT_TO_REPO.f(str(e))
-
-        return repo_ctrl.build_url(dev_sandbox.version_info)
-
-    @staticmethod
-    def _commit_in_dev_sandbox(detail: DevSandboxWithCodeEditorDetail, commit_msg: str) -> None:
-        """在沙箱本地执行一次 commit"""
-        # FIXME（沙箱重构）同上
-        resp = requests.get(
-            f"http://{detail.urls.devserver_url}codes/commit",
-            headers={"Authorization": f"Bearer {detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
-            params={"message": commit_msg},
-        )
-        if resp.status_code != status.HTTP_200_OK:
-            raise error_codes.DEV_SANDBOX_API_ERROR.f(resp.text)

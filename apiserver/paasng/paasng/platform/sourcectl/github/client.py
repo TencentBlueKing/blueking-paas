@@ -66,7 +66,7 @@ class GitHubApiClient(BaseGitApiClient):
         """
         url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/contents/{filepath}")
         resp = self._request_with_retry(url, params={"ref": ref})
-        if resp.get("encoding") != "base64":
+        if not resp or resp.get("encoding") != "base64":
             raise exceptions.UnsupportedGitRepoEncode(_("当前仅支持 base64 编码格式"))
 
         return base64.b64decode(resp["content"])

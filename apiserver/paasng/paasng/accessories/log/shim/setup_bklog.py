@@ -19,7 +19,6 @@ import datetime
 import logging
 from typing import Union
 
-import cattr
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
 
@@ -27,7 +26,6 @@ from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
-    ElasticSearchHost,
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
@@ -43,7 +41,7 @@ from paasng.infras.bk_log.definitions import (
     StorageConfig,
 )
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.constants import AppFeatureFlag, AppLanguage
+from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -141,22 +139,14 @@ def update_or_create_es_search_config(
         r"|otelServiceName|otelTraceID|requestID|environment|process_id|stream|__ext_json\..*",
     )
 
-    if application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_CLIENT):
-        defaults = {
-            "backend_type": "bkLog",
-            "bk_log_config": {
-                "scenarioID": "log",
-            },
-            "search_params": search_params,
-        }
-    else:
-        # 使用日志平台采集日志, 但使用 ES 查询日志, 需要保证日志平台的 storage_id 与 ELK 方案的 ES 为同一个 ES
-        host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
-        defaults = {
-            "backend_type": "es",
-            "elastic_search_host": host,
-            "search_params": search_params,
-        }
+    # 日志平台查询 API 参数配置
+    defaults = {
+        "backend_type": "bkLog",
+        "bk_log_config": {
+            "scenarioID": "log",
+        },
+        "search_params": search_params,
+    }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,

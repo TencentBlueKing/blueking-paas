@@ -29,14 +29,20 @@
               {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
             </bk-button>
           </span>
-          <bk-button :theme="'default'" @click="handleCancel">
+          <bk-button
+            :theme="'default'"
+            @click="handleCancel"
+          >
             {{ $t('取消') }}
           </bk-button>
         </div>
       </template>
 
       <!-- 部署限制 -->
-      <section v-if="isShowErrorAlert.deploy" class="customize-alert-wrapper mb12">
+      <section
+        v-if="isShowErrorAlert.deploy"
+        class="customize-alert-wrapper mb12"
+      >
         <p class="text">
           <i class="paasng-icon paasng-remind exclamation-cls"></i>
           <span>{{ deployErrorData?.message }}</span>
@@ -57,8 +63,14 @@
             @click="getDeployPreparations('deploy')"
           >
             {{ $t('刷新') }}
-            <i class="paasng-icon paasng-refresh-line" v-if="!deployRefreshLoading" />
-            <round-loading class="round-loading-cls" v-else />
+            <i
+              class="paasng-icon paasng-refresh-line"
+              v-if="!deployRefreshLoading"
+            />
+            <round-loading
+              class="round-loading-cls"
+              v-else
+            />
           </bk-button>
         </div>
       </section>
@@ -183,7 +195,7 @@
             <!-- smartAPP 不展示，代码版本差异 -->
             <bk-button
               v-if="isShowCodeDifferences"
-              style="font-size: 12px;"
+              style="font-size: 12px"
               theme="primary"
               text
               :disabled="isVersionDifferenceDisabled"
@@ -286,14 +298,20 @@
           <bk-radio-group v-model="imagePullStrategy">
             <bk-radio :value="'IfNotPresent'">
               IfNotPresent
-              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'IfNotPresent'">
+              <span
+                class="last-selected"
+                v-if="lastSelectedImagePullStrategy === 'IfNotPresent'"
+              >
                 ({{ $t('上次选择') }})
               </span>
             </bk-radio>
             <p class="tip mb10">{{ $t('当本地不存在镜像时从远程仓库拉取') }}</p>
             <bk-radio :value="'Always'">
               Always
-              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'Always'">
+              <span
+                class="last-selected"
+                v-if="lastSelectedImagePullStrategy === 'Always'"
+              >
                 ({{ $t('上次选择') }})
               </span>
             </bk-radio>
@@ -302,7 +320,10 @@
         </div>
       </div>
 
-      <section v-if="isShowCodeAlert" class="customize-alert-wrapper mt10">
+      <section
+        v-if="isShowCodeAlert"
+        class="customize-alert-wrapper mt10"
+      >
         <p class="text">
           <i class="paasng-icon paasng-remind exclamation-cls"></i>
           <span>{{ codeRepositoryErrorData?.message }}</span>
@@ -334,8 +355,14 @@
             @click="handleRefresh"
           >
             {{ $t('刷新') }}
-            <i class="paasng-icon paasng-refresh-line" v-if="!codeRefreshLoading" />
-            <round-loading class="round-loading-cls" v-else />
+            <i
+              class="paasng-icon paasng-refresh-line"
+              v-if="!codeRefreshLoading"
+            />
+            <round-loading
+              class="round-loading-cls"
+              v-else
+            />
           </bk-button>
         </div>
       </section>
@@ -384,7 +411,7 @@
                   {{ $t('已选中分支：') }}
                   <strong>{{ branchValue.split(':')[1] || '--' }}</strong>
                 </span>
-                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="revision-diff-sep ml25 mr25">&lt; &gt;</span>
                 <span class="">
                   {{ $t('已部署分支：') }}
                   <strong>
@@ -396,16 +423,16 @@
             </form>
             <table class="ps-table ps-table-default ps-table-outline">
               <colgroup>
-                <col style="width:150px">
-                <col style="width:150px">
-                <col style="width:170px">
-                <col style="width:250px">
+                <col style="width: 150px" />
+                <col style="width: 150px" />
+                <col style="width: 170px" />
+                <col style="width: 250px" />
               </colgroup>
               <tr class="ps-table-environment-header">
-                <th> {{ $t('版本号') }} </th>
-                <th> {{ $t('提交人') }} </th>
-                <th> {{ $t('提交时间') }} </th>
-                <th> {{ $t('注释') }} </th>
+                <th>{{ $t('版本号') }}</th>
+                <th>{{ $t('提交人') }}</th>
+                <th>{{ $t('提交时间') }}</th>
+                <th>{{ $t('注释') }}</th>
               </tr>
               <tr
                 v-if="!commitsList.length"
@@ -415,7 +442,7 @@
                   <div class="ps-no-result">
                     <div class="text">
                       <p><i class="paasng-icon paasng-empty no-data" /></p>
-                      <p> {{ $t('暂无版本差异记录') }} </p>
+                      <p>{{ $t('暂无版本差异记录') }}</p>
                     </div>
                   </div>
                 </td>
@@ -424,7 +451,7 @@
                 v-for="(cItem, index) in commitsList"
                 v-else
                 :key="index"
-                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+                :class="['ps-table-template', { open: commitDialog.curCommitsIndex === index }]"
               >
                 <tr
                   class="ps-table-slide-up"
@@ -456,7 +483,8 @@
     </bk-dialog>
   </div>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
 
@@ -564,7 +592,7 @@ export default {
   },
   computed: {
     curAppModule() {
-      return this.curAppModuleList.find(e => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
+      return this.curAppModuleList.find((e) => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
     },
     branchEmptyText() {
       const sourceType = this.overview.repo && this.overview.repo.source_type;
@@ -639,7 +667,7 @@ export default {
     deployErrorData() {
       const faileds = this.deployPreparations.failed_conditions;
       if (faileds?.length) {
-        const deployErrorList = faileds.filter(v => deployErrorStatus.includes(v.action_name));
+        const deployErrorList = faileds.filter((v) => deployErrorStatus.includes(v.action_name));
         return deployErrorList[0] || {};
       }
       return {};
@@ -650,7 +678,7 @@ export default {
       const faileds = this.deployPreparations.failed_conditions;
       if (faileds?.length) {
         // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
-        const codeRepositoryErrorList = faileds.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+        const codeRepositoryErrorList = faileds.filter((v) => codeRepositoryErrorStatus.includes(v.action_name));
         return codeRepositoryErrorList[0] || {};
       }
       return {};
@@ -805,7 +833,7 @@ export default {
           };
 
           // 组装数据，实现分组
-          if (!branchesList.map(item => item.id).includes(branch.type)) {
+          if (!branchesList.map((item) => item.id).includes(branch.type)) {
             branchesList.push({
               id: branch.type,
               name: branch.type,
@@ -813,7 +841,7 @@ export default {
               children: [obj],
             });
           } else {
-            const curData = branchesList.find(item => item.id === branch.type);
+            const curData = branchesList.find((item) => item.id === branch.type);
             curData.children.push(obj);
           }
 
@@ -1105,7 +1133,7 @@ export default {
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         this.imageTagListCount = res.count;
         // 默认选中已部署成功的 Tag, 否则选中第一个
-        this.tagData.tagValue = (this.curModulemirrorTag || this.imageTagList[0]?.id) || '';
+        this.tagData.tagValue = this.curModulemirrorTag || this.imageTagList[0]?.id || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1128,7 +1156,7 @@ export default {
         });
         this.customImageTagList.splice(0, this.customImageTagList.length, ...(res || []));
         // 默认选中已部署成功的 Tag, 否则选中第一个
-        this.tagData.tagValue = (this.curModulemirrorTag || this.customImageTagList[0]?.name) || '';
+        this.tagData.tagValue = this.curModulemirrorTag || this.customImageTagList[0]?.name || '';
       } catch (e) {
         this.tagUrl = e?.data?.url;
         this.errorTips = e.message;
@@ -1153,8 +1181,7 @@ export default {
       this.curSelectData = this.imageTagList.find((e) => {
         if (e.id === this.tagData.tagValue) {
           e.revision = e.digest;
-          e.type = 'image',
-          e.name = e.tag;
+          (e.type = 'image'), (e.name = e.tag);
           return e;
         }
       });
@@ -1198,7 +1225,7 @@ export default {
     async getDeployPreparations(type) {
       // 刷新
       if (type) {
-        type === 'deploy' ? this.deployRefreshLoading = true : this.codeRefreshLoading = true;
+        type === 'deploy' ? (this.deployRefreshLoading = true) : (this.codeRefreshLoading = true);
       }
       try {
         const res = await this.$store.dispatch('deploy/getDeployPreparations', {
@@ -1211,10 +1238,12 @@ export default {
         // 将错误数据进行分类
         if (!res.all_conditions_matched && res.failed_conditions.length) {
           // 部署限制相关的，错误信息
-          const deployErrorList = res.failed_conditions.filter(v => deployErrorStatus.includes(v.action_name));
+          const deployErrorList = res.failed_conditions.filter((v) => deployErrorStatus.includes(v.action_name));
           // 代码仓库相关，错误信息
           // eslint-disable-next-line max-len
-          const codeRepositoryErrorList = res.failed_conditions.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+          const codeRepositoryErrorList = res.failed_conditions.filter((v) =>
+            codeRepositoryErrorStatus.includes(v.action_name)
+          );
           if (deployErrorList.length) {
             this.isShowErrorAlert.deploy = true;
           } else {
@@ -1238,7 +1267,7 @@ export default {
         });
         this.deployAppDialog.disabled = false;
       } finally {
-        type === 'deploy' ? this.deployRefreshLoading = false : this.codeRefreshLoading = false;
+        type === 'deploy' ? (this.deployRefreshLoading = false) : (this.codeRefreshLoading = false);
       }
     },
 
@@ -1387,7 +1416,7 @@ export default {
 }
 .image-pull-strategy {
   margin-top: 20px;
-  &>.label {
+  & > .label {
     line-height: 32px;
     white-space: nowrap;
   }
@@ -1398,7 +1427,7 @@ export default {
   }
   .last-selected {
     font-size: 12px;
-    color: #C4C6CC;
+    color: #c4c6cc;
   }
 }
 
@@ -1415,8 +1444,8 @@ export default {
   .module-name-tag {
     margin-left: 8px;
     font-size: 12px;
-    color: #63656E;
-    background-color: #F0F1F5;
+    color: #63656e;
+    background-color: #f0f1f5;
     padding: 3px 7px;
     border-radius: 2px;
   }
@@ -1436,10 +1465,10 @@ export default {
   align-items: center;
   padding: 0 10px;
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
   min-height: 32px;
-  background: #FFEDED;
-  border: 1px solid #FFD2D2;
+  background: #ffeded;
+  border: 1px solid #ffd2d2;
   border-radius: 2px;
 
   .text {
@@ -1448,19 +1477,18 @@ export default {
     margin-right: 10px;
 
     .exclamation-cls {
-      color: #EA3636;
+      color: #ea3636;
       font-size: 14px;
       transform: translateY(2px);
       margin-right: 6px;
     }
   }
 
-
   .line {
     width: 1px;
     margin: 0 10px;
     height: 14px;
-    background: #DCDEE5;
+    background: #dcdee5;
   }
 
   .right-link {
@@ -1480,8 +1508,8 @@ export default {
 }
 .round-loading-cls {
   width: 14px;
-    height: 14px;
-    transform: translateY(-1px);
+  height: 14px;
+  transform: translateY(-1px);
 }
 .deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
   overflow: unset;

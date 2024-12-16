@@ -25,194 +25,203 @@
       </div>
     </bk-alert>
     <div v-if="deploymentInfoData.length">
-      <div
-        class="deploy-module-list"
-        v-for="(deploymentInfo, index) in deploymentInfoData"
-        :key="deploymentInfo.name"
+      <!-- 拖拽排序 -->
+      <draggable
+        v-model="deploymentInfoData"
+        :handle="'.top-info-wrapper'"
+        @end="draggableEnd"
       >
-        <div class="deploy-module-item">
-          <!-- 预览模式 / 详情模式 / 未部署 -->
-          <section class="top-info-wrapper">
-            <!-- 已部署 -->
-            <div class="left-info">
-              <div class="module">
-                <i class="icon paasng-icon paasng-deploy-item-dot"></i>
-                <div
-                  @click="handleOpenUrl(deploymentInfo.exposed_url)"
-                  :class="['module-name-wrapper', { link: deploymentInfo.exposed_url }]"
-                  v-bk-tooltips="{ content: $t('访问模块'), disabled: !deploymentInfo.exposed_url, distance: -3 }"
-                >
-                  <span class="name">{{ deploymentInfo.module_name }}</span>
+        <div
+          class="deploy-module-list"
+          v-for="(deploymentInfo, index) in deploymentInfoData"
+          :key="deploymentInfo.name"
+        >
+          <div class="deploy-module-item">
+            <!-- 预览模式 / 详情模式 / 未部署 -->
+            <section class="top-info-wrapper">
+              <!-- 已部署 -->
+              <div class="left-info">
+                <div class="module">
+                  <i class="icon paasng-icon paasng-deploy-item-dot"></i>
                   <div
-                    v-if="deploymentInfo.exposed_url"
-                    class="access-entrance"
+                    @click="handleOpenUrl(deploymentInfo.exposed_url)"
+                    :class="['module-name-wrapper', { link: deploymentInfo.exposed_url }]"
+                    v-bk-tooltips="{ content: $t('访问模块'), disabled: !deploymentInfo.exposed_url, distance: -3 }"
                   >
-                    <i class="paasng-icon paasng-jump-link ml10"></i>
+                    <span class="name">{{ deploymentInfo.module_name }}</span>
+                    <div
+                      v-if="deploymentInfo.exposed_url"
+                      class="access-entrance"
+                    >
+                      <i class="paasng-icon paasng-jump-link ml10"></i>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <!-- 最后一次是部署成功状态则展示 -->
-              <template v-if="deploymentInfo.state.deployment.latest_succeeded">
-                <!-- smart应用 -->
-                <div
-                  class="flex-row"
-                  v-if="isSmartApp"
-                >
-                  <div class="version">
-                    <span class="label">{{ $t('版本：') }}</span>
-                    <span class="value">
-                      {{ deploymentInfo.version_info.revision }}
-                    </span>
-                  </div>
-                </div>
-                <!-- 仅镜像 -->
-                <div
-                  class="flex-row"
-                  v-else-if="deploymentInfo.build_method === 'custom_image'"
-                >
-                  <div class="version">
-                    <span class="label">{{ $t('镜像Tag：') }}</span>
-                    <span class="value">
-                      {{ deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0, 16) }}
-                    </span>
-                  </div>
-                </div>
-                <!-- buildpack、dockerfile 展示版本/分支, smartApp 展示版本 -->
-                <div v-else>
-                  <!-- 源码分支 -->
+                <!-- 最后一次是部署成功状态则展示 -->
+                <template v-if="deploymentInfo.state.deployment.latest_succeeded">
+                  <!-- smart应用 -->
                   <div
                     class="flex-row"
-                    v-if="deploymentInfo.version_info.version_type === 'branch'"
+                    v-if="isSmartApp"
                   >
                     <div class="version">
                       <span class="label">{{ $t('版本：') }}</span>
                       <span class="value">
-                        {{ deploymentInfo.version_info.revision.substring(0, 8) }}
+                        {{ deploymentInfo.version_info.revision }}
                       </span>
                     </div>
-                    <template v-if="!isSmartApp">
-                      <div class="line"></div>
-                      <div class="branch">
-                        <span class="label">{{ $t('分支：') }}</span>
+                  </div>
+                  <!-- 仅镜像 -->
+                  <div
+                    class="flex-row"
+                    v-else-if="deploymentInfo.build_method === 'custom_image'"
+                  >
+                    <div class="version">
+                      <span class="label">{{ $t('镜像Tag：') }}</span>
+                      <span class="value">
+                        {{
+                          deploymentInfo.state.deployment.latest_succeeded.version_info.version_name.substring(0, 16)
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                  <!-- buildpack、dockerfile 展示版本/分支, smartApp 展示版本 -->
+                  <div v-else>
+                    <!-- 源码分支 -->
+                    <div
+                      class="flex-row"
+                      v-if="deploymentInfo.version_info.version_type === 'branch'"
+                    >
+                      <div class="version">
+                        <span class="label">{{ $t('版本：') }}</span>
                         <span class="value">
-                          {{ deploymentInfo.version_info.version_name }}
+                          {{ deploymentInfo.version_info.revision.substring(0, 8) }}
                         </span>
                       </div>
-                    </template>
+                      <template v-if="!isSmartApp">
+                        <div class="line"></div>
+                        <div class="branch">
+                          <span class="label">{{ $t('分支：') }}</span>
+                          <span class="value">
+                            {{ deploymentInfo.version_info.version_name }}
+                          </span>
+                        </div>
+                      </template>
+                    </div>
                   </div>
-                </div>
-              </template>
-              <template v-else-if="!deploymentInfo.state.deployment.latest">
-                <div class="not-deployed">{{ $t('暂未部署') }}</div>
-              </template>
-              <template v-else-if="isRemoved(deploymentInfo)">
-                <div class="not-deployed">{{ $t('已下架') }}</div>
-              </template>
-              <template v-else>
-                <div class="not-deployed">
-                  <span v-bk-tooltips="{ content: 'Error: ' + deploymentInfo.state.deployment?.latest?.err_detail }">
-                    <i class="paasng-icon paasng-info-line info-icon mr5" />
-                    {{ $t('暂未成功部署') }}
-                  </span>
-                </div>
-              </template>
-            </div>
-            <div class="right-btn">
-              <span v-if="!!deploymentInfo.state.deployment.pending">
-                <bk-button
-                  v-if="deploymentInfo.state.deployment.pending.has_requested_in"
-                  :theme="'primary'"
-                  class="mr10"
-                  size="small"
-                  text
-                >
-                  {{ $t('正在中断部署...') }}
-                </bk-button>
-                <bk-button
-                  v-else
-                  :theme="'primary'"
-                  class="mr10"
-                  size="small"
-                  text
-                  @click="handleShowDeploy(deploymentInfo)"
-                >
-                  {{ $t('部署详情') }}
-                </bk-button>
-              </span>
-              <bk-button
-                :theme="'primary'"
-                class="mr10"
-                size="small"
-                @click="handleDeploy(deploymentInfo, index)"
-                :disabled="!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending"
-                :loading="!!deploymentInfo.state.deployment.pending || (curDeployItemIndex === index && yamlLoading)"
-              >
-                {{ $t('部署') }}
-              </bk-button>
-              <bk-button
-                :theme="'default'"
-                class="mr10"
-                size="small"
-                @click="handleOfflineApp(deploymentInfo)"
-                :disabled="
-                  !!deploymentInfo.state.offline.pending ||
-                  !!deploymentInfo.state.deployment.pending ||
-                  !deploymentInfo.state.deployment.latest_succeeded
-                "
-                :loading="!!deploymentInfo.state.offline.pending"
-              >
-                {{ $t('下架') }}
-              </bk-button>
-              <bk-button
-                :theme="'default'"
-                ext-cls="module-config-btn"
-                size="small"
-                v-bk-tooltips="$t('模块配置')"
-                @click="handleToModuleConfig(deploymentInfo.module_name)"
-              >
-                <i class="paasng-icon paasng-configuration-line"></i>
-              </bk-button>
-            </div>
-          </section>
-          <!-- 内容 -->
-          <section class="main">
-            <!-- 详情表格 -->
-            <deploy-detail
-              v-if="deploymentInfo.isExpand"
-              :rv-data="rvData"
-              :index="index"
-              :deployment-info="deploymentInfo"
-              :environment="environment"
-              :module-name="deploymentInfo.module_name"
-              :is-dialog-show-sideslider="isDialogShowSideslider"
-            />
-            <!-- 预览 -->
-            <deploy-preview
-              :deployment-info="deploymentInfo"
-              v-if="!deploymentInfo.isExpand"
-            />
-            <div
-              class="operation-wrapper"
-              v-if="deploymentInfo.processes.length || deploymentInfo.proc_specs.length"
-            >
-              <div
-                class="btn"
-                @click="handleChangePanel(deploymentInfo)"
-              >
-                {{ deploymentInfo.isExpand ? $t('收起') : $t('展开详情') }}
-                <i
-                  class="paasng-icon paasng-ps-arrow-down"
-                  v-if="!deploymentInfo.isExpand"
-                ></i>
-                <i
-                  class="paasng-icon paasng-ps-arrow-up"
-                  v-else
-                ></i>
+                </template>
+                <template v-else-if="!deploymentInfo.state.deployment.latest">
+                  <div class="not-deployed">{{ $t('暂未部署') }}</div>
+                </template>
+                <template v-else-if="isRemoved(deploymentInfo)">
+                  <div class="not-deployed">{{ $t('已下架') }}</div>
+                </template>
+                <template v-else>
+                  <div class="not-deployed">
+                    <span v-bk-tooltips="{ content: 'Error: ' + deploymentInfo.state.deployment?.latest?.err_detail }">
+                      <i class="paasng-icon paasng-info-line info-icon mr5" />
+                      {{ $t('暂未成功部署') }}
+                    </span>
+                  </div>
+                </template>
               </div>
-            </div>
-          </section>
+              <div class="right-btn">
+                <span v-if="!!deploymentInfo.state.deployment.pending">
+                  <bk-button
+                    v-if="deploymentInfo.state.deployment.pending.has_requested_in"
+                    :theme="'primary'"
+                    class="mr10"
+                    size="small"
+                    text
+                  >
+                    {{ $t('正在中断部署...') }}
+                  </bk-button>
+                  <bk-button
+                    v-else
+                    :theme="'primary'"
+                    class="mr10"
+                    size="small"
+                    text
+                    @click="handleShowDeploy(deploymentInfo)"
+                  >
+                    {{ $t('部署详情') }}
+                  </bk-button>
+                </span>
+                <bk-button
+                  :theme="'primary'"
+                  class="mr10"
+                  size="small"
+                  @click="handleDeploy(deploymentInfo, index)"
+                  :disabled="!!deploymentInfo.state.offline.pending || !!deploymentInfo.state.deployment.pending"
+                  :loading="!!deploymentInfo.state.deployment.pending || (curDeployItemIndex === index && yamlLoading)"
+                >
+                  {{ $t('部署') }}
+                </bk-button>
+                <bk-button
+                  :theme="'default'"
+                  class="mr10"
+                  size="small"
+                  @click="handleOfflineApp(deploymentInfo)"
+                  :disabled="
+                    !!deploymentInfo.state.offline.pending ||
+                    !!deploymentInfo.state.deployment.pending ||
+                    !deploymentInfo.state.deployment.latest_succeeded
+                  "
+                  :loading="!!deploymentInfo.state.offline.pending"
+                >
+                  {{ $t('下架') }}
+                </bk-button>
+                <bk-button
+                  :theme="'default'"
+                  ext-cls="module-config-btn"
+                  size="small"
+                  v-bk-tooltips="$t('模块配置')"
+                  @click="handleToModuleConfig(deploymentInfo.module_name)"
+                >
+                  <i class="paasng-icon paasng-configuration-line"></i>
+                </bk-button>
+              </div>
+            </section>
+            <!-- 内容 -->
+            <section class="main">
+              <!-- 详情表格 -->
+              <deploy-detail
+                v-if="deploymentInfo.isExpand"
+                :rv-data="rvData"
+                :index="index"
+                :deployment-info="deploymentInfo"
+                :environment="environment"
+                :module-name="deploymentInfo.module_name"
+                :is-dialog-show-sideslider="isDialogShowSideslider"
+              />
+              <!-- 预览 -->
+              <deploy-preview
+                :deployment-info="deploymentInfo"
+                v-if="!deploymentInfo.isExpand"
+              />
+              <div
+                class="operation-wrapper"
+                v-if="deploymentInfo.processes.length || deploymentInfo.proc_specs.length"
+              >
+                <div
+                  class="btn"
+                  @click="handleChangePanel(deploymentInfo)"
+                >
+                  {{ deploymentInfo.isExpand ? $t('收起') : $t('展开详情') }}
+                  <i
+                    class="paasng-icon paasng-ps-arrow-down"
+                    v-if="!deploymentInfo.isExpand"
+                  ></i>
+                  <i
+                    class="paasng-icon paasng-ps-arrow-up"
+                    v-else
+                  ></i>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
+      </draggable>
     </div>
 
     <bk-dialog
@@ -271,7 +280,8 @@ import deployPreview from './deploy-preview';
 import deployDialog from './deploy-dialog';
 import deployStatusDetail from './deploy-status-detail';
 import appBaseMixin from '@/mixins/app-base-mixin';
-import { cloneDeep } from 'lodash';
+import draggable from 'vuedraggable';
+import { cloneDeep, isEqual } from 'lodash';
 import { bus } from '@/common/bus';
 
 export default {
@@ -280,6 +290,7 @@ export default {
     deployPreview,
     deployDialog,
     deployStatusDetail,
+    draggable,
   },
   mixins: [appBaseMixin],
   props: {
@@ -316,6 +327,7 @@ export default {
       curDeployItemIndex: '',
       isDialogShowSideslider: false, // 部署的侧边栏
       currentAllExpandedItems: [],
+      curModuleSequence: [],
     };
   },
 
@@ -350,16 +362,6 @@ export default {
         });
       }
     },
-
-    // 云原生应用不会默认展示部署进程
-    // isWatctDeploying(value) {
-    //   if (value && this.initPage) {    // 第一次进入页面，如果正在部署中，提示
-    //     this.$paasMessage({
-    //       theme: 'primary',
-    //       message: this.$t('检测到尚未结束的部署任务，已恢复部署进度'),
-    //     });
-    //   }
-    // },
   },
 
   beforeDestroy() {
@@ -375,8 +377,9 @@ export default {
   },
 
   methods: {
-    init() {
-      this.getModuleReleaseInfo();
+    async init() {
+      await this.getModuleOrder();
+      await this.getModuleReleaseInfo();
     },
     handleChangePanel(payload) {
       if (payload.isExpand) {
@@ -454,7 +457,10 @@ export default {
           appCode: this.appCode,
           env: this.environment,
         });
-        // this.deploymentInfoData = res.data;
+        // 是否需要排序
+        if (this.curModuleSequence.length) {
+          res.data = this.sortDataByModuleName(res.data, this.curModuleSequence);
+        }
         const isModuleDeployedList = [];
         res.data = res.data.map((e) => {
           if (this.currentAllExpandedItems.length) {
@@ -584,6 +590,69 @@ export default {
       const offlineTime = data.state.offline?.latest ? new Date(data.state.offline.latest?.created) : 0;
       return offlineTime > deploymentTime;
     },
+
+    // 拖拽结束后判断是否进行排序
+    draggableEnd() {
+      const dragDoduleSequence = this.getModuleSequence(this.deploymentInfoData);
+      if (!isEqual(this.curModuleSequence, dragDoduleSequence)) {
+        // 更新模块排序
+        this.updateModuleOrder();
+      }
+    },
+
+    // 模块列表按照指定数组进行排序
+    sortDataByModuleName(data, sequence) {
+      const sequenceMap = new Map(sequence.map((moduleName, index) => [moduleName, index]));
+
+      // 对 data 数组进行排序
+      data.sort((a, b) => {
+        // 获取 a 和 b 的索引，如果不存在则使用 Infinity 作为默认值
+        const indexA = sequenceMap.has(a.module_name) ? sequenceMap.get(a.module_name) : Infinity;
+        const indexB = sequenceMap.has(b.module_name) ? sequenceMap.get(b.module_name) : Infinity;
+        // 按照索引进行排序
+        return indexA - indexB;
+      });
+      return data;
+    },
+
+    // 获取当前模块列表名称序列
+    getModuleSequence(moduleList) {
+      return moduleList.map((item) => item.module_name);
+    },
+
+    // 获取部署管理模块顺序
+    async getModuleOrder() {
+      try {
+        const res = await this.$store.dispatch('deploy/getModuleOrder', {
+          appCode: this.appCode,
+        });
+        // 记录当前模块顺序
+        this.curModuleSequence = this.getModuleSequence(res);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+
+    // 更新模块顺序
+    async updateModuleOrder() {
+      try {
+        this.curModuleSequence = this.getModuleSequence(this.deploymentInfoData);
+        const data = {
+          module_orders: this.curModuleSequence.map((n, index) => {
+            return {
+              module_name: n,
+              order: index + 1,
+            };
+          }),
+        };
+        await this.$store.dispatch('deploy/updateModuleOrder', {
+          appCode: this.appCode,
+          data,
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
@@ -592,6 +661,11 @@ export default {
 .deploy-module-content {
   height: 100%;
   // min-height: 280px;
+  .deploy-module-list.sortable-chosen {
+    .main {
+      background: #deeff9;
+    }
+  }
 }
 .deploy-module-item {
   margin-bottom: 16px;
@@ -604,6 +678,9 @@ export default {
     padding-right: 24px;
     background: #eaebf0;
     border-radius: 2px 2px 0 0;
+    &:hover {
+      cursor: move;
+    }
 
     .left-info {
       height: 100%;

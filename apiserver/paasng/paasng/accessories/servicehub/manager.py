@@ -290,7 +290,7 @@ class MixedServiceMgr:
             except UnboundSvcAttachmentDoesNotExist:
                 continue
         raise UnboundSvcAttachmentDoesNotExist(
-            f"service<{ServiceObj}> has no attachment with service_instance_id<{service_instance_id}>"
+            f"service<{service}> has no attachment with service_instance_id<{service_instance_id}>"
         )
 
 

@@ -129,7 +129,6 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
     engine_app = models.ForeignKey(
         "engine.EngineApp",
         on_delete=models.CASCADE,
-        null=True,
         db_constraint=False,
         verbose_name="蓝鲸引擎应用",
         related_name="unbound_service_attachment",

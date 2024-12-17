@@ -76,5 +76,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/user/dev_sandbox_with_code_editors/pre_deploy_check/`;
       return http.get(url, config);
     },
+    /**
+     * 沙箱提交代码
+     */
+    sandboxSubmitCode({}, { appCode, moduleId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_with_code_editor/commit/`;
+      return http.post(url, data, config);
+    },
   },
 };

@@ -122,7 +122,7 @@ class MetaDataFileReader:
             try:
                 content = self.read_file(possible_key, version_info)
                 break
-            except exceptions.DoesNotExistsOnServer:
+            except Exception:
                 continue
         if content is None:
             error_msg = "Can not read app description file from repository"

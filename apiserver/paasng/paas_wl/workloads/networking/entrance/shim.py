@@ -27,23 +27,10 @@ from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSu
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath, Domain
-from paasng.core.region.models import get_region
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
 logger = logging.getLogger(__name__)
-
-
-def get_legacy_url(env: ModuleEnvironment) -> Optional[str]:
-    """Deprecated: Get legacy URL address which is a hard-coded value generated
-    y region configuration.
-
-    :return: None if not configured.
-    """
-    app = env.application
-    if tmpl := get_region(app.region).basic_info.link_engine_app:
-        return tmpl.format(code=app.code, region=app.region, name=env.engine_app.name)
-    return None
 
 
 class BaseEnvAddresses:
@@ -73,11 +60,6 @@ class BaseEnvAddresses:
     def list_subpath(self) -> List[Address]:
         """list all subpath addresses for given environment"""
         raise NotImplementedError
-
-    def list_legacy(self) -> List[Address]:
-        """Get addresses by legacy logic"""
-        url = get_legacy_url(self.env)
-        return [Address(type=AddressType.LEGACY, url=url)] if url else []
 
     def list_custom(self) -> List[Address]:
         """Get addresses from custom domains"""
@@ -116,7 +98,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
         if not env_is_running(self.env):
             return []
 
-        return self.list_subdomain() + self.list_subpath() + self.list_custom() + self.list_legacy()
+        return self.list_subdomain() + self.list_subpath() + self.list_custom()
 
     def list_subdomain(self) -> List[Address]:
         """list all `live` subdomain addresses for deployed environment"""
@@ -147,7 +129,7 @@ class PreAllocatedEnvAddresses(BaseEnvAddresses):
     """
 
     def list(self) -> List[Address]:
-        return self.list_subdomain() + self.list_subpath() + self.list_custom() + self.list_legacy()
+        return self.list_subdomain() + self.list_subpath() + self.list_custom()
 
     def list_subdomain(self) -> List[Address]:
         """list all subdomain addresses which should be allocated to the given environment"""
@@ -214,5 +196,7 @@ def get_builtin_addrs(env: ModuleEnvironment) -> Tuple[bool, List[Address]]:
     elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         addresses = svc.list_subdomain()
     else:
-        addresses = svc.list_legacy()
+        # The "exposed_url_type" is None. This should not happen in normal cases.
+        logger.warning("The exposed_url_type is None when getting builtin addrs, module: %s", module)
+        addresses = []
     return is_living, addresses

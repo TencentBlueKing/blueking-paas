@@ -39,11 +39,7 @@ class RegionSerializer:
         data["module_custom_domain"] = ModuleCustomDomainSLZ(
             {"allow_user_modifications": self.region.allow_user_modify_custom_domain}
         ).data
-
-        # Patch entrance_config to provide "app_root_domain" field
-        # TODO: Remove this field because it's app related instead of region
-        entrance_config = self.region.entrance_config
-        data["entrance_config"] = EntranceConfigSLZ(entrance_config).data
+        data["entrance_config"] = {"manually_upgrade_to_subdomain_allowed": True}
         return data
 
 
@@ -65,10 +61,6 @@ class ModuleMobileConfigSLZ(serializers.Serializer):
 
 class MulModulesConfigConfigSLZ(serializers.Serializer):
     creation_allowed = serializers.BooleanField()
-
-
-class EntranceConfigSLZ(serializers.Serializer):
-    manually_upgrade_to_subdomain_allowed = serializers.BooleanField()
 
 
 class ModuleCustomDomainSLZ(serializers.Serializer):

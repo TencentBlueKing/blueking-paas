@@ -216,10 +216,10 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
                     envs[name] = value
 
         if app.type == WlAppType.DEFAULT:
-            labels = pod.metadata.labels or {}
+            labels = pod.metadata.get("labels") or {}
             version = int(labels.get("release_version", 0))
         else:
-            annotations = pod.metadata.annotations or {}
+            annotations = pod.metadata.get("annotations") or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
         terminated_info = {}

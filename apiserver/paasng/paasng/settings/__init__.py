@@ -942,6 +942,8 @@ DEFAULT_REGION_TEMPLATE = {
         },
     },
     "mul_modules_config": {"creation_allowed": True},
+    # 是否允许用户添加独立域名(自定义访问地址)，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
+    "allow_user_modify_custom_domain": True,
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,

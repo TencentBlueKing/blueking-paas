@@ -61,7 +61,6 @@ tar -czvf /tmp/source.tgz -C examples/python-flask .
 
 首先，通过环境变量设置一些关键参数：
 
-
 ```bash
 # BUILDER_SHIM_IMAGE：构建工具镜像地址
 export BUILDER_SHIM_IMAGE='mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic:latest'
@@ -82,7 +81,7 @@ docker run --rm \
     -e USE_DOCKER_DAEMON=true \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     --mount type=bind,source=/tmp/source.tgz,target=/tmp/source.tgz \
-    $BUILDER_SHIM_IMAGE 
+    $BUILDER_SHIM_IMAGE
 ```
 
 要点说明：
@@ -102,7 +101,7 @@ docker run --rm \
 make heroku-dev
 ```
 
-其将使用默认的“云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
+其将使用默认的 “云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
 
 ```shell
 BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" DEV_IMAGE_NAME="bk-dev-heroku-bionic" DEV_IMAGE_TAG="latest" make heroku-dev
@@ -112,6 +111,7 @@ BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" DEV_IMA
 - `DEV_IMAGE_TAG`: 目标开发镜像 tag
 
 ### 2. 启动镜像
+
 首先，通过环境变量设置一些关键参数。参数设置可选，仅当容器中默认的地址无效时，进行设置：
 
 ```shell
@@ -133,7 +133,8 @@ docker run -d --net=host \
     bk-dev-heroku-bionic:latest
 ```
 
-### 3. 通过 http 请求完成源码的 hot-reload 
+### 3. 通过 http 请求完成源码的 hot-reload
+
 #### 3.1 请求源码部署
 
 请求命令
@@ -149,7 +150,7 @@ curl --location 'http://{devsandbox_ip}:8000/deploys' \
 
 ```json
 {
-    "deployID": "aaf79f28271e47bebf8448b63bddd04f"
+  "deployID": "aaf79f28271e47bebf8448b63bddd04f"
 }
 ```
 
@@ -162,6 +163,7 @@ curl --location 'http://{devsandbox_ip}:8000/deploys' \
 # deployID 是上一步请求部署时返回的 deployID
 curl --location 'http://{devsandbox_ip}:8000/deploys/{deployID}/results?log=true' --header 'Authorization: Bearer xxx'
 ```
+
 结果示例
 
 ```json

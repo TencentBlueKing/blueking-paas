@@ -39,7 +39,7 @@ var _ = Describe("Test Types", func() {
 			}
 
 			excepted := &DirTree{
-				Name: "",
+				Name: "/",
 				Dirs: []*DirTree{
 					{
 						Name: "api", Files: Files{
@@ -97,7 +97,7 @@ var _ = Describe("Test Types", func() {
 			}
 
 			excepted := &DirTree{
-				Name: "",
+				Name: "/",
 				Dirs: []*DirTree{
 					{
 						Name: "api",

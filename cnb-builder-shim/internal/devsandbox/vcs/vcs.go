@@ -106,7 +106,7 @@ func (v *VersionController) Diff() (Files, error) {
 			continue
 		}
 		var content string
-		// 如果是删除操作，不加载文件
+		// 只有指定要加载 & 不是删除操作时，才会加载文件内容
 		if v.withContent && action != FileActionDeleted {
 			if content, err = v.loadFileContent(filePath); err != nil {
 				return nil, err
@@ -153,8 +153,8 @@ func (v *VersionController) runGitCommand(args ...string) (string, error) {
 }
 
 // 加载指定文件内容
-func (v *VersionController) loadFileContent(filepath string) (string, error) {
-	file, err := os.Open(path.Join(v.srcPath, filepath))
+func (v *VersionController) loadFileContent(filePath string) (string, error) {
+	file, err := os.Open(path.Join(v.srcPath, filePath))
 	if err != nil {
 		return "", err
 	}
@@ -178,23 +178,23 @@ func (v *VersionController) parseDiffLine(line string) (FileAction, string, erro
 		return "", "", errors.Errorf("invalid diff line: `%s`", line)
 	}
 
-	rawAction, filepath := line[:index], strings.TrimSpace(line[index+1:])
+	rawAction, filePath := line[:index], strings.TrimSpace(line[index+1:])
 	switch rawAction {
 	case "A":
-		return FileActionAdded, filepath, nil
+		return FileActionAdded, filePath, nil
 	case "M":
-		return FileActionModified, filepath, nil
+		return FileActionModified, filePath, nil
 	case "D":
-		return FileActionDeleted, filepath, nil
+		return FileActionDeleted, filePath, nil
 	default:
 		return "", "", errors.Errorf("unknown action: %s", rawAction)
 	}
 }
 
 // 判断变更的文件是否需要被忽略
-func (v *VersionController) shouldIgnoreFile(filepath string) bool {
+func (v *VersionController) shouldIgnoreFile(filePath string) bool {
 	for _, prefix := range forceIgnoreFilePathPrefixes {
-		if strings.HasPrefix(filepath, prefix) {
+		if strings.HasPrefix(filePath, prefix) {
 			return true
 		}
 	}

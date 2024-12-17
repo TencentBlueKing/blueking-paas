@@ -57,7 +57,7 @@ func (files Files) AsTree() *DirTree {
 		return strings.Compare(a.Path, b.Path)
 	})
 
-	root := DirTree{Name: ""}
+	root := DirTree{Name: "/"}
 	var cur *DirTree
 	for _, f := range files {
 		parts := strings.Split(f.Path, "/")

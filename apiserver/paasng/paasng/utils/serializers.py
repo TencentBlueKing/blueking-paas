@@ -53,12 +53,7 @@ class UserField(serializers.Field):
         assert isinstance(obj, basestring), "Only accept user_id"
         user = get_user_by_user_id(obj)
         avatar = get_user_avatar(user.username)
-        return {
-            "id": user.pk,
-            "username": user.username,
-            "provider_type": user.provider_type,
-            "avatar": avatar,
-        }
+        return {"id": user.pk, "username": user.username, "provider_type": user.provider_type, "avatar": avatar}
 
     def to_internal_value(self, data):
         if "username" in data:
@@ -247,9 +242,7 @@ class SourceControlField(serializers.ChoiceField):
 
 class ConfigVarReservedKeyValidator:
     def __init__(
-        self,
-        protected_key_list: Optional[List[str]] = None,
-        protected_prefix_list: Optional[List[str]] = None,
+        self, protected_key_list: Optional[List[str]] = None, protected_prefix_list: Optional[List[str]] = None
     ):
         self.protected_key_set = set(protected_key_list or [])
         self.protected_prefix_list = protected_prefix_list or []

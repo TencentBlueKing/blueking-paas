@@ -22,10 +22,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List, cast
 
-from blue_krill.storages.blobstore.exceptions import (
-    DownloadFailedError,
-    UploadFailedError,
-)
+from blue_krill.storages.blobstore.exceptions import DownloadFailedError, UploadFailedError
 from django.db.transaction import atomic
 from django.http.response import Http404
 from django.shortcuts import get_object_or_404
@@ -50,29 +47,17 @@ from paasng.platform.applications.models import Application, SMartApplication
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.declarative.exceptions import (
-    ControllerError,
-    DescriptionValidationError,
-)
+from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.exceptions import (
-    GenAppCodeError,
-    PreparedPackageNotFound,
-)
+from paasng.platform.smart_app.exceptions import GenAppCodeError, PreparedPackageNotFound
 from paasng.platform.smart_app.serializers import (
     AppDescriptionSLZ,
     PackageStashConfirmRequestSLZ,
     PackageStashRequestSLZ,
     PackageStashResponseSLZ,
 )
-from paasng.platform.smart_app.services.app_desc import (
-    gen_app_code,
-    get_app_description,
-)
-from paasng.platform.smart_app.services.detector import (
-    SourcePackageStatReader,
-    update_meta_info,
-)
+from paasng.platform.smart_app.services.app_desc import gen_app_code, get_app_description
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader, update_meta_info
 from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
 from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.models import SourcePackage
@@ -97,9 +82,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         return super().handle_exception(exc)
 
     @swagger_auto_schema(
-        request_body=PackageStashRequestSLZ,
-        response_serializer=PackageStashResponseSLZ,
-        tags=["S-Mart", "创建应用"],
+        request_body=PackageStashRequestSLZ, response_serializer=PackageStashResponseSLZ, tags=["S-Mart", "创建应用"]
     )
     def upload(self, request):
         """上传一个 S-Mart 源码包，并将其暂存起来"""
@@ -150,10 +133,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             ).data
         )
 
-    @swagger_auto_schema(
-        request_body=PackageStashConfirmRequestSLZ,
-        tags=["S-Mart", "创建应用"],
-    )
+    @swagger_auto_schema(request_body=PackageStashConfirmRequestSLZ, tags=["S-Mart", "创建应用"])
     def confirm(self, request):
         """根据已暂存的 S-Mart 源码包创建应用"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
@@ -264,10 +244,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     """管理某个 S-Mart 应用的源码包"""
 
     serializer_class = SourcePackageSLZ
-    permission_classes = [
-        IsAuthenticated,
-        application_perm_class(AppAction.BASIC_DEVELOP),
-    ]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
     search_fields = ["version", "package_name", "package_size"]
     ordering = ("-created",)
     ordering_fields = ("version", "package_name", "package_size", "updated")

@@ -112,7 +112,10 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
             return self.default_access_entrance
         # 自定义地址，不验证是否为主模块的自定义地址，否则会导致切换主模块后应用市场地址为 None
         elif source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN:
-            return self.market_config.custom_domain_url
+            return AvailableAddress(
+                address=self.market_config.custom_domain_url,
+                type=ProductSourceUrlType.CUSTOM_DOMAIN.value,
+            )
         elif source_url_type == ProductSourceUrlType.THIRD_PARTY:
             return AvailableAddress(
                 address=self.market_config.source_tp_url, type=ProductSourceUrlType.THIRD_PARTY.value

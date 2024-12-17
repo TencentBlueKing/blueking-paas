@@ -68,7 +68,7 @@
                 target="_blank"
                 :href="curPluginItem.plugin_type.docs"
                 class="plugin-guide"
-                :style="{ right: `${getGuideOffset()}px`}"
+                :style="{ right: `${getGuideOffset()}px` }"
               >
                 <i class="paasng-icon paasng-question-circle" />
                 {{ $t('插件指引') }}
@@ -77,8 +77,8 @@
             <div
               v-if="
                 curPluginItem.plugin_type &&
-                  curPluginItem.plugin_type.approval_config &&
-                  curPluginItem.plugin_type.approval_config.enabled
+                curPluginItem.plugin_type.approval_config &&
+                curPluginItem.plugin_type.approval_config.enabled
               "
               class="plugin-info mt15"
             >
@@ -225,7 +225,7 @@
         </bk-form>
       </section>
 
-      <div :class="['create-button-warp', { 'sticky': isSticky }]">
+      <div :class="['create-button-warp', { sticky: isSticky }]">
         <bk-button
           :theme="'primary'"
           :title="$t('提交')"
@@ -246,13 +246,14 @@
     </paas-content-loader>
   </div>
 </template>
-<script>import http from '@/api';
+<script>
+import http from '@/api';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
 import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
-import { throttle } from 'lodash';
+import { throttle, uniqBy } from 'lodash';
 
 const BkSchemaForm = createForm();
 
@@ -356,7 +357,7 @@ export default {
   },
   computed: {
     curPluginInfo() {
-      const curPluginData = this.pluginTypeList.filter(item => item.plugin_type.id === this.form.pd_id);
+      const curPluginData = this.pluginTypeList.filter((item) => item.plugin_type.id === this.form.pd_id);
       return this.form.pd_id ? curPluginData[0] : this.pluginTypeList[0];
     },
     defaultPluginType() {
@@ -372,11 +373,13 @@ export default {
   watch: {
     'form.plugin_id'(value) {
       if (this.pluginTypeData.schema.repository_group && value) {
-        this.form.repositoryTemplateUrl = `${this.pluginTypeData.schema.repository_group}${value.toLocaleLowerCase()}.git`;
+        this.form.repositoryTemplateUrl = `${
+          this.pluginTypeData.schema.repository_group
+        }${value.toLocaleLowerCase()}.git`;
       }
     },
     'form.pd_id'(value) {
-      const selected = this.pluginTypeList.filter(item => item.plugin_type.id === value);
+      const selected = this.pluginTypeList.filter((item) => item.plugin_type.id === value);
       this.curPluginItem = selected[0];
       this.addRules();
       this.changePlaceholder();
@@ -396,7 +399,7 @@ export default {
         const res = await this.$store.dispatch('plugin/getPluginsTypeList');
         // 当前是否存在该插件类型
         let isQuery = false;
-        this.pluginTypeList = res && res.map((e) => {
+        this.pluginTypeList = res.map((e) => {
           if (e.plugin_type.id === this.defaultPluginType) {
             isQuery = true;
           }
@@ -413,7 +416,11 @@ export default {
         // 根据 extra_fields_order 字段排序
         const extraFieldsOrder = this.pluginTypeList[0]?.schema.extra_fields_order || [];
         const sortdProperties = this.sortdSchema(extraFieldsOrder, properties);
-        this.schema = { type: 'object', required: this.getRequiredFields(sortdProperties), properties: sortdProperties };
+        this.schema = {
+          type: 'object',
+          required: this.getRequiredFields(sortdProperties),
+          properties: sortdProperties,
+        };
         this.addRules();
         this.changePlaceholder();
       } catch (e) {
@@ -435,7 +442,10 @@ export default {
         return properties;
       }
       for (const key in properties) {
-        if (Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') && Array.isArray(properties[key].default)) {
+        if (
+          Object.prototype.hasOwnProperty.call(properties[key], 'ui:rules') &&
+          Array.isArray(properties[key].default)
+        ) {
           // 多选校验
           properties[key]['ui:rules'] = [
             {
@@ -514,25 +524,41 @@ export default {
       this.rules.name = rulesName;
     },
     changePlaceholder() {
-      this.pdIdPlaceholder = this.$t(this.curPluginInfo.schema.id.description) || this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
-      this.namePlaceholder = this.$t(this.curPluginInfo.schema.name.description) || this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
+      this.pdIdPlaceholder =
+        this.$t(this.curPluginInfo.schema.id.description) ||
+        this.$t('由小写字母、数字、连字符(-)组成，长度小于 16 个字符');
+      this.namePlaceholder =
+        this.$t(this.curPluginInfo.schema.name.description) ||
+        this.$t('由汉字、英文字母、数字组成，长度小于 20 个字符');
     },
     // 选中具体插件类型
     changePluginType(value) {
       this.schemaFormData = {};
       this.resetPluinParams();
       this.form.pd_id = value;
-      this.pluginTypeData = this.pluginTypeList.find(e => e.plugin_type.id === value);
+
+      // 获取当前选中的插件类型数据
+      this.pluginTypeData = this.pluginTypeList.find((e) => e.plugin_type.id === value);
+      const { schema } = this.pluginTypeData;
+      // 代码仓库链接
       this.form.repositoryTemplateUrl = this.form.plugin_id
-        ? `${this.pluginTypeData.schema.repository_group}${this.form.plugin_id}.git`
-        : this.pluginTypeData.schema.repository_template;
-      this.pluginLanguage = this.pluginTypeData.schema.init_templates;
-      this.extraFields = this.pluginTypeData.schema.extra_fields;
+        ? `${schema.repository_group}${this.form.plugin_id}.git`
+        : schema.repository_template;
+
+      // 语言去重
+      this.pluginLanguage = uniqBy(schema.init_templates, 'language');
+      this.extraFields = schema.extra_fields;
+
       // schema 排序
-      const extraFieldsOrder = this.pluginTypeData.schema?.extra_fields_order || [];
+      const extraFieldsOrder = schema.extra_fields_order || [];
       const properties = this.sortdSchema(extraFieldsOrder, this.pluginTypeData.properties);
       // 根据数据添加必填字段
-      this.schema = { type: 'object', required: this.getRequiredFields(properties), properties };
+      this.schema = {
+        type: 'object',
+        required: this.getRequiredFields(properties),
+        properties,
+      };
+
       this.$nextTick(() => {
         this.handleBottomAdsorption();
         this.closeSpellcheck();
@@ -545,9 +571,9 @@ export default {
     },
     // 选中具体插件开发语言
     changePluginLanguage(value) {
-      this.languageData = this.pluginLanguage.find(e => e.id === value) || {};
+      this.languageData = this.pluginLanguage.find((e) => e.id === value) || {};
       // 初始化模板
-      this.pluginTemplateList = this.pluginLanguage.filter(e => e.language === this.languageData.language);
+      this.pluginTemplateList = this.pluginLanguage.filter((e) => e.language === this.languageData.language);
       this.form.templateName = '';
     },
     // 富文本编辑
@@ -560,10 +586,11 @@ export default {
       if (this.$refs.bkForm) {
         formArray.push(this.$refs.bkForm.validate());
       }
-      Promise.all(formArray).then(() => {
-        this.buttonLoading = true;
-        this.save();
-      })
+      Promise.all(formArray)
+        .then(() => {
+          this.buttonLoading = true;
+          this.save();
+        })
         .catch((validator) => {
           this.buttonLoading = false;
           console.warn(validator);
@@ -622,7 +649,7 @@ export default {
       url = `${window.BACKEND_URL}/api/bk_plugin_distributors/`;
       try {
         const data = await http.get(url);
-        return data.map(e => ({ label: e.name, value: e.code_name }));
+        return data.map((e) => ({ label: e.name, value: e.code_name }));
       } catch (error) {
         console.warn(error);
       }
@@ -672,7 +699,7 @@ export default {
     position: absolute;
     top: 11px;
     right: 10px;
-    color: #3A84FF;
+    color: #3a84ff;
     cursor: pointer;
   }
   .mt16 {
@@ -715,8 +742,8 @@ export default {
     height: 48px;
     line-height: 48px;
     padding-left: 183px;
-    background: #FAFBFD;
-    box-shadow: 0 -1px 0 0 #DCDEE5;
+    background: #fafbfd;
+    box-shadow: 0 -1px 0 0 #dcdee5;
     margin: 0;
     z-index: 99;
   }
@@ -765,13 +792,13 @@ export default {
   [error] {
     border-color: #f5222d !important;
   }
-  .bk-schema-form-item__error-tips{
+  .bk-schema-form-item__error-tips {
     color: #f5222d;
   }
 }
 .bk-form-warp :deep(.bk-form-item) {
   .bk-form-content p.mt5 {
-    color: #979BA5 !important;
+    color: #979ba5 !important;
   }
 }
 .plugin-type {

@@ -27,6 +27,7 @@ from cattr import register_structure_hook, structure_attrs_fromdict
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
 from django.db import models, transaction
+from django.utils.translation import gettext as _
 from jsonfield import JSONField
 from kubernetes.client import Configuration
 
@@ -39,6 +40,7 @@ from paas_wl.infras.cluster.exceptions import (
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
 from paas_wl.utils.models import UuidAuditedModel, make_json_field
+from paasng.platform.modules.constants import ExposedURLType
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +142,7 @@ class ClusterManager(models.Manager):
         type: str = ClusterType.NORMAL,
         is_default: bool = False,
         description: Optional[str] = None,
+        exposed_url_type: int = ExposedURLType.SUBPATH.value,
         ingress_config: Optional[Dict] = None,
         annotations: Optional[Dict] = None,
         ca_data: Optional[str] = None,
@@ -184,6 +187,7 @@ class ClusterManager(models.Manager):
             "type": type,
             "is_default": is_default,
             "description": description,
+            "exposed_url_type": exposed_url_type,
             "ingress_config": ingress_config,
             "annotations": annotations,
             "ca_data": ca_data,
@@ -242,6 +246,7 @@ class Cluster(UuidAuditedModel):
     description = models.TextField(help_text="描述信息", blank=True)
     is_default = models.BooleanField(default=False, null=True, help_text="是否为默认集群")
 
+    exposed_url_type = models.IntegerField(verbose_name=_("应用的访问地址类型"), default=ExposedURLType.SUBPATH.value)
     ingress_config: IngressConfig = IngressConfigField()
     annotations = JSONField(default={}, help_text="Annotations are used to add metadata to describe the cluster.")
 

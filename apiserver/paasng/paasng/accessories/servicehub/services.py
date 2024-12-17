@@ -236,10 +236,6 @@ class UnboundEngineAppInstanceRel(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def is_recycled(self) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
     def recycle_resource(self):
         """Recycle resources"""
         raise NotImplementedError

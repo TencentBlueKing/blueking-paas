@@ -300,12 +300,15 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         self.db_obj.save()
 
     def mark_unbound(self):
-        UnboundRemoteServiceEngineAppAttachment.objects.create(
+        att = UnboundRemoteServiceEngineAppAttachment.objects.create(
             engine_app=self.db_engine_app,
             service_id=self.db_obj.service_id,
             plan_id=self.db_obj.plan_id,
             service_instance_id=self.db_obj.service_instance_id,
             credentials_enabled=self.db_obj.credentials_enabled,
+        )
+        logger.info(
+            f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
         )
 
     def get_instance(self) -> ServiceInstanceObj:
@@ -401,10 +404,13 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
         try:
-            instance_data = self.remote_client.retrieve_instance(str(self.db_obj.service_instance_id))
+            instance_data = self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
             # if not find service instance with this id, remote response http status code 404
             if e.status_code == 404:
+                logger.info(
+                    f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+                )
                 self.db_obj.delete()
                 raise SvcInstanceNotFound(f"service instance {self.db_obj.service_instance_id} not found")
             raise
@@ -421,10 +427,13 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
     def is_recycled(self) -> bool:
         try:
-            self.remote_client.retrieve_instance(str(self.db_obj.service_instance_id))
+            self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
             # if not find service instance with this id, remote response http status code 404
             if e.status_code == 404:
+                logger.info(
+                    f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+                )
                 self.db_obj.delete()
                 return True
             raise
@@ -436,6 +445,9 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
         try:
             self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
+            logger.info(
+                f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+            )
             self.db_obj.delete()
         except Exception as e:
             logger.exception("Error occurs during recycling")

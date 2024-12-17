@@ -57,7 +57,7 @@ from paasng.accessories.servicehub.services import (
     ServiceSpecificationHelper,
     UnboundEngineAppInstanceRel,
 )
-from paasng.accessories.services.models import Plan, Service, ServiceInstance
+from paasng.accessories.services.models import Plan, Service
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -176,12 +176,15 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         self.db_obj.clean_service_instance()
 
     def mark_unbound(self):
-        UnboundServiceEngineAppAttachment.objects.create(
+        att = UnboundServiceEngineAppAttachment.objects.create(
             engine_app=self.db_obj.engine_app,
             service=self.db_obj.service,
             plan=self.db_obj.plan,
             service_instance=self.db_obj.service_instance,
             credentials_enabled=self.db_obj.credentials_enabled,
+        )
+        logger.info(
+            f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
         )
 
     def get_instance(self) -> ServiceInstanceObj:
@@ -216,16 +219,7 @@ class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def get_service(self) -> LocalServiceObj:
         return LocalServiceObj.from_db_object(self.db_obj.service)
 
-    def is_recycled(self) -> bool:
-        if not ServiceInstance.objects.filter(uuid=self.db_obj.service_instance).exists():
-            self.db_obj.delete()
-            return True
-        return False
-
     def recycle_resource(self) -> None:
-        if self.is_recycled():
-            return
-
         self.db_obj.clean_service_instance()
 
     def get_instance(self) -> ServiceInstanceObj:

@@ -104,6 +104,13 @@ class ElasticSearchConfig(UuidAuditedModel):
         null=True, help_text="required when backend_type is 'bkLog'"
     )
     search_params: ElasticSearchParams = ElasticSearchParamsField(help_text="ES 搜索相关配置")
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        null=True,
+        help_text="本条数据的所属租户",
+    )
 
 
 class ProcessLogQueryConfigManager(models.Manager):

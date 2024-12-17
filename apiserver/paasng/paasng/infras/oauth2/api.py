@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -48,6 +47,9 @@ class BkAppSecret:
 def wrap_request_exc():
     try:
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception("The response from bk-oauth is not valid JSON.")
+        raise BkOauthApiException("response not JSON") from e
     except requests.RequestException as e:
         # Handle the potential NoneType of e.request
         request_info = e.request.url if e.request else "unknown"
@@ -56,9 +58,6 @@ def wrap_request_exc():
 
         error_msg = f"Something wrong happened when fetching {request_info}"
         raise BkOauthApiException(error_msg) from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response: {e.doc}")
-        raise BkOauthApiException(f"invalid json response: {e.doc}") from e
     except BkOauthApiResponseError as e:
         logger.exception(
             "invalid response(%s) from %s ,request_id: %s ,Detail: %s",

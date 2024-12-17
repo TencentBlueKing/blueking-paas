@@ -1315,8 +1315,7 @@ class LightAppViewSet(viewsets.ViewSet):
             except Exception:
                 logger.exception("save app base info fail.")
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
-                    message="create light app failed",
+                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
                 )
 
         return self.make_feedback_response(LightApplicationViewSetErrorCode.SUCCESS, data={"count": 1})

@@ -82,7 +82,9 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         return super().handle_exception(exc)
 
     @swagger_auto_schema(
-        request_body=PackageStashRequestSLZ, response_serializer=PackageStashResponseSLZ, tags=["S-Mart", "创建应用"]
+        request_body=PackageStashRequestSLZ,
+        response_serializer=PackageStashResponseSLZ,
+        tags=["S-Mart", "创建应用"],
     )
     def upload(self, request):
         """上传一个 S-Mart 源码包，并将其暂存起来"""

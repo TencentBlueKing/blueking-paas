@@ -121,6 +121,7 @@ class ErrorCodes:
     DOC_TEMPLATE_ID_NOT_FOUND = ErrorCode(_("文档模板不存在"))
     # S-Mart 应用
     PREPARED_PACKAGE_NOT_FOUND = ErrorCode(_("没找到任何待创建的 S-mart 应用包"), code_num=4314001)
+    PREPARED_PACKAGE_ERROR = ErrorCode(_("预处理 S-Mart 应用包异常"))
     MISSING_DESCRIPTION_INFO = ErrorCode(_("缺失应用描述文件"), code_num=4314002)
     FAILED_TO_HANDLE_APP_DESC = ErrorCode(_("分析应用描述文件异常"), code_num=4314003)
     FAILED_TO_PUSH_IMAGE = ErrorCode(_("访问容器镜像仓库异常"), code_num=4314004)

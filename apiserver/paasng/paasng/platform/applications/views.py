@@ -52,16 +52,21 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
-from paasng.core.tenant.user import Tenant, get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
-from paasng.infras.accounts.models import AccountFeatureFlag, User, make_verifier
-from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
+from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
+from paasng.infras.accounts.permissions.application import (
+    app_action_required,
+    application_perm_class,
+)
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
 from paasng.infras.accounts.serializers import VerificationCodeSLZ
-from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
+from paasng.infras.bkmonitorv3.exceptions import (
+    BkMonitorApiError,
+    BkMonitorGatewayServiceError,
+)
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import (
@@ -95,13 +100,21 @@ from paasng.platform.applications.models import (
     UserMarkedApplication,
 )
 from paasng.platform.applications.pagination import ApplicationListPagination
-from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
-from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
+from paasng.platform.applications.protections import (
+    AppResProtector,
+    ProtectedRes,
+    raise_if_protected,
+)
+from paasng.platform.applications.serializers import (
+    ApplicationMemberRoleOnlySLZ,
+    ApplicationMemberSLZ,
+)
 from paasng.platform.applications.signals import (
     application_member_updated,
     post_create_application,
 )
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (
     create_application,
     create_default_module,
@@ -110,8 +123,14 @@ from paasng.platform.applications.utils import (
     get_app_overview,
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
-from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
+from paasng.platform.bk_lesscode.exceptions import (
+    LessCodeApiError,
+    LessCodeGatewayServiceError,
+)
+from paasng.platform.declarative.exceptions import (
+    ControllerError,
+    DescriptionValidationError,
+)
 from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.evaluation.models import (
     AppOperationReport,
@@ -130,7 +149,6 @@ from paasng.platform.templates.models import Template
 from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from tests.api.test_applications import AppTenantMode
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -182,7 +200,11 @@ class ApplicationListViewSet(viewsets.ViewSet):
         # 如果将用户标记的应用排在前面，需要特殊处理一下
         if params.get("prefer_marked"):
             applications_ids = applications.values_list("id", flat=True)
-            applications_ids = sorted(applications_ids, key=lambda x: x in marked_application_ids, reverse=True)
+            applications_ids = sorted(
+                applications_ids,
+                key=lambda x: x in marked_application_ids,
+                reverse=True,
+            )
 
             page = paginator.paginate_queryset(applications_ids, self.request, view=self)
             page_applications = list(Application.objects.filter(id__in=page).select_related("product"))
@@ -196,7 +218,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         data = [
             {
                 "application": application,
-                "product": application.product if hasattr(application, "product") else None,
+                "product": (application.product if hasattr(application, "product") else None),
                 "marked": application.id in marked_application_ids,
                 # 应用市场访问地址信息
                 "market_config": MarketConfig.objects.get_or_create_by_app(application)[0],
@@ -263,7 +285,9 @@ class ApplicationListViewSet(viewsets.ViewSet):
         keyword = params.get("keyword")
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
+            include_inactive=params["include_inactive"],
+            order_by=["name"],
+            search_term=keyword,
         )
 
         # get marked application ids
@@ -272,7 +296,11 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         if params.get("prefer_marked"):
             # then sort it
-            applications = sorted(applications, key=lambda app: app.id in marked_application_ids, reverse=True)
+            applications = sorted(
+                applications,
+                key=lambda app: app.id in marked_application_ids,
+                reverse=True,
+            )
 
         data = [
             {
@@ -412,7 +440,11 @@ class ApplicationListViewSet(viewsets.ViewSet):
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
         total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
 
-        data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
+        data = {
+            "collected_at": latest_collected_at,
+            "issue_type_counts": issue_type_counts,
+            "total": total,
+        }
 
         serializer = slzs.ApplicationEvaluationIssueCountListResultSLZ(data)
         return Response(serializer.data)
@@ -582,7 +614,12 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         try:
             application = create_third_app(
-                data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
+                data["region"],
+                data["code"],
+                data["name_zh_cn"],
+                data["name_en"],
+                operator,
+                market_params,
             )
         except DbIntegrityError as e:
             # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
@@ -592,7 +629,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             raise
 
         return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": None},
+            data={
+                "application": slzs.ApplicationSLZ(application).data,
+                "source_init_result": None,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -693,9 +733,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
-        app_tenant_mode, app_tenant_id, tenant = self._validate_app_tenant_params(
-            request.user, params["app_tenant_mode"]
-        )
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
 
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
@@ -763,7 +801,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             prefer_https=https_enabled,
         )
         return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
+            data={
+                "application": slzs.ApplicationSLZ(application).data,
+                "source_init_result": source_init_result,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -794,7 +835,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             for region_name in get_all_regions():
                 clusters = RegionClusterService(region_name).list_clusters()
                 adv_region_clusters.append(
-                    {"region": region_name, "cluster_names": [cluster.name for cluster in clusters]}
+                    {
+                        "region": region_name,
+                        "cluster_names": [cluster.name for cluster in clusters],
+                    }
                 )
 
         options = {
@@ -825,7 +869,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         except IndexError:
             # exposed_url_type == SUBDOMAIN 的集群, 应当配置 default_root_domain
             # exposed_url_type == SUBPATH 的集群, 应当配置 default_sub_path_domain
-            logger.warning(_("集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."), region)
+            logger.warning(
+                _("集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."),
+                region,
+            )
             return False
 
     def _init_normal_app(
@@ -889,7 +936,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
         return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
+            data={
+                "application": slzs.ApplicationSLZ(application).data,
+                "source_init_result": source_init_result,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -911,7 +961,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         source_init_result: Dict[str, Any] = {"code": result.error}
         if result.is_success():
-            source_init_result = {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
+            source_init_result = {
+                "code": "OK",
+                "extra_info": result.extra_info,
+                "dest_type": result.dest_type,
+            }
 
         return Response(
             data={
@@ -926,27 +980,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
-
-    @staticmethod
-    def _validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> Tuple[AppTenantMode, str, Tenant]:
-        """Validate the params related with multi-tenant feature.
-
-        :param user: The user who is creating the application.
-        :param raw_app_tenant_mode: The app tenant mode in params.
-        :returns: A tuple, the items: (app_tenant_mode, app_tenant_id, tenant).
-        """
-        tenant = get_tenant(user)
-        app_tenant_mode: AppTenantMode
-        if tenant.is_stub:
-            app_tenant_mode = AppTenantMode.GLOBAL
-        else:
-            # The default tenant mode is SINGLE when multi-tenant mode is enabled
-            app_tenant_mode = AppTenantMode.SINGLE if not raw_app_tenant_mode else AppTenantMode(raw_app_tenant_mode)
-            if app_tenant_mode == AppTenantMode.GLOBAL and not tenant.is_op_type:
-                raise ValidationError(_("当前不允许创建全租户可用的应用"))
-
-        app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
-        return app_tenant_mode, app_tenant_id, tenant
 
 
 class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
@@ -994,7 +1027,11 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         self.check_admin_count(application.code, username)
         try:
             remove_user_all_roles(application.code, username)
-            add_role_members(application.code, ApplicationRole(serializer.data["role"]["id"]), username)
+            add_role_members(
+                application.code,
+                ApplicationRole(serializer.data["role"]["id"]),
+                username,
+            )
         except BKIAMGatewayServiceError as e:
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -1184,7 +1221,10 @@ class ApplicationGroupByFieldStatisticsView(APIView):
 
 
 class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [
+        IsAuthenticated,
+        application_perm_class(AppAction.BASIC_DEVELOP),
+    ]
 
     def get_secret(self, request, code):
         """获取单个应用的secret"""
@@ -1238,7 +1278,10 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
 class ApplicationResProtectionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """查看应用的资源保护情况"""
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [
+        IsAuthenticated,
+        application_perm_class(AppAction.VIEW_BASIC_INFO),
+    ]
 
     def list(self, request, code):
         """返回应用的资源保护状态"""
@@ -1267,13 +1310,15 @@ class LightAppViewSet(viewsets.ViewSet):
 
             if not parent_app:
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.PARAM_NOT_VALID, message="parent_app_code is illegal"
+                    LightApplicationViewSetErrorCode.PARAM_NOT_VALID,
+                    message="parent_app_code is illegal",
                 )
 
             app_code = self.get_available_light_app_code(session, parent_app.code)
             if not app_code:
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.PARAM_NOT_VALID, message="generate app_code failed"
+                    LightApplicationViewSetErrorCode.PARAM_NOT_VALID,
+                    message="generate app_code failed",
                 )
 
             tag = tag_manager.get(code=data["tag"])
@@ -1309,7 +1354,8 @@ class LightAppViewSet(viewsets.ViewSet):
             except Exception as e:
                 logger.exception("save app base info fail.")
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
+                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
+                    message="create light app failed",
                 ) from e
 
             try:
@@ -1319,7 +1365,8 @@ class LightAppViewSet(viewsets.ViewSet):
             except Exception:
                 logger.exception("同步开发者信息到桌面失败！")
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
+                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
+                    message="create light app failed",
                 )
 
             return self.make_app_response(session, light_app)
@@ -1342,7 +1389,8 @@ class LightAppViewSet(viewsets.ViewSet):
             except Exception:
                 logger.exception("save app base info fail.")
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
+                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
+                    message="create light app failed",
                 )
 
         return self.make_feedback_response(LightApplicationViewSetErrorCode.SUCCESS, data={"count": 1})
@@ -1376,7 +1424,8 @@ class LightAppViewSet(viewsets.ViewSet):
             except Exception:
                 logger.exception("save app base info fail.")
                 raise LightAppAPIError(
-                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="edit light app failed"
+                    LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
+                    message="edit light app failed",
                 )
 
             if developers:
@@ -1385,7 +1434,8 @@ class LightAppViewSet(viewsets.ViewSet):
                 except Exception:
                     logger.exception("同步开发者信息到桌面失败！")
                     raise LightAppAPIError(
-                        LightApplicationViewSetErrorCode.CREATE_APP_ERROR, message="create light app failed"
+                        LightApplicationViewSetErrorCode.CREATE_APP_ERROR,
+                        message="create light app failed",
                     )
 
             return self.make_app_response(session, app)
@@ -1452,7 +1502,9 @@ class LightAppViewSet(viewsets.ViewSet):
         app_logo_storage.save(logo_name, logo_file)
         bucket = settings.APP_LOGO_BUCKET
         try:
-            from paasng.platform.applications.handlers import initialize_app_logo_metadata
+            from paasng.platform.applications.handlers import (
+                initialize_app_logo_metadata,
+            )
 
             initialize_app_logo_metadata(Application._meta.get_field("logo").storage, bucket, logo_name)
         except Exception:
@@ -1487,7 +1539,10 @@ class LightAppViewSet(viewsets.ViewSet):
     @staticmethod
     def validate_app(app):
         if not app or not app.is_lapp:
-            raise LightAppAPIError(LightApplicationViewSetErrorCode.PARAM_NOT_VALID, message=f"{app.code} not found")
+            raise LightAppAPIError(
+                LightApplicationViewSetErrorCode.PARAM_NOT_VALID,
+                message=f"{app.code} not found",
+            )
         return app
 
 
@@ -1536,7 +1591,10 @@ class SysAppViewSet(viewsets.ViewSet):
 class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """部署管理-进程列表，模块的排序"""
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [
+        IsAuthenticated,
+        application_perm_class(AppAction.BASIC_DEVELOP),
+    ]
 
     @swagger_auto_schema(request_body=slzs.ApplicationDeploymentModuleOrderReqSLZ)
     @transaction.atomic

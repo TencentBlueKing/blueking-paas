@@ -20,9 +20,14 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.platform.applications.serializers import AppIDField, AppNameField
+from paasng.platform.declarative.application.validations.v2 import (
+    MarketSLZ,
+    ModuleDescriptionSLZ,
+)
 from paasng.platform.declarative.constants import DiffType
-from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -40,6 +45,9 @@ class PackageStashRequestSLZ(serializers.Serializer):
     """Handle S-mart application uploads"""
 
     package = serializers.FileField(help_text="应用源码包")
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
 
     def validate_package(self, package):
         if not re.fullmatch("[a-zA-Z0-9-_. ]+", package.name):
@@ -49,10 +57,22 @@ class PackageStashRequestSLZ(serializers.Serializer):
         return package
 
 
+@i18n
+class PackageStashConfirmRequestSLZ(serializers.Serializer):
+    """Handle S-mart application confirm after upload"""
+
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
+
+
 class PackageStashResponseSLZ(serializers.Serializer):
     app_description = AppDescriptionSLZ()
     signature = serializers.CharField(help_text="数字签名")
     supported_services = serializers.ListField(child=serializers.CharField(), help_text="支持的增强服务")
+    raw_app_description = AppDescriptionSLZ()
 
 
 class DiffItemSLZ(serializers.Serializer):

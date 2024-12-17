@@ -282,7 +282,7 @@ class Application(OwnerTimestampedModel):
 
     id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     code = models.CharField(verbose_name="应用代号", max_length=20, unique=True)
-    name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
+    name = models.CharField(verbose_name="应用名称", max_length=20)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
     # app_tenant_mode 和 app_tenant_id 字段共同控制了应用的“可用范围”，可能的组合包括：
@@ -355,6 +355,10 @@ class Application(OwnerTimestampedModel):
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()
+
+    class Meta:
+        # 应用名称租户内唯一
+        unique_together = ("name", "app_tenant_id")
 
     @property
     def has_deployed(self) -> bool:
@@ -644,3 +648,10 @@ class ApplicationDeploymentModuleOrder(models.Model):
 
     class Meta:
         verbose_name = "模块顺序"
+
+
+class SMartApplication(models.Model):
+    """SMart 应用信息"""
+
+    app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
+    raw_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)

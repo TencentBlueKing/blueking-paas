@@ -136,7 +136,7 @@
               @change="changePluginLanguage"
             >
               <bk-option
-                v-for="option in pluginLanguage"
+                v-for="option in developmentLanguages"
                 :id="option.id"
                 :key="option.id"
                 :name="option.language"
@@ -369,6 +369,9 @@ export default {
     isShowNotice() {
       return this.$store.state.isShowNotice;
     },
+    developmentLanguages() {
+      return uniqBy(this.pluginLanguage, 'language');
+    },
   },
   watch: {
     'form.plugin_id'(value) {
@@ -545,8 +548,7 @@ export default {
         ? `${schema.repository_group}${this.form.plugin_id}.git`
         : schema.repository_template;
 
-      // 语言去重
-      this.pluginLanguage = uniqBy(schema.init_templates, 'language');
+      this.pluginLanguage = schema.init_templates;
       this.extraFields = schema.extra_fields;
 
       // schema 排序

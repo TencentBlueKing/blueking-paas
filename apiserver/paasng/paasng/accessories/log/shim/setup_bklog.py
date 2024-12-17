@@ -21,6 +21,7 @@ from typing import Union
 
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
+from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
@@ -30,7 +31,7 @@ from paasng.accessories.log.models import (
     ProcessLogQueryConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
-from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
+from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
@@ -44,6 +45,7 @@ from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +148,7 @@ def update_or_create_es_search_config(
             "scenarioID": "log",
         },
         "search_params": search_params,
+        "tenant_id": application.tenant_id,
     }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
@@ -211,8 +214,18 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案
-    setup_platform_elk_model()
-    ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+    tenant_id = env.application.tenant_id
+    try:
+        ingress_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID, tenant_id=env.application.tenant_id
+        )
+    except ElasticSearchConfig.DoesNotExist:
+        # 未配置时，需要记录异常日志方便排查
+        logger.exception(
+            f"The access logs for tenant ({tenant_id}) are not configured with the corresponding Elasticsearch."
+        )
+        raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
+
     config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
     config.ingress = ingress_config
     config.save()

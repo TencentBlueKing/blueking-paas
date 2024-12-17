@@ -46,6 +46,7 @@ class QueryUniApplicationsByID(serializers.Serializer):
     include_contact_info = serializers.BooleanField(
         help_text="是否在结果中返回应用联系人（即最近操作人），默认返回", default=True
     )
+    include_market_info = serializers.BooleanField(help_text="是否在结果中返回应用市场信息，默认不返回", default=False)
 
 
 class QueryUniApplicationsByUserName(serializers.Serializer):

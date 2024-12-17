@@ -18,6 +18,7 @@ to the current version of the project delivered to anyone in the future.
 """
 
 import json
+import logging
 from contextlib import contextmanager
 from copy import deepcopy
 from enum import Enum
@@ -33,6 +34,8 @@ from vendor.serializers import PlanConfigSerializer
 
 from .constants import LinkType
 
+logger = logging.getLogger(__name__)
+
 
 class Tag(AuditedModel):
     class Meta(object):
@@ -47,7 +50,9 @@ class ClusterManager(models.Manager):
     def update_or_create_by_plan(self, plan: Plan):
         plan_config = json.loads(plan.config)
         slz = PlanConfigSerializer(data=plan_config)
-        slz.is_valid(raise_exception=True)
+        if not slz.is_valid():
+            logger.error("serialize plan config error: %s", slz.errors)
+            return
         config = slz.data
 
         cluster, created = self.update_or_create(

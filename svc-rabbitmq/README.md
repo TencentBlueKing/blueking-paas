@@ -50,6 +50,12 @@ export DATABASE_PORT="3306"
 export BKKRILL_ENCRYPT_SECRET_KEY="请参考上面的命令生成"
 # Django Settings
 export DJANGO_SETTINGS_MODULE="svc_rabbitmq.settings"
+
+# redis 配置
+export REDIS_HOST="localhost"
+export REDIS_PORT=6379
+export REDIS_DB=0
+export REDIS_PASS=""
 ```
 
 ### 4. 初始化数据
@@ -59,11 +65,25 @@ export DJANGO_SETTINGS_MODULE="svc_rabbitmq.settings"
 ```bash
 python manage.py migrate
 
+# 通过初始化数据创建服务和方案
 # 初始化数据放在 /data/fixtures 目录下
 # 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 default.json 中 region 的值
 python manage.py loaddata data/fixtures/default.json
 
-## 初始化 rabbitmq 集群，请根据实际情况修改参数的值
+## 配置增强服务方案，会根据方案自动生成 rabbitmq 集群信息(推荐)
+python manage.py shell
+
+import json
+from paas_service.models import Service
+from paas_service.models import Plan
+
+# pk 由 /data/fixtures/default.json 确认 
+plan = Plan.objects.get(pk="843127a9-d7a2-4485-b985-076a9b6695d8")
+config = {"host":"10.0.0.1", "admin":"admin","password":"blueking", "port":5672,"api_port":15672}
+plan.config = config=json.dumps(config)
+plan.save(update_fields=["config"])
+
+## 初始化 rabbitmq 集群，请根据实际情况修改参数的值(如果没有配置增强服务方案，也可以手动创建集群)
 python manage.py register_cluster \
 --name "builtin" \
 --host "10.0.0.1" \

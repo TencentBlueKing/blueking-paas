@@ -15,9 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Optional
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.accessories.servicehub.services import ServiceSpecificationHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
@@ -78,6 +82,24 @@ class ContactInfoSLZ(serializers.Serializer):
     recent_deployment_operators = serializers.ListSerializer(
         child=UserNameField(help_text="用户名", default=None), help_text="近期部署人员列表"
     )
+
+
+class BasicMarketInfoSLZ(serializers.ModelSerializer):
+    """仅返回用户在页面能看到信息，后台 DB 存储的冗余数据不返回"""
+
+    enabled = serializers.BooleanField(read_only=True, help_text="是否上架到市场")
+    market_address = serializers.SerializerMethodField(read_only=True, allow_null=True, help_text="市场访问链接")
+
+    class Meta:
+        model = MarketConfig
+        fields = [
+            "enabled",
+            "market_address",
+        ]
+
+    def get_market_address(self, instance: MarketConfig) -> Optional[str]:
+        entrance = MarketAvailableAddressHelper(instance).access_entrance
+        return entrance.address if entrance is not None else None
 
 
 class QueryApplicationsSLZ(serializers.Serializer):

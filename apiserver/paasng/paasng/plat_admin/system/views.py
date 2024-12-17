@@ -28,7 +28,6 @@ from rest_framework.response import Response
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.models import MarketConfig
-from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.accessories.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
 from paasng.accessories.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.infras.accounts.permissions.constants import SiteAction
@@ -44,6 +43,7 @@ from paasng.plat_admin.system.applications import (
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
     AddonSpecsSLZ,
+    BasicMarketInfoSLZ,
     ClusterNamespaceSLZ,
     ContactInfoSLZ,
     MinimalAppSLZ,
@@ -86,11 +86,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
             return None
 
         market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
-        access_entrance = MarketAvailableAddressHelper(market_config).access_entrance
-        if access_entrance:
-            return access_entrance.address
-        else:
-            return None
+        return BasicMarketInfoSLZ(market_config).data
 
     def serialize_app_details(
         self,

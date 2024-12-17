@@ -20,7 +20,7 @@ import os
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repository, VersionInfo
+from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, svn_version_types
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 
@@ -99,6 +99,10 @@ class SvnRepoController:
             CommitLog(commit["message"], commit["revision"], commit["date"], commit["author"], commit["changelist"])
             for commit in self.svn_client.get_commit_logs(from_revision, to_revision, rel_filepath)
         ]
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
+        """bk_svn 不支持该功能"""
+        raise NotImplementedError
 
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本(version_info)的代码中读取指定文件(file_path) 的内容"""

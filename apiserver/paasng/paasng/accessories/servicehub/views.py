@@ -226,7 +226,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({"results": slz.data})
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
-    @transaction.atomic
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
@@ -761,38 +760,6 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
 
 class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """已解绑待回收增强服务实例相关API"""
-
-    @staticmethod
-    def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
-
-    @app_action_required(AppAction.BASIC_DEVELOP)
-    def list_by_service(self, request, code, module_name, service_id):
-        """查看应用模块与增强服务已解绑实例详情"""
-        application = self.get_application()
-        module = self.get_module_via_path()
-        service = self.get_service(service_id, application)
-
-        results = []
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app, service=service):
-                try:
-                    instance = rel.get_instance()
-                except SvcInstanceNotFound:
-                    # 如果已经回收了，获取不到 instance，跳过
-                    continue
-                plan = rel.get_plan()
-                results.append(
-                    {
-                        "service_instance": instance,
-                        "environment": env.environment,
-                        "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "service_specs": plan.specifications,
-                        "usage": "{}",
-                    }
-                )
-        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
 
     @app_action_required(AppAction.BASIC_DEVELOP)
     def list_by_module(self, request, code, module_name):

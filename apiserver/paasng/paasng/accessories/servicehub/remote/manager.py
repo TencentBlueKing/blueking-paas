@@ -286,6 +286,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         except Exception:
             logger.exception(f"Error when updating instance config for {instance_id}")
 
+    @atomic
     def recycle_resource(self):
         """对于 remote service 我们默认其已经具备了回收的能力"""
         if self.is_provisioned():
@@ -294,22 +295,21 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             except Exception as e:
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
-            if self.remote_client.config.prefer_async_delete:
-                self.mark_unbound()
+
+        if self.remote_client.config.prefer_async_delete:
+            att = UnboundRemoteServiceEngineAppAttachment.objects.create(
+                engine_app=self.db_engine_app,
+                service_id=self.db_obj.service_id,
+                plan_id=self.db_obj.plan_id,
+                service_instance_id=self.db_obj.service_instance_id,
+                credentials_enabled=self.db_obj.credentials_enabled,
+            )
+            logger.info(
+                f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
+            )
+
         self.db_obj.service_instance_id = None
         self.db_obj.save()
-
-    def mark_unbound(self):
-        att = UnboundRemoteServiceEngineAppAttachment.objects.create(
-            engine_app=self.db_engine_app,
-            service_id=self.db_obj.service_id,
-            plan_id=self.db_obj.plan_id,
-            service_instance_id=self.db_obj.service_instance_id,
-            credentials_enabled=self.db_obj.credentials_enabled,
-        )
-        logger.info(
-            f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
-        )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
@@ -401,8 +401,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def get_service(self) -> RemoteServiceObj:
         return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
 
-    def get_instance(self) -> ServiceInstanceObj:
-        """Get service instance object"""
+    def retrieve_instance_to_be_delete(self) -> dict:
         try:
             instance_data = self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
@@ -414,6 +413,11 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
                 self.db_obj.delete()
                 raise SvcInstanceNotFound(f"service instance {self.db_obj.service_instance_id} not found")
             raise
+        return instance_data
+
+    def get_instance(self) -> ServiceInstanceObj:
+        """Get service instance object"""
+        instance_data = self.retrieve_instance_to_be_delete()
 
         svc_obj = self.get_service()
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
@@ -425,22 +429,10 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             create_time=create_time.datetime,
         )
 
-    def is_recycled(self) -> bool:
-        try:
-            self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
-        except RClientResponseError as e:
-            # if not find service instance with this id, remote response http status code 404
-            if e.status_code == 404:
-                logger.info(
-                    f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
-                )
-                self.db_obj.delete()
-                return True
-            raise
-        return False
-
     def recycle_resource(self) -> None:
-        if self.is_recycled():
+        try:
+            self.retrieve_instance_to_be_delete()
+        except SvcInstanceNotFound:
             return
 
         try:

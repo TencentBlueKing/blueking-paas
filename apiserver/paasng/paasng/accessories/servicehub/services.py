@@ -212,11 +212,6 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
         """Recycle resources but do not unbind the service"""
         raise NotImplementedError
 
-    @abstractmethod
-    def mark_unbound(self):
-        """Add to unbound instances, which is unbound with engine app, could be recycled later"""
-        raise NotImplementedError
-
 
 class UnboundEngineAppInstanceRel(metaclass=ABCMeta):
     """A provinsioned instance which is unbound with engine app"""

@@ -172,20 +172,18 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
 
     def recycle_resource(self):
         if self.is_provisioned() and self.db_obj.service.prefer_async_delete:
-            self.mark_unbound()
-        self.db_obj.clean_service_instance()
+            att = UnboundServiceEngineAppAttachment.objects.create(
+                engine_app=self.db_obj.engine_app,
+                service=self.db_obj.service,
+                plan=self.db_obj.plan,
+                service_instance=self.db_obj.service_instance,
+                credentials_enabled=self.db_obj.credentials_enabled,
+            )
+            logger.info(
+                f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
+            )
 
-    def mark_unbound(self):
-        att = UnboundServiceEngineAppAttachment.objects.create(
-            engine_app=self.db_obj.engine_app,
-            service=self.db_obj.service,
-            plan=self.db_obj.plan,
-            service_instance=self.db_obj.service_instance,
-            credentials_enabled=self.db_obj.credentials_enabled,
-        )
-        logger.info(
-            f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
-        )
+        self.db_obj.clean_service_instance()
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""

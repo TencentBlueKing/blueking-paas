@@ -135,17 +135,11 @@ urlpatterns = [
         views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
         name="api.services.mysql.retrieve_related_applications_info",
     ),
-    # retrieve unbound instances by module and service_id
-    re_path(
-        make_app_pattern(f"/services/{SERVICE_UUID}/attachments/unbound/$", include_envs=False),
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list_by_service"}),
-        name="api.services.attachment.unbound.list_by_service",
-    ),
     # List unbound instances by module
     re_path(
-        make_app_pattern("/services/attachments/unbound/$", include_envs=False),
+        make_app_pattern("/services/unbound_attachments/$", include_envs=False),
         views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list_by_module"}),
-        name="api.services.attachment.unbound.list_by_module",
+        name="api.services.attachment.unbound",
     ),
     # Recycle unbound instance
     re_path(

@@ -115,26 +115,6 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
 
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
-    def test_list_by_service(self, mock_get_or_404, mock_list_unbound_instance_rels, api_client, bk_app, bk_module):
-        service = G(Service)
-        mock_get_or_404.return_value = service
-
-        mock_rel1 = self.create_mock_rel(service, True, datetime.datetime(2020, 1, 1), a=1, b=2)
-        mock_rel2 = self.create_mock_rel(service, False, datetime.datetime(2020, 1, 1), c=3)
-        mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2]
-
-        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{str(service.uuid)}/attachments/unbound/"
-
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_200_OK
-        response_data = response.json()
-        assert response_data["count"] == 4
-        assert response_data["results"][0]["service_instance"]["credentials"] == '{"a": 1, "b": 2}'
-        assert response_data["results"][3]["service_specs"] == {"name": "version"}
-
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
-    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
     def test_list_by_module(self, mock_get_or_404, mock_list_unbound_instance_rels, api_client, bk_app, bk_module):
         service1 = G(
             Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
@@ -157,7 +137,7 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         mock_rel4 = self.create_mock_rel(service2, False, datetime.datetime(2020, 1, 1), f=1)
         mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2, mock_rel3, mock_rel4]
 
-        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/attachments/unbound/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/unbound_attachments/"
 
         response = api_client.get(url)
 

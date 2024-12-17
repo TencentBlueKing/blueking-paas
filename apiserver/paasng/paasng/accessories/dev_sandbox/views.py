@@ -29,7 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paasng.accessories.dev_sandbox.commit import DevSandboxCommitor
+from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -291,7 +291,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         # 初始化提交器
         try:
-            commitor = DevSandboxCommitor(module, operator)
+            commitor = DevSandboxCodeCommit(module, operator)
         except (ObjectDoesNotExist, DevSandboxResourceNotFound):
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 

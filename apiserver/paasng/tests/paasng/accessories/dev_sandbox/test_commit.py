@@ -20,7 +20,7 @@ from unittest import mock
 
 import pytest
 
-from paasng.accessories.dev_sandbox.commit import DevSandboxCommitor
+from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.platform.sourcectl.models import ChangedFile, CommitInfo
 
 pytestmark = pytest.mark.django_db
@@ -46,7 +46,7 @@ class StubRepoController:
         return "https://github.com/octocat/hello-world.git"
 
 
-class TestDevSandboxCommitor:
+class TestDevSandboxCodeCommit:
     @pytest.fixture(autouse=True)
     def _mocks(self):
         with mock.patch(
@@ -59,7 +59,7 @@ class TestDevSandboxCommitor:
             yield
 
     def test_commit(self, bk_user, bk_cnative_app, bk_module, dev_sandbox):
-        repo_url = DevSandboxCommitor(bk_module, bk_user.username).commit("this is commit message!")
+        repo_url = DevSandboxCodeCommit(bk_module, bk_user.username).commit("this is commit message!")
         assert repo_url == "https://github.com/octocat/hello-world.git"
 
     def test_build_commit_info(self, bk_user, bk_cnative_app, bk_module, dev_sandbox):
@@ -68,8 +68,9 @@ class TestDevSandboxCommitor:
             {"path": "api/main.py", "action": "modified", "content": "python content"},
             {"path": "backend/cmd/main.go", "action": "deleted", "content": "go content"},
         ]
-        commitor = DevSandboxCommitor(bk_module, bk_user.username)
-        commit_info = commitor._build_commit_info(diffs, "this is commit message!")
+        commit_info = DevSandboxCodeCommit(bk_module, bk_user.username)._build_commit_info(
+            diffs, "this is commit message!"
+        )
         assert commit_info == CommitInfo(
             message="this is commit message!",
             branch="develop",

@@ -29,7 +29,7 @@ from paasng.platform.sourcectl.models import ChangedFile, CommitInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 
 
-class DevSandboxCommitor:
+class DevSandboxCodeCommit:
     """开发沙箱代码提交"""
 
     def __init__(self, module: Module, operator: str):

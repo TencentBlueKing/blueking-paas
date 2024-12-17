@@ -138,6 +138,7 @@ class Region:
     basic_info: RegionBasicInfo
     mul_modules_config: RegionMulModulesConfig
     enabled_feature_flags: Set[str] = field(default_factory=set)
+    allow_user_modify_custom_domain: Optional[bool] = True
     module_mobile_config: Optional[RegionMobileConfig] = None
     provide_env_vars_platform: Optional[bool] = True
     allow_deploy_app_by_lesscode: Optional[bool] = False

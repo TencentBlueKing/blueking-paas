@@ -14,10 +14,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import logging
 from pathlib import Path
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -27,6 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
+from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -40,8 +43,11 @@ from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
+from .exceptions import CannotCommitToRepository, DevSandboxApiException
 from .serializers import (
     CreateDevSandboxWithCodeEditorSLZ,
+    DevSandboxCommitInputSLZ,
+    DevSandboxCommitOutputSLZ,
     DevSandboxDetailSLZ,
     DevSandboxSLZ,
     DevSandboxWithCodeEditorDetailSLZ,
@@ -149,6 +155,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
         )
         try:
+            # FIXME（沙箱重构）这里获取部署目录的逻辑过于冗余了，实际上无需考虑源码包的情况？
             # 获取构建目录相对路径
             source_dir = get_source_dir(module, request.user.pk, version_info)
             relative_source_dir = Path(source_dir)
@@ -171,6 +178,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # FIXME（沙箱重构）为啥删除 model 不清理资源？
             # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
@@ -228,7 +236,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "urls": detail.urls,
-                # FIXME（沙箱重构） token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
+                # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
@@ -249,7 +257,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response({"password": dev_sandbox.code_editor.password})
 
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})
+    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxSLZ(many=True)})
     def list_app_dev_sandbox(self, request, code):
         """获取该应用下用户的开发沙箱"""
         app = self.get_application()
@@ -266,3 +274,36 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             return Response(data={"result": False})
 
         return Response(data={"result": True})
+
+    @swagger_auto_schema(
+        tags=["开发沙箱"],
+        operation_description="提交变更的代码",
+        request_body=DevSandboxCommitInputSLZ(),
+        responses={status.HTTP_200_OK: DevSandboxCommitOutputSLZ()},
+    )
+    def commit(self, request, code, module_name):
+        slz = DevSandboxCommitInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        module = self.get_module_via_path()
+        operator = request.user.pk
+
+        # 初始化提交器
+        try:
+            commitor = DevSandboxCodeCommit(module, operator)
+        except (ObjectDoesNotExist, DevSandboxResourceNotFound):
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 沙箱代码提交
+        try:
+            repo_url = commitor.commit(data["message"])
+        except DevSandboxApiException as e:
+            raise error_codes.DEV_SANDBOX_API_ERROR.f(str(e))
+        except CannotCommitToRepository as e:
+            raise error_codes.CANNOT_COMMIT_TO_REPOSITORY.f(str(e))
+
+        return Response(
+            status=status.HTTP_200_OK,
+            data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data,
+        )

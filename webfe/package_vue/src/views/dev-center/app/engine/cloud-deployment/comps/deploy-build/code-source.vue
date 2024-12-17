@@ -2,7 +2,7 @@
   <div class="code-main">
     <section class="source-code-info code-source">
       <div class="header-wrapper mb20">
-        <span :class="['build-title', { 'edit': isCodeSourceEdit }]">{{$t('源码信息')}}</span>
+        <span :class="['build-title', { edit: isCodeSourceEdit }]">{{ $t('源码信息') }}</span>
         <div
           class="edit-container"
           v-if="isShowEdit"
@@ -15,25 +15,42 @@
 
       <template v-if="isEmptyData">
         <!-- 查看态 -->
-        <div class="content" v-if="!isCodeSourceEdit">
-          <div v-if="isCodeQuality" class="code-quality" :style="isInitTemplate ? { height: '158px' } : ''">
-            <div>
-              <span class="fraction">{{codeDetails.rdIndicatorsScore ?? '--'}}</span>
-              {{$t('分')}}
-              <p class="desc">{{$t('代码质量')}}</p>
-              <i class="paasng-icon paasng-process-file" @click="handleToggleSideslider" />
+        <div
+          class="content"
+          v-if="!isCodeSourceEdit"
+        >
+          <div
+            v-if="isCodeQuality"
+            :class="['code-quality', { entry: codeDetails.rdIndicatorsScore }]"
+            :style="isInitTemplate ? { height: '158px' } : ''"
+            @click="handleToggleSideslider"
+          >
+            <div class="box">
+              <p>
+                <span class="fraction">{{ codeDetails.rdIndicatorsScore ?? '--' }}</span>
+                {{ $t('分') }}
+              </p>
+              <p class="desc">{{ $t('代码质量') }}</p>
+            </div>
+            <div
+              v-if="codeDetails.rdIndicatorsScore"
+              class="code-inspection-entry"
+            >
+              {{ $t('代码检查') }}
+              <i class="paasng-icon paasng-back"></i>
             </div>
           </div>
           <div class="code-detail form-edit">
             <bk-form :model="sourceCodeData">
               <bk-form-item :label="`${$t('代码源')}：`">
-                <span class="form-text">{{curAppModule.repo?.display_name || '--'}}</span>
+                <span class="form-text">{{ curAppModule.repo?.display_name || '--' }}</span>
                 <a
                   v-if="sourceControlType === 'tc_git'"
                   :href="tcgitCopilotUrl"
                   target="_blank"
-                  class="copilot-link">
-                  {{`${$t('体验')}${$t('工蜂 Copilot')}`}}
+                  class="copilot-link"
+                >
+                  {{ `${$t('体验')}${$t('工蜂 Copilot')}` }}
                   <i class="paasng-icon paasng-jump-link"></i>
                 </a>
               </bk-form-item>
@@ -42,42 +59,58 @@
                   v-if="curAppModule.repo?.repo_url"
                   class="form-text code-link"
                   :href="curAppModule.repo?.repo_url"
-                  target="_blank">
-                  {{curAppModule.repo?.repo_url}}
+                  target="_blank"
+                >
+                  {{ curAppModule.repo?.repo_url }}
                 </a>
-                <template v-else>
-                  --
-                </template>
+                <template v-else>--</template>
               </bk-form-item>
               <bk-form-item :label="`${$t('构建目录')}：`">
-                <span class="form-text">{{curAppModule.repo?.source_dir || '--'}}</span>
+                <span class="form-text">{{ curAppModule.repo?.source_dir || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('初始化模板')}：`" v-if="isInitTemplate">
-                <span class="form-text">{{curAppModule.template_display_name || '--'}}</span>
+              <bk-form-item
+                :label="`${$t('初始化模板')}：`"
+                v-if="isInitTemplate"
+              >
+                <span class="form-text">{{ curAppModule.template_display_name || '--' }}</span>
                 <a
                   v-if="!curAppModule.repo?.linked_to_internal_svn && initTemplateDesc !== '--'"
                   class="download"
                   href="javascript: void(0);"
                   @click="handleDownloadTemplate"
-                > <i class="paasng-icon paasng-download"></i>{{ $t('下载') }} </a>
+                >
+                  <i class="paasng-icon paasng-download"></i>
+                  {{ $t('下载') }}
+                </a>
               </bk-form-item>
             </bk-form>
           </div>
         </div>
 
         <!-- 编辑态 -->
-        <div class="content no-border" v-else>
+        <div
+          class="content no-border"
+          v-else
+        >
           <section class="code-depot">
             <label class="form-label">
               {{ $t('代码源') }}
             </label>
             <div
-              v-for="(item, index) in sourceControlTypes" :key="index"
-              :class="['code-depot-item mr10', { 'on': item.value === sourceControlType },
-                       { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
-              @click="changeSourceControl(item.value)">
-              <img :src="'/static/images/' + item.imgSrc + '.png'">
-              <p class="source-control-title" :title="item.name">
+              v-for="(item, index) in sourceControlTypes"
+              :key="index"
+              :class="[
+                'code-depot-item mr10',
+                { on: item.value === sourceControlType },
+                { disabled: sourceControlDisabled && item.value === 'bk_svn' },
+              ]"
+              @click="changeSourceControl(item.value)"
+            >
+              <img :src="'/static/images/' + item.imgSrc + '.png'" />
+              <p
+                class="source-control-title"
+                :title="item.name"
+              >
                 {{ item.name }}
               </p>
             </div>
@@ -102,22 +135,34 @@
                 @change="changeSelectedRepoUrl"
               />
               <!-- 构建目录 -->
-              <div class="form-group-dir" style="margin-top: 10px;">
+              <div
+                class="form-group-dir"
+                style="margin-top: 10px"
+              >
                 <label class="form-label optional">
                   {{ $t('构建目录') }}
                 </label>
                 <div class="form-group-flex">
-                  <p>
+                  <div>
                     <bk-input
-                      v-model="sourceControlChangeForm.sourceDir" class="source-dir"
+                      v-model="sourceControlChangeForm.sourceDir"
+                      class="source-dir"
                       :class="isSourceDirInvalid ? 'error' : ''"
-                      :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')" />
-                    <ul v-if="isSourceDirInvalid" class="parsley-errors-list">
+                      :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
+                    />
+                    <ul
+                      v-if="isSourceDirInvalid"
+                      class="parsley-errors-list"
+                    >
                       <li class="parsley-pattern">
-                        {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                        {{
+                          $t(
+                            '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
+                          )
+                        }}
                       </li>
                     </ul>
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -137,11 +182,21 @@
           </template>
 
           <div class="footer-operate">
-            <bk-button :theme="'primary'" class="mr10" :loading="switchLoading" @click="sureSwitch">
-              {{$t('保存')}}
+            <bk-button
+              :theme="'primary'"
+              class="mr10"
+              :loading="switchLoading"
+              @click="sureSwitch"
+            >
+              {{ $t('保存') }}
             </bk-button>
-            <bk-button :theme="'default'" type="submit" @click="handleCancel" class="mr10">
-              {{$t('取消')}}
+            <bk-button
+              :theme="'default'"
+              type="submit"
+              @click="handleCancel"
+              class="mr10"
+            >
+              {{ $t('取消') }}
             </bk-button>
           </div>
         </div>
@@ -156,27 +211,42 @@
       >
         <p
           class="mt10"
-          style="color: #63656E;font-size: 14px;"
+          style="color: #63656e; font-size: 14px"
         >
           {{ $t('暂未绑定源码信息') }}
         </p>
         <p
           class="mt10"
-          style="color: #979BA5;font-size: 12px;"
+          style="color: #979ba5; font-size: 12px"
         >
           {{ $t('源码仓库仅用于 Homepage 运维开发分数统计，请瑞雪填写') }}
         </p>
-        <p class="guide-link mt15" @click="handleEdit">{{ $t('立即绑定') }}</p>
+        <p
+          class="guide-link mt15"
+          @click="handleEdit"
+        >
+          {{ $t('立即绑定') }}
+        </p>
       </bk-exception>
     </section>
 
     <!-- 代码检查 -->
-    <bk-sideslider :is-show.sync="defaultSettings.isShow" :width="960" :quick-close="true">
+    <bk-sideslider
+      :is-show.sync="defaultSettings.isShow"
+      :width="960"
+      :quick-close="true"
+    >
       <div slot="header">{{ defaultSettings.title }}</div>
-      <div class="p20 sideslider-content" slot="content">
-        <bk-alert type="info" v-if="!isDeploy">
+      <div
+        class="p20 sideslider-content"
+        slot="content"
+      >
+        <bk-alert
+          type="info"
+          v-if="!isDeploy"
+        >
           <div slot="title">
-            {{$t('该模块未部署，没有执行过代码检查。')}}
+            {{ $t('该模块未部署，没有执行过代码检查。') }}
           </div>
         </bk-alert>
         <code-inspection :code-details="codeDetails" />
@@ -185,7 +255,8 @@
   </div>
 </template>
 
-<script>import gitExtend from '@/components/ui/git-extend';
+<script>
+import gitExtend from '@/components/ui/git-extend';
 import repoInfo from '@/components/ui/repo-info.vue';
 import codeInspection from './code-inspection.vue';
 import { DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
@@ -313,7 +384,7 @@ export default {
 
   computed: {
     curSourceControl() {
-      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
+      const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
       return match;
     },
     // 部署目录校验
@@ -336,9 +407,6 @@ export default {
     isCodeQuality() {
       return this.curAppInfo.feature?.CODE_CHECK;
     },
-    isPluginApp() {
-      return this.curAppInfo.application?.is_plugin_app;
-    },
     isEmptyData() {
       return this.isCodeSourceEdit ? this.isCodeSourceEdit : this.curAppModule.repo?.repo_url;
     },
@@ -357,15 +425,12 @@ export default {
   methods: {
     async init() {
       // 获取模块基本信息
-      await Promise.all([
-        this.fetchModuleInfo(),
-        this.fetchAccountAllowSourceControlType(),
-      ]);
+      await Promise.all([this.fetchModuleInfo(), this.fetchAccountAllowSourceControlType()]);
       await this.fetchLanguageInfo();
       // 获取代码检查详情
       this.getCodeInspection();
 
-      const sourceControlTypes = this.sourceControlTypes.map(e => e.value);
+      const sourceControlTypes = this.sourceControlTypes.map((e) => e.value);
       // 初始化 repo List
       for (const key in this.gitExtendConfig) {
         const config = this.gitExtendConfig[key];
@@ -435,7 +500,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -489,8 +554,10 @@ export default {
         this.sourceControlChangeForm.sourceDir = '';
         return;
       }
-      if (this.curAppModule?.source_origin === 1
-      || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+      if (
+        this.curAppModule?.source_origin === 1 ||
+        this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+      ) {
         this.sourceControlType = this.curAppModule.repo.type;
         this.sourceControlChangeForm.sourceRepoUrl = this.curAppModule.repo.trunk_url;
         this.sourceControlChangeForm.sourceDir = this.curAppModule.repo.source_dir;
@@ -657,8 +724,10 @@ export default {
         });
         this.initTemplateType = this.curAppModule.template_display_name;
 
-        if (this.curAppModule?.source_origin === 1
-         || this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP) {
+        if (
+          this.curAppModule?.source_origin === 1 ||
+          this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SCENE_APP
+        ) {
           const { repo } = this.curAppModule;
           if (repo) {
             this.sourceControlType = repo.type;
@@ -692,7 +761,7 @@ export default {
         const initLanguage = this.curAppModule?.language;
         if (res[region] && res[region].languages) {
           const languages = res[region].languages[initLanguage] || [];
-          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
+          const lanObj = languages.find((item) => item.display_name === this.initTemplateType) || {};
           this.initTemplateDesc = lanObj.description || '--';
         }
       } catch (res) {
@@ -739,250 +808,269 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  @import '~@/assets/css/mixins/border-active-logo.scss';
+@import '~@/assets/css/mixins/border-active-logo.scss';
 
-  .code-main {
-    position: relative;
+.code-main {
+  position: relative;
 
-    &>section {
-      padding-bottom: 24px;
-      border-bottom: 1px solid #EAEBF0;
-      margin-bottom: 24px;
-    }
-
-    :deep(.bk-label-text) {
-      color: #63656E;
-    }
-
-    :deep(.bk-form-content) {
-      color: #313238;
-    }
-
-    :deep(.bk-sideslider-content) {
-      background: #F5F7FA;
-    }
-
-    :deep(.bk-alert) {
-      margin-bottom: 16px;
-    }
-
-    .button-edit {
-      position: absolute;
-      right: 0;
-      top: 0;
-    }
-
-    .form-group {
-      display: flex;
-    }
-
-    .code-detail {
-      .code-link {
-        color: #3A84FF;
-      }
-      .copilot-link {
-        margin-left: 10px;
-        i {
-          font-size: 16px;
-        }
-      }
-    }
-
-    .form-group-dir {
-      display: flex;
-      align-items: center;
-
-      .form-label {
-        transform: translateY(5px);
-      }
-    }
+  & > section {
+    padding-bottom: 24px;
+    border-bottom: 1px solid #eaebf0;
+    margin-bottom: 24px;
   }
 
-  .source-code-info.code-source {
-    width: 100%;
+  :deep(.bk-label-text) {
+    color: #63656e;
   }
 
-  .source-code-info .content {
-    display: flex;
-
-    :deep(.bk-form-item+.bk-form-item) {
-      margin-top: 10px;
-    }
-
-    :deep(.code-repo) {
-      .bk-label {
-        width: 150px !important;
-      }
-      .bk-form-content {
-        margin-left: 150px !important;
-      }
-    }
-  }
-
-  .content.no-border {
-    display: block;
-
-    :deep(.form-label) {
-      width: 150px;
-    }
-  }
-
-  :deep(.establish-tab) #shorter-loading-animate .form-label {
-    width: 130px !important;
-    margin-right: 20px;
-  }
-
-  .mirror-info {
-    :deep(.bk-form-item+.bk-form-item) {
-      margin-top: 10px;
-    }
-  }
-
-  .build-title {
-    position: relative;
-    font-weight: 700;
-    font-size: 14px;
+  :deep(.bk-form-content) {
     color: #313238;
-    &.edit::after {
-      content: '*';
-      height: 8px;
-      line-height: 1;
-      color: #ea3636;
-      font-size: 12px;
-      position: absolute;
-      display: inline-block;
-      vertical-align: middle;
-      top: 50%;
-      transform: translate(3px,-50%);
-    }
   }
 
-  .code-quality {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 190px;
-    background: #F5F7FA;
-    border-radius: 2px;
-    text-align: center;
-
-    .fraction {
-      font-size: 30px;
-      color: #313238;
-    }
-
-    .desc {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #00000099;
-    }
-
-    i {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      color: #3A84FF;
-      cursor: pointer;
-    }
+  :deep(.bk-sideslider-content) {
+    background: #f5f7fa;
   }
 
-  .sideslider-content {
-    :deep(.bk-alert-wraper) {
-      align-items: center;
-    }
+  :deep(.bk-alert) {
+    margin-bottom: 16px;
   }
 
-  /* 代码源 */
-  .code-source {
-    position: relative;
-    width: 1160px;
-
-    .form-label {
-      width: 150px;
-      min-height: 32px;
-      text-align: right;
-      vertical-align: middle;
-      line-height: 32px;
-      float: left;
-      font-size: 14px;
-      font-weight: 400;
-      color: #63656e;
-      padding: 0 24px 0 0;
-      box-sizing: border-box;
-    }
-
-    .code-depot {
-      display: flex;
-      margin: 20px 0;
-
-      &-item {
-        width: 134px;
-        height: 88px;
-        background: #f0f1f5;
-        border-radius: 2px;
-        text-align: center;
-        position: relative;
-        cursor: pointer;
-
-        img {
-          width: 40px;
-          height: 36px;
-          margin: 12px 0 6px 0;
-        }
-      }
-
-      .on {
-        border: solid 2px #3A84FF;
-        background-color: #fff;
-        color: #3A84FF;
-        @include border-active-logo;
-      }
-
-      .disabled {
-        color: #c4c6cc;
-        cursor: not-allowed;
-
-        span {
-          color: #c4c6cc;
-        }
-      }
-    }
+  .button-edit {
+    position: absolute;
+    right: 0;
+    top: 0;
   }
 
   .form-group {
     display: flex;
+  }
 
-    &-flex {
-      width: 520px;
-      margin-top: 10px;
+  .code-detail {
+    .code-link {
+      color: #3a84ff;
     }
-
-    &-radio {
-      display: flex;
-      align-items: center;
-      margin-top: 3px;
+    .copilot-link {
+      margin-left: 10px;
+      i {
+        font-size: 16px;
+      }
     }
   }
 
-  .footer-operate {
-    margin-top: 24px;
-    margin-left: 150px;
+  .form-group-dir {
+    display: flex;
+    align-items: center;
+
+    .form-label {
+      transform: translateY(5px);
+    }
+  }
+}
+
+.source-code-info.code-source {
+  width: 100%;
+}
+
+.source-code-info .content {
+  display: flex;
+
+  :deep(.bk-form-item + .bk-form-item) {
+    margin-top: 10px;
   }
 
-  .download {
-    cursor: pointer;
-    color: #3A84FF;
-    margin-left: 10px;
+  :deep(.code-repo) {
+    .bk-label {
+      width: 150px !important;
+    }
+    .bk-form-content {
+      margin-left: 150px !important;
+    }
+  }
+}
+
+.content.no-border {
+  display: block;
+
+  :deep(.form-label) {
+    width: 150px;
+  }
+}
+
+:deep(.establish-tab) #shorter-loading-animate .form-label {
+  width: 130px !important;
+  margin-right: 20px;
+}
+
+.mirror-info {
+  :deep(.bk-form-item + .bk-form-item) {
+    margin-top: 10px;
+  }
+}
+
+.build-title {
+  position: relative;
+  font-weight: 700;
+  font-size: 14px;
+  color: #313238;
+  &.edit::after {
+    content: '*';
+    height: 8px;
+    line-height: 1;
+    color: #ea3636;
+    font-size: 12px;
+    position: absolute;
+    display: inline-block;
+    vertical-align: middle;
+    top: 50%;
+    transform: translate(3px, -50%);
+  }
+}
+
+.code-quality {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 190px;
+  background: #f5f7fa;
+  border-radius: 2px;
+  text-align: center;
+  cursor: pointer;
+
+  &.entry:hover {
+    background: #f0f1f5;
+  }
+
+  .fraction {
+    font-size: 30px;
+    color: #313238;
+  }
+
+  .desc {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #00000099;
+  }
+
+  .box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .code-inspection-entry {
+    width: 100%;
+    height: 32px;
+    line-height: 32px;
+    font-size: 12px;
+    color: #3a84ff;
+    background: #e1ecff;
+    border-radius: 0 0 2px 2px;
     i {
-      font-size: 16px;
+      color: #3a84ff;
+      transform: rotate(180deg) translateY(1px);
     }
   }
+}
+
+.sideslider-content {
+  :deep(.bk-alert-wraper) {
+    align-items: center;
+  }
+}
+
+/* 代码源 */
+.code-source {
+  position: relative;
+  width: 1160px;
+
+  .form-label {
+    width: 150px;
+    min-height: 32px;
+    text-align: right;
+    vertical-align: middle;
+    line-height: 32px;
+    float: left;
+    font-size: 14px;
+    font-weight: 400;
+    color: #63656e;
+    padding: 0 24px 0 0;
+    box-sizing: border-box;
+  }
+
+  .code-depot {
+    display: flex;
+    margin: 20px 0;
+
+    &-item {
+      width: 134px;
+      height: 88px;
+      background: #f0f1f5;
+      border-radius: 2px;
+      text-align: center;
+      position: relative;
+      cursor: pointer;
+
+      img {
+        width: 40px;
+        height: 36px;
+        margin: 12px 0 6px 0;
+      }
+    }
+
+    .on {
+      border: solid 2px #3a84ff;
+      background-color: #fff;
+      color: #3a84ff;
+      @include border-active-logo;
+    }
+
+    .disabled {
+      color: #c4c6cc;
+      cursor: not-allowed;
+
+      span {
+        color: #c4c6cc;
+      }
+    }
+  }
+}
+
+.form-group {
+  display: flex;
+
+  &-flex {
+    width: 520px;
+    margin-top: 10px;
+  }
+
+  &-radio {
+    display: flex;
+    align-items: center;
+    margin-top: 3px;
+  }
+}
+
+.footer-operate {
+  margin-top: 24px;
+  margin-left: 150px;
+}
+
+.download {
+  cursor: pointer;
+  color: #3a84ff;
+  margin-left: 10px;
+  i {
+    font-size: 16px;
+  }
+}
 </style>
 <style lang="scss">
-  .form-group-flex .source-dir.error .bk-input-text {
-    input {
-      border-color: #ff3737 !important;
-    }
+.form-group-flex .source-dir.error .bk-input-text {
+  input {
+    border-color: #ff3737 !important;
   }
+}
 </style>

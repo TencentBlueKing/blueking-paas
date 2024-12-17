@@ -512,6 +512,7 @@ import { bus } from '@/common/bus';
 import eventDetail from './event-detail.vue';
 import dayjs from 'dayjs';
 import processLog from '@/components/process-log-dialog/log.vue';
+import { cloneDeep, isEqual } from 'lodash';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
@@ -742,7 +743,7 @@ export default {
         if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
         if (
-          JSON.stringify(newVal) !== JSON.stringify(oldVal) &&
+          !isEqual(newVal, oldVal) &&
           (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)
         ) {
           this.watchServerPush();
@@ -781,39 +782,17 @@ export default {
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
       this.$refs[`moreRef${i}`].instance?.hide();
     },
-    // 处理进程与实例的关系
-    // handleDeployInstanceData() {
-    //   this.processData = this.deployData.processes.reduce((p, v) => {
-    //     const instances = this.deployData.instances.filter((e) => {
-    //       if (e.process_type === v.type) {
-    //         e.date_time = moment(e.start_time).startOf('minute')
-    //           .fromNow();
-    //         return true;
-    //       }
-    //       return false;
-    //     });
-    //     v.instances = instances;
-    //     v.totalCount = v.failed + v.success;
-    //     p.push(v);
-    //     console.log(p);
-    //     return p;
-    //   }, []);
-    //   console.log(11113, this.processData);
-    // },
 
     // 对数据进行处理
     formatProcesses(processesData) {
       const allProcesses = [];
-
-      // 遍历进行数据组装
-      const packages = processesData.proc_specs;
-      const { instances } = processesData;
-      // 如果是下架的进程则processesData.proc_specs会有数据
-      if (processesData.proc_specs.length) {
-        const processName = processesData.processes.map((e) => e.type);
-        processesData.proc_specs.forEach((e) => {
-          if (!processName.includes(e.name)) {
-            processesData.processes.push({
+      const { proc_specs: packages, instances, processes } = processesData;
+      // 如果是下架的进程则 processesData.proc_specs 会有数据
+      if (packages.length > 0) {
+        const processNames = processes.map((e) => e.type);
+        packages.forEach((e) => {
+          if (!processNames.includes(e.name)) {
+            processes.push({
               module_name: e.plan_name,
               name: '',
               type: e.name,
@@ -828,23 +807,17 @@ export default {
           }
         });
       }
-      processesData.processes.forEach((processItem) => {
+      processes.forEach((processItem) => {
         const { type, name } = processItem;
-        const packageInfo = packages.find((item) => item.name === type);
+        const packageInfo = packages.find((item) => item.name === type) || {};
+        const relatedInstances = instances.filter((instance) => instance.process_type === type);
 
         const processInfo = {
           ...processItem,
           ...packageInfo,
-          instances: [],
+          instances: relatedInstances,
         };
 
-        instances.forEach((instance) => {
-          if (instance.process_type === type) {
-            processInfo.instances.push(instance);
-          }
-        });
-
-        // 作数据转换，以兼容原逻辑
         const process = {
           name: processInfo.name,
           instance: processInfo.instances.length,
@@ -874,15 +847,11 @@ export default {
         // 日期转换
         process.instances.forEach((item) => {
           item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.isOperate = false;
         });
         allProcesses.push(process);
       });
-      allProcesses.forEach((processe) => {
-        processe.instances.forEach((instance) => {
-          instance.isOperate = false;
-        });
-      });
-      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
+      this.allProcesses = cloneDeep(allProcesses);
     },
 
     // 进程详情
@@ -893,7 +862,7 @@ export default {
         targetReplicas: process.targetReplicas,
         maxReplicas: process.maxReplicas,
         status: process.status,
-        cpuLimit: this.transfer_cpu_unit(process.cpuLimit),
+        cpuLimit: this.transferCpuUnit(process.cpuLimit),
         memLimit: process.memLimit,
         clusterLink: process.clusterLink,
       };
@@ -906,7 +875,7 @@ export default {
       }
     },
 
-    transfer_cpu_unit(cpuLimit) {
+    transferCpuUnit(cpuLimit) {
       if (cpuLimit.endsWith('m')) {
         cpuLimit = parseInt(/^\d+/.exec(cpuLimit)) / 1000;
       }
@@ -1227,8 +1196,7 @@ export default {
       //   index,
       // });
 
-      const processType = process.name;
-      const { targetStatus } = process;
+      const { name: processType, targetStatus } = process;
       const patchForm = {
         process_type: processType,
         operate_type: targetStatus === 'start' ? 'stop' : 'start',
@@ -1242,18 +1210,10 @@ export default {
           data: patchForm,
         });
 
-        if (res.target_status === 'start') {
-          process.available_instance_count = res.target_replicas;
-        } else {
-          process.available_instance_count = 0;
-        }
+        process.available_instance_count = res.target_status === 'start' ? res.target_replicas : 0;
 
         // 更新当前操作状态
-        if (targetStatus === 'start') {
-          process.targetStatus = 'stop';
-        } else {
-          process.targetStatus = 'start';
-        }
+        process.targetStatus = targetStatus === 'start' ? 'stop' : 'start';
         if (!this.watchServerTimer) {
           this.watchServerPush();
         }
@@ -1271,55 +1231,44 @@ export default {
 
     // 监听进程事件流
     watchServerPush() {
-      // 停止轮询的标志
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
       }
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
 
-      const serverProcessEvent = new EventSource(url, {
-        withCredentials: true,
-      });
-      if (this.serverProcessEvent !== undefined) {
+      if (this.serverProcessEvent) {
         this.serverProcessEvent.close();
       }
-      this.serverProcessEvent = serverProcessEvent;
+      this.serverProcessEvent = new EventSource(url, { withCredentials: true });
 
-      // 收藏服务推送消息
-      serverProcessEvent.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log(this.$t('接受到推送'), data);
-        if (data.object_type === 'process') {
-          if (data.object.module_name !== this.curModuleId) return; // 更新当前模块的进程
-          this.updateProcessData(data);
-        } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId) return; // 更新当前模块的进程
-          this.updateInstanceData(data);
-        } else if (data.type === 'ERROR') {
-          // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
-          clearTimeout(this.timer);
-          this.timer = setTimeout(() => {
-            // this.getProcessList(this.releaseId, false);
-          }, 2000);
+      // 服务推送消息处理
+      this.serverProcessEvent.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log(this.$t('接受到推送'), data);
+
+          // 如果模块名称不匹配，直接返回
+          if (data.object.module_name !== this.curModuleId) return;
+
+          // 根据对象类型更新数据
+          if (['process', 'instance'].includes(data.object_type)) {
+            this.updateProcessData(data);
+          }
+        } catch (error) {
+          console.error(error);
         }
       };
 
       // 服务异常
-      serverProcessEvent.onerror = (event) => {
-        // 异常后主动关闭，否则会继续重连
-        console.error(this.$t('推送异常'), event);
-        serverProcessEvent.close();
-
-        // 推迟调用，防止过于频繁导致服务性能问题
-        // this.watchServerTimer = setTimeout(() => {
-        //   this.watchServerPush();
-        // }, 3000);
+      this.serverProcessEvent.onerror = () => {
+        console.error(this.$t('推送异常'));
+        this.serverProcessEvent.close();
       };
 
       // 服务结束
-      serverProcessEvent.addEventListener('EOF', () => {
-        serverProcessEvent.close();
-        if (this.serverProcessEvent === serverProcessEvent) {
+      this.serverProcessEvent.addEventListener('EOF', () => {
+        this.serverProcessEvent.close();
+        if (this.serverProcessEvent === this.serverProcessEvent) {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
         }
@@ -1610,7 +1559,7 @@ export default {
       this.$refs[`moreRef${i}`].instance?.hide();
     },
 
-    // 重启进程
+    // 滚动重启
     async handleRestartProcess(row) {
       try {
         await this.$store.dispatch('processes/restartProcess', {
@@ -1619,6 +1568,7 @@ export default {
           env: this.environment,
           processName: row.processName,
         });
+        bus.$emit('get-release-info');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1636,6 +1586,7 @@ export default {
           env: this.environment,
           instanceName: instance.name,
         });
+        bus.$emit('get-release-info');
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

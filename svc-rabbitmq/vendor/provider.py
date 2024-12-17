@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Type
@@ -34,10 +35,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProviderPlugin:
-    context: 'dict'
-    client: 'Client'
-    cluster: 'Cluster'
-    virtual_host: 'str'
+    context: "dict"
+    client: "Client"
+    cluster: "Cluster"
+    virtual_host: "str"
 
     def on_create(self):
         pass
@@ -55,7 +56,7 @@ class UserPolicyProviderPlugin(ProviderPlugin):
     def on_create(self):
         policies = self.context.setdefault("policies", [])
         for instance in UserPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
-            policy: 'UserPolicy' = instance.resolved
+            policy: "UserPolicy" = instance.resolved
             policies.append(policy.name)
             self.client.user_policy.create(
                 self.virtual_host,
@@ -81,7 +82,7 @@ class LimitPolicyProviderPlugin(ProviderPlugin):
 
         limits = self.context.setdefault("limits", [])
         for instance in LimitPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
-            policy: 'LimitPolicy' = instance.resolved
+            policy: "LimitPolicy" = instance.resolved
             limits.append(policy.name)
             self.client.limit_policy.create(self.virtual_host, policy.limit, policy.value)
 
@@ -128,7 +129,7 @@ class AdminAutoPermission(ProviderPlugin):
         )
 
 
-PROVIDER_PLUGINS: 'List[Type[ProviderPlugin]]' = [
+PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
     AdminAutoPermission,
     UserPolicyProviderPlugin,
     LimitPolicyProviderPlugin,
@@ -138,7 +139,9 @@ PROVIDER_PLUGINS: 'List[Type[ProviderPlugin]]' = [
 
 @dataclass
 class Provider(BaseProvider):
-    def make_instance_name(self, name: 'str', uuid: 'str') -> 'str':
+    cluster_id: "str" = None
+
+    def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []
         if settings.INSTANCE_DEFAULT_PREFIX:
             parts.append(settings.INSTANCE_DEFAULT_PREFIX)
@@ -154,8 +157,8 @@ class Provider(BaseProvider):
         return "-".join(parts)
 
     def create_instance(
-        self, name: 'str', bill: 'InstanceBill', context: 'dict', cluster: 'Cluster'
-    ) -> 'InstanceData':
+        self, name: "str", bill: "InstanceBill", context: "dict", cluster: "Cluster"
+    ) -> "InstanceData":
         """创建实例"""
         context["cluster_id"] = cluster.id
         context["host"] = cluster.host
@@ -193,7 +196,7 @@ class Provider(BaseProvider):
             cluster=cluster, bill=bill, virtual_host=virtual_host, user=user, password=password
         )
 
-    def create(self, params: Dict) -> 'InstanceData':
+    def create(self, params: Dict) -> "InstanceData":
         engine_app_name = params.get("engine_app_name")
         if not engine_app_name:
             raise ArgumentInvalidError("engine_app_name is empty")
@@ -202,23 +205,27 @@ class Provider(BaseProvider):
         bill = InstanceBill.objects.create(name=engine_app_name, action="create")
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
+            if self.cluster_id is not None:
+                # 通过 plan 获取集群
+                cluster = Cluster.objects.filter(enable=True, id=self.cluster_id)
+            else:
+                # 使用非 plan 导入的集群
+                clusters = Cluster.objects.filter_not_from_plan().filter(enable=True)
+                if "cluster_id" in context:
+                    clusters = clusters.filter(id=context["cluster_id"])
 
-            clusters = Cluster.objects.filter(enable=True)
-            if "cluster_id" in context:
-                clusters = clusters.filter(id=context["cluster_id"])
-
-            selector = ClusterSelector(DefaultClusterStrategy, clusters)
-            cluster = selector.one()  # 选择一个可用的集群
+                selector = ClusterSelector(DefaultClusterStrategy, clusters)
+                cluster = selector.one()  # 选择一个可用的集群
             if not cluster:
                 raise OperationFailed("no available cluster found")
 
             try:
                 return self.create_instance(engine_app_name, bill, context, cluster)
-            except Exception as err:
-                logger.exception(err)
-                raise err
+            except Exception:
+                logger.exception("failed to create instance")
+                raise
 
-    def delete_instance(self, context: 'dict', cluster: 'Cluster', instance_data: 'InstanceData'):
+    def delete_instance(self, context: "dict", cluster: "Cluster", instance_data: "InstanceData"):
         helper = InstanceHelper(instance_data)
         credentials = helper.get_credentials()
         client = Client.from_cluster(cluster)
@@ -239,7 +246,7 @@ class Provider(BaseProvider):
             plugin = cls(context=context, cluster=cluster, client=client, virtual_host=virtual_host)
             plugin.on_delete()
 
-    def delete(self, instance_data: 'InstanceData'):
+    def delete(self, instance_data: "InstanceData"):
         helper = InstanceHelper(instance_data)
         try:
             cluster = helper.get_cluster()
@@ -251,9 +258,9 @@ class Provider(BaseProvider):
         with bill.log_context() as context:  # type: dict
             try:
                 self.delete_instance(context, cluster, instance_data)
-            except Exception as err:
-                logger.exception(err)
-                raise err
+            except Exception:
+                logger.exception("failed to delete instance")
+                raise
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError

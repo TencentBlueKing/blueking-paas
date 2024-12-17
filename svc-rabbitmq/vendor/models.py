@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 from contextlib import contextmanager
 from copy import deepcopy
@@ -26,7 +27,9 @@ from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.utils.functional import cached_property
 from jsonfield import JSONField
-from paas_service.models import AuditedModel, UuidAuditedModel
+from paas_service.models import AuditedModel, Plan, UuidAuditedModel
+
+from vendor.serializers import PlanConfigSerializer
 
 from .constants import LinkType
 
@@ -35,9 +38,47 @@ class Tag(AuditedModel):
     class Meta(object):
         abstract = True
 
-    instance: 'models.Model'
+    instance: "models.Model"
     key = models.CharField("名称", max_length=64)
     value = models.CharField("值", max_length=128)
+
+
+class ClusterManager(models.Manager):
+    def update_or_create_by_plan(self, plan: Plan):
+        plan_config = json.loads(plan.config)
+        slz = PlanConfigSerializer(data=plan_config)
+        slz.is_valid(raise_exception=True)
+        config = slz.data
+
+        cluster, created = self.update_or_create(
+            id=plan_config.get("cluster_id"),
+            defaults={
+                "name": f"{plan.name}-cluster",
+                "host": config.get("host"),
+                "port": config.get("port"),
+                "management_api": config.get("management_api"),
+                "admin": config.get("admin"),
+                "password": config.get("password"),
+                "version": config.get("cluster_version"),
+                "extra": {"from_plan": plan.uuid},
+            },
+        )
+
+        if created:
+            plan_config["cluster_id"] = cluster.id
+            plan.config = json.dumps(plan_config)
+            plan.save(update_fields=["config"])
+
+    def delete_by_plan(self, plan: Plan):
+        plan_config = json.loads(plan.config)
+        cluster = self.filter(id=plan_config.get("cluster_id"))
+        cluster.delete()
+
+    def filter_not_from_plan(self) -> models.QuerySet:
+        clusters = self.all()
+        # 筛选不是从 plan 中获取的集群
+        filtered_ids = [c.id for c in clusters if not c.extra.get("from_plan")]
+        return self.filter(id__in=filtered_ids)
 
 
 class Cluster(AuditedModel):
@@ -50,6 +91,8 @@ class Cluster(AuditedModel):
     version = models.CharField("版本", max_length=16)
     enable = models.BooleanField("是否启用", default=True)
     extra = JSONField("额外信息", default=dict, blank=True, null=True)
+
+    objects = ClusterManager()
 
     def __str__(self):
         return f"{self.name}[{self.pk}]"
@@ -68,9 +111,9 @@ class LinkableModel(AuditedModel):
     link_type = models.IntegerField(
         "连接方式", default=LinkType.empty.value, choices=[(i.value, i.name) for i in LinkType]
     )
-    linked = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, default=None)
+    linked = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, default=None)
 
-    def resolve_extend(self, other: 'LinkableModel'):
+    def resolve_extend(self, other: "LinkableModel"):
         """处理继承连接合并细节"""
         for field in self._meta.fields:
             attname = field.attname
@@ -103,7 +146,7 @@ class PolicyTarget(Enum):
 class UserPolicy(LinkableModel):
     """集群下创建 vhost 默认策略，和具体 vhost 无关"""
 
-    resolve_link: Callable[[], 'UserPolicy']
+    resolve_link: Callable[[], "UserPolicy"]
 
     name = models.CharField("名称", max_length=64, null=True)
     enable = models.BooleanField("是否启用", default=True)
@@ -116,10 +159,10 @@ class UserPolicy(LinkableModel):
     cluster_id = models.IntegerField("集群id", blank=True, default=None)
 
     @cached_property
-    def cluster(self) -> 'Cluster':
+    def cluster(self) -> "Cluster":
         return Cluster.objects.filter(pk=self.cluster_id)
 
-    def resolve_extend(self, other: 'UserPolicy'):
+    def resolve_extend(self, other: "UserPolicy"):
         definitions = self.definitions or {}
         definitions.update(other.definitions or {})
         super().resolve_extend(other)
@@ -153,7 +196,7 @@ class LimitType(Enum):
 class LimitPolicy(LinkableModel):
     """集群下创建 vhost 限制机制，和具体 vhost 无关"""
 
-    resolve_link: Callable[[], 'LimitPolicy']
+    resolve_link: Callable[[], "LimitPolicy"]
 
     name = models.CharField("名称", max_length=64, null=True)
     enable = models.BooleanField("是否启用", default=True)
@@ -164,7 +207,7 @@ class LimitPolicy(LinkableModel):
     cluster_id = models.IntegerField("集群id", blank=True, default=None)
 
     @cached_property
-    def cluster(self) -> 'Cluster':
+    def cluster(self) -> "Cluster":
         return Cluster.objects.filter(pk=self.cluster_id)
 
     def __str__(self):
@@ -187,11 +230,11 @@ class InstanceBill(UuidAuditedModel):
     def get_context(self):
         return json.loads(self.context or "{}")
 
-    def set_context(self, context: 'dict'):
+    def set_context(self, context: "dict"):
         self.context = json.dumps(context)
 
     @contextmanager
-    def log_context(self) -> 'dict':
+    def log_context(self) -> "dict":
         context = self.get_context()
         try:
             yield context

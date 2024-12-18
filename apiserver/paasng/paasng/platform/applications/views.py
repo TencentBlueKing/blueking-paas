@@ -52,10 +52,9 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
-from paasng.core.tenant.user import Tenant, get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
-from paasng.infras.accounts.models import AccountFeatureFlag, User, make_verifier
+from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
@@ -97,11 +96,9 @@ from paasng.platform.applications.models import (
 from paasng.platform.applications.pagination import ApplicationListPagination
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
 from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
-from paasng.platform.applications.signals import (
-    application_member_updated,
-    post_create_application,
-)
+from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (
     create_application,
     create_default_module,
@@ -130,7 +127,6 @@ from paasng.platform.templates.models import Template
 from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from tests.api.test_applications import AppTenantMode
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -693,9 +689,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
-        app_tenant_mode, app_tenant_id, tenant = self._validate_app_tenant_params(
-            request.user, params["app_tenant_mode"]
-        )
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
 
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
@@ -926,27 +920,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             AppUserCredential.objects.create(application_id=application.id, **image_credential)
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
-
-    @staticmethod
-    def _validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> Tuple[AppTenantMode, str, Tenant]:
-        """Validate the params related with multi-tenant feature.
-
-        :param user: The user who is creating the application.
-        :param raw_app_tenant_mode: The app tenant mode in params.
-        :returns: A tuple, the items: (app_tenant_mode, app_tenant_id, tenant).
-        """
-        tenant = get_tenant(user)
-        app_tenant_mode: AppTenantMode
-        if tenant.is_stub:
-            app_tenant_mode = AppTenantMode.GLOBAL
-        else:
-            # The default tenant mode is SINGLE when multi-tenant mode is enabled
-            app_tenant_mode = AppTenantMode.SINGLE if not raw_app_tenant_mode else AppTenantMode(raw_app_tenant_mode)
-            if app_tenant_mode == AppTenantMode.GLOBAL and not tenant.is_op_type:
-                raise ValidationError(_("当前不允许创建全租户可用的应用"))
-
-        app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
-        return app_tenant_mode, app_tenant_id, tenant
 
 
 class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):

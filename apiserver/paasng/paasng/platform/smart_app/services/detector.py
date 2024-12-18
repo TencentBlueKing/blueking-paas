@@ -31,9 +31,9 @@ from rest_framework.exceptions import ValidationError
 from yaml import YAMLError
 
 from paasng.platform.declarative.application.resources import ApplicationDesc
-from paasng.platform.declarative.constants import AppDescPluginType
+from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.declarative.handlers import detect_spec_version, get_desc_handler
 from paasng.platform.smart_app.services.path import PathProtocol
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import (
@@ -62,6 +62,24 @@ def relative_path_of_app_desc(filepath: str) -> Optional[str]:
     if len(parts) > 1:
         return parts[0]
     return None
+
+
+def update_meta_info(meta_info: Dict, app_code: str, app_name: str) -> Dict:
+    """update meta info with app_code and app_name"""
+    try:
+        spec_version = detect_spec_version(meta_info)
+    except ValueError:
+        return meta_info
+
+    match spec_version:
+        case AppSpecVersion.VER_2:
+            meta_info["app"].update({"bk_app_code": app_code, "bk_app_name": app_name})
+            return meta_info
+        case AppSpecVersion.VER_3:
+            meta_info["app"].update({"bkAppCode": app_code, "bkAppName": app_name})
+            return meta_info
+        case _:
+            return meta_info
 
 
 class SourcePackageStatReader:

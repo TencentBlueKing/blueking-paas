@@ -15,10 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 
-class PreparedPackageNotFound(Exception):
-    """raised when prepared package was not found"""
+from django.db import migrations
+
+logger = logging.getLogger(__name__)
 
 
-class GenAppCodeError(Exception):
-    """raised when generate app code failed"""
+def forwards(apps, schema_editor):
+    """Create Smart Application from Application which is_smart_app is True"""
+    Application = apps.get_model("applications", "Application")
+    SMartApplication = apps.get_model("applications", "SMartApplication")
+
+    for app in Application.objects.filter(is_smart_app=True):
+        SMartApplication.objects.create(raw_code=app.code, app=app)
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("applications", "0015_alter_application_name_and_more"),
+    ]
+
+    operations = [
+        migrations.RunPython(forwards),
+    ]

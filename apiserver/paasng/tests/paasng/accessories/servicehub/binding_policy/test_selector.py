@@ -189,3 +189,61 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
         ServiceBindingPolicyManager(service_obj).add_precedence_static(
             cond_type=PrecedencePolicyCondType.CLUSTER_IN, cond_data={"cluster_names": [cluster_name]}, plans=[plan2]
         )
+
+
+class TestPlanSelectorListPossiblePlans:
+    def test_static_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_static([plan1])
+        possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
+
+        assert possible_plans.has_multiple_plans() is False
+        assert possible_plans.is_env_specific() is False
+        assert possible_plans.is_static() is True
+        assert possible_plans.get_static_plans() == [plan1]
+        assert possible_plans.get_env_specific_plans() is None
+
+    def test_static_multiple(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_static([plan1, plan2])
+        possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
+
+        assert possible_plans.has_multiple_plans() is True
+        assert possible_plans.is_env_specific() is False
+        assert possible_plans.is_static() is True
+        assert possible_plans.get_static_plans() == [plan1, plan2]
+        assert possible_plans.get_env_specific_plans() is None
+
+    def test_env_specific_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_env_specific(
+            env_plans=[
+                (AppEnvName.STAG, [plan1]),
+                (AppEnvName.PROD, [plan2]),
+            ]
+        )
+        possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
+
+        assert possible_plans.has_multiple_plans() is False
+        assert possible_plans.is_env_specific() is True
+        assert possible_plans.is_static() is False
+        assert possible_plans.get_static_plans() is None
+        assert possible_plans.get_env_specific_plans() == {
+            "stag": [plan1],
+            "prod": [plan2],
+        }
+
+    def test_env_specific_has_multi(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_env_specific(
+            env_plans=[
+                (AppEnvName.STAG, [plan1]),
+                (AppEnvName.PROD, [plan1, plan2]),
+            ]
+        )
+        possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
+
+        assert possible_plans.has_multiple_plans() is True
+        assert possible_plans.is_env_specific() is True
+        assert possible_plans.is_static() is False
+        assert possible_plans.get_static_plans() is None
+        assert possible_plans.get_env_specific_plans() == {
+            "stag": [plan1],
+            "prod": [plan1, plan2],
+        }

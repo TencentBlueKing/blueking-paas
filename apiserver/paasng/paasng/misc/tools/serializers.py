@@ -134,6 +134,10 @@ class SvcDiscoverySerializer(serializers.Serializer):
         return value
 
 
+class BkmonitorPortSerializer(serializers.Serializer):
+    port = serializers.IntegerField()
+
+
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
     source_dir = serializers.CharField(required=False)
@@ -144,6 +148,7 @@ class ModuleSerializer(serializers.Serializer):
     scripts = ScriptsSerializer(required=False)
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)
+    bkmonitor = BkmonitorPortSerializer(required=False)
 
 
 class AppDescSpec2Serializer(serializers.Serializer):

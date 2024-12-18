@@ -13,19 +13,33 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import List
+from typing import Dict, List
 
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.models.module import Module
 
 from .policy import binding_policy_factory, precedence_policy_factory
 
 
 class PlanSelector:
     """The selector that helps to select the plans based on the configured policies"""
+
+    def list_possible_plans(self, service: ServiceObj, module: Module) -> "PossiblePlans":
+        """List the possible plans for the service and the module. Can be one of these
+        situations:
+
+        - static with a single plan
+        - static with multiple plans
+        - env specific, each env has different plans(can be single or multiple)
+        """
+        data: Dict[str, List[PlanObj]] = {}
+        for env in module.envs.all():
+            data[env.environment] = self.list(service, env)
+        return PossiblePlans(env_plans=data)
 
     def select(self, service: ServiceObj, env: ModuleEnvironment) -> PlanObj:
         """Select the plan for the env object, might raise an exception if no plan is found
@@ -76,3 +90,69 @@ class PlanSelector:
         """Convert the plan ids to plan objects"""
         all_plans = mixed_plan_mgr.list(service)
         return [p for p in all_plans if p.uuid in plan_ids]
+
+
+class PossiblePlans:
+    """The possible plans for the service and the module. This object helps the client
+    to know the plans and use a proper way to interact with them.
+
+    :param env_plans: The plans for each environment.
+    """
+
+    def __init__(self, env_plans: Dict[str, List[PlanObj]]):
+        self._has_multiple_plans = False
+        self._is_static = False
+        self._is_env_specific = False
+
+        self.env_plans = env_plans
+        self._parse(self.env_plans)
+
+    def has_multiple_plans(self) -> bool:
+        """Whether there are multiple plans available. If this is True, then the
+        client should choose the plan manually.
+        """
+        return self._has_multiple_plans
+
+    def is_static(self) -> bool:
+        """Whether the plans are static."""
+        return self._is_static
+
+    def get_static_plans(self) -> List[PlanObj] | None:
+        """Get the static plans.
+
+        :return: The plan list, None if current object is not static.
+        """
+        if not self.is_static():
+            return None
+        return next(iter(self.env_plans.values()), None)
+
+    def is_env_specific(self) -> bool:
+        """Whether the plans are env specific."""
+        return self._is_env_specific
+
+    def get_env_specific_plans(self) -> Dict[str, List[PlanObj]] | None:
+        """Get the env specific plans.
+
+        :return: The plans dict, None if current object is not env specific.
+        """
+        if not self.is_env_specific():
+            return None
+        return self.env_plans
+
+    def _parse(self, env_plans: Dict[str, List[PlanObj]]):
+        """Parse the env plans to set the attributes."""
+        # If no plans are found, return directly to leave the properties as False
+        if not any(plans for plans in env_plans.values()):
+            return
+
+        self._has_multiple_plans = any(len(plans) > 1 for plans in self.env_plans.values())
+        self._is_static, self._is_env_specific = True, False
+
+        last_sorted_ids = None
+        # If any plans are different with others, then it is not static
+        for plans in self.env_plans.values():
+            sorted_ids = tuple(sorted(str(p.uuid) for p in plans))
+            if last_sorted_ids is not None and last_sorted_ids != sorted_ids:
+                self._is_static, self._is_env_specific = False, True
+                return
+            last_sorted_ids = sorted_ids

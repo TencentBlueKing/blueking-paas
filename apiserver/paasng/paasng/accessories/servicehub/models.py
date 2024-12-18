@@ -134,14 +134,11 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
         related_name="unbound_service_attachment",
     )
     service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="增强服务")
-    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     service_instance = models.ForeignKey(
         ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, verbose_name="增强服务实例"
     )
-    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
-        unique_together = ("service", "engine_app")
         verbose_name = "本地已解绑增强服务"
 
     def clean_service_instance(self):
@@ -188,12 +185,9 @@ class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
         related_name="unbound_remote_service_attachment",
     )
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
-    plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
     service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
-    credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
 
     class Meta:
-        unique_together = ("service_id", "engine_app")
         verbose_name = "远程已解绑增强服务"
 
 

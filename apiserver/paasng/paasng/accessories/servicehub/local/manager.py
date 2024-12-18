@@ -170,6 +170,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
             environment=db_env.environment, service=self.db_obj.service.name, plan=self.db_obj.plan.name
         ).inc()
 
+    @atomic
     def recycle_resource(self):
         if self.is_provisioned() and self.db_obj.service.prefer_async_delete:
             att = UnboundServiceEngineAppAttachment.objects.create(
@@ -214,9 +215,6 @@ class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def __init__(self, db_obj: UnboundServiceEngineAppAttachment):
         self.db_obj = db_obj
 
-    def get_service(self) -> LocalServiceObj:
-        return LocalServiceObj.from_db_object(self.db_obj.service)
-
     def recycle_resource(self) -> None:
         self.db_obj.clean_service_instance()
 
@@ -235,9 +233,6 @@ class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             should_remove_fields=should_remove_fields,
             create_time=self.db_obj.created,
         )
-
-    def get_plan(self) -> LocalPlanObj:
-        return LocalPlanObj.from_db(self.db_obj.plan)
 
 
 class LocalServiceMgr(BaseServiceMgr):

@@ -143,6 +143,8 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
+        print("------")
+        print(response_data)
         assert len(response_data) == 2
         assert response_data[0]["service"]["uuid"] == str(service1.uuid)
         assert response_data[0]["count"] == 4
@@ -155,8 +157,6 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             },
             "environment": "prod",
             "environment_name": "生产环境",
-            "usage": "{}",
-            "service_specs": {"name": "version"},
         }
         assert response_data[1]["service"]["uuid"] == str(service2.uuid)
         assert response_data[1]["count"] == 4
@@ -164,6 +164,4 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             "service_instance": {"config": {}, "credentials": '{"f": 1}', "sensitive_fields": [], "hidden_fields": {}},
             "environment": "stag",
             "environment_name": "预发布环境",
-            "usage": "{}",
-            "service_specs": {"name": "version"},
         }

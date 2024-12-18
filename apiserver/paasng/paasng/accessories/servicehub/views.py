@@ -775,15 +775,12 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
                 except SvcInstanceNotFound:
                     # 如果已经回收了，获取不到 instance，跳过
                     continue
-                plan = rel.get_plan()
 
                 categorized_rels[str(rel.db_obj.service_id)].append(
                     {
                         "service_instance": instance,
                         "environment": env.environment,
                         "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "service_specs": plan.specifications,
-                        "usage": "{}",
                     }
                 )
 
@@ -797,10 +794,14 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         return Response(serializer.data)
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
-    def recycle(self, request, code, module_name, service_id, service_instance_id):
+    def delete(self, request, code, module_name, service_id):
         """回收已解绑增强服务"""
+        slz = slzs.DeleteUnboundServiceEngineAppAttachmentSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
         service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
-        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, service_instance_id)
+        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, data.instance_id)
         unbound_instance.recycle_instance()
 
         return Response()

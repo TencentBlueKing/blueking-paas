@@ -398,9 +398,6 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
         self.remote_client = RemoteServiceClient(self.remote_config)
 
-    def get_service(self) -> RemoteServiceObj:
-        return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
-
     def retrieve_instance_to_be_delete(self) -> dict:
         try:
             instance_data = self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
@@ -418,9 +415,9 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
         instance_data = self.retrieve_instance_to_be_delete()
-
-        svc_obj = self.get_service()
+        svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
+
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
@@ -437,26 +434,13 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
         try:
             self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
-            logger.info(
-                f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
-            )
             self.db_obj.delete()
+            logger.info(
+                f"Manually recycled unbound remote service instance, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+            )
         except Exception as e:
             logger.exception("Error occurs during recycling")
             raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
-
-    def get_plan(self) -> RemotePlanObj:
-        plan_id = str(self.db_obj.plan_id)
-        # 兼容从v2迁移至v3的增强服务, 避免前端因此出现异常
-        if plan_id == str(constants.LEGACY_PLAN_ID):
-            return RemotePlanObj.from_data(constants.LEGACY_PLAN_INSTANCE)
-
-        svc_data = self.store.get(str(self.db_obj.service_id), region=self.db_application.region)
-        for d in svc_data["plans"]:
-            if d["uuid"] == plan_id:
-                return RemotePlanObj.from_data(d)
-
-        raise RuntimeError("Plan not found")
 
 
 class RemotePlainInstanceMgr(PlainInstanceMgr):

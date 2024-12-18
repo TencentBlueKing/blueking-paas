@@ -24,7 +24,6 @@ REGION = "(?P<region>[a-z0-9_-]{1,32})"
 SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
 APP_UUID = "(?P<application_id>[0-9a-f-]{32,36})"
 CATEGORY_ID = r"(?P<category_id>[\d]+)"
-SERVICE_INTANCE_ID = "(?P<service_instance_id>[0-9a-f-]{32,36})"
 
 urlpatterns = [
     # service APIs
@@ -143,8 +142,8 @@ urlpatterns = [
     ),
     # Recycle unbound instance
     re_path(
-        make_app_pattern(f"/services/{SERVICE_UUID}/unbound/{SERVICE_INTANCE_ID}/$", include_envs=False),
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "recycle"}),
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
         name="api.services.attachment.unbound.recycle",
     ),
 ]

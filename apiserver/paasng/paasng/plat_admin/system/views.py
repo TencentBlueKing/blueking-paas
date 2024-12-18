@@ -27,6 +27,7 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
 from paasng.accessories.servicehub.services import ServiceObj, ServiceSpecificationHelper
 from paasng.infras.accounts.permissions.constants import SiteAction
@@ -42,6 +43,7 @@ from paasng.plat_admin.system.applications import (
 from paasng.plat_admin.system.serializers import (
     AddonCredentialsSLZ,
     AddonSpecsSLZ,
+    BasicMarketInfoSLZ,
     ClusterNamespaceSLZ,
     ContactInfoSLZ,
     MinimalAppSLZ,
@@ -77,7 +79,22 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
             return deploy_info if deploy_info else None
         return None
 
-    def serialize_app_details(self, app: UniSimpleApp, contact_info_dict: Optional[dict], include_deploy_info: bool):
+    def get_market_address(self, application: Application, app_source: SimpleAppSource) -> Optional[str]:
+        """应用市场地址"""
+        # PaaS2.0 应用直接返回 None
+        if app_source == SimpleAppSource.LEGACY:
+            return None
+
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+        return BasicMarketInfoSLZ(market_config).data
+
+    def serialize_app_details(
+        self,
+        app: UniSimpleApp,
+        contact_info_dict: Optional[dict],
+        include_deploy_info: bool,
+        include_market_info: bool,
+    ):
         app_data = UniversalAppSLZ(app).data
         app_instance = cast(Application, app._db_object)
 
@@ -88,6 +105,9 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         # 返回数据总是否包含部署信息
         if include_deploy_info:
             app_data["deploy_info"] = self.get_deploy_info_data(app_instance, app._source)
+        # 添加应用市场地址信息
+        if include_market_info:
+            app_data["market_addres"] = self.get_market_address(app_instance, app._source)
         return app_data
 
     @swagger_auto_schema(
@@ -105,13 +125,16 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_deploy_info = request_data["include_deploy_info"]
         include_developers_info = request_data["include_developers_info"]
         include_contact_info = request_data["include_contact_info"]
+        include_market_info = request_data["include_market_info"]
 
         # 查询应用信息
         uni_apps = query_uni_apps_by_ids(app_ids, include_inactive_apps, include_developers_info)
         # 所有应用联系人信息（不包含 PaaS2.0 应用）
         contact_info_dict = get_contact_info_by_appids(app_ids) if include_contact_info else None
         app_details: List[Optional[Dict[str, Any]]] = [
-            self.serialize_app_details(app, contact_info_dict, include_deploy_info) if app is not None else None
+            self.serialize_app_details(app, contact_info_dict, include_deploy_info, include_market_info)
+            if app is not None
+            else None
             for app_id in app_ids
             for app in [uni_apps.get(app_id)]
         ]

@@ -6,7 +6,7 @@ authors = ["blueking <blueking@tencent.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-django = "4.2.16"
+django = "4.2.17"
 pymysql = "1.1.1"
 gunicorn = "22.0.0"
 paas-service = "2.0.0"

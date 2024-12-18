@@ -85,12 +85,11 @@ class GiteeRepoController(BaseGitRepoController):
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
+    def export(self, local_path, version_info: VersionInfo):
         """Gitee API 不支持下载压缩包，改成直接将代码库 clone 下来，由通用逻辑进行打包"""
         git_client = GitClient()
         git_client.clone(self._build_repo_url_with_auth(), local_path, branch=version_info.version_name, depth=1)
-        if not try_to_preserve_meta_info:
-            git_client.clean_meta_info(local_path)
+        git_client.clean_meta_info(local_path)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """列举仓库所有可用 branch 或 tag"""

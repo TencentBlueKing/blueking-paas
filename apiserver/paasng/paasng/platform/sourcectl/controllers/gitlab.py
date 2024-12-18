@@ -106,7 +106,7 @@ class GitlabRepoController(BaseGitRepoController):
             return True
 
     @error_converter
-    def export(self, local_path: str, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
+    def export(self, local_path: str, version_info: VersionInfo):
         tag_or_branch, revision = self.extract_version_info(version_info)
         with generate_temp_file(suffix=".tar.gz") as tar_file:
             self.api_client.repo_archive(self.project, tar_file, ref=revision or tag_or_branch)

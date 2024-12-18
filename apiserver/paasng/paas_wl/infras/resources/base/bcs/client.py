@@ -46,8 +46,11 @@ class BcsClient:
         return self.client.create_web_console_sessions(*args, **kwargs)
 
 
-def make_bcs_client():
+def get_bcs_client():
     if settings.ENABLE_BCS:
         return BcsClient
     else:
         return DummyBcsClient
+
+
+bcs_client_cls = get_bcs_client()

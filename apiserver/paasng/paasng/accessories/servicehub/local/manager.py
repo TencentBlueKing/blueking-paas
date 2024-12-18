@@ -176,9 +176,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
             att = UnboundServiceEngineAppAttachment.objects.create(
                 engine_app=self.db_obj.engine_app,
                 service=self.db_obj.service,
-                plan=self.db_obj.plan,
                 service_instance=self.db_obj.service_instance,
-                credentials_enabled=self.db_obj.credentials_enabled,
             )
             logger.info(
                 f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"

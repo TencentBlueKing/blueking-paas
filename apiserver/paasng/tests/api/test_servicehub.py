@@ -101,16 +101,15 @@ class TestServiceEngineAppAttachmentViewSet:
 
 
 class TestUnboundServiceEngineAppAttachmentViewSet:
-    def create_mock_rel(self, service, credentials_enabled, create_time, **credentials):
+    def create_mock_rel(self, service, create_time, **credentials):
         rel = mock.MagicMock()
+        instance_id = str(uuid.uuid4())
         rel.get_instance.return_value = ServiceInstanceObj(
-            uuid=str(uuid.uuid4()), credentials=credentials, config={}, create_time=create_time
+            uuid=instance_id, credentials=credentials, config={}, create_time=create_time
         )
-        rel.get_plan.return_value = mock.MagicMock(spec=["specifications"])
-        rel.get_plan.return_value.specifications = {"name": "version"}
         rel.get_service.return_value = service
         rel.db_obj.service_id = str(service.uuid)
-        rel.db_obj.credentials_enabled = credentials_enabled
+        rel.db_obj.service_instance_id = instance_id
         return rel
 
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
@@ -131,10 +130,10 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             else RemoteServiceObj.from_data(service2_dict)
         )
 
-        mock_rel1 = self.create_mock_rel(service1, True, datetime.datetime(2020, 1, 1), a=1, b=1)
-        mock_rel2 = self.create_mock_rel(service1, False, datetime.datetime(2020, 1, 1), c=1)
-        mock_rel3 = self.create_mock_rel(service2, True, datetime.datetime(2020, 1, 1), d=1, e=1)
-        mock_rel4 = self.create_mock_rel(service2, False, datetime.datetime(2020, 1, 1), f=1)
+        mock_rel1 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), a=1, b=1)
+        mock_rel2 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), c=1)
+        mock_rel3 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), d=1, e=1)
+        mock_rel4 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), f=1)
         mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2, mock_rel3, mock_rel4]
 
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/unbound_attachments/"
@@ -143,12 +142,11 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
-        print("------")
-        print(response_data)
         assert len(response_data) == 2
         assert response_data[0]["service"]["uuid"] == str(service1.uuid)
         assert response_data[0]["count"] == 4
         assert response_data[0]["unbound_instances"][0] == {
+            "instance_id": mock_rel1.db_obj.service_instance_id,
             "service_instance": {
                 "config": {},
                 "credentials": '{"a": 1, "b": 1}',
@@ -161,6 +159,7 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         assert response_data[1]["service"]["uuid"] == str(service2.uuid)
         assert response_data[1]["count"] == 4
         assert response_data[1]["unbound_instances"][3] == {
+            "instance_id": mock_rel4.db_obj.service_instance_id,
             "service_instance": {"config": {}, "credentials": '{"f": 1}', "sensitive_fields": [], "hidden_fields": {}},
             "environment": "stag",
             "environment_name": "预发布环境",

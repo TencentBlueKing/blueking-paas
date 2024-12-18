@@ -38,6 +38,7 @@ from paasng.accessories.servicehub.exceptions import (
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
     SvcInstanceNotFound,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceSetGroupByName
@@ -762,6 +763,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
     """已解绑待回收增强服务实例相关API"""
 
     @app_action_required(AppAction.BASIC_DEVELOP)
+    @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.UnboundServiceEngineAppAttachmentSLZ(many=True))
     def list_by_module(self, request, code, module_name):
         """查看模块所有已解绑增强服务实例，按增强服务归类"""
         application = self.get_application()
@@ -778,6 +780,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
                 categorized_rels[str(rel.db_obj.service_id)].append(
                     {
+                        "instance_id": rel.db_obj.service_instance_id,
                         "service_instance": instance,
                         "environment": env.environment,
                         "environment_name": AppEnvName.get_choice_label(env.environment),
@@ -794,14 +797,21 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         return Response(serializer.data)
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
+    @swagger_auto_schema(tags=["增强服务"], query_serializer=slzs.DeleteUnboundServiceEngineAppAttachmentSLZ)
     def delete(self, request, code, module_name, service_id):
         """回收已解绑增强服务"""
-        slz = slzs.DeleteUnboundServiceEngineAppAttachmentSLZ(data=request.data)
+        slz = slzs.DeleteUnboundServiceEngineAppAttachmentSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
-        unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service_obj, data.instance_id)
-        unbound_instance.recycle_instance()
+        try:
+            unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service_obj, data["instance_id"]
+            )
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        unbound_instance.recycle_resource()
 
         return Response()

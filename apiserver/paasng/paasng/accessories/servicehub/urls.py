@@ -144,7 +144,7 @@ urlpatterns = [
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/$", include_envs=False),
         views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
-        name="api.services.attachment.unbound.recycle",
+        name="api.services.attachment.unbound.delete",
     ),
 ]
 

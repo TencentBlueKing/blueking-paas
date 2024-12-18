@@ -62,7 +62,6 @@ def load_regions_from_settings():
             mul_modules_config=RegionMulModulesConfig(**cfg.pop("mul_modules_config")),
             enabled_feature_flags=set(cfg.pop("enabled_feature_flags", [])),
             provide_env_vars_platform=cfg.pop("provide_env_vars_platform", None),
-            allow_deploy_app_by_lesscode=cfg.pop("allow_deploy_app_by_lesscode", None),
         )
         register_region(region)
 

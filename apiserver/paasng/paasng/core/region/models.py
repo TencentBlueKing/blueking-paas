@@ -160,7 +160,6 @@ class Region:
     enabled_feature_flags: Set[str] = field(default_factory=set)
     module_mobile_config: Optional[RegionMobileConfig] = None
     provide_env_vars_platform: Optional[bool] = True
-    allow_deploy_app_by_lesscode: Optional[bool] = False
 
     def __post_init__(self):
         self._service_categories = []

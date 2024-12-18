@@ -63,5 +63,9 @@ class FrontendFeatureViewSet(ViewSet):
             "BK_CI_PIPELINE_BUILD": bool(settings.BK_CI_PAAS_PROJECT_ID and settings.BK_CI_BUILD_PIPELINE_ID),
             # 创建与使用“蓝鲸插件”类型应用
             "BK_PLUGIN_TYPED_APPLICATION": settings.IS_ALLOW_CREATE_BK_PLUGIN_APP,
+            # 访问控制台功能，由是否启用 BCS 控制
+            "WEB_CONSOLE": settings.ENABLE_BCS,
+            # 是否能创建 LessCode 应用
+            "BK_LESSCODE_APP": settings.ENABLE_BK_LESSCODE,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

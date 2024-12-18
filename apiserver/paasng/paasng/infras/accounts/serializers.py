@@ -94,7 +94,6 @@ class AllRegionSpecsSLZ:
                         "display_name": region.display_name,
                         "languages": languages,
                         "description": region.basic_info.description,
-                        "allow_deploy_app_by_lesscode": region.allow_deploy_app_by_lesscode,
                     }
                 }
             )

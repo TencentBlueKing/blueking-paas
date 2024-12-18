@@ -30,7 +30,8 @@ var _ = Describe("Test app desc", func() {
 	var tmpAppDir string
 	var tmpDescFilePath string
 
-	appDescV2TestYamlWithSingleModule := `spec_version: 2
+	appDescV2TestYamlWithSingleModule := `
+spec_version: 2
 module:
   language: Python
   scripts:
@@ -48,7 +49,8 @@ module:
     worker:
       command: celery -A app worker --loglevel=info
 `
-	appDescV2TestYamlWithModules := `spec_version: 2
+	appDescV2TestYamlWithModules := `
+spec_version: 2
 modules:
   backend:
     language: Python
@@ -67,7 +69,8 @@ modules:
       worker:
         command: celery -A app worker --loglevel=info
 `
-	appDescV3TestYamlWithSingleModule := `specVersion: 3
+	appDescV3TestYamlWithSingleModule := `
+specVersion: 3
 module:
   name: backend
   isDefault: true
@@ -89,7 +92,8 @@ module:
       preRelease:
         procCommand: python manage.py migrate --no-input
 `
-	appDescV3TestYamlWithModules := `specVersion: 3
+	appDescV3TestYamlWithModules := `
+specVersion: 3
 modules:
   - name: backend
     isDefault: true

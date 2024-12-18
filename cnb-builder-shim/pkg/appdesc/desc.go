@@ -25,8 +25,6 @@ import (
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 // AppDescVersion 描述文件版本
@@ -36,8 +34,6 @@ const (
 	appSpecVersion2 AppDescVersion = "2"
 	appSpecVersion3 AppDescVersion = "3"
 )
-
-var moduleName = utils.EnvOrDefault("BKPAAS_APP_MODULE_NAME", "")
 
 // AppSpecVersionLegacy ...
 type AppSpecVersionLegacy struct {

@@ -47,4 +47,6 @@ type Config struct {
 	SourceCode SourceCodeConfig
 	// 服务配置
 	Service ServiceConfig
+	// 模块配置
+	ModuleName string
 }

@@ -18,6 +18,8 @@
 
 package appdesc
 
+import "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+
 // EnvV3 ...
 type EnvV3 struct {
 	Name  string `yaml:"name"`
@@ -66,7 +68,8 @@ type AppDescV3 struct {
 // If Module is not nil, it is returned directly.
 // If the moduleName is empty, nil is returned.
 // Otherwise, it looks up and returns the module specified by moduleName from the Modules map.
-func (a *AppDescV3) GetModule(moduleName string) *ModuleV3 {
+func (a *AppDescV3) GetModule() *ModuleV3 {
+	moduleName := config.G.ModuleName
 	if a.Module != nil {
 		return a.Module
 	}
@@ -83,7 +86,7 @@ func (a *AppDescV3) GetModule(moduleName string) *ModuleV3 {
 
 // GetProcesses ...
 func (a *AppDescV3) GetProcesses() map[string]ProcessV2 {
-	module := a.GetModule(moduleName)
+	module := a.GetModule()
 	if module == nil {
 		return nil
 	}
@@ -98,7 +101,7 @@ func (a *AppDescV3) GetProcesses() map[string]ProcessV2 {
 
 // GetPreReleaseHook ...
 func (a *AppDescV3) GetPreReleaseHook() string {
-	module := a.GetModule(moduleName)
+	module := a.GetModule()
 	if module == nil {
 		return ""
 	}
@@ -107,7 +110,7 @@ func (a *AppDescV3) GetPreReleaseHook() string {
 
 // GetEnvs ...
 func (a *AppDescV3) GetEnvs() []EnvV2 {
-	module := a.GetModule(moduleName)
+	module := a.GetModule()
 	if module == nil {
 		return nil
 	}

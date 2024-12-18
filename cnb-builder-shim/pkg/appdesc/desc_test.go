@@ -24,6 +24,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 )
 
 var _ = Describe("Test app desc", func() {
@@ -119,7 +121,8 @@ modules:
 	BeforeEach(func() {
 		tmpAppDir, _ = os.MkdirTemp("", "app")
 		tmpDescFilePath = filepath.Join(tmpAppDir, "app_desc.yaml")
-		moduleName = "backend"
+		_ = config.InitConfig()
+		config.G.ModuleName = "backend"
 	})
 	AfterEach(func() {
 		Expect(os.RemoveAll(tmpAppDir)).To(BeNil())

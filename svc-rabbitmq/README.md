@@ -101,6 +101,7 @@ python manage.py register_cluster \
 使用以下命令启动项目：
 
 ```bash
+python manage.py collectstatic --no-input
 python manage.py runserver 8005
 ```
 

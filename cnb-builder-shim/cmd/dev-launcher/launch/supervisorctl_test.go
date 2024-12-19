@@ -54,8 +54,8 @@ var _ = Describe("Test supervisorctl", func() {
 			"invalid with (%)",
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
-				{Key: "FOO", Value: `%abc`},
-				{Key: "BAR", Value: `ab%c`},
+				{Name: "FOO", Value: `%abc`},
+				{Name: "BAR", Value: `ab%c`},
 			},
 			`environment variables: FOO, BAR has invalid characters ("%)`,
 		),
@@ -63,8 +63,8 @@ var _ = Describe("Test supervisorctl", func() {
 			"invalid with (%)",
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
-				{Key: "FOO", Value: `%abc`},
-				{Key: "BAR", Value: `abc`},
+				{Name: "FOO", Value: `%abc`},
+				{Name: "BAR", Value: `abc`},
 			},
 			`environment variables: FOO has invalid characters ("%)`,
 		),
@@ -72,9 +72,9 @@ var _ = Describe("Test supervisorctl", func() {
 			`invalid with ("%)`,
 			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
-				{Key: "FOO_TEST", Value: `http://abc.com/cc`},
-				{Key: "FOO", Value: `%abc`},
-				{Key: "BAR", Value: `ab"c`},
+				{Name: "FOO_TEST", Value: `http://abc.com/cc`},
+				{Name: "FOO", Value: `%abc`},
+				{Name: "BAR", Value: `ab"c`},
 			},
 			`environment variables: FOO, BAR has invalid characters ("%)`,
 		),
@@ -120,8 +120,8 @@ redirect_stderr = true
 				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 			},
 			[]appdesc.Env{
-				{Key: "DJANGO_SETTINGS_MODULE", Value: "settings"},
-				{Key: "WHITENOISE_STATIC_PREFIX", Value: "/static/"},
+				{Name: "DJANGO_SETTINGS_MODULE", Value: "settings"},
+				{Name: "WHITENOISE_STATIC_PREFIX", Value: "/static/"},
 			}, fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 

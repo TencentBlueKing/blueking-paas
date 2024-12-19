@@ -114,7 +114,7 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*Supervis
 		}
 		envs := make([]string, len(procEnvs))
 		for indx, env := range procEnvs {
-			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Key, env.Value)
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, env.Value)
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -212,7 +212,7 @@ func validateEnvironment(procEnvs []appdesc.Env) error {
 	invalidEnvNames := []string{}
 	for _, env := range procEnvs {
 		if strings.ContainsAny(env.Value, invalidChars) {
-			invalidEnvNames = append(invalidEnvNames, env.Key)
+			invalidEnvNames = append(invalidEnvNames, env.Name)
 		}
 	}
 	if len(invalidEnvNames) == 0 {

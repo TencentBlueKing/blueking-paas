@@ -57,6 +57,10 @@ func loadServiceConfigFromEnv() (ServiceConfig, error) {
 	return ServiceConfig{CORS: corsConfig}, nil
 }
 
+func loadModuleNameFromEnv() (string, error) {
+	return utils.EnvOrDefault("BKPAAS_APP_MODULE_NAME", ""), nil
+}
+
 func loadConfigFromEnv() (*Config, error) {
 	sourceCodeConfig, err := loadSourceConfigFromEnv()
 	if err != nil {
@@ -67,9 +71,15 @@ func loadConfigFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	moduleName, err := loadModuleNameFromEnv()
+	if err != nil {
+		return nil, err
+	}
 	return &Config{
 		SourceCode: sourceCodeConfig,
 		Service:    serviceConfig,
+		ModuleName: moduleName,
 	}, nil
 }
 

@@ -52,7 +52,7 @@
             v-for="(process, index) in processData"
             :key="index"
           >
-            {{ process.name }}
+            {{ process.Name }}
           </li>
         </ul>
       </div>

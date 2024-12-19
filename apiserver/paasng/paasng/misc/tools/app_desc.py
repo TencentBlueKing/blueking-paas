@@ -108,10 +108,6 @@ def transform_module(module):
 
     new_module["name"] = module["name"]
 
-    bkmonitor_port = None
-    if "bkmonitor" in module:
-        bkmonitor_port = module["bkmonitor"].get("port")
-
     # 处理 module 内容
     for key, value in module.items():
         if key in ["name", "bkmonitor", "package_plans"]:
@@ -125,17 +121,19 @@ def transform_module(module):
             # 其他, 即 is_default, source_dir 或 language
             new_module[snake_to_camel(key)] = value
 
-    # bkmonitor 转换，添加为 monitoring metrics
-    if bkmonitor_port and "spec" in new_module and "processes" in new_module["spec"]:
-        for process in new_module["spec"]["processes"]:
-            if process["name"] == "web":
-                process["services"].append(
-                    {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
-                )
+    # bkmonitor 转换，添加 observability.monitoring.metrics
+    if "bkmonitor" in module:
+        bkmonitor_port = module["bkmonitor"].get("port")
+        if bkmonitor_port and "spec" in new_module and "processes" in new_module["spec"]:
+            for process in new_module["spec"]["processes"]:
+                if process["name"] == "web":
+                    process["services"].append(
+                        {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
+                    )
 
-                new_module["spec"]["observability"] = {
-                    "monitoring": {"metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]}
-                }
+                    new_module["spec"]["observability"] = {
+                        "monitoring": {"metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]}
+                    }
 
     return new_module
 

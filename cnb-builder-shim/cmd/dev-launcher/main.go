@@ -19,13 +19,18 @@
 package main
 
 import (
+	"os"
+
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"os"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
+
+var logger = logging.Default()
 
 func main() {
 	if err := config.InitConfig(); err != nil {
+		logger.Error(err, "Init config failed")
 		os.Exit(1)
 	}
 

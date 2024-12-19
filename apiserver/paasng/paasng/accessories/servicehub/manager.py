@@ -17,6 +17,7 @@
 
 import logging
 import operator
+import uuid
 from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTuple, Optional, TypeVar, cast
 
 from django.db.models import QuerySet
@@ -27,6 +28,7 @@ from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.local.manager import LocalPlanMgr, LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.models import (
@@ -36,7 +38,12 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteServiceMgr, RemoteServiceObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import (
+    EngineAppInstanceRel,
+    PlanObj,
+    ServiceObj,
+    UnboundEngineAppInstanceRel,
+)
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions, set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
@@ -218,6 +225,9 @@ class MixedServiceMgr:
     )
     list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
+    list_unbound_instance_rels = cast(
+        Callable[..., Iterable[UnboundEngineAppInstanceRel]], _proxied_chained_generator("list_unbound_instance_rels")
+    )
 
     # Proxied generator methods end
 
@@ -272,6 +282,16 @@ class MixedServiceMgr:
             except SvcAttachmentDoesNotExist:
                 continue
         raise SvcAttachmentDoesNotExist(f"engine_app<{engine_app}> has no attachment with service<{service.uuid}>")
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        for mgr in self.mgr_instances:
+            try:
+                return mgr.get_unbound_instance_rel_by_instance_id(service, service_instance_id)
+            except UnboundSvcAttachmentDoesNotExist:
+                continue
+        raise UnboundSvcAttachmentDoesNotExist(
+            f"service<{service}> has no attachment with service_instance_id<{service_instance_id}>"
+        )
 
 
 class MixedPlanMgr:

@@ -68,7 +68,7 @@ def clean_recycled_unbound_remote_instances():
         remote_client = RemoteServiceClient(remote_config)
         for instance in instances:
             try:
-                remote_client.retrieve_instance_to_be_delete(instance.service_instance_id)
+                remote_client.retrieve_instance_to_be_deleted(instance.service_instance_id)
             except RClientResponseError as e:
                 # if not find service instance with this id, remote response http status code 404
                 if e.status_code == 404:

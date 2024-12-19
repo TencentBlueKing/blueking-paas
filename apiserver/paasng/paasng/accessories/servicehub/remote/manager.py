@@ -396,9 +396,9 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
         self.remote_client = RemoteServiceClient(self.remote_config)
 
-    def retrieve_instance_to_be_delete(self) -> dict:
+    def retrieve_instance_to_be_deleted(self) -> dict:
         try:
-            instance_data = self.remote_client.retrieve_instance_to_be_delete(str(self.db_obj.service_instance_id))
+            instance_data = self.remote_client.retrieve_instance_to_be_deleted(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
             # if not find service instance with this id, remote response http status code 404
             if e.status_code == 404:
@@ -412,7 +412,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
-        instance_data = self.retrieve_instance_to_be_delete()
+        instance_data = self.retrieve_instance_to_be_deleted()
         svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
 
@@ -426,7 +426,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
     def recycle_resource(self) -> None:
         try:
-            self.retrieve_instance_to_be_delete()
+            self.retrieve_instance_to_be_deleted()
         except SvcInstanceNotFound:
             return
 

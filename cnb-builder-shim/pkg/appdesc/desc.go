@@ -35,20 +35,8 @@ const (
 	appSpecVersion3 AppDescVersion = "3"
 )
 
-// Process ...
-type Process struct {
-	Name        string
-	ProcCommand string
-}
-
-// Env ...
-type Env struct {
-	Name  string
-	Value string
-}
-
-// AppSpecVersionLegacy ...
-type AppSpecVersionLegacy struct {
+// LegacyAppSpecVersion ...
+type LegacyAppSpecVersion struct {
 	SpecVersion string `yaml:"spec_version"`
 }
 
@@ -60,8 +48,7 @@ type AppSpecVersion struct {
 // GetAppSpecVersion ...
 func GetAppSpecVersion(data []byte) (AppDescVersion, error) {
 	// 尝试通过 AppSpecVersionLegacy 解析
-	//var specLegacy AppSpecVersionLegacy
-	specLegacy := new(AppSpecVersionLegacy)
+	specLegacy := new(LegacyAppSpecVersion)
 	if err := yaml.Unmarshal(data, &specLegacy); err != nil {
 		return "", err
 	}
@@ -72,7 +59,7 @@ func GetAppSpecVersion(data []byte) (AppDescVersion, error) {
 	case "":
 		// skip
 	default:
-		return "", fmt.Errorf("invalid legacy spec version: %s", specLegacy.SpecVersion)
+		return "", errors.Errorf("invalid legacy spec version: %s", specLegacy.SpecVersion)
 	}
 
 	// 通过 AppSpecVersion 解析
@@ -85,7 +72,7 @@ func GetAppSpecVersion(data []byte) (AppDescVersion, error) {
 	case "3":
 		return appSpecVersion3, nil
 	default:
-		return "", fmt.Errorf("invalid spec version: %s", specVersion.SpecVersion)
+		return "", errors.Errorf("invalid spec version: %s", specVersion.SpecVersion)
 	}
 
 }

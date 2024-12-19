@@ -18,12 +18,24 @@
 
 package appdesc
 
+// Process ...
+type Process struct {
+	Name        string
+	ProcCommand string
+}
+
+// Env ...
+type Env struct {
+	Name  string
+	Value string
+}
+
 // AppDesc ...
 type AppDesc interface {
-	// GetProcesses gets the list of processes
+	// GetProcesses ...
 	GetProcesses() []Process
-	// GetPreReleaseHook get hooks command
+	// GetPreReleaseHook ...
 	GetPreReleaseHook() string
-	// GetEnvs get environment variables
+	// GetEnvs ...
 	GetEnvs() []Env
 }

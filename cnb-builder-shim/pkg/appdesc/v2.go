@@ -31,8 +31,8 @@ type EnvV2 struct {
 	Value string `yaml:"value"`
 }
 
-// Module ...
-type Module struct {
+// ModuleV2 ...
+type ModuleV2 struct {
 	Processes map[string]ProcessV2 `yaml:"processes"`
 	Scripts   struct {
 		PreReleaseHook string `yaml:"pre_release_hook"`
@@ -42,45 +42,47 @@ type Module struct {
 
 // AppDescV2 ...
 type AppDescV2 struct {
-	SpecVersion string             `yaml:"spec_version"`
-	Module      *Module            `yaml:"module"`
-	Modules     map[string]*Module `yaml:"modules"`
+	SpecVersion string               `yaml:"spec_version"`
+	Module      *ModuleV2            `yaml:"module"`
+	Modules     map[string]*ModuleV2 `yaml:"modules"`
 }
 
 // GetModule returns the ModuleV2 object.
 // If Module is not nil, it is returned directly.
 // If the moduleName is empty, nil is returned.
 // Otherwise, it looks up and returns the module specified by moduleName from the Modules map.
-func (a *AppDescV2) GetModule() *Module {
+func (d *AppDescV2) GetModule() *ModuleV2 {
 	moduleName := config.G.ModuleName
-	if a.Module != nil {
-		return a.Module
+	if d.Module != nil {
+		return d.Module
 	}
 	if moduleName == "" {
 		return nil
 	}
-	return a.Modules[moduleName]
+	return d.Modules[moduleName]
 }
 
 // GetProcesses ...
-func (a *AppDescV2) GetProcesses() []Process {
-	module := a.GetModule()
+func (d *AppDescV2) GetProcesses() []Process {
+	module := d.GetModule()
 	if module == nil {
 		return nil
 	}
-	var processes []Process
+	processes := make([]Process, len(module.Processes))
+	index := 0
 	for pType, p := range module.Processes {
-		processes = append(processes, Process{
+		processes[index] = Process{
 			Name:        pType,
 			ProcCommand: p.Command,
-		})
+		}
+		index++
 	}
 	return processes
 }
 
 // GetPreReleaseHook ...
-func (a *AppDescV2) GetPreReleaseHook() string {
-	module := a.GetModule()
+func (d *AppDescV2) GetPreReleaseHook() string {
+	module := d.GetModule()
 	if module == nil {
 		return ""
 	}
@@ -88,8 +90,8 @@ func (a *AppDescV2) GetPreReleaseHook() string {
 }
 
 // GetEnvs ...
-func (a *AppDescV2) GetEnvs() []Env {
-	module := a.GetModule()
+func (d *AppDescV2) GetEnvs() []Env {
+	module := d.GetModule()
 	if module == nil {
 		return nil
 	}

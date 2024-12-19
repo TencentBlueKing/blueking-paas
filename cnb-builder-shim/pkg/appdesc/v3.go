@@ -68,15 +68,15 @@ type AppDescV3 struct {
 // If Module is not nil, it is returned directly.
 // If the moduleName is empty, nil is returned.
 // Otherwise, it looks up and returns the module specified by moduleName from the Modules map.
-func (a *AppDescV3) GetModule() *ModuleV3 {
+func (d *AppDescV3) GetModule() *ModuleV3 {
 	moduleName := config.G.ModuleName
-	if a.Module != nil {
-		return a.Module
+	if d.Module != nil {
+		return d.Module
 	}
 	if moduleName == "" {
 		return nil
 	}
-	for _, m := range a.Modules {
+	for _, m := range d.Modules {
 		if m.Name == moduleName {
 			return m
 		}
@@ -85,8 +85,8 @@ func (a *AppDescV3) GetModule() *ModuleV3 {
 }
 
 // GetProcesses ...
-func (a *AppDescV3) GetProcesses() []Process {
-	module := a.GetModule()
+func (d *AppDescV3) GetProcesses() []Process {
+	module := d.GetModule()
 	if module == nil {
 		return nil
 	}
@@ -101,8 +101,8 @@ func (a *AppDescV3) GetProcesses() []Process {
 }
 
 // GetPreReleaseHook ...
-func (a *AppDescV3) GetPreReleaseHook() string {
-	module := a.GetModule()
+func (d *AppDescV3) GetPreReleaseHook() string {
+	module := d.GetModule()
 	if module == nil {
 		return ""
 	}
@@ -110,8 +110,8 @@ func (a *AppDescV3) GetPreReleaseHook() string {
 }
 
 // GetEnvs ...
-func (a *AppDescV3) GetEnvs() []Env {
-	module := a.GetModule()
+func (d *AppDescV3) GetEnvs() []Env {
+	module := d.GetModule()
 	if module == nil {
 		return nil
 	}

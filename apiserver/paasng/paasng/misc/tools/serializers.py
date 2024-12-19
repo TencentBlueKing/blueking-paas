@@ -136,7 +136,7 @@ class SvcDiscoverySerializer(serializers.Serializer):
 
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
-    source_dir = serializers.CharField()
+    source_dir = serializers.CharField(required=False)
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)

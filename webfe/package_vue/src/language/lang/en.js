@@ -2923,4 +2923,13 @@ export default {
   来自应用描述文件: 'From the APP description file',
   '应用描述文件中定义的环境变量无法在页面上修改，但可以在页面上添加同名变量以覆盖其值': 'The environment variables defined in the APP description file cannot be modified on the page, but you can add variables with the same name on the page to override their values.',
   '环境变量已失效，因为页面上新增了同名的环境变量': 'The environment variable has become invalid because a variable with the same name was added on the page.',
+  提交代码: 'Submit code',
+  变更文件: 'Changed files',
+  代码提交成功: 'Code submitted successfully',
+  点击跳转到仓库查看: 'Click to view the repository',
+  没有变更的文件: 'No changed files',
+  文件名不符合规范: 'Filename does not conform to specifications',
+  '文件 {x} 名称不符合规范': 'The filename {x} does not conform to specifications',
+  '文件 {x} 等 {n} 个文件名称不符合规范': 'The filename {x} and {n} other files do not conform to specifications',
+  '修改的文件路径中不能包含中文，空格，以及除连接符（-），下划线（一），句号（.）外的特殊字符': 'The modified file path cannot contain Chinese characters, spaces, or special characters other than hyphens (-), underscores (_), and periods (.).',
 };

@@ -15,9 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Client for remote services
-"""
-import json
+"""Client for remote services"""
+
 import logging
 from contextlib import contextmanager
 from dataclasses import MISSING, dataclass
@@ -101,12 +100,12 @@ def wrap_request_exc(client: "RemoteServiceClient"):
     try:
         logger.debug("[servicehub] calling remote service<%s>", client.config)
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception(f"invalid json response from {client.config.index_url}")
+        raise RemoteClientError(f"invalid json response: {e}") from e
     except RequestException as e:
         logger.exception(f"unable to fetch remote services from {client.config.index_url}")
         raise RemoteClientError(f"unable to fetch remote services: {e}") from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response from {client.config.index_url}")
-        raise RemoteClientError(f"invalid json response: {e}") from e
 
 
 class RemoteServiceClient:

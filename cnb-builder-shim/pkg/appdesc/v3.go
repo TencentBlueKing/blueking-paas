@@ -90,12 +90,12 @@ func (d *AppDescV3) GetProcesses() []Process {
 	if module == nil {
 		return nil
 	}
-	processes := make([]Process, len(module.Spec.Processes))
-	for index, p := range module.Spec.Processes {
-		processes[index] = Process{
+	var processes []Process
+	for _, p := range module.Spec.Processes {
+		processes = append(processes, Process{
 			Name:        p.Name,
 			ProcCommand: p.ProcCommand,
-		}
+		})
 	}
 	return processes
 }
@@ -115,12 +115,12 @@ func (d *AppDescV3) GetEnvs() []Env {
 	if module == nil {
 		return nil
 	}
-	envs := make([]Env, len(module.Spec.Configuration.Env))
-	for index, env := range module.Spec.Configuration.Env {
-		envs[index] = Env{
+	var envs []Env
+	for _, env := range module.Spec.Configuration.Env {
+		envs = append(envs, Env{
 			Name:  env.Name,
 			Value: env.Value,
-		}
+		})
 	}
 	return envs
 }

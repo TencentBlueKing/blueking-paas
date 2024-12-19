@@ -68,14 +68,12 @@ func (d *AppDescV2) GetProcesses() []Process {
 	if module == nil {
 		return nil
 	}
-	processes := make([]Process, len(module.Processes))
-	index := 0
+	var processes []Process
 	for pType, p := range module.Processes {
-		processes[index] = Process{
+		processes = append(processes, Process{
 			Name:        pType,
 			ProcCommand: p.Command,
-		}
-		index++
+		})
 	}
 	return processes
 }
@@ -95,12 +93,12 @@ func (d *AppDescV2) GetEnvs() []Env {
 	if module == nil {
 		return nil
 	}
-	envs := make([]Env, len(module.ProcEnvs))
-	for index, env := range module.ProcEnvs {
-		envs[index] = Env{
+	var envs []Env
+	for _, env := range module.ProcEnvs {
+		envs = append(envs, Env{
 			Name:  env.Key,
 			Value: env.Value,
-		}
+		})
 	}
 	return envs
 }

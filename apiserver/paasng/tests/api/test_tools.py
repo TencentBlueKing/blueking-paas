@@ -535,6 +535,8 @@ module:
       command: gunicorn wsgi -w 4 -b [::]:${PORT}
     worker:
       command: celery -A app -l info
+  bkmonitor:
+    port: 5001
 """,
                 {
                     "specVersion": 3,
@@ -553,7 +555,8 @@ module:
                                             "exposedType": {"name": "bk/http"},
                                             "targetPort": settings.CONTAINER_PORT,
                                             "port": 80,
-                                        }
+                                        },
+                                        {"name": "metrics", "protocol": "TCP", "port": 5001, "targetPort": 5001},
                                     ],
                                 },
                                 {
@@ -568,7 +571,12 @@ module:
                                         }
                                     ],
                                 },
-                            ]
+                            ],
+                            "observability": {
+                                "monitoring": {
+                                    "metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]
+                                }
+                            },
                         },
                     },
                 },
@@ -587,6 +595,10 @@ module:
               name: bk/http
             targetPort: {settings.CONTAINER_PORT}
             port: 80
+          - name: metrics
+            protocol: TCP
+            port: 5001
+            targetPort: 5001
       - name: worker
         procCommand: celery -A app -l info
         services:
@@ -594,6 +606,12 @@ module:
             protocol: TCP
             targetPort: {settings.CONTAINER_PORT}
             port: 80
+    observability:
+      monitoring:
+        metrics:
+          - process: web
+            serviceName: metrics
+            path: /metrics
 """,
             ),
         ],

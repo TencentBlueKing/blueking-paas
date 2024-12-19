@@ -947,8 +947,6 @@ DEFAULT_REGION_TEMPLATE = {
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,
-    # 是否允许部署“蓝鲸运维开发平台提供源码包”
-    "allow_deploy_app_by_lesscode": True,
 }
 
 REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAULT_REGION_TEMPLATE)]})
@@ -1321,12 +1319,12 @@ APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
+# 是否允许创建 LessCode 应用
+ENABLE_BK_LESSCODE = settings.get("ENABLE_BK_LESSCODE", True)
 # bk_lesscode 注册在 APIGW 上的环境
 BK_LESSCODE_APIGW_STAGE = settings.get("BK_LESSCODE_APIGW_STAGE", "prod")
 # bk_lesscode 平台访问地址
 BK_LESSCODE_URL = settings.get("BK_LESSCODE_URL", "")
-# bk_lesscode API 是否已经注册在 APIGW 网关上
-ENABLE_BK_LESSCODE_APIGW = settings.get("ENABLE_BK_LESSCODE_APIGW", False)
 BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 
 # -----------------
@@ -1410,6 +1408,12 @@ BK_AUDIT_SETTINGS = {
     "ot_endpoint": BK_AUDIT_ENDPOINT,
     "bk_data_token": BK_AUDIT_DATA_TOKEN,
 }
+
+# ---------------------------------------------
+# 蓝鲸容器服务配置
+# ---------------------------------------------
+# 是否部署了 BCS，影响访问控制台等功能
+ENABLE_BCS = settings.get("ENABLE_BCS", True)
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用

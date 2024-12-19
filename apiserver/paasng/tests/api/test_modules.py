@@ -20,6 +20,7 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -93,7 +94,9 @@ class TestModuleCreation:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
+        with mock.patch.object(
+            IntegratedSvnAppRepoConnector, "sync_templated_sources"
+        ) as mocked_sync, override_settings(ENABLE_BK_LESSCODE=False):
             # Mock return value of syncing template
             mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 

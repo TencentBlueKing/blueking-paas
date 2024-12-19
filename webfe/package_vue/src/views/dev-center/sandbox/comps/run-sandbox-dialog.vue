@@ -49,10 +49,10 @@
         <ul class="processs">
           <li
             class="item"
-            v-for="(value, key) in processData"
-            :key="key"
+            v-for="(process, index) in processData"
+            :key="index"
           >
-            {{ key }}
+            {{ process.name }}
           </li>
         </ul>
       </div>
@@ -70,7 +70,7 @@ export default {
     },
     processData: {
       type: Object,
-      default: () => {},
+      default: () => [],
     },
   },
   data() {

@@ -231,7 +231,7 @@ export default {
       isLogsLoading: true,
       isCollapse: true,
       processInfo: {},
-      processData: {},
+      processData: [],
       isRunSandboxVisible: false,
       sandboxPassword: '',
       isSubmitCodeVisible: false,

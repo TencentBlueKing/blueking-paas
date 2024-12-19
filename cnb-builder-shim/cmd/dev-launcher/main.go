@@ -20,8 +20,14 @@ package main
 
 import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"os"
 )
 
 func main() {
+	if err := config.InitConfig(); err != nil {
+		os.Exit(1)
+	}
+
 	subcmd.Execute()
 }

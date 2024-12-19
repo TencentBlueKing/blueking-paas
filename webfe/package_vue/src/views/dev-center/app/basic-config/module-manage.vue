@@ -455,11 +455,6 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
-                <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
-                  </div>
-                </template>
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
@@ -505,11 +500,6 @@
                     class="ip-item"
                   >
                     {{ nodeIp.internal_ip_address }}
-                  </div>
-                </template>
-                <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
                 </template>
                 <template v-else>
@@ -956,8 +946,8 @@ export default {
         // 总是允许关闭出口 IP
         return false;
       }
-      // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
-      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+      // 如果应用未支持开关出口IP管理, 则不允许打开出口IP
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
     curProdDisabled() {
       if (this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing) {
@@ -968,8 +958,8 @@ export default {
         // 总是允许关闭出口 IP
         return false;
       }
-      // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
-      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+      // 如果应用未支持开关出口IP管理, 则不允许打开出口IP
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
     entranceConfig() {
       return this.$store.state.region.entrance_config;

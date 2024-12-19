@@ -16,8 +16,13 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from django.apps import AppConfig
 
 
 class VendorConfig(AppConfig):
-    name = 'vendor'
+    name = "vendor"
+
+    def ready(self):
+        # Register signal handlers
+        from . import handlers  # noqa: F401

@@ -13,6 +13,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from enum import StrEnum
 from typing import Dict, List
 
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
@@ -92,6 +93,19 @@ class PlanSelector:
         return [p for p in all_plans if p.uuid in plan_ids]
 
 
+class PossiblePlansResultType(StrEnum):
+    """The type of possible plans result.
+
+    It may look like `ServiceBindingPolicyType` but it is not the same. `PossiblePlansResultType`
+    is the "final" result of many policies. For example, if a service has been configured
+    to use the same plans for different envs, then the policy type might be `ENV_SPECIFIC`
+    but the `PossiblePlansResultType` is `STATIC`.
+    """
+
+    STATIC = "static"
+    ENV_SPECIFIC = "env_specific"
+
+
 class PossiblePlans:
     """The possible plans for the service and the module. This object helps the client
     to know the plans and use a proper way to interact with them.
@@ -101,8 +115,7 @@ class PossiblePlans:
 
     def __init__(self, env_plans: Dict[str, List[PlanObj]]):
         self._has_multiple_plans = False
-        self._is_static = False
-        self._is_env_specific = False
+        self._result_type = PossiblePlansResultType.STATIC
 
         self.env_plans = env_plans
         self._parse(self.env_plans)
@@ -113,29 +126,25 @@ class PossiblePlans:
         """
         return self._has_multiple_plans
 
-    def is_static(self) -> bool:
-        """Whether the plans are static."""
-        return self._is_static
+    def get_result_type(self) -> PossiblePlansResultType:
+        """Return the result type of the possible plans."""
+        return self._result_type
 
     def get_static_plans(self) -> List[PlanObj] | None:
         """Get the static plans.
 
         :return: The plan list, None if current object is not static.
         """
-        if not self.is_static():
+        if self.get_result_type() != PossiblePlansResultType.STATIC:
             return None
         return next(iter(self.env_plans.values()), None)
-
-    def is_env_specific(self) -> bool:
-        """Whether the plans are env specific."""
-        return self._is_env_specific
 
     def get_env_specific_plans(self) -> Dict[str, List[PlanObj]] | None:
         """Get the env specific plans.
 
         :return: The plans dict, None if current object is not env specific.
         """
-        if not self.is_env_specific():
+        if self.get_result_type() != PossiblePlansResultType.ENV_SPECIFIC:
             return None
         return self.env_plans
 
@@ -146,13 +155,12 @@ class PossiblePlans:
             return
 
         self._has_multiple_plans = any(len(plans) > 1 for plans in self.env_plans.values())
-        self._is_static, self._is_env_specific = True, False
 
         last_sorted_ids = None
         # If any plans are different with others, then it is not static
         for plans in self.env_plans.values():
             sorted_ids = tuple(sorted(str(p.uuid) for p in plans))
             if last_sorted_ids is not None and last_sorted_ids != sorted_ids:
-                self._is_static, self._is_env_specific = False, True
+                self._result_type = PossiblePlansResultType.ENV_SPECIFIC
                 return
             last_sorted_ids = sorted_ids

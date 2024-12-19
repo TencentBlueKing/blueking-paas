@@ -22,7 +22,7 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector, PossiblePlansResultType
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
@@ -197,8 +197,7 @@ class TestPlanSelectorListPossiblePlans:
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is False
-        assert possible_plans.is_env_specific() is False
-        assert possible_plans.is_static() is True
+        assert possible_plans.get_result_type() == PossiblePlansResultType.STATIC
         assert possible_plans.get_static_plans() == [plan1]
         assert possible_plans.get_env_specific_plans() is None
 
@@ -207,8 +206,7 @@ class TestPlanSelectorListPossiblePlans:
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is True
-        assert possible_plans.is_env_specific() is False
-        assert possible_plans.is_static() is True
+        assert possible_plans.get_result_type() == PossiblePlansResultType.STATIC
         assert possible_plans.get_static_plans() == [plan1, plan2]
         assert possible_plans.get_env_specific_plans() is None
 
@@ -222,8 +220,7 @@ class TestPlanSelectorListPossiblePlans:
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is False
-        assert possible_plans.is_env_specific() is True
-        assert possible_plans.is_static() is False
+        assert possible_plans.get_result_type() == PossiblePlansResultType.ENV_SPECIFIC
         assert possible_plans.get_static_plans() is None
         assert possible_plans.get_env_specific_plans() == {
             "stag": [plan1],
@@ -240,8 +237,7 @@ class TestPlanSelectorListPossiblePlans:
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is True
-        assert possible_plans.is_env_specific() is True
-        assert possible_plans.is_static() is False
+        assert possible_plans.get_result_type() == PossiblePlansResultType.ENV_SPECIFIC
         assert possible_plans.get_static_plans() is None
         assert possible_plans.get_env_specific_plans() == {
             "stag": [plan1],

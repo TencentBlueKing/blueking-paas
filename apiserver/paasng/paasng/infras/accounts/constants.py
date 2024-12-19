@@ -68,6 +68,7 @@ class AccountFeatureFlag(ChoicesEnum):
 
     _choices_labels = [
         (ALLOW_ADVANCED_CREATION_OPTIONS, _("允许创建模块时使用高级选项")),
+        # 加密镜像：镜像 label 设置了 secureEncrypted=1 的镜像
         (ENABLE_WEB_CONSOLE, _("允许打开未加密镜像的访问控制台")),
         (ALLOW_CREATE_SMART_APP, _("允许创建 SMart 应用")),
     ]

@@ -47,7 +47,7 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     # need to be passed to the rewritten path must explicitly be defined in a capture group.
     # Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
     INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress路径是否使用正则表达式"), default=False)
-    # 低于 k8s 1.12 的集群不支持蓝鲸监控，部分老集群可从原有 BCS 查询资源使用率的数据
+    # 低于 k8s 1.12 的集群不支持蓝鲸监控
     ENABLE_BK_MONITOR = FeatureFlagField(label=_("从蓝鲸监控查询资源使用率"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(

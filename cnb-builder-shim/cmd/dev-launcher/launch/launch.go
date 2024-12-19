@@ -104,7 +104,7 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	return processes, nil
 }
 
-func runPreReleaseHook(releaseHook string, runEnvs []appdesc.EnvV2) error {
+func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 	cmd := exec.Command(launch.LauncherPath, releaseHook)
 	cmd.Dir = DefaultAppDir
 	cmd.Stderr = os.Stderr
@@ -112,13 +112,13 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.EnvV2) error {
 
 	cmd.Env = os.Environ()
 	for _, env := range runEnvs {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
 	return cmd.Run()
 }
 
-func reloadProcesses(processes []Process, procEnvs []appdesc.EnvV2) error {
+func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
 	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
 		return err
 	} else {

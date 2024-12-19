@@ -85,15 +85,16 @@ func (a *AppDescV3) GetModule() *ModuleV3 {
 }
 
 // GetProcesses ...
-func (a *AppDescV3) GetProcesses() map[string]ProcessV2 {
+func (a *AppDescV3) GetProcesses() []Process {
 	module := a.GetModule()
 	if module == nil {
 		return nil
 	}
-	processes := make(map[string]ProcessV2)
-	for _, p := range module.Spec.Processes {
-		processes[p.Name] = ProcessV2{
-			Command: p.ProcCommand,
+	processes := make([]Process, len(module.Spec.Processes))
+	for index, p := range module.Spec.Processes {
+		processes[index] = Process{
+			Name:        p.Name,
+			ProcCommand: p.ProcCommand,
 		}
 	}
 	return processes
@@ -109,17 +110,17 @@ func (a *AppDescV3) GetPreReleaseHook() string {
 }
 
 // GetEnvs ...
-func (a *AppDescV3) GetEnvs() []EnvV2 {
+func (a *AppDescV3) GetEnvs() []Env {
 	module := a.GetModule()
 	if module == nil {
 		return nil
 	}
-	var envs []EnvV2
-	for _, env := range module.Spec.Configuration.Env {
-		envs = append(envs, EnvV2{
-			Key:   env.Name,
+	envs := make([]Env, len(module.Spec.Configuration.Env))
+	for index, env := range module.Spec.Configuration.Env {
+		envs[index] = Env{
+			Name:  env.Name,
 			Value: env.Value,
-		})
+		}
 	}
 	return envs
 }

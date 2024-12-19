@@ -146,20 +146,20 @@ scripts:
 test: "python"`, ""),
 			Entry("no pre_release_hook", `spec_version: 2`, ""))
 
-		DescribeTable("Test parse env_variables", func(appDescYaml string, expectedEnvs []EnvV2) {
+		DescribeTable("Test parse env_variables", func(appDescYaml string, expectedEnvs []Env) {
 			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
 
 			appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
 			Expect(err).To(BeNil())
 			Expect(appDesc.GetEnvs()).To(Equal(expectedEnvs))
-		}, Entry("has env_variables in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule, []EnvV2{
-			{Key: "FOO", Value: "value_of_foo"}, {Key: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in multi-module appDescV2 test yaml", appDescV2TestYamlWithModules, []EnvV2{
-			{Key: "FOO", Value: "value_of_foo"}, {Key: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in single module appDescV3 test yaml", appDescV3TestYamlWithSingleModule, []EnvV2{
-			{Key: "FOO", Value: "value_of_foo"}, {Key: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules, []EnvV2{
-			{Key: "FOO", Value: "value_of_foo"}, {Key: "BAR", Value: "value_of_bar"},
+		}, Entry("has env_variables in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule, []Env{
+			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
+		}), Entry("has env_variables in multi-module appDescV2 test yaml", appDescV2TestYamlWithModules, []Env{
+			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
+		}), Entry("has env_variables in single module appDescV3 test yaml", appDescV3TestYamlWithSingleModule, []Env{
+			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
+		}), Entry("has env_variables in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules, []Env{
+			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
 		}), Entry("no env_variables", `spec_version: 2`, nil))
 
 		DescribeTable("Test TransformToProcfile", func(appDescYaml string) {

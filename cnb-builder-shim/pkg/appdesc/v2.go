@@ -31,8 +31,8 @@ type EnvV2 struct {
 	Value string `yaml:"value"`
 }
 
-// ModuleV2 ...
-type ModuleV2 struct {
+// Module ...
+type Module struct {
 	Processes map[string]ProcessV2 `yaml:"processes"`
 	Scripts   struct {
 		PreReleaseHook string `yaml:"pre_release_hook"`
@@ -42,16 +42,16 @@ type ModuleV2 struct {
 
 // AppDescV2 ...
 type AppDescV2 struct {
-	SpecVersion string               `yaml:"spec_version"`
-	Module      *ModuleV2            `yaml:"module"`
-	Modules     map[string]*ModuleV2 `yaml:"modules"`
+	SpecVersion string             `yaml:"spec_version"`
+	Module      *Module            `yaml:"module"`
+	Modules     map[string]*Module `yaml:"modules"`
 }
 
 // GetModule returns the ModuleV2 object.
 // If Module is not nil, it is returned directly.
 // If the moduleName is empty, nil is returned.
 // Otherwise, it looks up and returns the module specified by moduleName from the Modules map.
-func (a *AppDescV2) GetModule() *ModuleV2 {
+func (a *AppDescV2) GetModule() *Module {
 	moduleName := config.G.ModuleName
 	if a.Module != nil {
 		return a.Module
@@ -63,12 +63,19 @@ func (a *AppDescV2) GetModule() *ModuleV2 {
 }
 
 // GetProcesses ...
-func (a *AppDescV2) GetProcesses() map[string]ProcessV2 {
+func (a *AppDescV2) GetProcesses() []Process {
 	module := a.GetModule()
 	if module == nil {
 		return nil
 	}
-	return module.Processes
+	var processes []Process
+	for pType, p := range module.Processes {
+		processes = append(processes, Process{
+			Name:        pType,
+			ProcCommand: p.Command,
+		})
+	}
+	return processes
 }
 
 // GetPreReleaseHook ...
@@ -81,10 +88,17 @@ func (a *AppDescV2) GetPreReleaseHook() string {
 }
 
 // GetEnvs ...
-func (a *AppDescV2) GetEnvs() []EnvV2 {
+func (a *AppDescV2) GetEnvs() []Env {
 	module := a.GetModule()
 	if module == nil {
 		return nil
 	}
-	return module.ProcEnvs
+	envs := make([]Env, len(module.ProcEnvs))
+	for index, env := range module.ProcEnvs {
+		envs[index] = Env{
+			Name:  env.Key,
+			Value: env.Value,
+		}
+	}
+	return envs
 }

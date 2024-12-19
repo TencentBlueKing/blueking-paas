@@ -35,6 +35,18 @@ const (
 	appSpecVersion3 AppDescVersion = "3"
 )
 
+// Process ...
+type Process struct {
+	Name        string
+	ProcCommand string
+}
+
+// Env ...
+type Env struct {
+	Name  string
+	Value string
+}
+
 // AppSpecVersionLegacy ...
 type AppSpecVersionLegacy struct {
 	SpecVersion string `yaml:"spec_version"`
@@ -123,8 +135,8 @@ func TransformToProcfile(descFilePath string) (string, error) {
 	}
 
 	lines := []string{}
-	for pType, p := range desc.GetProcesses() {
-		lines = append(lines, fmt.Sprintf("%s: %s", pType, p.Command))
+	for _, p := range desc.GetProcesses() {
+		lines = append(lines, fmt.Sprintf("%s: %s", p.Name, p.ProcCommand))
 	}
 
 	return strings.Join(lines, "\n"), nil

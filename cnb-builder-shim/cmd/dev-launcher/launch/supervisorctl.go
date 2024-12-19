@@ -103,7 +103,7 @@ type SupervisorConf struct {
 }
 
 // MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.EnvV2) (*SupervisorConf, error) {
+func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
 	}
@@ -114,7 +114,7 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.EnvV2) (*Superv
 		}
 		envs := make([]string, len(procEnvs))
 		for indx, env := range procEnvs {
-			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Key, env.Value)
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, env.Value)
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -207,12 +207,12 @@ func (ctl *SupervisorCtl) Stop() error {
 //
 // see detail environment conf in http://supervisord.org/configuration.html
 // char " and % in environment value will cause supervisord to fail
-func validateEnvironment(procEnvs []appdesc.EnvV2) error {
+func validateEnvironment(procEnvs []appdesc.Env) error {
 	invalidChars := `"%`
 	invalidEnvNames := []string{}
 	for _, env := range procEnvs {
 		if strings.ContainsAny(env.Value, invalidChars) {
-			invalidEnvNames = append(invalidEnvNames, env.Key)
+			invalidEnvNames = append(invalidEnvNames, env.Name)
 		}
 	}
 	if len(invalidEnvNames) == 0 {

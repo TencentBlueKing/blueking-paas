@@ -20,12 +20,10 @@ package appdesc
 
 // AppDesc ...
 type AppDesc interface {
-	// GetProcesses gets the list of processes, for compatibility
-	// it is expressed in the form of Process in the V2 version.
-	GetProcesses() map[string]ProcessV2
+	// GetProcesses gets the list of processes
+	GetProcesses() []Process
 	// GetPreReleaseHook get hooks command
 	GetPreReleaseHook() string
-	// GetEnvs get environment variables, for compatibility
-	// it is expressed as Env in V2 version
-	GetEnvs() []EnvV2
+	// GetEnvs get environment variables
+	GetEnvs() []Env
 }

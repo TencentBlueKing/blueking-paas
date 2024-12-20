@@ -200,7 +200,7 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
         raise NotImplementedError
 
     def delete(self):
-        """include delete rel, mark_unbound & real resource recycle"""
+        """include delete rel, real resource recycle. If prefer asynchronous delete, add a unbound attachment record."""
         if self.is_provisioned():
             self.recycle_resource()
         logger.info("going to delete remote service attachment from db")

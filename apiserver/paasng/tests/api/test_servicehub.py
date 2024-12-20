@@ -16,14 +16,18 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import uuid
 from unittest import mock
 
 import pytest
 from django_dynamic_fixture import G
+from rest_framework import status
 
+from paasng.accessories.servicehub.local.manager import LocalServiceObj
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment
+from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
-from paasng.accessories.services.models import Service
+from paasng.accessories.services.models import Service, ServiceCategory
 
 pytestmark = pytest.mark.django_db
 
@@ -94,3 +98,69 @@ class TestServiceEngineAppAttachmentViewSet:
         assert set(response.data[service.display_name]) == {"a", "b"}
         # 增强服务环境变量设置为不写入则不返回
         assert credentials_disabled_service.display_name not in return_svc_names
+
+
+class TestUnboundServiceEngineAppAttachmentViewSet:
+    def create_mock_rel(self, service, create_time, **credentials):
+        rel = mock.MagicMock()
+        instance_id = str(uuid.uuid4())
+        rel.get_instance.return_value = ServiceInstanceObj(
+            uuid=instance_id, credentials=credentials, config={}, create_time=create_time
+        )
+        rel.get_service.return_value = service
+        rel.db_obj.service_id = str(service.uuid)
+        rel.db_obj.service_instance_id = instance_id
+        return rel
+
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
+    def test_list_by_module(self, mock_get_or_404, mock_list_unbound_instance_rels, api_client, bk_app, bk_module):
+        service1 = G(
+            Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
+        )
+        service_category = G(ServiceCategory)
+        service2 = G(
+            Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
+        )
+        service2_dict = vars(service2)
+        service2_dict["category"] = service_category.id
+        mock_get_or_404.side_effect = (
+            lambda service_id, region: LocalServiceObj.from_db_object(service1)
+            if service_id == str(service1.uuid)
+            else RemoteServiceObj.from_data(service2_dict)
+        )
+
+        mock_rel1 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), a=1, b=1)
+        mock_rel2 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), c=1)
+        mock_rel3 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), d=1, e=1)
+        mock_rel4 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), f=1)
+        mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2, mock_rel3, mock_rel4]
+
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/unbound_attachments/"
+
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert len(response_data) == 2
+        assert response_data[0]["service"]["uuid"] == str(service1.uuid)
+        assert response_data[0]["count"] == 4
+        assert response_data[0]["unbound_instances"][0] == {
+            "instance_id": mock_rel1.db_obj.service_instance_id,
+            "service_instance": {
+                "config": {},
+                "credentials": '{"a": 1, "b": 1}',
+                "sensitive_fields": [],
+                "hidden_fields": {},
+            },
+            "environment": "prod",
+            "environment_name": "生产环境",
+        }
+        assert response_data[1]["service"]["uuid"] == str(service2.uuid)
+        assert response_data[1]["count"] == 4
+        assert response_data[1]["unbound_instances"][3] == {
+            "instance_id": mock_rel4.db_obj.service_instance_id,
+            "service_instance": {"config": {}, "credentials": '{"f": 1}', "sensitive_fields": [], "hidden_fields": {}},
+            "environment": "stag",
+            "environment_name": "预发布环境",
+        }

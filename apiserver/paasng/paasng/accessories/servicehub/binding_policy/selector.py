@@ -78,8 +78,11 @@ class PlanSelector:
             "-priority"
         )
         for pre_policy in precedence_policies:
-            binding_policy = binding_policy_factory(pre_policy.type, pre_policy.data)
-            policy_obj = precedence_policy_factory(pre_policy.cond_type, pre_policy.cond_data, binding_policy)
+            policy_obj = precedence_policy_factory(
+                pre_policy.cond_type,
+                pre_policy.cond_data,
+                binding_policy=binding_policy_factory(pre_policy.type, pre_policy.data),
+            )
             # If the policy does not match the env object, try the next one
             if not policy_obj.match(env):
                 continue

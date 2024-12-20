@@ -58,7 +58,7 @@ class StaticBindingPolicy(BindingPolicy):
 
     def get_plan_ids(self, env: ModuleEnvironment) -> list[str]:
         """Get the configured plan ids"""
-        return self.data["plans"]
+        return self.data["plan_ids"]
 
 
 @define
@@ -72,7 +72,7 @@ class EnvSpecificBindingPolicy(BindingPolicy):
 
     def get_plan_ids(self, env: ModuleEnvironment) -> list[str]:
         """Get the plan ids based on the environment"""
-        env_plans = self.data["env_plans"]
+        env_plans = self.data["env_plan_ids"]
         return env_plans.get(env.environment, [])
 
 
@@ -89,7 +89,7 @@ def precedence_policy_factory(
             raise ValueError(f"Invalid condition type: {cond_type}")
 
 
-class BindingPrecedencePolicy:
+class BindingPrecedencePolicy(abc.ABC):
     """The precedence policy type."""
 
     binding_policy: BindingPolicy

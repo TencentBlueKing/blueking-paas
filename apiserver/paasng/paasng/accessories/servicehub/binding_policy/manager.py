@@ -39,7 +39,7 @@ class ServiceBindingPolicyManager:
         if not plans:
             raise ValueError("plans cannot be empty")
 
-        data = {"plans": [p.uuid for p in plans]}
+        data = {"plan_ids": [p.uuid for p in plans]}
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
@@ -55,7 +55,7 @@ class ServiceBindingPolicyManager:
         if not all(plans for _, plans in env_plans):
             raise ValueError("plans cannot be empty")
 
-        data = {"env_plans": {env: [p.uuid for p in plans] for env, plans in env_plans}}
+        data = {"env_plan_ids": {env: [p.uuid for p in plans] for env, plans in env_plans}}
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
@@ -79,7 +79,7 @@ class ServiceBindingPolicyManager:
         if not plans:
             raise ValueError("plans cannot be empty")
 
-        data = {"plans": [p.uuid for p in plans]}
+        data = {"plan_ids": [p.uuid for p in plans]}
         ServiceBindingPrecedencePolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
@@ -110,7 +110,7 @@ class ServiceBindingPolicyManager:
         if not all(plans for _, plans in env_plans):
             raise ValueError("plans cannot be empty")
 
-        data = {"env_plans": {env: [p.uuid for p in plans] for env, plans in env_plans}}
+        data = {"env_plan_ids": {env: [p.uuid for p in plans] for env, plans in env_plans}}
         ServiceBindingPrecedencePolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),

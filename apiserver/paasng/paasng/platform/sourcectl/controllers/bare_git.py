@@ -88,11 +88,10 @@ class BareGitRepoController:
             raise
         return True
 
-    def export(self, local_path, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
+    def export(self, local_path, version_info: VersionInfo):
         """直接将代码库 clone 下来，由通用逻辑进行打包"""
         self.client.clone(self.repo_url, local_path, depth=1, branch=version_info.version_name)
-        if not try_to_preserve_meta_info:
-            self.client.clean_meta_info(local_path)
+        self.client.clean_meta_info(local_path)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """尝试直接从远端获取可选的分支信息"""

@@ -14,23 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from django.conf import settings
-from rest_framework.permissions import BasePermission
-
-
-class IsPluginCreator(BasePermission):
-    """判断是否为插件创建者"""
-
-    def has_permission(self, request, view):
-        return True
-
-    def has_object_permission(self, request, view, obj):
-        return obj.creator == request.user.pk
-
-
-class PluginCenterFeaturePermission(BasePermission):
-    """是否允许用户访问插件开发者中心"""
-
-    def has_permission(self, request, view):
-        return settings.IS_ALLOW_PLUGIN_CENTER

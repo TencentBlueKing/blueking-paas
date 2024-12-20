@@ -29,9 +29,10 @@ class PlanConfigSerializer(serializers.Serializer):
 
     def get_management_api(self, obj):
         api_url = obj.get("api_url")
-        host = obj.get("host")
-        api_port = obj.get("api_port")
         if obj.get("api_url") is not None:
             return api_url
         else:
+            host = obj.get("host")
+            api_port = obj.get("api_port")
+
             return f"http://{host}:{api_port}"

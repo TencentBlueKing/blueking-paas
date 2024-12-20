@@ -21,16 +21,15 @@ import json
 import logging
 from contextlib import contextmanager
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
+from typing import Callable, Optional
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.utils.functional import cached_property
 from jsonfield import JSONField
 from paas_service.models import AuditedModel, Plan, UuidAuditedModel
-
-from vendor.serializers import PlanConfigSerializer
 
 from .constants import LinkType
 
@@ -46,33 +45,36 @@ class Tag(AuditedModel):
     value = models.CharField("值", max_length=128)
 
 
-class ClusterManager(models.Manager):
-    def update_or_create_by_plan(self, plan: Plan):
-        plan_config = json.loads(plan.config)
-        slz = PlanConfigSerializer(data=plan_config)
-        if not slz.is_valid():
-            logger.error("serialize plan config error: %s", slz.errors)
-            return
-        config = slz.data
+@dataclass
+class ClusterConfig:
+    name: str
+    host: str
+    port: int
+    management_api: str
+    admin: str
+    password: str
+    cluster_version: str
+    plan_id: str
+    cluster_id: Optional[int] = None
 
-        cluster, created = self.update_or_create(
-            id=plan_config.get("cluster_id"),
+
+class ClusterManager(models.Manager):
+    """集群管理器"""
+
+    def update_or_create_by_cluster_config(self, config: ClusterConfig) -> ("Cluster", bool):
+        return self.update_or_create(
+            id=config.cluster_id,
             defaults={
-                "name": f"{plan.name}-cluster",
-                "host": config.get("host"),
-                "port": config.get("port"),
-                "management_api": config.get("management_api"),
-                "admin": config.get("admin"),
-                "password": config.get("password"),
-                "version": config.get("cluster_version"),
-                "extra": {"from_plan": plan.uuid},
+                "name": config.name,
+                "host": config.host,
+                "port": config.port,
+                "management_api": config.management_api,
+                "admin": config.admin,
+                "password": config.password,
+                "version": config.cluster_version,
+                "extra": {"from_plan": config.plan_id},
             },
         )
-
-        if created:
-            plan_config["cluster_id"] = cluster.id
-            plan.config = json.dumps(plan_config)
-            plan.save(update_fields=["config"])
 
     def delete_by_plan(self, plan: Plan):
         plan_config = json.loads(plan.config)

@@ -34,6 +34,7 @@ from tests.utils.helpers import generate_random_string
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.xdist_group(name="remote-services"),
 ]
 
 

@@ -134,7 +134,7 @@ class SvcDiscoverySerializer(serializers.Serializer):
         return value
 
 
-class BkmonitorPortSerializer(serializers.Serializer):
+class BkMonitorPortSerializer(serializers.Serializer):
     port = serializers.IntegerField()
 
 
@@ -148,7 +148,7 @@ class ModuleSerializer(serializers.Serializer):
     scripts = ScriptsSerializer(required=False)
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)
-    bkmonitor = BkmonitorPortSerializer(required=False)
+    bkmonitor = BkMonitorPortSerializer(required=False)
 
 
 class AppDescSpec2Serializer(serializers.Serializer):

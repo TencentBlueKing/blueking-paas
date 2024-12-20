@@ -121,19 +121,8 @@ def transform_module(module):
             # 其他, 即 is_default, source_dir 或 language
             new_module[snake_to_camel(key)] = value
 
-    # bkmonitor 转换，添加 observability.monitoring.metrics
-    if "bkmonitor" in module:
-        bkmonitor_port = module["bkmonitor"].get("port")
-        if bkmonitor_port and "spec" in new_module and "processes" in new_module["spec"]:
-            for process in new_module["spec"]["processes"]:
-                if process["name"] == "web":
-                    process["services"].append(
-                        {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
-                    )
-
-                    new_module["spec"]["observability"] = {
-                        "monitoring": {"metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]}
-                    }
+    if "bkmonitor" in module and "processes" in module:
+        tranform_module_sepc_bkmonitor(new_module["spec"], module["bkmonitor"])
 
     return new_module
 
@@ -159,6 +148,29 @@ def transform_module_spec(spec, key, value):
         spec["hooks"] = {"preRelease": {"procCommand": value.get("pre_release_hook")}}
     elif key == "svc_discovery" and "bk_saas" in value:
         spec["svcDiscovery"] = {"bkSaaS": transform_bk_saas(value["bk_saas"])}
+
+
+def tranform_module_sepc_bkmonitor(spec, bkmonitor):
+    """
+    Transforms module field 'bkmonitor'.
+
+    :param spec: The spec dictionary where the transformed data will be added.
+    :type spec: OrderedDict
+    :param bkmonitor: The 'bkmonitor' field of module from spec_version 2 format..
+    :type bkmonitor: dict
+    """
+    bkmonitor_port = bkmonitor["port"]
+    for process in spec["processes"]:
+        if process["name"] == "web":
+            process["services"].append(
+                {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
+            )
+
+            spec["observability"] = {
+                "monitoring": {"metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]}
+            }
+
+            return
 
 
 def transform_services(services):

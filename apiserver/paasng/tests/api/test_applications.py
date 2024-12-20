@@ -21,6 +21,7 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
@@ -278,23 +279,24 @@ class TestApplicationCreateWithEngine:
         source_control_type,
         is_success,
     ):
-        random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            "/api/bkapps/applications/v2/",
-            data={
-                "region": settings.DEFAULT_REGION_NAME,
-                "code": f"uta-{random_suffix}",
-                "name": f"uta-{random_suffix}",
-                "engine_params": {
-                    "source_origin": source_origin,
-                    "source_repo_url": source_repo_url,
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    "source_control_type": source_control_type,
+        with override_settings(ENABLE_BK_LESSCODE=False):
+            random_suffix = generate_random_string(length=6)
+            response = api_client.post(
+                "/api/bkapps/applications/v2/",
+                data={
+                    "region": settings.DEFAULT_REGION_NAME,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
+                    "engine_params": {
+                        "source_origin": source_origin,
+                        "source_repo_url": source_repo_url,
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                        "source_control_type": source_control_type,
+                    },
                 },
-            },
-        )
-        desired_status_code = 201 if is_success else 400
-        assert response.status_code == desired_status_code
+            )
+            desired_status_code = 201 if is_success else 400
+            assert response.status_code == desired_status_code
 
 
 class TestApplicationCreateWithoutEngine:

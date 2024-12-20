@@ -40,7 +40,7 @@ from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecMana
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.infras.resources.base.bcs_client import BCSClient
+from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -268,7 +268,7 @@ class ProcessManager:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
         cluster = get_cluster_by_app(self.wl_app)
-        return BCSClient().api.create_web_console_sessions(
+        return bcs_client_cls().create_web_console_sessions(
             json={
                 "namespace": self.wl_app.namespace,
                 "pod_name": process_instance_name,

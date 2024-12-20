@@ -134,16 +134,21 @@ class SvcDiscoverySerializer(serializers.Serializer):
         return value
 
 
+class BkMonitorPortSerializer(serializers.Serializer):
+    port = serializers.IntegerField()
+
+
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
     source_dir = serializers.CharField(required=False)
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)
-    processes = serializers.DictField(child=ProcessSerializer(), required=False)
+    processes = serializers.DictField(child=ProcessSerializer())
     scripts = ScriptsSerializer(required=False)
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)
+    bkmonitor = BkMonitorPortSerializer(required=False)
 
 
 class AppDescSpec2Serializer(serializers.Serializer):

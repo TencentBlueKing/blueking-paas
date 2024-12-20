@@ -110,9 +110,9 @@ def transform_module(module):
 
     # 处理 module 内容
     for key, value in module.items():
-        if key in ["name", "bkmonitor", "package_plans"]:
+        if key in ["name", "package_plans"]:
             continue
-        if key in ["services", "env_variables", "processes", "scripts", "svc_discovery"]:
+        if key in ["services", "env_variables", "processes", "scripts", "svc_discovery", "bkmonitor"]:
             # 收集这些到 module.spec
             if "spec" not in new_module:
                 new_module["spec"] = OrderedDict()
@@ -121,15 +121,12 @@ def transform_module(module):
             # 其他, 即 is_default, source_dir 或 language
             new_module[snake_to_camel(key)] = value
 
-    if "bkmonitor" in module and "processes" in module:
-        tranform_module_sepc_bkmonitor(new_module["spec"], module["bkmonitor"])
-
     return new_module
 
 
 def transform_module_spec(spec, key, value):
     """
-    Transforms module fields like 'services', 'env_variables', 'processes', 'scripts', and 'svc_discovery' into 'spec'.
+    Transforms module fields like 'services', 'env_variables', 'processes', 'scripts', 'svc_discovery' and 'bkmonitor' into 'spec'.
 
     :param spec: The spec dictionary where the transformed data will be added.
     :type spec: OrderedDict
@@ -145,32 +142,13 @@ def transform_module_spec(spec, key, value):
     elif key == "processes":
         spec["processes"] = transform_processes(value)
     elif key == "scripts":
-        spec["hooks"] = {"preRelease": {"procCommand": value.get("pre_release_hook")}}
+        spec["hooks"] = {"preRelease": {"procCommand": value["pre_release_hook"]}}
     elif key == "svc_discovery" and "bk_saas" in value:
         spec["svcDiscovery"] = {"bkSaaS": transform_bk_saas(value["bk_saas"])}
-
-
-def tranform_module_sepc_bkmonitor(spec, bkmonitor):
-    """
-    Transforms module field 'bkmonitor'.
-
-    :param spec: The spec dictionary where the transformed data will be added.
-    :type spec: OrderedDict
-    :param bkmonitor: The 'bkmonitor' field of module from spec_version 2 format..
-    :type bkmonitor: dict
-    """
-    bkmonitor_port = bkmonitor["port"]
-    for process in spec["processes"]:
-        if process["name"] == "web":
-            process["services"].append(
-                {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
-            )
-
-            spec["observability"] = {
-                "monitoring": {"metrics": [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]}
-            }
-
-            return
+    elif key == "bkmonitor":
+        metrics = tranform_bkmonitor(spec["processes"], value["port"])
+        if metrics:
+            spec["observability"] = {"monitoring": {"metrics": metrics}}
 
 
 def transform_services(services):
@@ -305,3 +283,23 @@ def transform_bk_saas(bk_saas):
         {snake_to_camel(k): v for k, v in item.items()} if isinstance(item, dict) else {"bkAppCode": item}
         for item in bk_saas
     ]
+
+
+def tranform_bkmonitor(processes, bkmonitor_port):
+    """
+    Transforms module field 'bkmonitor', add to process services as monitoring metric.
+
+    :param processes: The  transformed 'processes' in the specVersion 3 format.
+    :type processes: dict
+    :param bkmonitor_port: The 'port' in 'bkmonitor' of module from spec_version 2 format..
+    :type _port: dict
+    :return: monitoring metrics list in specVersion 3 format.
+    :rtype: list
+    """
+    for process in processes:
+        if process["name"] == "web":
+            process["services"].append(
+                {"name": "metrics", "protocol": "TCP", "port": bkmonitor_port, "targetPort": bkmonitor_port}
+            )
+            return [{"process": "web", "serviceName": "metrics", "path": "/metrics"}]
+    return []

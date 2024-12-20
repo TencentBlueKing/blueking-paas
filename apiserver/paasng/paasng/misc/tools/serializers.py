@@ -144,7 +144,7 @@ class ModuleSerializer(serializers.Serializer):
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)
-    processes = serializers.DictField(child=ProcessSerializer(), required=False)
+    processes = serializers.DictField(child=ProcessSerializer())
     scripts = ScriptsSerializer(required=False)
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)

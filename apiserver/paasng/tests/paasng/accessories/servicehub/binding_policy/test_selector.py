@@ -29,9 +29,8 @@ from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.engine.constants import AppEnvName
 from tests.api.test_cnative_migration import get_random_string
+from tests.paasng.accessories.servicehub import data_mocks
 from tests.utils.helpers import generate_random_string
-
-from .. import data_mocks
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),

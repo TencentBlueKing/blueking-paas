@@ -243,6 +243,7 @@ class ServiceBindingPolicy(AuditedModel):
     """
 
     service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
     # See `ServiceBindingPolicyType`
@@ -259,6 +260,7 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     """
 
     service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
     # See `PrecedencePolicyCondType`
@@ -268,4 +270,4 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     type = models.CharField(verbose_name="策略类型", max_length=16)
     data = models.JSONField(help_text="策略值", default={})
 
-    priority = models.SmallIntegerField(verbose_name="优先级", default=0)
+    priority = models.SmallIntegerField(verbose_name="优先级", default=0, help_text="值越大，优先级越高")

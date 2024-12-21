@@ -38,6 +38,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
+from paasng.accessories.log.shim.setup_elk import setup_platform_elk_config
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
     register_app_core_data,
@@ -151,6 +152,7 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
         cluster, apiserver = build_default_cluster()
         cluster.save()
         apiserver.save()
+        setup_platform_elk_config(settings.ELASTICSEARCH_HOSTS[0])
 
 
 def pytest_sessionstart(session):

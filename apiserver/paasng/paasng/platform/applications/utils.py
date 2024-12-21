@@ -101,7 +101,7 @@ def create_application(
         app_tenant_id=app_tenant_id,
         tenant_id=tenant_id,
     )
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     return application
 
@@ -132,7 +132,15 @@ def create_market_config(
 
 @transaction.atomic
 def create_third_app(
-    region: str, code: str, name: str, name_en: str, operator: str, market_params: Optional[dict] = None
+    region: str,
+    code: str,
+    name: str,
+    name_en: str,
+    operator: str,
+    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
+    app_tenant_id: str = "",
+    tenant_id: str = DEFAULT_TENANT_ID,
+    market_params: Optional[dict] = None,
 ) -> Application:
     """创建第三方（外链）应用"""
     if market_params is None:
@@ -146,6 +154,9 @@ def create_third_app(
         type_=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
+        app_tenant_mode=app_tenant_mode,
+        app_tenant_id=app_tenant_id,
+        tenant_id=tenant_id,
     )
     create_default_module(application)
 

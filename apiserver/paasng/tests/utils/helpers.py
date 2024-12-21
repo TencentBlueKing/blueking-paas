@@ -32,6 +32,8 @@ from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.core.region.states import load_regions_from_settings
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -58,7 +60,7 @@ except ImportError:
 def initialize_application(application, *args, **kwargs):
     """Initialize an application"""
     module = create_default_module(application)
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     initialize_module(module, *args, **kwargs)
 
@@ -152,7 +154,18 @@ def create_app(
     name = app_code.replace("-", "")
     fields = dict(name=name, name_en=name, language="Python", region=region)
 
-    application = G(Application, owner=user.pk, creator=user.pk, code=app_code, logo=None, **fields)
+    # 默认为全租户应用
+    application = G(
+        Application,
+        owner=user.pk,
+        creator=user.pk,
+        code=app_code,
+        logo=None,
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
+        **fields,
+    )
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -503,8 +516,12 @@ def create_cnative_app(
         logo=None,
         name=name,
         name_en=name,
+        # 默认为全租户应用
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
     )
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     # First try Svn, then GitLab, then Default
     if not repo_type:

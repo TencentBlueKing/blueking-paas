@@ -153,6 +153,7 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
         cluster, apiserver = build_default_cluster()
         cluster.save()
         apiserver.save()
+        setup_platform_elk_config(DEFAULT_TENANT_ID, settings.ELASTICSEARCH_HOSTS[0])
 
 
 def pytest_sessionstart(session):
@@ -191,11 +192,6 @@ def _auto_init_legacy_app(request):
     # Clean the legacy app data after test
     with legacy_db.session_scope() as session:
         AppManger(session).delete_by_code(legacy_app_code)
-
-
-@pytest.fixture(autouse=True)
-def _auto_init_es_config_for_default_tenant():
-    setup_platform_elk_config(DEFAULT_TENANT_ID, settings.ELASTICSEARCH_HOSTS[0])
 
 
 @pytest.fixture(autouse=True, scope="session")

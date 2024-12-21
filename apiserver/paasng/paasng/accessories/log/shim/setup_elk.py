@@ -103,7 +103,7 @@ def construct_platform_es_params() -> ESParamsConfig:
     )
 
 
-def setup_platform_elk_config(tenant_id: str, es_host: Optional[ElasticSearchHost] = None):
+def setup_platform_elk_config(es_host: Optional[ElasticSearchHost] = None):
     """
     按租户初始化/更新平台 ELK 日志方案的数据库配置，在新增租户时执行。
     """
@@ -123,7 +123,6 @@ def setup_platform_elk_config(tenant_id: str, es_host: Optional[ElasticSearchHos
 
     for config_id, params in collector_configs:
         elastic_search_config, created = ElasticSearchConfig.objects.update_or_create(
-            tenant_id=tenant_id,
             collector_config_id=config_id,
             backend_type="es",
             defaults={
@@ -132,30 +131,20 @@ def setup_platform_elk_config(tenant_id: str, es_host: Optional[ElasticSearchHos
             },
         )
         if created:
-            logger.info(f"Created new Elasticsearch configuration: {config_id} for tenant {tenant_id}")
+            logger.info(f"Created new Elasticsearch configuration: {config_id}")
         else:
-            logger.info(f"Updated Elasticsearch configuration: {config_id} for tenant {tenant_id}")
+            logger.info(f"Updated Elasticsearch configuration: {config_id}")
 
 
 def setup_saas_elk_model(env: ModuleEnvironment):
     """初始化 ELK 日志方案的数据库模型 - SaaS 维度"""
-    # 根据应用的租户获取 ES 配置信息
-    tenant_id = env.application.tenant_id
     try:
-        stdout_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID, tenant_id=tenant_id
-        )
-        structured_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID, tenant_id=tenant_id
-        )
-        ingress_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID, tenant_id=tenant_id
-        )
+        stdout_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID)
+        structured_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID)
+        ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查
-        logger.exception(
-            f"The access logs for tenant ({tenant_id}) are not configured with the corresponding Elasticsearch."
-        )
+        logger.exception("The elk logs are not configured with the corresponding Elasticsearch.")
         raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
 
     if ProcessLogQueryConfig.objects.filter(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER).exists():

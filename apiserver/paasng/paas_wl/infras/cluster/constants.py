@@ -71,3 +71,16 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
         if cluster_type == ClusterType.VIRTUAL:
             default_flags[cls.ENABLE_MOUNT_LOG_TO_HOST] = False
         return default_flags
+
+
+class ClusterAllocationPolicyType(StrStructuredEnum):
+    """集群分配策略类型"""
+
+    STATIC = EnumField("static", label=_("静态分配"))
+    RULE = EnumField("rule", label=_("按规则分配"))
+
+
+class ClusterAllocationPolicyCondType(StrStructuredEnum):
+    """集群分配策略匹配条件"""
+
+    REGION_IS = EnumField("region_is", label=_("可用区域为"))

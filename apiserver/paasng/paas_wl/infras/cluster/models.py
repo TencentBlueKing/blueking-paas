@@ -30,7 +30,12 @@ from django.db import models, transaction
 from jsonfield import JSONField
 from kubernetes.client import Configuration
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
+from paas_wl.infras.cluster.constants import (
+    ClusterAllocationPolicyCondType,
+    ClusterFeatureFlag,
+    ClusterTokenType,
+    ClusterType,
+)
 from paas_wl.infras.cluster.exceptions import (
     DuplicatedDefaultClusterError,
     NoDefaultClusterError,
@@ -38,7 +43,9 @@ from paas_wl.infras.cluster.exceptions import (
 )
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
-from paas_wl.utils.models import UuidAuditedModel, make_json_field
+from paas_wl.utils.models import UuidAuditedModel
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.utils.models import make_json_field
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +136,9 @@ class IngressConfig:
     @property
     def default_sub_path_domain(self) -> Domain:
         return self.sub_path_domains[0]
+
+
+IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=IngressConfig)
 
 
 class ClusterManager(models.Manager):
@@ -230,52 +240,57 @@ class ClusterManager(models.Manager):
         return prep_default_cluster
 
 
-IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=IngressConfig)
-
-
 class Cluster(UuidAuditedModel):
     """应用集群"""
 
-    region = models.CharField(max_length=32, db_index=True)
-    name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
-    type = models.CharField(max_length=32, help_text="cluster type", default=ClusterType.NORMAL)
-    description = models.TextField(help_text="描述信息", blank=True)
-    is_default = models.BooleanField(default=False, null=True, help_text="是否为默认集群")
+    region = models.CharField(help_text="可用区域", max_length=32, db_index=True)
+    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
+    available_tenant_ids = models.JSONField(help_text="可用的租户 ID 列表", default=list)
 
-    ingress_config: IngressConfig = IngressConfigField()
-    annotations = JSONField(default={}, help_text="Annotations are used to add metadata to describe the cluster.")
+    name = models.CharField(help_text="集群名称", max_length=32, unique=True)
+    type = models.CharField(max_length=32, help_text="集群类型", default=ClusterType.NORMAL)
+    description = models.TextField(help_text="集群描述", blank=True)
+    is_default = models.BooleanField(
+        help_text="是否为默认集群（deprecated，后续由分配策略替代）", default=False, null=True
+    )
 
-    ca_data = EncryptField(null=True)
-    # Auth type 1. Client-side certificate
-    cert_data = EncryptField(null=True)
-    key_data = EncryptField(null=True)
-    # Auth type 2. Bearer token
-    token_type = models.IntegerField(null=True)
-    token_value = EncryptField(null=True)
+    ingress_config: IngressConfig = IngressConfigField(help_text="ingress 配置")
+    annotations = JSONField(help_text="集群元数据，如 BCS 项目，集群，业务信息等", default=dict)
 
-    # App related default configs
-    default_node_selector = JSONField(default={}, help_text="default value for app's 'node_selector' field")
-    default_tolerations = JSONField(default=[], help_text="default value for app's 'tolerations' field")
-    feature_flags = JSONField(default={}, help_text="cluster's feature flag set")
+    # 认证方式 A
+    ca_data = EncryptField(help_text="证书认证机构（CA）", null=True)
+    cert_data = EncryptField(help_text="客户端证书", null=True)
+    key_data = EncryptField(help_text="客户端密钥", null=True)
+    # 认证方式 B
+    token_type = models.IntegerField(help_text="Token 类型", default=ClusterTokenType.SERVICE_ACCOUNT)
+    token_value = EncryptField(help_text="Token 值", null=True)
+
+    # App 默认配置
+    default_node_selector = JSONField(help_text="部署到本集群的应用默认节点选择器（node_selector）", default=dict)
+    default_tolerations = JSONField(help_text="部署到本集群的应用默认容忍度（tolerations）", default=dict)
+
+    # 集群特性，具体枚举值 -> ClusterFeatureFlag
+    feature_flags = JSONField(help_text="集群特性集", default=dict)
 
     objects = ClusterManager()
 
     def __str__(self):
-        return f"{self.__class__.__name__}(name={self.name}, default={self.is_default})"
-
-    @property
-    def bcs_cluster_id(self) -> Optional[str]:
-        """集群在 bcs 中注册的集群 ID，若没有配置，则返回 None"""
-        return self.annotations.get("bcs_cluster_id", None)
+        return f"{self.__class__.__name__}(name={self.name}, tenant={self.tenant_id}, region={self.region})"
 
     @property
     def bcs_project_id(self) -> Optional[str]:
-        """集群在 bcs 中注册的集群所属的项目 ID，若没有配置，则返回 None"""
+        """集群在 bcs 中注册的集群所属的项目 ID"""
         return self.annotations.get("bcs_project_id", None)
 
     @property
+    def bcs_cluster_id(self) -> Optional[str]:
+        """集群在 bcs 中注册的集群 ID"""
+        return self.annotations.get("bcs_cluster_id", None)
+
+    @property
     def bk_biz_id(self) -> Optional[str]:
-        """bcs 集群所在项目在 bkcc 中的业务 ID，若没有配置，则返回 None"""
+        """bcs 集群所在项目在 bkcc 中的业务 ID"""
+
         # 如果不是 bcs 集群，则 bkcc 业务 ID 不会生效
         if not self.bcs_cluster_id:
             return None
@@ -284,7 +299,9 @@ class Cluster(UuidAuditedModel):
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
-        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster_type=ClusterType(self.type))
+        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(
+            cluster_type=ClusterType(self.type),
+        )
         return self.feature_flags.get(ff, default_flags[ff])
 
 
@@ -385,3 +402,35 @@ class EnhancedConfiguration(Configuration):
 
     def __repr__(self) -> str:
         return f"EnhancedConfiguration(host={self.host!r})"
+
+
+@define
+class AllocationRule:
+    """集群分配规则"""
+
+    env_specific: bool
+    # 匹配规则，如果不需要，则设置为 None
+    matcher: Dict[ClusterAllocationPolicyCondType, str] | None = None
+    # 集群名称列表，非按环境分配时用
+    clusters: List[str] | None = None
+    # 环境 - 集群名称列表，按环境分配时用
+    env_clusters: Dict[str, List[str]] | None = None
+
+    def __attrs_post_init__(self):
+        if self.env_specific:
+            if not self.env_clusters:
+                raise ValueError("env_clusters can not be empty when env_specific is True")
+        elif not self.clusters:
+            raise ValueError("clusters can not be empty when env_specific is False")
+
+
+AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])
+
+
+class ClusterAllocationPolicy(UuidAuditedModel):
+    """集群分配策略"""
+
+    tenant_id = models.CharField(max_length=128, unique=True, help_text="所属租户")
+    # 枚举值 -> ClusterAllocationPolicyType
+    type = models.CharField(max_length=32, help_text="分配策略类型")
+    rules: List[AllocationRule] = AllocationRulesField(help_text="集群分配规则列表", default=list)

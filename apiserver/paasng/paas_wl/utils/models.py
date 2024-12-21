@@ -66,7 +66,10 @@ M = TypeVar("M")
 def make_json_field(  # noqa: C901
     cls_name: str, py_model: Type[M], decoder: Callable[[M], Dict] = cattr.unstructure, module: Optional[str] = None
 ) -> Type[JSONField]:
-    """生成会自动进行类型转换为 `py_model` 的 JSONField
+    """
+    Deprecated: 新增的自定义 JsonField 需使用 `paasng.utils.models.make_json_field`
+
+    生成会自动进行类型转换为 `py_model` 的 JSONField
 
     :param cls_name: 自动生成的 JSONField 的类名, 在使用时, cls_name 必须与赋值的变量名一致！否则 migrations 会报错.
     :param py_model: Python 对象, 需要能被 decoder 转换成可序列化成 json serializable 的 dict 对象.

@@ -41,22 +41,13 @@ class TestSiteMetricsClient:
         assert pa_client_class().get_or_create_app_site.called
         assert site_output == site
 
-    @pytest.mark.parametrize(
-        ("region", "expected_dimension_size"),
-        [
-            ("ieod", 2),
-            # TODO: 在实现过滤用户维度后, 修复这个单元测试
-            ("foo", 2),
-        ],
-    )
-    def test_get_site_config(self, pa_client_class, site, page_view_config, region, expected_dimension_size):
-        site.region = region
+    def test_get_site_config(self, pa_client_class, site, page_view_config):
         pa_client_class().get_site_pv_config.return_value = page_view_config
         client = SiteMetricsClient(site, MetricSourceType.USER_TRACKER)
         site_config = client.get_site_pv_config()
         assert pa_client_class().get_site_pv_config.called
         assert site_config["site"]["name"] == site.name
-        assert len(site_config["supported_dimension_type"]) == expected_dimension_size
+        assert len(site_config["supported_dimension_type"]) == 2
 
     def test_get_total_metric_about_site(self, pa_client_class, site, total_data_metrics):
         pa_client_class().get_total_page_view_metric_about_site.return_value = total_data_metrics

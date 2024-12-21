@@ -21,9 +21,25 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.modules.constants import ExposedURLType
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
+
+
+def get_exposed_url_type(region: str | None = None, cluster_name: str | None = None) -> ExposedURLType:
+    """Get the exposed url type.
+
+    :param region: The region. If given, use the region's default cluster.
+    :param cluster_name: The name of cluster. If given, other arguments are ignored.
+    """
+    if cluster_name:
+        cluster = Cluster.objects.get(name=cluster_name)
+    elif region:
+        cluster = RegionClusterService(region).get_default_cluster()
+    else:
+        raise TypeError("Invalid arguments")
+    return ExposedURLType(cluster.exposed_url_type)
 
 
 class RegionClusterService:

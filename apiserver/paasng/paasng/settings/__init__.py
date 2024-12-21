@@ -574,6 +574,14 @@ CSRF_COOKIE_NAME = "bk_paas3_csrftoken"
 FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME")
 CSRF_COOKIE_DOMAIN = settings.get("CSRF_COOKIE_DOMAIN")
 SESSION_COOKIE_DOMAIN = settings.get("SESSION_COOKIE_DOMAIN")
+# Django 4.0 会参考 Origin Header，如果使用了 CSRF_COOKIE_NAME，就需要在 settings 中额外配置 CSRF_TRUSTED_ORIGINS
+# 且必须配置协议和域名
+# https://docs.djangoproject.com/en/dev/releases/4.0/#format-change
+BK_COOKIE_DOMAIN = settings.get("BK_COOKIE_DOMAIN")
+# 正式环境 CSRF_COOKIE_DOMAIN 并未设置，所以默认值直接用通配符
+CSRF_TRUSTED_ORIGINS = settings.get(
+    "CSRF_TRUSTED_ORIGINS", [f"http://*{BK_COOKIE_DOMAIN}", f"https://*{BK_COOKIE_DOMAIN}"]
+)
 
 # 蓝鲸登录票据在 Cookie 中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
@@ -922,7 +930,6 @@ DEFAULT_REGION_TEMPLATE = {
     "basic_info": {
         "description": "默认版",
         "link_production_app": BK_CONSOLE_URL + "?app={code}",
-        "link_engine_app": "http://example.com/{region}-{name}/",
         "extra_logo_bucket_info": {},
         "deploy_ver_for_update_svn_account": "default",
         "legacy_deploy_version": "default",
@@ -937,18 +944,12 @@ DEFAULT_REGION_TEMPLATE = {
             },
         },
     },
-    "entrance_config": {
-        # - 1: 子路径模式
-        # - 2: 子域名模式
-        "exposed_url_type": 1,
-        "manually_upgrade_to_subdomain_allowed": False,
-    },
     "mul_modules_config": {"creation_allowed": True},
+    # 是否允许用户添加独立域名(自定义访问地址)，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
+    "allow_user_modify_custom_domain": True,
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,
-    # 是否允许部署“蓝鲸运维开发平台提供源码包”
-    "allow_deploy_app_by_lesscode": True,
 }
 
 REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAULT_REGION_TEMPLATE)]})
@@ -1321,12 +1322,12 @@ APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
+# 是否允许创建 LessCode 应用
+ENABLE_BK_LESSCODE = settings.get("ENABLE_BK_LESSCODE", True)
 # bk_lesscode 注册在 APIGW 上的环境
 BK_LESSCODE_APIGW_STAGE = settings.get("BK_LESSCODE_APIGW_STAGE", "prod")
 # bk_lesscode 平台访问地址
 BK_LESSCODE_URL = settings.get("BK_LESSCODE_URL", "")
-# bk_lesscode API 是否已经注册在 APIGW 网关上
-ENABLE_BK_LESSCODE_APIGW = settings.get("ENABLE_BK_LESSCODE_APIGW", False)
 BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 
 # -----------------
@@ -1410,6 +1411,12 @@ BK_AUDIT_SETTINGS = {
     "ot_endpoint": BK_AUDIT_ENDPOINT,
     "bk_data_token": BK_AUDIT_DATA_TOKEN,
 }
+
+# ---------------------------------------------
+# 蓝鲸容器服务配置
+# ---------------------------------------------
+# 是否部署了 BCS，影响访问控制台等功能
+ENABLE_BCS = settings.get("ENABLE_BCS", True)
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用

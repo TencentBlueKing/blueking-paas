@@ -7,7 +7,7 @@ import paasng.core.tenant.constants
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("applications", "0013_applicationdeploymentmoduleorder"),
+        ("applications", "0014_applicationdeploymentmoduleorder_user_and_more"),
     ]
 
     operations = [

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,14 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pytest
-
-from paas_wl.workloads.networking.entrance.utils import get_legacy_url
-
-pytestmark = pytest.mark.django_db
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-def test_get_legacy_url(bk_stag_env):
-    url = get_legacy_url(bk_stag_env)
-    assert url is not None
-    assert len(url) > 0
+class Group(OperationGroup):
+    # 创建 websocket session
+    create_web_console_sessions = bind_property(
+        Operation,
+        name="create_web_console_sessions",
+        method="POST",
+        path="/{version}/webconsole/api/portal/projects/{project_id_or_code}/"
+        "clusters/{cluster_id}/web_console/sessions/",
+    )
+
+
+class Client(APIGatewayClient):
+    """bcs-services 提供的网关 client"""
+
+    _api_name = "bcs-api-gateway"
+    api = bind_property(Group, name="api")

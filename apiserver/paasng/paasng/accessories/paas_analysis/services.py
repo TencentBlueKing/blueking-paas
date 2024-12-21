@@ -57,7 +57,7 @@ def get_or_create_site_by_env(env: ModuleEnvironment) -> Site:
         module_name=env.module.name,
         env=env.environment,
     )
-    return Site(region=env.module.region, **site_json)
+    return Site(**site_json)
 
 
 def get_or_create_custom_site_for_application(application: Application, site_name: str) -> Site:
@@ -71,7 +71,7 @@ def get_or_create_custom_site_for_application(application: Application, site_nam
     # {app_code}:{module_name}:{site_name}
     name = f"{application.code}:default:{site_name}"
     site_json = clients.PAClient().get_or_create_custom_site(site_name=name)
-    return Site(region=application.region, **site_json)
+    return Site(**site_json)
 
 
 def make_app_metadata(env: ModuleEnvironment) -> Dict[str, Any]:

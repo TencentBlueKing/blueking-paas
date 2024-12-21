@@ -22,6 +22,3 @@ class Site:
     type: str
     id: int
     name: str
-
-    # extra info, inject by PaaS
-    region: str

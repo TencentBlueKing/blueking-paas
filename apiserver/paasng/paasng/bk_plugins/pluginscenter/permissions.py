@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
 from rest_framework.permissions import BasePermission
 
 
@@ -32,8 +33,4 @@ class PluginCenterFeaturePermission(BasePermission):
     """是否允许用户访问插件开发者中心"""
 
     def has_permission(self, request, view):
-        # 原则上不希望引用开发者中心的资源
-        from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-        from paasng.infras.accounts.models import AccountFeatureFlag
-
-        return AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_PLUGIN_CENTER)
+        return settings.IS_ALLOW_PLUGIN_CENTER

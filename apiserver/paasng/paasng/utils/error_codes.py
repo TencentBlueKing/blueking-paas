@@ -75,6 +75,7 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_("源码包已存在"), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_("缺失版本信息"), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
+    CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
@@ -186,6 +187,7 @@ class ErrorCodes:
     DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)
     DEV_SANDBOX_NOT_FOUND = ErrorCode("dev sandbox not found")
     DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode("dev sandbox count over limit")
+    DEV_SANDBOX_API_ERROR = ErrorCode("dev sandbox's api return error", status_code=500)
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

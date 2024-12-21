@@ -16,9 +16,16 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.conf import settings
 from django_dynamic_fixture import G
 
-from paas_wl.infras.cluster.shim import Cluster, EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.shim import (
+    Cluster,
+    EnvClusterService,
+    RegionClusterService,
+    get_exposed_url_type,
+)
+from paasng.platform.modules.constants import ExposedURLType
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),
@@ -30,7 +37,13 @@ pytestmark = [
 def _setup(settings):
     """setup clusters and wl_apps"""
     Cluster.objects.all().delete()
-    G(Cluster, name="default", is_default=True, region=settings.DEFAULT_REGION_NAME)
+    G(
+        Cluster,
+        name="default",
+        is_default=True,
+        exposed_url_type=ExposedURLType.SUBDOMAIN.value,
+        region=settings.DEFAULT_REGION_NAME,
+    )
     G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
 
 
@@ -61,10 +74,15 @@ class TestEnvClusterService:
             EnvClusterService(bk_stag_env).get_cluster()
 
 
-def test_get_cluster(settings):
+def test_get_cluster():
     svc = RegionClusterService(settings.DEFAULT_REGION_NAME)
     assert svc.get_default_cluster().name == "default"
     assert svc.get_cluster_by_name("default").name == "default"
     assert svc.get_cluster_by_name("extra-1").name == "extra-1"
     with pytest.raises(Cluster.DoesNotExist):
         svc.get_cluster_by_name("invalid")
+
+
+def test_get_exposed_url_type():
+    assert get_exposed_url_type(region=settings.DEFAULT_REGION_NAME) == ExposedURLType.SUBDOMAIN
+    assert get_exposed_url_type(cluster_name="extra-1") == ExposedURLType.SUBPATH

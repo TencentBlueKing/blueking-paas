@@ -40,7 +40,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.bkapp_model.services import initialize_simple
-from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.constants import ExposedURLType, SourceOrigin
 from paasng.platform.modules.handlers import setup_module_log_model
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
@@ -379,6 +379,7 @@ def _mock_wl_services_in_creation():
         mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
         mock.patch("paasng.platform.bkapp_model.services.update_metadata_by_env", new=fake_update_metadata_by_env),
         mock.patch("paasng.platform.modules.manager.EnvClusterService"),
+        mock.patch("paasng.platform.modules.manager.get_exposed_url_type", return_value=ExposedURLType.SUBPATH),
         mock.patch(
             "paasng.platform.bkapp_model.services.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
         ),

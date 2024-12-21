@@ -110,7 +110,7 @@ modules:
                 - name: Content-Type
                 - value: application/json
           startup:
-            tcpscoket:
+            tcp_socket:
               port: 8000
               host: app.host.com
             initial_delay_seconds: 0
@@ -220,7 +220,7 @@ modules:
                                                 }
                                             },
                                             "startup": {
-                                                "tcpscoket": {"port": 8000, "host": "app.host.com"},
+                                                "tcpSocket": {"port": 8000, "host": "app.host.com"},
                                                 "initialDelaySeconds": 0,
                                                 "timeoutSeconds": 1,
                                                 "periodSeconds": 10,
@@ -339,7 +339,7 @@ modules:
                   - name: Content-Type
                   - value: application/json
             startup:
-              tcpscoket:
+              tcpSocket:
                 port: 8000
                 host: app.host.com
               initialDelaySeconds: 0
@@ -525,6 +525,77 @@ module:
         - bkAppCode: bk-user
 """,
             ),
+            # Test 3: simple template without module.source_dir
+            (
+                """spec_version: 2
+module:
+  language: Python
+  processes:
+    web:
+      command: gunicorn wsgi -w 4 -b [::]:${PORT}
+    worker:
+      command: celery -A app -l info
+""",
+                {
+                    "specVersion": 3,
+                    "module": {
+                        "name": "default",
+                        "language": "Python",
+                        "spec": {
+                            "processes": [
+                                {
+                                    "name": "web",
+                                    "procCommand": "gunicorn wsgi -w 4 -b [::]:${PORT}",
+                                    "services": [
+                                        {
+                                            "name": "web",
+                                            "protocol": "TCP",
+                                            "exposedType": {"name": "bk/http"},
+                                            "targetPort": settings.CONTAINER_PORT,
+                                            "port": 80,
+                                        }
+                                    ],
+                                },
+                                {
+                                    "name": "worker",
+                                    "procCommand": "celery -A app -l info",
+                                    "services": [
+                                        {
+                                            "name": "worker",
+                                            "protocol": "TCP",
+                                            "targetPort": settings.CONTAINER_PORT,
+                                            "port": 80,
+                                        }
+                                    ],
+                                },
+                            ]
+                        },
+                    },
+                },
+                f"""specVersion: 3
+module:
+  name: default
+  language: Python
+  spec:
+    processes:
+      - name: web
+        procCommand: gunicorn wsgi -w 4 -b [::]:${{PORT}}
+        services:
+          - name: web
+            protocol: TCP
+            exposedType:
+              name: bk/http
+            targetPort: {settings.CONTAINER_PORT}
+            port: 80
+      - name: worker
+        procCommand: celery -A app -l info
+        services:
+          - name: worker
+            protocol: TCP
+            targetPort: {settings.CONTAINER_PORT}
+            port: 80
+""",
+            ),
         ],
     )
     def test_app_desc_transform(self, api_client, spec2_yaml, expected_spec3_data, expected_spec3_yaml):
@@ -541,8 +612,57 @@ module:
     @pytest.mark.parametrize(
         ("spec2_yaml", "expected_exception_detail"),
         [
-            ("""    """, "Error parsing YAML content: no content."),
-            ("""spec_version: 2""", "Error parsing YAML content: one of 'modules' or 'module' is required."),
+            (
+                """modules:
+                - name: default
+                - name: web
+                """,
+                "modules: 期望是包含类目的字典，得到类型为 “list”。",
+            ),
+            (
+                """    """,
+                "No data provided",
+            ),
+            (
+                """spec_version: 2""",
+                "one of 'modules' or 'module' is required.",
+            ),
+            (
+                """
+module:
+  source_dir: src/frontend
+  language: NodeJS
+  services: # 增强服务配置仅对 Smart 应用生效
+    - name: mysql
+    - name: rabbitmq
+  env_variables:
+    - key: FOO
+      value: value_of_foo
+      description: 环境变量描述文件
+  processes:
+    web:
+      command: npm run server
+      plan: 4C1G5R
+      replicas: 2 # 副本数不能超过 plan 中定义的值
+      probes:
+        liveness:
+          exec:
+            command:
+              - cat
+        readiness:
+          http_get:
+            path: /healthz
+            port: 80
+        readiness:
+          http_get:
+            path: /healthz
+            port: 80
+            http_headers:
+              - name: Content-Type
+                value: application/json
+                """,
+                "module.processes.web.probes.readiness.http_get.http_headers: Each item in http_headers must be one key: value pair.",
+            ),
         ],
     )
     def test_app_desc_transform_exception(self, api_client, spec2_yaml, expected_exception_detail):

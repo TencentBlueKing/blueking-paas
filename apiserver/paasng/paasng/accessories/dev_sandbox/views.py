@@ -14,12 +14,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import logging
 from pathlib import Path
-from typing import Dict
 
-from bkpaas_auth.models import User
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -29,6 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
+from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
 from paasng.accessories.services.utils import generate_password
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -38,15 +39,15 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.module import Module
-from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
 
 from .config_var import CONTAINER_TOKEN_ENV, generate_envs
+from .exceptions import CannotCommitToRepository, DevSandboxApiException
 from .serializers import (
     CreateDevSandboxWithCodeEditorSLZ,
+    DevSandboxCommitInputSLZ,
+    DevSandboxCommitOutputSLZ,
     DevSandboxDetailSLZ,
     DevSandboxSLZ,
     DevSandboxWithCodeEditorDetailSLZ,
@@ -99,8 +100,10 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
     @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
     def deploy(self, request, code, module_name):
-        """部署开发沙箱"""
+        """部署开发沙箱
 
+        FIXME（沙箱重构）这个函数太长了，职责不清晰，重构时需要做拆分
+        """
         # 同时支持的开发沙箱数量是有上限的
         if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
@@ -112,16 +115,22 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
-        serializer = CreateDevSandboxWithCodeEditorSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
-
         # 目前仅支持 vcs 类型的源码获取方式
         if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
-        # 获取版本信息
-        version_info = self._get_version_info(request.user, module, params)
+        serializer = CreateDevSandboxWithCodeEditorSLZ(
+            data=request.data, context={"module": module, "operator": request.user.pk}
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+
+        # 代码版本信息
+        version_info = VersionInfo(
+            version_type=data["version_type"],
+            version_name=data["version_name"],
+            revision=data["revision"],
+        )
 
         dev_sandbox_code = gen_dev_sandbox_code()
         dev_sandbox = DevSandbox.objects.create(
@@ -137,10 +146,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         # 生成代码编辑器密码
         password = generate_password()
-        CodeEditor.objects.create(
-            dev_sandbox=dev_sandbox,
-            password=password,
-        )
+        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password)
 
         controller = DevSandboxWithCodeEditorController(
             app=app,
@@ -149,6 +155,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             owner=request.user.pk,
         )
         try:
+            # FIXME（沙箱重构）这里获取部署目录的逻辑过于冗余了，实际上无需考虑源码包的情况？
             # 获取构建目录相对路径
             source_dir = get_source_dir(module, request.user.pk, version_info)
             relative_source_dir = Path(source_dir)
@@ -171,6 +178,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
                 password=password,
             )
         except DevSandboxAlreadyExists:
+            # FIXME（沙箱重构）为啥删除 model 不清理资源？
             # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
@@ -228,6 +236,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
         serializer = DevSandboxWithCodeEditorDetailSLZ(
             {
                 "urls": detail.urls,
+                # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
                 "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
                 "dev_sandbox_status": detail.dev_sandbox_status,
                 "code_editor_status": detail.code_editor_status,
@@ -248,7 +257,7 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response({"password": dev_sandbox.code_editor.password})
 
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})
+    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxSLZ(many=True)})
     def list_app_dev_sandbox(self, request, code):
         """获取该应用下用户的开发沙箱"""
         app = self.get_application()
@@ -266,26 +275,35 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
 
         return Response(data={"result": True})
 
-    @staticmethod
-    def _get_version_info(user: User, module: Module, params: Dict) -> VersionInfo:
-        """Get VersionInfo from user inputted params"""
-        version_name = params["version_name"]
-        version_type = params["version_type"]
-        revision = params.get("revision")
-        try:
-            # 尝试根据获取最新的 revision
-            version_service = get_version_service(module, operator=user.pk)
-            revision = version_service.extract_smart_revision(f"{version_type}:{version_name}")
-        except GitLabBranchNameBugError as e:
-            raise error_codes.CANNOT_GET_REVISION.f(str(e))
-        except NotImplementedError:
-            logger.debug(
-                "The current source code system does not support parsing the version unique ID from the version name"
-            )
-        except Exception:
-            logger.exception("Failed to parse version information.")
+    @swagger_auto_schema(
+        tags=["开发沙箱"],
+        operation_description="提交变更的代码",
+        request_body=DevSandboxCommitInputSLZ(),
+        responses={status.HTTP_200_OK: DevSandboxCommitOutputSLZ()},
+    )
+    def commit(self, request, code, module_name):
+        slz = DevSandboxCommitInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
 
-        # 如果前端没有提供 revision 信息, 就报错
-        if not revision:
-            raise error_codes.CANNOT_GET_REVISION
-        return VersionInfo(revision, version_name, version_type)
+        module = self.get_module_via_path()
+        operator = request.user.pk
+
+        # 初始化提交器
+        try:
+            commitor = DevSandboxCodeCommit(module, operator)
+        except (ObjectDoesNotExist, DevSandboxResourceNotFound):
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 沙箱代码提交
+        try:
+            repo_url = commitor.commit(data["message"])
+        except DevSandboxApiException as e:
+            raise error_codes.DEV_SANDBOX_API_ERROR.f(str(e))
+        except CannotCommitToRepository as e:
+            raise error_codes.CANNOT_COMMIT_TO_REPOSITORY.f(str(e))
+
+        return Response(
+            status=status.HTTP_200_OK,
+            data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data,
+        )

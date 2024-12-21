@@ -111,11 +111,11 @@ class ProcessSpecManageViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
+        app = get_object_or_404(WlApp, name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 
-    def switch_process_plan(self, request, region, name, process_type):
+    def switch_process_plan(self, request, name, process_type):
         wl_app = self.get_app()
         data = request.data
 
@@ -130,7 +130,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
 
         defaults = {
             "type": "process",
-            "region": region,
+            "region": wl_app.region,
             "target_replicas": 1,
             "target_status": ProcessTargetStatus.START,
             "plan": plan,
@@ -156,7 +156,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def scale(self, request, region, name, process_type):
+    def scale(self, request, name, process_type):
         wl_app = self.get_app()
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
@@ -182,11 +182,11 @@ class ProcessInstanceViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
+        app = get_object_or_404(WlApp, name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 
-    def retrieve(self, request, region, name, process_type, instance_name):
+    def retrieve(self, request, name, process_type, instance_name):
         app = self.get_app()
         inst = instance_kmodel.get(app, instance_name)
         return Response(InstanceSerializer(inst).data)

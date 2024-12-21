@@ -71,32 +71,21 @@ class RegionList(list):
         return regions[0]
 
 
+@dataclass
 class RegionBasicInfo:
     """Basic info for region
 
     :param str description: description for this region
-    :param str link_engine_app: visit link for engine_app
     :param str link_production_app: visit link for app production env
     :param dict built_in_config_var: built-in config variables in this region
     """
 
-    def __init__(
-        self,
-        description,
-        link_engine_app,
-        link_production_app,
-        extra_logo_bucket_info,
-        deploy_ver_for_update_svn_account,
-        legacy_deploy_version,
-        built_in_config_var,
-    ):
-        self.description = description
-        self.link_engine_app = link_engine_app
-        self.link_production_app = link_production_app
-        self.extra_logo_bucket_info = extra_logo_bucket_info
-        self.deploy_ver_for_update_svn_account = deploy_ver_for_update_svn_account
-        self.legacy_deploy_version = legacy_deploy_version
-        self.built_in_config_var = built_in_config_var
+    description: str
+    link_production_app: str
+    deploy_ver_for_update_svn_account: str
+    legacy_deploy_version: str
+    extra_logo_bucket_info: dict = field(default_factory=dict)
+    built_in_config_var: dict = field(default_factory=dict)
 
     def get_extra_logo_bucket_name(self):
         return self.extra_logo_bucket_info["name"] if self.extra_logo_bucket_info else None
@@ -117,13 +106,6 @@ class RegionMobileConfig:
 
 
 @dataclass
-class RegionEntranceConfig:
-    exposed_url_type: str
-    manually_upgrade_to_subdomain_allowed: bool
-    app_subpath_shared_domain: str = field(default="[deprecated]")
-
-
-@dataclass
 class RegionMulModulesConfig:
     creation_allowed: bool
 
@@ -131,8 +113,7 @@ class RegionMulModulesConfig:
 class SvcCategoriesLoader(Protocol):
     """The loader for loading service categories"""
 
-    def __call__(self, region: str) -> List:
-        ...
+    def __call__(self, region: str) -> List: ...
 
 
 # The loader function that loads service categories, set it when all modules are initialized.
@@ -155,12 +136,11 @@ class Region:
     name: str
     display_name: str
     basic_info: RegionBasicInfo
-    entrance_config: RegionEntranceConfig
     mul_modules_config: RegionMulModulesConfig
     enabled_feature_flags: Set[str] = field(default_factory=set)
+    allow_user_modify_custom_domain: Optional[bool] = True
     module_mobile_config: Optional[RegionMobileConfig] = None
     provide_env_vars_platform: Optional[bool] = True
-    allow_deploy_app_by_lesscode: Optional[bool] = False
 
     def __post_init__(self):
         self._service_categories = []

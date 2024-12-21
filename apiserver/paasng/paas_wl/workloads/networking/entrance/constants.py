@@ -38,4 +38,4 @@ class AddressType(StrStructuredEnum):
     SUBDOMAIN = "subdomain"
     SUBPATH = "subpath"
     CUSTOM = "custom"
-    LEGACY = "legacy"
+    LEGACY = "legacy"  # deprecated value

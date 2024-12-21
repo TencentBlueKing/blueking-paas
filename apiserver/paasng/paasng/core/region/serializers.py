@@ -36,11 +36,10 @@ class RegionSerializer:
         data["services"] = {"categories": ServiceCategorySLZ(self.region.service_categories, many=True).data}
         data["module_mobile_config"] = ModuleMobileConfigSLZ(self.region.module_mobile_config).data
         data["mul_modules_config"] = MulModulesConfigConfigSLZ(self.region.mul_modules_config).data
-
-        # Patch entrance_config to provide "app_root_domain" field
-        # TODO: Remove this field because it's app related instead of region
-        entrance_config = self.region.entrance_config
-        data["entrance_config"] = EntranceConfigSLZ(entrance_config).data
+        data["module_custom_domain"] = ModuleCustomDomainSLZ(
+            {"allow_user_modifications": self.region.allow_user_modify_custom_domain}
+        ).data
+        data["entrance_config"] = {"manually_upgrade_to_subdomain_allowed": True}
         return data
 
 
@@ -64,5 +63,10 @@ class MulModulesConfigConfigSLZ(serializers.Serializer):
     creation_allowed = serializers.BooleanField()
 
 
-class EntranceConfigSLZ(serializers.Serializer):
-    manually_upgrade_to_subdomain_allowed = serializers.BooleanField()
+class ModuleCustomDomainSLZ(serializers.Serializer):
+    """Serializer for application custom domain"""
+
+    allow_user_modifications = serializers.BooleanField()
+    # TODO：兼容前端的处理逻辑，前端访问管理页面去掉后缀判断的相关逻辑后，可以去掉该参数
+    enabled = serializers.BooleanField(default=True)
+    valid_domain_suffixes = serializers.ListField(default=[])

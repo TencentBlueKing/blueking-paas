@@ -77,7 +77,6 @@ Before calling the interface, please get your access_token first. For specific g
                 }
             },
             "feature_flags": {
-                "ENABLE_EGRESS_IP": true,
                 "ENABLE_MOUNT_LOG_TO_HOST": true,
                 "INGRESS_USE_REGEX": true,
                 "ENABLE_BK_MONITOR": true,
@@ -115,7 +114,6 @@ Before calling the interface, please get your access_token first. For specific g
                 }
             },
             "feature_flags": {
-                "ENABLE_EGRESS_IP": true,
                 "ENABLE_MOUNT_LOG_TO_HOST": true,
                 "INGRESS_USE_REGEX": true,
                 "ENABLE_BK_MONITOR": true,

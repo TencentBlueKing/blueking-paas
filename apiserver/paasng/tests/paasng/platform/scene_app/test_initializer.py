@@ -59,10 +59,10 @@ class TestSceneAPPInitializer:
             "scene_tmpl1",
             app_name,
             app_code,
+            settings.DEFAULT_REGION_NAME,
             AppTenantMode.GLOBAL,
             "",
             DEFAULT_TENANT_ID,
-            settings.DEFAULT_REGION_NAME,
             {
                 "source_control_type": "github",
                 "source_repo_url": "https://github.com/octocat/helloWorld.git",

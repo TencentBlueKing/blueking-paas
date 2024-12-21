@@ -148,7 +148,6 @@ def update_or_create_es_search_config(
             "scenarioID": "log",
         },
         "search_params": search_params,
-        "tenant_id": application.tenant_id,
     }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
@@ -214,16 +213,11 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案
-    tenant_id = env.application.tenant_id
     try:
-        ingress_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID, tenant_id=env.application.tenant_id
-        )
+        ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查
-        logger.exception(
-            f"The access logs for tenant ({tenant_id}) are not configured with the corresponding Elasticsearch."
-        )
+        logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")
         raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
 
     config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)

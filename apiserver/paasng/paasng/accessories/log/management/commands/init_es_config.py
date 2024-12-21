@@ -26,12 +26,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--tenant_id",
-            type=str,
-            required=True,
-            help="Specify the tenant ID to update. If not provided, updates all tenants.",
-        )
-        parser.add_argument(
             "--host",
             type=str,
             required=True,
@@ -71,4 +65,4 @@ class Command(BaseCommand):
             },
             ElasticSearchHost,
         )
-        setup_platform_elk_config(tenant_id, es_host)
+        setup_platform_elk_config(es_host)

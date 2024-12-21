@@ -28,15 +28,7 @@ from paasng.accessories.log.shim.setup_elk import (
 class Command(BaseCommand):
     help = '"Update ElasticSearch query parameters, executed when modifying ES query configuration."'
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--tenant_id",
-            type=str,
-            help="Specify the tenant ID to update. If not provided, updates all tenants.",
-        )
-
     def handle(self, *args, **options):
-        tenant_id = options.get("tenant_id")
         # 获取最新的 Elasticsearch 查询参数
         search_params = construct_platform_es_params()
 
@@ -46,18 +38,9 @@ class Command(BaseCommand):
             (ELK_INGRESS_COLLECTOR_CONFIG_ID, search_params.ingress),
         ]
 
-        if tenant_id:
-            for config_id, params in collector_configs:
-                ElasticSearchConfig.objects.filter(
-                    tenant_id=tenant_id,
-                    collector_config_id=config_id,
-                    backend_type="es",
-                ).update(search_params=params)
-                self.stdout.write(self.style.SUCCESS(f"Updating {config_id} search_params for tenant: {tenant_id}"))
-        else:
-            for config_id, params in collector_configs:
-                ElasticSearchConfig.objects.filter(
-                    collector_config_id=config_id,
-                    backend_type="es",
-                ).update(search_params=params)
-                self.stdout.write(self.style.SUCCESS(f"Updating {config_id} search_params for all tenants"))
+        for config_id, params in collector_configs:
+            ElasticSearchConfig.objects.filter(
+                collector_config_id=config_id,
+                backend_type="es",
+            ).update(search_params=params)
+            self.stdout.write(self.style.SUCCESS(f"Updating {config_id} search_params for {config_id}"))

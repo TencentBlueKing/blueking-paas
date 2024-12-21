@@ -14,14 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from rest_framework import serializers
-
-
-class ClusterCreateInputSLZ(serializers.Serializer):
-    name = serializers.RegexField(regex=r"^[A-Za-z0-9-]+$", min_length=3, max_length=32, help_text="集群名称")
-    description = serializers.CharField(max_length=256, help_text="集群描述")
-
-    # 集群配置 -> BCS 类型
-    bcs_project_id = serializers.CharField(help_text="BCS 项目 ID", required=False)
-    bcs_cluster_id = serializers.CharField(help_text="BCS 集群 ID", required=False)
-    bk_biz_id = serializers.CharField(help_text="蓝鲸业务 ID", required=False)

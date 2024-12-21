@@ -29,7 +29,6 @@ def plat_mgt_perm_class(action: PlatMgtAction):
     """构建 DRF 可用的权限类，管理平台管理相关权限"""
 
     class Permission(BasePermission):
-        # used to check if is admin42 permission
         perm_action = action
 
         def has_permission(self, request, *args, **kwargs):

@@ -38,6 +38,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
+from paasng.accessories.log.shim.setup_elk import setup_platform_elk_config
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
     register_app_core_data,
@@ -46,6 +47,7 @@ from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.bk_plugins.bk_plugins.models import BkPluginProfile
 from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.core.core.storages.utils import SADBManager
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.constants import ApplicationRole
@@ -189,6 +191,11 @@ def _auto_init_legacy_app(request):
     # Clean the legacy app data after test
     with legacy_db.session_scope() as session:
         AppManger(session).delete_by_code(legacy_app_code)
+
+
+@pytest.fixture(autouse=True)
+def _auto_init_es_config_for_default_tenant():
+    setup_platform_elk_config(DEFAULT_TENANT_ID, settings.ELASTICSEARCH_HOSTS[0])
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -357,14 +364,14 @@ def bk_user(request):
     return user
 
 
-@pytest.fixture(autouse=True)
-def _mock_bk_auth():
-    from tests.utils.mocks.bkauth import StubBkOauthClient
+# @pytest.fixture(autouse=True)
+# def _mock_bk_auth():
+#     from tests.utils.mocks.bkauth import StubBkOauthClient
 
-    with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
-        "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
-    ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
-        yield
+#     with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
+#         "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
+#     ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
+#         yield
 
 
 @pytest.fixture(autouse=True)

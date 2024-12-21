@@ -20,6 +20,8 @@ import string
 import pytest
 from django.conf import settings
 
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from tests.utils import mock
 from tests.utils.basic import generate_random_string
@@ -57,6 +59,9 @@ class TestSceneAPPInitializer:
             "scene_tmpl1",
             app_name,
             app_code,
+            AppTenantMode.GLOBAL,
+            "",
+            DEFAULT_TENANT_ID,
             settings.DEFAULT_REGION_NAME,
             {
                 "source_control_type": "github",

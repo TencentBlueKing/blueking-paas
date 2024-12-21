@@ -22,6 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
@@ -108,7 +109,7 @@ class ElasticSearchConfig(UuidAuditedModel):
         verbose_name="租户 ID",
         max_length=32,
         db_index=True,
-        null=True,
+        default=DEFAULT_TENANT_ID,
         help_text="本条数据的所属租户",
     )
 

@@ -955,12 +955,13 @@ REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAU
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
-# 解析通过 API Gateway 的请求，该值为空时跳过解析
-APIGW_PUBLIC_KEY = settings.get("APIGW_PUBLIC_KEY", "")
 
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
+
+# 解析通过 API Gateway 的请求，该值为空时跳过解析
+APIGW_PUBLIC_KEY = settings.get("APIGW_PUBLIC_KEY", "")
 
 # 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
 BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE

@@ -52,6 +52,7 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
@@ -131,7 +132,6 @@ from paasng.platform.templates.models import Template
 from paasng.utils import dictx
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-from tests.api.test_applications import AppTenantMode
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor

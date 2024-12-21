@@ -66,10 +66,17 @@ class PackageStashConfirmRequestSLZ(serializers.Serializer):
 
 
 class PackageStashResponseSLZ(serializers.Serializer):
-    app_description = AppDescriptionSLZ()
+    """
+    PackageStashResponseSLZ
+
+    NOTE: app_description 是实际用于创建/更新 Smart 应用的应用描述文件对象，original_app_description 是原始应用描述文件对象.
+    它们同时返回给前端, 方便前端做 diff 展示
+    """
+
+    app_description = AppDescriptionSLZ(help_text="应用描述文件对象. 实际用于创建/更新 Smart 应用")
     signature = serializers.CharField(help_text="数字签名")
     supported_services = serializers.ListField(child=serializers.CharField(), help_text="支持的增强服务")
-    raw_app_description = AppDescriptionSLZ()
+    original_app_description = AppDescriptionSLZ(help_text="原始应用描述文件对象")
 
 
 class DiffItemSLZ(serializers.Serializer):

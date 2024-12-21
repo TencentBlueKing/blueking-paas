@@ -18,7 +18,7 @@
 import logging
 
 from django.utils.crypto import get_random_string
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.models import Application
@@ -37,7 +37,7 @@ def get_app_description(stat: SPStat) -> ApplicationDesc:
     :raises: ValidationError when meta info is invalid or empty
     """
     if not stat.meta_info:
-        raise ValidationError(gettext_lazy("找不到任何有效的应用描述信息"))
+        raise ValidationError(_("找不到任何有效的应用描述信息"))
 
     try:
         desc = get_desc_handler(stat.meta_info).app_desc
@@ -46,16 +46,19 @@ def get_app_description(stat: SPStat) -> ApplicationDesc:
     return desc
 
 
-def gen_app_code(raw_code: str) -> str:
-    """根据原始应用 code, 生成新的唯一 code
+def gen_app_code_when_conflict(original_code: str) -> str:
+    """当原始应用 code 已存在时(与存量应用冲突)，生成新的 code
 
-    :param raw_code: 原始 code
+    NOTE: 多租户模式下，同一个 Smart 包可以创建多个 Smart 应用, 但是 code 需要保持唯一.
+    该函数可用于创建 Smart 应用时, 生成推荐的新 code, 解决 code 冲突的问题
+
+    :param original_code: 原始 code
     :return: 新的 code, 由"原始 code + 2 位随机字符串"构成
     """
     max_count = 10
 
-    for _ in range(max_count):
-        new_app_code = f"{raw_code}-{get_random_string(2).lower()}"
+    for __ in range(max_count):
+        new_app_code = f"{original_code}-{get_random_string(2).lower()}"
         if not Application.objects.filter(code=new_app_code).exists():
             return new_app_code
 

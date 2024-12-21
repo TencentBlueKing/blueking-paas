@@ -358,7 +358,7 @@ class Application(OwnerTimestampedModel):
 
     class Meta:
         # 应用名称租户内唯一
-        unique_together = ("name", "app_tenant_id")
+        unique_together = ("app_tenant_id", "name")
 
     @property
     def has_deployed(self) -> bool:
@@ -650,8 +650,8 @@ class ApplicationDeploymentModuleOrder(models.Model):
         verbose_name = "模块顺序"
 
 
-class SMartApplication(models.Model):
-    """SMart 应用信息"""
+class SMartAppExtraInfo(models.Model):
+    """SMart 应用额外信息"""
 
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
-    raw_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
+    original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)

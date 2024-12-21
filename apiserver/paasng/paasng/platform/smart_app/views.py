@@ -43,7 +43,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import Application, SMartApplication
+from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -56,7 +56,7 @@ from paasng.platform.smart_app.serializers import (
     PackageStashRequestSLZ,
     PackageStashResponseSLZ,
 )
-from paasng.platform.smart_app.services.app_desc import gen_app_code, get_app_description
+from paasng.platform.smart_app.services.app_desc import gen_app_code_when_conflict, get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader, update_meta_info
 from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
 from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
@@ -114,8 +114,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
-            raw_app_desc = get_app_description(stat)
-            app_desc = self.validate_and_prepare_app_desc(raw_app_desc, app_tenant_id)
+            original_app_desc = get_app_description(stat)
+            app_desc = self.validate_and_prepare_app_desc(original_app_desc, app_tenant_id)
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)
@@ -130,7 +130,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     "app_description": app_desc,
                     "signature": stat.sha256_signature,
                     "supported_services": [service.name for service in supported_services],
-                    "raw_app_description": raw_app_desc,
+                    "original_app_description": original_app_desc,
                 }
             ).data
         )
@@ -164,7 +164,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
-            raw_app_desc = get_app_description(stat)
+            original_app_desc = get_app_description(stat)
 
             # 替换成实际待创建的应用信息
             stat.meta_info = update_meta_info(
@@ -187,8 +187,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     application.app_tenant_id = app_tenant_id
                     application.tenant_id = tenant.id
                     application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
-                    # 创建 SMartApplication, 记录应用原始 code
-                    SMartApplication.objects.create(app=application, raw_code=raw_app_desc.code)
+                    # 创建 SMartAppExtraInfo, 记录应用原始 code
+                    SMartAppExtraInfo.objects.create(app=application, original_code=original_app_desc.code)
 
             # Step 3. dispatch package as Image to registry
             try:
@@ -209,23 +209,24 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         return Response({}, status=status.HTTP_201_CREATED)
 
     @staticmethod
-    def validate_and_prepare_app_desc(raw_app_desc: ApplicationDesc, app_tenant_id: str) -> ApplicationDesc:
-        """validate raw app_desc and prepare app_desc which will be used to create app"""
-        if raw_app_desc.market is None:
+    def validate_and_prepare_app_desc(original_app_desc: ApplicationDesc, app_tenant_id: str) -> ApplicationDesc:
+        """validate original app_desc and prepare app_desc which will be used to create app"""
+        if original_app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
 
-        if not raw_app_desc.instance_existed:
-            return raw_app_desc
+        if not original_app_desc.instance_existed:
+            return original_app_desc
 
-        if SMartApplication.objects.filter(raw_code=raw_app_desc.code, app__app_tenant_id=app_tenant_id).exists():
-            raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=raw_app_desc.code))
+        if SMartAppExtraInfo.objects.filter(
+            original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
+        ).exists():
+            raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=original_app_desc.code))
 
-        # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性
-        app_desc = copy.deepcopy(raw_app_desc)
+        # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
+        app_desc = copy.deepcopy(original_app_desc)
         app_desc.instance_existed = False
-
         try:
-            app_desc.code = gen_app_code(raw_app_desc.code)
+            app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
         except GenAppCodeError:
             raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
         else:
@@ -276,23 +277,23 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         return Response(data=AppDescriptionSLZ(app_desc).data)
 
     @staticmethod
-    def validate_and_prepare_app_desc(raw_app_desc: ApplicationDesc, app: Application) -> ApplicationDesc:
-        """validate raw app_desc and prepare app_desc which will be used to update app"""
-        if raw_app_desc.spec_version == AppSpecVersion.VER_3 and app.type != ApplicationType.CLOUD_NATIVE:
+    def validate_and_prepare_app_desc(original_app_desc: ApplicationDesc, app: Application) -> ApplicationDesc:
+        """validate original app_desc and prepare app_desc which will be used to update app"""
+        if original_app_desc.spec_version == AppSpecVersion.VER_3 and app.type != ApplicationType.CLOUD_NATIVE:
             raise ValidationError(_("非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"))
 
-        if raw_app_desc.market is None:
+        if original_app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
 
-        if not SMartApplication.objects.filter(raw_code=raw_app_desc.code, app=app).exists():
+        if not SMartAppExtraInfo.objects.filter(original_code=original_app_desc.code, app=app).exists():
             raise ValidationError(
                 _("应用描述文件中声明的应用 ID（{app_desc_code} 未创建过 Smart 应用").format(
-                    app_desc_code=raw_app_desc.code
+                    app_desc_code=original_app_desc.code
                 )
             )
 
         # 准备可更新应用的 app_desc. 其中, code 设置为实际待更新的 app code
-        app_desc = copy.deepcopy(raw_app_desc)
+        app_desc = copy.deepcopy(original_app_desc)
         app_desc.code = app.code
         app_desc.name_zh_cn = app.name
         app_desc.instance_existed = True
@@ -320,8 +321,8 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
-            raw_app_desc = get_app_description(stat)
-            app_desc = self.validate_and_prepare_app_desc(raw_app_desc, application)
+            original_app_description = get_app_description(stat)
+            app_desc = self.validate_and_prepare_app_desc(original_app_description, application)
 
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)
@@ -333,7 +334,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                     "app_description": app_desc,
                     "signature": stat.sha256_signature,
                     "supported_services": [service.name for service in supported_services],
-                    "raw_app_description": raw_app_desc,
+                    "original_app_description": original_app_description,
                 }
             ).data
         )

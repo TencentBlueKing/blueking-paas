@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 def forwards(apps, schema_editor):
     """Create Smart Application from Application which is_smart_app is True"""
     Application = apps.get_model("applications", "Application")
-    SMartApplication = apps.get_model("applications", "SMartApplication")
+    SMartAppExtraInfo = apps.get_model("applications", "SMartAppExtraInfo")
 
     for app in Application.objects.filter(is_smart_app=True):
-        SMartApplication.objects.create(raw_code=app.code, app=app)
+        SMartAppExtraInfo.objects.create(original_code=app.code, app=app)
 
 
 class Migration(migrations.Migration):

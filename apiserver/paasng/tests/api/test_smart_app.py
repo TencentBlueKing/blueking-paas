@@ -28,7 +28,7 @@ import yaml
 from django.conf import settings
 
 from paasng.accessories.publish.market.models import MarketConfig, Tag
-from paasng.platform.applications.models import Application, SMartApplication
+from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.sourcectl.utils import compress_directory
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -83,7 +83,7 @@ class TestCreateSMartApp:
 
         assert response.json()["app_description"]["name"]
         assert response.json()["app_description"]["code"] == app_code
-        assert response.json()["raw_app_description"]["code"] == app_code
+        assert response.json()["original_app_description"]["code"] == app_code
 
         response = api_client.post(
             "/api/bkapps/s-mart/confirm/",
@@ -94,7 +94,7 @@ class TestCreateSMartApp:
         # Verify app info
         app = Application.objects.get(code=app_code)
         assert app.is_smart_app is True
-        assert SMartApplication.objects.filter(raw_code=app_code, app=app).exists()
+        assert SMartAppExtraInfo.objects.filter(original_code=app_code, app=app).exists()
 
     def test_upload_and_create_when_code_exists(self, api_client, tmp_path, bk_app, random_name):
         def _desc_updater(desc):
@@ -113,7 +113,7 @@ class TestCreateSMartApp:
 
         new_app_code = response.json()["app_description"]["code"]
         assert new_app_code.startswith(f"{bk_app.code}-")
-        assert response.json()["raw_app_description"]["code"] == bk_app.code
+        assert response.json()["original_app_description"]["code"] == bk_app.code
 
         response = api_client.post(
             "/api/bkapps/s-mart/confirm/",
@@ -126,13 +126,13 @@ class TestCreateSMartApp:
         assert app.is_smart_app is True
         assert app.name == random_name
 
-        assert SMartApplication.objects.filter(raw_code=bk_app.code, app=app).exists()
+        assert SMartAppExtraInfo.objects.filter(original_code=bk_app.code, app=app).exists()
 
 
 class TestUpdateSMartApp:
     @pytest.fixture()
     def _create_smart_app(self, bk_cnative_app):
-        SMartApplication.objects.create(raw_code=bk_cnative_app.code, app=bk_cnative_app)
+        SMartAppExtraInfo.objects.create(original_code=bk_cnative_app.code, app=bk_cnative_app)
         # AppDeclarativeController.perform_update(desc) 需要 MarketConfig
         MarketConfig.objects.create(
             region=bk_cnative_app.region,
@@ -157,7 +157,7 @@ class TestUpdateSMartApp:
                 data={"package": file},
             )
         assert response.json()["app_description"]["code"] == bk_cnative_app.code
-        assert response.json()["raw_app_description"]["code"] == bk_cnative_app.code
+        assert response.json()["original_app_description"]["code"] == bk_cnative_app.code
 
         signature = response.json()["signature"]
         response = api_client.post(

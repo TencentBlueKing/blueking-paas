@@ -20,9 +20,11 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.platform.applications.serializers import AppIDField, AppNameField
 from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ
 from paasng.platform.declarative.constants import DiffType
-from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 
 
 class AppDescriptionSLZ(serializers.Serializer):
@@ -40,6 +42,9 @@ class PackageStashRequestSLZ(serializers.Serializer):
     """Handle S-mart application uploads"""
 
     package = serializers.FileField(help_text="应用源码包")
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
 
     def validate_package(self, package):
         if not re.fullmatch("[a-zA-Z0-9-_. ]+", package.name):
@@ -49,10 +54,29 @@ class PackageStashRequestSLZ(serializers.Serializer):
         return package
 
 
+@i18n
+class PackageStashConfirmRequestSLZ(serializers.Serializer):
+    """Handle S-mart application confirm after upload"""
+
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
+
+
 class PackageStashResponseSLZ(serializers.Serializer):
-    app_description = AppDescriptionSLZ()
+    """
+    PackageStashResponseSLZ
+
+    NOTE: app_description 是实际用于创建/更新 Smart 应用的应用描述文件对象，original_app_description 是原始应用描述文件对象.
+    它们同时返回给前端, 方便前端做 diff 展示
+    """
+
+    app_description = AppDescriptionSLZ(help_text="应用描述文件对象. 实际用于创建/更新 Smart 应用")
     signature = serializers.CharField(help_text="数字签名")
     supported_services = serializers.ListField(child=serializers.CharField(), help_text="支持的增强服务")
+    original_app_description = AppDescriptionSLZ(help_text="原始应用描述文件对象")
 
 
 class DiffItemSLZ(serializers.Serializer):

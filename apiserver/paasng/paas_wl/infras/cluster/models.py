@@ -268,6 +268,9 @@ class Cluster(UuidAuditedModel):
     # App 默认配置
     default_node_selector = JSONField(help_text="部署到本集群的应用默认节点选择器（node_selector）", default=dict)
     default_tolerations = JSONField(help_text="部署到本集群的应用默认容忍度（tolerations）", default=dict)
+    container_log_dir = models.CharField(
+        help_text="容器日志目录", max_length=255, default="/var/lib/docker/containers"
+    )
 
     # 集群特性，具体枚举值 -> ClusterFeatureFlag
     feature_flags = JSONField(help_text="集群特性集", default=dict)
@@ -434,3 +437,14 @@ class ClusterAllocationPolicy(UuidAuditedModel):
     # 枚举值 -> ClusterAllocationPolicyType
     type = models.CharField(max_length=32, help_text="分配策略类型")
     rules: List[AllocationRule] = AllocationRulesField(help_text="集群分配规则列表", default=list)
+
+
+class ClusterElasticSearchConfig(UuidAuditedModel):
+    """集群 ES 配置"""
+
+    cluster = models.OneToOneField(Cluster, related_name="elastic_search_config", on_delete=models.CASCADE)
+    scheme = models.CharField(help_text="ES 集群协议", max_length=12)
+    host = models.CharField(help_text="ES 集群地址", max_length=128)
+    username = models.CharField(help_text="ES 集群用户名", max_length=64)
+    password = EncryptField(help_text="ES 集群密码")
+    port = models.IntegerField(help_text="ES 集群端口")

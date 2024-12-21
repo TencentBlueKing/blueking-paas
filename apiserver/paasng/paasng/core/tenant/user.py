@@ -60,7 +60,7 @@ def get_tenant(user: User) -> Tenant:
 
     # TODO: Get the tenant info directly from the user object when bkpaas_auth is ready
     try:
-        _id = getattr(user, "_tenant_id")
+        _id = getattr(user, "tenant_id")
     except AttributeError:
         raise ValueError("No tenant can be found")
     return Tenant(_id)
@@ -71,4 +71,4 @@ def set_tenant(user: User, tenant_id: str):
     test cases, in real world scenarios, the tenant info should be set by the auth
     middleware.
     """
-    user._tenant_id = tenant_id
+    user.tenant_id = tenant_id

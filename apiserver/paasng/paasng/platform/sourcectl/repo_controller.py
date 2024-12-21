@@ -83,8 +83,7 @@ class RepoController(Protocol):
     def extract_version_info(self, version_info: VersionInfo) -> Tuple[str, str]:
         """解析某个 VersionInfo 对象
 
-        :return: 元组（version_name, revision），前者是有名字的版本号，比如 master，后者为具体的
-            Commit ID。
+        :return: 元组（version_name, revision），前者是有名字的版本号，比如 master，后者为具体的 Commit ID。
         """
 
     def extract_smart_revision(self, smart_revision: str) -> str:

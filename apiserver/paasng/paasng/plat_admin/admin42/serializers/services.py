@@ -17,31 +17,12 @@
 
 from django.utils.translation import get_language
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
-from paasng.accessories.servicehub.services import ServiceSpecificationDefinition
 from paasng.accessories.services.models import Plan, PreCreatedInstance
 from paasng.plat_admin.admin42.serializers.engine import EnvironmentSLZ
 from paasng.utils.i18n import to_translated_field
-
-
-class ServiceSpecificationDefinitionSLZ(serializers.Serializer):
-    def to_representation(self, instance: ServiceSpecificationDefinition):
-        data = instance.as_dict()
-        # 去除辅助字段
-        data.pop("is_public")
-        return data
-
-    def to_internal_value(self, data):
-        try:
-            ServiceSpecificationDefinition(**data)
-        except ValueError:
-            raise ValidationError
-        # 去除辅助字段
-        data.pop("is_public", None)
-        return data
 
 
 class ServiceObjSLZ(serializers.Serializer):
@@ -62,7 +43,6 @@ class ServiceObjSLZ(serializers.Serializer):
 
     is_active = serializers.BooleanField()
     is_visible = serializers.BooleanField()
-    specifications = ServiceSpecificationDefinitionSLZ(many=True)
 
     provider_name = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     origin = serializers.SerializerMethodField()
@@ -97,7 +77,6 @@ class PlanObjSLZ(serializers.Serializer):
     description = serializers.CharField()
     config = serializers.JSONField(required=False, default=dict)
     is_active = serializers.BooleanField()
-    specifications = serializers.JSONField()
     properties = serializers.JSONField(required=False, default=dict)
 
 

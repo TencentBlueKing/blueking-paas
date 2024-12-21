@@ -116,7 +116,7 @@ def _get_service_env_vars(
     app = Application.objects.get(code=app_code)
 
     try:
-        svc_obj = mixed_service_mgr.find_by_name(name=service_name, region=app.region)
+        svc_obj = mixed_service_mgr.find_by_name(name=service_name)
     except ServiceObjNotFound as e:
         logger.info(e)
         return {}

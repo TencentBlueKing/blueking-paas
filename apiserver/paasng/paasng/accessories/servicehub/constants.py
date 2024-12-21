@@ -36,7 +36,6 @@ LEGACY_PLAN_INSTANCE = dict(
     is_active=True,
     is_eager=True,
     region="--",
-    specifications=dict(),
     properties=dict(),
 )
 

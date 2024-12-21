@@ -17,8 +17,7 @@
 
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Collection, Dict, List
+from typing import Collection, Dict
 
 from django.db import models
 
@@ -248,37 +247,6 @@ class SharedServiceAttachment(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "service_type", "service_id")
-
-
-@dataclass
-class ServiceSetGroupByName:
-    name: str
-    logo: str
-    display_name: str
-    description: str
-    long_description: str
-    available_languages: str
-    instance_tutorial: str
-
-    enabled_regions: List[str] = field(default_factory=list)
-    services: List[ServiceObj] = field(default_factory=list)
-    instances: List[object] = field(default_factory=list)
-
-    @classmethod
-    def from_service(cls, service: ServiceObj):
-        return cls(
-            name=service.name,
-            logo=service.logo,
-            display_name=service.display_name,
-            description=service.description,
-            long_description=service.long_description,
-            available_languages=service.available_languages,
-            instance_tutorial=service.instance_tutorial,
-        )
-
-    def add_enabled_region(self, region: str):
-        if region not in self.enabled_regions:
-            self.enabled_regions.append(region)
 
 
 class ServiceBindingPolicy(AuditedModel):

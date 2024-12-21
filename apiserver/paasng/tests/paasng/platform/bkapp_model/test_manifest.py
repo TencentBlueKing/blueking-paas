@@ -35,6 +35,7 @@ from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
@@ -104,7 +105,9 @@ def local_service(bk_app):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
-    return mixed_service_mgr.get(service.uuid, region=bk_app.region)
+    svc_obj = mixed_service_mgr.get(service.uuid)
+    ServiceBindingPolicyManager(svc_obj).set_static([svc_obj.get_plans()[0]])
+    return svc_obj
 
 
 @pytest.fixture()

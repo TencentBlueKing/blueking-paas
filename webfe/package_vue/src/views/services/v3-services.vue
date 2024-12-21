@@ -15,42 +15,17 @@
         placeholder="service-loading"
         :offset-top="15"
       >
-        <div
-          v-if="!isEmpty && uniqueRegionList.length > 1"
-          class="bk-button-group pt15"
-        >
-          <bk-button
-            style="width: 130px"
-            theme="primary"
-            :outline="tabActive !== 'all'"
-            @click="tabActive = 'all'"
-          >
-            {{ $t('全部') }}
-          </bk-button>
-          <bk-button
-            v-for="(item, index) in categoryObject"
-            v-if="index !== 'all'"
-            :key="index"
-            style="width: 130px"
-            theme="primary"
-            :outline="tabActive !== index"
-            @click="tabChange(index)"
-          >
-            {{ lauguageMap[index] }}
-          </bk-button>
-        </div>
-
         <div class="category-list">
           <ul
             v-if="
-              categoryObject[tabActive] &&
-              categoryObject[tabActive].services &&
-              categoryObject[tabActive].services.length
+              categoryObject &&
+              categoryObject.services &&
+              categoryObject.services.length
             "
             class="service-list"
           >
             <li
-              v-for="(service, index) in categoryObject[tabActive].services"
+              v-for="(service, index) in categoryObject.services"
               :key="index"
             >
               <router-link :to="{ name: 'serviceInnerPage', params: { category_id: categoryId, name: service.name } }">
@@ -89,39 +64,24 @@ export default {
       isLoading: false,
       categoryId: '',
 
-      lauguageMap: {
-        all: this.$t('全部'),
-        ieod: this.$t('内部版'),
-        tencent: this.$t('外部版'),
-        clouds: this.$t('混合云版'),
-      },
-
-      tabActive: 'all',
-
       categoryObject: {
-        all: {
-          services: [],
-        },
+        services: [],
       },
-      uniqueRegionList: [],
     };
   },
   computed: {
     isEmpty() {
       const keys = Object.keys(this.categoryObject);
-      return keys.every((item) => !this.categoryObject[item].services.length);
+      return this.categoryObject.length === 0;
     },
   },
   watch: {
     $route() {
       this.categoryId = Number(this.$route.params.category_id);
-      this.tabActive = 'all';
       this.categoryObject = Object.assign(
         {},
         {
-          all: {
-            services: [],
-          },
+          services: [],
         }
       );
       this.fetchCategoryInfo();
@@ -133,7 +93,6 @@ export default {
   },
   methods: {
     tabChange(tab) {
-      this.tabActive = tab;
       const tempServices = [];
       this.categoryObject.all.services.forEach((item) => {
         if (item.enabled_regions.includes(tab)) {
@@ -148,24 +107,7 @@ export default {
       this.$http.get(`${BACKEND_URL}/api/services/categories/${this.categoryId}/`).then((response) => {
         const resData = response;
 
-        const allRegions = [];
-
-        (resData.results || []).forEach((item) => {
-          item.enabled_regions.forEach((regItem) => {
-            allRegions.push(regItem);
-          });
-        });
-
-        this.uniqueRegionList = [...new Set(allRegions)];
-
-        this.uniqueRegionList.forEach((item) => {
-          this.$set(this.categoryObject, item, {
-            services: [],
-          });
-        });
-
-        this.categoryObject.all.services = [...resData.results];
-
+        this.categoryObject.services = [...resData.results];
         this.isLoading = false;
       });
     },
@@ -185,7 +127,7 @@ export default {
 
 .service-list li {
   position: relative;
-  padding: 0 6px 12px 6px;
+  padding: 24px 6px 12px 6px;
   width: 25%;
   float: left;
 }

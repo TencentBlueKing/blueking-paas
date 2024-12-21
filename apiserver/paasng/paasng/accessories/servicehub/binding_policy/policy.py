@@ -23,7 +23,6 @@ from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
     ServiceBindingPolicyType,
 )
-from paasng.accessories.servicehub.manager import get_db_properties
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -128,4 +127,7 @@ class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
 
 
 def get_service_type(service: ServiceObj) -> str:
+    # TODO: Fix the circular import issue
+    from paasng.accessories.servicehub.manager import get_db_properties
+
     return get_db_properties(service).col_service_type

@@ -24,6 +24,7 @@ from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -305,7 +306,7 @@ class TestMarketDisplayOptionsField:
 
 
 class TestServicesField:
-    @pytest.fixture(autouse=True, params=["legacy-local", "newly-local"])
+    @pytest.fixture(autouse=True)
     def _default_services(self, request):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
@@ -314,11 +315,12 @@ class TestServicesField:
             # Create service object
             svc = G(Service, name=name, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
             # Create default plans
-            if request.param == "legacy-local":
-                G(Plan, name="no-ha", service=svc, config="{}", is_active=True)
-                G(Plan, name="ha", service=svc, config="{}", is_active=True)
-            else:
-                G(Plan, name=generate_random_string(), service=svc, config="{}", is_active=True)
+            G(Plan, name="plan-1", service=svc, config="{}", is_active=True)
+            G(Plan, name="plan-2", service=svc, config="{}", is_active=True)
+
+            # Create a default binding polity so that the binding works by default
+            service = mixed_service_mgr.get(svc.uuid)
+            ServiceBindingPolicyManager(service).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):
@@ -339,7 +341,7 @@ class TestServicesField:
         controller = AppDeclarativeController(bk_user)
         controller.perform_action(get_app_description(app_desc))
 
-        service_obj = mixed_service_mgr.find_by_name("mysql", settings.DEFAULT_REGION_NAME)
+        service_obj = mixed_service_mgr.find_by_name("mysql")
         application = Application.objects.get(code=random_name)
         assert mixed_service_mgr.module_is_bound_with(service_obj, application.get_default_module()) is True
 
@@ -348,7 +350,7 @@ class TestServicesField:
         controller.perform_action(get_app_description(app_desc))
 
         # Add a new service
-        service_obj = mixed_service_mgr.find_by_name("rabbitmq", settings.DEFAULT_REGION_NAME)
+        service_obj = mixed_service_mgr.find_by_name("rabbitmq")
         module = Application.objects.get(code=random_name).get_default_module()
 
         assert mixed_service_mgr.module_is_bound_with(service_obj, module) is False

@@ -22,15 +22,17 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.binding_policy.selector import PlanSelector, PossiblePlansResultType
+from paasng.accessories.servicehub.binding_policy.selector import (
+    PlanSelector,
+    PossiblePlansResultType,
+    get_plan_by_env,
+)
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
-from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.engine.constants import AppEnvName
 from tests.api.test_cnative_migration import get_random_string
 from tests.paasng.accessories.servicehub import data_mocks
-from tests.utils.helpers import generate_random_string
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),
@@ -38,34 +40,12 @@ pytestmark = [
 ]
 
 
-# The default region value
-region = "r1"
-
-
-@pytest.fixture()
-def local_service():
-    service = G(Service, name="mysql", category=G(ServiceCategory), region=region, logo_b64="dummy")
-    # Create some plans
-    G(Plan, name=generate_random_string(), service=service)
-    G(Plan, name=generate_random_string(), service=service)
-    return mixed_service_mgr.get(service.uuid, region=region)
-
-
+# Only test remote service object, no need to test local because servicehub/test_manager.py::TestMixedMgrBindService
+# already covered the local service object.
 @pytest.fixture()
 @pytest.mark.usefixture("_faked_remote_services")
-def remote_service(_faked_remote_services):
-    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region=region)
-
-
-@pytest.fixture(params=["local", "remote"])
-def service_obj(request, local_service, remote_service):
-    """Service object for testing, this fixture will yield both a remote and a local service"""
-    if request.param == "remote":
-        return request.getfixturevalue("remote_service")
-    elif request.param in "local":
-        return request.getfixturevalue("local_service")
-    else:
-        raise ValueError("Invalid type_ parameter")
+def service_obj(_faked_remote_services):
+    return mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"])
 
 
 @pytest.fixture
@@ -243,3 +223,44 @@ class TestPlanSelectorListPossiblePlans:
             "stag": [plan1],
             "prod": [plan1, plan2],
         }
+
+
+class Test__get_plan_by_env:
+    @pytest.fixture
+    def with_plans_env(self, service_obj, bk_module, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_env_specific(
+            env_plans=[
+                (AppEnvName.STAG, [plan1]),
+                (AppEnvName.PROD, [plan1, plan2]),
+            ]
+        )
+
+    @pytest.fixture
+    def with_plans_static(self, service_obj, bk_module, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj).set_static([plan1])
+
+    def test_select_success(self, service_obj, bk_stag_env, plan1, with_plans_static):
+        selected_plan = get_plan_by_env(service_obj, bk_stag_env, None, None)
+        assert selected_plan == plan1
+
+    def test_select_fail(self, service_obj, bk_stag_env):
+        with pytest.raises(ValueError, match="no plans found"):
+            get_plan_by_env(service_obj, bk_stag_env, None, None)
+
+    def test_given_plan_id_static_ok(self, service_obj, bk_stag_env, plan1, with_plans_static):
+        selected_plan = get_plan_by_env(service_obj, bk_stag_env, plan1.uuid, None)
+        assert selected_plan == plan1
+
+    def test_given_plan_id_static_fail(self, service_obj, bk_stag_env, plan2, with_plans_static):
+        with pytest.raises(ValueError, match="no plan found by given plan_id"):
+            get_plan_by_env(service_obj, bk_stag_env, plan2.uuid, None)
+
+    def test_given_env_map_ok(self, service_obj, bk_stag_env, plan1, plan2, with_plans_env):
+        env_plan_id_map = {"stag": plan1.uuid}
+        selected_plan = get_plan_by_env(service_obj, bk_stag_env, None, env_plan_id_map)
+        assert selected_plan == plan1
+
+    def test_given_env_map_fail(self, service_obj, bk_stag_env, plan2, with_plans_env):
+        env_plan_id_map = {"stag": plan2.uuid}
+        with pytest.raises(ValueError, match="no plan found by given plan_id"):
+            get_plan_by_env(service_obj, bk_stag_env, None, env_plan_id_map)

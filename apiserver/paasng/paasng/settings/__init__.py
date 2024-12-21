@@ -1108,14 +1108,6 @@ SERVICE_REMOTE_ENDPOINTS: List[Dict] = get_service_remote_endpoints(settings)
 if hasattr(SERVICE_REMOTE_ENDPOINTS, "to_list"):
     SERVICE_REMOTE_ENDPOINTS = SERVICE_REMOTE_ENDPOINTS.to_list()
 
-# 无须用户关心的保留服务规格
-SERVICE_PROTECTED_SPEC_NAMES = ["app_zone"]
-
-# 集群名与 app_zone 的映射，app_zone 会在应用申请增强服务实例时用到
-# 其默认值为 universal。如果你需要为集群配置特殊值，也可修改该配置项，
-# 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
-APP_ZONE_CLUSTER_MAPPINGS = settings.get("APP_ZONE_CLUSTER_MAPPINGS", {})
-
 # ---------------
 # 应用市场相关配置
 # ---------------

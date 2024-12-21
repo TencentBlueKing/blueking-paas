@@ -73,7 +73,8 @@ class MarketDesc(AllowOmittedModel):
 
 class ServiceSpec(BaseModel):
     name: str
-    specs: Dict = Field(default_factory=dict, description="限定规格")
+    # specs 字段已弃用，不再接收描述文件通过 specs 定义任何规则
+    specs: Dict = Field(default_factory=dict, description="限定规格，已弃用")
     display_name: Optional[str] = None
     shared_from: Optional[str] = None
 

@@ -285,7 +285,6 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         except Exception:
             logger.exception(f"Error when updating instance config for {instance_id}")
 
-    @atomic
     def recycle_resource(self):
         """对于 remote service 我们默认其已经具备了回收的能力"""
         if self.is_provisioned():

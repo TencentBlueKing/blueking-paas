@@ -73,7 +73,7 @@ class TestClient:
         data = client.retrieve_instance_to_be_deleted(instance_id="faked-id")
         assert data is not None
         assert mocked_get.called
-        assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/?to_be_deleted=true"
+        assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/?to_be_deleted=True"
         auth_inst = mocked_get.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 

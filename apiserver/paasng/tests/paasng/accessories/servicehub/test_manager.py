@@ -265,7 +265,7 @@ class TestLocalMgr:
     def test_list_unbound_instance_rels(
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
-        """Test service instance provision"""
+        """Test list unbound instance rels"""
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
         delete_service_instance.side_effect = (
             lambda service_instance: service_instance.delete() if service_instance else None
@@ -288,16 +288,16 @@ class TestLocalMgr:
 
         unbound_rels = []
         for env in bk_app.envs.all():
-            for unbound_rel in mgr.list_unbound_instance_rels(env.engine_app):
-                assert unbound_rel.db_obj.service_instance_id in attachments
-                assert unbound_rel.db_obj.service_id == attachments[unbound_rel.db_obj.service_instance_id].service_id
-                assert unbound_rel.db_obj.engine_app == attachments[unbound_rel.db_obj.service_instance_id].engine_app
-                unbound_rels.append(unbound_rel)
+            for u_rel in mgr.list_unbound_instance_rels(env.engine_app):
+                assert u_rel.db_obj.service_instance_id in attachments
+                assert u_rel.db_obj.service_id == attachments[u_rel.db_obj.service_instance_id].service_id
+                assert u_rel.db_obj.engine_app == attachments[u_rel.db_obj.service_instance_id].engine_app
+                unbound_rels.append(u_rel)
 
         assert len(unbound_rels) == len(attachments)
 
-        for unbound_rel in unbound_rels:
-            unbound_rel.recycle_resource()
+        for u_rel in unbound_rels:
+            u_rel.recycle_resource()
 
         for env in bk_app.envs.all():
             for _rel in mgr.list_unbound_instance_rels(env.engine_app):
@@ -308,7 +308,7 @@ class TestLocalMgr:
     def test_get_unbound_instance_rel_by_instance_id(
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
-        """Test service instance provision"""
+        """Test get unbound instance rel by instance id"""
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
         delete_service_instance.side_effect = (
             lambda service_instance: service_instance.delete() if service_instance else None

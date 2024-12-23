@@ -47,6 +47,7 @@ urlpatterns = [
         views.ServiceViewSet.as_view({"get": "list_related_apps"}),
         name="api.services.list_application",
     ),
+    # TODO: the specs API is deprecated, use the new possible plans API instead
     re_path(
         r"^api/services/%s/regions/%s/specs$" % (SERVICE_UUID, REGION),
         views.ServicePlanViewSet.as_view({"get": "retrieve_specifications"}),
@@ -90,10 +91,16 @@ urlpatterns = [
         views.ModuleServicesViewSet.as_view({"get": "list_provisioned_env_keys"}),
         name="api.services.list_provisioned_env_keys",
     ),
+    # TODO: the specs API is deprecated, use the new possible plans API instead
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/specs$", include_envs=False),
         views.ModuleServicesViewSet.as_view({"get": "retrieve_specs"}),
         name="api.services.list_specs_by_application",
+    ),
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/possible_plans$", include_envs=False),
+        views.ModuleServicesViewSet.as_view({"get": "list_possible_plans"}),
+        name="api.services.list_possible_plans",
     ),
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/$", include_envs=False),

@@ -171,14 +171,14 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         ).inc()
 
     def recycle_resource(self):
-        if self.is_provisioned():
-            self.db_obj.clean_service_instance()
-            if self.db_obj.service.prefer_async_delete:
-                UnboundServiceEngineAppAttachment.objects.create(
-                    engine_app=self.db_obj.engine_app,
-                    service=self.db_obj.service,
-                    service_instance=self.db_obj.service_instance,
-                )
+        service_instance = self.db_obj.service_instance
+        self.db_obj.clean_service_instance()
+        if self.db_obj.service.prefer_async_delete:
+            UnboundServiceEngineAppAttachment.objects.create(
+                engine_app=self.db_obj.engine_app,
+                service=self.db_obj.service,
+                service_instance=service_instance,
+            )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""

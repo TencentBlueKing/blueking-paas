@@ -105,7 +105,6 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
                                     }
                                 },
                                 "feature_flags": {
-                                    "ENABLE_EGRESS_IP": true,
                                     "ENABLE_MOUNT_LOG_TO_HOST": true,
                                     "INGRESS_USE_REGEX": true,
                                     "ENABLE_BK_MONITOR": true,
@@ -143,7 +142,6 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
                                     }
                                 },
                                 "feature_flags": {
-                                    "ENABLE_EGRESS_IP": true,
                                     "ENABLE_MOUNT_LOG_TO_HOST": true,
                                     "INGRESS_USE_REGEX": true,
                                     "ENABLE_BK_MONITOR": true,

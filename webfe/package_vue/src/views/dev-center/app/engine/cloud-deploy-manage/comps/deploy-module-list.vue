@@ -28,7 +28,7 @@
       <!-- 拖拽排序 -->
       <draggable
         v-model="deploymentInfoData"
-        :handle="'.top-info-wrapper'"
+        :handle="'.paasng-deploy-item-dot'"
         @end="draggableEnd"
       >
         <div
@@ -674,13 +674,9 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-left: 12px;
     padding-right: 24px;
     background: #eaebf0;
     border-radius: 2px 2px 0 0;
-    &:hover {
-      cursor: move;
-    }
 
     .left-info {
       height: 100%;
@@ -707,7 +703,8 @@ export default {
         }
 
         .paasng-deploy-item-dot {
-          margin-right: 14px;
+          padding: 5px 14px 5px 12px;
+          cursor: move;
         }
 
         .name {

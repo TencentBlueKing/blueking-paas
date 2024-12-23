@@ -68,3 +68,18 @@ class DuplicatedServiceBoundError(BaseServicesException):
 
 class BindServiceNoPlansError(Exception):
     """When binding a service, appropriate plans cannot be found for all environments."""
+
+
+# Plan Selector Errors start
+
+
+class PlanSelectorError(BaseServicesException):
+    """The base error for selecting plans"""
+
+
+class NoPlanFoundError(BaseServicesException):
+    """No plans found when trying to select a plan"""
+
+
+class MultiplePlanFoundError(BaseServicesException):
+    """Multiple plans found when trying to select a plan"""

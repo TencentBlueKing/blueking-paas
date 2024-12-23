@@ -32,6 +32,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
 from paasng.accessories.servicehub.exceptions import (
     BindServiceNoPlansError,
     ReferencedAttachmentNotFound,
@@ -224,6 +225,41 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         slz = slzs.ServicePlanSpecificationSLZ(results, many=True)
         return Response({"results": slz.data})
+
+    @app_action_required(AppAction.BASIC_DEVELOP)
+    @swagger_auto_schema(response_serializer=slzs.PossiblePlansOutputSLZ)
+    def list_possible_plans(self, request, code, module_name, service_id):
+        """获取应用模块绑定服务时，可能的方案详情，主要由客户端在绑定前调用。关键逻辑：
+
+        - 当 `has_multiple_plans` 为 False 时，无需其他操作，可直接继续完成绑定
+        - 当 `has_multiple_plans` 为 True 时，表示存在多个可选方案，此时需要引导用户完成选择
+            - `static_plans` 非空时：表示所有环境的方案一致，使用该列表作为可选项
+            - `env_specific_plans` 非空时：表示不同环境的方案不一致，使用该字典作为可选项，此时
+              可能需要区分环境来展示多个可选项
+        """
+        application = self.get_application()
+        module = self.get_module_via_path()
+        service = self.get_service(service_id, application)
+
+        possible_plans = PlanSelector().list_possible_plans(service, module)
+        has_multi = possible_plans.has_multiple_plans()
+        if not has_multi:
+            # 当不存在多个可选方案时，无需返回更多信息，因为可以直接完成绑定
+            slz = slzs.PossiblePlansOutputSLZ({"has_multiple_plans": False})
+            return Response(slz.data)
+
+        def _plans_to_data(plans):
+            return [{"uuid": p.uuid, "name": p.name, "description": p.description} for p in plans]
+
+        # Set the plans data
+        data: Dict[str, Any] = {"has_multiple_plans": has_multi}
+        if static_plans := possible_plans.get_static_plans():
+            data["static_plans"] = _plans_to_data(static_plans)
+        elif env_plans := possible_plans.get_env_specific_plans():
+            data["env_specific_plans"] = {env: _plans_to_data(plans) for env, plans in env_plans.items()}
+
+        slz = slzs.PossiblePlansOutputSLZ(data)
+        return Response(slz.data)
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     def unbind(self, request, code, module_name, service_id):

@@ -66,6 +66,17 @@ class TestClient:
         auth_inst = mocked_get.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 
+    @mock.patch("requests.get")
+    def test_retrieve_instance_to_be_deleted_normal(self, mocked_get, client):
+        mocked_get.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)
+
+        data = client.retrieve_instance_to_be_deleted(instance_id="faked-id")
+        assert data is not None
+        assert mocked_get.called
+        assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/?to_be_deleted=true"
+        auth_inst = mocked_get.call_args[1]["auth"]
+        assert isinstance(auth_inst, ClientJWTAuth)
+
     @mock.patch("requests.post")
     def test_provision_instance_normal(self, mocked_post, client):
         mocked_post.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)

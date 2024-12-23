@@ -37,7 +37,6 @@ from paasng.accessories.servicehub.exceptions import (
     ReferencedAttachmentNotFound,
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
-    SvcInstanceNotFound,
     UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -772,9 +771,8 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         categorized_rels = defaultdict(list)
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
-                try:
-                    instance = rel.get_instance()
-                except SvcInstanceNotFound:
+                instance = rel.get_instance()
+                if not instance:
                     # 如果已经回收了，获取不到 instance，跳过
                     continue
 

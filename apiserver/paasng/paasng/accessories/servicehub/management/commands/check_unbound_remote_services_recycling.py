@@ -19,15 +19,15 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from paasng.accessories.servicehub.tasks import clean_recycled_unbound_remote_instances
+from paasng.accessories.servicehub.tasks import check_unbound_remote_services_recycling
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Check if unbound remote service instance is recycled, if it is recycled, delete object in database."
+    help = "Check if unbound remote service instance is recycled, if it is recycled, delete unbound attachment object in database."
 
     def handle(self, *args, **options):
         logger.info("Start to check if remote unbound service instance recycled")
-        clean_recycled_unbound_remote_instances()
+        check_unbound_remote_services_recycling()
         logger.info("Complete check if remote unbound service instance recycled")

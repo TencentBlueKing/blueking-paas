@@ -51,7 +51,7 @@ def clean_instances():
             logger.info(f"instance<{uuid}> cleaned. ")
 
 
-def clean_recycled_unbound_remote_instances():
+def check_unbound_remote_services_recycling():
     store = get_remote_store()
     unbound_instances = UnboundRemoteServiceEngineAppAttachment.objects.all()
 

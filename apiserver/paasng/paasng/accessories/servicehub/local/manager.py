@@ -170,19 +170,15 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
             environment=db_env.environment, service=self.db_obj.service.name, plan=self.db_obj.plan.name
         ).inc()
 
-    @atomic
     def recycle_resource(self):
-        if self.is_provisioned() and self.db_obj.service.prefer_async_delete:
-            att = UnboundServiceEngineAppAttachment.objects.create(
-                engine_app=self.db_obj.engine_app,
-                service=self.db_obj.service,
-                service_instance=self.db_obj.service_instance,
-            )
-            logger.info(
-                f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
-            )
-
-        self.db_obj.clean_service_instance()
+        if self.is_provisioned():
+            self.db_obj.clean_service_instance()
+            if self.db_obj.service.prefer_async_delete:
+                UnboundServiceEngineAppAttachment.objects.create(
+                    engine_app=self.db_obj.engine_app,
+                    service=self.db_obj.service,
+                    service_instance=self.db_obj.service_instance,
+                )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
@@ -216,7 +212,7 @@ class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
     def recycle_resource(self) -> None:
         self.db_obj.clean_service_instance()
 
-    def get_instance(self) -> ServiceInstanceObj:
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
         """Get service instance object"""
         # All local service instance's credentials was prefixed with service name
         service_name = self.db_obj.service.name

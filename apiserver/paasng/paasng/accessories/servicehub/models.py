@@ -140,6 +140,7 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
 
     class Meta:
         verbose_name = "本地已解绑增强服务"
+        unique_together = ("service", "engine_app", "service_instance")
 
     def clean_service_instance(self):
         """回收增强服务资源"""
@@ -189,6 +190,7 @@ class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 
     class Meta:
         verbose_name = "远程已解绑增强服务"
+        unique_together = ("service_id", "engine_app", "service_instance_id")
 
 
 class ServiceDBProperties:

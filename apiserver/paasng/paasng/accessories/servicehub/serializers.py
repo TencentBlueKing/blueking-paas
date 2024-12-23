@@ -273,7 +273,7 @@ class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
     count = serializers.SerializerMethodField(help_text="数量")
 
     def get_count(self, obj):
-        return len(obj.get("unbound_instances") or [])
+        return len(obj.get("unbound_instances", []))
 
 
 class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):

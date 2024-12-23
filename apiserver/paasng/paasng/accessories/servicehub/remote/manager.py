@@ -34,7 +34,6 @@ from paas_wl.workloads.networking.egress.shim import get_cluster_egress_info
 from paasng.accessories.servicehub import constants, exceptions
 from paasng.accessories.servicehub.exceptions import (
     BindServiceNoPlansError,
-    SvcInstanceNotFound,
     UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.models import (
@@ -296,15 +295,12 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
 
-        if self.remote_client.config.prefer_async_delete:
-            att = UnboundRemoteServiceEngineAppAttachment.objects.create(
-                engine_app=self.db_engine_app,
-                service_id=self.db_obj.service_id,
-                service_instance_id=self.db_obj.service_instance_id,
-            )
-            logger.info(
-                f"Create unbound remote service engine app attachment: service id: {att.service_id}, service instance id: {att.service_instance_id}"
-            )
+            if self.remote_client.config.prefer_async_delete:
+                UnboundRemoteServiceEngineAppAttachment.objects.create(
+                    engine_app=self.db_engine_app,
+                    service_id=self.db_obj.service_id,
+                    service_instance_id=self.db_obj.service_instance_id,
+                )
 
         self.db_obj.service_instance_id = None
         self.db_obj.save()
@@ -400,19 +396,18 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         try:
             instance_data = self.remote_client.retrieve_instance_to_be_deleted(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
-            # if not find service instance with this id, remote response http status code 404
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
             if e.status_code == 404:
-                logger.info(
-                    f"Unbound remote service instance is recycled, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
-                )
                 self.db_obj.delete()
-                raise SvcInstanceNotFound(f"service instance {self.db_obj.service_instance_id} not found")
+                return {}
             raise
         return instance_data
 
-    def get_instance(self) -> ServiceInstanceObj:
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
         """Get service instance object"""
         instance_data = self.retrieve_instance_to_be_deleted()
+        if not instance_data:
+            return None
         svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
 
@@ -426,19 +421,19 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
     def recycle_resource(self) -> None:
         try:
-            self.retrieve_instance_to_be_deleted()
-        except SvcInstanceNotFound:
-            return
-
-        try:
             self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
-            self.db_obj.delete()
-            logger.info(
-                f"Manually recycled unbound remote service instance, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
-            )
-        except Exception as e:
-            logger.exception("Error occurs during recycling")
-            raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+        except RClientResponseError as e:
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
+            if e.status_code == 404:
+                pass
+            else:
+                logger.exception("Error occurs during recycling")
+                raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+
+        self.db_obj.delete()
+        logger.info(
+            f"Manually recycled unbound remote service instance, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+        )
 
 
 class RemotePlainInstanceMgr(PlainInstanceMgr):

@@ -219,7 +219,7 @@ class UnboundEngineAppInstanceRel(metaclass=ABCMeta):
     db_obj: Any
 
     @abstractmethod
-    def get_instance(self) -> ServiceInstanceObj:
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
         raise NotImplementedError
 
     @abstractmethod

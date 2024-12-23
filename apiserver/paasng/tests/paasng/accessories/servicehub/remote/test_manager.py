@@ -573,7 +573,6 @@ class TestRemoteMgr:
         bk_app,
         bk_module,
     ):
-        """Test list unbound instance rels"""
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
 
         mgr = RemoteServiceMgr(store=store)
@@ -623,7 +622,6 @@ class TestRemoteMgr:
         bk_app,
         bk_module,
     ):
-        """Test get unbound service instance rel by instance id"""
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
 
         mgr = RemoteServiceMgr(store=store)

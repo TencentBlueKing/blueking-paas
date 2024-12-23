@@ -265,7 +265,6 @@ class TestLocalMgr:
     def test_list_unbound_instance_rels(
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
-        """Test list unbound instance rels"""
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
         delete_service_instance.side_effect = (
             lambda service_instance: service_instance.delete() if service_instance else None
@@ -308,7 +307,6 @@ class TestLocalMgr:
     def test_get_unbound_instance_rel_by_instance_id(
         self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
     ):
-        """Test get unbound instance rel by instance id"""
         create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
         delete_service_instance.side_effect = (
             lambda service_instance: service_instance.delete() if service_instance else None

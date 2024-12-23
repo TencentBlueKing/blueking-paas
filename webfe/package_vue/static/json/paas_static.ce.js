@@ -298,7 +298,9 @@ export const PLATFORM_CONFIG = {
         // 监控仪表盘指引
         MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics',
         // 应用描述文件介绍
-        APP_DESC_CNATIVE: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative'
+        APP_DESC_CNATIVE: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative',
+        // 访问控制台
+        WEB_CONSOLE: DOCS_URL_PREFIX + '/topics/paas/webconsole'
     },
 
     CONFIG: {

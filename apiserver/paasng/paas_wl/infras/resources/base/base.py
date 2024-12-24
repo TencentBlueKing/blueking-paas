@@ -16,11 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Base utils for kubernetes scheduler"""
+
 import logging
+import uuid
 from functools import lru_cache
 from typing import Dict, List
 
 from blue_krill.connections.ha_endpoint_pool import HAEndpointPool
+from django.core.cache import cache
 from kubernetes.client import ApiClient as BaseApiClient
 from kubernetes.client.rest import RESTClientObject
 from urllib3.exceptions import HTTPError
@@ -31,12 +34,19 @@ from paas_wl.infras.cluster.pools import ContextConfigurationPoolMap
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
 def get_global_configuration_pool() -> Dict[str, HAEndpointPool]:
+    version = global_config_version.get()
+    return _get_global_configuration_pool(version)
+
+
+@lru_cache
+def _get_global_configuration_pool(version: str) -> Dict[str, HAEndpointPool]:
     """Get the global config pool object.
 
     NOTE: This function is cached for performance. When the clusters have been updated,
     the cache must be cleared.
+
+    :param version: The global config version. 与 lru_cache 配合使用, 如果 version 发生变化, 则缓存失效, 从数据库重新加载
     """
     return ContextConfigurationPoolMap.from_db()
 
@@ -112,3 +122,26 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
 
     ep_pool = get_global_configuration_pool()[cluster_name]
     return EnhancedApiClient(ep_pool=ep_pool)
+
+
+class _GlobalConfigVersion:
+    """Global config version. This is just used to identify the global config has been updated or not"""
+
+    version_key = "global_config_version"
+
+    def get(self):
+        """get current version"""
+        if v := cache.get(self.version_key):
+            return v
+
+        v = str(uuid.uuid4())
+        cache.set(self.version_key, v, timeout=None)
+        return v
+
+    def update(self):
+        """update version to indicate global config has been updated"""
+        v = str(uuid.uuid4())
+        cache.set(self.version_key, v, timeout=None)
+
+
+global_config_version = _GlobalConfigVersion()

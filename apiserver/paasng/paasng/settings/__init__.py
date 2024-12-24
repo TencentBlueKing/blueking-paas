@@ -671,7 +671,6 @@ BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 # 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
 IAM_PERM_EFFECTIVE_TIMEDELTA = 5 * 60
 
-BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
 BK_COMPONENT_API_URL = settings.get("BK_COMPONENT_API_URL", "")
@@ -956,17 +955,32 @@ REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAU
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
+
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
+
 # 解析通过 API Gateway 的请求，该值为空时跳过解析
 APIGW_PUBLIC_KEY = settings.get("APIGW_PUBLIC_KEY", "")
 
+# 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
+BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE
+
+BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 BKAUTH_BACKEND_TYPE = settings.get("BKAUTH_BACKEND_TYPE", "bk_token")
 BKAUTH_TOKEN_APP_CODE = settings.get("BKAUTH_TOKEN_APP_CODE", BK_APP_CODE)
 BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", BK_APP_SECRET)
 
+# 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
+# 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
+# 多租户模式下(BKAUTH_ENABLE_MULTI_TENANT_MODE=True)必须设置有效的 BKAUTH_USER_INFO_APIGW_URL, 否则无法使用租户功能
+BKAUTH_BK_LOGIN_APIGW_STAGE = settings.get("BKAUTH_BK_LOGIN_APIGW_STAGE", "prod")
+BKAUTH_USER_INFO_APIGW_URL = settings.get(
+    "BKAUTH_USER_INFO_APIGW_URL",
+    f'{BK_API_URL_TMPL.format(api_name="bk-login")}/{BKAUTH_BK_LOGIN_APIGW_STAGE}/login/api/v3/open/bk-tokens/userinfo/',
+)
 BKAUTH_USER_COOKIE_VERIFY_URL = settings.get("BKAUTH_USER_COOKIE_VERIFY_URL", f"{BK_LOGIN_API_URL}/api/v3/is_login/")
+
 BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get(
     "BKAUTH_TOKEN_USER_INFO_ENDPOINT", f"{BK_COMPONENT_API_URL}/api/c/compapi/v2/bk_login/get_user/"
 )

@@ -116,10 +116,14 @@ def submit_canary_release_ticket(
 
     # 可见范围
     visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+    # 插件概览页面的地址
+    plugin_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/plugin-center/plugin/{pd.identifier}/{plugin.id}/summary"
     # 灰度发布在 ITSM 中展示的字段
     canary_fields = [
         # 提单人，ITSM 回调的信息不准确，需要自己存储获取
         {"key": "submitter", "value": operator},
+        # 插件概览页面地址
+        {"key": "plugin_url", "value": plugin_url},
         # 发布策略的字段
         {"key": "strategy_id", "value": release_strategy.id},
         {"key": "strategy", "value": release_strategy.get_strategy_display()},
@@ -183,10 +187,13 @@ def submit_visible_range_ticket(
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
     callback_url = f"{paas_url}/open/api/itsm/bkplugins/" + f"{pd.identifier}/plugins/{plugin.id}/visible_range/"
-
+    # 插件概览页面的地址
+    plugin_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/plugin-center/plugin/{pd.identifier}/{plugin.id}/summary"
     visible_range_fields = [
         # 提单人，ITSM 回调的信息不准确，需要自己存储获取
         {"key": "submitter", "value": operator},
+        # 插件概览页面地址
+        {"key": "plugin_url", "value": plugin_url},
         # 需要单独存储原始数据，用户审批成功后回调后用于更新 DB 的可见范围
         {"key": "origin_bkci_project", "value": bkci_project},
         {"key": "origin_organization", "value": organization},
@@ -248,9 +255,7 @@ def is_itsm_ticket_closed(sn: str) -> bool:
     """
     client = ItsmClient()
     ticket_status = client.get_ticket_status(sn)["current_status"]
-    if ticket_status in ItsmTicketStatus.completed_status():
-        return True
-    return False
+    return ticket_status in ItsmTicketStatus.completed_status()
 
 
 def _get_basic_fields(pd: PluginDefinition, plugin: PluginInstance) -> List[dict]:

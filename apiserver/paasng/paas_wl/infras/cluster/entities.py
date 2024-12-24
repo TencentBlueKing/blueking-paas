@@ -119,8 +119,9 @@ class IngressConfig:
 class AllocationRule:
     """集群分配规则"""
 
+    # 是否按环境分配
     env_specific: bool
-    # 匹配规则，如果不需要，则设置为 None
+    # 匹配规则，如果不需要，则设置为 None（例：{"region_is": "default"}）
     matcher: Dict[ClusterAllocationPolicyCondType, str] | None = None
     # 集群名称列表，非按环境分配时用
     clusters: List[str] | None = None

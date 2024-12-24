@@ -175,6 +175,8 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         self.db_obj.clean_service_instance()
         if self.db_obj.service.prefer_async_delete:
             UnboundServiceEngineAppAttachment.objects.create(
+                region=self.db_obj.region,
+                owner=self.db_obj.owner,
                 engine_app=self.db_obj.engine_app,
                 service=self.db_obj.service,
                 service_instance=service_instance,

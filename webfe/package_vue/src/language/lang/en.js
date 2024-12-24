@@ -2932,4 +2932,9 @@ export default {
   '文件 {x} 名称不符合规范': 'The filename {x} does not conform to specifications',
   '文件 {x} 等 {n} 个文件名称不符合规范': 'The filename {x} and {n} other files do not conform to specifications',
   '修改的文件路径中不能包含中文，空格，以及除连接符（-），下划线（一），句号（.）外的特殊字符': 'The modified file path cannot contain Chinese characters, spaces, or special characters other than hyphens (-), underscores (_), and periods (.).',
+  暂无访问控制台功能: 'Web console is currently not available',
+  '访问控制台可以让您进入应用进程的容器，查看线上运行的代码、进行在线调试以及执行一次性命令等操作。': 'The web console allows you to enter the container of the application process, view the code running online, perform online debugging, and execute one-time commands.',
+  '如需使用该功能，需要：': 'To use this feature, you need to:',
+  '1. 安装 BCS 套餐': '1. Install the BCS package.',
+  '2. 将应用集群来源修改为: BCS 集群': '2. Change the application cluster source to: BCS cluster.',
 };

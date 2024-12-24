@@ -497,6 +497,19 @@
       :params="logConfig.params"
       @refresh="refreshLogs"
     ></process-log>
+
+    <!-- 功能依赖项展示 -->
+    <FunctionalDependency
+      :show-dialog.sync="showFunctionalDependencyDialog"
+      mode="dialog"
+      :title="$t('暂无访问控制台功能')"
+      :functional-desc="
+        $t('访问控制台可以让您进入应用进程的容器，查看线上运行的代码、进行在线调试以及执行一次性命令等操作。')
+      "
+      :guide-title="$t('如需使用该功能，需要：')"
+      :guide-desc-list="[$t('1. 安装 BCS 套餐'), $t('2. 将应用集群来源修改为: BCS 集群')]"
+      @gotoMore="gotoMore"
+    />
   </div>
 </template>
 
@@ -513,6 +526,7 @@ import eventDetail from './event-detail.vue';
 import dayjs from 'dayjs';
 import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
@@ -527,6 +541,7 @@ export default {
     scaleDialog,
     eventDetail,
     processLog,
+    FunctionalDependency,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -701,6 +716,7 @@ export default {
         logs: [],
         parmas: {},
       },
+      showFunctionalDependencyDialog: false,
     };
   },
   computed: {
@@ -725,6 +741,9 @@ export default {
       const defaultWidth = 980;
       const maxWidth = window.innerWidth * 0.8;
       return Math.min(defaultWidth, maxWidth);
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
     },
   },
 
@@ -1420,6 +1439,11 @@ export default {
      * @param {Object} instance, processes
      */
     async showInstanceConsole(instance, processes) {
+      // 暂无访问控制台功能
+      if (!this.platformFeature.WEB_CONSOLE) {
+        this.showFunctionalDependencyDialog = true;
+        return;
+      }
       this.processRefuseDialog.isLoading = true;
       try {
         const params = {
@@ -1593,6 +1617,11 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 查看更多-访问控制台
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.WEB_CONSOLE, '_blank');
     },
   },
 };

@@ -67,9 +67,10 @@ def user_has_plat_mgt_action_perm(user: User, action: PlatMgtAction) -> bool:
     if not user.is_authenticated:
         return False
 
-    profile = UserProfile.objects.get_profile(user).first()
-    if not profile:
+    try:
+        profile = UserProfile.objects.get_profile(user)
+    except UserProfile.DoesNotExist:
         return False
 
     # FIXME（多租户）目前暂时使用 SiteRole，后续得切换成新的
-    return profile.role in [SiteRole.ADMIN, SiteRole.SUPER_USER]
+    return profile.role in [SiteRole.ADMIN.value, SiteRole.SUPER_USER.value]

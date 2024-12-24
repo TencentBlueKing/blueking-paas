@@ -15,10 +15,33 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
-from paasng.utils.basic import re_path
 
-urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
-]
+class ClusterSource(StrStructuredEnum):
+    """集群来源"""
+
+    BCS = EnumField("bcs", "BCS 集群")
+    NATIVE_K8S = EnumField("native_k8s", "原生 K8S 集群")
+
+
+class ClusterAuthType(StrStructuredEnum):
+    """集群认证类型"""
+
+    TOKEN = EnumField("token", "Token")
+    CERT = EnumField("cert", "证书")
+
+
+class TolerationOperator(StrStructuredEnum):
+    """容忍度运算符"""
+
+    EQUAL = EnumField("Equal", "Equal")
+    EXISTS = EnumField("Exists", "Exists")
+
+
+class TolerationEffect(StrStructuredEnum):
+    """容忍度效果"""
+
+    NO_EXECUTE = EnumField("NoExecute", "不执行")
+    NO_SCHEDULE = EnumField("NoSchedule", "不调度")
+    PREFER_NO_SCHEDULE = EnumField("PreferNoSchedule", "倾向不调度")

@@ -15,10 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
-from paasng.utils.basic import re_path
+from paasng.infras.accounts.permissions.constants import PlatMgtAction
+from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 
-urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
-]
+
+class ClusterComponentViewSet(viewsets.GenericViewSet):
+    """集群组件管理"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    def list(self, request, cluster_name, *args, **kwargs):
+        """获取集群组件列表"""
+        # FIXME 根据集群 ID 获取集群组件列表
+
+    def upsert(self, request, cluster_name, component_name, *args, **kwargs):
+        """更新或新建集群组件"""
+        # FIXME 根据集群 ID 和组件名称更新或新建集群组件

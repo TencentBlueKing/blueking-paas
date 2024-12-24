@@ -19,7 +19,6 @@ import base64
 from typing import List
 
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.constants import ClusterTokenType
 from paas_wl.infras.cluster.models import Cluster
@@ -107,39 +106,6 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     default_node_selector = serializers.JSONField(default={}, required=False)
     default_tolerations = serializers.JSONField(default=[], required=False)
     feature_flags = serializers.JSONField(default=dict, required=False)
-
-
-class GenRegionClusterStateSLZ(serializers.Serializer):
-    """生成 RegionClusterState 用序列化器"""
-
-    region = serializers.CharField(required=True, help_text="specify a region name")
-    ignore_labels = serializers.ListField(
-        child=serializers.CharField(),
-        required=False,
-        default=list,
-        help_text="ignore nodes if it matches any of these labels, "
-        "will always include 'node-role.kubernetes.io/master=true'",
-    )
-    include_masters = serializers.BooleanField(
-        required=False, default=False, help_text="include master nodes or not, default is false"
-    )
-
-    def validate(self, attrs):
-        cluster_regions = set(Cluster.objects.values_list("region", flat=True))
-
-        # 若指定 region，则必须有对应 region 的集群
-        if attrs["region"] not in cluster_regions:
-            raise ValidationError(f"region: [{attrs['region']}] is not a valid region name")
-
-        ignore_labels = [value.split("=") for value in attrs["ignore_labels"]]
-        if any(len(label) != 2 for label in ignore_labels):
-            raise ValidationError("invalid label given!")
-
-        if not attrs["include_masters"]:
-            ignore_labels.append(("node-role.kubernetes.io/master", "true"))
-
-        attrs["ignore_labels"] = ignore_labels
-        return attrs
 
 
 class GetClusterComponentStatusSLZ(serializers.Serializer):

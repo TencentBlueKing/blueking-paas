@@ -15,10 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
-
-from paasng.utils.basic import re_path
-
-urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
-]
+# 敏感信息掩码（注：7 位 * 是故意的，避免遇到用户输入 6/8 位 * 的情况）
+# 适用场景：平台管理 - 配置更新功能时，不对用户暴露数据库中的值（返回 MASK），用户提交 MASK 值
+# 不会对数据库中的值进行修改，避免出现修改非 MASK 的配置时，还需要填写所有 MASK 值的情况（体验优化）
+SENSITIVE_MASK = "*******"

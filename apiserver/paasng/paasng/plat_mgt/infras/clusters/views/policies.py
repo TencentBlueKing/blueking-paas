@@ -14,53 +14,20 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from django.db import transaction
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
 
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paas_wl.infras.cluster.models import ClusterAllocationPolicy
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-
-
-class ClusterViewSet(viewsets.GenericViewSet):
-    """集群管理，接入相关 API"""
-
-    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
-
-    def list(self, request, *args, **kwargs):
-        """
-        获取集群列表
-
-        平台管理员：可以查看到所有集群
-        租户管理员：只能查看本租户创建的 & 可用的集群
-        """
-
-    @transaction.atomic(using="workloads")
-    def create(self, request, *args, **kwargs):
-        """
-        新建集群
-
-        平台管理员：可以创建集群，并分配给指定租户（多个）
-        租户管理员：只能创建集群，并分配给本租户
-        """
-
-    @transaction.atomic(using="workloads")
-    def update(self, request, *args, **kwargs):
-        """
-        更新集群
-
-        平台管理员：可以更新所有集群
-        租户管理员：只能更新本租户创建的集群
-        """
-
-    @transaction.atomic(using="workloads")
-    def destroy(self, request, *args, **kwargs):
-        """
-        删除集群
-
-        平台管理员：可以删除所有集群
-        租户管理员：只能删除本租户创建的集群
-        """
+from paasng.plat_mgt.infras.clusters.serializers import (
+    ClusterAllocationPolicyCreateInputSLZ,
+    ClusterAllocationPolicyCreateOutputSLZ,
+    ClusterAllocationPolicyListOutputSLZ,
+    ClusterAllocationPolicyUpdateInputSLZ,
+)
 
 
 class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
@@ -70,14 +37,35 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         """获取集群分配策略列表"""
+        # FIXME（多租户）根据平台/租户管理员身份，返回不同的集群分配策略列表
+        return ClusterAllocationPolicy.objects.all()
 
     def list(self, request, *args, **kwargs):
         """获取集群分配策略"""
+        policies = self.get_queryset()
+        return Response(data=ClusterAllocationPolicyListOutputSLZ(policies, many=True).data)
 
-    @transaction.atomic(using="workloads")
     def create(self, request, *args, **kwargs):
         """新建集群分配策略"""
+        slz = ClusterAllocationPolicyCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
 
-    @transaction.atomic(using="workloads")
+        policy = ClusterAllocationPolicy.objects.create(**data)
+        return Response(
+            status=status.HTTP_201_CREATED,
+            data=ClusterAllocationPolicyCreateOutputSLZ(policy).data,
+        )
+
     def update(self, request, *args, **kwargs):
         """更新集群分配策略"""
+        slz = ClusterAllocationPolicyUpdateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        policy = self.get_object()
+        policy.type = data["type"]
+        policy.rules = data["rules"]
+        policy.save(update_fields=["type", "rules", "updated"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -15,10 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
+from .clusters import (
+    ClusterCreateInputSLZ,
+    ClusterListOutputSLZ,
+    ClusterRetrieveOutputSLZ,
+    ClusterUpdateInputSLZ,
+)  # noqa: F401
+from .policies import (
+    ClusterAllocationPolicyCreateInputSLZ,
+    ClusterAllocationPolicyCreateOutputSLZ,
+    ClusterAllocationPolicyListOutputSLZ,
+    ClusterAllocationPolicyUpdateInputSLZ,
+)  # noqa: F401
 
-from paasng.utils.basic import re_path
-
-urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
+__all__ = [
+    # clusters
+    "ClusterListOutputSLZ",
+    "ClusterRetrieveOutputSLZ",
+    "ClusterCreateInputSLZ",
+    "ClusterUpdateInputSLZ",
+    # policies
+    "ClusterAllocationPolicyListOutputSLZ",
+    "ClusterAllocationPolicyCreateInputSLZ",
+    "ClusterAllocationPolicyCreateOutputSLZ",
+    "ClusterAllocationPolicyUpdateInputSLZ",
 ]

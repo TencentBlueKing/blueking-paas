@@ -15,10 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
+from .clusters import ClusterViewSet  # noqa: F401
+from .components import ClusterComponentViewSet  # noqa: F401
+from .policies import ClusterAllocationPolicyViewSet  # noqa: F401
 
-from paasng.utils.basic import re_path
-
-urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
-]
+__all__ = ["ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]

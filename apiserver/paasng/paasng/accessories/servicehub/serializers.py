@@ -258,3 +258,13 @@ class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
     credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")
+
+
+class PossiblePlansOutputSLZ(serializers.Serializer):
+    """The possible plans for a service"""
+
+    has_multiple_plans = serializers.BooleanField(help_text="是否存在多个可选方案", read_only=True)
+    static_plans = serializers.ListField(
+        help_text="静态方案列表", child=serializers.DictField(), default=None, read_only=True
+    )
+    env_specific_plans = serializers.DictField(help_text="环境特定方案列表", default=None, read_only=True)

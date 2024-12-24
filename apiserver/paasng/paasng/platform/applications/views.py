@@ -98,10 +98,7 @@ from paasng.platform.applications.models import (
 from paasng.platform.applications.pagination import ApplicationListPagination
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
 from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
-from paasng.platform.applications.signals import (
-    application_member_updated,
-    post_create_application,
-)
+from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (

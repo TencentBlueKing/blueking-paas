@@ -25,6 +25,7 @@ from paasng.infras.accounts.models import User
 
 def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> tuple[AppTenantMode, str, Tenant]:
     """Validate the params related with multi-tenant feature.
+
     :param user: The user who is creating the application.
     :param raw_app_tenant_mode: The app tenant mode in params.
     :returns: A tuple, the items: (app_tenant_mode, app_tenant_id, tenant).

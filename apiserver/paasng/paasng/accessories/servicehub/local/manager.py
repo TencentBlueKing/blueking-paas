@@ -380,7 +380,7 @@ class LocalServiceMgr(BaseServiceMgr):
     def list_unbound_instance_rels(
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
-        """Return all unbound engine_app <-> local service instances by specified service (None for all)"""
+        """Return all local provisioned service instances which is unbound with engine app, filter by specified service (None for all)"""
         qs = engine_app.unbound_service_attachment.all()
         if service:
             qs = qs.filter(service_id=service.uuid)
@@ -436,6 +436,7 @@ class LocalServiceMgr(BaseServiceMgr):
             raise SvcAttachmentDoesNotExist from e
 
     def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        """Return a local provisioned service instance which is unbound with engine app by specified service and service instance id"""
         try:
             instance = UnboundServiceEngineAppAttachment.objects.get(
                 service_id=service.uuid,

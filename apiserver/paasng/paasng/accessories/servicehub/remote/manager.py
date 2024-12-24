@@ -391,7 +391,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
         self.remote_client = RemoteServiceClient(self.remote_config)
 
-    def retrieve_instance_to_be_deleted(self) -> dict:
+    def _retrieve_instance_to_be_deleted(self) -> dict:
         try:
             instance_data = self.remote_client.retrieve_instance_to_be_deleted(str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
@@ -404,7 +404,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
 
     def get_instance(self) -> Optional[ServiceInstanceObj]:
         """Get service instance object"""
-        instance_data = self.retrieve_instance_to_be_deleted()
+        instance_data = self._retrieve_instance_to_be_deleted()
         if not instance_data:
             return None
         svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
@@ -419,6 +419,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         )
 
     def recycle_resource(self) -> None:
+        """Recycle unbound service instance resource synchronously"""
         try:
             self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
         except RClientResponseError as e:
@@ -693,7 +694,7 @@ class RemoteServiceMgr(BaseServiceMgr):
     def list_unbound_instance_rels(
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundRemoteEngineAppInstanceRel, None, None]:
-        """Return all unbound engine_app <-> remote service instances"""
+        """Return all remote provisioned service instances which is unbound with engine app, filter by specific service (None for all)"""
         qs = engine_app.unbound_remote_service_attachment.all()
         if service:
             qs = qs.filter(service_id=service.uuid)
@@ -768,6 +769,7 @@ class RemoteServiceMgr(BaseServiceMgr):
             raise exceptions.SvcAttachmentDoesNotExist from e
 
     def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        """Return a remote provisioned service instances which is unbound with engine app, filter by specific service and service instance id"""
         try:
             instance = UnboundRemoteServiceEngineAppAttachment.objects.get(
                 service_id=service.uuid,

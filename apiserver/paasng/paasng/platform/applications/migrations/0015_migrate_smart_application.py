@@ -33,7 +33,7 @@ def forwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("applications", "0015_alter_application_name_and_more"),
+        ("applications", "0014_application_app_tenant_id_and_more"),
     ]
 
     operations = [

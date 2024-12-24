@@ -20,6 +20,8 @@ import string
 import pytest
 from django.conf import settings
 
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.scene_app.initializer import SceneAPPInitializer
 from tests.utils import mock
 from tests.utils.basic import generate_random_string
@@ -58,6 +60,9 @@ class TestSceneAPPInitializer:
             app_name,
             app_code,
             settings.DEFAULT_REGION_NAME,
+            AppTenantMode.GLOBAL,
+            "",
+            DEFAULT_TENANT_ID,
             {
                 "source_control_type": "github",
                 "source_repo_url": "https://github.com/octocat/helloWorld.git",

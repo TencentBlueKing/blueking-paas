@@ -17,7 +17,7 @@
 
 import cattr
 
-from paas_wl.infras.cluster.models import IngressConfig
+from paas_wl.infras.cluster.entities import IngressConfig
 
 
 def test_find_subdomain_domain():

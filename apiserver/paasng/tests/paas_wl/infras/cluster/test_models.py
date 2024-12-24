@@ -22,12 +22,13 @@ from django.db.utils import IntegrityError
 from django.utils.crypto import get_random_string
 
 from paas_wl.infras.cluster.constants import ClusterTokenType
+from paas_wl.infras.cluster.entities import Domain, IngressConfig, PortMap
 from paas_wl.infras.cluster.exceptions import (
     DuplicatedDefaultClusterError,
     NoDefaultClusterError,
     SwitchDefaultClusterError,
 )
-from paas_wl.infras.cluster.models import Cluster, Domain, EnhancedConfiguration, IngressConfig, PortMap
+from paas_wl.infras.cluster.models import Cluster, EnhancedConfiguration
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
 

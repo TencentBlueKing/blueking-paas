@@ -23,7 +23,8 @@ from django.utils.crypto import get_random_string
 from filelock import FileLock
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
-from paas_wl.infras.cluster.models import APIServer, Cluster, IngressConfig
+from paas_wl.infras.cluster.entities import IngressConfig
+from paas_wl.infras.cluster.models import APIServer, Cluster
 
 
 def _generate_cluster_name() -> str:

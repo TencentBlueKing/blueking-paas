@@ -17,20 +17,23 @@
 
 import contextlib
 import logging
-from operator import attrgetter
 from typing import Any, Dict, List, Optional
 from urllib import parse
 
-from attrs import Factory, asdict, define
 from blue_krill.models.fields import EncryptField
-from cattr import register_structure_hook, structure_attrs_fromdict
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
 from django.db import models, transaction
 from jsonfield import JSONField
 from kubernetes.client import Configuration
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
+from paas_wl.infras.cluster.constants import (
+    ClusterAnnotationKey,
+    ClusterFeatureFlag,
+    ClusterTokenType,
+    ClusterType,
+)
+from paas_wl.infras.cluster.entities import AllocationRule, IngressConfig
 from paas_wl.infras.cluster.exceptions import (
     DuplicatedDefaultClusterError,
     NoDefaultClusterError,
@@ -38,97 +41,11 @@ from paas_wl.infras.cluster.exceptions import (
 )
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.dns import custom_resolver
-from paas_wl.utils.models import UuidAuditedModel, make_json_field
+from paas_wl.utils.models import UuidAuditedModel
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.utils.models import make_json_field
 
 logger = logging.getLogger(__name__)
-
-
-@define
-class PortMap:
-    """PortMap is used to declare the port of http/https protocol exposed by the ingress gateway."""
-
-    http: int = 80
-    https: int = 443
-
-    def get_port_num(self, protocol: str) -> int:
-        """Return port number by protocol"""
-        return asdict(self)[protocol]
-
-
-@define
-class Domain:
-    name: str
-    # reserved: 表示该域名是否保留域名
-    reserved: bool = False
-    # https_enabled: 表示该域名是否打开 HTTPS 访问（要求提供对应证书）
-    https_enabled: bool = False
-
-    @staticmethod
-    def structure(obj, cl):
-        """对旧数据结构的兼容逻辑"""
-        if isinstance(obj, str):
-            return cl(name=obj)
-        return structure_attrs_fromdict(obj, cl)
-
-
-register_structure_hook(Domain, Domain.structure)
-
-
-@define
-class IngressConfig:
-    # [保留选项] 一个默认的 Ingress 域名字符串模板，形如 "%s.example.com"。当该选项有值时，
-    # 系统会为每个应用创建一个匹配域名 "{app_scheduler_name}.example.com" 的独一无二的 Ingress
-    # 资源。配合其他负载均衡器，可完成复杂的请求转发逻辑。
-    #
-    # 该配置仅供特殊环境中使用，大部分情况下，请直接使用 app_roo_domains 和 sub_path_domains。
-    default_ingress_domain_tmpl: str = ""
-
-    # 支持的子域名的根域列表, 在需要获取单个值的地方, 会优先使用第一个配置的根域名.
-    app_root_domains: List[Domain] = Factory(list)
-    # 支持的子路径的根域列表, 在需要获取单个值的地方, 会优先使用第一个配置的根域名.
-    sub_path_domains: List[Domain] = Factory(list)
-    # Ip address of frontend ingress controller
-    frontend_ingress_ip: str = ""
-    port_map: PortMap = Factory(PortMap)
-
-    def __attrs_post_init__(self):
-        self.app_root_domains = sorted(self.app_root_domains, key=attrgetter("reserved"))
-        self.sub_path_domains = sorted(self.sub_path_domains, key=attrgetter("reserved"))
-
-    def find_app_root_domain(self, hostname: str) -> Optional[Domain]:
-        """Find the possible app_root_domain by given hostname"""
-        for d in self.app_root_domains:
-            if hostname.endswith(d.name):
-                return d
-        return None
-
-    def find_subdomain_domain(self, host: str) -> Optional[Domain]:
-        """Find domain object in configured sub-domains by given host.
-
-        :param host: Any valid host name
-        """
-        for d in self.app_root_domains:
-            if d.name == host:
-                return d
-        return None
-
-    def find_subpath_domain(self, host: str) -> Optional[Domain]:
-        """Find domain object in configured sub-path domains by given host.
-
-        :param host: Any valid host name
-        """
-        for d in self.sub_path_domains:
-            if d.name == host:
-                return d
-        return None
-
-    @property
-    def default_root_domain(self) -> Domain:
-        return self.app_root_domains[0]
-
-    @property
-    def default_sub_path_domain(self) -> Domain:
-        return self.sub_path_domains[0]
 
 
 class ClusterManager(models.Manager):
@@ -236,55 +153,75 @@ IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=Ing
 class Cluster(UuidAuditedModel):
     """应用集群"""
 
-    region = models.CharField(max_length=32, db_index=True)
-    name = models.CharField(max_length=32, help_text="name of the cluster", unique=True)
-    type = models.CharField(max_length=32, help_text="cluster type", default=ClusterType.NORMAL)
-    description = models.TextField(help_text="描述信息", blank=True)
-    is_default = models.BooleanField(default=False, null=True, help_text="是否为默认集群")
+    region = models.CharField(help_text="可用区域", max_length=32, db_index=True)
+    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
+    available_tenant_ids = models.JSONField(help_text="可用的租户 ID 列表", default=list)
 
-    ingress_config: IngressConfig = IngressConfigField()
-    annotations = JSONField(default={}, help_text="Annotations are used to add metadata to describe the cluster.")
+    name = models.CharField(help_text="集群名称", max_length=32, unique=True)
+    type = models.CharField(max_length=32, help_text="集群类型", default=ClusterType.NORMAL)
+    description = models.TextField(help_text="集群描述", blank=True)
+    is_default = models.BooleanField(
+        help_text="是否为默认集群（deprecated，后续由分配策略替代）", default=False, null=True
+    )
 
-    ca_data = EncryptField(null=True)
-    # Auth type 1. Client-side certificate
-    cert_data = EncryptField(null=True)
-    key_data = EncryptField(null=True)
-    # Auth type 2. Bearer token
-    token_type = models.IntegerField(null=True)
-    token_value = EncryptField(null=True)
+    ingress_config: IngressConfig = IngressConfigField(help_text="ingress 配置")
+    annotations = JSONField(help_text="集群元数据，如 BCS 项目，集群，业务信息等", default=dict)
 
-    # App related default configs
-    default_node_selector = JSONField(default={}, help_text="default value for app's 'node_selector' field")
-    default_tolerations = JSONField(default=[], help_text="default value for app's 'tolerations' field")
-    feature_flags = JSONField(default={}, help_text="cluster's feature flag set")
+    # 认证方式 A
+    ca_data = EncryptField(help_text="证书认证机构（CA）", null=True)
+    cert_data = EncryptField(help_text="客户端证书", null=True)
+    key_data = EncryptField(help_text="客户端密钥", null=True)
+    # 认证方式 B
+    token_type = models.IntegerField(help_text="Token 类型", default=ClusterTokenType.SERVICE_ACCOUNT)
+    token_value = EncryptField(help_text="Token 值", null=True)
+
+    # App 默认配置
+    default_node_selector = JSONField(help_text="部署到本集群的应用默认节点选择器（node_selector）", default=dict)
+    default_tolerations = JSONField(help_text="部署到本集群的应用默认容忍度（tolerations）", default=list)
+    container_log_dir = models.CharField(
+        help_text="容器日志目录", max_length=255, default="/var/lib/docker/containers"
+    )
+
+    # 集群组件
+    component_preferred_namespace = models.CharField(
+        help_text="集群组件优先部署的命名空间", max_length=64, default="blueking"
+    )
+    component_image_registry = models.CharField(
+        help_text="集群组件镜像仓库地址", max_length=255, default="hub.bktencent.com"
+    )
+    # 集群特性，具体枚举值 -> ClusterFeatureFlag
+    feature_flags = JSONField(help_text="集群特性集", default=dict)
 
     objects = ClusterManager()
 
     def __str__(self):
-        return f"{self.__class__.__name__}(name={self.name}, default={self.is_default})"
-
-    @property
-    def bcs_cluster_id(self) -> Optional[str]:
-        """集群在 bcs 中注册的集群 ID，若没有配置，则返回 None"""
-        return self.annotations.get("bcs_cluster_id", None)
+        return f"{self.__class__.__name__}(name={self.name}, tenant={self.tenant_id}, region={self.region})"
 
     @property
     def bcs_project_id(self) -> Optional[str]:
-        """集群在 bcs 中注册的集群所属的项目 ID，若没有配置，则返回 None"""
-        return self.annotations.get("bcs_project_id", None)
+        """集群在 bcs 中注册的集群所属的项目 ID"""
+        return self.annotations.get(ClusterAnnotationKey.BCS_PROJECT_ID, None)
+
+    @property
+    def bcs_cluster_id(self) -> Optional[str]:
+        """集群在 bcs 中注册的集群 ID"""
+        return self.annotations.get(ClusterAnnotationKey.BCS_CLUSTER_ID, None)
 
     @property
     def bk_biz_id(self) -> Optional[str]:
-        """bcs 集群所在项目在 bkcc 中的业务 ID，若没有配置，则返回 None"""
+        """bcs 集群所在项目在 bkcc 中的业务 ID"""
+
         # 如果不是 bcs 集群，则 bkcc 业务 ID 不会生效
         if not self.bcs_cluster_id:
             return None
 
-        return self.annotations.get("bk_biz_id", None)
+        return self.annotations.get(ClusterAnnotationKey.BK_BIZ_ID, None)
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
-        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster_type=ClusterType(self.type))
+        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(
+            cluster_type=ClusterType(self.type),
+        )
         return self.feature_flags.get(ff, default_flags[ff])
 
 
@@ -385,3 +322,26 @@ class EnhancedConfiguration(Configuration):
 
     def __repr__(self) -> str:
         return f"EnhancedConfiguration(host={self.host!r})"
+
+
+AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])
+
+
+class ClusterAllocationPolicy(UuidAuditedModel):
+    """集群分配策略"""
+
+    tenant_id = models.CharField(max_length=128, unique=True, help_text="所属租户")
+    # 枚举值 -> ClusterAllocationPolicyType
+    type = models.CharField(max_length=32, help_text="分配策略类型")
+    rules: List[AllocationRule] = AllocationRulesField(help_text="集群分配规则列表", default=list)
+
+
+class ClusterElasticSearchConfig(UuidAuditedModel):
+    """集群 ES 配置"""
+
+    cluster = models.OneToOneField(Cluster, related_name="elastic_search_config", on_delete=models.CASCADE)
+    scheme = models.CharField(help_text="ES 集群协议", max_length=12)
+    host = models.CharField(help_text="ES 集群地址", max_length=128)
+    port = models.IntegerField(help_text="ES 集群端口")
+    username = models.CharField(help_text="ES 集群用户名", max_length=64)
+    password = EncryptField(help_text="ES 集群密码")

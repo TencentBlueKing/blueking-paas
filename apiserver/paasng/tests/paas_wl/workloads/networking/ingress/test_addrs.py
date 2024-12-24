@@ -17,8 +17,8 @@
 
 import pytest
 
-from paas_wl.infras.cluster.models import Domain as ClusterDomain
-from paas_wl.infras.cluster.models import PortMap
+from paas_wl.infras.cluster.entities import Domain as ClusterDomain
+from paas_wl.infras.cluster.entities import PortMap
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses, PreAllocatedEnvAddresses, get_legacy_url
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource

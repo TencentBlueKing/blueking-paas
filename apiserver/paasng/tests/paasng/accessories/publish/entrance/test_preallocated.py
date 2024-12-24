@@ -15,13 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Testcases entrance.exposer module
-"""
+"""Testcases entrance.exposer module"""
+
 import json
 
 import pytest
 
-from paas_wl.infras.cluster.models import Cluster, Domain, IngressConfig
+from paas_wl.infras.cluster.entities import Domain, IngressConfig
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import (
     _default_preallocated_urls,
     get_exposed_url_type,

@@ -17,7 +17,7 @@
 
 import pytest
 
-from paas_wl.infras.cluster.models import Domain
+from paas_wl.infras.cluster.entities import Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.helpers import (

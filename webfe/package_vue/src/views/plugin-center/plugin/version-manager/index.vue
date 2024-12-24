@@ -76,7 +76,11 @@
       </div>
 
       <section v-if="isCodeccEmpty">
-        <bk-exception class="exception-wrap-cls" type="empty" scene="part">
+        <bk-exception
+          class="exception-wrap-cls"
+          type="empty"
+          scene="part"
+        >
           <div class="exception-wrapper">
             <p class="title">{{ $t('暂无版本发布') }}</p>
             <p class="tips">{{ $t('请先完成对默认分支的测试') }}</p>
@@ -122,8 +126,8 @@
           <template slot-scope="{ row }">
             {{ row.version || '--' }}
             <span
-              v-if="row.source_version_type === 'tested_version' && isOfficialVersion && row.id === rollbacks[0]?.id"
-              style="color: #c4c6cc;"
+              v-if="row.gray_status === 'rolled_back'"
+              style="color: #c4c6cc"
             >
               ({{ $t('已回滚') }})
             </span>
@@ -144,7 +148,12 @@
           :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
-            <span v-bk-tooltips="row.comment" class="tips-dashed">{{ row.source_hash.slice(0, 8) || '--' }}</span>
+            <span
+              v-bk-tooltips="row.comment"
+              class="tips-dashed"
+            >
+              {{ row.source_hash.slice(0, 8) || '--' }}
+            </span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -311,7 +320,12 @@
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import versionManageTitle from './comps/version-manage-title.vue';
-import { PLUGIN_VERSION_STATUS, VERSION_NUMBER_TYPE, PLUGIN_TEST_VERSION_STATUS, CODECC_RELEASE_STATUS } from '@/common/constants';
+import {
+  PLUGIN_VERSION_STATUS,
+  VERSION_NUMBER_TYPE,
+  PLUGIN_TEST_VERSION_STATUS,
+  CODECC_RELEASE_STATUS,
+} from '@/common/constants';
 import { formatDate } from '@/common/tools';
 import { clearFilter } from '@/common/utils';
 import auth from '@/auth';
@@ -764,13 +778,13 @@ export default {
             this.$t('当前版本'),
             row.version,
             row.source_hash.slice(0, 8),
-            `${location}/commit/${row.source_hash}`,
+            `${location}/commit/${row.source_hash}`
           ),
           this.createVersionInfo(
             this.$t('回滚至版本'),
             rollback.version,
             rollback.source_hash.slice(0, 8),
-            `${location}/commit/${rollback.source_hash}`,
+            `${location}/commit/${rollback.source_hash}`
           ),
         ]),
         okText: this.$t('回滚'),
@@ -790,14 +804,15 @@ export default {
         h('span', [
           h('span', { style: { color: '#313238' } }, version),
           h(
-            'span', {
+            'span',
+            {
               class: ['ml8'],
               style: { color: '#3A84FF', cursor: 'pointer' },
               on: {
                 click: fn,
               },
             },
-            hash,
+            hash
           ),
         ]),
       ]);
@@ -855,7 +870,12 @@ export default {
     // 是否展示去发布
     showToRelease(row) {
       // 测试成功并且分支为 master，展示去发布快捷入口
-      return this.curPluginInfo.has_test_version && !this.isOfficialVersion && row.status === 'successful' && row.source_version_name === 'master';
+      return (
+        this.curPluginInfo.has_test_version &&
+        !this.isOfficialVersion &&
+        row.status === 'successful' &&
+        row.source_version_name === 'master'
+      );
     },
   },
 };
@@ -906,8 +926,8 @@ export default {
 
   &.successful,
   &.fully_released {
-  background: #e5f6ea;
-  border: 1px solid #3fc06d;
+    background: #e5f6ea;
+    border: 1px solid #3fc06d;
   }
 
   &.failed,
@@ -919,16 +939,16 @@ export default {
   }
   &.full_approval_in_progress,
   &.gray_approval_in_progress {
-    background: #FFE8C3;
-    border: 1px solid #FF9C01;
+    background: #ffe8c3;
+    border: 1px solid #ff9c01;
   }
   &.in_gray {
-    background: #E1ECFF;
-    border: 1px solid #699DF4;
+    background: #e1ecff;
+    border: 1px solid #699df4;
   }
   &.rolled_back {
-    background: #F0F1F5;
-    border: 1px solid #DCDEE5;
+    background: #f0f1f5;
+    border: 1px solid #dcdee5;
   }
 }
 
@@ -980,17 +1000,16 @@ export default {
     .exception-wrapper {
       .title {
         font-size: 24px;
-        color: #63656E;
+        color: #63656e;
         margin-bottom: 16px;
       }
       .tips {
         font-size: 14px;
-        color: #979BA5;
+        color: #979ba5;
         margin-bottom: 8px;
       }
     }
   }
-
 }
 </style>
 

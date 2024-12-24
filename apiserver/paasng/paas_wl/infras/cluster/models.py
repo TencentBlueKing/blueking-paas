@@ -32,6 +32,7 @@ from kubernetes.client import Configuration
 
 from paas_wl.infras.cluster.constants import (
     ClusterAllocationPolicyCondType,
+    ClusterAnnotationKey,
     ClusterFeatureFlag,
     ClusterTokenType,
     ClusterType,
@@ -267,11 +268,18 @@ class Cluster(UuidAuditedModel):
 
     # App 默认配置
     default_node_selector = JSONField(help_text="部署到本集群的应用默认节点选择器（node_selector）", default=dict)
-    default_tolerations = JSONField(help_text="部署到本集群的应用默认容忍度（tolerations）", default=dict)
+    default_tolerations = JSONField(help_text="部署到本集群的应用默认容忍度（tolerations）", default=list)
     container_log_dir = models.CharField(
         help_text="容器日志目录", max_length=255, default="/var/lib/docker/containers"
     )
 
+    # 集群组件
+    component_preferred_namespace = models.CharField(
+        help_text="集群组件优先部署的命名空间", max_length=64, default="blueking"
+    )
+    component_image_registry = models.CharField(
+        help_text="集群组件镜像仓库地址", max_length=255, default="hub.bktencent.com"
+    )
     # 集群特性，具体枚举值 -> ClusterFeatureFlag
     feature_flags = JSONField(help_text="集群特性集", default=dict)
 
@@ -283,12 +291,12 @@ class Cluster(UuidAuditedModel):
     @property
     def bcs_project_id(self) -> Optional[str]:
         """集群在 bcs 中注册的集群所属的项目 ID"""
-        return self.annotations.get("bcs_project_id", None)
+        return self.annotations.get(ClusterAnnotationKey.BCS_PROJECT_ID, None)
 
     @property
     def bcs_cluster_id(self) -> Optional[str]:
         """集群在 bcs 中注册的集群 ID"""
-        return self.annotations.get("bcs_cluster_id", None)
+        return self.annotations.get(ClusterAnnotationKey.BCS_CLUSTER_ID, None)
 
     @property
     def bk_biz_id(self) -> Optional[str]:
@@ -298,7 +306,7 @@ class Cluster(UuidAuditedModel):
         if not self.bcs_cluster_id:
             return None
 
-        return self.annotations.get("bk_biz_id", None)
+        return self.annotations.get(ClusterAnnotationKey.BK_BIZ_ID, None)
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
@@ -420,11 +428,18 @@ class AllocationRule:
     env_clusters: Dict[str, List[str]] | None = None
 
     def __attrs_post_init__(self):
+        # 数据校验
         if self.env_specific:
             if not self.env_clusters:
                 raise ValueError("env_clusters can not be empty when env_specific is True")
         elif not self.clusters:
             raise ValueError("clusters can not be empty when env_specific is False")
+
+        # 清理无效数据
+        if self.env_specific:
+            self.clusters = None
+        else:
+            self.env_clusters = None
 
 
 AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])
@@ -445,6 +460,6 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     cluster = models.OneToOneField(Cluster, related_name="elastic_search_config", on_delete=models.CASCADE)
     scheme = models.CharField(help_text="ES 集群协议", max_length=12)
     host = models.CharField(help_text="ES 集群地址", max_length=128)
+    port = models.IntegerField(help_text="ES 集群端口")
     username = models.CharField(help_text="ES 集群用户名", max_length=64)
     password = EncryptField(help_text="ES 集群密码")
-    port = models.IntegerField(help_text="ES 集群端口")

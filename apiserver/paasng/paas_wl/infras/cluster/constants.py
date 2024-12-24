@@ -73,6 +73,14 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
         return default_flags
 
 
+class ClusterAnnotationKey(StrStructuredEnum):
+    """集群注解键"""
+
+    BCS_PROJECT_ID = EnumField("bcs_project_id", label=_("BCS 项目 ID"))
+    BCS_CLUSTER_ID = EnumField("bcs_cluster_id", label=_("BCS 集群 ID"))
+    BK_BIZ_ID = EnumField("bk_biz_id", label=_("蓝鲸业务 ID"))
+
+
 class ClusterAllocationPolicyType(StrStructuredEnum):
     """集群分配策略类型"""
 

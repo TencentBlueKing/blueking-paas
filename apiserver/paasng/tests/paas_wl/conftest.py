@@ -33,7 +33,7 @@ from paas_wl.bk_app.applications.models import Build, BuildProcess, WlApp
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan, initialize_default_proc_spec_plans
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.utils import get_default_cluster_by_region
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paasng.platform.applications.models import ModuleEnvironment
@@ -56,7 +56,7 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
         with transaction.atomic():
             # Clear cached configuration pool in case there are some stale configurations
             # in the pool.
-            get_global_configuration_pool.cache_clear()
+            invalidate_global_configuration_pool()
 
         # The initialization in `processes.models` will not create default package plans in the TEST database,
         # it only creates the default plans in the non-test database(without the "test_" prefix).

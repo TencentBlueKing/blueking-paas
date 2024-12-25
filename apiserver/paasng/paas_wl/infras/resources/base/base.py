@@ -16,29 +16,45 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Base utils for kubernetes scheduler"""
+
 import logging
 from functools import lru_cache
 from typing import Dict, List
 
 from blue_krill.connections.ha_endpoint_pool import HAEndpointPool
+from django.utils import timezone
 from kubernetes.client import ApiClient as BaseApiClient
 from kubernetes.client.rest import RESTClientObject
 from urllib3.exceptions import HTTPError
 
 from paas_wl.infras.cluster.models import EnhancedConfiguration
 from paas_wl.infras.cluster.pools import ContextConfigurationPoolMap
+from paasng.core.core.storages.redisdb import get_default_redis
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
 def get_global_configuration_pool() -> Dict[str, HAEndpointPool]:
+    """Get the global config pool object from cache"""
+    last_modified = _GlobalConfigLastModified().get()
+    return _get_global_configuration_pool(last_modified)
+
+
+@lru_cache
+def _get_global_configuration_pool(last_modified: str) -> Dict[str, HAEndpointPool]:
     """Get the global config pool object.
 
     NOTE: This function is cached for performance. When the clusters have been updated,
     the cache must be cleared.
+
+    :param version: The global config version. 与 lru_cache 配合使用, 如果 version 发生变化, 则缓存失效, 从数据库重新加载
     """
     return ContextConfigurationPoolMap.from_db()
+
+
+def invalidate_global_configuration_pool():
+    """Invalidate the global config pool object cache"""
+    _GlobalConfigLastModified().update()
 
 
 class EnhancedApiClient(BaseApiClient):
@@ -112,3 +128,29 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
 
     ep_pool = get_global_configuration_pool()[cluster_name]
     return EnhancedApiClient(ep_pool=ep_pool)
+
+
+class _GlobalConfigLastModified:
+    """Global config last modified. This is just used to identify the global config has been updated or not"""
+
+    _key = "config_last_modified"
+
+    def __init__(self):
+        self.redis = get_default_redis()
+
+    def get(self) -> str:
+        """get current last modified"""
+        if v := self.redis.get(self._key):
+            return v.decode()
+
+        v = self._get_time_now()
+        self.redis.set(self._key, v)
+        return v
+
+    def update(self):
+        """update last modified to indicate global config has been updated"""
+        self.redis.set(self._key, self._get_time_now())
+
+    @staticmethod
+    def _get_time_now() -> str:
+        return timezone.now().strftime("%Y%m%d%H%M%S")

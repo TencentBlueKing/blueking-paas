@@ -18,12 +18,12 @@
 """Base utils for kubernetes scheduler"""
 
 import logging
-import uuid
 from functools import lru_cache
 from typing import Dict, List
 
 from blue_krill.connections.ha_endpoint_pool import HAEndpointPool
 from django.core.cache import cache
+from django.utils import timezone
 from kubernetes.client import ApiClient as BaseApiClient
 from kubernetes.client.rest import RESTClientObject
 from urllib3.exceptions import HTTPError
@@ -35,12 +35,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_global_configuration_pool() -> Dict[str, HAEndpointPool]:
-    version = global_config_version.get()
-    return _get_global_configuration_pool(version)
+    """Get the global config pool object from cache"""
+    last_modified = _GlobalConfigLastModified().get()
+    return _get_global_configuration_pool(last_modified)
 
 
 @lru_cache
-def _get_global_configuration_pool(version: str) -> Dict[str, HAEndpointPool]:
+def _get_global_configuration_pool(last_modified: str) -> Dict[str, HAEndpointPool]:
     """Get the global config pool object.
 
     NOTE: This function is cached for performance. When the clusters have been updated,
@@ -49,6 +50,11 @@ def _get_global_configuration_pool(version: str) -> Dict[str, HAEndpointPool]:
     :param version: The global config version. 与 lru_cache 配合使用, 如果 version 发生变化, 则缓存失效, 从数据库重新加载
     """
     return ContextConfigurationPoolMap.from_db()
+
+
+def invalidate_get_global_configuration_pool():
+    """Invalidate the global config pool object cache"""
+    _GlobalConfigLastModified().update()
 
 
 class EnhancedApiClient(BaseApiClient):
@@ -124,24 +130,21 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
     return EnhancedApiClient(ep_pool=ep_pool)
 
 
-class _GlobalConfigVersion:
-    """Global config version. This is just used to identify the global config has been updated or not"""
+class _GlobalConfigLastModified:
+    """Global config last modified. This is just used to identify the global config has been updated or not"""
 
-    version_key = "global_config_version"
+    _key = "config_last_modified"
 
     def get(self):
-        """get current version"""
-        if v := cache.get(self.version_key):
+        """get current last modified"""
+        if v := cache.get(self._key):
             return v
 
-        v = str(uuid.uuid4())
-        cache.set(self.version_key, v, timeout=None)
+        v = timezone.now().strftime("%Y%m%d%H%M%S")
+        cache.set(self._key, v, timeout=None)
         return v
 
     def update(self):
-        """update version to indicate global config has been updated"""
-        v = str(uuid.uuid4())
-        cache.set(self.version_key, v, timeout=None)
-
-
-global_config_version = _GlobalConfigVersion()
+        """update last modified to indicate global config has been updated"""
+        v = timezone.now().strftime("%Y%m%d%H%M%S")
+        cache.set(self._key, v, timeout=None)

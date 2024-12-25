@@ -696,7 +696,7 @@ class RemoteServiceMgr(BaseServiceMgr):
     def list_unbound_instance_rels(
         self, engine_app: EngineApp, service: Optional[ServiceObj] = None
     ) -> Generator[UnboundRemoteEngineAppInstanceRel, None, None]:
-        """Return all remote provisioned service instances which is unbound with engine app, filter by specific service (None for all)"""
+        """Return all unbound remote service instances, filter by specific service (None for all)"""
         qs = engine_app.unbound_remote_service_attachment.all()
         if service:
             qs = qs.filter(service_id=service.uuid)
@@ -771,7 +771,7 @@ class RemoteServiceMgr(BaseServiceMgr):
             raise exceptions.SvcAttachmentDoesNotExist from e
 
     def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
-        """Return a remote provisioned service instances which is unbound with engine app, filter by specific service and service instance id"""
+        """Return a unbound remote service instances, filter by specific service and service instance id"""
         try:
             instance = UnboundRemoteServiceEngineAppAttachment.objects.get(
                 service_id=service.uuid,

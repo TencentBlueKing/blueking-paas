@@ -124,7 +124,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 
 
 class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Unbound binding relationship between the engine app and the local service"""
+    """Unbound attachment between local service and engine app"""
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",
@@ -133,13 +133,18 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
         verbose_name="蓝鲸引擎应用",
         related_name="unbound_service_attachment",
     )
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="增强服务")
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, db_constraint=False, verbose_name="增强服务")
     service_instance = models.ForeignKey(
-        ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, verbose_name="增强服务实例"
+        ServiceInstance,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        db_constraint=False,
+        verbose_name="增强服务实例",
     )
 
     class Meta:
-        verbose_name = "本地已解绑增强服务"
+        verbose_name = "unbound attachment between local service and engine app"
         unique_together = ("service", "engine_app", "service_instance")
 
     def clean_service_instance(self):
@@ -176,7 +181,7 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 
 
 class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Unbound binding relationship between the engine app and the remote service"""
+    """Unbound attachment between remote service and engine app"""
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",
@@ -189,7 +194,7 @@ class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
 
     class Meta:
-        verbose_name = "远程已解绑增强服务"
+        verbose_name = "unbound attachment between remote service and engine app"
         unique_together = ("service_id", "engine_app", "service_instance_id")
 
 

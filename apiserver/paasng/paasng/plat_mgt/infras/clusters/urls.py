@@ -15,56 +15,57 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.urls import path
+
 from paasng.plat_mgt.infras.clusters import views
-from paasng.utils.basic import re_path
 
 urlpatterns = [
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/",
         views.ClusterViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.cluster.bulk",
     ),
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/",
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster.detail",
     ),
     # 集群状态
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/status/",
         views.ClusterViewSet.as_view({"get": "retrieve_status"}),
         name="plat_mgt.infras.cluster.status",
     ),
     # 集群使用情况
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/usage/",
         views.ClusterViewSet.as_view({"get": "retrieve_usage"}),
         name="plat_mgt.infras.cluster.usage",
     ),
     # 集群节点同步
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/operations/sync_nodes/",
         views.ClusterViewSet.as_view({"post": "sync_nodes"}),
-        name="plat_mgt.infras.cluster.sync",
+        name="plat_mgt.infras.cluster.sync_nodes",
     ),
     # 集群组件安装信息
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/components/",
         views.ClusterComponentViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.cluster.component.bulk",
     ),
     # 单一集群组件相关操作
-    re_path(
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/",
         views.ClusterComponentViewSet.as_view({"post": "upsert"}),
         name="plat_mgt.infras.cluster.component.detail",
     ),
-    re_path(
+    path(
         "api/plat-mgt/infras/cluster-allocation-policies/",
         views.ClusterAllocationPolicyViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.cluster_allocation_policy.bulk",
     ),
-    re_path(
+    path(
         "api/plat-mgt/infras/cluster-allocation-policies/<str:policy_id>/",
         views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
         name="plat_mgt.infras.cluster_allocation_policy.detail",

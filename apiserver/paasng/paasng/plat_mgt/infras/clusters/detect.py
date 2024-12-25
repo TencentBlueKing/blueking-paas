@@ -55,26 +55,29 @@ class ClusterUsageDetector:
         return ClusterUsageState(
             cluster_name=self.cluster.name,
             available_tenant_ids=self.cluster.available_tenant_ids,
-            allocated_tenant_ids=self._get_allocated_tenant_ids(),
-            bind_app_module_envs=self._get_bind_app_module_envs(),
+            allocated_tenant_ids=self.get_allocated_tenant_ids(),
+            bind_app_module_envs=self.get_bind_app_module_envs(),
         )
 
-    def _get_allocated_tenant_ids(self) -> List[str]:
+    def get_allocated_tenant_ids(self) -> List[str]:
         allocated_tenant_ids = set()
 
         # 需要针对所有分配策略中的所有规则逐一检查（分配策略数量 <= 租户数量，总体可控）
         for policy in ClusterAllocationPolicy.objects.all():
             for rule in policy.rules:
-                if self.cluster.name in rule.clusters:
-                    allocated_tenant_ids.add(policy.tenant_id)
-                else:
+                if rule.clusters:
+                    # 统一分配
+                    if self.cluster.name in rule.clusters:
+                        allocated_tenant_ids.add(policy.tenant_id)
+                elif rule.env_clusters:
+                    # 按环境分配
                     for clusters in rule.env_clusters.values():
-                        if self.cluster.name in clusters:
+                        if clusters and self.cluster.name in clusters:
                             allocated_tenant_ids.add(policy.tenant_id)
 
         return list(allocated_tenant_ids)
 
-    def _get_bind_app_module_envs(self) -> List[AppModuleEnv]:
+    def get_bind_app_module_envs(self) -> List[AppModuleEnv]:
         # 理论上 WlApp & Config 应该是一一对应的，但是由于使用的是 ForeignKey，
         # 可能会出现重复 Config 的情况（脏数据），这里使用 set 来做下去重
         app_module_envs = set()

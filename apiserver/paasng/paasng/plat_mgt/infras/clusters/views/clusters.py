@@ -23,7 +23,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.constants import ClusterTokenType, ClusterType
-from paas_wl.infras.cluster.models import APIServer, Cluster
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -108,6 +108,10 @@ class ClusterViewSet(viewsets.GenericViewSet):
             # 创建 ApiServers
             api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
             APIServer.objects.bulk_create(api_servers)
+            # 创建 ElasticSearch 配置
+            ClusterElasticSearchConfig.objects.create(cluster=cluster, **data["elastic_search_config"])
+
+        # FIXME（多租户）添加刷新集群配置缓存逻辑
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -153,6 +157,13 @@ class ClusterViewSet(viewsets.GenericViewSet):
             api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
             APIServer.objects.bulk_create(api_servers)
 
+            # 更新 ElasticSearch 配置
+            cluster.elastic_search_config.update(**data["elastic_search_config"])
+
+        # FIXME（多租户）添加刷新集群配置缓存逻辑
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],
         operation_description="删除集群",
@@ -174,7 +185,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             )
 
         cluster.elastic_search_config.delete()
-        cluster.api_servers.delete()
+        cluster.api_servers.all().delete()
         cluster.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -197,7 +208,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     def sync_nodes(self, request, cluster_name, *args, **kwargs):
         """同步集群节点"""
         cluster = self.get_object()
-        client = get_client_by_cluster_name(cluster_name=cluster.cluster_name)
+        client = get_client_by_cluster_name(cluster_name=cluster.name)
 
         ignore_labels = {"node-role.kubernetes.io/master": "true"}
         state = generate_state(cluster.region, cluster.name, client, ignore_labels)

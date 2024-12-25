@@ -35,6 +35,9 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    lookup_field = "uuid"
+    lookup_url_kwarg = "policy_id"
+
     def get_queryset(self):
         """获取集群分配策略列表"""
         # FIXME（多租户）根据平台/租户管理员身份，返回不同的集群分配策略列表
@@ -59,11 +62,12 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     def update(self, request, *args, **kwargs):
         """更新集群分配策略"""
-        slz = ClusterAllocationPolicyUpdateInputSLZ(data=request.data)
+        policy = self.get_object()
+
+        slz = ClusterAllocationPolicyUpdateInputSLZ(data=request.data, context={"policy": policy})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        policy = self.get_object()
         policy.type = data["type"]
         policy.rules = data["rules"]
         policy.save(update_fields=["type", "rules", "updated"])

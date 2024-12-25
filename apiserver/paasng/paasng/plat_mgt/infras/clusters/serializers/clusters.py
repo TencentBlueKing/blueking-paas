@@ -35,6 +35,7 @@ from paasng.plat_mgt.infras.clusters.constants import (
     TolerationEffect,
     TolerationOperator,
 )
+from paasng.plat_mgt.infras.clusters.detect import ClusterUsageDetector
 
 
 def ensure_base64_encoded(content: str) -> None:
@@ -63,17 +64,24 @@ class ClusterListOutputSLZ(serializers.Serializer):
     description = serializers.CharField(help_text="集群描述")
     tenant = serializers.SerializerMethodField(help_text="所属租户名称")
     available_tenants = serializers.SerializerMethodField(help_text="可用租户列表")
-    feature_flags = serializers.ListField(help_text="特性标志名称列表", child=serializers.CharField())
+    feature_flags = serializers.SerializerMethodField(help_text="已启用的特性标志名称列表")
     nodes = serializers.SerializerMethodField(help_text="集群节点列表")
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_tenant(self, obj: Cluster) -> str:
         # FIXME（多租户）这里应该把 ID 转换成名称
         return obj.tenant_id
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_available_tenants(self, obj: Cluster) -> str:
         # FIXME（多租户）这里应该把 ID 转换成名称
         return obj.available_tenant_ids
 
+    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
+    def get_feature_flags(self, obj: Cluster) -> List[str]:
+        return [ClusterFeatureFlag.get_feature_label(ff) for ff, enabled in obj.feature_flags.items() if enabled]
+
+    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_nodes(self, obj: Cluster) -> List[str]:
         # 注：虽然有 N+1 问题，但是集群数量不会很多，总体还好
         state = RegionClusterState.objects.filter(cluster_name=obj.name).first()
@@ -155,9 +163,24 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         choices=ClusterSource.get_choices(),
     )
     # bcs 集群特殊配置
-    bcs_project_id = serializers.CharField(help_text="BCS 项目 ID", required=False)
-    bcs_cluster_id = serializers.CharField(help_text="BCS 集群 ID", required=False)
-    bk_biz_id = serializers.CharField(help_text="蓝鲸业务 ID", required=False)
+    bcs_project_id = serializers.CharField(
+        help_text="BCS 项目 ID",
+        default=None,
+        allow_null=True,
+        allow_blank=True,
+    )
+    bcs_cluster_id = serializers.CharField(
+        help_text="BCS 集群 ID",
+        default=None,
+        allow_null=True,
+        allow_blank=True,
+    )
+    bk_biz_id = serializers.CharField(
+        help_text="蓝鲸业务 ID",
+        default=None,
+        allow_null=True,
+        allow_blank=True,
+    )
     # 注：虽然 bcs 集群只需要一个 server，也统一为列表结构
     api_servers = serializers.ListField(
         help_text="API Server 列表",
@@ -173,21 +196,29 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         help_text="CA 证书",
         validators=[ensure_base64_encoded],
         default=None,
+        allow_null=True,
         allow_blank=True,
     )
     cert = serializers.CharField(
         help_text="证书",
         validators=[ensure_base64_encoded],
         default=None,
+        allow_null=True,
         allow_blank=True,
     )
     key = serializers.CharField(
         help_text="私钥",
         validators=[ensure_base64_encoded],
         default=None,
+        allow_null=True,
         allow_blank=True,
     )
-    token = serializers.CharField(help_text="Token", default=None, allow_blank=True)
+    token = serializers.CharField(
+        help_text="Token",
+        default=None,
+        allow_null=True,
+        allow_blank=True,
+    )
 
     # 周边组件相关配置
     container_log_dir = serializers.CharField(help_text="容器日志目录")
@@ -300,10 +331,20 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
     tolerations = serializers.ListField(help_text="污点容忍度", child=TolerationSLZ(), default=list)
 
     def validate_name(self, name: str) -> str:
-        if name != self.context["cur_cluster_name"]:
+        cur_cluster = self.context["cur_cluster"]
+        if name != cur_cluster.name:
             raise ValidationError(_("集群名称不可修改"))
 
         return name
+
+    def validate_available_tenant_ids(self, available_tenant_ids: List[str]) -> List[str]:
+        # 判断租户 ID 列表是否有包含所有已配置策略的租户
+        allocated_tenant_ids = ClusterUsageDetector(self.context["cur_cluster"]).get_allocated_tenant_ids()
+
+        if used_tenant_ids := set(allocated_tenant_ids) - set(available_tenant_ids):
+            raise ValidationError(_("当前集群已被租户 {} 分配，无法变更可用租户").format(used_tenant_ids))
+
+        return available_tenant_ids
 
     def validate_feature_flags(self, feature_flags: Dict[str, bool]) -> Dict[str, bool]:
         if not isinstance(feature_flags, dict):

@@ -149,16 +149,23 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster.component_image_registry = data["component_image_registry"]
         cluster.feature_flags = data["feature_flags"]
 
+        # 集群 ElasticSearch 配置
+        es_cfg = data["elastic_search_config"]
+        cluster_es_cfg = cluster.elastic_search_config
+        cluster_es_cfg.scheme = es_cfg["scheme"]
+        cluster_es_cfg.host = es_cfg["host"]
+        cluster_es_cfg.port = es_cfg["port"]
+        cluster_es_cfg.username = es_cfg["username"]
+        cluster_es_cfg.password = es_cfg["password"]
+
         with transaction.atomic(using="workloads"):
             cluster.save()
+            cluster_es_cfg.save()
 
             # 更新 ApiServers，采用先全部删除，再插入的方式
-            cluster.api_servers.delete()
+            cluster.api_servers.all().delete()
             api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
             APIServer.objects.bulk_create(api_servers)
-
-            # 更新 ElasticSearch 配置
-            cluster.elastic_search_config.update(**data["elastic_search_config"])
 
         # FIXME（多租户）添加刷新集群配置缓存逻辑
 
@@ -194,8 +201,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
         """获取集群状态"""
         # FIXME（多租户）提供集群基础信息，组件状态，集群特性配置完成度
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster"],
+        operation_description="获取集群使用情况",
+        responses={status.HTTP_200_OK: ClusterUsageRetrieveOutputSLZ()},
+    )
     def retrieve_usage(self, request, cluster_name, *args, **kwargs):
-        """获取集群使用情况"""
         cluster = self.get_object()
         state = ClusterUsageDetector(cluster).detect()
         return Response(ClusterUsageRetrieveOutputSLZ(state).data)
@@ -206,7 +217,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def sync_nodes(self, request, cluster_name, *args, **kwargs):
-        """同步集群节点"""
         cluster = self.get_object()
         client = get_client_by_cluster_name(cluster_name=cluster.name)
 

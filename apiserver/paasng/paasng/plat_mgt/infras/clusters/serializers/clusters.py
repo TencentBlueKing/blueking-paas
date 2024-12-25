@@ -55,6 +55,14 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="ES 集群用户名")
     password = serializers.CharField(help_text="ES 集群密码")
 
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        # 对于敏感信息，需要支持如果是提交的 MASK，则使用原始数据库中的值
+        if data["password"] == SENSITIVE_MASK:  # noqa: SIM102
+            if cluster := self.context.get("cur_cluster"):
+                data["password"] = cluster.elastic_search_config.password
+
+        return data
+
 
 class ClusterListOutputSLZ(serializers.Serializer):
     """集群列表"""
@@ -349,6 +357,9 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
     def validate_feature_flags(self, feature_flags: Dict[str, bool]) -> Dict[str, bool]:
         if not isinstance(feature_flags, dict):
             raise ValidationError(_("特性标志必须为字典"))
+
+        if not feature_flags:
+            raise ValidationError(_("特性标志不能为空"))
 
         for k, v in feature_flags.items():
             try:

@@ -288,14 +288,145 @@ class TestCreateCluster:
 class TestUpdateCluster:
     """更新集群"""
 
-    def test_update_cluster_access(self, init_system_cluster, plat_mgt_api_client):
+    def test_update_scene_cluster_access(self, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群接入（第一步场景）"""
+        data = {
+            "name": init_default_cluster.name,
+            "description": generate_random_string(64),
+            # bcs 集群改成原生 k8s 集群
+            "cluster_source": "native_k8s",
+            "api_servers": [
+                "http://127.0.0.1:6553",
+                "http://127.0.0.2:6553",
+                "http://127.0.0.3:6553",
+            ],
+            "auth_type": "cert",
+            "ca": "MTIzNDU2Cg==",
+            "cert": "MTIzNDU2Cg==",
+            "key": "MTIzNDU2Cg==",
+            "container_log_dir": "/var/lib/containerd",
+            "access_entry_ip": "127.0.0.11",
+            "elastic_search_config": {
+                "scheme": "http",
+                "host": "127.0.0.10",
+                "port": "9000",
+                "username": "admin",
+                "password": "*******",
+            },
+            "available_tenant_ids": ["cobra", "viper"],
+            "component_image_registry": "hub.tencent.com",
+            "component_preferred_namespace": "blueking",
+            "feature_flags": init_default_cluster.feature_flags,
+        }
+        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_default_cluster.name})
+        resp = plat_mgt_api_client.put(url, data=data)
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_update_cluster_component(self, init_system_cluster, plat_mgt_api_client):
+        init_default_cluster.refresh_from_db()
+        assert init_default_cluster.token_value is None
+        assert init_default_cluster.container_log_dir == "/var/lib/containerd"
+        assert init_default_cluster.ingress_config.frontend_ingress_ip == "127.0.0.11"
+        # 提交 ******* 不会覆盖原来数据库中的值
+        assert init_default_cluster.elastic_search_config.password == "admin"
+
+    def test_update_scene_cluster_component(self, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群组件（第二步场景）"""
+        data = {
+            "name": init_default_cluster.name,
+            "description": generate_random_string(64),
+            "cluster_source": "bcs",
+            "bcs_project_id": "fake_project_id",
+            "bcs_cluster_id": "BCS-K8S-55555",
+            "bk_biz_id": "54321",
+            "api_servers": [
+                "http://bcs-api.example.com/clusters/BCS-K8S-55555",
+            ],
+            "auth_type": "token",
+            "token": "*******",
+            "container_log_dir": "/var/lib/containerd",
+            "access_entry_ip": "127.0.0.11",
+            "elastic_search_config": {
+                "scheme": "http",
+                "host": "127.0.0.10",
+                "port": "9000",
+                "username": "admin",
+                "password": "*******",
+            },
+            "available_tenant_ids": ["cobra", "viper"],
+            "component_image_registry": "hub.bk.tencent.com",
+            "component_preferred_namespace": "blueking-system",
+            "feature_flags": init_default_cluster.feature_flags,
+        }
+        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_default_cluster.name})
+        resp = plat_mgt_api_client.put(url, data=data)
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_update_feature_flags(self, init_system_cluster, plat_mgt_api_client):
+        init_default_cluster.refresh_from_db()
+        # 提交 ******* 不会覆盖原来数据库中的值
+        assert init_default_cluster.token_value == "masked"
+        assert init_default_cluster.annotations == {
+            "bcs_project_id": "fake_project_id",
+            "bcs_cluster_id": "BCS-K8S-55555",
+            "bk_biz_id": "54321",
+        }
+        assert init_default_cluster.api_servers.filter(host__icontains="55555").exists()
+        assert init_default_cluster.component_image_registry == "hub.bk.tencent.com"
+        assert init_default_cluster.component_preferred_namespace == "blueking-system"
+
+    def test_update_scene_feature_flags(self, init_system_cluster, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群特性（第三步场景）"""
+        data = {
+            "name": init_system_cluster.name,
+            "description": generate_random_string(64),
+            "cluster_source": "native_k8s",
+            "api_servers": [
+                "http://127.0.0.18:6553",
+                "http://127.0.0.19:6553",
+            ],
+            "auth_type": "cert",
+            "ca": "*******",
+            "cert": "*******",
+            "key": "*******",
+            "container_log_dir": "/var/lib/containerd",
+            "access_entry_ip": "127.0.0.11",
+            "elastic_search_config": {
+                "scheme": "http",
+                "host": "127.0.0.10",
+                "port": "9000",
+                "username": "admin",
+                "password": "*******",
+            },
+            "available_tenant_ids": ["cobra", "viper"],
+            "component_image_registry": "bk.tencent.com",
+            "component_preferred_namespace": "blueking",
+            "feature_flags": init_default_cluster.feature_flags,
+            "node_selector": {"paas.bk.tencent.com/node-type": "saas"},
+            "tolerations": [
+                {
+                    "key": "paas.bk.tencent.com/node-type",
+                    "operator": "Equal",
+                    "value": "nginx",
+                    "effect": "PreferNoSchedule",
+                }
+            ],
+        }
+        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
+        resp = plat_mgt_api_client.put(url, data=data)
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+        init_system_cluster.refresh_from_db()
+        # 提交 ******* 不会覆盖原来数据库中的值
+        assert init_system_cluster.ca_data == "MTIzNDU2Cg=="
+        assert init_system_cluster.cert_data == "MTIzNDU2Cg=="
+        assert init_system_cluster.key_data == "MTIzNDU2Cg=="
+        assert init_system_cluster.annotations == {}
+        assert set(init_system_cluster.api_servers.values_list("host", flat=True)) == {
+            "http://127.0.0.18:6553",
+            "http://127.0.0.19:6553",
+        }
+        assert init_system_cluster.feature_flags == init_default_cluster.feature_flags
+        assert init_system_cluster.default_node_selector != []
+        assert init_system_cluster.default_tolerations != []
 
 
 class TestDeleteCluster:

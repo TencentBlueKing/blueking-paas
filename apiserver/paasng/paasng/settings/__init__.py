@@ -556,16 +556,13 @@ REDIS_CONNECTION_OPTIONS = {
 }
 
 # == 缓存相关配置项
-# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存，否则使用临时文件作为缓存
+# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用默认的 LocMemCache
+# WARNING: 请配置远程服务缓存, 如 RedisCache, DatabaseCache 等, 以保证多副本多 worker 时, 缓存数据一致, 否则可能无法正常工作
 DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
 elif REDIS_URL:
     CACHES = {"default": Env.cache_url_config(REDIS_URL)}
-else:
-    CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.filebased.FileBasedCache", "LOCATION": "/tmp/django_cache"}
-    }
 
 # 修改默认 Cookie 名称，避免冲突
 SESSION_COOKIE_NAME = "bk_paas3_sessionid"

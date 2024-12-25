@@ -227,7 +227,7 @@ class RemoteServiceClient:
             return resp.json()
 
     def retrieve_instance_to_be_deleted(self, instance_id: str) -> Dict:
-        """Retrieve a provisioned instance info
+        """Retrieve a provisioned instance info, which is to be deleted
 
         :raises: RemoteClientError
         :return: <instance dict>

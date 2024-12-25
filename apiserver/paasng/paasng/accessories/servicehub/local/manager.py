@@ -206,7 +206,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
 
 
 class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
-    """A unbound relationship between EngineApp and Provisioned instance"""
+    """unbound relationship between EngineApp and local provisioned instance"""
 
     def __init__(self, db_obj: UnboundServiceEngineAppAttachment):
         self.db_obj = db_obj

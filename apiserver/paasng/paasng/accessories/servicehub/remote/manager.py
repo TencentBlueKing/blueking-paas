@@ -376,7 +376,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
 
 class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
-    """A unbound relationship between EngineApp and Provisioned instance"""
+    """Unbound relationship between EngineApp and remote provisioned instance"""
 
     def __init__(
         self, db_obj: UnboundRemoteServiceEngineAppAttachment, mgr: "RemoteServiceMgr", store: RemoteServiceStore

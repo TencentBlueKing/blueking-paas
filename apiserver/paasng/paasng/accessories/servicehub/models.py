@@ -124,7 +124,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 
 
 class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Local service instance which is unbound with engine app"""
+    """Unbound binding relationship between the engine app and the local service"""
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",
@@ -176,7 +176,7 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 
 
 class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Remote service instance which is unbound with engine app"""
+    """Unbound binding relationship between the engine app and the remote service"""
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",

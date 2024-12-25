@@ -64,7 +64,9 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
             logger.info("Resource BkApp not found in cluster")
             return None
         except ResourceMissing:
-            logger.info("BkApp not found in %s, app: %s", wl_app.namespace, env.application)
+            logger.info(
+                "BkApp: %s not found in %s, app: %s", generate_bkapp_name(env), wl_app.namespace, env.application
+            )
             return None
     return BkAppResource(**data)
 

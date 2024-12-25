@@ -22,7 +22,6 @@ from functools import lru_cache
 from typing import Dict, List
 
 from blue_krill.connections.ha_endpoint_pool import HAEndpointPool
-from django.core.cache import cache
 from django.utils import timezone
 from kubernetes.client import ApiClient as BaseApiClient
 from kubernetes.client.rest import RESTClientObject
@@ -30,6 +29,7 @@ from urllib3.exceptions import HTTPError
 
 from paas_wl.infras.cluster.models import EnhancedConfiguration
 from paas_wl.infras.cluster.pools import ContextConfigurationPoolMap
+from paasng.core.core.storages.redisdb import get_default_redis
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def _get_global_configuration_pool(last_modified: str) -> Dict[str, HAEndpointPo
     return ContextConfigurationPoolMap.from_db()
 
 
-def invalidate_get_global_configuration_pool():
+def invalidate_global_configuration_pool():
     """Invalidate the global config pool object cache"""
     _GlobalConfigLastModified().update()
 
@@ -135,16 +135,19 @@ class _GlobalConfigLastModified:
 
     _key = "config_last_modified"
 
-    def get(self):
+    def __init__(self):
+        self.redis = get_default_redis()
+
+    def get(self) -> str:
         """get current last modified"""
-        if v := cache.get(self._key):
-            return v
+        if v := self.redis.get(self._key):
+            return v.decode("utf-8")
 
         v = timezone.now().strftime("%Y%m%d%H%M%S")
-        cache.set(self._key, v, timeout=None)
+        self.redis.set(self._key, v)
         return v
 
     def update(self):
         """update last modified to indicate global config has been updated"""
         v = timezone.now().strftime("%Y%m%d%H%M%S")
-        cache.set(self._key, v, timeout=None)
+        self.redis.set(self._key, v)

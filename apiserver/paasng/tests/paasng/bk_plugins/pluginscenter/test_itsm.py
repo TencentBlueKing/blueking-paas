@@ -21,8 +21,13 @@ from unittest import mock
 import pytest
 import requests
 
-from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
+from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRole
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    add_approver_to_plugin_admins,
+    get_ticket_status,
+    submit_online_approval_ticket,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -82,3 +87,64 @@ def test_itsm_render(mock_client_session):
 
     assert ticket_info["current_status_display"] == "被挂起"
     assert ticket_info["can_withdraw"] is True
+
+
+@pytest.mark.parametrize(
+    ("service_name", "expected_leader", "expected_admins", "sync_members_mock"),
+    [
+        # 可见范围修改：将平台管理员添加到插件管理员中
+        (ApprovalServiceName.VISIBLE_RANGE_APPROVAL, None, ["admin1", "admin2"], True),
+        # 全量审批：将平台管理员添加到插件管理员中
+        (ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL, None, ["admin1", "admin2"], True),
+        # 灰度审批（含组织）：将提单者上级添加到插件管理员中
+        (ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL, ["leader_user"], None, True),
+        # 灰度审批（不含组织）：不需要新增管理员
+        (ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL, None, None, False),
+    ],
+)
+def test_add_approver_as_admin(mocker, plugin, service_name, expected_leader, expected_admins, sync_members_mock):
+    """插件的 MemberShip 表已经删除，无法像应用一样将 iam 操作 mock 为 DB 操作，直接验证相关条件下对应的函数是否正确调用"""
+    if expected_leader:
+        mock_get_leader = mocker.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils._get_leader_by_user", return_value=expected_leader
+        )
+
+    # Mocking members API to return existing members
+    mock_members = [mock.MagicMock(username="existing_user", role=mock.MagicMock(id=PluginRole.ADMINISTRATOR))]
+    mocker.patch(
+        "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils.members_api.fetch_plugin_members",
+        return_value=mock_members,
+    )
+
+    # Mock members_api methods for removing and adding roles
+    mock_remove_roles = mocker.patch(
+        "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils.members_api.remove_user_all_roles"
+    )
+    mock_add_roles = mocker.patch("paasng.bk_plugins.pluginscenter.itsm_adaptor.utils.members_api.add_role_members")
+
+    # Mocking sync_members if required
+    if sync_members_mock:
+        mock_sync_members = mocker.patch("paasng.bk_plugins.pluginscenter.itsm_adaptor.utils.sync_members")
+
+    # Setting the plugin administrators
+    if expected_admins:
+        plugin.pd.administrator = expected_admins
+
+    # Call the function
+    add_approver_to_plugin_admins(plugin, service_name, "operator_user")
+
+    # Verify the leader fetching function was called
+    if expected_leader:
+        mock_get_leader.assert_called_once_with("operator_user")
+
+    # Verify that the correct roles are removed and added
+    if expected_leader:
+        mock_remove_roles.assert_called_once_with(plugin, expected_leader)
+        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=expected_leader)
+    elif expected_admins:
+        mock_remove_roles.assert_called_once_with(plugin, expected_admins)
+        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=expected_admins)
+
+    # Verify sync_members was called
+    if sync_members_mock:
+        mock_sync_members.assert_called_once_with(pd=plugin.pd, instance=plugin)

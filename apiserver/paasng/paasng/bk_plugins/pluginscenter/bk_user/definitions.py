@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -33,3 +33,20 @@ class DepartmentDetail(BaseModel):
     id: int
     name: str
     parent: Optional[int]
+
+
+@prepare_json_field
+class LeaderDetail(BaseModel):
+    """用户上级详情，目前只用到了 username 字段"""
+
+    username: str
+
+
+@prepare_json_field
+class UserDetail(BaseModel):
+    """用户详情，目前只用到了 leader 字段
+
+    :param leader: 用户上级
+    """
+
+    leader: List[LeaderDetail]

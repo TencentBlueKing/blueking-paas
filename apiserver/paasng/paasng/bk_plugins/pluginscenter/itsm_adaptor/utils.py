@@ -20,6 +20,7 @@ from typing import List, Optional
 
 from django.conf import settings
 
+from paasng.bk_plugins.pluginscenter.bk_user.client import BkUserManageClient
 from paasng.bk_plugins.pluginscenter.constants import (
     GrayReleaseStatus,
     PluginReleaseStatus,
@@ -27,6 +28,7 @@ from paasng.bk_plugins.pluginscenter.constants import (
     ReleaseStageInvokeMethod,
     ReleaseStrategy,
 )
+from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName, ItsmTicketStatus
@@ -38,6 +40,8 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginVisibleRange,
 )
 from paasng.bk_plugins.pluginscenter.models.instances import is_release_strategy_organization_changed
+from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
+from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 
 if typing.TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models.instances import ItsmDetail
@@ -157,6 +161,8 @@ def submit_canary_release_ticket(
         + f"{pd.identifier}/plugins/{plugin.id}/releases/{version.id}/strategy/{release_strategy.id}/"
     )
 
+    # 提审批单据前，先将审批人（平台管理员）添加到插件的管理员中
+    add_approver_to_plugin_admins(plugin, service_name, operator)
     # 提交 itsm 申请单据
     client = ItsmClient()
     itsm_detail = client.create_ticket(service_id, operator, callback_url, itsm_fields)
@@ -182,7 +188,8 @@ def submit_visible_range_ticket(
     organization: Optional[list],
 ) -> "ItsmDetail":
     # 查询上线审批服务ID
-    service_id = ApprovalService.objects.get(service_name=ApprovalServiceName.VISIBLE_RANGE_APPROVAL).service_id
+    service_name = ApprovalServiceName.VISIBLE_RANGE_APPROVAL
+    service_id = ApprovalService.objects.get(service_name=service_name).service_id
 
     # 单据结束的时候，itsm 会调用 callback_url 告知审批结果，回调地址为开发者中心后台 API 的地址
     paas_url = f"{settings.BK_IAM_RESOURCE_API_HOST}/backend"
@@ -208,10 +215,11 @@ def submit_visible_range_ticket(
     title_fields = [{"key": "title", "value": f"插件[{plugin.name}]可见范围修改审批"}]
     fields = basic_fields + title_fields + visible_range_fields
 
+    # 提审批单据前，先将审批人（平台管理员）添加到插件的管理员中
+    add_approver_to_plugin_admins(plugin, service_name, operator)
     # 提交 itsm 申请单据
     client = ItsmClient()
     itsm_detail = client.create_ticket(service_id, operator, callback_url, fields)
-
     return itsm_detail
 
 
@@ -338,3 +346,43 @@ def _get_bkci_project_display_name(bkci_project: Optional[List[str]]) -> str:
         return ITSM_FIELD_PLACEHOLDER
 
     return ";".join(bkci_project)
+
+
+def _get_leader_by_user(username: str) -> list:
+    client = BkUserManageClient()
+    user_detail = client.get_user_detail(username)
+    return [u.username for u in user_detail.leader]
+
+
+def _add_users_to_plugin_admins(plugin: PluginInstance, usernames: list):
+    members = members_api.fetch_plugin_members(plugin)
+    plugin_admins = {m.username for m in members if m.role.id == PluginRole.ADMINISTRATOR}
+    users_to_add = set(usernames) - plugin_admins
+    if not users_to_add:
+        return
+
+    try:
+        # 先删除审批在插件中的所有权限，再添加为管理员。避免审批者已经是开发者角色，再添加为管理员会报错
+        members_api.remove_user_all_roles(plugin, list(usernames))
+        members_api.add_role_members(plugin, role=PluginRole.ADMINISTRATOR, usernames=list(usernames))
+    except BKIAMGatewayServiceError as e:
+        raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(
+            f"Failed to add user({usernames}) as plugin({plugin.id}) administrator: {e.message}"
+        )
+    # 将成语同步到第三方系统中
+    sync_members(pd=plugin.pd, instance=plugin)
+    return
+
+
+def add_approver_to_plugin_admins(plugin: PluginInstance, service_name: str, operator: str):
+    """将审批者提前添加到插件管理员中，方便其跟进插件状态"""
+    # 按组织灰度审批，审批者为提单者 leader
+    if service_name == ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL:
+        operator_leaders = _get_leader_by_user(operator)
+        _add_users_to_plugin_admins(plugin, operator_leaders)
+    # 全量发布、可见范围修改：平台管理员审批
+    elif service_name in [
+        ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL,
+        ApprovalServiceName.VISIBLE_RANGE_APPROVAL,
+    ]:
+        _add_users_to_plugin_admins(plugin, plugin.pd.administrator)

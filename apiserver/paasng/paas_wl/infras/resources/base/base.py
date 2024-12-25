@@ -141,13 +141,16 @@ class _GlobalConfigLastModified:
     def get(self) -> str:
         """get current last modified"""
         if v := self.redis.get(self._key):
-            return v.decode("utf-8")
+            return v.decode()
 
-        v = timezone.now().strftime("%Y%m%d%H%M%S")
+        v = self._get_time_now()
         self.redis.set(self._key, v)
         return v
 
     def update(self):
         """update last modified to indicate global config has been updated"""
-        v = timezone.now().strftime("%Y%m%d%H%M%S")
-        self.redis.set(self._key, v)
+        self.redis.set(self._key, self._get_time_now())
+
+    @staticmethod
+    def _get_time_now() -> str:
+        return timezone.now().strftime("%Y%m%d%H%M%S")

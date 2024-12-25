@@ -47,7 +47,8 @@ def _get_global_configuration_pool(last_modified: str) -> Dict[str, HAEndpointPo
     NOTE: This function is cached for performance. When the clusters have been updated,
     the cache must be cleared.
 
-    :param version: The global config version. 与 lru_cache 配合使用, 如果 version 发生变化, 则缓存失效, 从数据库重新加载
+    :param last_modified: The global config last modified. 与 lru_cache 配合使用, 如果 last_modified 发生变化, 则缓存失效,
+      从数据库重新加载
     """
     return ContextConfigurationPoolMap.from_db()
 

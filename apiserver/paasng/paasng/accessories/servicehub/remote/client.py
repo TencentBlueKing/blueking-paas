@@ -80,6 +80,9 @@ class RemoteSvcConfig:
         self.update_plan_url = urljoin(self.endpoint_url, "plans/{plan_id}/")
 
         self.retrieve_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
+        self.retrieve_instance_to_be_deleted_url = urljoin(
+            self.endpoint_url, "instances/{instance_id}/?to_be_deleted={to_be_deleted}"
+        )
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
@@ -223,6 +226,18 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
+    def retrieve_instance_to_be_deleted(self, instance_id: str) -> Dict:
+        """Retrieve a provisioned instance info, which is to be deleted
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.retrieve_instance_to_be_deleted_url.format(instance_id=instance_id, to_be_deleted=True)
+        with wrap_request_exc(self):
+            resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
+            self.validate_resp(resp)
+            return resp.json()
+
     def retrieve_instance_by_name(self, service_id: str, instance_name: str) -> Dict:
         """Retrieve a provisioned instance info by name
 
@@ -244,6 +259,18 @@ class RemoteServiceClient:
             url = self.config.async_delete_instance_url.format(instance_id=instance_id)
         else:
             url = self.config.delete_instance_url.format(instance_id=instance_id)
+
+        with wrap_request_exc(self):
+            resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)
+            self.validate_resp(resp)
+            return
+
+    def delete_instance_synchronously(self, instance_id: str):
+        """Delete a provisioned instance synchronously
+
+        We assume the remote service is already able to recycle resources
+        """
+        url = self.config.delete_instance_url.format(instance_id=instance_id)
 
         with wrap_request_exc(self):
             resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)

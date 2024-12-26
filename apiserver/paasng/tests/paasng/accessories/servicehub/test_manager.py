@@ -25,13 +25,18 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.constants import Category
-from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError, ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import (
+    BindServiceNoPlansError,
+    ServiceObjNotFound,
+    UnboundSvcAttachmentDoesNotExist,
+)
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
+from paasng.platform.modules.manager import ModuleCleaner
 from tests.paasng.accessories.servicehub import data_mocks
 
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
@@ -254,6 +259,84 @@ class TestLocalMgr:
 
         for service_instance_id in expect_obj:
             assert mgr.get_attachment_by_instance_id(svc, service_instance_id) == expect_obj[service_instance_id]
+
+    @mock.patch("paasng.accessories.services.models.Service.delete_service_instance")
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
+    def test_list_unbound_instance_rels(
+        self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
+    ):
+        create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
+        delete_service_instance.side_effect = (
+            lambda service_instance: service_instance.delete() if service_instance else None
+        )
+
+        mgr = LocalServiceMgr()
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        mgr.bind_service(service, bk_module)
+
+        attachments: Dict[UUID, ServiceEngineAppAttachment] = {}
+        for env in bk_app.envs.all():
+            for rel in mgr.list_unprovisioned_rels(env.engine_app):
+                rel.provision()
+                attachments[rel.db_obj.service_instance_id] = rel.db_obj
+
+        assert len(attachments) == 2
+
+        cleaner = ModuleCleaner(bk_module)
+        cleaner.delete_services(svc.uuid)
+
+        unbound_rels = []
+        for env in bk_app.envs.all():
+            for u_rel in mgr.list_unbound_instance_rels(env.engine_app):
+                assert u_rel.db_obj.service_instance_id in attachments
+                assert u_rel.db_obj.service_id == attachments[u_rel.db_obj.service_instance_id].service_id
+                assert u_rel.db_obj.engine_app == attachments[u_rel.db_obj.service_instance_id].engine_app
+                unbound_rels.append(u_rel)
+
+        assert len(unbound_rels) == len(attachments)
+
+        for u_rel in unbound_rels:
+            u_rel.recycle_resource()
+
+        for env in bk_app.envs.all():
+            for _rel in mgr.list_unbound_instance_rels(env.engine_app):
+                pytest.fail("Expect no return unbound instance rels after recycle resource")
+
+    @mock.patch("paasng.accessories.services.models.Service.delete_service_instance")
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
+    def test_get_unbound_instance_rel_by_instance_id(
+        self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
+    ):
+        create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
+        delete_service_instance.side_effect = (
+            lambda service_instance: service_instance.delete() if service_instance else None
+        )
+
+        mgr = LocalServiceMgr()
+        service = mgr.get(svc.uuid, region=bk_module.region)
+        mgr.bind_service(service, bk_module)
+
+        attachments: Dict[UUID, ServiceEngineAppAttachment] = {}
+        for env in bk_app.envs.all():
+            for rel in mgr.list_unprovisioned_rels(env.engine_app):
+                rel.provision()
+                attachments[rel.db_obj.service_instance_id] = rel.db_obj
+
+        assert len(attachments) == 2
+
+        cleaner = ModuleCleaner(bk_module)
+        cleaner.delete_services(svc.uuid)
+
+        for instance_id in attachments:
+            rel = mgr.get_unbound_instance_rel_by_instance_id(svc, instance_id)
+            assert rel.db_obj.service_instance_id in attachments
+            assert rel.db_obj.service_id == attachments[rel.db_obj.service_instance_id].service_id
+            assert rel.db_obj.engine_app == attachments[rel.db_obj.service_instance_id].engine_app
+            rel.recycle_resource()
+
+        for instance_id in attachments:
+            with pytest.raises(UnboundSvcAttachmentDoesNotExist):
+                mgr.get_unbound_instance_rel_by_instance_id(svc, instance_id)
 
 
 class TestLocalRabbitMQMgr:

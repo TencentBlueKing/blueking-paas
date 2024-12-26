@@ -44,6 +44,10 @@ class SvcAttachmentDoesNotExist(BaseServicesException):
     """remote or local service attachment does not exist"""
 
 
+class UnboundSvcAttachmentDoesNotExist(BaseServicesException):
+    """unbound remote or local service attachment does not exist"""
+
+
 class CanNotModifyPlan(BaseServicesException):
     """remote or local service attachment already provided"""
 

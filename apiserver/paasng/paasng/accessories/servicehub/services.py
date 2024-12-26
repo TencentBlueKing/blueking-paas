@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""The universal services module, handles both services from database and remote REST API
-"""
+"""The universal services module, handles both services from database and remote REST API"""
+
 import logging
 import uuid
 import weakref
@@ -200,7 +200,7 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
         raise NotImplementedError
 
     def delete(self):
-        """include delete rel & real resource recycle"""
+        """include delete rel, real resource recycle. If prefer asynchronous delete, add a unbound attachment record."""
         if self.is_provisioned():
             self.recycle_resource()
         logger.info("going to delete remote service attachment from db")
@@ -210,6 +210,21 @@ class EngineAppInstanceRel(metaclass=ABCMeta):
     @abstractmethod
     def recycle_resource(self):
         """Recycle resources but do not unbind the service"""
+        raise NotImplementedError
+
+
+class UnboundEngineAppInstanceRel(metaclass=ABCMeta):
+    """A provinsioned instance which is unbound with engine app"""
+
+    db_obj: Any
+
+    @abstractmethod
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def recycle_resource(self):
+        """Recycle resources"""
         raise NotImplementedError
 
 
@@ -268,6 +283,12 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def list_unbound_instance_rels(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_provisioned_queryset(self, service: ServiceObj, application_ids: List[str]) -> QuerySet:
         raise NotImplementedError
 
@@ -293,6 +314,10 @@ class BaseServiceMgr(metaclass=ABCMeta):
 
     @abstractmethod
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         raise NotImplementedError
 
 

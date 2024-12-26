@@ -32,12 +32,20 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.shim import get_cluster_egress_info
 from paasng.accessories.servicehub import constants, exceptions
-from paasng.accessories.servicehub.exceptions import BindServiceNoPlansError
-from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
+from paasng.accessories.servicehub.exceptions import (
+    BindServiceNoPlansError,
+    UnboundSvcAttachmentDoesNotExist,
+)
+from paasng.accessories.servicehub.models import (
+    RemoteServiceEngineAppAttachment,
+    RemoteServiceModuleAttachment,
+    UnboundRemoteServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient
 from paasng.accessories.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
 from paasng.accessories.servicehub.remote.exceptions import (
     GetClusterEgressInfoError,
+    RClientResponseError,
     ServiceNotFound,
     UnsupportedOperationError,
 )
@@ -55,6 +63,7 @@ from paasng.accessories.servicehub.services import (
     ServicePlansHelper,
     ServiceSpecificationDefinition,
     ServiceSpecificationHelper,
+    UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
 from paasng.core.region.models import get_all_regions
@@ -284,6 +293,16 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             except Exception as e:
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+
+            if self.remote_client.config.prefer_async_delete:
+                UnboundRemoteServiceEngineAppAttachment.objects.create(
+                    region=self.db_obj.region,
+                    owner=self.db_obj.owner,
+                    engine_app=self.db_engine_app,
+                    service_id=self.db_obj.service_id,
+                    service_instance_id=self.db_obj.service_instance_id,
+                )
+
         self.db_obj.service_instance_id = None
         self.db_obj.save()
 
@@ -354,6 +373,69 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                 return RemotePlanObj.from_data(d)
 
         raise RuntimeError("Plan not found")
+
+
+class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
+    """Unbound relationship between EngineApp and remote provisioned instance"""
+
+    def __init__(
+        self, db_obj: UnboundRemoteServiceEngineAppAttachment, mgr: "RemoteServiceMgr", store: RemoteServiceStore
+    ):
+        self.store = store
+        self.mgr = mgr
+
+        # Database objects
+        self.db_obj = db_obj
+        self.db_env = ModuleEnvironment.objects.get(engine_app=self.db_obj.engine_app)
+        self.db_application = self.db_env.application
+
+        # Client components
+        self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
+        self.remote_client = RemoteServiceClient(self.remote_config)
+
+    def _retrieve_instance_to_be_deleted(self) -> dict:
+        try:
+            instance_data = self.remote_client.retrieve_instance_to_be_deleted(str(self.db_obj.service_instance_id))
+        except RClientResponseError as e:
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
+            if e.status_code == 404:
+                self.db_obj.delete()
+                return {}
+            raise
+        return instance_data
+
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
+        """Get service instance object"""
+        instance_data = self._retrieve_instance_to_be_deleted()
+        if not instance_data:
+            return None
+        svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        create_time = arrow.get(instance_data.get("created"))  # type: ignore
+
+        return create_svc_instance_obj_from_remote(
+            uuid=str(self.db_obj.service_instance_id),
+            credentials=instance_data["credentials"],
+            config=instance_data["config"],
+            field_prefix=svc_obj.name,
+            create_time=create_time.datetime,
+        )
+
+    def recycle_resource(self) -> None:
+        """Recycle unbound service instance resource synchronously"""
+        try:
+            self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
+        except RClientResponseError as e:
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
+            if e.status_code == 404:
+                pass
+            else:
+                logger.exception("Error occurs during recycling")
+                raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+
+        self.db_obj.delete()
+        logger.info(
+            f"Manually recycled unbound remote service instance, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+        )
 
 
 class RemotePlainInstanceMgr(PlainInstanceMgr):
@@ -611,6 +693,16 @@ class RemoteServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_unbound_instance_rels(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[UnboundRemoteEngineAppInstanceRel, None, None]:
+        """Return all unbound remote service instances, filter by specific service (None for all)"""
+        qs = engine_app.unbound_remote_service_attachment.all()
+        if service:
+            qs = qs.filter(service_id=service.uuid)
+        for attachment in qs:
+            yield UnboundRemoteEngineAppInstanceRel(attachment, self, self.store)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return RemoteServiceEngineAppAttachment.objects.get(
@@ -677,6 +769,17 @@ class RemoteServiceMgr(BaseServiceMgr):
             return RemoteServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
         except RemoteServiceEngineAppAttachment.DoesNotExist as e:
             raise exceptions.SvcAttachmentDoesNotExist from e
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        """Return a unbound remote service instances, filter by specific service and service instance id"""
+        try:
+            instance = UnboundRemoteServiceEngineAppAttachment.objects.get(
+                service_id=service.uuid,
+                service_instance_id=service_instance_id,
+            )
+        except UnboundRemoteServiceEngineAppAttachment.DoesNotExist as e:
+            raise UnboundSvcAttachmentDoesNotExist from e
+        return UnboundRemoteEngineAppInstanceRel(instance, self, self.store)
 
 
 class RemotePlanMgr(BasePlanMgr):

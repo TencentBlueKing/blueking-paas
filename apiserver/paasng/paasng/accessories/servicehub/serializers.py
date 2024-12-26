@@ -260,6 +260,26 @@ class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
     credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")
 
 
+class UnboundServiceInstanceInfoSLZ(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    service_instance = ServiceInstanceSLZ(help_text="增强服务实例信息")
+    environment = serializers.CharField(help_text="环境")
+    environment_name = serializers.CharField(help_text="环境名称")
+
+
+class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    service = ServiceMinimalSLZ(help_text="增强服务信息")
+    unbound_instances = UnboundServiceInstanceInfoSLZ(many=True, help_text="已解绑增强服务实例")
+    count = serializers.SerializerMethodField(help_text="数量")
+
+    def get_count(self, obj):
+        return len(obj.get("unbound_instances", []))
+
+
+class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+
+
 class PossiblePlansOutputSLZ(serializers.Serializer):
     """The possible plans for a service"""
 

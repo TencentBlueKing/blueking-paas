@@ -141,6 +141,18 @@ urlpatterns = [
         views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
         name="api.services.mysql.retrieve_related_applications_info",
     ),
+    # List unbound instances by module
+    re_path(
+        make_app_pattern("/services/unbound_attachments/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list_by_module"}),
+        name="api.services.attachment.unbound",
+    ),
+    # Recycle unbound instance
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
+        name="api.services.attachment.unbound.delete",
+    ),
 ]
 
 # Multi-editions specific start

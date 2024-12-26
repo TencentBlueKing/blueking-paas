@@ -19,7 +19,7 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError
 
 from paasng.bk_plugins.pluginscenter.bk_user.backend.esb import get_client_by_username
-from paasng.bk_plugins.pluginscenter.bk_user.definitions import DepartmentDetail
+from paasng.bk_plugins.pluginscenter.bk_user.definitions import DepartmentDetail, UserDetail
 from paasng.bk_plugins.pluginscenter.bk_user.exceptions import BkUserManageApiError, BkUserManageGatewayServiceError
 
 
@@ -36,7 +36,7 @@ class BkUserManageClient:
         try:
             resp = self.client.retrieve_department(params={"id": department_id})
         except APIGatewayResponseError:
-            raise BkUserManageGatewayServiceError("Failed to list custom collector config")
+            raise BkUserManageGatewayServiceError("Failed to retrieve department")
 
         if not resp["result"]:
             raise BkUserManageApiError(resp["message"])
@@ -59,3 +59,15 @@ class BkUserManageClient:
             return collected
 
         return _get_parents(department_id, [])
+
+    def get_user_detail(self, username: str):
+        try:
+            resp = self.client.retrieve_user(params={"id": username})
+        except APIGatewayResponseError:
+            raise BkUserManageGatewayServiceError("Failed to get user detail")
+
+        if not resp["result"]:
+            raise BkUserManageApiError(resp["message"])
+
+        data = resp["data"]
+        return cattrs.structure(data, UserDetail)

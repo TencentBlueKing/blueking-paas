@@ -543,8 +543,8 @@ def is_release_strategy_organization_changed(release: PluginRelease) -> bool:
         return True
 
     # 获取两个发布策略的组织 ID 集合
-    latest_org_ids = {s["id"] for s in latest_release_strategy.organization}
-    second_org_ids = {s["id"] for s in second_release_strategy.organization}
+    latest_org_ids = {s["id"] for s in latest_release_strategy.organization or set()}
+    second_org_ids = {s["id"] for s in second_release_strategy.organization or set()}
 
     # 前后两个组织的 ID 不完全相等
     return latest_org_ids != second_org_ids

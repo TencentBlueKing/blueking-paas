@@ -189,6 +189,9 @@ class TestPluginApi:
         ), mock.patch(
             "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
             return_value=["admin"],
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils._get_leader_by_user",
+            return_value=[],
         ):
             resp = api_client.post(
                 url,

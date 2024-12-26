@@ -22,20 +22,22 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.constants import ClusterTokenType, ClusterType
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.infras.clusters.detect import ClusterUsageDetector
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
+    ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterUpdateInputSLZ,
+    ClusterUsageRetrieveOutputSLZ,
 )
-from paasng.plat_mgt.infras.clusters.serializers.clusters import ClusterUsageRetrieveOutputSLZ
 from paasng.utils.error_codes import error_codes
 
 
@@ -87,8 +89,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster = Cluster.objects.create(
                 # 集群分划属性
                 region=settings.DEFAULT_REGION_NAME,
-                # FIXME（多租户）替换为用户所属租户 ID
-                tenant_id="default",
+                tenant_id=get_tenant(request.user).id,
                 available_tenant_ids=data["available_tenant_ids"],
                 # 集群基本属性
                 name=data["name"],
@@ -200,6 +201,19 @@ class ClusterViewSet(viewsets.GenericViewSet):
     def retrieve_status(self, request, cluster_name, *args, **kwargs):
         """获取集群状态"""
         # FIXME（多租户）提供集群基础信息，组件状态，集群特性配置完成度
+
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster"],
+        operation_description="获取集群默认特性",
+        responses={status.HTTP_200_OK: ClusterDefaultFeatureFlagsRetrieveOutputSLZ()},
+    )
+    def retrieve_default_feature_flags(self, request, cluster_name, *args, **kwargs):
+        cluster = self.get_object()
+
+        feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster.type)
+        # FIXME（多租户）根据集群是否有安装某类组件，提供不同的默认特性配置（比如 GPA）
+
+        return Response(ClusterDefaultFeatureFlagsRetrieveOutputSLZ({"feature_flags": feature_flags}).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],

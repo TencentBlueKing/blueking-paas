@@ -114,6 +114,7 @@ class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
         if attrs["type"] == ClusterAllocationPolicyType.STATIC and len(attrs["rules"]) > 1:
             raise ValidationError(_("统一分配模式下，只能有且仅有一个分配规则"))
 
-        _validate_cluster_in_rules(self.context["policy"].tenant_id, attrs["rules"])
+        cur_policy = self.context["cur_policy"]
+        _validate_cluster_in_rules(cur_policy.tenant_id, attrs["rules"])
 
         return attrs

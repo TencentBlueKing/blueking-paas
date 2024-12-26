@@ -65,12 +65,11 @@ class ClusterUsageDetector:
         # 需要针对所有分配策略中的所有规则逐一检查（分配策略数量 <= 租户数量，总体可控）
         for policy in ClusterAllocationPolicy.objects.all():
             for rule in policy.rules:
-                if rule.clusters:
-                    # 统一分配
-                    if self.cluster.name in rule.clusters:
-                        allocated_tenant_ids.add(policy.tenant_id)
+                # 所有环境使用相同集群
+                if rule.clusters and self.cluster.name in rule.clusters:
+                    allocated_tenant_ids.add(policy.tenant_id)
+                # 按应用部署环境分配集群
                 elif rule.env_clusters:
-                    # 按环境分配
                     for clusters in rule.env_clusters.values():
                         if clusters and self.cluster.name in clusters:
                             allocated_tenant_ids.add(policy.tenant_id)
@@ -83,6 +82,9 @@ class ClusterUsageDetector:
         app_module_envs = set()
 
         for cfg in WlAppConfig.objects.filter(cluster=self.cluster.name):
+            if not cfg.metadata:
+                continue
+
             app_code = cfg.metadata.get("paas_app_code")
             module_name = cfg.metadata.get("module_name")
             environment = cfg.metadata.get("environment")

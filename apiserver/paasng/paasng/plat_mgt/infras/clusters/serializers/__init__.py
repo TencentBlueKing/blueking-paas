@@ -17,9 +17,11 @@
 
 from .clusters import (
     ClusterCreateInputSLZ,
+    ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterUpdateInputSLZ,
+    ClusterUsageRetrieveOutputSLZ,
 )  # noqa: F401
 from .policies import (
     ClusterAllocationPolicyCreateInputSLZ,
@@ -34,6 +36,8 @@ __all__ = [
     "ClusterRetrieveOutputSLZ",
     "ClusterCreateInputSLZ",
     "ClusterUpdateInputSLZ",
+    "ClusterUsageRetrieveOutputSLZ",
+    "ClusterDefaultFeatureFlagsRetrieveOutputSLZ",
     # policies
     "ClusterAllocationPolicyListOutputSLZ",
     "ClusterAllocationPolicyCreateInputSLZ",

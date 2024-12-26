@@ -32,6 +32,12 @@ urlpatterns = [
     ),
     # 集群状态
     path(
+        "api/plat-mgt/infras/clusters/<str:cluster_name>/default-feature-flags/",
+        views.ClusterViewSet.as_view({"get": "retrieve_default_feature_flags"}),
+        name="plat_mgt.infras.cluster.default_feature_flags",
+    ),
+    # 集群状态
+    path(
         "api/plat-mgt/infras/clusters/<str:cluster_name>/status/",
         views.ClusterViewSet.as_view({"get": "retrieve_status"}),
         name="plat_mgt.infras.cluster.status",

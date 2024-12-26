@@ -413,6 +413,10 @@ class AppModuleEnvSLZ(serializers.Serializer):
     environment = serializers.CharField(help_text="部署环境")
 
 
+class ClusterDefaultFeatureFlagsRetrieveOutputSLZ(serializers.Serializer):
+    feature_flags = serializers.JSONField(help_text="特性标志")
+
+
 class ClusterUsageRetrieveOutputSLZ(serializers.Serializer):
     """集群被使用的情况"""
 

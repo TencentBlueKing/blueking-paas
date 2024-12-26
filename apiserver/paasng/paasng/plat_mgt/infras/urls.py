@@ -15,10 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include
-
-from paasng.utils.basic import re_path
+from django.urls import include, path
 
 urlpatterns = [
-    re_path("", include("paasng.plat_mgt.infras.clusters.urls")),
+    path("", include("paasng.plat_mgt.infras.clusters.urls")),
 ]

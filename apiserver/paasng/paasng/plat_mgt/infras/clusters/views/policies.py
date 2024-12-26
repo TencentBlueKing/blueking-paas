@@ -64,7 +64,10 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         """更新集群分配策略"""
         policy = self.get_object()
 
-        slz = ClusterAllocationPolicyUpdateInputSLZ(data=request.data, context={"policy": policy})
+        slz = ClusterAllocationPolicyUpdateInputSLZ(
+            data=request.data,
+            context={"cur_policy": policy},
+        )
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 

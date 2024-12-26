@@ -463,6 +463,29 @@ class TestDeleteCluster:
         assert "集群已被 1 个应用部署环境绑定" in resp.json()["detail"]
 
 
+class TestRetrieveClusterDefaultFeatureFlags:
+    """获取集群默认特性"""
+
+    def test_retrieve(self, plat_mgt_api_client, init_default_cluster):
+        resp = plat_mgt_api_client.get(
+            reverse(
+                "plat_mgt.infras.cluster.default_feature_flags",
+                kwargs={"cluster_name": init_default_cluster.name},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert resp.json()["feature_flags"] == {
+            ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
+            ClusterFeatureFlag.INGRESS_USE_REGEX: False,
+            ClusterFeatureFlag.ENABLE_BK_MONITOR: False,
+            ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR: False,
+            ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
+            ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
+        }
+
+
 class TestRetrieveClusterStatus:
     """获取集群状态"""
 

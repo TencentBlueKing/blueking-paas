@@ -62,7 +62,6 @@ class EnhancedApiClient(BaseApiClient):
     """Enhanced Kubernetes ApiClient, with some extra features:
 
     1. Client-side HA support using multiple endpoints
-    2. Hostname overridden(via custom resolver).
 
     Arguments:
 

@@ -37,7 +37,6 @@ def ensure_base64_encoded(content):
 class APIServerSLZ(serializers.Serializer):
     uuid = serializers.CharField(required=False, read_only=True)
     host = serializers.CharField()
-    overridden_hostname = serializers.CharField(default=None, required=False, allow_blank=True)
 
 
 class ReadonlyClusterSLZ(serializers.ModelSerializer):

@@ -15,17 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import contextlib
 import logging
 from typing import Any, Dict, List, Optional
-from urllib import parse
 
 from blue_krill.models.fields import EncryptField
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_ipv46_address
 from django.db import models, transaction
 from jsonfield import JSONField
-from kubernetes.client import Configuration
 
 from paas_wl.infras.cluster.constants import (
     ClusterAnnotationKey,
@@ -40,7 +35,6 @@ from paas_wl.infras.cluster.exceptions import (
     SwitchDefaultClusterError,
 )
 from paas_wl.infras.cluster.validators import validate_ingress_config
-from paas_wl.utils.dns import custom_resolver
 from paas_wl.utils.models import UuidAuditedModel
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.utils.models import make_json_field
@@ -228,100 +222,9 @@ class Cluster(UuidAuditedModel):
 class APIServer(UuidAuditedModel):
     cluster = models.ForeignKey(to=Cluster, related_name="api_servers", on_delete=models.CASCADE)
     host = models.CharField(max_length=255, help_text="API Server 的后端地址")
-    overridden_hostname = models.CharField(
-        max_length=255,
-        help_text="在请求该 APIServer 时, 使用该 hostname 替换具体的 backend 中的 hostname",
-        default=None,
-        blank=True,
-        null=True,
-    )
 
     class Meta:
         unique_together = ("cluster", "host")
-
-
-class EnhancedConfiguration(Configuration):
-    """Enhanced Configuration, which is loaded from db and supporting advanced function.
-
-    :param cert_file: client-side certificate file
-    :param key_file: client-side key file
-    :param token: bearer token
-    """
-
-    @classmethod
-    def create(
-        cls, host: str, overridden_hostname: str, ssl_ca_cert: str, cert_file: str, key_file: str, token: Optional[str]
-    ):
-        """Create an `EnhancedConfiguration` object.
-
-        由于 Swagger 在重载 __init__ 方法时不允许添加参数, 因此定义另一个工厂函数
-
-        :param overridden_hostname: Replace host with this value. A custom resolver is required to make
-            sure the request is sending to the right host. For example: when host="https://192.168.1.1:8443/"
-            and overridden_hostname="kubernetes". The request will be send to "https://kubernetes:8443/"
-            while domain "kubernetes" resolved to "192.168.1.1".
-        :raise ValueError: When given properties is not valid.
-        """
-        self = cls()
-        # Set properties afterwards
-        self._initialize_host(host, overridden_hostname)
-        self._initialize_auth(ssl_ca_cert, cert_file, key_file, token)
-        return self
-
-    def _initialize_host(self, host: str, forced_hostname: str):
-        """Initialize host and DNS resolver related properties"""
-        if forced_hostname:
-            ip = self.extract_ip(host)
-            if not ip:
-                raise ValueError(f"No IP address found in {host}")
-            self.host = host.replace(ip, forced_hostname, 1)
-            self.resolver_records = {forced_hostname: ip}
-        else:
-            self.host = host
-            self.resolver_records = {}
-
-    def _initialize_auth(self, ssl_ca_cert: str, cert_file: str, key_file: str, token: Optional[str]):
-        """Initialize auth related properties"""
-        if ssl_ca_cert:
-            self.ssl_ca_cert = ssl_ca_cert
-        else:
-            self.verify_ssl = False
-
-        # Auth type: client-side certificate
-        if cert_file and key_file:
-            self.cert_file = cert_file
-            self.key_file = key_file
-
-        # Auth type: Bearer token
-        if token:
-            token = f"Bearer {token}"
-            self.api_key["authorization"] = token
-
-    @contextlib.contextmanager
-    def activate_resolver(self):
-        """Activate this context manager when sending any API requests to make "hostname-override" works"""
-        if self.resolver_records:
-            logger.debug("Custom resolver record: %s", self.resolver_records)
-            with custom_resolver(self.resolver_records):
-                yield
-        else:
-            yield
-
-    @staticmethod
-    def extract_ip(host: str) -> Optional[str]:
-        """Extract an IP address from host
-
-        :return: None if the host is not valid IP address
-        """
-        val = parse.urlparse(url=host).hostname
-        try:
-            validate_ipv46_address(val)
-        except ValidationError:
-            return None
-        return val
-
-    def __repr__(self) -> str:
-        return f"EnhancedConfiguration(host={self.host!r})"
 
 
 AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])

@@ -48,10 +48,7 @@ def cluster_creator(ca_data, cert_data, key_data):
         )
 
         for api_server in servers:
-            APIServer.objects.update_or_create(
-                host=api_server["host"],
-                defaults=dict(cluster=cluster, overridden_hostname=api_server.get("overridden_hostname", None)),
-            )
+            APIServer.objects.update_or_create(host=api_server["host"], cluster=cluster)
 
     return get_or_create
 

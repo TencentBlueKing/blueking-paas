@@ -78,9 +78,5 @@ def build_default_cluster():
         token_value=settings.FOR_TESTS_CLUSTER_CONFIG["token_value"],
         feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
     )
-    apiserver = APIServer(
-        host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
-        cluster=cluster,
-        overridden_hostname=settings.FOR_TESTS_CLUSTER_CONFIG["force_domain"],
-    )
+    apiserver = APIServer(host=settings.FOR_TESTS_CLUSTER_CONFIG["url"], cluster=cluster)
     return cluster, apiserver

@@ -24,10 +24,10 @@ from typing import Dict, List
 from blue_krill.connections.ha_endpoint_pool import HAEndpointPool
 from django.utils import timezone
 from kubernetes.client import ApiClient as BaseApiClient
+from kubernetes.client import Configuration
 from kubernetes.client.rest import RESTClientObject
 from urllib3.exceptions import HTTPError
 
-from paas_wl.infras.cluster.models import EnhancedConfiguration
 from paas_wl.infras.cluster.pools import ContextConfigurationPoolMap
 from paasng.core.core.storages.redisdb import get_default_redis
 
@@ -47,8 +47,8 @@ def _get_global_configuration_pool(last_modified: str) -> Dict[str, HAEndpointPo
     NOTE: This function is cached for performance. When the clusters have been updated,
     the cache must be cleared.
 
-    :param last_modified: The global config last modified. 与 lru_cache 配合使用, 如果 last_modified 发生变化, 则缓存失效,
-      从数据库重新加载
+    :param last_modified: 任意集群配置最后变更时间. 与 lru_cache 配合使用,
+        如果 last_modified 发生变化, 则会触发缓存失效，从数据库重新加载
     """
     return ContextConfigurationPoolMap.from_db()
 
@@ -82,11 +82,10 @@ class EnhancedApiClient(BaseApiClient):
         # will stay intact because it's value was set in `BaseApiClient.__init__` method. This behaviour is not
         # harmful to current implementation, but due to this vulnerability, we may have to change current
         # implementation(e.g. create another `Client` object) in order to make things work in the future.
-        self.configuration: EnhancedConfiguration = self.ep_pool.get()
+        self.configuration: Configuration = self.ep_pool.get()
         try:
-            with self.configuration.activate_resolver():
-                logger.debug("Send request to Kubernetes API %s...", self.configuration.host)
-                ret = super().call_api(*args, **kwargs)
+            logger.debug("Send request to Kubernetes API %s...", self.configuration.host)
+            ret = super().call_api(*args, **kwargs)
         except HTTPError:
             self.ep_pool.fail()
             raise
@@ -106,7 +105,7 @@ class EnhancedApiClient(BaseApiClient):
 
 
 @lru_cache(maxsize=128)
-def make_rest_client(configuration: EnhancedConfiguration) -> RESTClientObject:
+def make_rest_client(configuration: Configuration) -> RESTClientObject:
     """Use LRU cache to avoid re-creating HTTP connections"""
     return RESTClientObject(configuration)
 

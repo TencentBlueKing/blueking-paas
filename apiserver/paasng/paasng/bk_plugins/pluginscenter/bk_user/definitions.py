@@ -18,10 +18,10 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from paasng.utils.structure import prepare_json_field
+from paasng.utils.structure import register
 
 
-@prepare_json_field
+@register
 class DepartmentDetail(BaseModel):
     """组织架构的详情
 
@@ -35,14 +35,14 @@ class DepartmentDetail(BaseModel):
     parent: Optional[int]
 
 
-@prepare_json_field
+@register
 class LeaderDetail(BaseModel):
     """用户上级详情，目前只用到了 username 字段"""
 
     username: str
 
 
-@prepare_json_field
+@register
 class UserDetail(BaseModel):
     """用户详情，目前只用到了 leader 字段
 

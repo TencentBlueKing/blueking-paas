@@ -36,7 +36,7 @@ class BkUserManageClient:
         try:
             resp = self.client.retrieve_department(params={"id": department_id})
         except APIGatewayResponseError:
-            raise BkUserManageGatewayServiceError("Failed to list custom collector config")
+            raise BkUserManageGatewayServiceError("Failed to retrieve department")
 
         if not resp["result"]:
             raise BkUserManageApiError(resp["message"])
@@ -64,7 +64,7 @@ class BkUserManageClient:
         try:
             resp = self.client.retrieve_user(params={"id": username})
         except APIGatewayResponseError:
-            raise BkUserManageGatewayServiceError("Failed to list custom collector config")
+            raise BkUserManageGatewayServiceError("Failed to get user detail")
 
         if not resp["result"]:
             raise BkUserManageApiError(resp["message"])

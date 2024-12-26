@@ -369,7 +369,7 @@ def _add_users_to_plugin_admins(plugin: PluginInstance, usernames: list):
         raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(
             f"Failed to add user({usernames}) as plugin({plugin.id}) administrator: {e.message}"
         )
-    # 将成语同步到第三方系统中
+    # 将成员同步到第三方系统中
     sync_members(pd=plugin.pd, instance=plugin)
     return
 

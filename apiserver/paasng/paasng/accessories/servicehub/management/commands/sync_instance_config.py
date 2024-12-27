@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Sync instance configs with remote services
-"""
+"""Sync instance configs with remote services"""
+
 import logging
 from typing import Optional
 
@@ -27,7 +27,6 @@ from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachmen
 from paasng.accessories.servicehub.remote import RemoteServiceMgr
 from paasng.accessories.servicehub.remote.manager import RemoteEngineAppInstanceRel, RemoteServiceObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.core.region.models import get_all_regions
 
 logger = logging.getLogger("commands")
 
@@ -46,12 +45,10 @@ class Command(BaseCommand):
 
     def _get_service(self, mgr: RemoteServiceMgr, name: str) -> Optional[RemoteServiceObj]:
         """Iterate all regions to get remote service object"""
-        for region in get_all_regions():
-            try:
-                return mgr.find_by_name(name, region)
-            except ServiceObjNotFound:
-                continue
-        return None
+        try:
+            return mgr.find_by_name(name)
+        except ServiceObjNotFound:
+            return None
 
     def handle(self, *args, **options):
         store = get_remote_store()

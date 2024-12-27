@@ -21,41 +21,9 @@ import pytest
 
 from paasng.accessories.servicehub.remote import collector
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from tests.paasng.accessories.servicehub.utils import gen_plan, gen_service
 from tests.utils.api import mock_json_response
-from tests.utils.helpers import configure_regions
 
 from . import data_mocks
-
-
-@pytest.fixture()
-def bk_service_r1():
-    return gen_service(region="r1")
-
-
-@pytest.fixture()
-def bk_plan_r1_v1():
-    return gen_plan(region="r1", specifications={"version": "1", "app_zone": "1"})
-
-
-@pytest.fixture()
-def bk_plan_r1_v2():
-    return gen_plan(region="r1", specifications={"version": "2", "app_zone": "1"})
-
-
-@pytest.fixture()
-def bk_plan_r2_v1():
-    return gen_plan(region="r2", specifications={"version": "1", "app_zone": "2"})
-
-
-@pytest.fixture(autouse=True)
-def _setup_mocks():
-    """
-    - Setup regions which were used in mocked data
-    - Mock ClusterService which will be used in bind_service
-    """
-    with configure_regions(["r1", "r2", "r3", "rr1", "rr2"]):
-        yield
 
 
 @pytest.fixture()

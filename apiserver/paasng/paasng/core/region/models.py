@@ -113,7 +113,7 @@ class RegionMulModulesConfig:
 class SvcCategoriesLoader(Protocol):
     """The loader for loading service categories"""
 
-    def __call__(self, region: str) -> List: ...
+    def __call__(self) -> List: ...
 
 
 # The loader function that loads service categories, set it when all modules are initialized.
@@ -159,7 +159,7 @@ class Region:
         if not _service_categories_loader:
             raise RuntimeError("the svc categories loader is not found")
 
-        self._service_categories = _service_categories_loader(self.name)
+        self._service_categories = _service_categories_loader()
 
     def get_built_in_config_var(self, key, env):
         return self.basic_info.built_in_config_var.get(key, {}).get(env, "")

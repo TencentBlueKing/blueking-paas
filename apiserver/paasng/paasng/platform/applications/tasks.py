@@ -37,7 +37,7 @@ def sync_developers_to_sentry(application_id):
     for app_env in application.get_app_envs():
         engine_app = app_env.engine_app
         region = engine_app.region
-        service_obj = mixed_service_mgr.find_by_name(name="sentry", region=region)
+        service_obj = mixed_service_mgr.find_by_name(name="sentry")
         service_obj = cast(LocalServiceObj, service_obj)
 
         if list(mixed_service_mgr.list_provisioned_rels(engine_app, service_obj)):

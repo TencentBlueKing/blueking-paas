@@ -19,12 +19,10 @@ import uuid
 from unittest import mock
 
 import pytest
-from django.conf import settings
-from django_dynamic_fixture import G
 
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
-from paasng.accessories.services.models import Service, ServiceCategory
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
@@ -37,20 +35,17 @@ pytestmark = [
 
 
 dummy_service = RemoteServiceObj(
-    region=settings.DEFAULT_REGION_NAME,
     uuid="00000000-0000-0000-0000-000000000000",
     name="dummy-service",
     logo="",
     is_visible=True,
     plans=[
         RemotePlanObj(
-            region=settings.DEFAULT_REGION_NAME,
             uuid="11111111-1111-1111-1111-111111111111",
             name="dummy-plan",
             description="dummy plan",
             is_eager=True,
             is_active=True,
-            specifications={},
             properties={},
         )
     ],
@@ -61,6 +56,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
+        ServiceBindingPolicyManager(dummy_service).set_static([dummy_service.get_plans()[0]])
         yield
 
 
@@ -70,18 +66,6 @@ class TestBaseServiceMigration:
 
 
 class TestBaseRemoteServiceMigration:
-    @pytest.fixture()
-    def bk_service(self):
-        category = G(ServiceCategory)
-        svc = G(
-            Service,
-            name=dummy_service.name,
-            category=category,
-            region=settings.DEFAULT_REGION_NAME,
-            uuid=dummy_service.uuid,
-        )
-        return svc
-
     def test_bind_service_to_default_module(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         assert RemoteServiceModuleAttachment.objects.filter(module=bk_module).exists() is False

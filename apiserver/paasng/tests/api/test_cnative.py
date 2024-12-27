@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 from django.urls import reverse
 
 from paas_wl.bk_app.cnative.specs.constants import BKPAAS_ADDONS_ANNO_KEY
@@ -32,8 +31,8 @@ class TestCNative:
         with mock.patch(
             "paasng.platform.bkapp_model.views.mixed_service_mgr.list_binded",
             return_value=[
-                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="mysql", logo="", is_visible=True),
-                ServiceObj(region=settings.DEFAULT_REGION_NAME, uuid="xxx", name="redis", logo="", is_visible=True),
+                ServiceObj(uuid="xxx", name="mysql", logo="", is_visible=True),
+                ServiceObj(uuid="xxx", name="redis", logo="", is_visible=True),
             ],
         ):
             yield

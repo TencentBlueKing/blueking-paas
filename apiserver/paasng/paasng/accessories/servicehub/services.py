@@ -22,14 +22,11 @@ import uuid
 import weakref
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List, Mapping, Optional, Type
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, Type
 
-from django.conf import settings
 from django.db.models import QuerySet
-from django.utils.translation import gettext_lazy as _
 
-from paas_wl.infras.cluster.shim import get_application_cluster
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
@@ -39,27 +36,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ServiceSpecificationDefinition:
-    """Service spec definition"""
-
-    name: str
-    description: str
-    recommended_value: Optional[str] = None
-    is_public: Optional[bool] = field(default=None)
-    display_name: str = ""
-
-    def __post_init__(self):
-        # 规格定义是否需要暴露给用户
-        if self.is_public is None:
-            self.is_public = self.name not in settings.SERVICE_PROTECTED_SPEC_NAMES
-        self.description = _(self.description)
-        self.display_name = _(self.display_name)
-
-    def as_dict(self) -> Dict:
-        return asdict(self)
-
-
 NOTSET = object()
 
 
@@ -67,7 +43,6 @@ NOTSET = object()
 class ServiceObj:
     """A universal service object"""
 
-    region: str
     uuid: str
     name: str
     logo: str = field(compare=False)
@@ -75,7 +50,6 @@ class ServiceObj:
     is_active: bool = True
     available_languages: str = ""
     config: Dict = field(default_factory=dict, compare=False)
-    specifications: List["ServiceSpecificationDefinition"] = field(default_factory=list, compare=False)
 
     display_name: str = ""
     description: str = ""
@@ -85,14 +59,6 @@ class ServiceObj:
     # below attributes should be set by subclass
     category_id = None
     category = None
-
-    @property
-    def public_specifications(self) -> List["ServiceSpecificationDefinition"]:
-        return [i for i in self.specifications if i.is_public]
-
-    @property
-    def protected_specifications(self) -> List["ServiceSpecificationDefinition"]:
-        return [i for i in self.specifications if not i.is_public]
 
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         """Return all related plans"""
@@ -108,8 +74,6 @@ class PlanObj:
     description: str
     is_active: bool
     is_eager: bool
-    region: str
-    specifications: Dict[str, str]
     properties: Dict
     config: Dict = field(default_factory=dict)
 
@@ -252,9 +216,7 @@ class BaseServiceMgr(metaclass=ABCMeta):
     service_obj_cls = ServiceObj
 
     @abstractmethod
-    def list_by_category(
-        self, region: str, category_id: int, include_hidden: bool = False
-    ) -> Generator[ServiceObj, None, None]:
+    def list_by_category(self, category_id: int, include_hidden: bool = False) -> Generator[ServiceObj, None, None]:
         raise NotImplementedError
 
     @abstractmethod
@@ -267,7 +229,17 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
+    def bind_service(
+        self,
+        service: ServiceObj,
+        module: Module,
+        plan_id: str | None = None,
+        env_plan_id_map: Dict[str, str] | None = None,
+    ) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def bind_service_use_first_plan(self, service: ServiceObj, module: Module) -> str:
         raise NotImplementedError
 
     @abstractmethod
@@ -293,10 +265,6 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get_provisioned_queryset_by_services(self, services: List[ServiceObj], application_ids: List[str]) -> QuerySet:
-        raise NotImplementedError
-
-    @abstractmethod
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         raise NotImplementedError
 
@@ -305,11 +273,11 @@ class BaseServiceMgr(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, uuid: str, region: str) -> ServiceObj:
+    def get(self, uuid) -> ServiceObj:
         raise NotImplementedError
 
     @abstractmethod
-    def find_by_name(self, name: str, region: str) -> ServiceObj:
+    def find_by_name(self, name: str) -> ServiceObj:
         raise NotImplementedError
 
     @abstractmethod
@@ -337,166 +305,3 @@ class BasePlanMgr:
 
     def delete_plan(self, service: ServiceObj, plan_id: str):
         raise NotImplementedError
-
-
-@dataclass
-class ServicePlansHelper:
-    """Hepler work for plans"""
-
-    plans: List["PlanObj"]
-
-    @classmethod
-    def from_service(cls, service: "ServiceObj") -> "ServicePlansHelper":
-        return cls(service.get_plans())
-
-    def get_by_region(self, region: "str") -> "Iterable[PlanObj]":
-        """"""
-        for p in self.plans:
-            if p.region == region:
-                yield p
-
-
-@dataclass
-class ServiceSpecificationHelper:
-    """Helper work for service specifications"""
-
-    definitions: List["ServiceSpecificationDefinition"]
-    plans: List["PlanObj"]
-
-    def __post_init__(self):
-        specification_keys = {definition.name for definition in self.definitions}
-        if len(specification_keys) != len(self.definitions):
-            raise ValueError("Encountered duplicate field name.")
-
-    @classmethod
-    def from_service(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
-        return cls(definitions=service.specifications, plans=service.get_plans())
-
-    @classmethod
-    def from_service_public_specifications(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
-        return cls(definitions=service.public_specifications, plans=service.get_plans())
-
-    @classmethod
-    def from_service_protected_specifications(cls, service: "ServiceObj") -> "ServiceSpecificationHelper":
-        return cls(definitions=service.protected_specifications, plans=service.get_plans())
-
-    def filter_plans(self, specifications: Optional[Dict] = None) -> List["PlanObj"]:
-        """Get plans which matched specifications. But if not provided any specifications, return all plans."""
-        plans = self.plans
-        if not specifications:
-            return plans
-
-        results = []
-        target_specs = self._sanitize_specs(specifications)
-        for plan in plans:
-            plan_specs = self._sanitize_specs(plan.specifications)
-            for k, v in target_specs.items():
-                if v is not None and plan_specs[k] != v:
-                    break
-            else:
-                results.append(plan)
-        return results
-
-    def get_recommended_spec(self) -> Dict[str, Optional[str]]:
-        """Get recommended specs."""
-        recommended_spec = {}
-        grouped_spec_values: Optional[Dict] = self.get_grouped_spec_values()
-        for definition in self.definitions:
-            value = definition.recommended_value
-            if grouped_spec_values is None:
-                value = None
-            elif value in grouped_spec_values:
-                grouped_spec_values = grouped_spec_values.get(value)
-            else:
-                value = grouped_spec_values = None
-            recommended_spec[definition.name] = value
-        return self._sanitize_specs(recommended_spec)
-
-    def list_plans_spec_value(self) -> List[List[Optional[str]]]:
-        """List spec_value from plans.
-
-        :return: [plan_A_spec_value, plan_B_spec_value, ...]
-        """
-        if not self.definitions:
-            return []
-
-        plan_spec_values = []
-        for plan in self.plans:
-            plan_spec_values.append(list(self._sanitize_specs(plan.specifications).values()))
-        return plan_spec_values
-
-    def get_grouped_spec_values(self) -> Dict:
-        """Get grouped spec_values from plan."""
-        return self.parse_spec_values_tree(self.list_plans_spec_value())
-
-    def _sanitize_specs(self, specs: Mapping[str, Optional[str]]) -> Dict[str, Optional[str]]:
-        """Order given specs by service definitions, and ignored those undefined specs."""
-        return OrderedDict((definition.name, specs.get(definition.name)) for definition in self.definitions)
-
-    @staticmethod
-    def parse_spec_values_tree(values: List[List[Optional[str]]]) -> Dict:
-        """Parse grouped specs from given specs.
-
-        >>> ServiceSpecificationHelper.parse_spec_values_tree([["a", "b"], ["a", "c"]])
-        {'a': {'b': None, 'c': None}}
-
-        >>> ServiceSpecificationHelper.parse_spec_values_tree([["a", "b"], ["a", "c"], ["d", "c"]])
-        {'a': {'b': None, 'c': None}, 'd': {'c': None}}
-
-        >>> ServiceSpecificationHelper.parse_spec_values_tree([["a", "b", "c", "e"], ["d"]])
-        {'a': {'b': {'c': {'e': None}}}, "d": None}
-
-        >>> ServiceSpecificationHelper.parse_spec_values_tree([["a", "b"], ["a", None]])
-        {'a': {'b': None, None: None}}
-
-        :param values: given plans spec values, grouped by List.
-        :return: grouped dict.
-        """
-        specifications: Dict = {}
-        for sub_specs in values:
-            current = specifications
-            for spec in sub_specs[:-1]:
-                current = current.setdefault(spec, {})
-
-            tail = sub_specs[-1]
-            current[tail] = None  # mark end
-        return specifications
-
-    def format_given_specs(self, specs: Dict[str, str]) -> List[Dict]:
-        """Format given specs dict by definitions."""
-        results = []
-        for definition in self.definitions:
-            if definition.name not in specs:  # ignore undefined key.
-                continue
-
-            results.append(
-                {
-                    "name": definition.name,
-                    "display_name": definition.display_name,
-                    "description": definition.description,
-                    "is_public": definition.is_public,
-                    "value": specs[definition.name],
-                }
-            )
-        return results
-
-
-@dataclass
-class ModuleSpecificationsHelper:
-    service: "ServiceObj"
-    module: "Module"
-    specs: Dict[str, str]
-
-    def __post_init__(self):
-        if self.specs is None:
-            self.specs = {}
-
-    def fill_spec_app_zone(self):
-        cluster_info = get_application_cluster(self.module.application)
-        self.specs["app_zone"] = settings.APP_ZONE_CLUSTER_MAPPINGS.get(cluster_info.name, "universal")
-
-    def fill_protected_specs(self):
-        for name in settings.SERVICE_PROTECTED_SPEC_NAMES:
-            method = getattr(self, f"fill_spec_{name}", None)
-            if callable(method):
-                method()

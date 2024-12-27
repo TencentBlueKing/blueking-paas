@@ -15,14 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydantic.main import BaseModel
 
 
 # Plan Schema
 class BaseConfigSchema(BaseModel):
-    specifications: Dict[str, str]
+    """The base schema for all types of configurations"""
 
 
 class RabbitMQConfigSchema(BaseConfigSchema):

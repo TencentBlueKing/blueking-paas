@@ -136,7 +136,7 @@ class Command(BaseCommand):
                 AppManger(session).sync_oauth(region, code=code, secret=secret_key)
                 # TODO: 检查以下流程
                 #  1. 是否使用 mysql 数据库?
-                #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)
+                #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name)
                 #  3. 需注释或替换 GCSMysqlServiceMigration、注释 RabbitMQServiceMigration
         if not silence:
             print(f"create legacy {framework_version} app [{name}]<{deploy_ver}-{code}> with secret key: {secret_key}")

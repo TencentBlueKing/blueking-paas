@@ -5,7 +5,8 @@
       <div
         v-if="isMigrationProgress"
         class="migration-progress"
-        @click.stop="handleShowAppMigrationDialog">
+        @click.stop="handleShowAppMigrationDialog"
+      >
         <i class="paasng-icon paasng-qianyi-mianxing" />
         <span>{{ $t('迁移进度') }}</span>
       </div>
@@ -74,9 +75,11 @@
     </div>
   </div>
 </template>
-<script>import { defineComponent, ref, watch } from 'vue';
+<script>
+import { defineComponent, ref, watch, computed } from 'vue';
 import store from '@/store';
 import router from '@/router';
+import { traceIds } from '@/common/trace-ids';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -122,13 +125,27 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    // 是否添加元素埋点
+    isTrace: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);
     const curModelName = ref(props.curModule.name || 'default');
     const route = router.currentRoute;
+    const curAppInfo = computed(() => store.state.curAppInfo);
 
     const handleTabChange = () => {
+      if (props.isTrace) {
+        if (window.NODE_ENV !== 'development') {
+          // 添加埋点
+          const category = curAppInfo.application?.type === 'cloud_native' ? '云原生应用' : '普通应用';
+          const label = props.navList.find((item) => item.name === curActive.value).label;
+          BKANALYSIS.sendEvent({ id: traceIds[label], action: 'view', category: category });
+        }
+      }
       emit('change', curActive.value);
     };
 
@@ -137,7 +154,7 @@ export default defineComponent({
     };
 
     const handleChangeModule = (moduleName) => {
-      const module = props.moduleList.find(item => item.name === moduleName) || {};
+      const module = props.moduleList.find((item) => item.name === moduleName) || {};
       emit('change-module', module);
       store.commit('updateCurAppModule', module);
       // 根据模块刷新当前路由
@@ -151,10 +168,13 @@ export default defineComponent({
       });
     };
 
-    watch(() => props.navList, (list) => {
-      // 通过路径高亮tab
-      curActive.value = props.active || list[0]?.name;
-    });
+    watch(
+      () => props.navList,
+      (list) => {
+        // 通过路径高亮tab
+        curActive.value = props.active || list[0]?.name;
+      }
+    );
 
     const handleShowAppMigrationDialog = () => {
       emit('migration-dialog', true);

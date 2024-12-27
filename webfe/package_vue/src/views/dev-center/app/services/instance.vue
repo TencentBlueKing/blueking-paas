@@ -8,11 +8,7 @@
     />
 
     <section
-      :class="[
-        'instance-detail',
-        { 'default-instance-detail-cls': !isCloudNativeApp },
-        { 'collapsed': isCollapsed }
-      ]"
+      :class="['instance-detail', { 'default-instance-detail-cls': !isCloudNativeApp }, { collapsed: isCollapsed }]"
     >
       <bk-resize-layout
         ref="resizeLayoutRef"
@@ -47,7 +43,9 @@
               mode="partial"
               :title="$t('暂无蓝鲸 APM 增强功能')"
               :functional-desc="
-                $t('应用部署后自动接入蓝鲸监控平台，即可获得应用性能管理（APM）以及 Trace 检索等全面可观测性方案，帮助您实时洞察应用状态并优化用户体验。')
+                $t(
+                  '应用部署后自动接入蓝鲸监控平台，即可获得应用性能管理（APM）以及 Trace 检索等全面可观测性方案，帮助您实时洞察应用状态并优化用户体验。'
+                )
               "
               :guide-title="$t('如需要该功能，需要部署：')"
               :guide-desc-list="[$t('1. 蓝鲸监控：监控日志套餐')]"
@@ -84,28 +82,23 @@
               <!-- 编辑 -->
               <div
                 class="instance-info"
-                v-if="specifications.length"
+                v-if="Object.keys(servicePlans).length"
               >
                 <div
+                  v-if="isSamePlan"
                   class="item"
-                  v-for="item in specifications"
-                  :key="item.name"
                 >
-                  <span>{{ $t(item.name) }}：</span>
-                  <span
-                    class="value"
-                    v-bk-overflow-tips
-                  >
-                    {{ $t(item.value) }}
-                  </span>
+                  {{ $t('方案') }}：{{ servicePlans.stag?.name }}
                 </div>
-                <span
-                  v-bk-tooltips="{ content: $t('增强服务实例已分配，不能再修改配置信息'), disabled: canEditConfig }"
-                  :class="['edit-icon', { disabled: !canEditConfig }]"
-                  @click="handleEditInstance"
+                <div
+                  v-else
+                  class="item"
+                  v-for="(value, key) in servicePlans"
+                  :key="key"
                 >
-                  <i class="paasng-icon paasng-edit-2"></i>
-                </span>
+                  {{ $t('方案') }}({{ key === 'prod' ? $t('生产环境') : $t('预发布环境') }})：
+                  <span class="value">{{ value.name }}</span>
+                </div>
               </div>
               <bk-table
                 :data="instanceList"
@@ -282,41 +275,6 @@
       </bk-resize-layout>
     </section>
 
-    <bk-dialog
-      v-model="instanceDialogConfig.visiable"
-      width="400"
-      :title="$t('配置信息')"
-      :theme="'primary'"
-      :mask-close="false"
-      :header-position="'left'"
-    >
-      <config-edit
-        ref="configInfoEdit"
-        mode="edit"
-        :is-save-operation="false"
-        :list="definitions"
-        :guide="serviceMarkdown"
-        :value="values"
-        :save-loading="saveLoading"
-        @on-change="handleConfigChange"
-      />
-      <template slot="footer">
-        <bk-button
-          theme="primary"
-          :loading="instanceDialogConfig.isLoading"
-          @click="handleConfigInfoSave"
-        >
-          {{ $t('确定') }}
-        </bk-button>
-        <bk-button
-          theme="default"
-          @click="instanceDialogConfig.visiable = false"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </template>
-    </bk-dialog>
-
     <!-- 删除服务 -->
     <bk-dialog
       v-model="delAppDialog.visiable"
@@ -374,7 +332,6 @@
 import { marked } from 'marked';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
-import ConfigEdit from './comps/config-edit';
 import usageGuide from '@/components/usage-guide';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 import $ from 'jquery';
@@ -382,7 +339,6 @@ import $ from 'jquery';
 export default {
   components: {
     appTopBar,
-    ConfigEdit,
     usageGuide,
     FunctionalDependency,
   },
@@ -411,17 +367,9 @@ export default {
       },
       formRemoveConfirmCode: '',
       servicePaths: [],
-      showConfigInfo: true,
-      canEditConfig: false,
       specifications: [],
-      definitions: [],
-      values: [],
-      saveLoading: false,
-      requestQueue: ['init', 'enabled', 'shareModule'],
-      instanceDialogConfig: {
-        visiable: false,
-        isLoading: false,
-      },
+      servicePlans: {},
+      requestQueue: ['init', 'enabled'],
       isTableLoading: false,
       credentialsDisabled: false,
       isExpand: true,
@@ -433,7 +381,8 @@ export default {
   computed: {
     compiledMarkdown() {
       this.$nextTick(() => {
-        $('#markdown').find('a')
+        $('#markdown')
+          .find('a')
           .each(function () {
             $(this).attr('target', '_blank');
           });
@@ -445,7 +394,7 @@ export default {
     },
     pageTips() {
       return `${this.$t('实例被以下模块共享：')}${this.delAppDialog.moduleList
-        .map(item => item.name)
+        .map((item) => item.name)
         .join('、')}${this.$t('，这些模块将获得实例的所有环境变量。')}`;
     },
     isLoading() {
@@ -462,18 +411,20 @@ export default {
     },
     errorTips() {
       return `${this.$t('该实例被以下模块共享：')}${this.delAppDialog.moduleList
-        .map(item => item.name)
+        .map((item) => item.name)
         .join('、')}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
     },
     asideWidth() {
       return window.innerWidth <= 1366 ? '28%' : '32%';
     },
+    isSamePlan() {
+      return this.servicePlans.prod?.name === this.servicePlans.stag?.name;
+    },
   },
   watch: {
     $route() {
-      this.requestQueue = ['init', 'enabled', 'shareModule'];
+      this.requestQueue = ['init', 'enabled'];
       this.init();
-      this.fetchEnableSpecs();
       this.fetchServicesShareDetail();
     },
     compiledMarkdown() {
@@ -488,7 +439,6 @@ export default {
   },
   created() {
     this.init();
-    this.fetchEnableSpecs();
     this.fetchServicesShareDetail();
     this.getCredentialsEnabled();
   },
@@ -563,14 +513,15 @@ export default {
           moduleId: this.curModuleId,
           service: this.service,
         });
-        const { results, count } = res;
+        const { results, plans } = res;
         this.instanceList = results;
-        this.canEditConfig = count === 0;
-        // eslint-disable-next-line no-restricted-syntax
+        this.servicePlans = plans;
         for (const instanceIndex in results) {
           this.hFieldstoggleStatus.push({});
           // eslint-disable-next-line max-len
-          this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(this.instanceList[instanceIndex].service_instance.credentials);
+          this.instanceList[instanceIndex].service_instance.credentials = JSON.parse(
+            this.instanceList[instanceIndex].service_instance.credentials
+          );
           this.instanceList[instanceIndex].usage = JSON.parse(this.instanceList[instanceIndex].usage);
         }
       } catch (e) {
@@ -591,107 +542,6 @@ export default {
       }
     },
 
-    async fetchEnableSpecs() {
-      try {
-        const res = await this.$store.dispatch('service/getEnableSpecs', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-          service: this.service,
-        });
-        this.specifications = (res.results || []).map(({ display_name, value }) => ({
-          // eslint-disable-next-line camelcase
-          name: display_name,
-          value,
-        }));
-      } catch (e) {
-        console.error(e);
-      } finally {
-        this.requestQueue.shift();
-      }
-    },
-
-    async fetchServicesSpecsDetail() {
-      try {
-        const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
-          id: this.service,
-          region: this.region,
-        });
-        (res.definitions || []).forEach((item, index) => {
-          let values = [];
-          res.values.forEach((val) => {
-            values.push(val[index]);
-          });
-          values = [...new Set(values)].filter(Boolean);
-          this.$set(item, 'children', values);
-          this.$set(item, 'active', this.specifications[index].value);
-          this.$set(item, 'showError', false);
-        });
-        this.definitions = [...res.definitions];
-        this.values = [...res.values];
-        this.showConfigInfo = false;
-      } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
-    },
-
-    async handleConfigChange(action, payload) {
-      if (action === 'cancel') {
-        this.showConfigInfo = true;
-        return;
-      }
-      this.saveLoading = true;
-      const params = {
-        specs: payload,
-        service_id: this.service,
-        module_name: this.curModuleId,
-        code: this.appCode,
-      };
-      try {
-        await this.$store.dispatch('service/enableServices', params);
-        this.$paasMessage({
-          limit: 1,
-          theme: 'success',
-          message: this.$t('配置信息修改成功'),
-        });
-        const specifications = [];
-        for (const key in payload) {
-          const curObj = this.definitions.find(item => item.name === key);
-          specifications.push({
-            name: curObj.display_name,
-            value: payload[key],
-          });
-        }
-        const specificationsNames = this.specifications.map(item => item.name);
-        const notHasNames = specificationsNames.filter((item) => {
-          const arr = this.definitions.map(item => item.display_name);
-          return !arr.includes(item);
-        });
-        notHasNames.forEach((item) => {
-          const obj = this.specifications.find(spec => spec.name === item);
-          specifications.push({
-            name: obj.name,
-            value: obj.value,
-          });
-        });
-        this.specifications = specifications;
-        this.showConfigInfo = true;
-        this.instanceDialogConfig.visiable = false;
-      } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.saveLoading = false;
-        this.instanceDialogConfig.isLoading = false;
-      }
-    },
-
     // 处理复制内容
     handleCopy(payload) {
       const { credentials } = payload.service_instance;
@@ -704,19 +554,6 @@ export default {
         copyContent += `${key}:${hiddenFields[key]}\n`;
       }
       return copyContent;
-    },
-
-    // 编辑实例弹窗
-    handleEditInstance() {
-      if (!this.canEditConfig) return;
-      this.instanceDialogConfig.visiable = true;
-      this.fetchServicesSpecsDetail();
-    },
-
-    // 编辑实例确定
-    handleConfigInfoSave() {
-      this.instanceDialogConfig.isLoading = true;
-      this.$refs.configInfoEdit?.handleSave();
     },
 
     async getCredentialsEnabled() {
@@ -1078,34 +915,19 @@ export default {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    min-height: 40px;
     margin: 16px 0px;
-    padding: 10px 16px;
+    padding: 0 16px;
     background: #f0f5ff;
     border-radius: 2px;
+    gap: 0px 38px;
+    font-size: 12px;
     .item {
-      white-space: nowrap;
-      display: flex;
-      align-items: flex-end;
-      line-height: 20px;
+      flex-shrink: 0;
+      line-height: 32px;
+      color: #4d4f56;
       .value {
-        width: 66px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
         color: #313238;
-      }
-    }
-    .edit-icon {
-      position: absolute;
-      right: 14px;
-      cursor: pointer;
-      &:hover {
-        color: #3a84ff;
-      }
-      &.disabled {
-        cursor: not-allowed;
-        color: #c4c6cc;
       }
     }
   }

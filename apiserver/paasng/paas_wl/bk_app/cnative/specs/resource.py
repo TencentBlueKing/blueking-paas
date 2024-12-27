@@ -57,16 +57,13 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
         try:
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(
-                generate_bkapp_name(env), namespace=wl_app.namespace
-            )
+            bkapp_name = generate_bkapp_name(env)
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(bkapp_name, namespace=wl_app.namespace)
         except ResourceNotFoundError:
-            logger.info("Resource BkApp not found in cluster")
+            logger.info("Resource BkApp: %s not found in cluster", bkapp_name)
             return None
         except ResourceMissing:
-            logger.info(
-                "BkApp: %s not found in %s, app: %s", generate_bkapp_name(env), wl_app.namespace, env.application
-            )
+            logger.info("BkApp: %s not found in %s, app: %s", bkapp_name, wl_app.namespace, env.application)
             return None
     return BkAppResource(**data)
 

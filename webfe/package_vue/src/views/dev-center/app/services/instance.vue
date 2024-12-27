@@ -97,9 +97,7 @@
                   :key="key"
                 >
                   {{ $t('方案') }}({{ key === 'prod' ? $t('生产环境') : $t('预发布环境') }})：
-                  <span class="value">
-                    {{ value.name }}
-                  </span>
+                  <span class="value">{{ value.name }}</span>
                 </div>
               </div>
               <bk-table
@@ -917,31 +915,19 @@ export default {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    min-height: 40px;
     margin: 16px 0px;
-    padding: 10px 16px;
+    padding: 0 16px;
     background: #f0f5ff;
     border-radius: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    gap: 10px 16px;
+    gap: 0px 38px;
+    font-size: 12px;
     .item {
       flex-shrink: 0;
-      line-height: 20px;
+      line-height: 32px;
+      color: #4d4f56;
       .value {
         color: #313238;
-      }
-    }
-    .edit-icon {
-      position: absolute;
-      right: 14px;
-      cursor: pointer;
-      &:hover {
-        color: #3a84ff;
-      }
-      &.disabled {
-        cursor: not-allowed;
-        color: #c4c6cc;
       }
     }
   }

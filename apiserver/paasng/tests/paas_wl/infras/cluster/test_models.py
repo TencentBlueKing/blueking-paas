@@ -28,7 +28,7 @@ from paas_wl.infras.cluster.exceptions import (
     NoDefaultClusterError,
     SwitchDefaultClusterError,
 )
-from paas_wl.infras.cluster.models import Cluster, EnhancedConfiguration
+from paas_wl.infras.cluster.models import Cluster
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
 
@@ -157,32 +157,3 @@ class TestIngressConfigField:
         assert root_domain.reserved is True
 
         assert config.find_app_root_domain("test.foo.example.org") is None
-
-
-class TestEnhancedConfiguration:
-    def test_create_normal(self):
-        conf = EnhancedConfiguration.create("https://192.168.1.1:8443", "", "", "", "", "")
-        assert conf.host == "https://192.168.1.1:8443"
-        assert conf.resolver_records == {}
-
-    def test_create_force_hostname(self):
-        conf = EnhancedConfiguration.create("https://192.168.1.1:8443", "kubernetes", "", "", "", "")
-        assert conf.host == "https://kubernetes:8443"
-        assert conf.resolver_records == {"kubernetes": "192.168.1.1"}
-
-    def test_create_invalid_values(self):
-        with pytest.raises(ValueError, match=r"No IP address found in .*"):
-            EnhancedConfiguration.create("https://example.com", "kubernetes", "", "", "", "")
-
-    @pytest.mark.parametrize(
-        ("host", "ip"),
-        [
-            ("https://192.168.1.100/", "192.168.1.100"),
-            ("http://192.168.1.1:8080/", "192.168.1.1"),
-            ("http://[fdf8:f53b:82e4::53]:8443/", "fdf8:f53b:82e4::53"),
-            ("http://[fdf8:f53b:82e4::53]/", "fdf8:f53b:82e4::53"),
-            ("https://kubernetes:8443/", None),
-        ],
-    )
-    def test_extract_ip(self, host, ip):
-        assert EnhancedConfiguration.extract_ip(host) == ip

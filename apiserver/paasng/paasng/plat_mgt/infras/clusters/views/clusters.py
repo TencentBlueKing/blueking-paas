@@ -238,7 +238,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         operation_description="获取集群使用情况",
         responses={status.HTTP_200_OK: ClusterUsageRetrieveOutputSLZ()},
     )
-    def retrieve_usage(self, request, cluster_name, *args, **kwargs):
+    def retrieve_allocation_state(self, request, cluster_name, *args, **kwargs):
         cluster = self.get_object()
         state = ClusterAllocationGetter(cluster).get_state()
         return Response(ClusterUsageRetrieveOutputSLZ(state).data)

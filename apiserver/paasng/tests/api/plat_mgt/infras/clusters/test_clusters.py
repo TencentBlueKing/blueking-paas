@@ -519,7 +519,7 @@ class TestRetrieveClusterUsage:
 
         resp = plat_mgt_api_client.get(
             reverse(
-                "plat_mgt.infras.cluster.usage",
+                "plat_mgt.infras.cluster.allocation_state",
                 kwargs={"cluster_name": init_system_cluster.name},
             )
         )

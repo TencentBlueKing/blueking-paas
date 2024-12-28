@@ -44,9 +44,9 @@ urlpatterns = [
     ),
     # 集群使用情况
     path(
-        "api/plat_mgt/infras/clusters/<str:cluster_name>/usage/",
-        views.ClusterViewSet.as_view({"get": "retrieve_usage"}),
-        name="plat_mgt.infras.cluster.usage",
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/allocation_state/",
+        views.ClusterViewSet.as_view({"get": "retrieve_allocation_state"}),
+        name="plat_mgt.infras.cluster.allocation_state",
     ),
     # 集群节点同步
     path(

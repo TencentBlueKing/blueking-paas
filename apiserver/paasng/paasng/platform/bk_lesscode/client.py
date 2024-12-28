@@ -59,7 +59,8 @@ class LessCodeClient:
                     "bk_app_secret": settings.BK_APP_SECRET,
                     self.login_cookie_name: self.login_cookie,
                 }
-            )
+            ),
+            "X-Bk-Tenant-Id": self.tenant_id,
         }
 
         # 需要 lesscode 的 API 支持国际化

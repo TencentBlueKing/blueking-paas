@@ -279,7 +279,7 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp["message"])
 
 
-def _make_bk_minotor_backend() -> BkMonitorBackend:
+def _make_bk_minotor_backend(tenant_id) -> BkMonitorBackend:
     if settings.ENABLE_BK_MONITOR_APIGW:
         apigw_client = Client(
             endpoint=settings.BK_API_URL_TMPL,
@@ -289,6 +289,11 @@ def _make_bk_minotor_backend() -> BkMonitorBackend:
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
+        apigw_client.update_headers(
+            {
+                "X-Bk-Tenant-Id": tenant_id,
+            }
+        )
         return apigw_client.api
 
     # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
@@ -296,9 +301,9 @@ def _make_bk_minotor_backend() -> BkMonitorBackend:
     return esb_client.monitor_v3
 
 
-def make_bk_monitor_client() -> BkMonitorClient:
-    return BkMonitorClient(_make_bk_minotor_backend())
+def make_bk_monitor_client(tenant_id) -> BkMonitorClient:
+    return BkMonitorClient(_make_bk_minotor_backend(tenant_id))
 
 
-def make_bk_monitor_space_manager() -> BKMonitorSpaceManager:
-    return BKMonitorSpaceManager(_make_bk_minotor_backend())
+def make_bk_monitor_space_manager(tenant_id) -> BKMonitorSpaceManager:
+    return BKMonitorSpaceManager(_make_bk_minotor_backend(tenant_id))

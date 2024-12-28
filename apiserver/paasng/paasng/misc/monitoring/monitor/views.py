@@ -28,6 +28,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
@@ -40,6 +41,7 @@ from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manage
 from paasng.misc.monitoring.monitor.models import AppDashboard
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
@@ -270,8 +272,9 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response([])
 
+        tenant_id = get_tenant_id_for_app(code)
         try:
-            alerts = make_bk_monitor_client().query_alerts(query_params)
+            alerts = make_bk_monitor_client(tenant_id).query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
@@ -292,8 +295,10 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response([])
 
+        # 查询用户下所有应用的告警信息，这里直接按当前用户获取租户信息
+        tenant_id = get_tenant(request.user).id
         # 查询告警
-        bk_monitor_client = make_bk_monitor_client()
+        bk_monitor_client = make_bk_monitor_client(tenant_id)
         try:
             alerts = bk_monitor_client.query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
@@ -330,8 +335,9 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
         serializer = ListAlarmStrategiesSLZ(data=request.data, context={"app_code": code})
         serializer.is_valid(raise_exception=True)
 
+        tenant_id = get_tenant_id_for_app(code)
         try:
-            alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
+            alarm_strategies = make_bk_monitor_client(tenant_id).query_alarm_strategies(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
             # BkMonitorSpace 不存在（应用未部署）时，返回空字典
             return Response({})

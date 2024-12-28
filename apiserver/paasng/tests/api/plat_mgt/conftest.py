@@ -44,7 +44,7 @@ def plat_mgt_api_client(request, plat_manager_user):
 @pytest.fixture
 def tenant_manager_user():
     """租户管理员用户"""
-    # FIXME（多租户）实现该 fixture，需要兼容租户管理员权限逻辑
+    # FIXME: (多租户)实现该 fixture，需要兼容租户管理员权限逻辑
     return create_user()
 
 

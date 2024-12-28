@@ -15,6 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+# TODO 评估是否能不使用这种特殊的协议，比如说搞一个复杂的和前端交互的协议
+#  用于解决敏感信息字段的更新，创建等等各种场景的传值处理，比如空值 / 不提供字段？
+#  尤其需要注意的是，要解决输入框组件的必填，null，空字符串等校验的冲突问题
 # 敏感信息掩码（注：7 位 * 是故意的，避免遇到用户输入 6/8 位 * 的情况）
 # 适用场景：平台管理 - 配置更新功能时，不对用户暴露数据库中的值（返回 MASK），用户提交 MASK 值
 # 不会对数据库中的值进行修改，避免出现修改非 MASK 的配置时，还需要填写所有 MASK 值的情况（体验优化）

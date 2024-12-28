@@ -102,7 +102,7 @@ class ClusterAllocationPolicyCreateOutputSLZ(serializers.Serializer):
 
 
 class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
-    """创建集群分配策略"""
+    """更新集群分配策略"""
 
     type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
     rules = serializers.ListField(help_text="分配规则列表", child=AllocationRuleSLZ(), min_length=1, max_length=10)

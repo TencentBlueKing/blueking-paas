@@ -33,26 +33,26 @@ class AppModuleEnv:
 
 
 @define
-class ClusterUsageState:
-    """集群被使用的状态"""
+class ClusterAllocationState:
+    """集群被分配/绑定的状态"""
 
     cluster_name: str
     # 可用租户 ID 列表
     available_tenant_ids: List[str]
     # 已绑定分配规则的租户 ID 列表
     allocated_tenant_ids: List[str]
-    # 已绑定的应用环境数量
+    # 已绑定的应用环境信息
     bind_app_module_envs: List[AppModuleEnv]
 
 
-class ClusterUsageDetector:
-    """集群使用情况"""
+class ClusterAllocationGetter:
+    """集群分配/绑定情况"""
 
     def __init__(self, cluster: Cluster):
         self.cluster = cluster
 
-    def detect(self) -> ClusterUsageState:
-        return ClusterUsageState(
+    def get_state(self) -> ClusterAllocationState:
+        return ClusterAllocationState(
             cluster_name=self.cluster.name,
             available_tenant_ids=self.cluster.available_tenant_ids,
             allocated_tenant_ids=self.get_allocated_tenant_ids(),

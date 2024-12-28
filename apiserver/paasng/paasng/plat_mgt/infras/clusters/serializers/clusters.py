@@ -35,15 +35,8 @@ from paasng.plat_mgt.infras.clusters.constants import (
     TolerationEffect,
     TolerationOperator,
 )
-from paasng.plat_mgt.infras.clusters.detect import ClusterUsageDetector
-
-
-def ensure_base64_encoded(content: str) -> None:
-    """确保内容是 base64 编码的"""
-    try:
-        base64.b64decode(content)
-    except Exception:
-        raise ValidationError("content isn't base64 encoded.")
+from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
+from paasng.utils.validators import Base64Validator
 
 
 class ElasticSearchConfigSLZ(serializers.Serializer):
@@ -77,12 +70,12 @@ class ClusterListOutputSLZ(serializers.Serializer):
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_tenant(self, obj: Cluster) -> str:
-        # FIXME（多租户）这里应该把 ID 转换成名称
+        # FIXME: (多租户)这里应该把 ID 转换成名称
         return obj.tenant_id
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_available_tenants(self, obj: Cluster) -> str:
-        # FIXME（多租户）这里应该把 ID 转换成名称
+        # FIXME: (多租户)这里应该把 ID 转换成名称
         return obj.available_tenant_ids
 
     @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
@@ -202,21 +195,21 @@ class ClusterCreateInputSLZ(serializers.Serializer):
     # ca + cert + key / token 二选一
     ca = serializers.CharField(
         help_text="CA 证书",
-        validators=[ensure_base64_encoded],
+        validators=[Base64Validator],
         default=None,
         allow_null=True,
         allow_blank=True,
     )
     cert = serializers.CharField(
         help_text="证书",
-        validators=[ensure_base64_encoded],
+        validators=[Base64Validator],
         default=None,
         allow_null=True,
         allow_blank=True,
     )
     key = serializers.CharField(
         help_text="私钥",
-        validators=[ensure_base64_encoded],
+        validators=[Base64Validator],
         default=None,
         allow_null=True,
         allow_blank=True,
@@ -241,6 +234,19 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         # BCS 集群特殊配置校验
+        self._validate_cluster_source(attrs)
+        # 认证配置校验
+        self._validate_auth(attrs)
+
+        # 清理无效的认证数据，避免混淆
+        if attrs["auth_type"] == ClusterAuthType.CERT:
+            attrs["token"] = None
+        else:
+            attrs["ca"] = attrs["cert"] = attrs["key"] = None
+
+        return attrs
+
+    def _validate_cluster_source(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         if attrs["cluster_source"] == ClusterSource.BCS:
             if not (attrs.get("bcs_project_id") and attrs.get("bcs_cluster_id") and attrs.get("bk_biz_id")):
                 raise ValidationError(_("BCS 集群必须提供项目，集群，业务信息"))
@@ -248,7 +254,9 @@ class ClusterCreateInputSLZ(serializers.Serializer):
             if len(attrs.get("api_servers", [])) != 1:
                 raise ValidationError(_("BCS 集群必须提供且仅提供一个 API Server"))
 
-        # 认证配置校验
+        return attrs
+
+    def _validate_auth(self, attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
         if auth_type == ClusterAuthType.CERT:
             if not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
@@ -258,14 +266,6 @@ class ClusterCreateInputSLZ(serializers.Serializer):
                 raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
         else:
             raise ValidationError(_("集群认证方式 {} 不合法").format(auth_type))
-
-        # 清理无效的认证数据，避免混淆
-        if auth_type == ClusterAuthType.CERT:
-            attrs["token"] = None
-        else:
-            attrs["ca"] = attrs["cert"] = attrs["key"] = None
-
-        return attrs
 
     def validate_name(self, name: str) -> str:
         if Cluster.objects.filter(name=name).exists():
@@ -347,7 +347,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
 
     def validate_available_tenant_ids(self, available_tenant_ids: List[str]) -> List[str]:
         # 判断租户 ID 列表是否有包含所有已配置策略的租户
-        allocated_tenant_ids = ClusterUsageDetector(self.context["cur_cluster"]).get_allocated_tenant_ids()
+        allocated_tenant_ids = ClusterAllocationGetter(self.context["cur_cluster"]).get_allocated_tenant_ids()
 
         if used_tenant_ids := set(allocated_tenant_ids) - set(available_tenant_ids):
             raise ValidationError(_("当前集群已被租户 {} 分配，无法变更可用租户").format(used_tenant_ids))

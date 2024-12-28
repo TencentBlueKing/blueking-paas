@@ -24,12 +24,12 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.infras.clusters.detect import ClusterUsageDetector
+from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -50,7 +50,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     lookup_url_kwarg = "cluster_name"
 
     def get_queryset(self):
-        # FIXME（多租户）根据平台/租户管理员身份，返回不同的集群列表
+        # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群列表
         return Cluster.objects.all()
 
     @swagger_auto_schema(
@@ -112,7 +112,8 @@ class ClusterViewSet(viewsets.GenericViewSet):
             # 创建 ElasticSearch 配置
             ClusterElasticSearchConfig.objects.create(cluster=cluster, **data["elastic_search_config"])
 
-        # FIXME（多租户）添加刷新集群配置缓存逻辑
+        # 新添加集群后，需要刷新配置池
+        invalidate_global_configuration_pool()
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -135,11 +136,22 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster.ingress_config = data["ingress_config"]
         cluster.annotations = data["annotations"]
 
+        # 检查集群认证信息 & APIServers 是否被修改
+        auth_cfg_modified = bool(
+            cluster.ca_data != data["ca"]
+            or cluster.cert_data != data["cert"]
+            or cluster.key_data != data["key"]
+            or cluster.token_value != data["token"]
+        )
+        exists_api_servers = cluster.api_servers.values_list("host", flat=True)
+        api_servers_modified = set(exists_api_servers) != set(data["api_servers"])
+
         # 集群认证信息
-        cluster.ca_data = data["ca"]
-        cluster.cert_data = data["cert"]
-        cluster.key_data = data["key"]
-        cluster.token_value = data["token"]
+        if auth_cfg_modified:
+            cluster.ca_data = data["ca"]
+            cluster.cert_data = data["cert"]
+            cluster.key_data = data["key"]
+            cluster.token_value = data["token"]
 
         # App 默认配置
         cluster.default_tolerations = data["tolerations"]
@@ -163,12 +175,15 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster.save()
             cluster_es_cfg.save()
 
-            # 更新 ApiServers，采用先全部删除，再插入的方式
-            cluster.api_servers.all().delete()
-            api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
-            APIServer.objects.bulk_create(api_servers)
+            if api_servers_modified:
+                # 更新 ApiServers，采用先全部删除，再插入的方式
+                cluster.api_servers.all().delete()
+                api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+                APIServer.objects.bulk_create(api_servers)
 
-        # FIXME（多租户）添加刷新集群配置缓存逻辑
+        # 更新集群后，需要根据变更的信息，决定是否刷新配置池
+        if auth_cfg_modified or api_servers_modified:
+            invalidate_global_configuration_pool()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -182,7 +197,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster = self.get_object()
 
         # 删除集群前需要检查使用情况（分配策略，应用模块绑定等）
-        state = ClusterUsageDetector(cluster).detect()
+        state = ClusterAllocationGetter(cluster).get_state()
         if state.allocated_tenant_ids:
             raise error_codes.CANNOT_DELETE_CLUSTER.f(
                 f"集群已被租户 {', '.join(state.allocated_tenant_ids)} 分配",
@@ -196,11 +211,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster.api_servers.all().delete()
         cluster.delete()
 
+        # 删除集群后，需要刷新配置池
+        invalidate_global_configuration_pool()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve_status(self, request, cluster_name, *args, **kwargs):
         """获取集群状态"""
-        # FIXME（多租户）提供集群基础信息，组件状态，集群特性配置完成度
+        # FIXME: (多租户)提供集群基础信息，组件状态，集群特性配置完成度
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],
@@ -211,7 +229,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster = self.get_object()
 
         feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster.type)
-        # FIXME（多租户）根据集群是否有安装某类组件，提供不同的默认特性配置（比如 GPA）
+        # FIXME: (多租户)根据集群是否有安装某类组件，提供不同的默认特性配置（比如 GPA）
 
         return Response(ClusterDefaultFeatureFlagsRetrieveOutputSLZ({"feature_flags": feature_flags}).data)
 
@@ -222,7 +240,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     )
     def retrieve_usage(self, request, cluster_name, *args, **kwargs):
         cluster = self.get_object()
-        state = ClusterUsageDetector(cluster).detect()
+        state = ClusterAllocationGetter(cluster).get_state()
         return Response(ClusterUsageRetrieveOutputSLZ(state).data)
 
     @swagger_auto_schema(

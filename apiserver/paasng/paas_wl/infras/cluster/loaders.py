@@ -47,36 +47,47 @@ class DBConfigLoader:
             return
 
         for cluster in self._qs.all():  # type: Cluster
-            config = {
-                "certificate-authority-data": cluster.ca_data,
-                "client-certificate-data": cluster.cert_data,
-                "client-key-data": cluster.key_data,
-            }
-            ssl_ca_cert = FileOrData(config, file_key_name="certificate-authority").as_file()
-            cert_file = FileOrData(config, file_key_name="client-certificate").as_file()
-            key_file = FileOrData(config, file_key_name="client-key").as_file()
-
-            for api_server in cluster.api_servers.order_by("created"):
-                cfg = Configuration(host=api_server.host)
-                if ssl_ca_cert:
-                    cfg.ssl_ca_cert = ssl_ca_cert
-                else:
-                    cfg.verify_ssl = False
-
-                # Auth type: client-side certificate
-                if cert_file and key_file:
-                    cfg.cert_file = cert_file
-                    cfg.key_file = key_file
-
-                # Auth type: Bearer token
-                if cluster.token_value:
-                    cfg.api_key["authorization"] = f"Bearer {cluster.token_value}"
-
-                self.configurations[cluster.name].append(cfg)
-
+            self.configurations[cluster.name] = self._build_cluster_configurations(cluster)
             self.clusters[cluster.name] = cluster
 
         self._loaded = True
+
+    def _build_cluster_configurations(self, cluster: Cluster) -> List[Configuration]:
+        config = {
+            "certificate-authority-data": cluster.ca_data,
+            "client-certificate-data": cluster.cert_data,
+            "client-key-data": cluster.key_data,
+        }
+        ssl_ca_cert = FileOrData(config, file_key_name="certificate-authority").as_file()
+        cert_file = FileOrData(config, file_key_name="client-certificate").as_file()
+        key_file = FileOrData(config, file_key_name="client-key").as_file()
+
+        configurations = []
+        for api_server in cluster.api_servers.order_by("created"):
+            cfg = Configuration(host=api_server.host)
+
+            # TLS 验证主机名（注：False 值也是有效的）
+            if cluster.assert_hostname is not None:
+                cfg.assert_hostname = cluster.assert_hostname
+
+            # 是否使用 ssl 证书
+            if ssl_ca_cert:
+                cfg.ssl_ca_cert = ssl_ca_cert
+            else:
+                cfg.verify_ssl = False
+
+            # Auth type: client-side certificate
+            if cert_file and key_file:
+                cfg.cert_file = cert_file
+                cfg.key_file = key_file
+
+            # Auth type: Bearer token
+            if cluster.token_value:
+                cfg.api_key["authorization"] = f"Bearer {cluster.token_value}"
+
+            configurations.append(cfg)
+
+        return configurations
 
     def get_all_cluster_names(self) -> List[str]:
         self._load()

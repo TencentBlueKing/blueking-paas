@@ -168,6 +168,7 @@ class Cluster(UuidAuditedModel):
     # 认证方式 B
     token_type = models.IntegerField(help_text="Token 类型", default=ClusterTokenType.SERVICE_ACCOUNT)
     token_value = EncryptField(help_text="Token 值", null=True)
+    assert_hostname = models.JSONField(help_text="TLS 验证主机名", default=None, null=True)
 
     # App 默认配置
     default_node_selector = JSONField(help_text="部署到本集群的应用默认节点选择器（node_selector）", default=dict)

@@ -99,6 +99,7 @@ class TestBkLesscode:
         assert fake_good_client.create_project_by_app.called
         _, kwargs = fake_good_client.create_project_by_app.call_args_list[0]
         assert kwargs["headers"]["x-bkapi-authorization"] != ""
+        assert kwargs["headers"]["X-Bk-Tenant-Id"] == tenant_id
         assert kwargs["data"]["appCode"] == bk_app_code
         assert kwargs["data"]["moduleCode"] == bk_module_name
 

@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 class BkMonitorMetricClient:
     query_tmpl_config = BKMONITOR_PROMQL_TMPL
 
-    def __init__(self, bk_biz_id: str):
+    def __init__(self, bk_biz_id: str, tenant_id: str):
         self.bk_biz_id = bk_biz_id
+        self.tenant_id = tenant_id
 
     def general_query(
         self, queries: List[MetricQuery], container_name: str
@@ -82,7 +83,7 @@ class BkMonitorMetricClient:
         """请求蓝鲸监控时序数据 API，若成功则返回 Series 数据(list)，否则抛出异常"""
 
         try:
-            client = make_bk_monitor_client()
+            client = make_bk_monitor_client(self.tenant_id)
             series = client.promql_query(self.bk_biz_id, promql, start, end, step)
         except BkMonitorGatewayServiceError as e:
             logger.warning("fetch metrics failed, promql: %s, start: %s, end: %s, step: %s", promql, start, end, step)

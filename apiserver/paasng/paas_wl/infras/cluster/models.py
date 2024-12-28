@@ -168,6 +168,8 @@ class Cluster(UuidAuditedModel):
     # 认证方式 B
     token_type = models.IntegerField(help_text="Token 类型", default=ClusterTokenType.SERVICE_ACCOUNT)
     token_value = EncryptField(help_text="Token 值", null=True)
+    # 可选值：True, False, None 或 hostname 字符串（如 kubernetes）
+    # https://github.com/TencentBlueKing/blueking-paas/pull/1845#discussion_r1898229643
     assert_hostname = models.JSONField(help_text="TLS 验证主机名", default=None, null=True)
 
     # App 默认配置

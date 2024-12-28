@@ -32,13 +32,13 @@ class BkApigatewayInnerComponent(BaseComponent):
     host = BK_APIGATEWAY_INNER_API_URL
     system_name = "bk-apigateway-inner"
 
-    def get(self, path: str, bk_username: str = "", **kwargs):
-        return self._call_api(http_get, path, headers=self._prepare_headers(bk_username), **kwargs)
+    def get(self, path: str, tenant_id: str, bk_username: str = "", **kwargs):
+        return self._call_api(http_get, path, headers=self._prepare_headers(bk_username, tenant_id), **kwargs)
 
-    def post(self, path: str, bk_username: str = "", **kwargs):
-        return self._call_api(http_post, path, headers=self._prepare_headers(bk_username), **kwargs)
+    def post(self, path: str, tenant_id: str, bk_username: str = "", **kwargs):
+        return self._call_api(http_post, path, headers=self._prepare_headers(bk_username, tenant_id), **kwargs)
 
-    def _prepare_headers(self, bk_username: str):
+    def _prepare_headers(self, bk_username: str, tenant_id: str):
         headers = {
             "x-bkapi-authorization": json.dumps(
                 {
@@ -46,7 +46,8 @@ class BkApigatewayInnerComponent(BaseComponent):
                     "bk_app_secret": settings.BK_APP_SECRET,
                     "bk_username": bk_username,
                 }
-            )
+            ),
+            "X-Bk-Tenant-Id": tenant_id,
         }
 
         language = get_language()

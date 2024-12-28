@@ -35,6 +35,7 @@ from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.core.region.models import get_region
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import (
     app_action_required,
     application_perm_class,
@@ -112,7 +113,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if source_origin == SourceOrigin.BK_LESS_CODE:
             bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             try:
-                make_bk_lesscode_client(login_cookie=bk_token).create_app(
+                make_bk_lesscode_client(login_cookie=bk_token, tenant_id=get_tenant(request.user).id).create_app(
                     application.code, application.name, data["name"]
                 )
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:

@@ -33,7 +33,6 @@ from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -433,10 +432,14 @@ class Application(OwnerTimestampedModel):
 
     def get_administrators(self):
         """获取具有管理权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         return fetch_role_members(self.code, ApplicationRole.ADMINISTRATOR)
 
     def get_devopses(self) -> List[str]:
         """获取具有运营权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         devopses = fetch_role_members(self.code, ApplicationRole.OPERATOR) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -444,6 +447,8 @@ class Application(OwnerTimestampedModel):
 
     def get_developers(self) -> List[str]:
         """获取具有开发权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         developers = fetch_role_members(self.code, ApplicationRole.DEVELOPER) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )

@@ -41,10 +41,11 @@ class DummyLessCodeClient:
 class LessCodeClient:
     """bk_lesscode 通过 APIGW 提供的 API"""
 
-    def __init__(self, login_cookie: str, client: Optional[LessCodeGroup] = None):
+    def __init__(self, login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
         self.client = client or self._make_api_client()
         self.login_cookie_name = settings.BK_COOKIE_NAME
         self.login_cookie = login_cookie
+        self.tenant_id = tenant_id
 
     def _make_api_client(self) -> LessCodeGroup:
         """Make a client object for requesting"""
@@ -105,8 +106,8 @@ class LessCodeClient:
         return f"{settings.BK_LESSCODE_URL}{address_path}"
 
 
-def make_bk_lesscode_client(login_cookie: str, client: Optional[LessCodeGroup] = None):
-    if settings.ENABLE_BK_LESSCODE:
-        return LessCodeClient(login_cookie, client)
+def make_bk_lesscode_client(login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
+    if settings.ENABLE_BK_LESSCODE_APIGW:
+        return LessCodeClient(login_cookie, tenant_id, client)
     else:
         return DummyLessCodeClient()

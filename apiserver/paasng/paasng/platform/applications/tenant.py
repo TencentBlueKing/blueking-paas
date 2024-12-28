@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
@@ -21,6 +22,9 @@ from rest_framework.exceptions import ValidationError
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import Tenant, get_tenant
 from paasng.infras.accounts.models import User
+from paasng.platform.applications.models import Application
+
+logger = logging.getLogger(__name__)
 
 
 def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> tuple[AppTenantMode, str, Tenant]:
@@ -42,3 +46,12 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
 
     app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
     return app_tenant_mode, app_tenant_id, tenant
+
+
+def get_tenant_id_for_app(app_code: str) -> str:
+    try:
+        app = Application.objects.get(code=app_code)
+    except Application.DoesNotExist:
+        logger.warning("Application: %s DoesNotExist", app_code)
+        return ""
+    return app.tenant_id

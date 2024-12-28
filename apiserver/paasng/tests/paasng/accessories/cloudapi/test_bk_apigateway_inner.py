@@ -34,8 +34,9 @@ class TestBkApigatewayInnerComponent:
                             "bk_app_code": "test",
                             "bk_app_secret": "app-secret",
                             "bk_username": "admin",
-                        }
-                    )
+                        },
+                    ),
+                    "X-Bk-Tenant-Id": "system",
                 },
             ),
             (
@@ -49,11 +50,12 @@ class TestBkApigatewayInnerComponent:
                             "bk_username": "admin",
                         }
                     ),
+                    "X-Bk-Tenant-Id": "system",
                 },
             ),
         ],
     )
-    def test_prepare_headers(self, settings, mocker, fake_language, expected):
+    def test_prepare_headers(self, settings, mocker, tenant_id, fake_language, expected):
         settings.BK_APP_CODE = "test"
         settings.BK_APP_SECRET = "app-secret"
 
@@ -63,6 +65,5 @@ class TestBkApigatewayInnerComponent:
         )
 
         comp = BkApigatewayInnerComponent()
-        result = comp._prepare_headers("admin")
-
+        result = comp._prepare_headers("admin", tenant_id)
         assert result == expected

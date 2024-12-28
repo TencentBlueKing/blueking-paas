@@ -118,9 +118,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         data = slz.validated_data
         cluster = self.get_object()
         data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        api_server, _ = APIServer.objects.update_or_create(
-            cluster=cluster, host=data["host"], defaults=dict(overridden_hostname=data["overridden_hostname"])
-        )
+        api_server, _ = APIServer.objects.update_or_create(cluster=cluster, host=data["host"])
 
         add_admin_audit_record(
             user=request.user.pk,

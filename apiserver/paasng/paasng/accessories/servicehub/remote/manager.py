@@ -398,7 +398,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         instance_data = self._retrieve_instance_to_be_deleted()
         if not instance_data:
             return None
-        svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        svc_obj = self.mgr.get(str(self.db_obj.service_id))
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
 
         return create_svc_instance_obj_from_remote(

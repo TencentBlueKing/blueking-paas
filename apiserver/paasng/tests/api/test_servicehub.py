@@ -125,7 +125,7 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         service2_dict = vars(service2)
         service2_dict["category"] = service_category.id
         mock_get_or_404.side_effect = (
-            lambda service_id, region: LocalServiceObj.from_db_object(service1)
+            lambda service_id: LocalServiceObj.from_db_object(service1)
             if service_id == str(service1.uuid)
             else RemoteServiceObj.from_data(service2_dict)
         )

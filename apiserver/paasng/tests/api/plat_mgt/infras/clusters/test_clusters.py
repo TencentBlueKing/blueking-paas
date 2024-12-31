@@ -28,8 +28,8 @@ from paas_wl.infras.cluster.constants import (
     ClusterAllocationPolicyType,
     ClusterFeatureFlag,
 )
-from paas_wl.infras.cluster.entities import AllocationRule, IngressConfig
-from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
+from paas_wl.infras.cluster.entities import IngressConfig
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
@@ -438,12 +438,16 @@ class TestDeleteCluster:
         )
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_delete_cluster_allocation_policy_exists(self, init_system_cluster, plat_mgt_api_client):
-        ClusterAllocationPolicy.objects.create(
-            tenant_id=OP_TYPE_TENANT_ID,
-            type=ClusterAllocationPolicyType.STATIC,
-            rules=[AllocationRule(env_specific=False, clusters=[init_system_cluster.name])],
-        )
+    def test_delete_cluster_when_allocation_policy_exists(self, init_system_cluster, plat_mgt_api_client):
+        data = {
+            "tenant_id": OP_TYPE_TENANT_ID,
+            "type": ClusterAllocationPolicyType.MANUAL,
+            "rules": [{"env_specific": False, "clusters": [init_system_cluster.name]}],
+        }
+        # 使用创建 API 初始化集群分配策略
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        assert resp.status_code == status.HTTP_201_CREATED
+
         resp = plat_mgt_api_client.delete(
             reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
         )
@@ -496,20 +500,24 @@ class TestRetrieveClusterUsage:
     """获取集群使用情况"""
 
     def test_retrieve_usage(self, bk_cnative_app, init_system_cluster, init_default_cluster, plat_mgt_api_client):
-        ClusterAllocationPolicy.objects.create(
-            tenant_id=DEFAULT_TENANT_ID,
-            type=ClusterAllocationPolicyType.RULE,
-            rules=[
-                AllocationRule(
-                    env_specific=True,
-                    matcher={ClusterAllocationPolicyCondType.REGION_IS: "default"},
-                    env_clusters={
+        data = {
+            "tenant_id": DEFAULT_TENANT_ID,
+            "type": ClusterAllocationPolicyType.RULE,
+            "rules": [
+                {
+                    "env_specific": True,
+                    "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "default"},
+                    "env_clusters": {
                         AppEnvironment.STAGING: [init_system_cluster.name],
                         AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
                     },
-                ),
+                }
             ],
-        )
+        }
+        # 使用创建 API 初始化集群分配策略
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        assert resp.status_code == status.HTTP_201_CREATED
+        # 初始化 wl_app 并绑定集群
         app_code = generate_random_string(8)
         create_wl_app(
             paas_app_code=app_code,
@@ -527,7 +535,7 @@ class TestRetrieveClusterUsage:
         assert resp.json() == {
             "available_tenant_ids": ["system", "default"],
             "allocated_tenant_ids": ["default"],
-            "bind_app_module_envs": [
+            "bound_app_module_envs": [
                 {
                     "app_code": app_code,
                     "module_name": "default",

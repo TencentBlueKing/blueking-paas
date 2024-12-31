@@ -22,14 +22,11 @@ from paas_wl.bk_app.applications.models.config import Config as WlAppConfig
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 
 
-@define
+@define(frozen=True)
 class AppModuleEnv:
     app_code: str
     module_name: str
     environment: str
-
-    def __hash__(self):
-        return hash((self.app_code, self.module_name, self.environment))
 
 
 @define
@@ -42,7 +39,7 @@ class ClusterAllocationState:
     # 已绑定分配规则的租户 ID 列表
     allocated_tenant_ids: List[str]
     # 已绑定的应用环境信息
-    bind_app_module_envs: List[AppModuleEnv]
+    bound_app_module_envs: List[AppModuleEnv]
 
 
 class ClusterAllocationGetter:
@@ -56,7 +53,7 @@ class ClusterAllocationGetter:
             cluster_name=self.cluster.name,
             available_tenant_ids=self.cluster.available_tenant_ids,
             allocated_tenant_ids=self.get_allocated_tenant_ids(),
-            bind_app_module_envs=self.get_bind_app_module_envs(),
+            bound_app_module_envs=self.get_bound_app_module_envs(),
         )
 
     def get_allocated_tenant_ids(self) -> List[str]:
@@ -76,7 +73,7 @@ class ClusterAllocationGetter:
 
         return list(allocated_tenant_ids)
 
-    def get_bind_app_module_envs(self) -> List[AppModuleEnv]:
+    def get_bound_app_module_envs(self) -> List[AppModuleEnv]:
         # 理论上 WlApp & Config 应该是一一对应的，但是由于使用的是 ForeignKey，
         # 可能会出现重复 Config 的情况（脏数据），这里使用 set 来做下去重
         app_module_envs = set()

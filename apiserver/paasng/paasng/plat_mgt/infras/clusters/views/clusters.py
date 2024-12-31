@@ -29,7 +29,6 @@ from paas_wl.workloads.networking.egress.cluster_state import generate_state, sy
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -38,6 +37,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
+from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.utils.error_codes import error_codes
 
 
@@ -202,9 +202,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             raise error_codes.CANNOT_DELETE_CLUSTER.f(
                 f"集群已被租户 {', '.join(state.allocated_tenant_ids)} 分配",
             )
-        if state.bind_app_module_envs:
+        if state.bound_app_module_envs:
             raise error_codes.CANNOT_DELETE_CLUSTER.f(
-                f"集群已被 {len(state.bind_app_module_envs)} 个应用部署环境绑定",
+                f"集群已被 {len(state.bound_app_module_envs)} 个应用部署环境绑定",
             )
 
         cluster.elastic_search_config.delete()

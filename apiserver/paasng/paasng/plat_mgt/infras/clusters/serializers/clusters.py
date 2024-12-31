@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import base64
 from typing import Any, Dict, List
 
 from django.utils.translation import gettext_lazy as _
@@ -424,4 +423,4 @@ class ClusterUsageRetrieveOutputSLZ(serializers.Serializer):
     allocated_tenant_ids = serializers.ListField(
         help_text="已有集群分配策略租户 ID 列表", child=serializers.CharField()
     )
-    bind_app_module_envs = serializers.ListField(help_text="已绑定的应用部署环境", child=AppModuleEnvSLZ())
+    bound_app_module_envs = serializers.ListField(help_text="已绑定的应用部署环境", child=AppModuleEnvSLZ())

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -13,12 +14,34 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import random
 
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" + "0123456789"
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable random string."""
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
+class ClusterSource(StrStructuredEnum):
+    """集群来源"""
+
+    BCS = EnumField("bcs", "BCS 集群")
+    NATIVE_K8S = EnumField("native_k8s", "原生 K8S 集群")
+
+
+class ClusterAuthType(StrStructuredEnum):
+    """集群认证类型"""
+
+    TOKEN = EnumField("token", "Token")
+    CERT = EnumField("cert", "证书")
+
+
+class TolerationOperator(StrStructuredEnum):
+    """容忍度运算符"""
+
+    EQUAL = EnumField("Equal", "Equal")
+    EXISTS = EnumField("Exists", "Exists")
+
+
+class TolerationEffect(StrStructuredEnum):
+    """容忍度效果"""
+
+    NO_EXECUTE = EnumField("NoExecute", "不执行")
+    NO_SCHEDULE = EnumField("NoSchedule", "不调度")
+    PREFER_NO_SCHEDULE = EnumField("PreferNoSchedule", "倾向不调度")

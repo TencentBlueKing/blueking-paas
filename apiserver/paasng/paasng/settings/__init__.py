@@ -167,6 +167,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.admin42",
     "paasng.plat_admin.system",
     "paasng.plat_admin.admin_cli",
+    "paasng.plat_mgt.infras.clusters",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
     "paasng.misc.monitoring.metrics",

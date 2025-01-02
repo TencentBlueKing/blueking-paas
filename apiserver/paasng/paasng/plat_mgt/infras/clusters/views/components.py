@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -13,12 +14,23 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import random
 
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" + "0123456789"
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+
+from paasng.infras.accounts.permissions.constants import PlatMgtAction
+from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 
 
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable random string."""
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
+class ClusterComponentViewSet(viewsets.GenericViewSet):
+    """集群组件管理"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    def list(self, request, cluster_name, *args, **kwargs):
+        """获取集群组件列表"""
+        # FIXME 根据集群 ID 获取集群组件列表
+
+    def upsert(self, request, cluster_name, component_name, *args, **kwargs):
+        """更新或新建集群组件"""
+        # FIXME 根据集群 ID 和组件名称更新或新建集群组件

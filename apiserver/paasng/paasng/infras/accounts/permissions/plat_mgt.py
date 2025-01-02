@@ -48,7 +48,7 @@ def plat_mgt_perm_required(action: PlatMgtAction):
     """平台管理权限验证装饰器"""
 
     def decorated(func):
-        # FIXME（多租户）如何利用 perm_insure 模块来确保权限已被正确配置？
+        # FIXME: (多租户)如何利用 perm_insure 模块来确保权限已被正确配置？
 
         @wraps(func)
         def view_func(self, request, *args, **kwargs):
@@ -72,5 +72,5 @@ def user_has_plat_mgt_action_perm(user: User, action: PlatMgtAction) -> bool:
     except UserProfile.DoesNotExist:
         return False
 
-    # FIXME（多租户）目前暂时使用 SiteRole，后续得切换成新的
+    # FIXME: (多租户)目前暂时使用 SiteRole，后续得切换成新的
     return profile.role in [SiteRole.ADMIN.value, SiteRole.SUPER_USER.value]

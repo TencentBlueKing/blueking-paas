@@ -15,29 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.basic import re_path
-
-from . import views
+from django.urls import include, path
 
 urlpatterns = [
-    re_path(
-        "api/plat-mgt/infras/clusters/",
-        views.ClusterViewSet.as_view({"post": "create", "get": "list"}),
-        name="plat_mgt.infras.cluster.bulk",
-    ),
-    re_path(
-        "api/plat-mgt/infras/clusters/<str:cluster_id>/",
-        views.ClusterViewSet.as_view({"put": "update", "delete": "destroy"}),
-        name="plat_mgt.infras.cluster.detail",
-    ),
-    re_path(
-        "api/plat-mgt/infras/cluster-allocation-policies/",
-        views.ClusterAllocationPolicyViewSet.as_view({"post": "create", "get": "list"}),
-        name="plat_mgt.infras.cluster_allocation_policy.bulk",
-    ),
-    re_path(
-        "api/plat-mgt/infras/cluster-allocation-policies/<str:policy_id>/",
-        views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
-        name="plat_mgt.infras.cluster_allocation_policy.detail",
-    ),
+    path("", include("paasng.plat_mgt.infras.clusters.urls")),
 ]

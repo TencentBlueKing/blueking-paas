@@ -51,7 +51,7 @@ class SiteAction(StrStructuredEnum):
 class PlatMgtAction(StrStructuredEnum):
     """平台管理功能相关权限
 
-    FIXME（多租户）切换为权限中心 -> 租户管理员 / 平台管理员权限 Action
+    FIXME: (多租户)切换为权限中心 -> 租户管理员 / 平台管理员权限 Action
     """
 
     # 允许所有平台管理功能

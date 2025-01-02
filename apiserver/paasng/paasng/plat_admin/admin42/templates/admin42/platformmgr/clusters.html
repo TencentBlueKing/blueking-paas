@@ -79,7 +79,7 @@
                 <bk-button
                     class="ml5" theme="primary" text
                     v-bk-tooltips="genTooltipsConfig(props.row)"
-                    @click="handleGenNodeState(props.row.region, props.row.name)"
+                    @click="handleGenNodeState(props.row.name)"
                 >同步节点信息</bk-button>
                 <bk-button class="ml5" theme="primary" text @click="setAsDefault(props.row)">设为默认集群</bk-button>
             </template>
@@ -586,10 +586,10 @@
                     this.readOnlyDialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.readOnlyDialog.visible = true
                 },
-                handleGenNodeState: function (region, clusterName) {
+                handleGenNodeState: function (clusterName) {
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)
-                    this.$http.post(url, {region: region}).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 节点成功`})
+                    this.$http.post(url).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${clusterName} ] 节点成功`})
                         this.fetchClusterList()
                     })
                 },
@@ -684,8 +684,7 @@
                 },
                 genTooltipsConfig: function (row) {
                     return {
-                        content: '为应用集群同步节点的信息，影响 ”模块管理 -> 出口 IP 管理“ 中的 IP 列表，更新后新的节点才会出现在 IP 列表中。<br>' +
-                            '该操作等效于: python manage.py region_gen_state --region ' + row.region + ' --cluster-name ' + row.name,
+                        content: '为应用集群同步节点的信息，影响 ”模块管理 -> 出口 IP 管理“ 中的 IP 列表，更新后新的节点才会出现在 IP 列表中。<br>',
                         allowHTML: true
                     }
                 },

@@ -720,7 +720,6 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.UnboundServiceEngineAppAttachmentSLZ(many=True))
     def list_by_module(self, request, code, module_name):
         """查看模块所有已解绑增强服务实例，按增强服务归类"""
-        application = self.get_application()
         module = self.get_module_via_path()
 
         categorized_rels = defaultdict(list)
@@ -742,9 +741,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
         results = []
         for service_id, rels in categorized_rels.items():
-            results.append(
-                {"service": mixed_service_mgr.get_or_404(service_id, application.region), "unbound_instances": rels}
-            )
+            results.append({"service": mixed_service_mgr.get_or_404(service_id), "unbound_instances": rels})
 
         serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
         return Response(serializer.data)
@@ -757,7 +754,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         try:
             unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
                 service_obj, data["instance_id"]

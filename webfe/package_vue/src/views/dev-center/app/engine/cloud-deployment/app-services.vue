@@ -77,6 +77,7 @@
           <bk-table-column
             :label="$t('配置信息')"
             :render-header="$renderHeader"
+            show-overflow-tooltip
           >
             <template slot-scope="{ row }">
               <span v-if="row.isStartUp && row.plans">

@@ -66,13 +66,14 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
         slz = ClusterAllocationPolicyUpdateInputSLZ(
             data=request.data,
-            context={"cur_policy": policy},
+            context={"cur_tenant_id": policy.tenant_id},
         )
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         policy.type = data["type"]
-        policy.rules = data["rules"]
-        policy.save(update_fields=["type", "rules", "updated"])
+        policy.manual_allocation_config = data["manual_allocation_config"]
+        policy.allocation_rules = data["allocation_rules"]
+        policy.save(update_fields=["type", "manual_allocation_config", "allocation_rules", "updated"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)

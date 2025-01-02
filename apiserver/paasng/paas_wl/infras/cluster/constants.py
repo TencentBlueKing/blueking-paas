@@ -84,7 +84,7 @@ class ClusterAnnotationKey(StrStructuredEnum):
 class ClusterAllocationPolicyType(StrStructuredEnum):
     """集群分配策略类型"""
 
-    STATIC = EnumField("static", label=_("静态分配"))
+    MANUAL = EnumField("manual", label=_("手动分配"))
     RULE = EnumField("rule", label=_("按规则分配"))
 
 

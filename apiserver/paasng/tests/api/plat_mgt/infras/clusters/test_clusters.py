@@ -442,7 +442,7 @@ class TestDeleteCluster:
         data = {
             "tenant_id": OP_TYPE_TENANT_ID,
             "type": ClusterAllocationPolicyType.MANUAL,
-            "rules": [{"env_specific": False, "clusters": [init_system_cluster.name]}],
+            "manual_allocation_config": {"env_specific": False, "clusters": [init_system_cluster.name]},
         }
         # 使用创建 API 初始化集群分配策略
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
@@ -503,7 +503,7 @@ class TestRetrieveClusterUsage:
         data = {
             "tenant_id": DEFAULT_TENANT_ID,
             "type": ClusterAllocationPolicyType.RULE,
-            "rules": [
+            "allocation_rules": [
                 {
                     "env_specific": True,
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "default"},

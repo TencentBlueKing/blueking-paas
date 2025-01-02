@@ -116,13 +116,39 @@ class IngressConfig:
 
 
 @define
+class ManualAllocationConfig:
+    """手动分配配置"""
+
+    # 是否按环境分配
+    env_specific: bool
+    # 集群名称列表，非按环境分配时用
+    clusters: List[str] | None = None
+    # 环境 - 集群名称列表，按环境分配时用
+    env_clusters: Dict[str, List[str]] | None = None
+
+    def __attrs_post_init__(self):
+        # 数据校验
+        if self.env_specific:
+            if not self.env_clusters:
+                raise ValueError("env_clusters can not be empty when env_specific is True")
+        elif not self.clusters:
+            raise ValueError("clusters can not be empty when env_specific is False")
+
+        # 清理无效数据
+        if self.env_specific:
+            self.clusters = None
+        else:
+            self.env_clusters = None
+
+
+@define
 class AllocationRule:
     """集群分配规则"""
 
     # 是否按环境分配
     env_specific: bool
-    # 匹配规则，如果不需要，则设置为 None（例：{"region_is": "default"}）
-    matcher: Dict[ClusterAllocationPolicyCondType, str] | None = None
+    # 匹配规则（例：{"region_is": "default"}）
+    matcher: Dict[ClusterAllocationPolicyCondType, str]
     # 集群名称列表，非按环境分配时用
     clusters: List[str] | None = None
     # 环境 - 集群名称列表，按环境分配时用

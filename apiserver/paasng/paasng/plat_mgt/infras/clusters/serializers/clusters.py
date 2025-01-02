@@ -27,7 +27,6 @@ from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paasng.plat_mgt.constants import SENSITIVE_MASK
 from paasng.plat_mgt.infras.clusters.constants import (
     ClusterAuthType,
     ClusterSource,
@@ -45,15 +44,7 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
     host = serializers.CharField(help_text="ES 集群地址")
     port = serializers.IntegerField(help_text="ES 集群端口")
     username = serializers.CharField(help_text="ES 集群用户名")
-    password = serializers.CharField(help_text="ES 集群密码")
-
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        # 对于敏感信息，需要支持如果是提交的 MASK，则使用原始数据库中的值
-        if data["password"] == SENSITIVE_MASK:  # noqa: SIM102
-            if cluster := self.context.get("cur_cluster"):
-                data["password"] = cluster.elastic_search_config.password
-
-        return data
+    password = serializers.CharField(help_text="ES 集群密码", required=False, allow_blank=True)
 
 
 class ClusterListOutputSLZ(serializers.Serializer):
@@ -101,12 +92,8 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     bk_biz_id = serializers.CharField(help_text="蓝鲸业务 ID")
     api_servers = serializers.SerializerMethodField(help_text="API Server 列表")
 
+    # 注意：敏感信息如 ca，cert，key，token 需要不会暴露给前端（字段都没有）
     auth_type = serializers.SerializerMethodField(help_text="认证类型")
-    # 注：敏感配置不会再次暴露给前端，使用 MASK 替换（这里使用 default 是可以的，原始 key 与这里的不同）
-    ca = serializers.CharField(help_text="CA 证书", default=SENSITIVE_MASK)
-    cert = serializers.CharField(help_text="证书", default=SENSITIVE_MASK)
-    key = serializers.CharField(help_text="私钥", default=SENSITIVE_MASK)
-    token = serializers.CharField(help_text="Token", default=SENSITIVE_MASK)
 
     container_log_dir = serializers.CharField(help_text="容器日志目录")
     access_entry_ip = serializers.SerializerMethodField(help_text="集群访问入口（一般为 clb）IP")
@@ -143,9 +130,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
         if not cfg:
             return {}
 
-        # 同上，ES 配置中的密码信息也是敏感配置，不会再次暴露给前端
-        cfg.password = SENSITIVE_MASK
-        return ElasticSearchConfigSLZ(cfg).data
+        return ElasticSearchConfigSLZ(cfg.as_dict()).data
 
 
 class ClusterCreateInputSLZ(serializers.Serializer):
@@ -257,14 +242,11 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
     def _validate_auth(self, attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
-        if auth_type == ClusterAuthType.CERT:
-            if not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
-                raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
-        elif auth_type == ClusterAuthType.TOKEN:
-            if not attrs.get("token"):
-                raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
-        else:
-            raise ValidationError(_("集群认证方式 {} 不合法").format(auth_type))
+        if auth_type == ClusterAuthType.CERT and not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
+            raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
+
+        if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
+            raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
 
     def validate_name(self, name: str) -> str:
         if Cluster.objects.filter(name=name).exists():
@@ -383,15 +365,16 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
 
         return node_selector
 
+    def _validate_auth(self, attrs: Dict[str, Any]):
+        """更新清理下的认证配置比较特殊，允许为 None / 空字符串时候表示不覆盖"""
+        if attrs["auth_type"] == ClusterAuthType.CERT:
+            ca, cert, key = attrs.get("ca"), attrs.get("cert"), attrs.get("key")
+            # ca, cert, key 均为假值（None/空字符串）是可接受的，但是如果任意一项提供了，则都需要提供
+            if (ca or cert or key) and not (ca and cert and key):
+                raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
+
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data = super().to_internal_value(data)
-
-        cur_cluster = self.context["cur_cluster"]
-        # 对于敏感信息，需要支持如果是提交的 MASK，则使用原始数据库中的值
-        data["ca"] = data["ca"] if data["ca"] != SENSITIVE_MASK else cur_cluster.ca_data
-        data["cert"] = data["cert"] if data["cert"] != SENSITIVE_MASK else cur_cluster.cert_data
-        data["key"] = data["key"] if data["key"] != SENSITIVE_MASK else cur_cluster.key_data
-        data["token"] = data["token"] if data["token"] != SENSITIVE_MASK else cur_cluster.token_value
 
         # 子路径 / 子域名相关转换
         domains = [

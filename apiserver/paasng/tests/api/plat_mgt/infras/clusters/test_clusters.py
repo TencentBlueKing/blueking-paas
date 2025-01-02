@@ -93,10 +93,6 @@ class TestRetrieveCluster:
                 "http://127.0.0.9:6553",
             ],
             "auth_type": "cert",
-            "ca": "*******",
-            "cert": "*******",
-            "key": "*******",
-            "token": "*******",
             "container_log_dir": "/var/lib/docker/containers",
             "access_entry_ip": "127.0.0.1",
             "elastic_search_config": {
@@ -104,7 +100,6 @@ class TestRetrieveCluster:
                 "host": "127.0.0.12",
                 "port": 9200,
                 "username": "blueking",
-                "password": "*******",
             },
             "available_tenant_ids": ["system", "default"],
             "node_selector": {},
@@ -311,7 +306,6 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
-                "password": "*******",
             },
             "available_tenant_ids": ["cobra", "viper"],
             "component_image_registry": "hub.tencent.com",
@@ -326,7 +320,7 @@ class TestUpdateCluster:
         assert init_default_cluster.token_value is None
         assert init_default_cluster.container_log_dir == "/var/lib/containerd"
         assert init_default_cluster.ingress_config.frontend_ingress_ip == "127.0.0.11"
-        # 提交 ******* 不会覆盖原来数据库中的值
+        # 不提交 / 提交空值不会覆盖原来数据库中的值
         assert init_default_cluster.elastic_search_config.password == "admin"
 
     def test_update_scene_cluster_component(self, init_default_cluster, plat_mgt_api_client):
@@ -342,7 +336,7 @@ class TestUpdateCluster:
                 "http://bcs-api.example.com/clusters/BCS-K8S-55555",
             ],
             "auth_type": "token",
-            "token": "*******",
+            "token": "",
             "container_log_dir": "/var/lib/containerd",
             "access_entry_ip": "127.0.0.11",
             "elastic_search_config": {
@@ -350,7 +344,6 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
-                "password": "*******",
             },
             "available_tenant_ids": ["cobra", "viper"],
             "component_image_registry": "hub.bk.tencent.com",
@@ -362,7 +355,7 @@ class TestUpdateCluster:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         init_default_cluster.refresh_from_db()
-        # 提交 ******* 不会覆盖原来数据库中的值
+        # token 提交空值不会覆盖原来数据库中的值
         assert init_default_cluster.token_value == "masked"
         assert init_default_cluster.annotations == {
             "bcs_project_id": "fake_project_id",
@@ -372,6 +365,8 @@ class TestUpdateCluster:
         assert init_default_cluster.api_servers.filter(host__icontains="55555").exists()
         assert init_default_cluster.component_image_registry == "hub.bk.tencent.com"
         assert init_default_cluster.component_preferred_namespace == "blueking-system"
+        # 不提交 password 不会覆盖原来数据库中的值
+        assert init_default_cluster.elastic_search_config.password == "admin"
 
     def test_update_scene_feature_flags(self, init_system_cluster, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群特性（第三步场景）"""
@@ -384,9 +379,9 @@ class TestUpdateCluster:
                 "http://127.0.0.19:6553",
             ],
             "auth_type": "cert",
-            "ca": "*******",
-            "cert": "*******",
-            "key": "*******",
+            # ca -> None, cert -> ""，key 直接不提交
+            "ca": None,
+            "cert": "",
             "container_log_dir": "/var/lib/containerd",
             "access_entry_ip": "127.0.0.11",
             "elastic_search_config": {
@@ -394,7 +389,6 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
-                "password": "*******",
             },
             "available_tenant_ids": ["cobra", "viper"],
             "component_image_registry": "bk.tencent.com",
@@ -415,7 +409,7 @@ class TestUpdateCluster:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         init_system_cluster.refresh_from_db()
-        # 提交 ******* 不会覆盖原来数据库中的值
+        # 不提交 / 提交空值不会覆盖原来数据库中的值
         assert init_system_cluster.ca_data == "MTIzNDU2Cg=="
         assert init_system_cluster.cert_data == "MTIzNDU2Cg=="
         assert init_system_cluster.key_data == "MTIzNDU2Cg=="

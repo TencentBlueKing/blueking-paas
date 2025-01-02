@@ -42,13 +42,8 @@ ipdb = {version = "^0.13.2", allow-prereleases = true}
 
 [[tool.poetry.source]]
 name = "pypi-tencent-mirror"
-url = "https://mirrors.cloud.tencent.com/pypi/simple/"
-priority = "primary"
-
-[[tool.poetry.source]]
-name = "pypi-official"
-url = "https://pypi.org/simple"
-priority = "secondary"
+url = "https://mirrors.tencent.com/pypi/simple/"
+default = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

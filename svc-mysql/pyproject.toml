@@ -34,13 +34,7 @@ requests-mock = "==1.5.2"
 [[tool.poetry.source]]
 name = "pypi-tencent-mirror"
 url = "https://mirrors.tencent.com/pypi/simple/"
-priority = "primary"
-
-[[tool.poetry.source]]
-name = "pypi-official"
-url = "https://pypi.org/simple"
-priority = "secondary"
-
+default = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

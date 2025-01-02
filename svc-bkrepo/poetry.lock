@@ -1018,8 +1018,8 @@ pyjwt = ">=2.4.0,<3.0.0"
 
 [package.source]
 type = "legacy"
-url = "https://pypi.org/simple"
-reference = "pypi-official"
+url = "https://mirrors.tencent.com/pypi/simple"
+reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "packaging"
@@ -2044,4 +2044,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "ef4e886637efd81bf5c36fd81dcc806b232648cefea1f819ff9529a806cab7c0"
+content-hash = "8c0c0df879f070f8dc455b970a12bfc84f61e1cdc4e6aee097725087097830cf"

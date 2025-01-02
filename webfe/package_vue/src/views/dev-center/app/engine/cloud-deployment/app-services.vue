@@ -172,7 +172,7 @@
       <bk-dialog
         v-model="isShowStartDialog"
         width="600"
-        :title="$t('配置信息')"
+        :title="$t('方案信息')"
         :mask-close="false"
         ext-cls="paasng-service-export-dialog-cls"
         header-position="left"
@@ -180,7 +180,7 @@
       >
         <bk-form
           :model="startFormData"
-          :label-width="100"
+          :label-width="150"
           ext-cls="config-info-box"
         >
           <bk-form-item
@@ -780,7 +780,7 @@ export default {
     },
 
     getEnvironmentName(key) {
-      return key === 'prod' ? this.$t('生产环境') : this.$t('预发布环境');
+      return key === 'prod' ? this.$t('方案（生产环境）') : this.$t('方案（预发布环境）');
     },
 
     // 获取应用模块绑定服务时，可能的详情方案

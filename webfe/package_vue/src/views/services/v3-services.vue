@@ -13,17 +13,12 @@
         class="middle bnone"
         :is-loading="isLoading"
         placeholder="service-loading"
-        :offset-top="15"
       >
-        <div class="category-list">
-          <ul
-            v-if="
-              categoryObject &&
-              categoryObject.services &&
-              categoryObject.services.length
-            "
-            class="service-list"
-          >
+        <div
+          class="category-list"
+          v-if="categoryObject.services && categoryObject.services?.length"
+        >
+          <ul class="service-list">
             <li
               v-for="(service, index) in categoryObject.services"
               :key="index"
@@ -42,7 +37,7 @@
         </div>
 
         <div
-          v-if="isEmpty"
+          v-else
           style="height: 250px"
         >
           <div class="ps-no-result text">
@@ -68,12 +63,6 @@ export default {
         services: [],
       },
     };
-  },
-  computed: {
-    isEmpty() {
-      const keys = Object.keys(this.categoryObject);
-      return this.categoryObject.length === 0;
-    },
   },
   watch: {
     $route() {
@@ -116,20 +105,15 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.category-list {
-  margin-top: 20px;
-}
-
 .service-list {
-  margin: 0 -6px 0 -6px;
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .service-list li {
-  position: relative;
-  padding: 24px 6px 12px 6px;
-  width: 25%;
-  float: left;
+  flex: 0 0 calc(25% - 16px);
+  box-sizing: border-box;
 }
 
 .service-list li.on,
@@ -179,9 +163,9 @@ export default {
 }
 
 .service-container {
+  margin-top: 16px;
   background: #fff;
-  margin-top: 20px;
-  padding: 0 20px;
+  padding: 16px 0 16px 16px;
   min-height: 260px;
 }
 </style>

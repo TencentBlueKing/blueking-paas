@@ -137,12 +137,10 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster.annotations = data["annotations"]
 
         # 检查集群认证信息 & APIServers 是否被修改
-        auth_cfg_modified = bool(
-            cluster.ca_data != data["ca"]
-            or cluster.cert_data != data["cert"]
-            or cluster.key_data != data["key"]
-            or cluster.token_value != data["token"]
-        )
+        # 集群认证信息有效情况（二种，SLZ 会拦截其他无效的情况）
+        #   1. ca、cert、key 都有值
+        #   2. token 有值
+        auth_cfg_modified = bool((data["ca"] and data["cert"] and data["key"]) or data["token"])
         exists_api_servers = cluster.api_servers.values_list("host", flat=True)
         api_servers_modified = set(exists_api_servers) != set(data["api_servers"])
 
@@ -169,7 +167,8 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster_es_cfg.host = es_cfg["host"]
         cluster_es_cfg.port = es_cfg["port"]
         cluster_es_cfg.username = es_cfg["username"]
-        cluster_es_cfg.password = es_cfg["password"]
+        # 更新时，如果密码为假值，则不更新
+        cluster_es_cfg.password = es_cfg["password"] if es_cfg.get("password") else cluster_es_cfg.password
 
         with transaction.atomic(using="workloads"):
             cluster.save()

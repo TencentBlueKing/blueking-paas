@@ -230,7 +230,7 @@ class APIServer(UuidAuditedModel):
         unique_together = ("cluster", "host")
 
 
-ManualAllocationConfigField = make_json_field("ManualAllocateConfigField", ManualAllocationConfig)
+ManualAllocationConfigField = make_json_field("ManualAllocationConfigField", ManualAllocationConfig)
 
 AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])
 
@@ -256,3 +256,15 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     port = models.IntegerField(help_text="ES 集群端口")
     username = models.CharField(help_text="ES 集群用户名", max_length=64)
     password = EncryptField(help_text="ES 集群密码")
+
+    def as_dict(self, include_password=False) -> Dict[str, Any]:
+        data = {
+            "scheme": self.scheme,
+            "host": self.host,
+            "port": self.port,
+            "username": self.username,
+        }
+        if include_password:
+            data["password"] = self.password
+
+        return data

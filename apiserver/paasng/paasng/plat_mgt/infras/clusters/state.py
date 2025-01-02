@@ -75,6 +75,7 @@ class ClusterAllocationGetter:
             return set()
 
         allocated_tenant_ids = set()
+        # 所有环境使用相同集群
         if cfg.clusters and self.cluster.name in cfg.clusters:
             allocated_tenant_ids.add(policy.tenant_id)
         # 按应用部署环境分配集群

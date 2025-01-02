@@ -242,12 +242,11 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
     def _validate_auth(self, attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
-        if auth_type == ClusterAuthType.CERT:
-            if not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
-                raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
-        elif auth_type == ClusterAuthType.TOKEN:  # noqa: SIM102
-            if not attrs.get("token"):
-                raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
+        if auth_type == ClusterAuthType.CERT and not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
+            raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
+
+        if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
+            raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
 
     def validate_name(self, name: str) -> str:
         if Cluster.objects.filter(name=name).exists():
@@ -370,7 +369,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         """更新清理下的认证配置比较特殊，允许为 None / 空字符串时候表示不覆盖"""
         if attrs["auth_type"] == ClusterAuthType.CERT:
             ca, cert, key = attrs.get("ca"), attrs.get("cert"), attrs.get("key")
-            # ca, cert, key 均为假值是可接受的，但是如果任意一项提供了，则都需要提供
+            # ca, cert, key 均为假值（None/空字符串）是可接受的，但是如果任意一项提供了，则都需要提供
             if (ca or cert or key) and not (ca and cert and key):
                 raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
 

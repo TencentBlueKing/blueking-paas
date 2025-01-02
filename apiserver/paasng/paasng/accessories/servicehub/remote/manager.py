@@ -519,7 +519,7 @@ def create_svc_instance_obj_from_remote(
     special fields:
 
     - `config.__meta__`: if "should_hidden_fields" or "should_remove_fields" was included in this
-        field, the value will be popped for instance intializing.
+        field, the value will be popped for instance initializing.
     """
 
     def _format_key(val):

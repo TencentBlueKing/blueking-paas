@@ -2937,9 +2937,9 @@ export default {
   '如需使用该功能，需要：': 'To use this feature, you need to:',
   '1. 安装 BCS 套餐': '1. Install the BCS package.',
   '2. 将应用集群来源修改为: BCS 集群': '2. Change the application cluster source to: BCS cluster.',
-  方案: 'Solution',
-  方案信息: 'Solution information',
-  '方案（预发布环境）': 'Solution (Stag Env)',
-  '方案（生产环境）': 'Solution (Prod Env)',
+  方案: 'Plan',
+  方案信息: 'Plan information',
+  '方案（预发布环境）': 'Plan (Stag Env)',
+  '方案（生产环境）': 'Plan (Prod Env)',
   '获取增强服务配置信息出错，请联系管理员。': 'Error retrieving enhanced service configuration information, please contact the administrator.',
 };

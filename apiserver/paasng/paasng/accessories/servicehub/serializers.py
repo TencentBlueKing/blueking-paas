@@ -24,6 +24,7 @@ from paasng.accessories.servicehub.remote.exceptions import ServiceConfigNotFoun
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.services.models import ServiceCategory
 from paasng.platform.modules.serializers import MinimalModuleSLZ
+from paasng.utils.serializers import VerificationCodeField
 
 
 class CategorySLZ(serializers.ModelSerializer):
@@ -260,7 +261,13 @@ class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 
 class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
-    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id", required=True)
+
+
+class RetrieveServiceInstanceSensitiveField(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id", required=True)
+    field_name = serializers.CharField(help_text="字段名称", required=True)
+    verification_code = VerificationCodeField()
 
 
 class PossiblePlansOutputSLZ(serializers.Serializer):

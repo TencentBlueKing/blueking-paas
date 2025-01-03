@@ -26,7 +26,7 @@ from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingP
 logger = logging.getLogger(__name__)
 
 
-def create_service_binding_policy(apps, schema_editor):
+def init_service_binding_policy(apps, schema_editor):
     ServiceBindingPolicy = apps.get_model('servicehub', 'ServiceBindingPolicy')
     ServiceBindingPrecedencePolicy = apps.get_model('servicehub', 'ServiceBindingPrecedencePolicy')
 
@@ -48,5 +48,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_service_binding_policy),
+        migrations.RunPython(init_service_binding_policy),
     ]

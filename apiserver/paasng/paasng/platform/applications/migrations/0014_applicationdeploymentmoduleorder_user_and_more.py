@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('modules', '0016_auto_20240904_1439'),
-        ('applications', '0014_application_app_tenant_id_and_more'),
+        ('applications', '0013_applicationdeploymentmoduleorder'),
     ]
 
     operations = [

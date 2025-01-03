@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("applications", "0013_applicationdeploymentmoduleorder"),
+        ("applications", "0014_applicationdeploymentmoduleorder_user_and_more"),
     ]
 
     operations = [
@@ -65,9 +65,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "original_code",
-                    models.CharField(
-                        max_length=20, verbose_name="描述文件中的应用原始 code"
-                    ),
+                    models.CharField(max_length=20, verbose_name="描述文件中的应用原始 code"),
                 ),
                 (
                     "app",

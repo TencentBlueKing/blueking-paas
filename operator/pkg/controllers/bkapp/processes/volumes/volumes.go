@@ -21,6 +21,7 @@ package volumes
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -85,10 +86,8 @@ func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deplo
 
 	containers := deployment.Spec.Template.Spec.Containers
 	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      vm.Volume.Name,
-			MountPath: vm.MountPath,
-		})
+		volumeMounts := vm.getVolumeMounts()
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, volumeMounts...)
 	}
 	return nil
 }
@@ -121,6 +120,27 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 		}, nil
 	}
 	return corev1.VolumeSource{}, errors.New("unknown volume source")
+}
+
+func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
+	if configMap := vm.Volume.Source.ConfigMap; configMap != nil && configMap.SubPaths != nil {
+		// configMap 不为空，且 configMap.SubPaths 不为空
+		// 使用 subPath 挂载多个文件
+		for _, subPath := range configMap.SubPaths {
+			return []corev1.VolumeMount{
+				{
+					Name:      vm.Volume.Name,
+					MountPath: filepath.Join(vm.MountPath, subPath),
+					SubPath:   subPath,
+				},
+			}
+		}
+	}
+
+	return []corev1.VolumeMount{{
+		Name:      vm.Volume.Name,
+		MountPath: vm.MountPath,
+	}}
 }
 
 // BuiltinLogsVolumeMount 内置日志挂载卷

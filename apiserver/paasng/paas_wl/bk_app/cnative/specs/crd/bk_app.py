@@ -190,6 +190,7 @@ class BkAppConfiguration(BaseModel):
 @register
 class ConfigMapSource(BaseModel):
     name: str
+    subPaths: Optional[List[str]] = None
 
 
 @register

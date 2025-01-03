@@ -64,7 +64,7 @@ class IngressConfig:
     # 系统会为每个应用创建一个匹配域名 "{app_scheduler_name}.example.com" 的独一无二的 Ingress
     # 资源。配合其他负载均衡器，可完成复杂的请求转发逻辑。
     #
-    # 该配置仅供特殊环境中使用，大部分情况下，请直接使用 app_roo_domains 和 sub_path_domains。
+    # 该配置仅供特殊环境中使用，大部分情况下，请直接使用 app_root_domains 和 sub_path_domains。
     default_ingress_domain_tmpl: str = ""
 
     # 支持的子域名的根域列表, 在需要获取单个值的地方, 会优先使用第一个配置的根域名.

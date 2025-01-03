@@ -19,7 +19,7 @@ pool = ["amqpstorm-pool"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -35,7 +35,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -59,7 +59,7 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -78,7 +78,7 @@ tests = ["mypy (>=0.800)", "pytest", "pytest-asyncio"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -94,7 +94,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -117,7 +117,7 @@ test = ["astroid (>=1,<2)", "astroid (>=2,<4)", "pytest"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -139,7 +139,7 @@ wrapt = ">=1.15.0,<2.0.0"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -160,7 +160,7 @@ wcwidth = ">=0.1.4"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -191,7 +191,7 @@ watchdog = "*"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -207,7 +207,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -291,7 +291,7 @@ pycparser = "*"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -410,7 +410,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -429,7 +429,7 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -445,7 +445,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -499,7 +499,7 @@ test-randomorder = ["pytest-randomly"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -517,7 +517,7 @@ requests = "*"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -535,7 +535,7 @@ dev = ["black", "coveralls", "mypy", "pre-commit", "pylint", "pytest (>=5)", "py
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -551,7 +551,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -576,7 +576,7 @@ bcrypt = ["bcrypt"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -597,7 +597,7 @@ testing = ["coverage[toml] (>=5.0a4)", "pytest (>=4.6.11)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -619,7 +619,7 @@ tests = ["tox"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -638,7 +638,7 @@ prometheus-client = ">=0.7"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -666,7 +666,7 @@ testing = ["boto3 (>=1.14.12,<2.0.0)", "croniter (>=0.3.34,<0.4.0)", "django-red
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -689,7 +689,7 @@ hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -711,7 +711,7 @@ tests = ["coverage"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -730,7 +730,7 @@ django = ">=4.2"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -749,7 +749,7 @@ tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipyth
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -770,7 +770,7 @@ pyflakes = ">=3.2.0,<3.3.0"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -838,7 +838,7 @@ test = ["cffi (>=1.12.2)", "coverage (>=5.0)", "dnspython (>=1.16.0,<2.0)", "idn
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -929,7 +929,7 @@ test = ["objgraph", "psutil"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -955,7 +955,7 @@ tornado = ["tornado (>=0.2)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -974,7 +974,7 @@ all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -990,7 +990,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1010,7 +1010,7 @@ ipython = {version = ">=7.31.1", markers = "python_version >= \"3.11\""}
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1052,7 +1052,7 @@ test-extra = ["curio", "ipython[test]", "matplotlib (!=3.2.0)", "nbformat", "num
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1076,7 +1076,7 @@ testing = ["Django", "attrs", "colorama", "docopt", "pytest (<7.0.0)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1095,7 +1095,7 @@ ansicon = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1114,7 +1114,7 @@ Django = ">=2.2"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1133,7 +1133,7 @@ traitlets = "*"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1149,18 +1149,18 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "paas-service"
-version = "2.0.0"
+version = "2.0.1"
 description = "A Django application for developing BK-PaaS add-on services."
 optional = false
 python-versions = ">=3.8,<3.12"
 files = [
-    {file = "paas_service-2.0.0-py3-none-any.whl", hash = "sha256:27a6f6d1b8505864c6eb538c1a6c7b53bc814f4a081fb13de0e73bbc4a13b843"},
-    {file = "paas_service-2.0.0.tar.gz", hash = "sha256:3997bac3d6231866b7587722b82109b5957466fe1565539975844cbd59a4eaba"},
+    {file = "paas_service-2.0.1-py3-none-any.whl", hash = "sha256:ab6d2584d3bc3ac21c3453fa0660b5c8e1d955860429c0c3d0adeec5b802f0c7"},
+    {file = "paas_service-2.0.1.tar.gz", hash = "sha256:1d68dd06e53293689f3bd612d20174392d7b03937ffdf6881991d35caef16852"},
 ]
 
 [package.dependencies]
@@ -1173,7 +1173,7 @@ pyjwt = ">=2.4.0,<3.0.0"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1189,7 +1189,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1208,7 +1208,7 @@ codegen = ["lxml"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1228,7 +1228,7 @@ testing = ["docopt", "pytest"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1247,7 +1247,7 @@ ptyprocess = ">=0.5"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1267,7 +1267,7 @@ testing = ["pytest", "pytest-benchmark"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1286,7 +1286,7 @@ twisted = ["twisted"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1305,7 +1305,7 @@ wcwidth = "*"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1321,7 +1321,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1340,7 +1340,7 @@ tests = ["pytest"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1356,7 +1356,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1372,7 +1372,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1418,7 +1418,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1475,7 +1475,7 @@ email = ["email-validator (>=1.0.3)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1491,7 +1491,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1510,7 +1510,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1532,7 +1532,7 @@ tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1552,7 +1552,7 @@ rsa = ["cryptography"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1577,7 +1577,7 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1600,7 +1600,7 @@ testing = ["Django", "django-configurations (>=2.0)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1619,7 +1619,7 @@ six = ">=1.5"
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1636,7 +1636,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1655,7 +1655,7 @@ hiredis = ["hiredis (>=0.1.3)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1681,7 +1681,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1705,7 +1705,7 @@ test = ["fixtures", "mock", "pytest", "sphinx", "testrepository (>=0.0.18)", "te
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1741,7 +1741,7 @@ tornado = ["tornado (>=5)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1766,7 +1766,7 @@ type = ["importlib-metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (==1.11
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1782,7 +1782,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1802,7 +1802,7 @@ doc = ["sphinx"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1826,7 +1826,7 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1842,7 +1842,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1891,7 +1891,7 @@ test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-subtests",
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1911,7 +1911,7 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1927,7 +1927,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1943,7 +1943,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1959,7 +1959,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -1980,7 +1980,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2027,7 +2027,7 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2043,7 +2043,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2062,7 +2062,7 @@ brotli = ["Brotli"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2146,7 +2146,7 @@ files = [
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2169,7 +2169,7 @@ test = ["zope.testrunner"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [[package]]
@@ -2228,10 +2228,10 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 
 [package.source]
 type = "legacy"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
+url = "https://mirrors.tencent.com/pypi/simple"
 reference = "pypi-tencent-mirror"
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "05e8de4bcc43362c1d4cb8a9ce8ce358ba0a56eea0a6825fe73c669df6df836c"
+content-hash = "0bca29fb67a614a8b17cc90180c9c0a50b249ed59237712c2782d6f318820b62"

@@ -96,7 +96,9 @@ const state = {
   },
 };
 
-const getters = {};
+const getters = {
+  isShowTenant: state => state.curUserInfo?.tenantId === window.GLOBAL_CONFIG.OP_TYPE_TENANT_ID,
+};
 
 const mutations = {
   updateUserFeature(state, data) {

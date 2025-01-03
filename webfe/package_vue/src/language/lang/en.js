@@ -2939,4 +2939,8 @@ export default {
   '2. 将应用集群来源修改为: BCS 集群': '2. Change the application cluster source to: BCS cluster.',
   方案: 'Solution',
   '获取增强服务配置信息出错，请联系管理员。': 'Error retrieving enhanced service configuration information, please contact the administrator.',
+  租户类型: 'Tenant Type',
+  所属租户: 'Associated Tenant',
+  单租户: 'Single Tenant',
+  全租户: 'All Tenants',
 };

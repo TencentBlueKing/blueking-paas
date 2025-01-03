@@ -32,7 +32,6 @@ from paasng.accessories.publish.market.signals import product_create_or_update_b
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
-from paasng.core.region.models import get_region
 from paasng.infras.accounts.models import User, UserProfile
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -156,7 +155,6 @@ class AppDeclarativeController:
 
     def sync_modules(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Sync modules to database"""
-        region = get_region(application.region)
 
         # Get the cluster name used by the existing default module, if the module exists
         if application.modules.exists():
@@ -184,7 +182,6 @@ class AppDeclarativeController:
                 source_type=None,
                 language=module_desc.language.value,
                 source_init_template="",
-                exposed_url_type=region.entrance_config.exposed_url_type,
             )
             # Initialize module
             try:
@@ -296,7 +293,7 @@ class AppDeclarativeController:
         """Sync services related field for single module."""
         for service in services:
             try:
-                obj = mixed_service_mgr.find_by_name(service.name, region=module.region)
+                obj = mixed_service_mgr.find_by_name(service.name)
             except ServiceObjNotFound:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
@@ -315,7 +312,7 @@ class AppDeclarativeController:
                     continue
 
                 logger.info('Bind service "%s" to Module "%s".', service.name, module)
-                mixed_service_mgr.bind_service(obj, module, specs=service.specs)
+                mixed_service_mgr.bind_service_use_first_plan(obj, module)
 
     def save_description(self, desc: ApplicationDesc, application: Application, is_creation: bool):
         """Save description to database

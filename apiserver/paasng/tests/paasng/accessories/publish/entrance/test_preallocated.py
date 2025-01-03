@@ -32,7 +32,6 @@ from paasng.accessories.publish.entrance.preallocated import (
 )
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.helpers import override_region_configs
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -227,16 +226,3 @@ class TestDefaultEntrance:
             f"http://stag-dot-{bk_app.code}.bar-1.example.com",
             f"http://stag-dot-{bk_app.code}.bar-2.example.org",
         ]
-
-    def test_get_preallocated_urls_legacy(self, bk_app, bk_module, bk_stag_env):
-        """Test: default module's stag env with exposed url type set to None"""
-        bk_module.exposed_url_type = None
-        bk_module.is_default = True
-        bk_module.save()
-
-        def update_region_hook(config):
-            config["basic_info"]["link_engine_app"] = "http://example.com/{region}-legacy-path/"
-
-        with override_region_configs(bk_app.region, update_region_hook):
-            urls = get_preallocated_urls(bk_stag_env)
-            assert [u.address for u in urls] == [f"http://example.com/{bk_app.region}-legacy-path/"]

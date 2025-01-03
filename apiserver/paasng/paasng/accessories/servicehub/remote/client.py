@@ -15,9 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Client for remote services
-"""
-import json
+"""Client for remote services"""
+
 import logging
 from contextlib import contextmanager
 from dataclasses import MISSING, dataclass
@@ -81,6 +80,9 @@ class RemoteSvcConfig:
         self.update_plan_url = urljoin(self.endpoint_url, "plans/{plan_id}/")
 
         self.retrieve_instance_url = urljoin(self.endpoint_url, "instances/{instance_id}/")
+        self.retrieve_instance_to_be_deleted_url = urljoin(
+            self.endpoint_url, "instances/{instance_id}/?to_be_deleted={to_be_deleted}"
+        )
         self.retrieve_instance_by_name_url = urljoin(self.endpoint_url, "services/{service_id}/instances/?name={name}")
         self.update_inst_config_url = urljoin(self.endpoint_url, "instances/{instance_id}/config/")
         self.create_instance_url = urljoin(self.endpoint_url, "services/{service_id}/instances/{instance_id}/")
@@ -101,12 +103,12 @@ def wrap_request_exc(client: "RemoteServiceClient"):
     try:
         logger.debug("[servicehub] calling remote service<%s>", client.config)
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception(f"invalid json response from {client.config.index_url}")
+        raise RemoteClientError(f"invalid json response: {e}") from e
     except RequestException as e:
         logger.exception(f"unable to fetch remote services from {client.config.index_url}")
         raise RemoteClientError(f"unable to fetch remote services: {e}") from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response from {client.config.index_url}")
-        raise RemoteClientError(f"invalid json response: {e}") from e
 
 
 class RemoteServiceClient:
@@ -224,6 +226,18 @@ class RemoteServiceClient:
             self.validate_resp(resp)
             return resp.json()
 
+    def retrieve_instance_to_be_deleted(self, instance_id: str) -> Dict:
+        """Retrieve a provisioned instance info, which is to be deleted
+
+        :raises: RemoteClientError
+        :return: <instance dict>
+        """
+        url = self.config.retrieve_instance_to_be_deleted_url.format(instance_id=instance_id, to_be_deleted=True)
+        with wrap_request_exc(self):
+            resp = requests.get(url, auth=self.auth, timeout=self.REQUEST_LIST_TIMEOUT)
+            self.validate_resp(resp)
+            return resp.json()
+
     def retrieve_instance_by_name(self, service_id: str, instance_name: str) -> Dict:
         """Retrieve a provisioned instance info by name
 
@@ -245,6 +259,18 @@ class RemoteServiceClient:
             url = self.config.async_delete_instance_url.format(instance_id=instance_id)
         else:
             url = self.config.delete_instance_url.format(instance_id=instance_id)
+
+        with wrap_request_exc(self):
+            resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)
+            self.validate_resp(resp)
+            return
+
+    def delete_instance_synchronously(self, instance_id: str):
+        """Delete a provisioned instance synchronously
+
+        We assume the remote service is already able to recycle resources
+        """
+        url = self.config.delete_instance_url.format(instance_id=instance_id)
 
         with wrap_request_exc(self):
             resp = requests.delete(url, auth=self.auth, timeout=self.REQUEST_DELETE_TIMEOUT)

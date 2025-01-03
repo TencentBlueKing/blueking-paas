@@ -21,9 +21,11 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
+from rest_framework.test import APIClient
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
@@ -46,8 +48,7 @@ from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, S
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
-from tests.utils.basic import generate_random_string
-from tests.utils.helpers import configure_regions, create_app, initialize_module
+from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -281,23 +282,24 @@ class TestApplicationCreateWithEngine:
         source_control_type,
         is_success,
     ):
-        random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            "/api/bkapps/applications/v2/",
-            data={
-                "region": settings.DEFAULT_REGION_NAME,
-                "code": f"uta-{random_suffix}",
-                "name": f"uta-{random_suffix}",
-                "engine_params": {
-                    "source_origin": source_origin,
-                    "source_repo_url": source_repo_url,
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    "source_control_type": source_control_type,
+        with override_settings(ENABLE_BK_LESSCODE=False):
+            random_suffix = generate_random_string(length=6)
+            response = api_client.post(
+                "/api/bkapps/applications/v2/",
+                data={
+                    "region": settings.DEFAULT_REGION_NAME,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
+                    "engine_params": {
+                        "source_origin": source_origin,
+                        "source_repo_url": source_repo_url,
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                        "source_control_type": source_control_type,
+                    },
                 },
-            },
-        )
-        desired_status_code = 201 if is_success else 400
-        assert response.status_code == desired_status_code
+            )
+            desired_status_code = 201 if is_success else 400
+            assert response.status_code == desired_status_code
 
 
 class TestApplicationCreateWithoutEngine:
@@ -857,15 +859,37 @@ class TestListEvaluation:
 
 
 class TestDeploymentModuleOrder:
-    def test_module_order(self, api_client, bk_app, bk_user):
+    @pytest.fixture
+    def bk_app(self, bk_app, bk_user) -> Application:
         """
-        测试部署管理-进程列表模块自定义排序
+        创建 bk_app 的第二个 module
         """
-        module = Module.objects.create(
-            application=bk_app, name="test1", language="python", source_init_template="test1", creator=bk_user
+        Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
         )
-        initialize_module(module)
+        return bk_app
 
+    @pytest.fixture
+    def api_client_1(self, bk_app) -> APIClient:
+        """
+        创建第二个用户, 和APIClient, 并添加到应用的用户组
+        """
+        from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
+        from paasng.infras.iam.members.models import ApplicationUserGroup
+        from tests.utils.mocks.iam import StubBKIAMClient
+
+        bk_user_1 = create_user()
+        api_client_1 = APIClient()
+        api_client_1.force_authenticate(user=bk_user_1)
+
+        user_group = ApplicationUserGroup.objects.get(app_code=bk_app.code, role=ApplicationRole.DEVELOPER)
+        StubBKIAMClient().add_user_group_members(user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS)
+        return api_client_1
+
+    def test_module_order(self, api_client, bk_app, api_client_1):
+        """
+        测试部署管理-进程列表模块自定义排序, 2个用户取得各自的排序
+        """
         url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
         response = api_client.post(
@@ -873,7 +897,7 @@ class TestDeploymentModuleOrder:
             data={
                 "module_orders": [
                     {
-                        "module_name": "test1",
+                        "module_name": "test",
                         "order": 1,
                     },
                     {
@@ -885,7 +909,7 @@ class TestDeploymentModuleOrder:
         )
         assert response.data == [
             {
-                "module_name": "test1",
+                "module_name": "test",
                 "order": 1,
             },
             {
@@ -894,13 +918,13 @@ class TestDeploymentModuleOrder:
             },
         ]
 
-        response = api_client.post(
+        response = api_client_1.post(
             url,
             data={
                 "module_orders": [
                     {
-                        "module_name": "test1",
-                        "order": 3,
+                        "module_name": "test",
+                        "order": 4,
                     },
                     {
                         "module_name": "default",
@@ -915,8 +939,46 @@ class TestDeploymentModuleOrder:
                 "order": 2,
             },
             {
-                "module_name": "test1",
+                "module_name": "test",
+                "order": 4,
+            },
+        ]
+
+        response = api_client.post(
+            url,
+            data={
+                "module_orders": [
+                    {
+                        "module_name": "test",
+                        "order": 3,
+                    },
+                    {
+                        "module_name": "default",
+                        "order": 1,
+                    },
+                ]
+            },
+        )
+        assert response.data == [
+            {
+                "module_name": "default",
+                "order": 1,
+            },
+            {
+                "module_name": "test",
                 "order": 3,
+            },
+        ]
+
+        response = api_client_1.get(url)
+        assert response.data == [
+            {
+                "module_name": "default",
+                "order": 2,
+            },
+            {
+                "module_name": "test",
+                "order": 4,
             },
         ]
 
@@ -924,23 +986,18 @@ class TestDeploymentModuleOrder:
         assert response.data == [
             {
                 "module_name": "default",
-                "order": 2,
+                "order": 1,
             },
             {
-                "module_name": "test1",
+                "module_name": "test",
                 "order": 3,
             },
         ]
 
-    def test_module_order_missing_module(self, api_client, bk_app, bk_user):
+    def test_module_order_missing_module(self, api_client, bk_app):
         """
         测试部署管理-进程列表模块自定义排序, 模块排序少传
         """
-        module = Module.objects.create(
-            application=bk_app, name="test1", language="python", source_init_template="test1", creator=bk_user
-        )
-        initialize_module(module)
-
         url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
         response = api_client.post(
@@ -948,7 +1005,7 @@ class TestDeploymentModuleOrder:
             data={
                 "module_orders": [
                     {
-                        "module_name": "test1",
+                        "module_name": "test",
                         "order": 1,
                     }
                 ]
@@ -957,14 +1014,10 @@ class TestDeploymentModuleOrder:
         response_data = response.json()
         assert response_data["detail"] == "Modules missing an order: default."
 
-    def test_module_order_extra_module(self, api_client, bk_app, bk_user):
+    def test_module_order_extra_module(self, api_client, bk_app):
         """
         测试部署管理-进程列表模块自定义排序, 模块排序多传
         """
-        module = Module.objects.create(
-            application=bk_app, name="test1", language="python", source_init_template="test1", creator=bk_user
-        )
-        initialize_module(module)
 
         url = reverse("api.applications.deployment.module_order", kwargs={"code": bk_app.code})
 
@@ -973,7 +1026,7 @@ class TestDeploymentModuleOrder:
             data={
                 "module_orders": [
                     {
-                        "module_name": "test1",
+                        "module_name": "test",
                         "order": 1,
                     },
                     {

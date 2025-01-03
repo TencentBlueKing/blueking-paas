@@ -34,7 +34,7 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
@@ -155,6 +155,12 @@ class ModuleInitializer:
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
+
+        # Also set the module's exposed_url_type by the cluster
+        self.module.exposed_url_type = get_exposed_url_type(
+            region=self.application.region, cluster_name=cluster_name
+        ).value
+        self.module.save(update_fields=["exposed_url_type"])
 
     def initialize_vcs_with_template(
         self,
@@ -471,7 +477,7 @@ class ModuleCleaner:
                 logger.info(f"service<{rel.db_obj.service_id}-{rel.db_obj.service_instance_id}> deleted. ")
 
                 # Put related services into collection
-                service = mixed_service_mgr.get(rel.db_obj.service_id, self.module.region)
+                service = mixed_service_mgr.get(rel.db_obj.service_id)
                 services.append(service)
 
         # Clear all related shared services
@@ -521,14 +527,16 @@ class DefaultServicesBinder:
 
     def _bind(self, services: PresetServiceSpecs):
         """Bind current module with given services"""
-        for service_name, config in services.items():
+        # The value of `services` contains specs, the specs used to be a parameter for
+        # `bind_service` but now it's not used anymore, so we just ignore it.
+        for service_name in services:
             try:
-                service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)
+                service_obj = mixed_service_mgr.find_by_name(service_name)
             except ServiceObjNotFound:
                 logger.exception("应用<%s>获取预设增强服务<%s>失败", self.application.code, service_name)
                 continue
 
-            mixed_service_mgr.bind_service(service_obj, self.module, config.get("specs"))
+            mixed_service_mgr.bind_service_use_first_plan(service_obj, self.module)
 
 
 def make_engine_app_name(module: Module, app_code: str, env: str) -> str:

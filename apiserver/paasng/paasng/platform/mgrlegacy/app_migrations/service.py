@@ -44,7 +44,7 @@ class LegacyBaseServiceMigration(BaseMigration):
     service_name: str = ""
 
     def get_service(self, service_name: str):
-        return mixed_service_mgr.find_by_name(service_name, self.context.app.region)
+        return mixed_service_mgr.find_by_name(service_name)
 
     def _bind_service(self, service_name: str):
         service_obj = self.get_service(service_name)
@@ -59,7 +59,7 @@ class LegacyBaseServiceMigration(BaseMigration):
                 raise RuntimeError(f"service {service_name} is not local service, will abort")
 
         module = self.context.app.get_default_module()
-        mixed_service_mgr.bind_service(service_obj, module)
+        mixed_service_mgr.bind_service_use_first_plan(service_obj, module)
 
     def _get_environment_attachment(self, environment: str):
         try:
@@ -177,7 +177,7 @@ class BaseServiceMigration(BaseMigration):
             self.rollback_service_instance(environment=AppEnvName(environment))
 
     def get_service(self):
-        return self.service_mgr.find_by_name(self.service_name, self.context.app.region)
+        return self.service_mgr.find_by_name(self.service_name)
 
     def bind_service_to_default_module(self):
         """绑定增强服务至模块, 但不创建 engine_app 与 service 之间的绑定关系"""
@@ -202,7 +202,7 @@ class BaseServiceMigration(BaseMigration):
                 service_obj=service_obj.name, module_name=module.name
             )
         )
-        self.service_mgr.bind_service(service_obj, module=module)
+        self.service_mgr.bind_service_use_first_plan(service_obj, module=module)
 
     def migrate_service_instance(self, environment: AppEnvName, credentials: Dict, config: Optional[Dict] = None):
         """迁移增强服务实例信息至远程增强服务"""

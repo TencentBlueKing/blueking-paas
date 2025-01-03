@@ -17,12 +17,10 @@
 
 """Unit tests for ceph provider"""
 
-import string
 import uuid
-from typing import Optional
 
-from paasng.accessories.servicehub.services import PlanObj, ServiceObj, ServiceSpecificationDefinition
-from tests.utils.basic import generate_random_string
+from paasng.accessories.servicehub.services import PlanObj, ServiceObj
+from tests.utils.helpers import generate_random_string
 
 SERVICE_COMMON_ARGS: dict = dict(
     logo="http://logo.com/my.jpg",
@@ -31,12 +29,12 @@ SERVICE_COMMON_ARGS: dict = dict(
 )
 
 
-def gen_service(region: str):
+def gen_service():
     name = generate_random_string()
-    return ServiceObj(region=region, uuid=str(uuid.uuid4()), name=name, display_name=name, **SERVICE_COMMON_ARGS)
+    return ServiceObj(uuid=str(uuid.uuid4()), name=name, display_name=name, **SERVICE_COMMON_ARGS)
 
 
-def gen_plan(region: str, specifications: dict):
+def gen_plan():
     name = generate_random_string()
     return PlanObj(
         uuid=str(uuid.uuid4()),
@@ -44,18 +42,5 @@ def gen_plan(region: str, specifications: dict):
         description=generate_random_string(),
         is_active=True,
         is_eager=False,
-        region=region,
-        specifications=specifications,
         properties={},
-    )
-
-
-def generate_ssd(name: Optional[str] = None, recommended_value=None):
-    """生成随机的 ServiceSpecificationDefinition"""
-    name = name or generate_random_string(chars=string.ascii_letters)
-    return ServiceSpecificationDefinition(
-        name=name,
-        display_name=name,
-        recommended_value=recommended_value,
-        description="",
     )

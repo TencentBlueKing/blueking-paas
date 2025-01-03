@@ -253,7 +253,7 @@ def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceCo
 
 def generate_source_config_name(app_code: str) -> str:
     """Generate name of the Mount source_config"""
-    return f"{app_code}-{uuid.uuid4().hex}"
+    return f"{app_code.replace('_', '0us0')}-{uuid.uuid4().hex}"
 
 
 def deploy_volume_source(env: ModuleEnvironment):

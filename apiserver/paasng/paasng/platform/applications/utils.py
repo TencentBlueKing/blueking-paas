@@ -27,7 +27,6 @@ from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
-from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -55,7 +54,6 @@ def create_default_module(
         skipped.
     :param source_origin: The origin of module's source code
     """
-    region = get_region(application.region)
     language = language or application.language
     module = Module.objects.create(
         application=application,
@@ -68,7 +66,6 @@ def create_default_module(
         source_origin=source_origin.value,
         language=language,
         source_init_template=source_init_template,
-        exposed_url_type=region.entrance_config.exposed_url_type,
     )
     return module
 

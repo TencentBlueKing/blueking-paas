@@ -52,7 +52,6 @@ def init_default_cluster() -> Cluster:
         },
         token_value="masked",
         feature_flags={
-            ClusterFeatureFlag.ENABLE_EGRESS_IP: True,
             ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
             ClusterFeatureFlag.INGRESS_USE_REGEX: False,
             ClusterFeatureFlag.ENABLE_BK_MONITOR: True,
@@ -111,7 +110,6 @@ def init_system_cluster() -> Cluster:
         cert_data="MTIzNDU2Cg==",
         key_data="MTIzNDU2Cg==",
         feature_flags={
-            ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
             ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
             ClusterFeatureFlag.INGRESS_USE_REGEX: False,
             ClusterFeatureFlag.ENABLE_BK_MONITOR: True,

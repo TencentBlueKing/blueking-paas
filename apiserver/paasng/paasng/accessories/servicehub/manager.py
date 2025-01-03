@@ -17,9 +17,9 @@
 
 import logging
 import operator
+import uuid
 from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTuple, Optional, TypeVar, cast
 
-from django.db.models import QuerySet
 from django.http import Http404
 
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
@@ -27,6 +27,7 @@ from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.local.manager import LocalPlanMgr, LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.models import (
@@ -36,18 +37,23 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteServiceMgr, RemoteServiceObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import (
+    EngineAppInstanceRel,
+    PlanObj,
+    ServiceObj,
+    UnboundEngineAppInstanceRel,
+)
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.region.models import get_all_regions, set_service_categories_loader
+from paasng.core.region.models import set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def _fetch_service_categories(region: str) -> List[ServiceCategory]:
+def _fetch_service_categories() -> List[ServiceCategory]:
     """Fetch service categories by region."""
-    category_ids = {obj.category_id for obj in mixed_service_mgr.list_by_region(region)}
+    category_ids = {obj.category_id for obj in mixed_service_mgr.list_visible()}
     categories = ServiceCategory.objects.filter(pk__in=category_ids).order_by("-sort_priority")
     return list(categories)
 
@@ -118,32 +124,23 @@ class MixedServiceMgr:
         store = get_remote_store()
         self.mgr_instances = [LocalServiceMgr(), RemoteServiceMgr(store)]
 
-    def get(self, uuid: str, region: str) -> ServiceObj:
+    def get(self, uuid: str) -> ServiceObj:
         for mgr in self.mgr_instances:
             try:
-                return mgr.get(uuid, region)
+                return mgr.get(uuid)
             except ServiceObjNotFound:
                 continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} in region {region} was not found")
+        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
 
-    def find_by_name(self, name: str, region: str, include_invisible: bool = False) -> ServiceObj:
+    def find_by_name(self, name: str, include_invisible: bool = False) -> ServiceObj:
         for mgr in self.mgr_instances:
             try:
-                obj = mgr.find_by_name(name, region)
+                obj = mgr.find_by_name(name)
                 if include_invisible or obj.is_visible:
                     return obj
             except ServiceObjNotFound:
                 continue
-        raise ServiceObjNotFound(f"service with name {name} in region {region} was not found")
-
-    def get_without_region(self, uuid: str) -> ServiceObj:
-        """Get a service without any region info"""
-        for region in get_all_regions():
-            try:
-                return self.get(uuid, region)
-            except ServiceObjNotFound:
-                continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
+        raise ServiceObjNotFound(f"service with name {name} was not found")
 
     def get_or_404(self, *args, **kwargs) -> ServiceObj:
         """Get a ServiceObj object or raise 404
@@ -168,10 +165,31 @@ class MixedServiceMgr:
         # 所有 mgr 都无法找到具体条目
         raise SvcAttachmentDoesNotExist(f"module<{module_id}> has no attachment with service<{service_id}>")
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
-        """Create bind relationship for given module and service object"""
+    def bind_service(
+        self,
+        service: ServiceObj,
+        module: Module,
+        plan_id: str | None = None,
+        env_plan_id_map: Dict[str, str] | None = None,
+    ) -> str:
+        """Create bind relationship for given module and service object.
+
+        Use this method when the user can manually select a plan to bind, if this
+        condition is not met, use `bind_service_use_first_plan` instead.
+        """
         DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
-        return _proxied_svc_dispatcher("bind_service")(self, service, module, specs=specs)
+        return _proxied_svc_dispatcher("bind_service")(
+            self, service, module, plan_id=plan_id, env_plan_id_map=env_plan_id_map
+        )
+
+    def bind_service_use_first_plan(self, service: ServiceObj, module: Module) -> str:
+        """Create bind relationship for given module and service object.
+
+        The difference between this method and `bind_service` is that this method will
+        use the first plan when multiple plans are available instead of raising an exception.
+        """
+        DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
+        return _proxied_svc_dispatcher("bind_service_use_first_plan")(self, service, module)
 
     # Dispatch via service type start
 
@@ -184,22 +202,6 @@ class MixedServiceMgr:
     module_is_bound_with = _proxied_svc_dispatcher("module_is_bound_with")
     update = _proxied_svc_dispatcher("update")
     destroy = _proxied_svc_dispatcher("destroy")
-
-    def get_provisioned_queryset_by_services(self, services: List[ServiceObj], application_ids: List[str]) -> QuerySet:
-        joined_qs = None
-        for mgr in self.mgr_instances:
-            mgr_services = [service for service in services if isinstance(service, mgr.service_obj_cls)]
-            if not mgr_services:
-                continue
-
-            qs = mgr.get_provisioned_queryset_by_services(mgr_services, application_ids)
-            if joined_qs is None:
-                joined_qs = qs
-            else:
-                joined_qs = joined_qs.union(qs)
-        if joined_qs is None:
-            raise ValueError(f"{services} is an invalid service list")
-        return joined_qs
 
     # Dispatch via service type end
 
@@ -216,8 +218,11 @@ class MixedServiceMgr:
     list_provisioned_rels = cast(
         Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
-    list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
+    list_unbound_instance_rels = cast(
+        Callable[..., Iterable[UnboundEngineAppInstanceRel]], _proxied_chained_generator("list_unbound_instance_rels")
+    )
+    list_visible = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list_visible"))
 
     # Proxied generator methods end
 
@@ -272,6 +277,16 @@ class MixedServiceMgr:
             except SvcAttachmentDoesNotExist:
                 continue
         raise SvcAttachmentDoesNotExist(f"engine_app<{engine_app}> has no attachment with service<{service.uuid}>")
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        for mgr in self.mgr_instances:
+            try:
+                return mgr.get_unbound_instance_rel_by_instance_id(service, service_instance_id)
+            except UnboundSvcAttachmentDoesNotExist:
+                continue
+        raise UnboundSvcAttachmentDoesNotExist(
+            f"service<{service}> has no attachment with service_instance_id<{service_instance_id}>"
+        )
 
 
 class MixedPlanMgr:

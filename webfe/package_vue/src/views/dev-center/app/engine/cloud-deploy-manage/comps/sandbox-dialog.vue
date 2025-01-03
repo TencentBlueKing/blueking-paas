@@ -67,9 +67,14 @@
         </bk-form-item>
         <bk-form-item
           :label="`${$t('代码仓库')}：`"
-          class="line-item"
+          class="line-item repository"
         >
-          <span :class="{ 'repo-url': curModuleInfo.repo?.repo_url }">{{ curModuleInfo.repo?.repo_url || '--' }}</span>
+          <div
+            :class="{ 'repo-url': curModuleInfo.repo?.repo_url }"
+            v-bk-overflow-tips
+          >
+            {{ curModuleInfo.repo?.repo_url || '--' }}
+          </div>
         </bk-form-item>
         <bk-form-item
           :label="`${$t('构建目录')}：`"
@@ -207,7 +212,7 @@ export default {
           appCode: this.appCode,
           moduleId: this.formData.module,
         });
-        this.branchList = res.results;
+        this.branchList = res.results.filter((item) => item.type === 'branch');
       } catch (e) {
         this.branchList = [];
         this.catchErrorHandler(e);
@@ -275,10 +280,20 @@ export default {
   .item-tips {
     color: #979ba5;
     font-size: 12px;
+    line-height: 20px;
+    margin-top: 4px;
   }
   .line-item {
     display: flex;
+    &.repository {
+      white-space: nowrap;
+      /deep/ .bk-form-content {
+        overflow: hidden;
+      }
+    }
     .repo-url {
+      text-overflow: ellipsis;
+      overflow: hidden;
       color: #3a84ff;
     }
     /deep/ .bk-label {

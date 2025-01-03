@@ -24,6 +24,7 @@ from paas_wl.infras.cluster.constants import ClusterTokenType
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.serializers import IngressConfigSLZ
 from paas_wl.workloads.networking.egress.models import RegionClusterState
+from paasng.platform.modules.constants import ExposedURLType
 
 
 def ensure_base64_encoded(content):
@@ -70,11 +71,12 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
             "default_tolerations",
             "feature_flags",
             "nodes",
+            "exposed_url_type",
         ]
 
     def get_nodes(self, obj: Cluster) -> List[str]:
         """获取集群拥有的 Node 信息（根据 RegionClusterState 表查询，若有新增节点需要先更新状态）"""
-        state = RegionClusterState.objects.filter(region=obj.region, cluster_name=obj.name).first()
+        state = RegionClusterState.objects.filter(cluster_name=obj.name).first()
         if not state:
             return []
         return state.nodes_name
@@ -89,6 +91,7 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     is_default = serializers.BooleanField(required=False, default=False)
     # optional field
     description = serializers.CharField(required=False, default="")
+    exposed_url_type = serializers.ChoiceField(choices=ExposedURLType.get_choices())
     ingress_config = IngressConfigSLZ(required=False, default=None)
     annotations = serializers.JSONField(required=False, default=None)
     ca_data = serializers.CharField(

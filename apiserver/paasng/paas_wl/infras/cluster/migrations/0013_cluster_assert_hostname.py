@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cluster', '0011_clusterallocationpolicy_cluster_available_tenant_ids_and_more'),
+        ('cluster', '0012_clusterallocationpolicy_cluster_available_tenant_ids_and_more'),
     ]
 
     operations = [

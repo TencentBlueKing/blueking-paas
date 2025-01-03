@@ -34,7 +34,6 @@ from paas_wl.infras.cluster.shim import get_application_cluster
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
-from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import (
     app_action_required,
     application_perm_class,
@@ -118,7 +117,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:
                 raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
 
-        region = get_region(application.region)
         module = Module.objects.create(
             application=application,
             is_default=False,
@@ -129,7 +127,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             source_init_template=source_init_template,
             owner=application.owner,
             creator=request.user.pk,
-            exposed_url_type=region.entrance_config.exposed_url_type,
         )
         # Use the same cluster with previous modules
         cluster = get_application_cluster(application)
@@ -297,7 +294,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             name=data["name"],
             owner=application.owner,
             creator=request.user.pk,
-            exposed_url_type=get_region(application.region).entrance_config.exposed_url_type,
             **module_src_cfg,
         )
 

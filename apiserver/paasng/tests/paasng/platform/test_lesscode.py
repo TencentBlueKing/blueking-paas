@@ -29,7 +29,7 @@ from tests.utils.basic import generate_random_string
 
 @pytest.fixture(autouse=True)
 def _override_default_region():
-    with override_settings(ENABLE_BK_LESSCODE_APIGW=True):
+    with override_settings(ENABLE_BK_LESSCODE=True):
         yield
 
 

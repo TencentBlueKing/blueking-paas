@@ -15,7 +15,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
-import json
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -39,6 +38,9 @@ logger = logging.getLogger(__name__)
 def wrap_request_exc():
     try:
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception("The response from pa is not valid JSON.")
+        raise PAClientException("response not JSON") from e
     except requests.RequestException as e:
         # Handle the potential NoneType of e.request
         request_info = e.request.url if e.request else "unknown"
@@ -46,9 +48,6 @@ def wrap_request_exc():
 
         error_msg = f"Something wrong happened when fetching {request_info}"
         raise PAClientException(error_msg) from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response: {e.doc}")
-        raise PAClientException(f"invalid json response: {e.doc}") from e
     except PAResponseError as e:
         logger.exception(f"invalid response({e.status_code}) from {e.request_url}.Detail: {e.response_text}")
         raise
@@ -315,7 +314,7 @@ class SiteMetricsClient:
         resp = self.pa_client.get_site_pv_config(
             site_name=self.site.name, metric_source_type=self.metric_source_type.value
         )
-        slz = slzs.PageViewConfigSLZ(data=resp, context={"region": self.site.region})
+        slz = slzs.PageViewConfigSLZ(data=resp)
         slz.is_valid(raise_exception=True)
         return slz.validated_data
 

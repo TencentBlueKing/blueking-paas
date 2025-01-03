@@ -125,6 +125,9 @@
             <bk-form-item label="集群描述">
                 <bk-input v-model="readOnlyDialog.form.description" disabled="true"></bk-input>
             </bk-form-item>
+            <bk-form-item label="应用访问类型">
+                <span>$[ exposedURLTypeToText(readOnlyDialog.form.exposed_url_type) ]</span>
+            </bk-form-item>
             <bk-form-item label="子路径根域名">
                 <json-pretty
                     :data="readOnlyDialog.form.ingress_config.sub_path_domains"
@@ -275,6 +278,12 @@
             </bk-form-item>
             <bk-form-item label="集群描述" required>
                 <bk-input v-model="dialog.form.description"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="应用访问类型" required>
+                <bk-select v-model="dialog.form.exposed_url_type" ext-cls="select-custom" ext-popover-cls="select-popover-custom">
+                    <bk-option key="1" id="1" name="子路径(1)"></bk-option>
+                    <bk-option key="2" id="2" name="子域名(2)"></bk-option>
+                </bk-select>
             </bk-form-item>
             <bk-form-item label="子路径根域名" desc="在拼接应用子路径访问地址时遵循以下规则: 'http(s)://{子路径根域名}/{应用子路径}/'">
                 <json-editor ref='subPathDomainsEditor' v-model="dialog.form.ingress_config.sub_path_domains" :schema="DomainSchema"></json-editor>
@@ -455,6 +464,7 @@
                             name: '',
                             type: '',
                             is_default: false,
+                            exposed_url_type: 1,
                             description: '',
                             ingress_config: {
                                 port_map: {},
@@ -548,6 +558,7 @@
                     this.dialog.form.type = clusterTypeList[0].value
                     this.dialog.form.is_default = false
                     this.dialog.form.description = undefined
+                    this.dialog.form.exposed_url_type = 1
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
                     this.dialog.form.annotations = {}
                     this.dialog.form.feature_flags = {}
@@ -690,6 +701,16 @@
                 },
                 handleRequestError: function (res) {
                     console.error(res)
+                },
+                exposedURLTypeToText: (t) => {
+                    switch (t) {
+                        case 1:
+                            return '子路径(1)'
+                        case 2:
+                            return '子域名(2)'
+                        default:
+                            return `未知(${t})`
+                    }
                 }
             },
         })

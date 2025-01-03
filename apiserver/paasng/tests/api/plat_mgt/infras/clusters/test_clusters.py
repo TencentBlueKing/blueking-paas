@@ -105,7 +105,6 @@ class TestRetrieveCluster:
             "node_selector": {},
             "tolerations": [],
             "feature_flags": {
-                ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
                 ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
                 ClusterFeatureFlag.INGRESS_USE_REGEX: False,
                 ClusterFeatureFlag.ENABLE_BK_MONITOR: True,
@@ -474,7 +473,6 @@ class TestRetrieveClusterDefaultFeatureFlags:
         assert resp.status_code == status.HTTP_200_OK
 
         assert resp.json()["feature_flags"] == {
-            ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
             ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
             ClusterFeatureFlag.INGRESS_USE_REGEX: False,
             ClusterFeatureFlag.ENABLE_BK_MONITOR: False,

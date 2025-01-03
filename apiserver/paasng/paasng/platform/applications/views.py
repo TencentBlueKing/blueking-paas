@@ -1591,7 +1591,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
 
         # 操作前
         old_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            ApplicationDeploymentModuleOrder.objects.filter(user=request.user.pk, module__application=application)
             .order_by("order")
             .values("order", module_name=F("module__name"))
         )
@@ -1599,6 +1599,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
         # 更新或创建模块排序
         for item in module_orders_data:
             ApplicationDeploymentModuleOrder.objects.update_or_create(
+                user=request.user.pk,
                 module=module_name_to_module_dict[item["module_name"]],
                 defaults={
                     "order": item["order"],
@@ -1607,7 +1608,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
 
         # 操作后
         new_module_orders = list(
-            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            ApplicationDeploymentModuleOrder.objects.filter(user=request.user.pk, module__application=application)
             .order_by("order")
             .values("order", module_name=F("module__name"))
         )
@@ -1630,7 +1631,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
         """获取模块的排序"""
         application = self.get_application()
         result = (
-            ApplicationDeploymentModuleOrder.objects.filter(module__application=application)
+            ApplicationDeploymentModuleOrder.objects.filter(user=request.user.pk, module__application=application)
             .order_by("order")
             .values("order", module_name=F("module__name"))
         )

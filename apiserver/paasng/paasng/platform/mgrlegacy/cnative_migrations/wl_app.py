@@ -106,7 +106,7 @@ class WlAppBackupManager:
             try:
                 rel = WlAppBackupRel.objects.get(original_id=self.original_wl_app.uuid)
             except WlAppBackupRel.DoesNotExist:
-                WlApp.objects.filter(name=self.backup_name, region=self.original_wl_app.region).delete()
+                WlApp.objects.filter(name=self.backup_name).delete()
             else:
                 WlApp.objects.filter(uuid=rel.backup_id).delete()
                 rel.delete()

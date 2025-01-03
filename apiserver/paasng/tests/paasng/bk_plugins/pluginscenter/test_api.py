@@ -57,7 +57,7 @@ class TestArchived:
         plugin.save()
         return plugin
 
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_readonly_api(self, api_client, pd, plugin, release, iam_policy_client):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.get(url)
@@ -65,7 +65,7 @@ class TestArchived:
         assert resp.status_code == 200
         assert data["overview_page"]["top_url"].find(str(plugin.id)) > 0
 
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_update_api(self, api_client, pd, plugin, release, iam_policy_client):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/"
         resp = api_client.post(url)
@@ -83,7 +83,7 @@ class TestPluginApi:
             (True, PluginReleaseStatus.FAILED.value, 200, PluginReleaseStatus.FAILED.value),
         ],
     )
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_update_status(
         self,
         api_client,
@@ -107,7 +107,7 @@ class TestPluginApi:
         if resp.status_code == 200:
             assert resp.json()["status"] == stage_status
 
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_update_publisher(self, api_client, pd, plugin, iam_policy_client):
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/publisher/"
 
@@ -124,7 +124,7 @@ class TestPluginApi:
             (True, 400),
         ],
     )
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_update_visible_range(
         self, api_client, pd, plugin, is_in_approval, status_code, iam_policy_client, visible_range_approval_service
     ):
@@ -165,7 +165,7 @@ class TestPluginApi:
             ("FINISHED", 200),
         ],
     )
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_upadate_release_strategy(
         self,
         api_client,
@@ -189,6 +189,9 @@ class TestPluginApi:
         ), mock.patch(
             "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
             return_value=["admin"],
+        ), mock.patch(
+            "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils._get_leader_by_user",
+            return_value=[],
         ):
             resp = api_client.post(
                 url,
@@ -219,7 +222,7 @@ class TestPluginApi:
             (PluginReleaseStatus.PENDING.value, 400),
         ],
     )
-    @pytest.mark.usefixtures("_setup_bk_user")
+    @pytest.mark.usefixtures("_enable_plugin_center")
     def test_rollback_release(
         self,
         api_client,

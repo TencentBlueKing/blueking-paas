@@ -45,7 +45,7 @@ def forwards_func(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("cluster", "0012_cluster_assert_hostname"),
+        ("cluster", "0013_cluster_assert_hostname"),
     ]
 
     operations = [migrations.RunPython(forwards_func)]

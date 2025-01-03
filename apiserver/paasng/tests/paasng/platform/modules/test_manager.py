@@ -60,24 +60,23 @@ class TestModuleInitializer:
         assert raw_module.envs.get(environment="stag").get_engine_app() is not None
 
     @pytest.mark.parametrize(
-        ("services_in_template", "is_default", "expected_bind_service_cnt"),
+        ("services_in_template", "is_default", "bind_call_cnt"),
         [
             ({}, True, 0),
             ({"mysql": {"specs": {}}}, True, 1),
             ({"mysql": {"specs": {}}}, False, 1),
         ],
     )
-    def test_bind_default_services(
-        self, services_in_template, is_default, expected_bind_service_cnt, settings, raw_module
-    ):
+    def test_bind_default_services(self, services_in_template, is_default, bind_call_cnt, settings, raw_module):
         raw_module.source_init_template = "dj18_with_auth"
         raw_module.is_default = is_default
         raw_module.save()
 
         module_initializer = ModuleInitializer(raw_module)
-        with mock.patch("paasng.platform.templates.manager.Template.objects.get") as mocked_get_tmpl, mock.patch(
-            "paasng.platform.modules.manager.mixed_service_mgr"
-        ) as mocked_service_mgr:
+        with (
+            mock.patch("paasng.platform.templates.manager.Template.objects.get") as mocked_get_tmpl,
+            mock.patch("paasng.platform.modules.manager.mixed_service_mgr") as mocked_service_mgr,
+        ):
             mocked_get_tmpl.return_value = Template(
                 name="foo",
                 language="Python",
@@ -88,9 +87,9 @@ class TestModuleInitializer:
 
             module_initializer.bind_default_services()
 
-            if expected_bind_service_cnt:
+            if bind_call_cnt:
                 assert mocked_service_mgr.find_by_name.called
-            assert mocked_service_mgr.bind_service.call_count == expected_bind_service_cnt
+            assert mocked_service_mgr.bind_service_use_first_plan.call_count == bind_call_cnt
 
     def test_bind_default_runtime(self, raw_module, settings):
         raw_module.source_init_template = "test_template"
@@ -141,11 +140,11 @@ class TestModuleInitializer:
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_initialize_vcs(self, raw_module):
-        with mock.patch("paasng.platform.sourcectl.svn.client.RepoProvider") as mocked_provider, mock.patch(
-            "paasng.platform.sourcectl.connector.SvnRepositoryClient"
-        ) as mocked_client, mock.patch(
-            "paasng.platform.templates.templater.Templater.download_tmpl"
-        ) as mocked_download:
+        with (
+            mock.patch("paasng.platform.sourcectl.svn.client.RepoProvider") as mocked_provider,
+            mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient") as mocked_client,
+            mock.patch("paasng.platform.templates.templater.Templater.download_tmpl") as mocked_download,
+        ):
             mocked_provider().provision.return_value = {"repo_url": "mocked_repo_url"}
             mocked_download.return_value = Path(tempfile.mkdtemp())
 

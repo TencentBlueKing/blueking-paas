@@ -41,14 +41,12 @@ class Command(BaseCommand):
             if cluster.type == ClusterType.NORMAL:
                 cluster.feature_flags.update(
                     {
-                        ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
                         ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
                     }
                 )
             elif cluster.type == ClusterType.VIRTUAL:
                 cluster.feature_flags.update(
                     {
-                        ClusterFeatureFlag.ENABLE_EGRESS_IP: False,
                         ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: False,
                     }
                 )

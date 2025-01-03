@@ -9,7 +9,7 @@
           <img
             src="/static/images/yahei-5.png"
             class="appear"
-          >
+          />
         </div>
         <router-link
           :to="{ name: 'createApp' }"
@@ -27,7 +27,7 @@
         <router-link
           v-if="isShowOffAppAction"
           :to="{ name: 'myApplications', query: { include_inactive: true } }"
-          style="margin-left: 0;"
+          style="margin-left: 0"
           class="btn-link spacing-h-x2"
         >
           {{ $t('查看已下架应用') }}
@@ -61,7 +61,7 @@
       data-test-id="developer_content_wrap"
       v-if="!userHasApp"
     >
-      <div class="wrap">
+      <div class="wrap guide-content">
         <!-- 新手入门&使用指南 start -->
         <div
           class="paas-content-boxpanel"
@@ -80,7 +80,9 @@
                 :href="item.url"
                 target="_blank"
                 class="paas-ask"
-              >{{ item.title }}</a>
+              >
+                {{ item.title }}
+              </a>
               <p>{{ item.info }}</p>
             </div>
           </div>
@@ -147,10 +149,9 @@ export default {
       next((vm) => {
         vm.setUserHasApp(userHasApp);
         if (!userHasApp) {
-          auth.requestOffApp()
-            .then((flag) => {
-              vm.isShowOffAppAction = flag;
-            });
+          auth.requestOffApp().then((flag) => {
+            vm.isShowOffAppAction = flag;
+          });
         }
       });
     });
@@ -161,10 +162,9 @@ export default {
       this.setUserHasApp(userHasApp);
       next(() => {
         if (!userHasApp) {
-          auth.requestOffApp()
-            .then((flag) => {
-              this.isShowOffAppAction = flag;
-            });
+          auth.requestOffApp().then((flag) => {
+            this.isShowOffAppAction = flag;
+          });
         }
       });
     });
@@ -188,6 +188,10 @@ export default {
 @import '~@/assets/css/mixins/ellipsis.scss';
 .paas-content.home-content {
   background-color: #f5f7fa;
+  .guide-content {
+    width: 1200px;
+    margin: 0 auto;
+  }
 }
 
 .paas-highcharts {

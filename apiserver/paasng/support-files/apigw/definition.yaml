@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.3.2
-  title: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
-  comment: "Update: get_deploy_phases_framework, get_deploy_phases_framework, list_processes."
+  version: 1.3.3
+  title: "Remove Unused APIs: retrieve_addon_specs and provision_addon_instance."
+  comment: "This release remove unused apis retrieve_addon_specs and provision_addon_instance."
 
 
 stage:

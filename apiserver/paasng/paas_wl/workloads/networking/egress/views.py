@@ -69,10 +69,10 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
         cluster = get_cluster_by_app(wl_app)
         try:
-            state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
+            state = RegionClusterState.objects.filter(cluster_name=cluster.name).latest()
             binding = RCStateAppBinding.objects.create(app=wl_app, state=state)
         except RegionClusterState.DoesNotExist:
-            logger.warning("No cluster state can be found for region=%s", wl_app.region)
+            logger.warning("No cluster state can be found for cluster=%s", cluster.name)
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("集群数据未初始化，请稍候再试")
         except IntegrityError:
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("不能重复绑定")

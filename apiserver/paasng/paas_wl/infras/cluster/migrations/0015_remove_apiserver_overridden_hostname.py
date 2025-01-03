@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cluster', '0013_migration_overridden_hostname'),
+        ('cluster', '0014_migration_overridden_hostname'),
     ]
 
     operations = [

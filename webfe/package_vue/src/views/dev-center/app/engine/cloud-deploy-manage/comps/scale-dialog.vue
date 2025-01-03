@@ -44,8 +44,11 @@
             <li
               v-for="item in scaleTypes"
               :key="item.type"
-              :class="['tab-item', { active: curActiveType === item.type },
-                       { disabled: item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING }]"
+              :class="[
+                'tab-item',
+                { active: curActiveType === item.type },
+                { disabled: item.value && !autoScalDisableConfig.ENABLE_AUTOSCALING },
+              ]"
               @click="handleChangeType(item)"
             >
               {{ item.label }}
@@ -137,9 +140,10 @@
   </bk-dialog>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import i18n from '@/language/i18n.js';
-import _ from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 let maxReplicasNum = 0;
 
 export default {
@@ -196,7 +200,11 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('动态扩缩容计算规则')}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
+        html: `<a target="_blank" href="${
+          this.GLOBAL.LINK.BK_APP_DOC
+        }topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t(
+          '动态扩缩容计算规则'
+        )}<i class="paasng-icon paasng-jump-link ml10"/></a>`,
         placements: ['top'],
       },
       rules: {
@@ -259,8 +267,7 @@ export default {
     },
 
     isScalingConfigChange() {
-      return this.autoscaling === this.autoscalingBackUp
-      && JSON.stringify(this.scalingConfig) === JSON.stringify(this.initScalingConfig);
+      return this.autoscaling === this.autoscalingBackUp && isEqual(this.scalingConfig, this.initScalingConfig);
     },
 
     // 进程实例设置
@@ -310,6 +317,7 @@ export default {
           message: err.message,
         });
       } finally {
+        bus.$emit('get-release-info');
         this.isLoading = false;
       }
     },
@@ -459,7 +467,7 @@ export default {
 
       // 扩容方式
       this.autoscaling = process.autoscaling;
-      this.autoscalingBackUp = _.cloneDeep(this.autoscaling);
+      this.autoscalingBackUp = cloneDeep(this.autoscaling);
       this.curActiveType = process.autoscaling ? 'automatic' : 'manual';
       this.scalingConfig.maxReplicas = process?.scalingConfig?.max_replicas || maxReplicasNum;
       this.scalingConfig.minReplicas = process?.scalingConfig?.min_replicas || minReplicasNum;

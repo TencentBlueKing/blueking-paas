@@ -40,7 +40,6 @@ BK_LOG_DEFAULT_ENABLED = settings.LOG_COLLECTOR_TYPE == LOG_COLLECTOR_TYPE_BK_LO
 class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     """集群特性标志"""
 
-    ENABLE_EGRESS_IP = FeatureFlagField(label=_("支持提供出口 IP"), default=False)
     ENABLE_MOUNT_LOG_TO_HOST = FeatureFlagField(label=_("允许挂载日志到主机"), default=True)
     # Indicates if the paths defined on an Ingress use regular expressions
     # if not use regex, the cluster can only deploy ingress-nginx-controller <= 0.21.0
@@ -49,7 +48,7 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     # Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
     INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress路径是否使用正则表达式"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸监控
-    ENABLE_BK_MONITOR = FeatureFlagField(label=_("支持蓝鲸监控"), default=False)
+    ENABLE_BK_MONITOR = FeatureFlagField(label=_("从蓝鲸监控查询资源使用率"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(
         # 如果 LOG_COLLECTOR_TYPE 设置成 BK_LOG(即只用蓝鲸日志采集链路)

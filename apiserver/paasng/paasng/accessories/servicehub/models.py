@@ -17,8 +17,7 @@
 
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Collection, Dict, List
+from typing import Collection, Dict
 
 from django.db import models
 
@@ -27,7 +26,7 @@ from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
-from paasng.utils.models import OwnerTimestampedModel, TimestampedModel
+from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +122,35 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
             return "{prefix}-no-provision".format(prefix=prefix)
 
 
+class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
+    """Unbound attachment between local service and engine app"""
+
+    engine_app = models.ForeignKey(
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_service_attachment",
+    )
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, db_constraint=False, verbose_name="增强服务")
+    service_instance = models.ForeignKey(
+        ServiceInstance,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        db_constraint=False,
+        verbose_name="增强服务实例",
+    )
+
+    class Meta:
+        verbose_name = "unbound attachment between local service and engine app"
+        unique_together = ("service", "engine_app", "service_instance")
+
+    def clean_service_instance(self):
+        """回收增强服务资源"""
+        self.service.delete_service_instance(self.service_instance)
+
+
 class RemoteServiceModuleAttachment(OwnerTimestampedModel):
     """Binding relationship of module <-> remote service"""
 
@@ -149,6 +177,24 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 
     class Meta:
         unique_together = ("service_id", "engine_app")
+
+
+class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
+    """Unbound attachment between remote service and engine app"""
+
+    engine_app = models.ForeignKey(
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_remote_service_attachment",
+    )
+    service_id = models.UUIDField(verbose_name="远程增强服务 ID")
+    service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
+
+    class Meta:
+        verbose_name = "unbound attachment between remote service and engine app"
+        unique_together = ("service_id", "engine_app", "service_instance_id")
 
 
 class ServiceDBProperties:
@@ -203,32 +249,40 @@ class SharedServiceAttachment(TimestampedModel):
         unique_together = ("module", "service_type", "service_id")
 
 
-@dataclass
-class ServiceSetGroupByName:
-    name: str
-    logo: str
-    display_name: str
-    description: str
-    long_description: str
-    available_languages: str
-    instance_tutorial: str
+class ServiceBindingPolicy(AuditedModel):
+    """ServiceBindingPolicy 是增强服务所使用的绑定策略，负责在应用启用增强服务时确定应该
+    使用哪一个增强服务方案（Plan）。一个增强服务，必须有一个绑定策略才算完成“初始化”，否则
+    无法被应用正常使用。
 
-    enabled_regions: List[str] = field(default_factory=list)
-    services: List[ServiceObj] = field(default_factory=list)
-    instances: List[object] = field(default_factory=list)
+    - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
+    """
 
-    @classmethod
-    def from_service(cls, service: ServiceObj):
-        return cls(
-            name=service.name,
-            logo=service.logo,
-            display_name=service.display_name,
-            description=service.description,
-            long_description=service.long_description,
-            available_languages=service.available_languages,
-            instance_tutorial=service.instance_tutorial,
-        )
+    service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    # See `ServiceType` in constants
+    service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 
-    def add_enabled_region(self, region: str):
-        if region not in self.enabled_regions:
-            self.enabled_regions.append(region)
+    # See `ServiceBindingPolicyType`
+    type = models.CharField(verbose_name="策略类型", max_length=16)
+    data = models.JSONField(help_text="策略数据", default={})
+
+
+class ServiceBindingPrecedencePolicy(AuditedModel):
+    """ServiceBindingPrecedencePolicy 是优先于普通 ServiceBindingPolicy 之上的特殊策略，
+    它并非必选，并且不像普通策略一样针对所有的情况生效。ServiceBindingPrecedencePolicy 总是
+    只对特定条件生效，例如：某些特殊的应用或某些特殊应用集群，等等。
+
+    如果 ServiceBindingPrecedencePolicy 生效，将忽略其他已配置的 ServiceBindingPolicy。
+    """
+
+    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    # See `ServiceType` in constants
+    service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+
+    # See `PrecedencePolicyCondType`
+    cond_type = models.CharField(verbose_name="条件类型", max_length=16)
+    cond_data = models.JSONField(verbose_name="条件值", default={})
+    # See `ServiceBindingPolicyType`
+    type = models.CharField(verbose_name="策略类型", max_length=16)
+    data = models.JSONField(help_text="策略值", default={})
+
+    priority = models.SmallIntegerField(verbose_name="优先级", default=0, help_text="值越大，优先级越高")

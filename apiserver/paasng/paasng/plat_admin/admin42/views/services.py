@@ -95,8 +95,6 @@ class ApplicationServicesManageViewSet(GenericViewSet):
     @staticmethod
     def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
         service_data = ServiceObjSLZ(rel.get_service()).data
-        # 该字段会导致无法序列化，同时该字段不随当前 API 操作改变，故删除
-        del service_data["specifications"]
 
         return DataDetail(
             type=DataType.RAW_DATA,
@@ -133,7 +131,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
         application = get_object_or_404(Application, code=code)
         module = application.get_module(module_name)
         env = module.envs.get(environment=environment)
-        service = mixed_service_mgr.get_or_404(service_id, module.region)
+        service = mixed_service_mgr.get_or_404(service_id)
 
         rel = next(mixed_service_mgr.list_unprovisioned_rels(env.engine_app, service=service), None)
         if not rel:
@@ -153,9 +151,7 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 
     @atomic
     def recycle_resource(self, request, code, module_name, service_id, instance_id):
-        application = get_object_or_404(Application, code=code)
-        module = application.get_module(module_name)
-        service = mixed_service_mgr.get_or_404(service_id, module.region)
+        service = mixed_service_mgr.get_or_404(service_id)
 
         try:
             instance_rel = mixed_service_mgr.get_instance_rel_by_instance_id(service, instance_id)
@@ -229,7 +225,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
         return Response(data=ServiceObjSLZ(mixed_service_mgr.list(), many=True).data)
 
     def destroy(self, request, pk):
-        service = mixed_service_mgr.get_without_region(uuid=pk)
+        service = mixed_service_mgr.get(uuid=pk)
         data_before = DataDetail(type=DataType.RAW_DATA, data=ServiceObjSLZ(service).data)
         try:
             mixed_service_mgr.destroy(service)
@@ -247,7 +243,7 @@ class PlatformServicesManageViewSet(GenericViewSet):
 
     def update(self, request, pk):
         try:
-            service = mixed_service_mgr.get_without_region(uuid=pk)
+            service = mixed_service_mgr.get(uuid=pk)
         except ServiceObjNotFound:
             raise Http404("ServiceObjNotFound")
 
@@ -255,8 +251,6 @@ class PlatformServicesManageViewSet(GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         data_before = ServiceObjSLZ(service).data
-        # specifications 字段无法序列化，同时 specifications 配置能在 config 字段中看到
-        del data_before["specifications"]
         # logo 字段太长，前端比较时会导致浏览器 OOM
         del data_before["logo"]
 
@@ -265,9 +259,8 @@ class PlatformServicesManageViewSet(GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        service = mixed_service_mgr.get_without_region(uuid=pk)
+        service = mixed_service_mgr.get(uuid=pk)
         data_after = ServiceObjSLZ(service).data
-        del data_after["specifications"]
         del data_after["logo"]
         add_admin_audit_record(
             user=request.user.pk,
@@ -314,7 +307,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
 
         try:
             mixed_plan_mgr.create(service, plan_data=data)
@@ -334,7 +327,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         return Response(data=PlanObjSLZ(mixed_plan_mgr.list(), many=True).data)
 
     def destroy(self, request, service_id, plan_id):
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要删除的 plan
         plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
@@ -359,7 +352,7 @@ class PlatformPlanManageViewSet(GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         # 这里不好直接获取到 plan，通过 service 获取 plan 列表，从列表中找到要更新的 plan
         plans = service.get_plans(is_active=False) + service.get_plans(is_active=True)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)

@@ -132,7 +132,6 @@
           <template v-if="isProcessRunning || isBuildSuccess">
             <bk-button
               :theme="'default'"
-              class="ml8"
               :loading="isRunNowLoading"
               @click="handleRunNow"
             >
@@ -151,6 +150,13 @@
               {{ $t('立即运行') }}
             </bk-button>
           </template>
+          <bk-button
+            :theme="'default'"
+            class="ml8"
+            @click="showSubmitCodeDialog"
+          >
+            {{ $t('提交代码') }}
+          </bk-button>
         </div>
         <!-- 访问链接 -->
         <bk-button
@@ -175,6 +181,14 @@
       :process-data="processData"
       @confirm="handleRunNow"
     />
+    <!-- 提交代码 -->
+    <submit-code-dialog
+      ref="submitCodeDialog"
+      :show.sync="isSubmitCodeVisible"
+      :config="submitCode"
+      @submit="submitCommit"
+      @reset="submitCodeReset"
+    />
   </div>
 </template>
 
@@ -184,6 +198,7 @@ import RightTab from './comps/right-tab.vue';
 import { bus } from '@/common/bus';
 import axios from 'axios';
 import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
+import SubmitCodeDialog from './comps/submit-code-dialog.vue';
 
 export default {
   name: 'Sandbox',
@@ -191,6 +206,7 @@ export default {
     PasswordRequestDialog,
     RightTab,
     RunSandboxDialog,
+    SubmitCodeDialog,
   },
   data() {
     return {
@@ -215,9 +231,16 @@ export default {
       isLogsLoading: true,
       isCollapse: true,
       processInfo: {},
-      processData: {},
+      processData: [],
       isRunSandboxVisible: false,
       sandboxPassword: '',
+      isSubmitCodeVisible: false,
+      submitCode: {
+        loading: false,
+        isConfirm: false,
+        fileTotal: 0,
+        tree: {},
+      },
     };
   },
   computed: {
@@ -283,6 +306,8 @@ export default {
   beforeDestroy() {
     this.clearIntervals();
     clearInterval(this.sandboxIntervalId);
+    bus.$off('change-refresh-time');
+    bus.$off('refresh-log');
   },
   methods: {
     ensureHttpProtocol(url) {
@@ -542,6 +567,71 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    showSubmitCodeDialog() {
+      this.isSubmitCodeVisible = true;
+      this.getDiffs();
+    },
+    // 获取 diff 信息
+    async getDiffs() {
+      this.submitCode.loading = true;
+      try {
+        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}codes/diffs?tree=true`);
+        const res = await this.executeRequest(url);
+        this.submitCode.isConfirm = !(res.total > 0);
+        this.submitCode.fileTotal = res.total;
+        this.submitCode.tree = res.tree;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.submitCode.loading = false;
+      }
+    },
+    // 提交 commit 信息
+    async submitCommit(message) {
+      try {
+        const res = await this.$store.dispatch('sandbox/sandboxSubmitCode', {
+          appCode: this.code,
+          moduleId: this.module,
+          data: {
+            message,
+          },
+        });
+        this.showMessage(res.repo_url);
+        this.isSubmitCodeVisible = false;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.$refs.submitCodeDialog?.closeLoading();
+      }
+    },
+    // commit 成功弹窗
+    showMessage(link) {
+      const h = this.$createElement;
+      const that = this;
+      this.$bkMessage({
+        message: h('p', [
+          `${that.$t('代码提交成功')}，`,
+          h(
+            'a',
+            {
+              attrs: {
+                href: link,
+                target: '_blank',
+              },
+              style: {
+                color: '#3A84FF',
+              },
+            },
+            that.$t('点击跳转到仓库查看')
+          ),
+        ]),
+        theme: 'success',
+      });
+    },
+    submitCodeReset() {
+      this.submitCode.loading = false;
+      this.submitCode.isConfirm = false;
     },
   },
 };

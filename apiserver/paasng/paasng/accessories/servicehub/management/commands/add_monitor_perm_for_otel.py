@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Add BK Monitoring space permissions to applications that have enabled the Otel service.
-"""
+"""Add BK Monitoring space permissions to applications that have enabled the Otel service."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -34,7 +34,7 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", default=False, action="store_true", help="dry run")
 
     def handle(self, region, dry_run, *args, **options):
-        service = mixed_service_mgr.find_by_name("otel", region)
+        service = mixed_service_mgr.find_by_name("otel")
         application_ids = list(Application.objects.all().values_list("id", flat=True))
         # 查询所有以开启 otel 增强服务的应用信息
         service_instances = mixed_service_mgr.get_provisioned_queryset(service, application_ids)

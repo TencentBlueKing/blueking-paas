@@ -264,7 +264,6 @@ class TestChecklistInfoViewSet:
     def _set_rcs_binding(self, _set_default_cluster, settings, bk_app, _with_wl_apps, bk_stag_env):
         wl_app = bk_app.get_engine_app("stag", module_name="default").to_wl_obj()
         state = RegionClusterState.objects.create(
-            region=wl_app.region,
             cluster_name=CLUSTER_NAME_FOR_TESTING,
             nodes_data=[
                 {
@@ -276,7 +275,6 @@ class TestChecklistInfoViewSet:
         RCStateAppBinding.objects.create(app=wl_app, state=state)
 
         RegionClusterState.objects.create(
-            region=wl_app.region,
             cluster_name=settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER,
             nodes_data=[
                 {

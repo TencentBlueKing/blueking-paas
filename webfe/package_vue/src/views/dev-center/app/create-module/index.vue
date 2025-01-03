@@ -141,13 +141,6 @@
                   >
                     {{ $t('蓝鲸开发框架') }}
                   </li>
-                  <li
-                    v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                    :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
-                    @click="handleCodeTypeChange(2)"
-                  >
-                    {{ $t('蓝鲸运维开发平台') }}
-                  </li>
                 </div>
               </section>
             </div>

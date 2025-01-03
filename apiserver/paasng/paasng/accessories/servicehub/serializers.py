@@ -32,13 +32,6 @@ class CategorySLZ(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class SpecDefinitionSLZ(serializers.Serializer):
-    name = serializers.CharField()
-    display_name = serializers.CharField()
-    description = serializers.CharField(allow_blank=True)
-    recommended_value = serializers.CharField(allow_null=True)
-
-
 class ServiceMinimalSLZ(serializers.Serializer):
     uuid = serializers.CharField()
     name = serializers.CharField()
@@ -46,7 +39,6 @@ class ServiceMinimalSLZ(serializers.Serializer):
     display_name = serializers.CharField()
     description = serializers.CharField()
     category = CategorySLZ()
-    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source="public_specifications")
 
 
 class ServiceCategoryByRegionSLZ(serializers.Serializer):
@@ -56,7 +48,6 @@ class ServiceCategoryByRegionSLZ(serializers.Serializer):
 
 class ServiceSLZ(serializers.Serializer):
     uuid = serializers.CharField()
-    region = serializers.CharField()
     name = serializers.CharField()
     available_languages = serializers.CharField()
     display_name = serializers.CharField()
@@ -64,7 +55,6 @@ class ServiceSLZ(serializers.Serializer):
     description = serializers.CharField()
     long_description = serializers.CharField()
     category = CategorySLZ()
-    specifications = serializers.ListField(child=SpecDefinitionSLZ(), source="public_specifications")
     instance_tutorial = serializers.CharField()
     is_ready = serializers.SerializerMethodField()
 
@@ -81,30 +71,12 @@ class ServiceSLZ(serializers.Serializer):
         return is_ready
 
 
-class ServiceWithSpecsSLZ(serializers.Serializer):
+class ServiceSimpleFieldsSLZ(serializers.Serializer):
     uuid = serializers.CharField()
     name = serializers.CharField()
     display_name = serializers.CharField()
     description = serializers.CharField()
     category = CategorySLZ()
-    specs = serializers.ListField(allow_null=True, default=None)
-
-
-class SingleServiceSpecificationSLZ(serializers.Serializer):
-    name = serializers.CharField()
-    display_name = serializers.CharField()
-    description = serializers.CharField()
-    recommended_value = serializers.CharField()
-
-
-class ServicePlanSpecificationSLZ(SingleServiceSpecificationSLZ):
-    value = serializers.CharField()
-
-
-class ServiceSpecificationSLZ(serializers.Serializer):
-    definitions = serializers.ListField(child=SingleServiceSpecificationSLZ(), allow_empty=True)
-    recommended_values = serializers.ListField(child=serializers.CharField(), allow_empty=True)
-    values = serializers.ListField(child=serializers.ListField(child=serializers.CharField()), allow_empty=True)
 
 
 class ApplicationWithLogoSLZ(serializers.Serializer):
@@ -151,7 +123,7 @@ class ServiceAttachmentSLZ(serializers.Serializer):
 
 class ServiceAttachmentDetailedSLZ(ServiceAttachmentSLZ):
     created = serializers.DateTimeField()
-    region = serializers.CharField(allow_null=True, default="")
+    region = serializers.CharField(help_text="应用版本", allow_null=True, default="")
 
 
 class ServiceAttachmentQuerySLZ(serializers.Serializer):
@@ -173,7 +145,9 @@ class CreateAttachmentSLZ(serializers.Serializer):
     service_id = serializers.CharField()
     module_name = serializers.CharField(required=False)
     code = serializers.CharField()
-    specs = serializers.DictField(default=dict)
+
+    plan_id = serializers.CharField(help_text="手动指定的方案 ID", default=None)
+    env_plan_id_map = serializers.DictField(help_text="手动指定的分环境方案 ID 字典", default=None)
 
 
 class ServiceInstanceSLZ(serializers.Serializer):
@@ -198,21 +172,20 @@ class ServiceInstanceInfoSLZ(serializers.Serializer):
     environment = serializers.CharField()
     environment_name = serializers.CharField()
     usage = serializers.CharField()
-    service_specs = serializers.DictField(child=serializers.CharField())
 
 
 # 增强服务按名称聚合
-class ServiceSetGroupByNameSLZ(serializers.Serializer):
+class ServiceWithInstsSLZ(serializers.Serializer):
+    uuid = serializers.CharField()
     name = serializers.CharField()
     logo = serializers.CharField()
+    category = CategorySLZ()
     display_name = serializers.CharField()
     description = serializers.CharField()
     long_description = serializers.CharField(allow_null=True, default="")
     available_languages = serializers.CharField(default="")
     instance_tutorial = serializers.CharField(default="")
 
-    enabled_regions = serializers.ListField(child=serializers.CharField())
-    services = serializers.ListField(child=ServiceMinimalSLZ())
     instances = serializers.ListField(allow_null=True, child=ServiceAttachmentDetailedSLZ())
 
 
@@ -227,12 +200,24 @@ class ProvisionInfoSLZ(serializers.Serializer):
     prod = serializers.BooleanField(help_text="是否已配置实例(生产环境)", default=False)
 
 
+class PlanForDisplaySLZ(serializers.Serializer):
+    """用于简单展示的 Plan 信息"""
+
+    name = serializers.CharField(help_text="方案名称")
+    description = serializers.CharField(help_text="方案描述")
+
+
+class BoundPlansSLZ(serializers.Serializer):
+    stag = PlanForDisplaySLZ(help_text="预发布环境方案信息", default=None)
+    prod = PlanForDisplaySLZ(help_text="生产环境方案信息", default=None)
+
+
 class BoundServiceInfoSLZ(serializers.Serializer):
     """Serializer for representing bound service info"""
 
     service = ServiceMinimalSLZ(help_text="增强服务信息")
     provision_infos = ProvisionInfoSLZ(help_text="增强服务实例分配信息")
-    specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
+    plans = BoundPlansSLZ(help_text="增强服务方案信息")
     ref_modules = serializers.ListField(help_text="共享当前增强服务的模块", allow_null=True, child=MinimalModuleSLZ())
 
 
@@ -248,7 +233,6 @@ class SharedServiceInfoWithAllocationSLZ(SharedServiceInfoSLZ):
     """携带分配 & 配置信息的共享服务信息"""
 
     provision_infos = ProvisionInfoSLZ(help_text="共享服务实例分配信息")
-    specifications = serializers.ListField(help_text="配置信息", allow_null=True, child=ServicePlanSpecificationSLZ())
 
 
 class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
@@ -258,3 +242,33 @@ class ServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 class UpdateServiceEngineAppAttachmentSLZ(serializers.Serializer):
     credentials_enabled = serializers.BooleanField(help_text="是否使用凭证")
+
+
+class UnboundServiceInstanceInfoSLZ(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    service_instance = ServiceInstanceSLZ(help_text="增强服务实例信息")
+    environment = serializers.CharField(help_text="环境")
+    environment_name = serializers.CharField(help_text="环境名称")
+
+
+class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    service = ServiceMinimalSLZ(help_text="增强服务信息")
+    unbound_instances = UnboundServiceInstanceInfoSLZ(many=True, help_text="已解绑增强服务实例")
+    count = serializers.SerializerMethodField(help_text="数量")
+
+    def get_count(self, obj):
+        return len(obj.get("unbound_instances", []))
+
+
+class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+
+
+class PossiblePlansOutputSLZ(serializers.Serializer):
+    """The possible plans for a service"""
+
+    has_multiple_plans = serializers.BooleanField(help_text="是否存在多个可选方案", read_only=True)
+    static_plans = serializers.ListField(
+        help_text="静态方案列表", child=serializers.DictField(), default=None, read_only=True
+    )
+    env_specific_plans = serializers.DictField(help_text="环境特定方案列表", default=None, read_only=True)

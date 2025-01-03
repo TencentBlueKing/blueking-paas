@@ -28,7 +28,7 @@ cryptography = "43.0.3"
 curlify = "2.2.1"
 dataclasses = {version = "0.7", python = ">=3.6.2,<3.7"}
 dj-static = "0.0.6"
-django = "4.2.16"
+django = "4.2.17"
 django-bootstrap3 = "21.2"
 django-cors-headers = "4.5.0"
 django-dynamic-fixture = "3.1.2"

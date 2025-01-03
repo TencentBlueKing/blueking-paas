@@ -121,7 +121,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             PreparedSourcePackage(request).store(filepath)
 
         logger.debug("[S-Mart] fetching remote services by region.")
-        supported_services = list(mixed_service_mgr.list_by_region(get_region(app_desc=app_desc)))
+        supported_services = list(mixed_service_mgr.list_visible())
         supported_services = cast(List[ServiceObj], supported_services)
 
         return Response(
@@ -327,7 +327,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)
 
-        supported_services = mixed_service_mgr.list_by_region(application.region)
+        supported_services = mixed_service_mgr.list_visible()
         return Response(
             data=PackageStashResponseSLZ(
                 {

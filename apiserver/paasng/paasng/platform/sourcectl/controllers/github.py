@@ -26,7 +26,14 @@ from django.utils.functional import cached_property
 
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.github.client import GitHubApiClient
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.sourcectl.utils import generate_temp_file
@@ -78,7 +85,7 @@ class GitHubRepoController(BaseGitRepoController):
         else:
             return True
 
-    def export(self, local_path: PathLike, version_info: VersionInfo, try_to_preserve_meta_info: bool = False):
+    def export(self, local_path: PathLike, version_info: VersionInfo):
         """下载 zip 包并解压到指定路径"""
         target_branch, revision = self.extract_version_info(version_info)
         with generate_temp_file(suffix=".zip") as zip_file:
@@ -129,6 +136,10 @@ class GitHubRepoController(BaseGitRepoController):
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
+        """github 不支持该功能"""
+        raise NotImplementedError
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """github 不支持该功能"""
         raise NotImplementedError
 

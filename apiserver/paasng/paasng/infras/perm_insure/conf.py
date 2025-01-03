@@ -76,7 +76,6 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "MkSearchViewset",
     "StreamViewSet",
     "VoidViewset",
-    "ServicePlanViewSet",
     "TemplateViewSet",
     "RegionTemplateViewSet",
     "ChangelogViewSet",

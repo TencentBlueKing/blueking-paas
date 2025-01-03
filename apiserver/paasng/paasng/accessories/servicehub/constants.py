@@ -36,7 +36,6 @@ LEGACY_PLAN_INSTANCE = dict(
     is_active=True,
     is_eager=True,
     region="--",
-    specifications=dict(),
     properties=dict(),
 )
 
@@ -58,3 +57,23 @@ class ServiceBindingType(IntStructuredEnum):
 
     NORMAL = 1
     SHARING = 2
+
+
+class ServiceBindingPolicyType(StrStructuredEnum):
+    """The type of service binding policy"""
+
+    # Use the same value under all conditions
+    STATIC = "static"
+
+    # Use different values for different app environments
+    ENV_SPECIFIC = "env_specific"
+
+
+class PrecedencePolicyCondType(StrStructuredEnum):
+    """The type of precedence policy condition"""
+
+    # Test if the region is in the given list
+    REGION_IN = "region_in"
+
+    # Test if the cluster is in the given list
+    CLUSTER_IN = "cluster_in"

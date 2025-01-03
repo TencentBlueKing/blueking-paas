@@ -15,8 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Testcases entrance.exposer module
-"""
+"""Testcases entrance.exposer module"""
 
 import pytest
 
@@ -24,7 +23,6 @@ from paas_wl.workloads.networking.entrance.addrs import Address
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
 
@@ -33,17 +31,12 @@ pytestmark = pytest.mark.django_db
 def _setup_addrs(bk_app, mock_env_is_running, mock_get_builtin_addresses):
     """Set up common mock and configs for testing functions related with addresses"""
 
-    def update_region_hook(config):
-        config["basic_info"]["link_engine_app"] = "http://example.com/{region}-legacy-path/"
-
     mock_env_is_running["stag"] = True
     mock_get_builtin_addresses["stag"] = [
         Address(type=AddressType.SUBDOMAIN, url="http://foo.example.com/"),
         Address(type=AddressType.SUBDOMAIN, url="http://default-foo.example.com/"),
         Address(type=AddressType.SUBDOMAIN, url="http://default-foo.example.org/"),
     ]
-    with override_region_configs(bk_app.region, update_region_hook):
-        yield
 
 
 def test_env_is_deployed(bk_stag_env, bk_prod_env, mock_env_is_running):

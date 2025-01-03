@@ -37,6 +37,7 @@ from paas_wl.infras.cluster.exceptions import (
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.models import UuidAuditedModel
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.models import make_json_field
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ class ClusterManager(models.Manager):
         type: str = ClusterType.NORMAL,
         is_default: bool = False,
         description: Optional[str] = None,
+        exposed_url_type: int = ExposedURLType.SUBPATH.value,
         ingress_config: Optional[Dict] = None,
         annotations: Optional[Dict] = None,
         ca_data: Optional[str] = None,
@@ -95,6 +97,7 @@ class ClusterManager(models.Manager):
             "type": type,
             "is_default": is_default,
             "description": description,
+            "exposed_url_type": exposed_url_type,
             "ingress_config": ingress_config,
             "annotations": annotations,
             "ca_data": ca_data,
@@ -158,6 +161,7 @@ class Cluster(UuidAuditedModel):
         help_text="是否为默认集群（deprecated，后续由分配策略替代）", default=False, null=True
     )
 
+    exposed_url_type = models.IntegerField(help_test="应用的访问地址类型", default=ExposedURLType.SUBPATH.value)
     ingress_config: IngressConfig = IngressConfigField(help_text="ingress 配置")
     annotations = JSONField(help_text="集群元数据，如 BCS 项目，集群，业务信息等", default=dict)
 

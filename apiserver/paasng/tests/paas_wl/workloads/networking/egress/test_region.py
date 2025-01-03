@@ -16,19 +16,20 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Tests for region app"""
+
 from typing import Dict, List
 
 import pytest
 from django.conf import settings
 from django.core.management import call_command
 
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.kres import KNode
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from tests.paas_wl.utils.basic import random_resource_name
 
 # GenState 依赖 k8s node 状态, 不能并发执行
 pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.xdist_group(name="k8s-node")]
-
 
 REGION_NAME = settings.DEFAULT_REGION_NAME
 
@@ -72,7 +73,8 @@ class TestCommandGenState:
 
     def test_normal(self, existing_node_names, default_node_name, k8s_client):
         call_command("region_gen_state", region=REGION_NAME, no_input=True)
-        state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        cluster_names = Cluster.objects.filter(region=REGION_NAME).values_list("name", flat=True)
+        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         assert state.nodes_cnt == len(existing_node_names) + 1
         assert set(state.nodes_name) == set(existing_node_names + [default_node_name])
@@ -83,19 +85,21 @@ class TestCommandGenState:
 
         # Call the command multiple times without any nodes updates should generates no new states
         call_command("region_gen_state", region=REGION_NAME, no_input=True)
-        new_state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        new_state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
         assert new_state.id == state.id
 
     def test_with_adding_node(self, node_maker, default_node_name, k8s_client):
+        cluster_names = Cluster.objects.filter(region=REGION_NAME).values_list("name", flat=True)
+
         call_command("region_gen_state", region=REGION_NAME, no_input=True)
-        state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         # Create a new node
         node_name = "node-{}".format(random_resource_name())
         node_maker(body={"metadata": {"name": node_name}})
 
         call_command("region_gen_state", region=REGION_NAME, no_input=True)
-        new_state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        new_state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         assert new_state.id != state.id
         assert new_state.nodes_cnt - state.nodes_cnt == 1
@@ -118,7 +122,8 @@ class TestCommandGenState:
             ignore_labels=["should_be_ignored=1", "another_label=some_value"],
             no_input=True,
         )
-        state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        cluster_names = Cluster.objects.filter(region=REGION_NAME).values_list("name", flat=True)
+        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         assert state.nodes_cnt == len(existing_node_names)
 
@@ -131,7 +136,8 @@ class TestCommandGenState:
             ignore_labels=["should_be_ignored=1", "should_be_ignored_2=1"],
             no_input=True,
         )
-        state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        cluster_names = Cluster.objects.filter(region=REGION_NAME).values_list("name", flat=True)
+        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         assert state.nodes_cnt == len(existing_node_names)
 
@@ -147,6 +153,7 @@ class TestCommandGenState:
             }
         )
         call_command("region_gen_state", region=REGION_NAME, no_input=True)
-        state = RegionClusterState.objects.filter(region=REGION_NAME).latest()
+        cluster_names = Cluster.objects.filter(region=REGION_NAME).values_list("name", flat=True)
+        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
 
         assert state.nodes_cnt == len(existing_node_names) + 1

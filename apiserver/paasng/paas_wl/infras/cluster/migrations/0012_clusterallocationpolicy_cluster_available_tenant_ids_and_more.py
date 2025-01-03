@@ -12,7 +12,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cluster', '0011_cluster_exposed_url_type.py'),
+        ('cluster', '0011_cluster_exposed_url_type'),
     ]
 
     operations = [

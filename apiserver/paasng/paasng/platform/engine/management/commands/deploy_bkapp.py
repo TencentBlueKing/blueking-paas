@@ -18,6 +18,7 @@
 """
 A Command to deploy a Blueking Application.
 """
+
 import json
 import logging
 from functools import wraps
@@ -32,6 +33,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.applications.models import Application
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.models.deployment import Deployment
@@ -97,11 +99,21 @@ class Command(BaseCommand):
         )
         parser.add_argument("--revision", dest="smart_revision", required=True, type=str, help=REVISION_HELP_TEXT)
         parser.add_argument(
+            "--image-pull-policy",
+            dest="image_pull_policy",
+            required=False,
+            choices=[value for value, _label in ImagePullPolicy.get_choices()],
+            default=ImagePullPolicy.IF_NOT_PRESENT,
+            help="镜像拉取策略",
+        )
+        parser.add_argument(
             "--force", dest="force", default=False, action="store_true", help="强制部署, 无论上次部署是否还在进行."
         )
 
     @handle_error
-    def handle(self, operator, app_code, module_name, environment, smart_revision, force, *args, **options):
+    def handle(
+        self, operator, app_code, module_name, environment, smart_revision, image_pull_policy, force, *args, **options
+    ):
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 
         application = Application.objects.get(code=app_code)
@@ -117,13 +129,21 @@ class Command(BaseCommand):
 
         revision = version_service.extract_smart_revision(smart_revision)
         version_info = VersionInfo(revision, version_name, version_type)
+        advanced_options = None
+        if image_pull_policy:
+            advanced_options = {"image_pull_policy": image_pull_policy}
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
             raise DeployError("部署失败，已有部署任务进行中，请刷新查看❌")
 
         with coordinator.release_on_error():
-            deployment = initialize_deployment(env=env, operator=operator, version_info=version_info)
+            deployment = initialize_deployment(
+                env=env,
+                operator=operator,
+                version_info=version_info,
+                advanced_options=advanced_options,
+            )
             DeployTaskRunner(deployment).start()
 
             self.stdout.write("---------------------------------")

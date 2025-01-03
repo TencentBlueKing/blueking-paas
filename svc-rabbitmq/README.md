@@ -2,6 +2,19 @@
 
 `svc-rabbitmq` 是蓝鲸开发者中心的 RabbitMQ 增强服务模块。
 
+## 相关概念说明
+
+### 集群（Cluster）
+
+集群是 RabbitMQ 的基本单位，包含了 RabbitMQ 的基本信息和配置信息。
+
+### 增强服务方案（Plan）
+
+增强服务方案是增强服务的一种规格，包含了增强服务的基本信息和 RabbitMQ 集群配置信息。
+增强服务方案是增强服务的基本单位，用户可以根据自己的需求选择不同的增强服务方案。
+
+在创建增强服务方案时，需要在 config 中配置 RabbitMQ 集群信息，增强服务会根据集群信息自动创建 RabbitMQ 集群。
+
 ## 本地开发指引
 
 ### 1. 安装 Python 3.11
@@ -50,6 +63,12 @@ export DATABASE_PORT="3306"
 export BKKRILL_ENCRYPT_SECRET_KEY="请参考上面的命令生成"
 # Django Settings
 export DJANGO_SETTINGS_MODULE="svc_rabbitmq.settings"
+
+# redis 配置
+export REDIS_HOST="localhost"
+export REDIS_PORT=6379
+export REDIS_DB=0
+export REDIS_PASS=""
 ```
 
 ### 4. 初始化数据
@@ -59,11 +78,32 @@ export DJANGO_SETTINGS_MODULE="svc_rabbitmq.settings"
 ```bash
 python manage.py migrate
 
+# 通过初始化数据创建服务和方案
 # 初始化数据放在 /data/fixtures 目录下
 # 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 default.json 中 region 的值
 python manage.py loaddata data/fixtures/default.json
 
-## 初始化 rabbitmq 集群，请根据实际情况修改参数的值
+# 启动 shell 环境
+python manage.py shell
+```
+
+在 shell 环境中执行以下命令，配置增强服务方案，会根据方案自动生成 rabbitmq 集群信息(推荐)：
+
+```python
+import json
+from paas_service.models import Plan
+
+# pk 由 /data/fixtures/default.json 确认 
+plan = Plan.objects.get(pk="843127a9-d7a2-4485-b985-076a9b6695d8")
+config = {"host":"10.0.0.1", "admin":"admin","password":"blueking", "port":5672,"api_port":15672}
+plan.config = json.dumps(config)
+plan.save(update_fields=["config"])
+```
+
+不通过方案管理集群，也可以手动创建 RabbitMQ Cluster，可以使用以下命令：
+
+```bash
+## 初始化 rabbitmq 集群，请根据实际情况修改参数的值(如果没有配置增强服务方案，也可以手动创建集群)
 python manage.py register_cluster \
 --name "builtin" \
 --host "10.0.0.1" \
@@ -81,6 +121,7 @@ python manage.py register_cluster \
 使用以下命令启动项目：
 
 ```bash
+python manage.py collectstatic --no-input
 python manage.py runserver 8005
 ```
 

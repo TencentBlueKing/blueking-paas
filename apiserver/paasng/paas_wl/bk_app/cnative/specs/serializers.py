@@ -60,6 +60,7 @@ class ConfigMapSLZ(serializers.Serializer):
         child=serializers.CharField(),
         allow_null=True,
     )
+    overwrite = serializers.BooleanField(help_text="是否覆盖目录下的文件", default=False)
 
     def validate_source_config_data(self, data):
         if not data:

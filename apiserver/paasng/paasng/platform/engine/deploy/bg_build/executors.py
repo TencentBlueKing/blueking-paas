@@ -338,7 +338,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         # 由于蓝盾流水线构建没有参数可以传递应用信息，因此借用启动参数传递（便于问题定位 & 排查）
         env = self.deployment.app_environment
         env_vars_params["APP_MODULE_ENV_INFO"] = (
-            f"App: {env.application.name}, Module: {env.module.name}, Env: {env.environment}"
+            f"App: {env.application.code}, Module: {env.module.name}, Env: {env.environment}"
         )
 
         return env_vars_params

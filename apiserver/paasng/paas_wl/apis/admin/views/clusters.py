@@ -37,7 +37,6 @@ from paas_wl.apis.admin.helpers.operator import detect_operator_status, fetch_pa
 from paas_wl.apis.admin.serializers.clusters import (
     APIServerSLZ,
     ClusterRegisterRequestSLZ,
-    GenRegionClusterStateSLZ,
     GetClusterComponentStatusSLZ,
     ReadonlyClusterSLZ,
 )
@@ -56,6 +55,8 @@ logger = logging.getLogger(__name__)
 
 
 class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
+    """deprecated：Admin42 功能未来将由平台管理页面替代"""
+
     queryset = Cluster.objects.all()
     serializer_class = ReadonlyClusterSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -117,9 +118,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         data = slz.validated_data
         cluster = self.get_object()
         data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        api_server, _ = APIServer.objects.update_or_create(
-            cluster=cluster, host=data["host"], defaults=dict(overridden_hostname=data["overridden_hostname"])
-        )
+        api_server, _ = APIServer.objects.update_or_create(cluster=cluster, host=data["host"])
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -146,19 +145,17 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         return Response()
 
     def gen_node_state(self, request, cluster_name, *args, **kwargs):
-        slz = GenRegionClusterStateSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        region = data["region"]
-
-        if not Cluster.objects.filter(region=region, name=cluster_name).exists():
+        cluster = Cluster.objects.filter(name=cluster_name).first()
+        if not cluster:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        logger.info(f"will generate state for [{cluster_name}]...")
-        client = get_client_by_cluster_name(cluster_name=cluster_name)
+        logger.info(f"will generate state for [{cluster.name}]...")
+        client = get_client_by_cluster_name(cluster_name=cluster.name)
 
-        logger.info(f"generating state for [{cluster_name}]...")
-        state = generate_state(cluster_name, client, data["ignore_labels"])
+        logger.info(f"generating state for [{cluster.name}]...")
+        # 强制忽略 master 节点
+        ignore_labels = {"node-role.kubernetes.io/master": "true"}
+        state = generate_state(cluster.name, client, ignore_labels)
 
         logger.info("syncing the state to nodes...")
         sync_state_to_nodes(client, state)

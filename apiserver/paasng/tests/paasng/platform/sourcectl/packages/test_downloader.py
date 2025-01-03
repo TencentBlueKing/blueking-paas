@@ -19,7 +19,7 @@ import pytest
 
 from paasng.platform.sourcectl.package.downloader import download_file_via_http
 from paasng.platform.sourcectl.utils import generate_temp_file
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 @pytest.mark.parametrize(

@@ -45,25 +45,19 @@ def clusters():
     return {
         "foo": {
             "api_servers": [
-                dict(
-                    host="https://hostname-of-foo:6553",
-                )
+                {"host": "https://hostname-of-foo:6553"},
             ]
         },
         "bar": {
             "api_servers": [
-                dict(
-                    host="https://hostname-of-bar-a:6553",
-                ),
-                dict(
-                    host="https://hostname-of-bar-b:6553",
-                ),
+                {"host": "https://hostname-of-bar-a:6553"},
+                {"host": "https://hostname-of-bar-b:6553"},
             ]
         },
         "baz": {
             "api_servers": [
-                dict(host="https://192.168.1.100:6553", overridden_hostname="baz-a.domain.com"),
-                dict(host="https://192.168.1.101:6553", overridden_hostname="baz-b.domain.com"),
+                {"host": "https://192.168.1.100:6553"},
+                {"host": "https://192.168.1.101:6553"},
             ]
         },
     }

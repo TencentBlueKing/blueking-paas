@@ -21,9 +21,10 @@ from typing import Dict, Iterable, List, Optional
 
 import yaml
 from django.db.models import QuerySet
+from kubernetes.client import Configuration
 from kubernetes.config.kube_config import FileOrData, KubeConfigLoader
 
-from paas_wl.infras.cluster.models import Cluster, EnhancedConfiguration
+from paas_wl.infras.cluster.models import Cluster
 
 
 class DBConfigLoader:
@@ -35,7 +36,7 @@ class DBConfigLoader:
         """
         self._loaded = False
         self.clusters: Dict[str, Cluster] = {}
-        self.configurations: Dict[str, List[EnhancedConfiguration]] = defaultdict(list)
+        self.configurations: Dict[str, List[Configuration]] = defaultdict(list)
 
         if qs is not None and qs.model is not Cluster:
             raise ValueError("Can only be loaded from Cluster QuerySet.")
@@ -46,35 +47,53 @@ class DBConfigLoader:
             return
 
         for cluster in self._qs.all():  # type: Cluster
-            config = {
-                "certificate-authority-data": cluster.ca_data,
-                "client-certificate-data": cluster.cert_data,
-                "client-key-data": cluster.key_data,
-            }
-            ssl_ca_cert = FileOrData(config, file_key_name=None, data_key_name="certificate-authority-data").as_file()
-            cert_file = FileOrData(config, file_key_name=None, data_key_name="client-certificate-data").as_file()
-            key_file = FileOrData(config, file_key_name=None, data_key_name="client-key-data").as_file()
-
-            for api_server in cluster.api_servers.order_by("created"):
-                self.configurations[cluster.name].append(
-                    EnhancedConfiguration.create(
-                        host=api_server.host,
-                        overridden_hostname=api_server.overridden_hostname,
-                        ssl_ca_cert=ssl_ca_cert,
-                        cert_file=cert_file,
-                        key_file=key_file,
-                        token=cluster.token_value,
-                    )
-                )
+            self.configurations[cluster.name] = self._build_cluster_configurations(cluster)
             self.clusters[cluster.name] = cluster
 
         self._loaded = True
+
+    def _build_cluster_configurations(self, cluster: Cluster) -> List[Configuration]:
+        config = {
+            "certificate-authority-data": cluster.ca_data,
+            "client-certificate-data": cluster.cert_data,
+            "client-key-data": cluster.key_data,
+        }
+        ssl_ca_cert = FileOrData(config, file_key_name="certificate-authority").as_file()
+        cert_file = FileOrData(config, file_key_name="client-certificate").as_file()
+        key_file = FileOrData(config, file_key_name="client-key").as_file()
+
+        configurations = []
+        for api_server in cluster.api_servers.order_by("created"):
+            cfg = Configuration(host=api_server.host)
+
+            # TLS 验证主机名（注：False 值也是有效的）
+            if cluster.assert_hostname is not None:
+                cfg.assert_hostname = cluster.assert_hostname
+
+            # 是否使用 ssl 证书
+            if ssl_ca_cert:
+                cfg.ssl_ca_cert = ssl_ca_cert
+            else:
+                cfg.verify_ssl = False
+
+            # Auth type: client-side certificate
+            if cert_file and key_file:
+                cfg.cert_file = cert_file
+                cfg.key_file = key_file
+
+            # Auth type: Bearer token
+            if cluster.token_value:
+                cfg.api_key["authorization"] = f"Bearer {cluster.token_value}"
+
+            configurations.append(cfg)
+
+        return configurations
 
     def get_all_cluster_names(self) -> List[str]:
         self._load()
         return list(self.clusters.keys())
 
-    def list_configurations_by_name(self, name: str) -> Iterable[EnhancedConfiguration]:
+    def list_configurations_by_name(self, name: str) -> Iterable[Configuration]:
         """通过 name 加载 configuration 列表"""
         self._load()
         for config in self.configurations[name]:
@@ -102,7 +121,7 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
         all_contexts_meta = self.list_contexts()
         return list({self._get_tag_from_context(context) for context in all_contexts_meta})
 
-    def list_configurations_by_tag(self, tag: str) -> Iterable[EnhancedConfiguration]:
+    def list_configurations_by_tag(self, tag: str) -> Iterable[Configuration]:
         """通过 tag 加载 configuration 列表"""
 
         all_contexts_meta = self.list_contexts()
@@ -111,21 +130,7 @@ class LegacyKubeConfigLoader(KubeConfigLoader):
         ]
 
         for context_name in target_context_names:
-            # use EnhancedKubeConfiguration instead
-            configuration = EnhancedConfiguration()
+            configuration = Configuration()
             self.set_active_context(context_name)
             self.load_and_set(configuration)
             yield configuration
-
-    def _load_cluster_info(self):
-        """make force domain field available for config setting"""
-        super()._load_cluster_info()
-        setattr(self, "overridden_hostname", self._cluster.safe_get("overridden-hostname"))
-
-    def _set_config(self, client_configuration):
-        """make force domain field into configuration"""
-        super()._set_config(client_configuration)
-
-        keys = ["overridden_hostname"]
-        for key in keys:
-            setattr(client_configuration, key, getattr(self, key, None))

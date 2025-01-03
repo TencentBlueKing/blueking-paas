@@ -48,10 +48,7 @@ def cluster_creator(ca_data, cert_data, key_data):
         )
 
         for api_server in servers:
-            APIServer.objects.update_or_create(
-                host=api_server["host"],
-                defaults=dict(cluster=cluster, overridden_hostname=api_server.get("overridden_hostname", None)),
-            )
+            APIServer.objects.update_or_create(host=api_server["host"], cluster=cluster)
 
     return get_or_create
 
@@ -72,7 +69,7 @@ class TestLoader:
         [
             ("foo", 1, {"hostname-of-foo"}),
             ("bar", 2, {"hostname-of-bar-a", "hostname-of-bar-b"}),
-            ("baz", 2, {"baz-a.domain.com", "baz-b.domain.com"}),
+            ("baz", 2, {"192.168.1.100", "192.168.1.101"}),
         ],
     )
     def test_list_configurations_by_name(self, context_name, configurations_count, server_hostname_set):

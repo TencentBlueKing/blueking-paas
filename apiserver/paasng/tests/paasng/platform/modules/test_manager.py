@@ -46,7 +46,7 @@ def raw_module(bk_user) -> Module:
     )
     register_iam_after_create_application(application)
     module = create_default_module(application)
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
     return module
 
 

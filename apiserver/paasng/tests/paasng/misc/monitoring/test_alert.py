@@ -26,7 +26,8 @@ from filelock import FileLock
 from paasng.infras.bkmonitorv3.constants import SpaceType
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
-from tests.utils.helpers import create_app, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db
 
@@ -78,7 +79,7 @@ def bk_monitor_space():
 
 
 class TestQueryAlertsParams:
-    @pytest.mark.django_db()
+    @pytest.mark.django_db
     @pytest.mark.parametrize(
         ("create_query_params", "expected_query_string"),
         [

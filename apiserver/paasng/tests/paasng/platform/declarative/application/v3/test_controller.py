@@ -41,7 +41,8 @@ from paasng.platform.declarative.serializers import validate_desc
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
 from tests.paasng.platform.declarative.utils import AppDescV3Decorator as decorator  # noqa: N813
 from tests.utils.auth import create_user
-from tests.utils.helpers import configure_regions, create_app, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import configure_regions, create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

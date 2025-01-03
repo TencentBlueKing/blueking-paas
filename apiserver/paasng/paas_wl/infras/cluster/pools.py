@@ -31,7 +31,7 @@ class ContextConfigurationPoolMap(UserDict):
     """K8S High Performance Configuration Pool Map With Cluster Name
 
     The key should be cluster name, such as regionA-default, regionB-legacy
-    The Value should be HAEndpointPool, which is containing EnhancedConfiguration
+    The Value should be HAEndpointPool, which is containing Configuration
     """
 
     @classmethod

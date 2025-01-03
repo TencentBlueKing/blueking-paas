@@ -17,7 +17,7 @@
 
 import pytest
 
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 @pytest.fixture()

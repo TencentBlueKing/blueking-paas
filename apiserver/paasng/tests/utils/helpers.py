@@ -17,7 +17,6 @@
 
 import copy
 import datetime
-import random
 import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
@@ -33,6 +32,8 @@ from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.core.region.states import load_regions_from_settings
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -47,7 +48,8 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
-from .auth import create_user
+from . import auth
+from .basic import generate_random_string
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationTag
@@ -58,7 +60,7 @@ except ImportError:
 def initialize_application(application, *args, **kwargs):
     """Initialize an application"""
     module = create_default_module(application)
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     initialize_module(module, *args, **kwargs)
 
@@ -141,9 +143,9 @@ def create_app(
         additional_modules = []
 
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
 
     region = region or settings.DEFAULT_REGION_NAME
 
@@ -152,7 +154,18 @@ def create_app(
     name = app_code.replace("-", "")
     fields = dict(name=name, name_en=name, language="Python", region=region)
 
-    application = G(Application, owner=user.pk, creator=user.pk, code=app_code, logo=None, **fields)
+    # 默认为全租户应用
+    application = G(
+        Application,
+        owner=user.pk,
+        creator=user.pk,
+        code=app_code,
+        logo=None,
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
+        **fields,
+    )
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -335,21 +348,6 @@ def configure_regions(regions: List[str]):
     load_regions_from_settings()
 
 
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
-
-
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable OAuth token
-
-    OAuth (1 and 2) does not specify the format of tokens except that they
-    should be strings of random characters. Tokens should not be guessable
-    and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
-    """
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
-
-
 # Stores pending actions related with workloads during app creation
 _faked_wl_apps = {}
 _faked_env_metadata = {}
@@ -500,9 +498,9 @@ def create_cnative_app(
     :param owner_username: username of owner
     """
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
     region = region or settings.DEFAULT_REGION_NAME
 
     # Create the Application object
@@ -519,8 +517,12 @@ def create_cnative_app(
         logo=None,
         name=name,
         name_en=name,
+        # 默认为全租户应用
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
     )
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     # First try Svn, then GitLab, then Default
     if not repo_type:

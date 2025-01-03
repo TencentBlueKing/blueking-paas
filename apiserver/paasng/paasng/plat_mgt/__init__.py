@@ -15,32 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import cattr
+"""
+Platform Management (plat_mgt)
 
-from paas_wl.infras.cluster.models import IngressConfig
+本模块用于为前端平台管理页面功能提供 API
 
+支持从平台管理员，租户管理员视角对平台相关配置进行管理
 
-def test_find_subdomain_domain():
-    ing_cfg = cattr.structure(
-        {
-            "app_root_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
-        },
-        IngressConfig,
-    )
-    d = ing_cfg.find_subdomain_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subdomain_domain("foo-2.example.com") is None
-
-
-def test_find_subpath_domain():
-    ing_cfg = cattr.structure(
-        {
-            "sub_path_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
-        },
-        IngressConfig,
-    )
-    d = ing_cfg.find_subpath_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subpath_domain("bar.example.com") is None
+包含子模块：
+FIXME 子模块划分待定，总体上会对应页面菜单分块设计
+- application: 应用相关（如：应用列表，运营评估，部署概览等）
+- infras: 基础服务相关（如：应用集群，增强服务，运行时管理，代码库配置等）
+- configuration: 配置相关（如：内置环境变量，应用模板等）
+- operation: 运营数据（如：应用迁移，部署统计等）
+- account: 用户账号管理（如：用户特性管理）
+- audit: 操作审计（如：后台管理审计，应用操作审计等）
+- third_party: 第三方 API（如：可选租户列表，集群列表等）
+"""

@@ -29,9 +29,9 @@ def get_random_secret_key():
     return get_random_string(50, chars)
 
 
-def create_oauth2_client(bk_app_code: str) -> bool:
+def create_oauth2_client(bk_app_code: str, app_tenant_mode: str, app_tenant_id: str) -> bool:
     """Create oauth2 client for application"""
-    return BkOauthClient().create_client(bk_app_code)
+    return BkOauthClient().create_client(bk_app_code, app_tenant_mode, app_tenant_id)
 
 
 def get_app_secret_in_env_var(bk_app_code: str) -> BkAppSecret:

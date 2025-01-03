@@ -16,12 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Address related functionalities"""
+
 from typing import NamedTuple, Optional
 from urllib.parse import urlparse
 
 from attrs import define
 
-from paas_wl.infras.cluster.models import PortMap
+from paas_wl.infras.cluster.entities import PortMap
 from paas_wl.workloads.networking.entrance.constants import AddressType
 
 default_port_map = PortMap()

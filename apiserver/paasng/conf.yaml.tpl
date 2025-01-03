@@ -144,6 +144,8 @@
 ## 跳过初始化已有应用数据到权限中心
 # BK_IAM_SKIP: false
 
+## 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
+# ENABLE_MULTI_TENANT_MODE: false
 
 ## 网关访问 IAM 地址
 # BK_IAM_APIGATEWAY_URL: ''
@@ -349,6 +351,14 @@
 
 ## API Gateway 公钥，用于解析通过 API Gateway 的请求，该值为空时跳过解析
 # APIGW_PUBLIC_KEY: ''
+
+## 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
+# BKAUTH_ENABLE_MULTI_TENANT_MODE: ENABLE_MULTI_TENANT_MODE
+
+## 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
+## 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
+## 多租户模式下(BKAUTH_ENABLE_MULTI_TENANT_MODE=True)必须设置有效的 BKAUTH_USER_INFO_APIGW_URL, 否则无法使用租户功能
+# BKAUTH_USER_INFO_APIGW_URL = ''
 
 ## 用户身份校验类型，默认值为 bk_token
 # BKAUTH_BACKEND_TYPE: bk_token

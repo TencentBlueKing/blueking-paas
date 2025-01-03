@@ -15,13 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Testcases for application entrance management
-"""
+"""Testcases for application entrance management"""
+
 import cattr
 import pytest
 
-from paas_wl.infras.cluster.models import Domain as DomainCfg
-from paas_wl.infras.cluster.models import IngressConfig, PortMap
+from paas_wl.infras.cluster.entities import Domain as DomainCfg
+from paas_wl.infras.cluster.entities import IngressConfig, PortMap
 from paas_wl.workloads.networking.entrance.allocator.domains import (
     DomainPriorityType,
     ModuleEnvDomains,

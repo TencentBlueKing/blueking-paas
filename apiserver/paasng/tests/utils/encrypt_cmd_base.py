@@ -23,7 +23,7 @@ from django.core.management import call_command
 from django.test import override_settings
 from django_dynamic_fixture import G
 
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 def generate_encrypted_instance(model_class):

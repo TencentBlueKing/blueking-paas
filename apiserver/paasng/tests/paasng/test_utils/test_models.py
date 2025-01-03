@@ -29,7 +29,7 @@ from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.utils import create_application
 from paasng.utils.models import BkUserField, OrderByField, make_json_field, make_legacy_json_field
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

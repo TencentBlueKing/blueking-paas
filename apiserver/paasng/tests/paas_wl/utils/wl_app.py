@@ -33,6 +33,7 @@ def create_wl_app(
     paas_app_code: Optional[str] = None,
     environment: Optional[str] = None,
     owner: Optional[User] = None,
+    cluster_name: Optional[str] = None,
 ) -> WlApp:
     default_environment = random.choice(["stag", "prod"])
     default_app_name = "app-" + get_random_string(length=12).lower()
@@ -56,6 +57,7 @@ def create_wl_app(
             "paas_app_code": paas_app_code or app_info["name"],
             "module_name": "default",
         },
+        cluster=cluster_name or "",
     )
     return wl_app
 

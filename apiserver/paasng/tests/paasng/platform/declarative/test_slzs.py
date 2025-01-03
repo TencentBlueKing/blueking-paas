@@ -27,7 +27,7 @@ from tests.paasng.platform.declarative.utils import AppDescV2Builder as v2_build
 from tests.paasng.platform.declarative.utils import AppDescV2Decorator as v2_decorator  # noqa: N813
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as v3_builder  # noqa: N813
 from tests.paasng.platform.declarative.utils import AppDescV3Decorator as v3_decorator  # noqa: N813
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

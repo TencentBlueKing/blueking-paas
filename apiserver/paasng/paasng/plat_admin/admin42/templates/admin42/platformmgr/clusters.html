@@ -12,7 +12,6 @@
                 <bk-table :data="props.row.api_servers" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
                     <bk-table-column type="index" label="序列" width="60"></bk-table-column>
                     <bk-table-column prop="host" label="主机地址"></bk-table-column>
-                    <bk-table-column prop="overridden_hostname" label="DNS覆写域名"></bk-table-column>
                     <bk-table-column label="操作">
                         <template slot-scope="subProps">
                             <bk-button class="ml5" theme="danger" text @click="unbindApiServer(props.row, subProps.row)">删除</bk-button>
@@ -80,7 +79,7 @@
                 <bk-button
                     class="ml5" theme="primary" text
                     v-bk-tooltips="genTooltipsConfig(props.row)"
-                    @click="handleGenNodeState(props.row.region, props.row.name)"
+                    @click="handleGenNodeState(props.row.name)"
                 >同步节点信息</bk-button>
                 <bk-button class="ml5" theme="primary" text @click="setAsDefault(props.row)">设为默认集群</bk-button>
             </template>
@@ -409,9 +408,6 @@
             <bk-form-item label="主机地址" required>
                 <bk-input type="url" placeholder="主机地址, 形如 scheme://host:port, 例如 https://127.0.0.1:6443" v-model="subDialog.form.host"></bk-input>
             </bk-form-item>
-            <bk-form-item label="DNS覆写域名">
-                <bk-input placeholder="DNS覆写域名, 不需要则留空" v-model="subDialog.form.overridden_hostname"></bk-input>
-            </bk-form-item>
         </bk-form>
     </bk-dialog>
 </div>
@@ -516,7 +512,6 @@
                         form: {
                             cluster_id: '',
                             host: '',
-                            overridden_hostname: '',
                             uuid: ''
                         }
                     },
@@ -602,10 +597,10 @@
                     this.readOnlyDialog.form = { ...row, ingress_config: {...row.ingress_config} }
                     this.readOnlyDialog.visible = true
                 },
-                handleGenNodeState: function (region, clusterName) {
+                handleGenNodeState: function (clusterName) {
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)
-                    this.$http.post(url, {region: region}).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${region} / ${clusterName} ] 节点成功`})
+                    this.$http.post(url).then(resp => {
+                        this.$bkMessage({theme: 'success', message: `更新集群 [ ${clusterName} ] 节点成功`})
                         this.fetchClusterList()
                     })
                 },
@@ -683,7 +678,6 @@
                     this.subDialog.form = {
                         cluster_id: cluster.uuid,
                         host: isUpdate ? api_server.host : '',
-                        overridden_hostname: isUpdate ? api_server.overridden_hostname : '',
                         uuid: isUpdate ? api_server.uuid : '',
                     }
                     this.subDialog.visible = true
@@ -695,15 +689,13 @@
                     this.subDialog.form = {
                         cluster_id: cluster.uuid,
                         host: api_server.host,
-                        overridden_hostname: api_server.overridden_hostname,
                         uuid: api_server.uuid,
                     }
                     this.subDialog.visible = true
                 },
                 genTooltipsConfig: function (row) {
                     return {
-                        content: '为应用集群同步节点的信息，影响 ”模块管理 -> 出口 IP 管理“ 中的 IP 列表，更新后新的节点才会出现在 IP 列表中。<br>' +
-                            '该操作等效于: python manage.py region_gen_state --region ' + row.region + ' --cluster-name ' + row.name,
+                        content: '为应用集群同步节点的信息，影响 ”模块管理 -> 出口 IP 管理“ 中的 IP 列表，更新后新的节点才会出现在 IP 列表中。<br>',
                         allowHTML: true
                     }
                 },

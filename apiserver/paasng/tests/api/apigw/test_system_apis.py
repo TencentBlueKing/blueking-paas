@@ -41,7 +41,8 @@ from paasng.platform.engine.constants import OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
-from tests.utils.helpers import create_legacy_application, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_legacy_application
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

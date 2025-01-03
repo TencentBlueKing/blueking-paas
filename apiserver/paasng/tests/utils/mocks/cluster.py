@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """TestDoubles for paasng.platform.engine module"""
+
 import logging
 from contextlib import contextmanager
 from typing import Dict, Optional
@@ -25,7 +26,8 @@ import cattr
 import pytest
 
 from paas_wl.bk_app.applications.models.app import WlApp
-from paas_wl.infras.cluster.models import Cluster, IngressConfig
+from paas_wl.infras.cluster.entities import IngressConfig
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from tests.conftest import CLUSTER_NAME_FOR_TESTING
 

@@ -35,6 +35,7 @@ from paasng.accessories.publish.sync_market.handlers import (
 )
 from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -69,10 +70,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--source", type=str, dest="source")
         parser.add_argument("--app_codes", type=str, dest="third_app_init_codes")
+        parser.add_argument("--tenant_mode", type=str, dest="app_tenant_mode", default=AppTenantMode.GLOBAL)
+        parser.add_argument("--tenant_id", type=str, dest="app_tenant_id", default="")
         parser.add_argument("--override", type=str2bool, dest="override", default=False)
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
-    def handle(self, source, third_app_init_codes, override, dry_run, *args, **options):
+    def handle(self, source, third_app_init_codes, tenant_mode, tenant_id, override, dry_run, *args, **options):
         """批量创建第三方应用"""
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
@@ -99,7 +102,7 @@ class Command(BaseCommand):
                 logger.info("going to create App according to desc: %s", f"{desc.name} - {desc.code}")
                 already_in_paas2 = bool(legacy_app)
                 with atomic():
-                    self.create_3rd_app(desc, already_in_paas2)
+                    self.create_3rd_app(desc, already_in_paas2, tenant_mode, tenant_id)
 
     def get_app_secret_key(self, code: str) -> str:
         session = console_db.get_scoped_session()
@@ -108,14 +111,14 @@ class Command(BaseCommand):
             return legacy_app.auth_token
         return ""
 
-    def create_oauth_client_by_code(self, code: str):
+    def create_oauth_client_by_code(self, code: str, tenant_mode: str, tenant_id: str):
         secret_key = self.get_app_secret_key(code)
         # secret_key 不存在，则生成一个新的
         if not secret_key:
-            create_oauth2_client(code)
+            create_oauth2_client(code, tenant_mode, tenant_id)
             logger.info("create oauth app(code:%s) with a new randomly generated key", code)
 
-    def create_3rd_app(self, app_desc: Simple3rdAppDesc, already_in_paas2: bool):
+    def create_3rd_app(self, app_desc: Simple3rdAppDesc, already_in_paas2: bool, tenant_mode: str, tenant_id: str):
         try:
             application, created = Application.objects.update_or_create(
                 code=app_desc.code,
@@ -155,7 +158,7 @@ class Command(BaseCommand):
 
         if created:
             module = create_default_module(application)
-            self.create_oauth_client_by_code(app_desc.code)
+            self.create_oauth_client_by_code(app_desc.code, tenant_mode, tenant_id)
         else:
             module = application.get_default_module()
 

@@ -42,14 +42,28 @@ logger = logging.getLogger(__name__)
 class SceneAPPInitializer:
     """场景 SaaS 应用初始化"""
 
-    def __init__(self, user, tmpl_name: str, app_name: str, app_code: str, region: str, engine_params: Dict):
+    def __init__(
+        self,
+        user,
+        tmpl_name: str,
+        app_name: str,
+        app_code: str,
+        region: str,
+        app_tenant_mode: str,
+        app_tenant_id: str,
+        tenant_id: str,
+        engine_params: Dict,
+    ):
         self.user = user
         self.tmpl_name = tmpl_name
         self.app_name = app_name
         self.app_code = app_code
         self.region = region
+        self.app_tenant_mode = app_tenant_mode
+        self.app_tenant_id = app_tenant_id
+        self.tenant_id = tenant_id
         self.engine_params = engine_params or {}
-        create_oauth2_client(self.app_code)
+        create_oauth2_client(self.app_code, app_tenant_mode, app_tenant_id)
         self.app_secret = get_oauth2_client_secret(self.app_code)
 
     def execute(self) -> Tuple[Application, SourceSyncResult]:
@@ -81,6 +95,11 @@ class SceneAPPInitializer:
                 # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度,
                 # 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
                 application = desc_handler.handle_app(self.user, SourceOrigin.SCENE)
+                # 更新应用的租户信息
+                application.app_tenant_mode = self.app_tenant_mode
+                application.app_tenant_id = self.app_tenant_id
+                application.tenant_id = self.tenant_id
+                application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
 
                 # Step 4. 为每个模块单独绑定代码仓库信息，source_dir
                 repo_type = self.engine_params.get("source_control_type", "")

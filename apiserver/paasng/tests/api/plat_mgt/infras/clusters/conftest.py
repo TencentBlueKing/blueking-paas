@@ -79,7 +79,6 @@ def init_default_cluster() -> Cluster:
     nodes_name = ["127.0.0.1", "127.0.0.2", "127.0.0.3"]
     nodes_digest = get_digest_of_nodes_name(nodes_name)
     RegionClusterState.objects.create(
-        region=DEFAULT_TENANT_ID,
         cluster_name=cluster.name,
         name=f"eng-cstate-{nodes_digest[:8]}-1",
         nodes_digest=nodes_digest,
@@ -139,7 +138,6 @@ def init_system_cluster() -> Cluster:
     nodes_name = ["127.0.0.8", "127.0.0.9"]
     nodes_digest = get_digest_of_nodes_name(nodes_name)
     RegionClusterState.objects.create(
-        region=DEFAULT_TENANT_ID,
         cluster_name=cluster.name,
         name=f"eng-cstate-{nodes_digest[:8]}-1",
         nodes_digest=nodes_digest,

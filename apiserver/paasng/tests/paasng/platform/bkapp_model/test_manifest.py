@@ -19,11 +19,9 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
-from django.core.management import call_command
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ApiVersion,
     MountEnvName,
     VolumeSourceType,
@@ -33,8 +31,6 @@ from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
-from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -53,7 +49,6 @@ from paasng.platform.bkapp_model.manifest import (
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
     apply_builtin_env_vars,
-    apply_egress_annotations,
     apply_env_annots,
     apply_proc_svc_if_implicit_needed,
     get_manifest,
@@ -582,17 +577,3 @@ def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource_with_processes
     assert blank_resource_with_processes.spec.processes[0].services[0].exposedType is None
     assert blank_resource_with_processes.spec.processes[1].services[0].name == "web"
     assert blank_resource_with_processes.spec.processes[1].services[0].exposedType == crd.ExposedType()
-
-
-@pytest.mark.usefixtures("_with_wl_apps")
-def test_apply_egress_annotations(blank_resource, bk_stag_env):
-    # Bind the app with a cluster state object
-    call_command(
-        "region_gen_state", region=settings.DEFAULT_REGION_NAME, no_input=True, ignore_labels=["kind-node=true"]
-    )
-    cluster_names = Cluster.objects.filter(region=settings.DEFAULT_REGION_NAME).values_list("name", flat=True)
-    state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
-    RCStateAppBinding.objects.create(app=bk_stag_env.wl_app, state=state)
-
-    apply_egress_annotations(blank_resource, bk_stag_env)
-    assert blank_resource.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] == state.name

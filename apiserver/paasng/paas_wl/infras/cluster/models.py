@@ -161,7 +161,7 @@ class Cluster(UuidAuditedModel):
         help_text="是否为默认集群（deprecated，后续由分配策略替代）", default=False, null=True
     )
 
-    exposed_url_type = models.IntegerField(help_test="应用的访问地址类型", default=ExposedURLType.SUBPATH.value)
+    exposed_url_type = models.IntegerField(help_text="应用的访问地址类型", default=ExposedURLType.SUBPATH.value)
     ingress_config: IngressConfig = IngressConfigField(help_text="ingress 配置")
     annotations = JSONField(help_text="集群元数据，如 BCS 项目，集群，业务信息等", default=dict)
 
@@ -246,7 +246,7 @@ class ClusterAllocationPolicy(UuidAuditedModel):
     # 枚举值 -> ClusterAllocationPolicyType
     type = models.CharField(max_length=32, help_text="分配策略类型")
     manual_allocation_config: ManualAllocationConfig | None = ManualAllocationConfigField(
-        help_text="手动分配配置", default=None
+        help_text="手动分配配置", default=None, null=True
     )
     allocation_rules: List[AllocationRule] = AllocationRulesField(help_text="集群分配规则列表", default=list)
 

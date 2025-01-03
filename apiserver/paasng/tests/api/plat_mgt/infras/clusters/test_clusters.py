@@ -58,9 +58,8 @@ class TestListClusters:
             "tenant": "default",
             "available_tenants": ["default"],
             "feature_flags": [
-                "支持提供出口 IP",
                 "允许挂载日志到主机",
-                "支持蓝鲸监控",
+                "从蓝鲸监控查询资源使用率",
                 "使用蓝鲸日志平台方案采集日志",
                 "支持自动扩容",
                 "支持 BCS Egress",

@@ -365,8 +365,8 @@ class PipelineBuildProcessExecutor(DeployStep):
             ]:
                 logger.info("break poll loop with pipeline build status: %s", build_status.status)
                 break
-
-        if time.time() - time_started >= _BKCI_PIPELINE_BUILD_TIMEOUT:
+        else:
+            # 没有在 while 循环中跳出 -> 构建超时
             raise BuildProcessTimeoutError
 
         # Q：为什么不在轮询过程中，按分块获取日志（做流式效果）

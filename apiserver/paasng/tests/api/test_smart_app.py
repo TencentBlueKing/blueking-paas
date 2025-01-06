@@ -131,7 +131,6 @@ class TestCreateSMartApp:
 
 class TestUpdateSMartApp:
     @pytest.fixture()
-    @pytest.mark.usefixtures("_with_wl_apps")
     def _create_smart_app(self, bk_cnative_app):
         SMartAppExtraInfo.objects.create(original_code=bk_cnative_app.code, app=bk_cnative_app)
         # AppDeclarativeController.perform_update(desc) 需要 MarketConfig
@@ -147,6 +146,8 @@ class TestUpdateSMartApp:
         def _desc_updater(desc):
             desc["app"]["bkAppCode"] = bk_cnative_app.code
             desc["app"]["bkAppName"] = bk_cnative_app.name
+            # 因为 bk_cnative_app 有默认的模块,所以要设置 isDefault 为 False
+            desc["modules"][0]["isDefault"] = False
             return desc
 
         tarball_path = make_smart_tarball(tmp_path, _desc_updater)
@@ -161,11 +162,14 @@ class TestUpdateSMartApp:
         assert response.json()["original_app_description"]["code"] == bk_cnative_app.code
 
         signature = response.json()["signature"]
-        response = api_client.post(
-            f"/api/bkapps/applications/{bk_cnative_app.code}/source_package/commit/{signature}/",
-        )
+        with mock.patch(
+            "paasng.platform.declarative.application.controller.AppDeclarativeController._sync_default_module"
+        ):
+            response = api_client.post(
+                f"/api/bkapps/applications/{bk_cnative_app.code}/source_package/commit/{signature}/",
+            )
 
-        assert response.status_code == 201
+            assert response.status_code == 201
 
 
 def make_smart_tarball(tmp_path: Path, desc_updater: Callable, version: str = "") -> Path:

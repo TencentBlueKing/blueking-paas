@@ -17,6 +17,7 @@
 
 import json
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -262,13 +263,18 @@ class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 
 class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
-    instance_id = serializers.UUIDField(help_text="增强服务实例 id", required=True)
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
 
 
 class RetrieveServiceInstanceSensitiveField(serializers.Serializer):
-    instance_id = serializers.UUIDField(help_text="增强服务实例 id", required=True)
-    field_name = serializers.CharField(help_text="字段名称", required=True)
-    verification_code = VerificationCodeField()
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    field_name = serializers.CharField(help_text="字段名称")
+    verification_code = VerificationCodeField(help_text="验证码", required=False, allow_blank=True, allow_null=True)
+
+    def validate_verification_code(self, value):
+        if settings.ENABLE_VERIFICATION_CODE and not value:
+            raise serializers.ValidationError("verification_code is required.")
+        return value
 
 
 class PossiblePlansOutputSLZ(serializers.Serializer):

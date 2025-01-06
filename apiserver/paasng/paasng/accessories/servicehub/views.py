@@ -57,7 +57,6 @@ from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
@@ -773,18 +772,18 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveServiceInstanceSensitiveField)
-    def retrive_sensitive_field(self, request, code, module_name, service_id):
+    def retrieve_sensitive_field(self, request, code, module_name, service_id):
         """验证验证码查看解绑实例的敏感信息字段"""
-        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        serializer = slzs.RetrieveServiceInstanceSensitiveField(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        # 验证验证码
         if settings.ENABLE_VERIFICATION_CODE:
-            serializer = VerificationCodeSLZ(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            data = serializer.validated_data
-
             verifier = make_verifier(request.session, FunctionType.RETRIEVE_SERVICE_SENSITIVE_FIELD.value)
             is_valid = verifier.validate(data["verification_code"])
             if not is_valid:
                 raise ValidationError({"verification_code": [_("验证码错误")]})
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
         else:
             logger.warning("Verification code is not currently supported, return snesitive field directly")
 
@@ -802,6 +801,6 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
             raise NotFound(detail="Resource has been recycled.", code=404)
 
         credentials = instance.credentials
-        if data["field_name"] in credentials:
-            Response(credentials[data["field_name"]])
+        if data["field_name"] in instance.should_remove_fields and data["field_name"] in credentials:
+            return Response(credentials[data["field_name"]])
         return Response()

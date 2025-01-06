@@ -20,6 +20,7 @@ import uuid
 from unittest import mock
 
 import pytest
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from rest_framework import status
 
@@ -101,15 +102,22 @@ class TestServiceEngineAppAttachmentViewSet:
 
 
 class TestUnboundServiceEngineAppAttachmentViewSet:
-    def create_mock_rel(self, service, create_time, **credentials):
-        rel = mock.MagicMock()
-        instance_id = str(uuid.uuid4())
-        rel.get_instance.return_value = ServiceInstanceObj(
-            uuid=instance_id, credentials=credentials, config={}, create_time=create_time
+    def create_instance(self, create_time, should_hidden_fields, should_remove_fields, **credentials):
+        return ServiceInstanceObj(
+            uuid=str(uuid.uuid4()),
+            credentials=credentials,
+            config={},
+            create_time=create_time,
+            should_hidden_fields=should_hidden_fields,
+            should_remove_fields=should_remove_fields,
         )
+
+    def create_mock_rel(self, service, instance):
+        rel = mock.MagicMock()
+        rel.get_instance.return_value = instance
         rel.get_service.return_value = service
         rel.db_obj.service_id = str(service.uuid)
-        rel.db_obj.service_instance_id = instance_id
+        rel.db_obj.service_instance_id = instance.uuid
         return rel
 
     @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.list_unbound_instance_rels")
@@ -118,22 +126,25 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         service1 = G(
             Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
         )
-        service_category = G(ServiceCategory)
         service2 = G(
             Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
         )
         service2_dict = vars(service2)
-        service2_dict["category"] = service_category.id
+        service2_dict["category"] = G(ServiceCategory).id
         mock_get_or_404.side_effect = (
             lambda service_id: LocalServiceObj.from_db_object(service1)
             if service_id == str(service1.uuid)
             else RemoteServiceObj.from_data(service2_dict)
         )
 
-        mock_rel1 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), a=1, b=1)
-        mock_rel2 = self.create_mock_rel(service1, datetime.datetime(2020, 1, 1), c=1)
-        mock_rel3 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), d=1, e=1)
-        mock_rel4 = self.create_mock_rel(service2, datetime.datetime(2020, 1, 1), f=1)
+        mock_rel1 = self.create_mock_rel(
+            service1, self.create_instance(datetime.datetime(2020, 1, 1), [], [], a=1, b=1)
+        )
+        mock_rel2 = self.create_mock_rel(service1, self.create_instance(datetime.datetime(2020, 1, 1), [], [], c=1))
+        mock_rel3 = self.create_mock_rel(
+            service2, self.create_instance(datetime.datetime(2020, 1, 1), [], [], d=1, e=1)
+        )
+        mock_rel4 = self.create_mock_rel(service2, self.create_instance(datetime.datetime(2020, 1, 1), [], [], f=1))
         mock_list_unbound_instance_rels.return_value = [mock_rel1, mock_rel2, mock_rel3, mock_rel4]
 
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/unbound_attachments/"
@@ -164,3 +175,25 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             "environment": "stag",
             "environment_name": "预发布环境",
         }
+
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_unbound_instance_rel_by_instance_id")
+    @mock.patch("paasng.accessories.servicehub.views.mixed_service_mgr.get_or_404")
+    def test_retrieve_sensitive_field(self, mock_get_or_404, mock_get_rel, api_client, bk_app, bk_module):
+        service = G(
+            Service, uuid=uuid.uuid4(), logo_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAAC"
+        )
+        service_dict = vars(service)
+        service_dict["category"] = G(ServiceCategory).id
+        mock_get_or_404.return_value = RemoteServiceObj.from_data(service_dict)
+
+        instance = self.create_instance(datetime.datetime(2020, 1, 1), ["c"], ["d"], a=1, b=2, c=3, d=4)
+        mock_rel = self.create_mock_rel(service, instance)
+        mock_get_rel.return_value = mock_rel
+
+        with override_settings(ENABLE_VERIFICATION_CODE=False):
+            url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/unbound_attachments/retrieve_field/"
+            data = {"instance_id": instance.uuid, "field_name": "d"}
+            response = api_client.post(url, data=data)
+
+        assert response.status_code == 200
+        assert response.data == 4

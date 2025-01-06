@@ -143,9 +143,9 @@ urlpatterns = [
     ),
     # Retrieve unbound instance sensitive field
     re_path(
-        make_app_pattern("/services/{SERVICE_UUID}/unbound_attachments/sensitive_field$", include_envs=False),
-        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"post": "retrive_sensitive_field"}),
-        name="api.services.attachment.unbound.sensitive_field",
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/retrieve_field/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"post": "retrieve_sensitive_field"}),
+        name="api.services.attachment.unbound.retrieve_sensitive_field",
     ),
 ]
 

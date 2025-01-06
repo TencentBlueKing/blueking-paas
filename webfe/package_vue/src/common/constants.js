@@ -393,7 +393,7 @@ export const PLUGIN_ACTION = {
 /**
  * 租户类型
  */
-export const TENANT_TYPE = {
+export const APP_TENANT_MODE = {
   single: '单租户',
   global: '全租户',
 };

@@ -480,7 +480,7 @@
             :filter-multiple="false"
           >
             <template slot-scope="{ row }">
-              {{ $t(tenantType[row.application.app_tenant_mode]) }}
+              {{ $t(appTenantMode[row.application.app_tenant_mode]) }}
             </template>
           </bk-table-column>
           <bk-table-column :label="$t('所属租户')">
@@ -613,7 +613,7 @@ import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';
-import { PAAS_APP_TYPE, TENANT_TYPE } from '@/common/constants';
+import { PAAS_APP_TYPE, APP_TENANT_MODE } from '@/common/constants';
 import { mapGetters } from 'vuex';
 
 const APP_TYPE_MAP = [
@@ -785,7 +785,7 @@ export default {
       },
       noMigrationNeededStatus: ['no_need_migration', 'confirmed'],
       appTypeList: APP_TYPE_MAP,
-      tenantType: TENANT_TYPE,
+      appTenantMode: APP_TENANT_MODE,
       tenantFilters: [
         { text: this.$t('单租户'), value: 'single' },
         { text: this.$t('全租户'), value: 'global' },

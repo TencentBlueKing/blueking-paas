@@ -58,7 +58,7 @@
                   <div class="item">
                     <div class="label">{{ $t('租户类型') }}：</div>
                     <div class="value">
-                      {{ $t(tenantType[curAppInfo.application.app_tenant_mode]) }}
+                      {{ $t(appTenantMode[curAppInfo.application.app_tenant_mode]) }}
                     </div>
                   </div>
                   <div class="item">
@@ -282,7 +282,7 @@ import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import authenticationInfo from '@/components/authentication-info.vue';
 import pluginInfo from './plugin-info.vue';
-import { TENANT_TYPE } from '@/common/constants';
+import { APP_TENANT_MODE } from '@/common/constants';
 import { mapGetters } from 'vuex';
 
 export default {
@@ -338,7 +338,7 @@ export default {
         visible: false,
       },
       curFileData: [],
-      tenantType: TENANT_TYPE,
+      appTenantMode: APP_TENANT_MODE,
     };
   },
   computed: {

@@ -146,8 +146,6 @@ class TestUpdateSMartApp:
         def _desc_updater(desc):
             desc["app"]["bkAppCode"] = bk_cnative_app.code
             desc["app"]["bkAppName"] = bk_cnative_app.name
-            # 因为 bk_cnative_app 有默认的模块,所以要设置 isDefault 为 False
-            desc["modules"][0]["isDefault"] = False
             return desc
 
         tarball_path = make_smart_tarball(tmp_path, _desc_updater)

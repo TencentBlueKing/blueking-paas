@@ -4,7 +4,7 @@
       class="title"
       v-if="isSaveOperation"
     >
-      {{ $t('配置信息') }}
+      {{ $t('方案信息') }}
       <bk-button
         text
         size="small"
@@ -18,7 +18,7 @@
     <section :class="['content', { 'not-title': !isSaveOperation }]">
       <bk-form
         :model="formData"
-        :label-width="100"
+        :label-width="150"
       >
         <bk-form-item
           :label="$t('方案')"
@@ -37,7 +37,7 @@
         <template v-else>
           <bk-form-item
             v-for="(value, key) in data.env_specific_plans"
-            :label="key === 'stag' ? $t('预发布环境') : $t('生产环境')"
+            :label="getEnvironmentName(key)"
             :key="key"
           >
             <bk-radio-group v-model="formData[key]">
@@ -56,7 +56,7 @@
         v-if="mode === ''"
         class="info"
       >
-        {{ $t('模块部署前可在“增强服务/管理实例”页面修改配置信息，部署后则不能再修改配置信息') }}
+        {{ $t('部署后则不能再修改方案信息') }}
       </p>
     </section>
     <section
@@ -234,6 +234,9 @@ export default {
         });
       }
     },
+    getEnvironmentName(key) {
+      return key === 'prod' ? this.$t('方案（生产环境）') : this.$t('方案（预发布环境）');
+    },
   },
 };
 </script>
@@ -286,7 +289,7 @@ export default {
   }
   .info {
     margin-top: 10px;
-    padding-left: 100px;
+    padding-left: 150px;
     font-size: 12px;
     color: #979ba5;
   }

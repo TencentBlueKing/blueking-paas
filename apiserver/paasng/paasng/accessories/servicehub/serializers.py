@@ -124,6 +124,7 @@ class ServiceAttachmentSLZ(serializers.Serializer):
 
 class ServiceAttachmentDetailedSLZ(ServiceAttachmentSLZ):
     created = serializers.DateTimeField()
+    region = serializers.CharField(help_text="应用版本", allow_null=True, default="")
 
 
 class ServiceAttachmentQuerySLZ(serializers.Serializer):

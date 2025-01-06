@@ -398,7 +398,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
         instance_data = self._retrieve_instance_to_be_deleted()
         if not instance_data:
             return None
-        svc_obj = self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        svc_obj = self.mgr.get(str(self.db_obj.service_id))
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
 
         return create_svc_instance_obj_from_remote(
@@ -519,7 +519,7 @@ def create_svc_instance_obj_from_remote(
     special fields:
 
     - `config.__meta__`: if "should_hidden_fields" or "should_remove_fields" was included in this
-        field, the value will be popped for instance intializing.
+        field, the value will be popped for instance initializing.
     """
 
     def _format_key(val):

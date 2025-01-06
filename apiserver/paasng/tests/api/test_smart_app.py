@@ -131,6 +131,7 @@ class TestCreateSMartApp:
 
 class TestUpdateSMartApp:
     @pytest.fixture()
+    @pytest.mark.usefixtures("_with_wl_apps")
     def _create_smart_app(self, bk_cnative_app):
         SMartAppExtraInfo.objects.create(original_code=bk_cnative_app.code, app=bk_cnative_app)
         # AppDeclarativeController.perform_update(desc) 需要 MarketConfig

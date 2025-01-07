@@ -116,8 +116,8 @@ class IngressConfig:
 
 
 @define
-class ManualAllocationConfig:
-    """手动分配配置"""
+class AllocationPolicy:
+    """分配策略"""
 
     # 是否按环境分配
     env_specific: bool
@@ -142,8 +142,8 @@ class ManualAllocationConfig:
 
 
 @define
-class AllocationRule:
-    """集群分配规则"""
+class AllocationPrecedencePolicy:
+    """分配策略（按规则）"""
 
     # 是否按环境分配
     env_specific: bool

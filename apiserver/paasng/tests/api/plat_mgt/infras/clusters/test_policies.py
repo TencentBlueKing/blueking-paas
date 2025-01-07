@@ -21,7 +21,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
-from paas_wl.infras.cluster.entities import AllocationRule, ManualAllocationConfig
+from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
@@ -37,14 +37,14 @@ class TestClusterAllocationPolicyViewSet:
     def init_policies(self, init_system_cluster, init_default_cluster) -> List[ClusterAllocationPolicy]:
         manual_policy = ClusterAllocationPolicy.objects.create(
             tenant_id=OP_TYPE_TENANT_ID,
-            type=ClusterAllocationPolicyType.MANUAL,
-            manual_allocation_config=ManualAllocationConfig(env_specific=False, clusters=[init_system_cluster.name]),
+            type=ClusterAllocationPolicyType.UNIFORM,
+            allocation_policy=AllocationPolicy(env_specific=False, clusters=[init_system_cluster.name]),
         )
         rule_policy = ClusterAllocationPolicy.objects.create(
             tenant_id=DEFAULT_TENANT_ID,
-            type=ClusterAllocationPolicyType.RULE,
-            allocation_rules=[
-                AllocationRule(
+            type=ClusterAllocationPolicyType.RULE_BASED,
+            allocation_precedence_policies=[
+                AllocationPrecedencePolicy(
                     env_specific=True,
                     matcher={ClusterAllocationPolicyCondType.REGION_IS: "default"},
                     env_clusters={
@@ -60,11 +60,11 @@ class TestClusterAllocationPolicyViewSet:
         resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"))
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_create_manual_allocation_policy(self, plat_mgt_api_client, init_default_cluster):
+    def test_create_allocation_policy(self, plat_mgt_api_client, init_default_cluster):
         data = {
             "tenant_id": DEFAULT_TENANT_ID,
-            "type": ClusterAllocationPolicyType.MANUAL,
-            "manual_allocation_config": {
+            "type": ClusterAllocationPolicyType.UNIFORM,
+            "allocation_policy": {
                 "env_specific": False,
                 "clusters": [init_default_cluster.name],
             },
@@ -72,11 +72,13 @@ class TestClusterAllocationPolicyViewSet:
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_create_allocation_rules_policy(self, plat_mgt_api_client, init_system_cluster, init_default_cluster):
+    def test_create_allocation_precedence_policies_policy(
+        self, plat_mgt_api_client, init_system_cluster, init_default_cluster
+    ):
         data = {
             "tenant_id": DEFAULT_TENANT_ID,
-            "type": ClusterAllocationPolicyType.RULE,
-            "allocation_rules": [
+            "type": ClusterAllocationPolicyType.RULE_BASED,
+            "allocation_precedence_policies": [
                 {
                     "env_specific": False,
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "ieod"},
@@ -98,8 +100,8 @@ class TestClusterAllocationPolicyViewSet:
         """租户 ID 不在指定集群的可用租户列表中"""
         data = {
             "tenant_id": generate_random_string(8),
-            "type": ClusterAllocationPolicyType.MANUAL,
-            "manual_allocation_config": {
+            "type": ClusterAllocationPolicyType.UNIFORM,
+            "allocation_policy": {
                 "env_specific": False,
                 "clusters": [init_default_cluster.name],
             },
@@ -112,8 +114,8 @@ class TestClusterAllocationPolicyViewSet:
         data = {
             # 虽然指定要修改 tenant_id，但是不会生效的
             "tenant_id": OP_TYPE_TENANT_ID,
-            "type": ClusterAllocationPolicyType.RULE,
-            "allocation_rules": [
+            "type": ClusterAllocationPolicyType.RULE_BASED,
+            "allocation_precedence_policies": [
                 {
                     "env_specific": True,
                     "env_clusters": {
@@ -134,12 +136,12 @@ class TestClusterAllocationPolicyViewSet:
 
         policy.refresh_from_db()
         assert policy.tenant_id != OP_TYPE_TENANT_ID
-        assert policy.type == ClusterAllocationPolicyType.RULE
+        assert policy.type == ClusterAllocationPolicyType.RULE_BASED
 
     def test_update_policy_without_available_tenant_id(self, init_policies, init_default_cluster, plat_mgt_api_client):
         data = {
-            "type": ClusterAllocationPolicyType.RULE,
-            "allocation_rules": [
+            "type": ClusterAllocationPolicyType.RULE_BASED,
+            "allocation_precedence_policies": [
                 {
                     "env_specific": False,
                     "clusters": [init_default_cluster.name],

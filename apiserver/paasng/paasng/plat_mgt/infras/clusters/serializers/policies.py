@@ -22,7 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
-from paas_wl.infras.cluster.entities import AllocationRule, ManualAllocationConfig
+from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import Cluster
 
 
@@ -33,8 +33,8 @@ class EnvClustersSLZ(serializers.Serializer):
     prod = serializers.ListField(help_text="生产环境集群列表", child=serializers.CharField())
 
 
-class ManualAllocationConfigSLZ(serializers.Serializer):
-    """手动分配配置"""
+class AllocationPolicySLZ(serializers.Serializer):
+    """统一分配策略"""
 
     env_specific = serializers.BooleanField(help_text="是否按环境分配")
     clusters = serializers.ListField(
@@ -42,11 +42,11 @@ class ManualAllocationConfigSLZ(serializers.Serializer):
     )
     env_clusters = EnvClustersSLZ(help_text="环境集群列表", default=dict, required=False)
 
-    def to_internal_value(self, data: Dict[str, Any]) -> ManualAllocationConfig:
-        return ManualAllocationConfig(**super().to_internal_value(data))
+    def to_internal_value(self, data: Dict[str, Any]) -> AllocationPolicy:
+        return AllocationPolicy(**super().to_internal_value(data))
 
 
-class AllocationRuleSLZ(serializers.Serializer):
+class AllocationPrecedencePolicySLZ(serializers.Serializer):
     """分配规则"""
 
     env_specific = serializers.BooleanField(help_text="是否按环境分配")
@@ -56,8 +56,8 @@ class AllocationRuleSLZ(serializers.Serializer):
     )
     env_clusters = EnvClustersSLZ(help_text="环境集群列表", default=dict, required=False)
 
-    def to_internal_value(self, data: Dict[str, Any]) -> AllocationRule:
-        return AllocationRule(**super().to_internal_value(data))
+    def to_internal_value(self, data: Dict[str, Any]) -> AllocationPrecedencePolicy:
+        return AllocationPrecedencePolicy(**super().to_internal_value(data))
 
 
 class ClusterAllocationPolicyListOutputSLZ(serializers.Serializer):
@@ -66,27 +66,29 @@ class ClusterAllocationPolicyListOutputSLZ(serializers.Serializer):
     id = serializers.UUIDField(help_text="分配策略 ID", source="uuid")
     tenant_id = serializers.CharField(help_text="所属租户")
     type = serializers.CharField(help_text="分配策略类型")
-    manual_allocation_config = ManualAllocationConfigSLZ(help_text="手动分配配置")
-    allocation_rules = serializers.ListField(help_text="分配规则列表", child=AllocationRuleSLZ())
+    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
+    allocation_precedence_policies = serializers.ListField(
+        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ()
+    )
 
 
 def _validate_allocation_policy_clusters(
     tenant_id: str,
-    manual_allocation_config: ManualAllocationConfig | None,
-    allocation_rules: List[AllocationRule] | None,
+    allocation_policy: AllocationPolicy | None,
+    allocation_precedence_policies: List[AllocationPrecedencePolicy] | None,
 ) -> None:
     """校验配置的集群是否合法"""
     cluster_names = set()
-    if manual_allocation_config:
-        if clusters := manual_allocation_config.clusters:
+    if allocation_policy:
+        if clusters := allocation_policy.clusters:
             cluster_names |= set(clusters)
-        if env_clusters := manual_allocation_config.env_clusters:
+        if env_clusters := allocation_policy.env_clusters:
             for clusters in env_clusters.values():
                 cluster_names |= set(clusters)
 
-    if allocation_rules:
+    if allocation_precedence_policies:
         # 遍历所有规则，获取使用到的集群名称
-        for r in allocation_rules:
+        for r in allocation_precedence_policies:
             if r.clusters:
                 cluster_names |= set(r.clusters)
             if r.env_clusters:
@@ -106,27 +108,29 @@ class ClusterAllocationPolicyCreateInputSLZ(serializers.Serializer):
 
     tenant_id = serializers.CharField(help_text="所属租户")
     type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
-    manual_allocation_config = ManualAllocationConfigSLZ(help_text="手动分配配置", required=False)
-    allocation_rules = serializers.ListField(help_text="分配规则列表", child=AllocationRuleSLZ(), required=False)
+    allocation_policy = AllocationPolicySLZ(help_text="手动分配配置", required=False)
+    allocation_precedence_policies = serializers.ListField(
+        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), required=False
+    )
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         policy_type = attrs["type"]
-        if policy_type == ClusterAllocationPolicyType.MANUAL:
-            if not attrs.get("manual_allocation_config"):
-                raise ValidationError(_("需要配置手动分配配置"))
+        if policy_type == ClusterAllocationPolicyType.UNIFORM:
+            if not attrs.get("allocation_policy"):
+                raise ValidationError(_("需要配置统一分配策略"))
 
-            attrs["allocation_rules"] = []
+            attrs["allocation_precedence_policies"] = []
 
-        elif policy_type == ClusterAllocationPolicyType.RULE:
-            if not attrs.get("allocation_rules"):
+        elif policy_type == ClusterAllocationPolicyType.RULE_BASED:
+            if not attrs.get("allocation_precedence_policies"):
                 raise ValidationError(_("需要配置分配规则"))
 
-            attrs["manual_allocation_config"] = None
+            attrs["allocation_policy"] = None
 
         _validate_allocation_policy_clusters(
             attrs["tenant_id"],
-            attrs["manual_allocation_config"],
-            attrs["allocation_rules"],
+            attrs["allocation_policy"],
+            attrs["allocation_precedence_policies"],
         )
         return attrs
 
@@ -141,26 +145,28 @@ class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
     """更新集群分配策略"""
 
     type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
-    manual_allocation_config = ManualAllocationConfigSLZ(help_text="手动分配配置", required=False)
-    allocation_rules = serializers.ListField(help_text="分配规则列表", child=AllocationRuleSLZ(), required=False)
+    allocation_policy = AllocationPolicySLZ(help_text="手动分配配置", required=False)
+    allocation_precedence_policies = serializers.ListField(
+        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), required=False
+    )
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         policy_type = attrs["type"]
-        if policy_type == ClusterAllocationPolicyType.MANUAL:
-            if not attrs.get("manual_allocation_config"):
-                raise ValidationError(_("需要配置手动分配配置"))
+        if policy_type == ClusterAllocationPolicyType.UNIFORM:
+            if not attrs.get("allocation_policy"):
+                raise ValidationError(_("需要配置统一分配策略"))
 
-            attrs["allocation_rules"] = []
+            attrs["allocation_precedence_policies"] = []
 
-        elif policy_type == ClusterAllocationPolicyType.RULE:
-            if not attrs.get("allocation_rules"):
+        elif policy_type == ClusterAllocationPolicyType.RULE_BASED:
+            if not attrs.get("allocation_precedence_policies"):
                 raise ValidationError(_("需要配置分配规则"))
 
-            attrs["manual_allocation_config"] = None
+            attrs["allocation_policy"] = None
 
         _validate_allocation_policy_clusters(
             self.context["cur_tenant_id"],
-            attrs["manual_allocation_config"],
-            attrs["allocation_rules"],
+            attrs["allocation_policy"],
+            attrs["allocation_precedence_policies"],
         )
         return attrs

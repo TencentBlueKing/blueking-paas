@@ -62,15 +62,15 @@ class ClusterAllocationGetter:
 
         # 需要针对所有分配策略中的所有规则逐一检查（分配策略数量 <= 租户数量，总体可控）
         for policy in ClusterAllocationPolicy.objects.all():
-            if policy.type == ClusterAllocationPolicyType.MANUAL:
-                allocated_tenant_ids |= self._get_allocated_tenant_ids_in_manual_allocation_config(policy)
-            elif policy.type == ClusterAllocationPolicyType.RULE:
-                allocated_tenant_ids |= self._get_allocated_tenant_ids_in_allocation_rules(policy)
+            if policy.type == ClusterAllocationPolicyType.UNIFORM:
+                allocated_tenant_ids |= self._get_allocated_tenant_ids_in_allocation_policy(policy)
+            elif policy.type == ClusterAllocationPolicyType.RULE_BASED:
+                allocated_tenant_ids |= self._get_allocated_tenant_ids_in_allocation_precedence_policies(policy)
 
         return list(allocated_tenant_ids)
 
-    def _get_allocated_tenant_ids_in_manual_allocation_config(self, policy: ClusterAllocationPolicy) -> Set[str]:
-        cfg = policy.manual_allocation_config
+    def _get_allocated_tenant_ids_in_allocation_policy(self, policy: ClusterAllocationPolicy) -> Set[str]:
+        cfg = policy.allocation_policy
         if not cfg:
             return set()
 
@@ -86,10 +86,10 @@ class ClusterAllocationGetter:
 
         return allocated_tenant_ids
 
-    def _get_allocated_tenant_ids_in_allocation_rules(self, policy: ClusterAllocationPolicy) -> Set[str]:
+    def _get_allocated_tenant_ids_in_allocation_precedence_policies(self, policy: ClusterAllocationPolicy) -> Set[str]:
         allocated_tenant_ids = set()
 
-        for rule in policy.allocation_rules:
+        for rule in policy.allocation_precedence_policies:
             # 所有环境使用相同集群
             if rule.clusters and self.cluster.name in rule.clusters:
                 allocated_tenant_ids.add(policy.tenant_id)

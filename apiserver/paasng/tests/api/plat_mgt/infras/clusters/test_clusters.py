@@ -433,8 +433,8 @@ class TestDeleteCluster:
     def test_delete_cluster_when_allocation_policy_exists(self, init_system_cluster, plat_mgt_api_client):
         data = {
             "tenant_id": OP_TYPE_TENANT_ID,
-            "type": ClusterAllocationPolicyType.MANUAL,
-            "manual_allocation_config": {"env_specific": False, "clusters": [init_system_cluster.name]},
+            "type": ClusterAllocationPolicyType.UNIFORM,
+            "allocation_policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
         }
         # 使用创建 API 初始化集群分配策略
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
@@ -493,8 +493,8 @@ class TestRetrieveClusterUsage:
     def test_retrieve_usage(self, bk_cnative_app, init_system_cluster, init_default_cluster, plat_mgt_api_client):
         data = {
             "tenant_id": DEFAULT_TENANT_ID,
-            "type": ClusterAllocationPolicyType.RULE,
-            "allocation_rules": [
+            "type": ClusterAllocationPolicyType.RULE_BASED,
+            "allocation_precedence_policies": [
                 {
                     "env_specific": True,
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "default"},

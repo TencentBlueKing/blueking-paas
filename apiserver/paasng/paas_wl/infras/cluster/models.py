@@ -28,7 +28,7 @@ from paas_wl.infras.cluster.constants import (
     ClusterTokenType,
     ClusterType,
 )
-from paas_wl.infras.cluster.entities import AllocationRule, IngressConfig, ManualAllocationConfig
+from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy, IngressConfig
 from paas_wl.infras.cluster.exceptions import (
     DuplicatedDefaultClusterError,
     NoDefaultClusterError,
@@ -234,9 +234,11 @@ class APIServer(UuidAuditedModel):
         unique_together = ("cluster", "host")
 
 
-ManualAllocationConfigField = make_json_field("ManualAllocationConfigField", ManualAllocationConfig)
+AllocationPolicyField = make_json_field("AllocationPolicyField", AllocationPolicy)
 
-AllocationRulesField = make_json_field("AllocationRulesField", List[AllocationRule])
+AllocationPrecedencePoliciesField = make_json_field(
+    "AllocationPrecedencePoliciesField", List[AllocationPrecedencePolicy]
+)
 
 
 class ClusterAllocationPolicy(UuidAuditedModel):
@@ -245,10 +247,12 @@ class ClusterAllocationPolicy(UuidAuditedModel):
     tenant_id = models.CharField(max_length=128, unique=True, help_text="所属租户")
     # 枚举值 -> ClusterAllocationPolicyType
     type = models.CharField(max_length=32, help_text="分配策略类型")
-    manual_allocation_config: ManualAllocationConfig | None = ManualAllocationConfigField(
-        help_text="手动分配配置", default=None, null=True
+    allocation_policy: AllocationPolicy | None = AllocationPolicyField(
+        help_text="统一分配策略", default=None, null=True
     )
-    allocation_rules: List[AllocationRule] = AllocationRulesField(help_text="集群分配规则列表", default=list)
+    allocation_precedence_policies: List[AllocationPrecedencePolicy] = AllocationPrecedencePoliciesField(
+        help_text="规则分配优先策略", default=list
+    )
 
 
 class ClusterElasticSearchConfig(UuidAuditedModel):

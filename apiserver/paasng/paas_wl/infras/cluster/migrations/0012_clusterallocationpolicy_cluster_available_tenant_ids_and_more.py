@@ -24,8 +24,8 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('tenant_id', models.CharField(help_text='所属租户', max_length=128, unique=True)),
                 ('type', models.CharField(help_text='分配策略类型', max_length=32)),
-                ('manual_allocation_config', paas_wl.infras.cluster.models.ManualAllocationConfigField(default=None, null=True, help_text='手动分配配置')),
-                ('allocation_rules', paas_wl.infras.cluster.models.AllocationRulesField(default=list, help_text='集群分配规则列表')),
+                ('allocation_policy', paas_wl.infras.cluster.models.AllocationPolicyField(default=None, null=True, help_text='手动分配配置')),
+                ('allocation_precedence_policies', paas_wl.infras.cluster.models.AllocationPrecedencePoliciesField(default=list, help_text='集群分配规则列表')),
             ],
             options={
                 'abstract': False,

@@ -101,15 +101,26 @@ class TestQueryUniApps:
         assert results[legacy_app.code].name == legacy_app.name
         assert results[legacy_app.code].type == ApplicationType.DEFAULT.value
 
+    def test_query_by_tenant_id(self, bk_app):
+        default_tenant_apps = query_uni_apps_by_ids(
+            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True, tenant_id="default"
+        )
+        assert default_tenant_apps[bk_app.code].name == bk_app.name
+
+        tenant2_apps = query_default_apps_by_ids(
+            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True, tenant_id="tenant2"
+        )
+        assert tenant2_apps == {}
+
     @pytest.mark.parametrize(
-        ("keyword", "expected_count", "language", "name_field"),
+        ("keyword", "expected_count", "language", "name_field", "tenant_id"),
         [
-            ("", 2, "", "name"),
-            ("bk_app", 1, "en", "name_en"),
-            ("legacy_app", 1, "en", "name"),
+            ("", 2, "", "name", ""),
+            ("bk_app", 1, "en", "name_en", "default"),
+            ("legacy_app", 1, "en", "name", "default"),
         ],
     )
-    def test_query_by_keyword(self, bk_app, keyword, expected_count, language, name_field):
+    def test_query_by_keyword(self, bk_app, keyword, expected_count, language, name_field, tenant_id):
         keyword_app = bk_app
         legacy_app = create_legacy_application()
 
@@ -120,7 +131,9 @@ class TestQueryUniApps:
             keyword = legacy_app.name
 
         with override(language, True):
-            uni_apps_list = query_uni_apps_by_keyword(keyword, offset=0, limit=10, include_inactive_apps=True)
+            uni_apps_list = query_uni_apps_by_keyword(
+                keyword, offset=0, limit=10, include_inactive_apps=True, tenant_id=tenant_id
+            )
             assert len(uni_apps_list) == expected_count
 
             uni_apps_dict = {app.code: app.name for app in uni_apps_list}

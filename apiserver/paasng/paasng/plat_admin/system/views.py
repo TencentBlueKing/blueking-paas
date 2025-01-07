@@ -125,8 +125,10 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_contact_info = request_data["include_contact_info"]
         include_market_info = request_data["include_market_info"]
 
+        # 获取请求头中的租户信息
+        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
         # 查询应用信息
-        uni_apps = query_uni_apps_by_ids(app_ids, include_inactive_apps, include_developers_info)
+        uni_apps = query_uni_apps_by_ids(app_ids, include_inactive_apps, include_developers_info, tenant_id)
         # 所有应用联系人信息（不包含 PaaS2.0 应用）
         contact_info_dict = get_contact_info_by_appids(app_ids) if include_contact_info else None
         app_details: List[Optional[Dict[str, Any]]] = [
@@ -152,7 +154,9 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         data = serializer.validated_data
 
         username = data["username"]
-        uni_apps = query_uni_apps_by_username(username)
+        # 获取请求头中的租户信息
+        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+        uni_apps = query_uni_apps_by_username(username, tenant_id)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
     @swagger_auto_schema(
@@ -171,7 +175,9 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
 
         keyword = data.get("keyword")
         include_inactive_apps = data.get("include_inactive_apps")
-        applications = query_uni_apps_by_keyword(keyword, offset, limit, include_inactive_apps)
+        # 获取请求头中的租户信息
+        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+        applications = query_uni_apps_by_keyword(keyword, offset, limit, include_inactive_apps, tenant_id)
 
         # Paginate results
         applications = paginator.paginate_queryset(applications, request, self)

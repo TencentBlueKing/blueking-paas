@@ -293,6 +293,7 @@ class BkPluginAppQuerySet:
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
         tag_id: Optional[int] = None,
+        tenant_id: Optional[str] = None,
     ) -> QuerySet:
         """filter queryset by given term
 
@@ -313,6 +314,8 @@ class BkPluginAppQuerySet:
             # tag_id 的值为未分类时，过滤所有没有分类信息的插件
             tag_id = None if tag_id == PluginTagIdType.UNTAGGED.value else tag_id
             applications = applications.filter(bk_plugin_profile__tag=tag_id)
+        if tenant_id:
+            applications = applications.filter(tenant_id=tenant_id)
         return applications
 
 

@@ -118,3 +118,13 @@ class TestBkPluginAppQuerySet:
         profile.tag = tag_1
         profile.save(update_fields=["tag"])
         assert query(tag_id=tag_1.id).count() == 1
+
+    def test_tenant_id(self, bk_plugin_app, mock_apigw_api_client):
+        query = partial(BkPluginAppQuerySet().filter, search_term="", order_by=["-created"])
+        assert query().count() == 1
+        assert query(tenant_id="default").count() == 1
+        assert query(tenant_id="fake_tenant").count() == 0
+
+        bk_plugin_app.tenant_id = "fake_tenant"
+        bk_plugin_app.save()
+        assert query(tenant_id="fake_tenant").count() == 1

@@ -65,6 +65,8 @@ class FilterPluginsMixin:
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+
         # Query and paginate applications
         applications = BkPluginAppQuerySet().filter(
             search_term=data["search_term"],
@@ -72,6 +74,7 @@ class FilterPluginsMixin:
             has_deployed=data["has_deployed"],
             distributor_code_name=data["distributor_code_name"],
             tag_id=data["tag_id"],
+            tenant_id=tenant_id,
         )
         paginator = LimitOffsetPagination()
         applications = paginator.paginate_queryset(applications, request, self)

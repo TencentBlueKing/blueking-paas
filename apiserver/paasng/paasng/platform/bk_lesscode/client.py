@@ -108,7 +108,7 @@ class LessCodeClient:
 
 
 def make_bk_lesscode_client(login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
-    if settings.ENABLE_BK_LESSCODE_APIGW:
+    if settings.ENABLE_BK_LESSCODE:
         return LessCodeClient(login_cookie, tenant_id, client)
     else:
         return DummyLessCodeClient()

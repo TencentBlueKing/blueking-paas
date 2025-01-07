@@ -45,12 +45,14 @@ class TestClusterAllocationPolicyViewSet:
             type=ClusterAllocationPolicyType.RULE_BASED,
             allocation_precedence_policies=[
                 AllocationPrecedencePolicy(
-                    env_specific=True,
                     matcher={ClusterAllocationPolicyCondType.REGION_IS: "default"},
-                    env_clusters={
-                        AppEnvironment.STAGING: [init_system_cluster.name],
-                        AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
-                    },
+                    policy=AllocationPolicy(
+                        env_specific=True,
+                        env_clusters={
+                            AppEnvironment.STAGING: [init_system_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                        },
+                    ),
                 ),
             ],
         )
@@ -80,15 +82,19 @@ class TestClusterAllocationPolicyViewSet:
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
-                    "env_specific": False,
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "ieod"},
-                    "clusters": [init_system_cluster.name],
+                    "policy": {
+                        "env_specific": False,
+                        "clusters": [init_system_cluster.name],
+                    },
                 },
                 {
-                    "env_specific": True,
-                    "env_clusters": {
-                        AppEnvironment.STAGING: [init_default_cluster.name],
-                        AppEnvironment.PRODUCTION: [init_default_cluster.name, init_system_cluster.name],
+                    "policy": {
+                        "env_specific": True,
+                        "env_clusters": {
+                            AppEnvironment.STAGING: [init_default_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_default_cluster.name, init_system_cluster.name],
+                        },
                     },
                 },
             ],
@@ -117,10 +123,12 @@ class TestClusterAllocationPolicyViewSet:
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
-                    "env_specific": True,
-                    "env_clusters": {
-                        AppEnvironment.STAGING: [init_system_cluster.name],
-                        AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                    "policy": {
+                        "env_specific": True,
+                        "env_clusters": {
+                            AppEnvironment.STAGING: [init_system_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                        },
                     },
                 }
             ],
@@ -143,8 +151,10 @@ class TestClusterAllocationPolicyViewSet:
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
-                    "env_specific": False,
-                    "clusters": [init_default_cluster.name],
+                    "policy": {
+                        "env_specific": False,
+                        "clusters": [init_default_cluster.name],
+                    },
                 }
             ],
         }

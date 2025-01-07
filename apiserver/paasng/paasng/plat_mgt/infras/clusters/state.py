@@ -89,13 +89,13 @@ class ClusterAllocationGetter:
     def _get_allocated_tenant_ids_in_allocation_precedence_policies(self, policy: ClusterAllocationPolicy) -> Set[str]:
         allocated_tenant_ids = set()
 
-        for rule in policy.allocation_precedence_policies:
+        for p in policy.allocation_precedence_policies:
             # 所有环境使用相同集群
-            if rule.clusters and self.cluster.name in rule.clusters:
+            if p.policy.clusters and self.cluster.name in p.policy.clusters:
                 allocated_tenant_ids.add(policy.tenant_id)
             # 按应用部署环境分配集群
-            elif rule.env_clusters:
-                for clusters in rule.env_clusters.values():
+            elif p.policy.env_clusters:
+                for clusters in p.policy.env_clusters.values():
                     if clusters and self.cluster.name in clusters:
                         allocated_tenant_ids.add(policy.tenant_id)
 

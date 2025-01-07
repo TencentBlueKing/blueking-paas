@@ -496,11 +496,13 @@ class TestRetrieveClusterUsage:
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
-                    "env_specific": True,
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "default"},
-                    "env_clusters": {
-                        AppEnvironment.STAGING: [init_system_cluster.name],
-                        AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                    "policy": {
+                        "env_specific": True,
+                        "env_clusters": {
+                            AppEnvironment.STAGING: [init_system_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                        },
                     },
                 }
             ],

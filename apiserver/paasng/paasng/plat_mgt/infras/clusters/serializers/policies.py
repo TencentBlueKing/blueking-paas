@@ -49,12 +49,8 @@ class AllocationPolicySLZ(serializers.Serializer):
 class AllocationPrecedencePolicySLZ(serializers.Serializer):
     """分配规则"""
 
-    env_specific = serializers.BooleanField(help_text="是否按环境分配")
-    matcher = serializers.DictField(help_text="匹配器", default=dict, required=False)
-    clusters = serializers.ListField(
-        help_text="集群列表（不区分环境）", child=serializers.CharField(), default=list, required=False
-    )
-    env_clusters = EnvClustersSLZ(help_text="环境集群列表", default=dict, required=False)
+    matcher = serializers.DictField(help_text="匹配器", default=dict)
+    policy = AllocationPolicySLZ(help_text="分配策略")
 
     def to_internal_value(self, data: Dict[str, Any]) -> AllocationPrecedencePolicy:
         return AllocationPrecedencePolicy(**super().to_internal_value(data))
@@ -88,11 +84,11 @@ def _validate_allocation_policy_clusters(
 
     if allocation_precedence_policies:
         # 遍历所有规则，获取使用到的集群名称
-        for r in allocation_precedence_policies:
-            if r.clusters:
-                cluster_names |= set(r.clusters)
-            if r.env_clusters:
-                for clusters in r.env_clusters.values():
+        for p in allocation_precedence_policies:
+            if p.policy.clusters:
+                cluster_names |= set(p.policy.clusters)
+            if p.policy.env_clusters:
+                for clusters in p.policy.env_clusters.values():
                     cluster_names |= set(clusters)
 
     # 校验集群是否存在 & 指定的租户可用

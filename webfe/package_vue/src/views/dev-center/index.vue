@@ -471,6 +471,24 @@
             </div>
           </template>
         </bk-table-column>
+        <template v-if="isShowTenant">
+          <bk-table-column
+            :label="$t('租户类型')"
+            prop="app_tenant_mode"
+            column-key="app_tenant_mode"
+            :filters="tenantFilters"
+            :filter-multiple="false"
+          >
+            <template slot-scope="{ row }">
+              {{ $t(appTenantMode[row.application.app_tenant_mode]) }}
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('所属租户')">
+            <template slot-scope="{ row }">
+              {{ row.application.app_tenant_id || '--' }}
+            </template>
+          </bk-table-column>
+        </template>
         <bk-table-column
           :label="$t('状态')"
           :render-header="statusRenderHeader"
@@ -595,7 +613,8 @@ import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';
-import { PAAS_APP_TYPE } from '@/common/constants';
+import { PAAS_APP_TYPE, APP_TENANT_MODE } from '@/common/constants';
+import { mapGetters } from 'vuex';
 
 const APP_TYPE_MAP = [
   {
@@ -758,8 +777,6 @@ export default {
       ],
       expandRowKeys: [],
       curHoverRowIndex: -1,
-      isFilterConditionPresent: false,
-      filterRegion: [],
       appExtraData: {},
       tableHeaderFilterValue: 'all',
       appMigrationDialogConfig: {
@@ -768,6 +785,12 @@ export default {
       },
       noMigrationNeededStatus: ['no_need_migration', 'confirmed'],
       appTypeList: APP_TYPE_MAP,
+      appTenantMode: APP_TENANT_MODE,
+      tenantFilters: [
+        { text: this.$t('单租户'), value: 'single' },
+        { text: this.$t('全租户'), value: 'global' },
+      ],
+      tableFilters: {},
     };
   },
   computed: {
@@ -794,15 +817,13 @@ export default {
         ? this.sortValue.indexOf('-') !== -1
         : !(this.sortValue.indexOf('-') !== -1);
     },
+    ...mapGetters(['isShowTenant']),
   },
   watch: {
     filterKey(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
         this.fetchAppList();
       }
-    },
-    filterRegion() {
-      this.fetchAppList();
     },
   },
   created() {
@@ -949,7 +970,7 @@ export default {
       let url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?format=json`;
       // 筛选,搜索等操作时，强制切到 page 的页码
       // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
-      url = this.getParams(url);
+      url = this.concatenateFilters(url);
       this.fetchParams.order_by = this.sortValue;
       const params = Object.assign(this.fetchParams, {
         search_term: this.filterKey,
@@ -1071,18 +1092,21 @@ export default {
       this.reset();
     },
 
-    getParams(url) {
-      // 应用版本
-      if (this.filterRegion.length) {
-        const region = this.filterRegion[0] === '内部版' ? 'ieod' : 'tencent';
+    concatenateFilters(url) {
+      const { region, tenant } = this.tableFilters;
+      if (region) {
+        const region = region === '内部版' ? 'ieod' : 'tencent';
         url += `&region=${region}`;
+      }
+      if (tenant) {
+        url += `&app_tenant_mode=${tenant}`;
       }
       return url;
     },
 
     // 是否存在筛选条件
     updateTableEmptyConfig() {
-      if (this.filterKey || this.isFilterConditionPresent) {
+      if (this.filterKey || this.tableFilters.region || this.tableFilters.tenant) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
@@ -1121,9 +1145,12 @@ export default {
     // 表格筛选
     handleFilterChange(filds) {
       if (filds.region_name) {
-        this.filterRegion = filds.region_name.length ? filds.region_name : [];
+        this.tableFilters['region'] = filds.region_name.length ? filds.region_name[0] : '';
       }
-      this.isFilterConditionPresent = !!filds.region_name.length;
+      if (filds.app_tenant_mode) {
+        this.tableFilters['tenant'] = filds.app_tenant_mode.length ? filds.app_tenant_mode[0] : '';
+      }
+      this.fetchAppList();
     },
 
     statusRenderHeader(h) {

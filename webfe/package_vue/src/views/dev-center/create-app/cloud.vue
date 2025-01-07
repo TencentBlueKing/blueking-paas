@@ -71,7 +71,33 @@
               class="form-input-width"
             ></bk-input>
           </bk-form-item>
-
+          <!-- 多租户 -->
+          <template v-if="isShowTenant">
+            <bk-form-item
+              :required="true"
+              :property="'tenant'"
+              error-display-type="normal"
+              ext-cls="form-item-cls"
+              :label="$t('租户类型')"
+            >
+              <bk-radio-group v-model="formData.tenantMode">
+                <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
+                <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="formData.tenantMode === 'single'"
+              :required="true"
+              ext-cls="form-item-cls"
+              :label="$t('所属租户')"
+            >
+              <bk-input
+                class="form-input-width"
+                :value="curUserInfo.tenantId"
+                :disabled="true"
+              ></bk-input>
+            </bk-form-item>
+          </template>
           <!-- 镜像仓库不需要展示构建方式 -->
           <bk-form-item
             :required="true"
@@ -593,7 +619,7 @@
           >
             <bk-button
               theme="primary"
-              :disabled="!curExtendConfig.isAuth"
+              :disabled="!curExtendConfig?.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}
@@ -696,6 +722,7 @@ import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import { mapGetters } from 'vuex';
 export default {
   components: {
     gitExtend,
@@ -712,6 +739,7 @@ export default {
       formData: {
         name: '', // 应用名称
         code: '', // 应用ID
+        tenantMode: 'single',
         url: '', // 镜像仓库
         clusterName: '', // 集群名称
         sourceOrigin: 'soundCode', // 托管方式
@@ -943,9 +971,6 @@ export default {
       }
       return tagStrList.join('-');
     },
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
     mirrorExamplePlaceholder() {
       return `${this.$t('请输入镜像仓库，如')}：${
         this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE
@@ -978,6 +1003,10 @@ export default {
     },
     platformFeature() {
       return this.$store.state.platformFeature;
+    },
+    ...mapGetters(['isShowTenant']),
+    curUserInfo() {
+      return this.$store.state.curUserInfo;
     },
   },
   watch: {
@@ -1127,6 +1156,9 @@ export default {
           }
           return e;
         });
+        this.sourceControlTypeItem =
+          this.sourceControlTypes.find((item) => item.imgSrc === this.sourceControlTypeItem)?.imgSrc ??
+          this.sourceControlTypes[0]?.imgSrc;
         const sourceControlTypeValues = this.sourceControlTypes.map((item) => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
@@ -1318,6 +1350,8 @@ export default {
         region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
+        // 租户模式
+        ...(this.isShowTenant && { app_tenant_mode: this.formData.tenantMode }),
         source_config: {
           source_init_template: this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate,
           source_control_type: this.sourceControlTypeItem,

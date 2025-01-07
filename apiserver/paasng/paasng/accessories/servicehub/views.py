@@ -343,23 +343,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response({"result": services})
 
-    def list_by_region(self, request, region):
-        """根据region获取所有增强服务"""
-        # INFO: region 参数已经废弃，总是拉去所有的增强服务
-        results = []
-        for category in ServiceCategory.objects.order_by("sort_priority").all():
-            services = []
-            for service in mixed_service_mgr.list_by_category(category_id=category.id):
-                if not service.is_visible:
-                    continue
-
-                services.append(service)
-
-            if services:
-                results.append({"category": category, "services": services})
-        serializer = slzs.ServiceCategoryByRegionSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
-
     @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
     def list_related_apps(self, request, service_id):
         """获取服务绑定的所有应用"""

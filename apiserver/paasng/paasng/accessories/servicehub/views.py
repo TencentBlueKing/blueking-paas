@@ -317,7 +317,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(service)
         return Response({"result": serializer.data})
 
-    def list_by_template(self, request, region, template):
+    def list_by_template(self, request, template):
         """根据初始模板获取相关增强服务"""
         tmpl = Template.objects.get(name=template, type=TemplateType.NORMAL)
         services = {}

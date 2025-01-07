@@ -36,8 +36,8 @@ export default {
     /**
      * 获取增强服务实例
      */
-    getRegionsServices({}, { region, language }, config = {}) {
-      const url = `${BACKEND_URL}/api/services/regions/${region}/init_templates/${language}`;
+    getServicesByTmpl({}, { language }, config = {}) {
+      const url = `${BACKEND_URL}/api/services/init_templates/${language}`;
       return http.get(url, config);
     },
 

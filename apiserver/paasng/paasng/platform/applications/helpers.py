@@ -32,7 +32,7 @@ def register_builtin_user_groups_and_grade_manager(application: Application):
     默认为每个新建的蓝鲸应用创建三个用户组（管理者，开发者，运营者），以及该应用对应的分级管理员
     将 创建者 添加到 管理者用户组 以获取应用的管理权限，并添加为 分级管理员成员 以获取审批其他用户加入各个用户组的权限
     """
-    tenant_id = get_tenant_id_for_app(application.app_code)
+    tenant_id = get_tenant_id_for_app(application.code)
     iam_client = BKIAMClient(tenant_id)
     creator = get_username_by_bkpaas_user_id(application.creator)
 

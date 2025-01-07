@@ -876,6 +876,7 @@ class TestDeploymentModuleOrder:
         """
         from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
         from paasng.infras.iam.members.models import ApplicationUserGroup
+        from paasng.platform.applications.tenant import get_tenant_id_for_app
         from tests.utils.mocks.iam import StubBKIAMClient
 
         bk_user_1 = create_user()
@@ -883,7 +884,10 @@ class TestDeploymentModuleOrder:
         api_client_1.force_authenticate(user=bk_user_1)
 
         user_group = ApplicationUserGroup.objects.get(app_code=bk_app.code, role=ApplicationRole.DEVELOPER)
-        StubBKIAMClient().add_user_group_members(user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS)
+        tenant_id = get_tenant_id_for_app(bk_app.code)
+        StubBKIAMClient(tenant_id).add_user_group_members(
+            user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS
+        )
         return api_client_1
 
     def test_module_order(self, api_client, bk_app, api_client_1):

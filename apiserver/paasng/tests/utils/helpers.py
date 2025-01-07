@@ -563,10 +563,12 @@ def register_iam_after_create_application(application: Application):
     """
     from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
     from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+    from paasng.platform.applications.tenant import get_tenant_id_for_app
     from paasng.utils.basic import get_username_by_bkpaas_user_id
     from tests.utils.mocks.iam import StubBKIAMClient
 
-    cli = StubBKIAMClient()
+    tenant_id = get_tenant_id_for_app(application.code)
+    cli = StubBKIAMClient(tenant_id)
     creator = get_username_by_bkpaas_user_id(application.creator or application.owner)
 
     # 1. 创建分级管理员，并记录分级管理员 ID

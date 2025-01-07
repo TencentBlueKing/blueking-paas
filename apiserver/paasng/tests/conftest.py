@@ -38,6 +38,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
+from paasng.accessories.log.shim.setup_elk import setup_platform_elk_config
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
     register_app_core_data,
@@ -63,6 +64,7 @@ from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
 from tests.utils.auth import create_user
+from tests.utils.basic import generate_random_string
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING, build_default_cluster
 from tests.utils.helpers import (
     _mock_wl_services_in_creation,
@@ -70,7 +72,6 @@ from tests.utils.helpers import (
     create_app,
     create_cnative_app,
     create_pending_wl_apps,
-    generate_random_string,
     initialize_module,
 )
 
@@ -151,6 +152,7 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
         cluster, apiserver = build_default_cluster()
         cluster.save()
         apiserver.save()
+        setup_platform_elk_config(settings.ELASTICSEARCH_HOSTS[0])
 
 
 def pytest_sessionstart(session):
@@ -381,27 +383,36 @@ def _mock_iam():
     from tests.utils.mocks.iam import StubBKIAMClient
     from tests.utils.mocks.permissions import StubApplicationPermission
 
-    with mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient), mock.patch(
-        "paasng.infras.iam.helpers.BKIAMClient",
-        new=StubBKIAMClient,
-    ), mock.patch(
-        "paasng.platform.applications.helpers.BKIAMClient",
-        new=StubBKIAMClient,
-    ), mock.patch(
-        "paasng.infras.iam.helpers.IAM_CLI",
-        new=StubBKIAMClient(),
-    ), mock.patch(
-        "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
-        new=mock_user_has_app_action_perm,
-    ), mock.patch(
-        "paasng.platform.declarative.application.controller.user_has_app_action_perm",
-        new=mock_user_has_app_action_perm,
-    ), mock.patch(
-        "paasng.platform.applications.models.ApplicationPermission",
-        new=StubApplicationPermission,
-    ), mock.patch(
-        "paasng.plat_admin.numbers.app.ApplicationPermission",
-        new=StubApplicationPermission,
+    with (
+        mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient),
+        mock.patch(
+            "paasng.infras.iam.helpers.BKIAMClient",
+            new=StubBKIAMClient,
+        ),
+        mock.patch(
+            "paasng.platform.applications.helpers.BKIAMClient",
+            new=StubBKIAMClient,
+        ),
+        mock.patch(
+            "paasng.infras.iam.helpers.IAM_CLI",
+            new=StubBKIAMClient(),
+        ),
+        mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
+            new=mock_user_has_app_action_perm,
+        ),
+        mock.patch(
+            "paasng.platform.declarative.application.controller.user_has_app_action_perm",
+            new=mock_user_has_app_action_perm,
+        ),
+        mock.patch(
+            "paasng.platform.applications.models.ApplicationPermission",
+            new=StubApplicationPermission,
+        ),
+        mock.patch(
+            "paasng.plat_admin.numbers.app.ApplicationPermission",
+            new=StubApplicationPermission,
+        ),
     ):
         yield
 
@@ -867,9 +878,10 @@ def mock_env_is_running():
         return status.get(env.environment, False)
 
     status["side_effect"] = side_effect  # type: ignore
-    with mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1, mock.patch(
-        "paas_wl.workloads.networking.entrance.shim.env_is_running"
-    ) as m2:
+    with (
+        mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1,
+        mock.patch("paas_wl.workloads.networking.entrance.shim.env_is_running") as m2,
+    ):
         m1.side_effect = side_effect
         m2.side_effect = side_effect
         yield status
@@ -927,7 +939,8 @@ def _with_wl_apps(request):
 @pytest.fixture(autouse=True, scope="session")
 def _mock_sync_developers_to_sentry():
     # 避免单元测试时会往 celery 推送任务
-    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
-        "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+    with (
+        mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"),
+        mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"),
     ):
         yield

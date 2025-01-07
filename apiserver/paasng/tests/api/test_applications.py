@@ -29,6 +29,8 @@ from rest_framework.test import APIClient
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
@@ -622,6 +624,101 @@ class TestCreateCloudNativeApp:
         assert response.status_code == 201, f'error: {response.json()["detail"]}'
         application = Application.objects.get(code=f"uta-{random_suffix}")
         assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
+
+
+@pytest.mark.usefixtures("_init_tmpls")
+@pytest.mark.usefixtures("mock_initialize_vcs_with_template")
+class TestCreateApplicationWithTenantParams:
+    """Test application creation with different tenant parameters and settings."""
+
+    # cases start: when multi-tenant mode is disabled
+
+    @pytest.mark.parametrize(
+        ("user_tenant", "request_tenant_mode"),
+        [
+            (DEFAULT_TENANT_ID, AppTenantMode.GLOBAL),
+            (DEFAULT_TENANT_ID, AppTenantMode.SINGLE),
+            (DEFAULT_TENANT_ID, None),
+            ("foo_tenant", AppTenantMode.GLOBAL),
+            ("foo_tenant", AppTenantMode.SINGLE),
+            ("foo_tenant", None),
+        ],
+    )
+    def test_any_tenant_or_model_should_produce_the_same_result(
+        self, user_tenant, request_tenant_mode, api_client, settings
+    ):
+        settings.ENABLE_MULTI_TENANT_MODE = False
+
+        user = create_user(tenant_id=user_tenant)
+        api_client.force_authenticate(user=user)
+        if request_tenant_mode is None:
+            data = self.build_create_params()
+        else:
+            data = self.build_create_params(app_tenant_mode=request_tenant_mode.value)
+        response = api_client.post("/api/bkapps/cloud-native/", data=data)
+
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()["application"]
+        assert app_data["app_tenant_mode"] == AppTenantMode.GLOBAL
+        assert app_data["app_tenant_id"] == ""
+
+        # Check the tenant_id of the created application object
+        # TODO: Find a better way to do this assertion check.
+        assert Application.objects.get(code=app_data["code"]).tenant_id == DEFAULT_TENANT_ID
+
+    # cases start: when multi-tenant mode is enabled
+
+    @pytest.mark.parametrize(
+        ("user_tenant", "request_tenant_mode", "expected"),
+        [
+            # None value for 'expected' means the creation should fail
+            ("foo_tenant", AppTenantMode.GLOBAL, None),
+            ("foo_tenant", AppTenantMode.SINGLE, (AppTenantMode.SINGLE, "foo_tenant")),
+            ("foo_tenant", None, (AppTenantMode.SINGLE, "foo_tenant")),
+            (OP_TYPE_TENANT_ID, AppTenantMode.GLOBAL, (AppTenantMode.GLOBAL, "")),
+            (OP_TYPE_TENANT_ID, AppTenantMode.SINGLE, (AppTenantMode.SINGLE, OP_TYPE_TENANT_ID)),
+            (OP_TYPE_TENANT_ID, None, (AppTenantMode.SINGLE, OP_TYPE_TENANT_ID)),
+        ],
+    )
+    def test_any_tenant_or_model_should_create_the_same_result(
+        self, user_tenant, request_tenant_mode, expected, api_client, settings
+    ):
+        settings.ENABLE_MULTI_TENANT_MODE = True
+
+        user = create_user(tenant_id=user_tenant)
+        api_client.force_authenticate(user=user)
+        if request_tenant_mode is None:
+            data = self.build_create_params()
+        else:
+            data = self.build_create_params(app_tenant_mode=request_tenant_mode.value)
+        response = api_client.post("/api/bkapps/cloud-native/", data=data)
+
+        if expected is None:
+            assert response.status_code == 400
+            return
+
+        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        app_data = response.json()["application"]
+        assert app_data["app_tenant_mode"] == expected[0]
+        assert app_data["app_tenant_id"] == expected[1]
+
+        assert Application.objects.get(code=app_data["code"]).tenant_id == user_tenant
+
+    def build_create_params(self, **kwargs):
+        """The default parameters for creating an application."""
+        random_suffix = generate_random_string(length=6)
+        return {
+            "region": settings.DEFAULT_REGION_NAME,
+            "code": f"uta-{random_suffix}",
+            "name": f"uta-{random_suffix}",
+            "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
+            "source_config": {
+                "source_init_template": "docker",
+                "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                "source_repo_auth_info": {},
+            },
+        } | kwargs
 
 
 class TestListEvaluation:

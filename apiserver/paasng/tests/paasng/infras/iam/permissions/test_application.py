@@ -23,7 +23,7 @@ from paasng.infras.iam.permissions.exceptions import PermissionDeniedError
 from paasng.infras.iam.permissions.perm import ActionResourcesRequest
 from paasng.infras.iam.permissions.resources.application import AppAction, AppCreatorAction, AppPermCtx
 from tests.paasng.infras.iam.conftest import generate_apply_url
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 from . import roles
 

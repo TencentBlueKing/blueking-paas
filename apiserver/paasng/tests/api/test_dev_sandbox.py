@@ -22,7 +22,7 @@ import pytest
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import DevSandboxDetail, HealthPhase
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 

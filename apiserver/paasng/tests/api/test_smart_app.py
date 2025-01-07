@@ -160,11 +160,14 @@ class TestUpdateSMartApp:
         assert response.json()["original_app_description"]["code"] == bk_cnative_app.code
 
         signature = response.json()["signature"]
-        response = api_client.post(
-            f"/api/bkapps/applications/{bk_cnative_app.code}/source_package/commit/{signature}/",
-        )
+        with mock.patch(
+            "paasng.platform.declarative.application.controller.AppDeclarativeController._sync_default_module"
+        ):
+            response = api_client.post(
+                f"/api/bkapps/applications/{bk_cnative_app.code}/source_package/commit/{signature}/",
+            )
 
-        assert response.status_code == 201
+            assert response.status_code == 201
 
 
 def make_smart_tarball(tmp_path: Path, desc_updater: Callable, version: str = "") -> Path:

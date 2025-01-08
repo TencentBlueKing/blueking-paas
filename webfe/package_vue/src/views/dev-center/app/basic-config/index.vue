@@ -5,11 +5,15 @@
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
+      :is-trace="true"
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
     <div class="router-container">
-      <router-view :key="routeIndex" :environment="active"></router-view>
+      <router-view
+        :key="routeIndex"
+        :environment="active"
+      ></router-view>
     </div>
   </div>
 </template>
@@ -42,11 +46,11 @@ export default {
       ];
       // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
-        panels = panels.filter(tab => tab.name !== 'appMobileMarket');
+        panels = panels.filter((tab) => tab.name !== 'appMobileMarket');
       }
       // 普通应用不支持 | feature判断
       if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
-        panels = panels.filter(tab => tab.name !== 'storage');
+        panels = panels.filter((tab) => tab.name !== 'storage');
       }
       return panels;
     },
@@ -68,7 +72,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curEnv = this.panels.find(item => item.name === name) || this.panels[0];
+      const curEnv = this.panels.find((item) => item.name === name) || this.panels[0];
       this.$router.push({
         name: curEnv.routeName,
         params: {
@@ -90,5 +94,3 @@ export default {
   },
 };
 </script>
-<style lang="scss" scoped>
-</style>

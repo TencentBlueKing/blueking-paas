@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-12-19 15:18+0800\n"
+"POT-Creation-Date: 2024-12-21 10:28+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -324,11 +324,21 @@ msgstr "Supports auto-scaling"
 msgid "支持 BCS Egress"
 msgstr "Supports BCS Egress"
 
+#: paas_wl/infras/cluster/constants.py:79
+msgid "静态分配"
+msgstr "Allocate statically"
+
+#: paas_wl/infras/cluster/constants.py:80
+msgid "按规则分配"
+msgstr "Allocate according to rules"
+
+#: paas_wl/infras/cluster/constants.py:86
+msgid "可用区域为"
+msgstr "RegionIs"
+
 #: paas_wl/infras/cluster/models.py:249
-#, fuzzy
-#| msgid "修改应用市场访问地址"
 msgid "应用的访问地址类型"
-msgstr "modify market url"
+msgstr "Application access address type"
 
 #: paas_wl/infras/cluster/serializers.py:52
 msgid "`sub_path_domains` 与 `app_root_domains` 不能同时为空"

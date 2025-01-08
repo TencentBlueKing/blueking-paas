@@ -513,7 +513,7 @@ export default {
           moduleId: this.curModuleId,
           service: this.service,
         });
-        const { results, plans } = res;
+        const { results, plans = {} } = res;
         this.instanceList = results;
         this.servicePlans = plans;
         for (const instanceIndex in results) {
@@ -1155,6 +1155,7 @@ export default {
   }
   .gray {
     color: #c4c6cc;
+    margin-right: 6px;
   }
   .break-all {
     color: #63656e;

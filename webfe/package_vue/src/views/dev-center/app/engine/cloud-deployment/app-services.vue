@@ -79,33 +79,26 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
-              <span v-if="row.isStartUp && row.plans">
-                <bk-tag v-if="row.plans?.stag?.name === row.plans?.prod?.name">
+              <div
+                v-if="row.isStartUp && row.plans"
+                class="config-info-tag"
+              >
+                <bk-tag
+                  v-if="row.plans?.stag?.name === row.plans?.prod?.name"
+                  v-bk-overflow-tips="{ allowHTML: true }"
+                >
                   {{ row.plans.stag?.name }}
                 </bk-tag>
                 <bk-tag
                   v-else
                   v-for="(value, key) in row.plans"
                   :key="key"
+                  v-bk-overflow-tips
                 >
                   {{ getEnvironmentName(key) }}：{{ value.name }}
                 </bk-tag>
-              </span>
+              </div>
               <span v-else>{{ $t('无') }}</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('共享信息')"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
-                {{ $t('被') }} {{ row.ref_modules.map((e) => e.name).join(',') }} {{ $t('共享') }}
-              </span>
-              <span v-else-if="row.type === 'shared' && row.ref_module">
-                {{ $t('共享来自') }} {{ row.ref_module.name }}
-              </span>
-              <span v-else>--</span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -172,7 +165,7 @@
       <bk-dialog
         v-model="isShowStartDialog"
         width="600"
-        :title="$t('配置信息')"
+        :title="$t('方案信息')"
         :mask-close="false"
         ext-cls="paasng-service-export-dialog-cls"
         header-position="left"
@@ -180,7 +173,7 @@
       >
         <bk-form
           :model="startFormData"
-          :label-width="100"
+          :label-width="150"
           ext-cls="config-info-box"
         >
           <bk-form-item
@@ -780,7 +773,7 @@ export default {
     },
 
     getEnvironmentName(key) {
-      return key === 'prod' ? this.$t('生产环境') : this.$t('预发布环境');
+      return key === 'prod' ? this.$t('方案（生产环境）') : this.$t('方案（预发布环境）');
     },
 
     // 获取应用模块绑定服务时，可能的详情方案
@@ -890,6 +883,14 @@ export default {
       margin-left: 0px !important;
       line-height: 32px;
     }
+  }
+}
+.config-info-tag {
+  display: flex;
+  .bk-tag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

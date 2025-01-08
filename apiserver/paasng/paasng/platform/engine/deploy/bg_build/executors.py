@@ -40,6 +40,7 @@ from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
     BkCIPipelineBuildNotSuccess,
     BkCITooManyEnvVarsError,
+    BuildProcessTimeoutError,
 )
 from paasng.platform.engine.deploy.bg_build.utils import (
     SlugBuilderTemplate,
@@ -60,8 +61,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Max timeout seconds for waiting the slugbuilder pod to become ready
-_WAIT_FOR_READINESS_TIMEOUT = 300
-_BUILD_PROCESS_TIMEOUT = 300
+_WAIT_FOR_READINESS_TIMEOUT = 5 * 60
+# Read timeout seconds for retrieving logs (wait for the connection connected)
+_POD_LOG_READ_TIMEOUT = 5 * 60
+# Max timeout seconds for waiting the bkci pipeline to become success
+_BKCI_PIPELINE_BUILD_TIMEOUT = 12 * 60
 
 
 class DefaultBuildProcessExecutor(DeployStep):
@@ -150,7 +154,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
             for raw_line in self.build_handler.get_build_log(
-                name=self._builder_name, follow=True, timeout=_BUILD_PROCESS_TIMEOUT, namespace=self.wl_app.namespace
+                name=self._builder_name, follow=True, timeout=_POD_LOG_READ_TIMEOUT, namespace=self.wl_app.namespace
             ):
                 line = force_str(raw_line)
                 self.stream.write_message(line)
@@ -295,6 +299,9 @@ class PipelineBuildProcessExecutor(DeployStep):
         except BkCITooManyEnvVarsError:
             self.stream.write_message(Style.Error("Too many environment variables, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
+        except BuildProcessTimeoutError:
+            self.stream.write_message(Style.Error("Build process timeout, please contact the administrator"))
+            self.bp.update_status(BuildStatus.FAILED)
         except Exception:
             logger.exception(f"critical error happened during deploy[{self.bp}]")
             self.bp.update_status(BuildStatus.FAILED)
@@ -328,13 +335,19 @@ class PipelineBuildProcessExecutor(DeployStep):
             start = idx * self.mac_env_var_block_length
             env_vars_params[f"ENV_VARS_BLOCK_{idx}"] = env_vars_str[start : start + self.mac_env_var_block_length]
 
+        # 由于蓝盾流水线构建没有参数可以传递应用信息，因此借用启动参数传递（便于问题定位 & 排查）
+        env = self.deployment.app_environment
+        env_vars_params["APP_MODULE_ENV_INFO"] = (
+            f"App: {env.application.code}, Module: {env.module.name}, Env: {env.environment}"
+        )
+
         return env_vars_params
 
     def _start_following_logs(self, pb: entities.PipelineBuild):
         """通过轮询，检查流水线是否执行完成，并逐批获取执行日志"""
         time_started = time.time()
 
-        while time.time() - time_started < _BUILD_PROCESS_TIMEOUT:
+        while time.time() - time_started < _BKCI_PIPELINE_BUILD_TIMEOUT:
             time.sleep(self.polling_result_interval)
             self.stream.write_message("Pipeline is running, please wait patiently...")
 
@@ -352,6 +365,9 @@ class PipelineBuildProcessExecutor(DeployStep):
             ]:
                 logger.info("break poll loop with pipeline build status: %s", build_status.status)
                 break
+        else:
+            # 没有在 while 循环中跳出 -> 构建超时
+            raise BuildProcessTimeoutError
 
         # Q：为什么不在轮询过程中，按分块获取日志（做流式效果）
         # A：经测试，通过获取 log_num 再分块获取日志，会丢失部分日志，这是难以接受的，

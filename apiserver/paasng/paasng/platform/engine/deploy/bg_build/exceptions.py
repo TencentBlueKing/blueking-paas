@@ -21,3 +21,7 @@ class BkCIPipelineBuildNotSuccess(Exception):
 
 class BkCITooManyEnvVarsError(Exception):
     """环境变量过多"""
+
+
+class BuildProcessTimeoutError(Exception):
+    """构建超时"""

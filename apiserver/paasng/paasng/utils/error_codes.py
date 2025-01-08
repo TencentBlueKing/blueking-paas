@@ -84,6 +84,7 @@ class ErrorCodes:
     CUSTOM_COLLECTOR_NOT_EXISTED = ErrorCode(_("日志平台-「自定义上报」配置不存在"))
     CANNOT_DELETE_CUSTOM_COLLECTOR = ErrorCode(_("删除日志采集规则失败"))
     CUSTOM_COLLECTOR_UNSUPPORTED = ErrorCode(_("暂不支持自定义日志采集"))
+    ES_NOT_CONFIGURED = ErrorCode(_("ElasticSearch 未配置"))
     # 权限管理
     CANNOT_MODIFY_ITEM = ErrorCode(_("当前项不允许变更"))
     # 迁移
@@ -121,7 +122,8 @@ class ErrorCodes:
     # 文档填写
     DOC_TEMPLATE_ID_NOT_FOUND = ErrorCode(_("文档模板不存在"))
     # S-Mart 应用
-    PREPARED_PACKAGE_NOT_FOUND = ErrorCode(_("没找到任何待创建的 S-mart 应用包"), code_num=4314001)
+    PREPARED_PACKAGE_NOT_FOUND = ErrorCode(_("没找到任何待创建的 S-Mart 应用包"), code_num=4314001)
+    PREPARED_PACKAGE_ERROR = ErrorCode(_("预处理 S-Mart 应用包异常"))
     MISSING_DESCRIPTION_INFO = ErrorCode(_("缺失应用描述文件"), code_num=4314002)
     FAILED_TO_HANDLE_APP_DESC = ErrorCode(_("分析应用描述文件异常"), code_num=4314003)
     FAILED_TO_PUSH_IMAGE = ErrorCode(_("访问容器镜像仓库异常"), code_num=4314004)
@@ -181,6 +183,9 @@ class ErrorCodes:
 
     # Manifest
     IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
+
+    # 应用集群
+    CANNOT_DELETE_CLUSTER = ErrorCode("无法删除应用集群")
 
     # dev sandbox
     DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)

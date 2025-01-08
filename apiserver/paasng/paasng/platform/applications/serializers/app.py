@@ -253,7 +253,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        exclude = ["logo"]
+        exclude = ["logo", "tenant_id"]
 
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):

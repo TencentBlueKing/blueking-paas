@@ -19,6 +19,7 @@ import logging
 from collections import defaultdict
 from typing import Any, Dict, List
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404
@@ -27,6 +28,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -50,6 +52,8 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -764,4 +768,41 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
         unbound_instance.recycle_resource()
 
+        return Response()
+
+    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
+    @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveUnboundServiceSensitiveFieldSLZ)
+    def retrieve_sensitive_field(self, request, code, module_name, service_id):
+        """验证验证码查看解绑实例的敏感信息字段"""
+        serializer = slzs.RetrieveUnboundServiceSensitiveFieldSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        # 验证验证码
+        if settings.ENABLE_VERIFICATION_CODE:
+            verifier = make_verifier(request.session, FunctionType.RETRIEVE_UNBOUND_SERVICE_SENSITIVE_FIELD.value)
+            is_valid = verifier.validate(data["verification_code"])
+            if not is_valid:
+                raise ValidationError({"verification_code": [_("验证码错误")]})
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        else:
+            logger.warning(
+                "Verification code functionality is not currently supported. Returning the sensitive field directly."
+            )
+
+        service_obj = mixed_service_mgr.get_or_404(service_id)
+
+        try:
+            unbound_instance_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service_obj, data["instance_id"]
+            )
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        instance = unbound_instance_rel.get_instance()
+        if not instance:
+            raise NotFound(detail="Resource has been recycled.", code=404)
+
+        credentials = instance.credentials
+        if data["field_name"] in instance.should_remove_fields and data["field_name"] in credentials:
+            return Response(credentials[data["field_name"]])
         return Response()

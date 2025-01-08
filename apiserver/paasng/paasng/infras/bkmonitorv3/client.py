@@ -96,7 +96,8 @@ class BKMonitorSpaceManager:
             "space_name": space.space_name,
             "space_id": space.space_id,
             "space_type_id": space.space_type_id,
-            "creator": space.creator,
+            # Application 表中只记录了创建者信息，这个字段不影响实际使用，为了不增加额外的传参复杂度，故 updater 还是传应用的创建者
+            "updater": space.creator,
         }
         try:
             resp = self.client.metadata_update_space(

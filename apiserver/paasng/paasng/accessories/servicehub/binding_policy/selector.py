@@ -16,14 +16,49 @@
 from enum import StrEnum
 from typing import Dict, List
 
-from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
-from paasng.accessories.servicehub.manager import mixed_plan_mgr
+from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError, PlanSelectorError
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.module import Module
 
 from .policy import binding_policy_factory, precedence_policy_factory
+
+
+def get_plan_by_env(
+    service: ServiceObj, env: ModuleEnvironment, plan_id: str | None, env_plan_id_map: dict[str, str] | None
+) -> PlanObj:
+    """Return the plan that matching the given conditions.
+
+    The plan_id and env_plan_id_map are optional, if both are not provided, the plan
+    selector will be used to select a plan.
+
+    :param env: The module env obj.
+    :param plan_id: Optional, The plan id
+    :param env_plan_id_map: Optional, The plan id map, structure: {env_name: plan_id, ...}.
+    :return: A Plan object.
+    :raise ValueError: When unable to find a plan by given parameters.
+    """
+    selector = PlanSelector()
+
+    if plan_id:
+        key = plan_id
+    elif env_plan_id_map:
+        key = env_plan_id_map[env.environment]
+    else:
+        try:
+            return selector.select(service, env)
+        except PlanSelectorError as e:
+            raise ValueError(f"Unable to select a plan: {e}")
+
+    plans = selector.list(service, env)
+    # Try to find the plan object by the given plan id
+    if not plans:
+        raise ValueError("no plans found")
+    plan = next((p for p in plans if p.uuid == key), None)
+    if not plan:
+        raise ValueError("no plan found by given plan_id")
+    return plan
 
 
 class PlanSelector:
@@ -45,12 +80,15 @@ class PlanSelector:
     def select(self, service: ServiceObj, env: ModuleEnvironment) -> PlanObj:
         """Select the plan for the env object, might raise an exception if no plan is found
         or multiple plans are found.
+
+        :raise NoPlanFoundError: If no plan is found
+        :raise MultiplePlanFoundError: If multiple plans are found
         """
         plans = self.list(service, env)
         if len(plans) == 0:
-            raise NoPlanFoundError("No plans found")
+            raise NoPlanFoundError("no plans found")
         elif len(plans) > 1:
-            raise MultiplePlanFoundError("Multiple plans found")
+            raise MultiplePlanFoundError("multiple plans found")
         return plans[0]
 
     def list(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
@@ -92,8 +130,8 @@ class PlanSelector:
     @staticmethod
     def plan_ids_to_objs(service: ServiceObj, plan_ids: List[str]) -> List[PlanObj]:
         """Convert the plan ids to plan objects"""
-        all_plans = mixed_plan_mgr.list(service)
-        return [p for p in all_plans if p.uuid in plan_ids]
+        index = {p.uuid: p for p in service.get_plans()}
+        return [index[plan_id] for plan_id in plan_ids]
 
 
 class PossiblePlansResultType(StrEnum):

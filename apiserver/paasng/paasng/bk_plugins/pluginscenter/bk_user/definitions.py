@@ -14,14 +14,14 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
-from paasng.utils.structure import prepare_json_field
+from paasng.utils.structure import register
 
 
-@prepare_json_field
+@register
 class DepartmentDetail(BaseModel):
     """组织架构的详情
 
@@ -33,3 +33,20 @@ class DepartmentDetail(BaseModel):
     id: int
     name: str
     parent: Optional[int]
+
+
+@register
+class LeaderDetail(BaseModel):
+    """用户上级详情，目前只用到了 username 字段"""
+
+    username: str
+
+
+@register
+class UserDetail(BaseModel):
+    """用户详情，目前只用到了 leader 字段
+
+    :param leader: 用户上级
+    """
+
+    leader: List[LeaderDetail]

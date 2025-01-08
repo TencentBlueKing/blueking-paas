@@ -17,8 +17,7 @@
 
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Collection, Dict, List
+from typing import Collection, Dict
 
 from django.db import models
 
@@ -123,6 +122,35 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
             return "{prefix}-no-provision".format(prefix=prefix)
 
 
+class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
+    """Unbound attachment between local service and engine app"""
+
+    engine_app = models.ForeignKey(
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_service_attachment",
+    )
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, db_constraint=False, verbose_name="增强服务")
+    service_instance = models.ForeignKey(
+        ServiceInstance,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        db_constraint=False,
+        verbose_name="增强服务实例",
+    )
+
+    class Meta:
+        verbose_name = "unbound attachment between local service and engine app"
+        unique_together = ("service", "engine_app", "service_instance")
+
+    def clean_service_instance(self):
+        """回收增强服务资源"""
+        self.service.delete_service_instance(self.service_instance)
+
+
 class RemoteServiceModuleAttachment(OwnerTimestampedModel):
     """Binding relationship of module <-> remote service"""
 
@@ -149,6 +177,24 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
 
     class Meta:
         unique_together = ("service_id", "engine_app")
+
+
+class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
+    """Unbound attachment between remote service and engine app"""
+
+    engine_app = models.ForeignKey(
+        "engine.EngineApp",
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        verbose_name="蓝鲸引擎应用",
+        related_name="unbound_remote_service_attachment",
+    )
+    service_id = models.UUIDField(verbose_name="远程增强服务 ID")
+    service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
+
+    class Meta:
+        verbose_name = "unbound attachment between remote service and engine app"
+        unique_together = ("service_id", "engine_app", "service_instance_id")
 
 
 class ServiceDBProperties:
@@ -201,37 +247,6 @@ class SharedServiceAttachment(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "service_type", "service_id")
-
-
-@dataclass
-class ServiceSetGroupByName:
-    name: str
-    logo: str
-    display_name: str
-    description: str
-    long_description: str
-    available_languages: str
-    instance_tutorial: str
-
-    enabled_regions: List[str] = field(default_factory=list)
-    services: List[ServiceObj] = field(default_factory=list)
-    instances: List[object] = field(default_factory=list)
-
-    @classmethod
-    def from_service(cls, service: ServiceObj):
-        return cls(
-            name=service.name,
-            logo=service.logo,
-            display_name=service.display_name,
-            description=service.description,
-            long_description=service.long_description,
-            available_languages=service.available_languages,
-            instance_tutorial=service.instance_tutorial,
-        )
-
-    def add_enabled_region(self, region: str):
-        if region not in self.enabled_regions:
-            self.enabled_regions.append(region)
 
 
 class ServiceBindingPolicy(AuditedModel):

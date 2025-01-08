@@ -19,6 +19,7 @@ from unittest import mock
 
 import pytest
 
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.oauth2.api import BkAppSecret
 from paasng.infras.oauth2.utils import create_oauth2_client, get_oauth2_client_secret
 
@@ -38,6 +39,6 @@ class TestBkOauthClient:
         with mock.patch("paasng.infras.oauth2.utils.get_app_secret_in_env_var", return_value=secret_obj), mock.patch(
             "paasng.infras.oauth2.utils.create_oauth2_client", return_value=secret_obj
         ):
-            create_oauth2_client(bk_oauth_client_id)
+            create_oauth2_client(bk_oauth_client_id, app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="")
             client_secret = get_oauth2_client_secret(bk_oauth_client_id)
             assert client_secret == bk_oauth_client_key

@@ -38,24 +38,34 @@
               v-if="!appBaseInfoConfig.isEdit"
             >
               <section class="info-warpper">
-                <div class="row">
-                  <div class="item">
-                    <div class="label">{{ $t('应用名称') }}：</div>
-                    <div
-                      class="value"
-                      v-bk-overflow-tips
-                    >
-                      {{ localeAppInfo.name || '--' }}
-                    </div>
-                  </div>
+                <div class="item">
+                  <div class="label">{{ $t('应用名称') }}：</div>
                   <div
-                    class="item"
-                    v-if="platformFeature.REGION_DISPLAY"
+                    class="value"
+                    v-bk-overflow-tips
                   >
-                    <div class="label">{{ $t('应用版本') }}：</div>
-                    <div class="value">{{ curAppInfo.application.region_name || '--' }}</div>
+                    {{ localeAppInfo.name || '--' }}
                   </div>
                 </div>
+                <div
+                  class="item"
+                  v-if="platformFeature.REGION_DISPLAY"
+                >
+                  <div class="label">{{ $t('应用版本') }}：</div>
+                  <div class="value">{{ curAppInfo.application.region_name || '--' }}</div>
+                </div>
+                <template v-if="isShowTenant">
+                  <div class="item">
+                    <div class="label">{{ $t('租户类型') }}：</div>
+                    <div class="value">
+                      {{ $t(appTenantMode[curAppInfo.application.app_tenant_mode]) }}
+                    </div>
+                  </div>
+                  <div class="item">
+                    <div class="label">{{ $t('所属租户') }}：</div>
+                    <div class="value">{{ curAppInfo.application.app_tenant_id || '--' }}</div>
+                  </div>
+                </template>
                 <div class="item">
                   <div class="label">{{ $t('创建时间') }}：</div>
                   <div class="value">{{ curAppInfo.application.created || '--' }}</div>
@@ -161,7 +171,11 @@
             </div>
           </div>
           <div class="info">
-            {{ descAppStatus ? $t('已启用应用描述文件 app_desc.yaml，可在文件中定义环境变量，服务发现等。') : $t('未启用应用描述文件 app_desc.yaml') }}
+            {{
+              descAppStatus
+                ? $t('已启用应用描述文件 app_desc.yaml，可在文件中定义环境变量，服务发现等。')
+                : $t('未启用应用描述文件 app_desc.yaml')
+            }}
             <a
               :href="GLOBAL.DOC.APP_DESC_DOC"
               target="_blank"
@@ -268,6 +282,8 @@ import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import authenticationInfo from '@/components/authentication-info.vue';
 import pluginInfo from './plugin-info.vue';
+import { APP_TENANT_MODE } from '@/common/constants';
+import { mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -322,6 +338,7 @@ export default {
         visible: false,
       },
       curFileData: [],
+      appTenantMode: APP_TENANT_MODE,
     };
   },
   computed: {
@@ -357,6 +374,7 @@ export default {
     isShowAppDescriptionFile() {
       return !['engineless_app', 'cloud_native'].includes(this.curAppInfo.application.type);
     },
+    ...mapGetters(['isShowTenant']),
   },
   watch: {
     curAppInfo(value) {
@@ -404,11 +422,14 @@ export default {
     // 应用名称校验
     handleSaveCheck() {
       // 应用名称保存
-      this.$refs.appNmaeRef.validate().then(() => {
-        this.updateAppBasicInfo();
-      }, (e) => {
-        console.error(e.content || e);
-      });
+      this.$refs.appNmaeRef.validate().then(
+        () => {
+          this.updateAppBasicInfo();
+        },
+        (e) => {
+          console.error(e.content || e);
+        }
+      );
     },
 
     // 更新基本信息
@@ -524,9 +545,11 @@ export default {
     handleEditBaseInfo() {
       if (!this.isBasicInfoEditable) return;
       if (this.localeAppInfo.logo) {
-        this.curFileData = [{
-          url: this.localeAppInfo.logo,
-        }];
+        this.curFileData = [
+          {
+            url: this.localeAppInfo.logo,
+          },
+        ];
       }
       this.appBaseInfoConfig.isEdit = true;
     },
@@ -551,11 +574,14 @@ export default {
 
     // 基本信息提交
     handleSubmitBaseInfo() {
-      this.$refs.formNameRef?.validate().then(async () => {
-        this.updateAppBasicInfo();
-      }, (e) => {
-        console.error(e);
-      });
+      this.$refs.formNameRef?.validate().then(
+        async () => {
+          this.updateAppBasicInfo();
+        },
+        (e) => {
+          console.error(e);
+        }
+      );
     },
 
     // 自定义上传处理
@@ -574,10 +600,12 @@ export default {
       }
       this.appBaseInfoConfig.logoData = fileData;
       const previewImageUrl = URL.createObjectURL(fileData);
-      this.curFileData = [{
-        name: fileData.name,
-        url: previewImageUrl,
-      }];
+      this.curFileData = [
+        {
+          name: fileData.name,
+          url: previewImageUrl,
+        },
+      ];
     },
     handleDelete() {
       this.curFileData = [];

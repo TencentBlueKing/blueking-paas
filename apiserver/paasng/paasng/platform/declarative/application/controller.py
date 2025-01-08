@@ -105,7 +105,7 @@ class AppDeclarativeController:
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
         )
-        create_oauth2_client(application.code)
+        create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
         self.sync_modules(application, desc.modules)
         default_module = application.get_default_module()
 
@@ -293,7 +293,7 @@ class AppDeclarativeController:
         """Sync services related field for single module."""
         for service in services:
             try:
-                obj = mixed_service_mgr.find_by_name(service.name, region=module.region)
+                obj = mixed_service_mgr.find_by_name(service.name)
             except ServiceObjNotFound:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
@@ -312,7 +312,7 @@ class AppDeclarativeController:
                     continue
 
                 logger.info('Bind service "%s" to Module "%s".', service.name, module)
-                mixed_service_mgr.bind_service(obj, module, specs=service.specs)
+                mixed_service_mgr.bind_service_use_first_plan(obj, module)
 
     def save_description(self, desc: ApplicationDesc, application: Application, is_creation: bool):
         """Save description to database

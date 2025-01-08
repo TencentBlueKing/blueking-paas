@@ -35,7 +35,7 @@ from paasng.platform.sourcectl.package.client import (
 from paasng.platform.sourcectl.package.uploader import upload_to_blob_store
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 class TestBinaryTarClient:

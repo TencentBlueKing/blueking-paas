@@ -129,7 +129,7 @@ class Command(BaseCommand):
         :param dry_run: 是否为模拟运行
         """
         try:
-            service = mixed_service_mgr.find_by_name(name, region)
+            service = mixed_service_mgr.find_by_name(name)
         except ServiceObjNotFound:
             self.stdout.write(self.style.WARNING(f"Addon service(name:{name},region:{region}) does not exist, skip"))
             return

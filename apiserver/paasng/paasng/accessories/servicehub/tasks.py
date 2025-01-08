@@ -16,8 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from collections import defaultdict
 
-from .models import ServiceInstance
+from paasng.accessories.servicehub.remote.client import RemoteServiceClient
+from paasng.accessories.servicehub.remote.exceptions import RClientResponseError
+from paasng.accessories.servicehub.remote.store import get_remote_store
+
+from .models import ServiceInstance, UnboundRemoteServiceEngineAppAttachment
 
 logger = logging.getLogger(__name__)
 
@@ -44,3 +49,34 @@ def clean_instances():
             continue
         else:
             logger.info(f"instance<{uuid}> cleaned. ")
+
+
+def check_unbound_remote_services_recycling():
+    store = get_remote_store()
+    unbound_instances = UnboundRemoteServiceEngineAppAttachment.objects.all()
+
+    if not unbound_instances:
+        logger.info("no unbound remote instances waiting for to be recycled")
+        return
+
+    categorized_instances = defaultdict(list)
+    for instance in unbound_instances:
+        categorized_instances[str(instance.service_id)].append(instance)
+
+    for service_id, instances in categorized_instances.items():
+        remote_config = store.get_source_config(service_id)
+        remote_client = RemoteServiceClient(remote_config)
+        for instance in instances:
+            try:
+                remote_client.retrieve_instance_to_be_deleted(instance.service_instance_id)
+            except RClientResponseError as e:
+                # if not find service instance with this id, remote response http status code 404
+                if e.status_code == 404:
+                    instance.delete()
+                    logger.info(f"unbound service instance<{instance.service_instance_id}> is recycled.")
+                    continue
+                logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
+            except Exception as e:
+                logger.warning(f"retrive unbound remote service instance<{instance.service_instance_id}> failed: {e}")
+            else:
+                logger.info(f"unbound service instance<{instance.service_instance_id}> is not recycled.")

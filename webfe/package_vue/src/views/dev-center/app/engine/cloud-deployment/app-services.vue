@@ -23,20 +23,30 @@
           <div slot="empty">
             <table-empty empty />
           </div>
-          <bk-table-column :label="$t('服务名称')" width="300">
-            <template slot-scope="{row, $index}">
+          <bk-table-column
+            :label="$t('服务名称')"
+            width="300"
+          >
+            <template slot-scope="{ row, $index }">
               <div class="flex-row align-items-center">
-                <img class="row-img" :src="row.logo" alt="">
+                <img
+                  class="row-img"
+                  :src="row.logo"
+                  alt=""
+                />
                 <p
                   class="row-title-text"
-                  :class="row.isStartUp ? '' : 'text-disabled'" @click="handleToPage(row)">
+                  :class="row.isStartUp ? '' : 'text-disabled'"
+                  @click="handleToPage(row)"
+                >
                   {{ row.display_name || '--' }}
                 </p>
                 <i
                   v-if="$index === rowIndex"
                   class="row-icon paasng-icon paasng-process-file pl5"
-                  v-bk-tooltips="{content: $t('使用指南')}"
-                  @click="handleShowGuideDialog(row)" />
+                  v-bk-tooltips="{ content: $t('使用指南') }"
+                  @click="handleShowGuideDialog(row)"
+                />
               </div>
             </template>
           </bk-table-column>
@@ -45,7 +55,7 @@
             width="100"
             :render-header="$renderHeader"
           >
-            <template slot-scope="{row}">
+            <template slot-scope="{ row }">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
                 <i class="paasng-icon paasng-correct success-icon" />
               </span>
@@ -57,7 +67,7 @@
             width="100"
             :render-header="$renderHeader"
           >
-            <template slot-scope="{row}">
+            <template slot-scope="{ row }">
               <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
                 <i class="paasng-icon paasng-correct success-icon" />
               </span>
@@ -68,14 +78,26 @@
             :label="$t('配置信息')"
             :render-header="$renderHeader"
           >
-            <template slot-scope="{row}">
-              <span v-if="row.isStartUp && row.specifications && row.specifications.length">
-                <bk-tag v-for="(item) in row.specifications" :key="item.recommended_value">
-                  <span>
-                    {{ $t(item.display_name) }} {{ getVersionValue(item.name, row?.specificationsData || []) }}
-                  </span>
+            <template slot-scope="{ row }">
+              <div
+                v-if="row.isStartUp && row.plans"
+                class="config-info-tag"
+              >
+                <bk-tag
+                  v-if="row.plans?.stag?.name === row.plans?.prod?.name"
+                  v-bk-overflow-tips="{ allowHTML: true }"
+                >
+                  {{ row.plans.stag?.name }}
                 </bk-tag>
-              </span>
+                <bk-tag
+                  v-else
+                  v-for="(value, key) in row.plans"
+                  :key="key"
+                  v-bk-overflow-tips
+                >
+                  {{ getEnvironmentName(key) }}：{{ value.name }}
+                </bk-tag>
+              </div>
               <span v-else>{{ $t('无') }}</span>
             </template>
           </bk-table-column>
@@ -83,12 +105,12 @@
             :label="$t('共享信息')"
             :render-header="$renderHeader"
           >
-            <template slot-scope="{row}">
+            <template slot-scope="{ row }">
               <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
-                {{ $t('被') }} {{ row.ref_modules.map(e => e.name).join(',') }} {{ $t('共享') }}
+                {{ $t('被') }} {{ row.ref_modules.map((e) => e.name).join(',') }} {{ $t('共享') }}
               </span>
               <span v-else-if="row.type === 'shared' && row.ref_module">
-                {{ $t('共享来自') }} {{row.ref_module.name }}
+                {{ $t('共享来自') }} {{ row.ref_module.name }}
               </span>
               <span v-else>--</span>
             </template>
@@ -99,16 +121,17 @@
             class-name="services-table-cloumn"
             :render-header="$renderHeader"
           >
-            <template slot-scope="{row, $index}">
+            <template slot-scope="{ row, $index }">
               <div
                 class="ps-switcher-wrapper"
                 @click="toggleSwitch(row, $index)"
                 v-bk-tooltips="{
                   content: $t('S-mart 应用不支持停用增强服务'),
                   disabled: !isSmartApp,
-                  allowHTML: true
+                  allowHTML: true,
                 }"
-                v-if="row.isStartUp">
+                v-if="row.isStartUp"
+              >
                 <bk-switcher
                   v-model="row.isStartUp"
                   :theme="row.type === 'shared' ? 'success' : 'primary'"
@@ -136,7 +159,8 @@
                     v-for="item in startData"
                     :key="item.id"
                     class="item"
-                    @click="handleSwitcherOpen(item)">
+                    @click="handleSwitcherOpen(item)"
+                  >
                     {{ item.label }}
                   </div>
                 </div>
@@ -154,31 +178,57 @@
 
       <bk-dialog
         v-model="isShowStartDialog"
-        width="480"
-        :title="$t('配置信息')"
+        width="600"
+        :title="$t('方案信息')"
         :mask-close="false"
         ext-cls="paasng-service-export-dialog-cls"
         header-position="left"
-        @confirm="handleConfigChange">
+        @confirm="handleConfigChange"
+      >
         <bk-form
-          :model="startFormData">
+          :model="startFormData"
+          :label-width="150"
+          ext-cls="config-info-box"
+        >
           <bk-form-item
-            v-for="(item, index) in definitions" :key="index"
-            :label="$t(item.display_name)"
+            :label="$t('方案')"
+            v-if="serviceConfig.static_plans?.length"
           >
-            <!-- <span class="form-text">{{ artifactType || '--' }}</span> -->
             <bk-radio-group
-              v-model="item.active"
+              v-model="startFormData.plan"
+              class="config-group"
             >
               <bk-radio
-                v-for="childrenItem in item.children"
-                :key="childrenItem"
-                :value="childrenItem"
+                v-for="item in serviceConfig.static_plans"
+                :key="item.uuid"
+                :value="item.uuid"
+                ext-cls="config-radio-cls"
               >
-                {{ $t(childrenItem) }}
+                <span class="ml5">{{ item.name }}</span>
               </bk-radio>
             </bk-radio-group>
           </bk-form-item>
+          <template v-else>
+            <bk-form-item
+              v-for="(value, key) in serviceConfig.env_specific_plans"
+              :label="getEnvironmentName(key)"
+              :key="key"
+            >
+              <bk-radio-group
+                v-model="startFormData[key]"
+                class="config-group"
+              >
+                <bk-radio
+                  v-for="item in value"
+                  :key="item.uuid"
+                  :value="item.uuid"
+                  ext-cls="config-radio-cls"
+                >
+                  <span class="ml5">{{ item.name }}</span>
+                </bk-radio>
+              </bk-radio-group>
+            </bk-form-item>
+          </template>
         </bk-form>
       </bk-dialog>
 
@@ -195,22 +245,24 @@
       >
         <form
           class="ps-form"
-          style="min-height: 63px;"
+          style="min-height: 63px"
           @submit.prevent="submitRemoveInstance"
         >
           <div class="spacing-x1">
-            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }} <code>{{ appCode }}</code> {{ $t('确认：') }}
+            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }}
+            <code>{{ appCode }}</code>
+            {{ $t('确认：') }}
           </div>
           <div class="ps-form-group">
             <input
               v-model="formRemoveConfirmCode"
               type="text"
               class="ps-form-control"
-            >
+            />
           </div>
           <bk-alert
             v-if="delAppDialog.moduleList.length > 0"
-            style="margin-top: 10px;"
+            class="mt10"
             type="error"
             :title="errorTips"
           />
@@ -254,14 +306,16 @@
             class="mb20"
           />
           <div class="spacing-x1">
-            {{ $t('请完整输入应用 ID ') }}<code>{{ appCode }}</code> {{ $t('确认：') }}
+            {{ $t('请完整输入应用 ID ') }}
+            <code>{{ appCode }}</code>
+            {{ $t('确认：') }}
           </div>
           <div class="ps-form-group">
             <input
               v-model="formRemoveConfirmCode"
               type="text"
               class="ps-form-control"
-            >
+            />
           </div>
         </form>
         <template slot="footer">
@@ -292,7 +346,10 @@
         @hidden="hookAfterClose"
       >
         <div slot="content">
-          <div id="markdown" v-bkloading="{ isLoading: guideLoading, opacity: 1 }">
+          <div
+            id="markdown"
+            v-bkloading="{ isLoading: guideLoading, opacity: 1 }"
+          >
             <div
               class="markdown-body"
               v-html="compiledMarkdown"
@@ -304,7 +361,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import SharedDialog from './comps/shared-dialog';
 import { marked } from 'marked';
 
@@ -335,11 +393,18 @@ export default {
         placement: 'bottom',
         extCls: 'services-tips-cls',
       },
-      startData: [{ value: 'start', label: this.$t('直接启用') }, { value: 'shared', label: this.$t('从其他模块共享') }],
+      startData: [
+        { value: 'start', label: this.$t('直接启用') },
+        { value: 'shared', label: this.$t('从其他模块共享') },
+      ],
       isShowDialog: false,
       curData: {},
       curIndex: '',
-      startFormData: {},
+      startFormData: {
+        plan: '',
+        prod: '',
+        stag: '',
+      },
       definitions: [],
       delAppDialog: {
         visiable: false,
@@ -354,6 +419,7 @@ export default {
       isShowGuideDialog: false,
       serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
       guideLoading: false,
+      serviceConfig: {},
     };
   },
   computed: {
@@ -373,13 +439,16 @@ export default {
       if (this.curData.type === 'bound' && this.delAppDialog.moduleList.length) {
         return '该实例被共享，删除后这些模块将无法获取相关环境变量；删除会导致预发布环境和生产环境的实例都将被删除，且该操作不可撤销，请谨慎操作';
       }
-      return `${this.$t('解除后，当前模块将无法获取 ')}${this.curModuleId} ${this.$t('模块的')} ${this.curData.display_name} ${this.$t('服务的所有环境变量')}`;
+      return `${this.$t('解除后，当前模块将无法获取 ')}${this.curModuleId} ${this.$t('模块的')} ${
+        this.curData.display_name
+      } ${this.$t('服务的所有环境变量')}`;
     },
 
     compiledMarkdown() {
       // eslint-disable-next-line vue/no-async-in-computed-properties
       this.$nextTick(() => {
-        $('#markdown').find('a')
+        $('#markdown')
+          .find('a')
           .each(function () {
             $(this).attr('target', '_blank');
           });
@@ -388,7 +457,7 @@ export default {
     },
     getVersionValue() {
       return function (name, data) {
-        const versionData = data.find(e => e.name === name) || {};
+        const versionData = data.find((e) => e.name === name) || {};
         return versionData?.value || '';
       };
     },
@@ -428,7 +497,6 @@ export default {
         // 新增一个字段isStartUp true代表是启动状态 false代表停止状态
         // 改造bound数据
         res.bound = (res.bound || []).reduce((p, v) => {
-          v.specificationsData = v.specifications;
           p.push({ ...v, ...v.service, type: 'bound', isStartUp: true });
           return p;
         }, []);
@@ -448,7 +516,7 @@ export default {
         this.tableList = [...res.bound, ...res.shared, ...res.unbound];
 
         // 处理服务->数据存储服务详情跳转
-        const redirectData = this.tableList.find(v => v.uuid === this.$route.params?.service);
+        const redirectData = this.tableList.find((v) => v.uuid === this.$route.params?.service);
         if (redirectData) {
           this.handleToPage(redirectData);
         }
@@ -492,45 +560,55 @@ export default {
       }
       this.curData = payload;
       this.curIndex = index;
-      if (payload.isStartUp) {    // 已经启动的状态
-        if (payload.type === 'shared') {    // 解绑弹窗
+      if (payload.isStartUp) {
+        // 已经启动的状态
+        if (payload.type === 'shared') {
+          // 解绑弹窗
           this.removeSharedDialog.visiable = true;
         } else {
-          this.delAppDialog.visiable = true;    // 停用弹窗
+          this.delAppDialog.visiable = true; // 停用弹窗
           this.fetchServicesShareDetail();
         }
       }
     },
 
+    // 设置配置信息默认值数据
+    formatConfig(data) {
+      if (data.static_plans?.length) {
+        // 选择方案
+        this.startFormData.plan = data.static_plans[0]?.uuid;
+      } else {
+        // 环境
+        Object.keys(data.env_specific_plans).forEach((key) => {
+          this.startFormData[key] = data.env_specific_plans[key][0]?.uuid;
+        });
+      }
+      this.serviceConfig = data;
+    },
 
-    handleSwitcherOpen(payload) {
-      // eslint-disable-next-line no-underscore-dangle
+    // 启用服务
+    async handleSwitcherOpen(payload) {
       this.$refs[`tooltipsHtml${this.curIndex}`]._tippy.hide();
-      if (payload.value === 'start') {  // 直接启动
-        if (this.curData.specifications.length) { // 配置并启动
-          this.isShowStartDialog = true;
-          this.fetchServicesSpecsDetail();
-        } else {  // 直接启动
-          const formData = {
-            service_id: this.curData.uuid,
-            code: this.appCode,
-            module_name: this.curModuleId,
-          };
-          const url = `${BACKEND_URL}/api/services/service-attachments/`;
-          this.$http.post(url, formData).then(() => {
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('服务启用成功'),
-            });
-            this.init();
-          }, (resp) => {
-            this.$paasMessage({
+      if (payload.value === 'start') {
+        // 获取启动时需要的配置信息
+        const res = await this.getServicePossiblePlans();
+        if (res.has_multiple_plans) {
+          // 无配置信息
+          if (!res.static_plans && !res.env_specific_plans) {
+            this.$bkMessage({
               theme: 'error',
-              message: resp.detail || this.$t('接口异常'),
+              message: this.$t('获取增强服务配置信息出错，请联系管理员。'),
             });
-          });
+            return;
+          }
+          this.formatConfig(res);
+          this.isShowStartDialog = true;
+        } else {
+          // 直接启动 （无需弹窗）
+          this.handleConfigChange(true);
         }
-      } else {    // 从其他模块中共享
+      } else {
+        // 从其他模块中共享
         this.isShowDialog = true;
       }
     },
@@ -539,51 +617,26 @@ export default {
       this.init();
     },
 
-
-    // 获取启动时需要的配置信息
-    async fetchServicesSpecsDetail() {
-      try {
-        const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
-          id: this.curData.uuid,
-          region: this.region,
-        });
-        (res.definitions || []).forEach((item, index) => {
-          let values = [];
-          res.values.forEach((val) => {
-            values.push(val[index]);
-          });
-          values = [...new Set(values)].filter(Boolean);
-          this.$set(item, 'children', values);
-          this.$set(item, 'active', res.recommended_values[index]);
-          this.$set(item, 'showError', false);
-        });
-        this.definitions = [...res.definitions];
-        this.values = [...res.values];
-      } catch (res) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: res.detail || res.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-
     // 确认启动服务
-    async handleConfigChange() {
+    async handleConfigChange(isEnableDirectly = false) {
       this.loading = true;
-      const specs = this.definitions.reduce((p, v) => {
-        p[v.name] = v.active;
-        return p;
-      }, {});
       const params = {
-        specs,
         service_id: this.curData.uuid,
         module_name: this.curModuleId,
         code: this.curAppCode,
       };
+      // 配置信息
+      if (!isEnableDirectly) {
+        const { plan, prod, stag } = this.startFormData;
+        if (this.serviceConfig.static_plans?.length) {
+          params.plan_id = plan;
+        } else {
+          params.env_plan_id_map = {
+            prod,
+            stag,
+          };
+        }
+      }
       try {
         await this.$store.dispatch('service/enableServices', params);
         this.$paasMessage({
@@ -602,7 +655,6 @@ export default {
         this.loading = false;
       }
     },
-
 
     hookAfterClose() {
       this.formRemoveConfirmCode = '';
@@ -628,7 +680,7 @@ export default {
             message: res.detail,
           });
           this.delAppDialog.visiable = false;
-        },
+        }
       );
     },
 
@@ -658,7 +710,6 @@ export default {
       }
     },
 
-
     // 停用服务时需要展示的error数据
     async fetchServicesShareDetail() {
       try {
@@ -677,12 +728,12 @@ export default {
       }
     },
 
-
     // 处理跳转逻辑
     handleToPage(payload) {
       if (payload.isStartUp) {
         this.isCloudNativeApp && this.$emit('hide-tab');
-        if (payload.type === 'shared') {    // 共享
+        if (payload.type === 'shared') {
+          // 共享
           if (this.isCloudNativeApp) {
             this.$router.push({
               name: 'cloudAppServiceInnerShared',
@@ -694,7 +745,8 @@ export default {
             name: 'appServiceInnerShared',
             params: { id: this.appCode, service: payload.uuid, category_id: payload.category.id },
           });
-        } else {    // 直接启动
+        } else {
+          // 直接启动
           if (this.isCloudNativeApp) {
             this.$router.push({
               name: 'cloudAppServiceInnerWithModule',
@@ -734,273 +786,312 @@ export default {
       this.getGuideData();
     },
 
+    getEnvironmentName(key) {
+      return key === 'prod' ? this.$t('方案（生产环境）') : this.$t('方案（预发布环境）');
+    },
+
+    // 获取应用模块绑定服务时，可能的详情方案
+    async getServicePossiblePlans() {
+      try {
+        const res = await this.$store.dispatch('service/getServicePossiblePlans', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.curData.uuid,
+        });
+        return res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+        return {};
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-  .services-container{
-    .ps-top-bar{
-      padding: 0 20px;
-    }
-    .image-content{
-      background: #fff;
-      padding-top: 0;
-    }
-    .row-img{
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-    }
-    .ps-switcher-wrapper {
-      margin-left: 0;
-    }
-    .row-title-text{
-      margin-left: 8px;
-      overflow:hidden; //超出的文本隐藏
-      text-overflow:ellipsis; //溢出用省略号显示
-      white-space:nowrap; //溢出不换行
+.services-container {
+  .ps-top-bar {
+    padding: 0 20px;
+  }
+  .image-content {
+    background: #fff;
+    padding-top: 0;
+  }
+  .row-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+  }
+  .ps-switcher-wrapper {
+    margin-left: 0;
+  }
+  .row-title-text {
+    margin-left: 8px;
+    overflow: hidden; //超出的文本隐藏
+    text-overflow: ellipsis; //溢出用省略号显示
+    white-space: nowrap; //溢出不换行
+    cursor: pointer;
+    color: #3a84ff;
+  }
+  .text-disabled {
+    color: #63656e;
+    cursor: unset;
+  }
+  .row-icon {
+    color: #63656e;
+    margin-top: 3px;
+
+    &:hover {
       cursor: pointer;
-      color: #3A84FF;
-    }
-    .text-disabled{
-      color: #63656e;
-      cursor: unset;
-    }
-    .row-icon{
-      color: #63656E;
-      margin-top: 3px;
-
-      &:hover {
-        cursor: pointer;
-        color: #3A84FF;
-      }
-    }
-
-    .success-icon{
-      font-size: 24px;
-      color: #2DCB56;
+      color: #3a84ff;
     }
   }
-    .header-title {
-        display: flex;
-        align-items: center;
-        .app-code {
-            color: #979BA5;
-        }
-        .arrows {
-            margin: 0 9px;
-            transform: rotate(-90deg);
-            font-size: 12px;
-            font-weight: 600;
-            color: #979ba5;
-        }
-    }
-    #switcher-tooltip{
-      border: 1px solid #DCDEE5;
-      border-radius: 2px;
-      .item{
-        padding: 0 12px;
-        cursor: pointer;
-        height: 32px;
-        line-height: 32px;
-        color: #63656E;
-        font-size: 12px;
-        &:hover {
-          background: #F5F7FA;
-        }
-        &:first-child {
-          margin-top: 4px;
-        }
-        &:last-child {
-          margin-bottom: 4px;
-        }
-      }
-    }
 
+  .success-icon {
+    font-size: 24px;
+    color: #2dcb56;
+  }
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  .app-code {
+    color: #979ba5;
+  }
+  .arrows {
+    margin: 0 9px;
+    transform: rotate(-90deg);
+    font-size: 12px;
+    font-weight: 600;
+    color: #979ba5;
+  }
+}
+#switcher-tooltip {
+  border: 1px solid #dcdee5;
+  border-radius: 2px;
+  .item {
+    padding: 0 12px;
+    cursor: pointer;
+    height: 32px;
+    line-height: 32px;
+    color: #63656e;
+    font-size: 12px;
+    &:hover {
+      background: #f5f7fa;
+    }
+    &:first-child {
+      margin-top: 4px;
+    }
+    &:last-child {
+      margin-bottom: 4px;
+    }
+  }
+}
+.paasng-service-export-dialog-cls {
+  .config-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0px 20px;
+    .config-radio-cls {
+      margin-left: 0px !important;
+      line-height: 32px;
+    }
+  }
+}
+.config-info-tag {
+  display: flex;
+  .bk-tag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 </style>
 <style lang="scss">
-    .services-tips-cls{
-      .tippy-arrow{
-          display: none !important;
-        }
-      .tippy-tooltip,
-      .tippy-content{
-        padding: 0 !important;
-      }
+.services-tips-cls {
+  .tippy-tooltip.light-theme {
+    padding: 0 !important;
+    .tippy-arrow {
+      display: none !important;
     }
+    .tippy-content {
+      padding: 0 !important;
+    }
+  }
+}
 
-    .markdown-body {
-      h2 {
-        color: var(--color-fg-default);
-      }
-    }
+.markdown-body {
+  h2 {
+    color: var(--color-fg-default);
+  }
+}
 
-    #markdown {
-      padding: 20px;
-    }
+#markdown {
+  padding: 20px;
+}
 
-    #markdown h2 {
-        padding-bottom: 0.3em;
-        font-size: 1.5em;
-        border-bottom: 1px solid #eaecef;
-        padding: 0;
-        padding-bottom: 10px;
-        margin-top: 24px;
-        margin-bottom: 16px;
-        font-weight: 600;
-        line-height: 1.25;
-    }
+#markdown h2 {
+  padding-bottom: 0.3em;
+  font-size: 1.5em;
+  border-bottom: 1px solid #eaecef;
+  padding: 0;
+  padding-bottom: 10px;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
 
-    #markdown h3 {
-        color: var(--color-fg-default);
-        line-height: 52px;
-        font-size: 14px;
-        position: relative;
-    }
+#markdown h3 {
+  color: var(--color-fg-default);
+  line-height: 52px;
+  font-size: 14px;
+  position: relative;
+}
 
-    #markdown h2 .octicon-link {
-        color: #1b1f23;
-        vertical-align: middle;
-        visibility: hidden;
-    }
+#markdown h2 .octicon-link {
+  color: #1b1f23;
+  vertical-align: middle;
+  visibility: hidden;
+}
 
-    #markdown h2:hover .anchor {
-        text-decoration: none;
-    }
+#markdown h2:hover .anchor {
+  text-decoration: none;
+}
 
-    #markdown h2:hover .anchor .octicon-link {
-        visibility: visible;
-    }
+#markdown h2:hover .anchor .octicon-link {
+  visibility: visible;
+}
 
-    #markdown code,
-    #markdown kbd,
-    #markdown pre {
-        font-size: 1em;
-    }
+#markdown code,
+#markdown kbd,
+#markdown pre {
+  font-size: 1em;
+}
 
-    #markdown code {
-        font-size: 12px;
-    }
+#markdown code {
+  font-size: 12px;
+}
 
-    #markdown pre {
-        margin-top: 0;
-        margin-bottom: 16px;
-        font-size: 12px;
-    }
+#markdown pre {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
 
-    #markdown pre {
-        word-wrap: normal;
-    }
+#markdown pre {
+  word-wrap: normal;
+}
 
-    #markdown code {
-        padding: 0.2em 0.4em;
-        margin: 0;
-        font-size: 85%;
-        background-color: rgba(27, 31, 35, 0.05);
-        border-radius: 3px;
-        color: inherit;
-    }
+#markdown code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  color: inherit;
+}
 
-    #markdown pre>code {
-        padding: 0;
-        margin: 0;
-        font-size: 100%;
-        word-break: normal;
-        white-space: pre;
-        background: transparent;
-        border: 0;
-    }
+#markdown pre > code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
 
-    #markdown .highlight {
-        margin-bottom: 16px;
-    }
+#markdown .highlight {
+  margin-bottom: 16px;
+}
 
-    #markdown .highlight pre {
-        margin-bottom: 0;
-        word-break: normal;
-    }
+#markdown .highlight pre {
+  margin-bottom: 0;
+  word-break: normal;
+}
 
-    #markdown .highlight pre,
-    #markdown pre {
-        padding: 16px;
-        overflow: auto;
-        font-size: 85%;
-        line-height: 1.45;
-        background-color: var(--color-canvas-subtle);
-        border-radius: 3px;
-    }
+#markdown .highlight pre,
+#markdown pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: var(--color-canvas-subtle);
+  border-radius: 3px;
+}
 
-    #markdown pre code {
-        display: inline;
-        max-width: auto;
-        padding: 0;
-        margin: 0;
-        overflow: visible;
-        line-height: inherit;
-        word-wrap: normal;
-        background-color: transparent;
-        border: 0;
-    }
+#markdown pre code {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+}
 
-    #markdown p {
-        margin-top: 0;
-        margin-bottom: 10px;
-    }
+#markdown p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
 
-    #markdown a {
-        background-color: transparent;
-    }
+#markdown a {
+  background-color: transparent;
+}
 
-    #markdown a:active,
-    #markdown a:hover {
-        outline-width: 0;
-    }
+#markdown a:active,
+#markdown a:hover {
+  outline-width: 0;
+}
 
-    #markdown a {
-        color: #0366d6;
-        text-decoration: none;
-    }
+#markdown a {
+  color: #0366d6;
+  text-decoration: none;
+}
 
-    #markdown a:hover {
-        text-decoration: underline;
-    }
+#markdown a:hover {
+  text-decoration: underline;
+}
 
-    #markdown a:not([href]) {
-        color: inherit;
-        text-decoration: none;
-    }
+#markdown a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
 
-    #markdown ul,
-    #markdown ol {
-        padding-left: 0;
-        margin-top: 0;
-        margin-bottom: 0;
-        list-style: unset !important;
-    }
+#markdown ul,
+#markdown ol {
+  padding-left: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  list-style: unset !important;
+}
 
-    #markdown ol ol,
-    #markdown ul ol {
-        list-style-type: lower-roman;
-    }
+#markdown ol ol,
+#markdown ul ol {
+  list-style-type: lower-roman;
+}
 
-    #markdown ul ul ol,
-    #markdown ul ol ol,
-    #markdown ol ul ol,
-    #markdown ol ol ol {
-        list-style-type: lower-alpha;
-    }
+#markdown ul ul ol,
+#markdown ul ol ol,
+#markdown ol ul ol,
+#markdown ol ol ol {
+  list-style-type: lower-alpha;
+}
 
-    #markdown ul,
-    #markdown ol {
-        padding-left: 2em;
-    }
+#markdown ul,
+#markdown ol {
+  padding-left: 2em;
+}
 
-    #markdown ul ul,
-    #markdown ul ol,
-    #markdown ol ol,
-    #markdown ol ul {
-        margin-top: 0;
-        margin-bottom: 0;
-    }
+#markdown ul ul,
+#markdown ul ol,
+#markdown ol ol,
+#markdown ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 </style>

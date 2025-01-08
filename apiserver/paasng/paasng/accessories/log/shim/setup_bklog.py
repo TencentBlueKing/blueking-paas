@@ -19,20 +19,19 @@ import datetime
 import logging
 from typing import Union
 
-import cattr
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
+from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
-    ElasticSearchHost,
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
-from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
+from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
@@ -43,9 +42,10 @@ from paasng.infras.bk_log.definitions import (
     StorageConfig,
 )
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.constants import AppFeatureFlag, AppLanguage
+from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -141,22 +141,14 @@ def update_or_create_es_search_config(
         r"|otelServiceName|otelTraceID|requestID|environment|process_id|stream|__ext_json\..*",
     )
 
-    if application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_CLIENT):
-        defaults = {
-            "backend_type": "bkLog",
-            "bk_log_config": {
-                "scenarioID": "log",
-            },
-            "search_params": search_params,
-        }
-    else:
-        # 使用日志平台采集日志, 但使用 ES 查询日志, 需要保证日志平台的 storage_id 与 ELK 方案的 ES 为同一个 ES
-        host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
-        defaults = {
-            "backend_type": "es",
-            "elastic_search_host": host,
-            "search_params": search_params,
-        }
+    # 日志平台查询 API 参数配置
+    defaults = {
+        "backend_type": "bkLog",
+        "bk_log_config": {
+            "scenarioID": "log",
+        },
+        "search_params": search_params,
+    }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,
@@ -221,8 +213,13 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案
-    setup_platform_elk_model()
-    ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+    try:
+        ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+    except ElasticSearchConfig.DoesNotExist:
+        # 未配置时，需要记录异常日志方便排查
+        logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")
+        raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
+
     config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
     config.ingress = ingress_config
     config.save()

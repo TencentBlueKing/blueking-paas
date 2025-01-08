@@ -16,7 +16,7 @@
       <div class="fadeIn">
         <section v-show="!loading">
           <div class="middle bnone">
-            <h4> {{ $t('已启用的服务') }} </h4>
+            <h4>{{ $t('已启用的服务') }}</h4>
             <div v-if="!loading">
               <ul
                 v-if="serviceListBound.length !== 0"
@@ -29,15 +29,17 @@
                   <div class="service-item">
                     <router-link
                       v-if="!item.isShare"
-                      :to="{ name: 'appServiceInner',
-                             params: { id: appCode, service: item.uuid, category_id: item.category.id } }"
+                      :to="{
+                        name: 'appServiceInner',
+                        params: { id: appCode, service: item.uuid, category_id: item.category.id },
+                      }"
                     >
                       <div class="badge">
                         <div class="logo">
                           <img
                             :src="item.logo"
                             alt=""
-                          >
+                          />
                         </div>
                         <span class="title">{{ item.display_name }}</span>
                       </div>
@@ -49,18 +51,19 @@
                       v-else
                       :to="{
                         name: 'appServiceInnerShared',
-                        params: { id: appCode, service: item.service.uuid, category_id: item.service.category.id } }"
+                        params: { id: appCode, service: item.service.uuid, category_id: item.service.category.id },
+                      }"
                     >
                       <div class="badge">
                         <i
-                          v-bk-tooltips=" `${$t('共享自')} ${item.ref_module ? item.ref_module.name : ''}${$t('模块')}`"
+                          v-bk-tooltips="`${$t('共享自')} ${item.ref_module ? item.ref_module.name : ''}${$t('模块')}`"
                           class="paasng-icon paasng-info-circle ref-module-icon"
                         />
                         <div class="logo">
                           <img
                             :src="item.service.logo"
                             alt=""
-                          >
+                          />
                         </div>
                         <span class="title">{{ item.service.display_name }}</span>
                       </div>
@@ -82,7 +85,7 @@
             </div>
           </div>
           <div class="middle bnone service">
-            <h4> {{ $t('未启用的服务') }} </h4>
+            <h4>{{ $t('未启用的服务') }}</h4>
             <div v-if="!loading">
               <ul
                 v-if="serviceListUnbound.length !== 0"
@@ -95,23 +98,26 @@
                   <div class="service-item service-item-with-console">
                     <router-link
                       target="_blank"
-                      :to="{ name: 'serviceInnerPage',
-                             params: { category_id: item.category.id, name: item.name },
-                             query: { name: item.display_name } }"
+                      :to="{
+                        name: 'serviceInnerPage',
+                        params: { category_id: item.category.id, name: item.name },
+                        query: { name: item.display_name },
+                      }"
                     >
                       <div class="badge">
                         <div class="logo">
                           <img
                             :src="item.logo"
                             alt=""
-                          >
+                          />
                         </div>
                         <div class="title">
                           {{ item.display_name }}
                         </div>
                       </div>
                       <div class="dyna-info">
-                        <i class="paasng-icon paasng-clipboard" /> {{ $t('简介') }}
+                        <i class="paasng-icon paasng-clipboard" />
+                        {{ $t('简介') }}
                       </div>
                     </router-link>
                   </div>
@@ -122,14 +128,9 @@
                       v-bk-tooltips="$t('S-mart应用请在配置文件中设置并开启增强服务')"
                       class="ps-btn ps-btn-default ps-btn-disabled"
                     >
-                      <template v-if="item.specifications.length">
-                        <span v-dashed> {{ $t('配置并启用服务') }} </span>
-                      </template>
-                      <template v-else>
-                        <section>
-                          <span v-dashed> {{ $t('启用服务') }} </span>
-                        </section>
-                      </template>
+                      <section>
+                        <span v-dashed>{{ $t('启用服务') }}</span>
+                      </section>
                     </a>
                     <a
                       v-else
@@ -137,14 +138,11 @@
                       v-bk-overflow-tips
                       @click="enableService(item)"
                     >
-                      <template v-if="item.specifications.length">
-                        <span> {{ $t('配置并启用服务') }} </span>
-                      </template>
-                      <template v-else-if="serviceStates[item.uuid] === 'applying'">
-                        <span> {{ $t('启用中...') }} </span>
+                      <template v-if="serviceStates[item.uuid] === 'applying'">
+                        <span>{{ $t('启用中...') }}</span>
                       </template>
                       <template v-else>
-                        <span> {{ $t('启用服务') }} </span>
+                        <span>{{ $t('启用服务') }}</span>
                       </template>
                     </a>
                     <bk-popconfirm
@@ -194,10 +192,11 @@
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import SharedDialog from './comps/shared-dialog';
+import { remove } from 'lodash';
 
 export default {
   components: {
@@ -215,10 +214,11 @@ export default {
       serviceStates: {},
       isShowDialog: false,
       curData: {},
+      serviceConfig: {},
     };
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
   },
@@ -261,8 +261,19 @@ export default {
       });
     },
 
-    enableService(service) {
-      if (service.specifications.length) {
+    // 启用服务
+    async enableService(service) {
+      await this.getServicePossiblePlans(service.uuid);
+      // 使用接口字段判断是否需要配置
+      if (this.serviceConfig.has_multiple_plans) {
+        // 无配置信息
+        if (!this.serviceConfig.static_plans && !this.serviceConfig.env_specific_plans) {
+          this.$bkMessage({
+            theme: 'error',
+            message: this.$t('获取增强服务配置信息出错，请联系管理员。'),
+          });
+          return;
+        }
         this.$router.push({
           name: 'appServiceConfig',
           params: {
@@ -270,6 +281,7 @@ export default {
             service: service.uuid,
             category_id: service.category.id,
             moduleId: this.curModuleId,
+            data: this.serviceConfig,
           },
         });
         return;
@@ -286,159 +298,176 @@ export default {
         module_name: this.curModuleId,
       };
       const url = `${BACKEND_URL}/api/services/service-attachments/`;
-      this.$http.post(url, formData).then(() => {
-        this.serviceListBound.push(service);
-        _.remove(this.serviceListUnbound, service);
-        this.serviceStates[service.uuid] = 'applied';
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('服务启用成功'),
+      this.$http.post(url, formData).then(
+        () => {
+          this.serviceListBound.push(service);
+          remove(this.serviceListUnbound, service);
+          this.serviceStates[service.uuid] = 'applied';
+          this.$paasMessage({
+            theme: 'success',
+            message: this.$t('服务启用成功'),
+          });
+        },
+        (resp) => {
+          this.serviceStates[service.uuid] = 'default';
+          this.$paasMessage({
+            theme: 'error',
+            message: resp.detail || this.$t('接口异常'),
+          });
+        }
+      );
+    },
+
+    // 获取应用模块绑定服务时，可能的详情方案
+    async getServicePossiblePlans(id) {
+      try {
+        const res = await this.$store.dispatch('service/getServicePossiblePlans', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: id,
         });
-      }, (resp) => {
-        this.serviceStates[service.uuid] = 'default';
-        this.$paasMessage({
-          theme: 'error',
-          message: resp.detail || this.$t('接口异常'),
-        });
-      });
+        this.serviceConfig = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .ps-category{
-      background: #fff;
-      padding: 10px 24px;
-      margin-top: 14px;
+.ps-category {
+  background: #fff;
+  padding: 10px 24px;
+  margin-top: 14px;
+}
+.multiNotes {
+  p {
+    line-height: 42px;
+  }
+}
+
+.service-list {
+  overflow: hidden;
+  margin: 0 -6px 0 -6px;
+}
+
+.service-list li {
+  padding: 0 6px 12px 6px;
+  width: 25%;
+  float: left;
+}
+
+.service-item {
+  position: relative;
+  border: solid 1px #e6e9ea;
+  border-radius: 2px;
+  transition: all 0.5s;
+  cursor: pointer;
+  a {
+    display: block;
+  }
+
+  .dyna-info {
+    font-size: 12px;
+    position: absolute;
+    display: none;
+    top: 0;
+    right: 0;
+    margin: 4px 6px 0 0;
+    color: #999;
+  }
+
+  .description {
+    color: #999;
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 8px 15px 16px 15px;
+    text-align: center;
+  }
+
+  .badge {
+    position: relative;
+    text-align: center;
+    .ref-module-icon {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #63656e;
+      cursor: default;
     }
-    .multiNotes {
-        p {
-            line-height: 42px;
-        }
-    }
+    .logo {
+      padding: 24px 0 0 0;
 
-    .service-list {
-        overflow: hidden;
-        margin: 0 -6px 0 -6px;
-    }
-
-    .service-list li {
-        padding: 0 6px 12px 6px;
-        width: 25%;
-        float: left;
-    }
-
-    .service-item {
-        position: relative;
-        border: solid 1px #e6e9ea;
-        border-radius: 2px;
-        transition: all .5s;
-        cursor: pointer;
-        a {
-            display: block;
-        }
-
-        .dyna-info {
-            font-size: 12px;
-            position: absolute;
-            display: none;
-            top: 0;
-            right: 0;
-            margin: 4px 6px 0 0;
-            color: #999;
-        }
-
-        .description {
-            color: #999;
-            font-size: 12px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            padding: 8px 15px 16px 15px;
-            text-align: center;
-        }
-
-        .badge {
-            position: relative;
-            text-align: center;
-            .ref-module-icon {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                color: #63656e;
-                cursor: default;
-            }
-            .logo {
-                padding: 24px 0 0 0;
-
-                img {
-                    height: 48px;
-                }
-            }
-
-            .title {
-                font-weight: bold;
-                color: #5d6075;
-                line-height: 34px;
-                overflow: hidden;
-                padding: 10px 0;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-                max-width: 190px;
-                display: inline-block;
-            }
-        }
+      img {
+        height: 48px;
+      }
     }
 
-    .service-item:hover {
-        border: solid 1px #3A84FF;
-        box-shadow: 0 0 1px #5cadff;
-
-        .dyna-info {
-            display: block;
-        }
+    .title {
+      font-weight: bold;
+      color: #5d6075;
+      line-height: 34px;
+      overflow: hidden;
+      padding: 10px 0;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      max-width: 190px;
+      display: inline-block;
     }
+  }
+}
 
-    .service-item-with-console {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
+.service-item:hover {
+  border: solid 1px #3a84ff;
+  box-shadow: 0 0 1px #5cadff;
+
+  .dyna-info {
+    display: block;
+  }
+}
+
+.service-item-with-console {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.service-console {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  color: #c4c4c4;
+
+  a {
+    width: calc(100% - 39px);
+    border-top-width: 0;
+    border-radius: 2px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    display: block;
+    line-height: 22px;
+    font-size: 14px;
+
+    &:not(.ps-btn-disabled) {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      &:hover {
+        color: white;
+        background: #3a84ff;
+      }
     }
+  }
 
-    .service-console {
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        color: #c4c4c4;
-
-        a {
-            width: calc(100% - 39px);
-            border-top-width: 0;
-            border-radius: 2px;
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
-            display: block;
-            line-height: 22px;
-            font-size: 14px;
-
-            &:not(.ps-btn-disabled) {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                &:hover {
-                    color: white;
-                    background: #3A84FF;
-                }
-            }
-        }
-
-        .export-wrapper {
-            width: 39px;
-            line-height: 39px;
-            text-align: center;
-            border-right: 1px solid #e5e5e5;
-            border-bottom: 1px solid #e5e5e5;
-            cursor: pointer;
-        }
-    }
+  .export-wrapper {
+    width: 39px;
+    line-height: 39px;
+    text-align: center;
+    border-right: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    cursor: pointer;
+  }
+}
 </style>

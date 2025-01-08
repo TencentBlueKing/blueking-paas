@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Storage for remote services
-"""
+"""Storage for remote services"""
+
 import copy
 import json
 import logging
@@ -63,7 +63,7 @@ class StoreMixin:
     get: Callable
     all: Callable
 
-    def filter(self, region: str, conditions: Optional[Dict] = None) -> List[Dict]:
+    def filter(self, conditions: Optional[Dict] = None) -> List[Dict]:
         """Find a list of services by given conditions
 
         :param conditions: a dict of conditions, eg. {"category": 1}
@@ -71,9 +71,6 @@ class StoreMixin:
         result = []
         conditions = conditions or {}
         for service in self.all():
-            if not self._svc_supports_region(service, region):
-                continue
-
             for key, value in conditions.items():
                 if service.get(key) != value:
                     break
@@ -82,7 +79,7 @@ class StoreMixin:
                 result.append(copy.deepcopy(service))
         return result
 
-    def bulk_get(self, uuids: List[str], region: str) -> List[Dict]:
+    def bulk_get(self, uuids: List[str]) -> List[Dict]:
         """Get multiple service instances by a list of uuids
 
         :returns: a list of service object, if a service can not be found by given uuid, use
@@ -91,16 +88,11 @@ class StoreMixin:
         items = []
         for uuid in uuids:
             try:
-                items.append(self.get(uuid, region))
+                items.append(self.get(uuid))
             except ServiceNotFound:
                 logger.warning(f"bulk_get: can not find a service by uuid {uuid}")
                 items.append(None)
         return items
-
-    @staticmethod
-    def _svc_supports_region(svc_data: Dict, region: str) -> bool:
-        """Check if a service supports given region"""
-        return any(plan["properties"].get("region") == region for plan in svc_data["plans"])
 
 
 class MemoryStore(StoreMixin):
@@ -131,14 +123,10 @@ class MemoryStore(StoreMixin):
         """Get the source remote svc config by service uuid"""
         return self._map_id_to_config[uuid]
 
-    def get(self, uuid: str, region: str) -> Dict:
+    def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         try:
-            item = copy.deepcopy(self._map_id_to_service[uuid])
-            if not self._svc_supports_region(item, region):
-                raise RuntimeError("service does not contains a plan in given region")
-            else:
-                return item
+            return copy.deepcopy(self._map_id_to_service[uuid])
         except KeyError:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
@@ -209,16 +197,13 @@ class RedisStore(StoreMixin):
             raise ServiceConfigNotFound(f"Service config uuid={uuid} not found")
         return RemoteSvcConfig.from_json(_loads(config))
 
-    def get(self, uuid: str, region: str) -> Dict:
+    def get(self, uuid: str) -> Dict:
         """Get a service instance by uuid"""
         result = self.redis.get(self._make_svc_info_key(uuid))
         if result is None:
             raise ServiceNotFound(f"remote service with id={uuid} not found")
 
-        item = _loads(result)
-        if not self._svc_supports_region(item, region):
-            raise RuntimeError("service does not contains a plan in given region")
-        return item
+        return _loads(result)
 
     def all(self) -> List[Dict]:
         """List all services"""

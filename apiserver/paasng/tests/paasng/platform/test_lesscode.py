@@ -24,7 +24,7 @@ from django.test.utils import override_settings
 
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 @pytest.fixture(autouse=True)

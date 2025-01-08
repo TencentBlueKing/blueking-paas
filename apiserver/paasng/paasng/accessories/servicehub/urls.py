@@ -47,12 +47,6 @@ urlpatterns = [
         views.ServiceViewSet.as_view({"get": "list_related_apps"}),
         name="api.services.list_application",
     ),
-    # TODO: the specs API is deprecated, use the new possible plans API instead
-    re_path(
-        r"^api/services/%s/regions/%s/specs$" % (SERVICE_UUID, REGION),
-        views.ServicePlanViewSet.as_view({"get": "retrieve_specifications"}),
-        name="api.services.get_specifications",
-    ),
     re_path(
         f"^api/services/categories/{CATEGORY_ID}/$",
         views.ServiceSetViewSet.as_view({"get": "list_by_category"}),
@@ -90,12 +84,6 @@ urlpatterns = [
         make_app_pattern("/services/config_var_keys/$", include_envs=False),
         views.ModuleServicesViewSet.as_view({"get": "list_provisioned_env_keys"}),
         name="api.services.list_provisioned_env_keys",
-    ),
-    # TODO: the specs API is deprecated, use the new possible plans API instead
-    re_path(
-        make_app_pattern(f"/services/{SERVICE_UUID}/specs$", include_envs=False),
-        views.ModuleServicesViewSet.as_view({"get": "retrieve_specs"}),
-        name="api.services.list_specs_by_application",
     ),
     re_path(
         make_app_pattern(f"/services/{SERVICE_UUID}/possible_plans$", include_envs=False),
@@ -140,6 +128,18 @@ urlpatterns = [
         r"^sys/api/services/mysql/(?P<db_name>[^/]+)/related_applications_info/$",
         views.RelatedApplicationsInfoViewSet.as_view({"get": "retrieve_related_applications_info"}),
         name="api.services.mysql.retrieve_related_applications_info",
+    ),
+    # List unbound instances by module
+    re_path(
+        make_app_pattern("/services/unbound_attachments/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"get": "list_by_module"}),
+        name="api.services.attachment.unbound",
+    ),
+    # Recycle unbound instance
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
+        name="api.services.attachment.unbound.delete",
     ),
 ]
 

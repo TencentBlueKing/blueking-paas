@@ -29,6 +29,14 @@ class Group(OperationGroup):
         path="/api/c/compapi/v2/usermanage/retrieve_department/",
     )
 
+    # 查询单个用户信息 (v2)
+    retrieve_user = bind_property(
+        Operation,
+        name="retrieve_user",
+        method="GET",
+        path="/api/c/compapi/v2/usermanage/retrieve_user/",
+    )
+
 
 class Client(ESBClient):
     """ESB Components"""

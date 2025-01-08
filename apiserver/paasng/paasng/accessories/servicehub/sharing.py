@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Shared service across modules"""
+
 import logging
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -163,7 +164,7 @@ class ServiceSharingManager:
 
 
 def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedServiceInfo]:
-    """Extract shared service infomation by attachment object
+    """Extract shared service information by attachment object
 
     :param attachment: SharedServiceAttachment object
     :return: None if the referenced object was not found
@@ -175,7 +176,7 @@ def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedS
         return None
 
     return SharedServiceInfo(
-        service=mixed_service_mgr.get(referenced_rel.service_id, attachment.region),
+        service=mixed_service_mgr.get(referenced_rel.service_id),
         module=attachment.module,
         ref_module=referenced_rel.module,
     )

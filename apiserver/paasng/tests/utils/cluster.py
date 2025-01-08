@@ -23,7 +23,8 @@ from django.utils.crypto import get_random_string
 from filelock import FileLock
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
-from paas_wl.infras.cluster.models import APIServer, Cluster, IngressConfig
+from paas_wl.infras.cluster.entities import IngressConfig
+from paas_wl.infras.cluster.models import APIServer, Cluster
 
 
 def _generate_cluster_name() -> str:
@@ -77,9 +78,5 @@ def build_default_cluster():
         token_value=settings.FOR_TESTS_CLUSTER_CONFIG["token_value"],
         feature_flags=ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
     )
-    apiserver = APIServer(
-        host=settings.FOR_TESTS_CLUSTER_CONFIG["url"],
-        cluster=cluster,
-        overridden_hostname=settings.FOR_TESTS_CLUSTER_CONFIG["force_domain"],
-    )
+    apiserver = APIServer(host=settings.FOR_TESTS_CLUSTER_CONFIG["url"], cluster=cluster)
     return cluster, apiserver

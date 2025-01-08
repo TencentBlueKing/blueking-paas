@@ -21,7 +21,8 @@ import json
 
 import pytest
 
-from paas_wl.infras.cluster.models import Cluster, Domain, IngressConfig
+from paas_wl.infras.cluster.entities import Domain, IngressConfig
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.entrance.preallocated import (
     _default_preallocated_urls,
     get_exposed_url_type,

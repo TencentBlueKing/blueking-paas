@@ -266,7 +266,7 @@ class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
     instance_id = serializers.UUIDField(help_text="增强服务实例 id")
 
 
-class RetrieveServiceInstanceSensitiveField(serializers.Serializer):
+class RetrieveUnboundServiceSensitiveFieldSLZ(serializers.Serializer):
     instance_id = serializers.UUIDField(help_text="增强服务实例 id")
     field_name = serializers.CharField(help_text="字段名称")
     verification_code = VerificationCodeField(help_text="验证码", required=False, allow_blank=True, allow_null=True)

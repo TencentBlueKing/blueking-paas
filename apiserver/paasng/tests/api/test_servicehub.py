@@ -187,8 +187,7 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
         mock_get_or_404.return_value = RemoteServiceObj.from_data(service_dict)
 
         instance = self.create_instance(datetime.datetime(2020, 1, 1), ["c"], ["d"], a=1, b=2, c=3, d=4)
-        mock_rel = self.create_mock_rel(service, instance)
-        mock_get_rel.return_value = mock_rel
+        mock_get_rel.return_value = self.create_mock_rel(service, instance)
 
         with override_settings(ENABLE_VERIFICATION_CODE=False):
             url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/{service.uuid}/unbound_attachments/retrieve_field/"

@@ -771,15 +771,15 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         return Response()
 
     @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
-    @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveServiceInstanceSensitiveField)
+    @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveUnboundServiceSensitiveFieldSLZ)
     def retrieve_sensitive_field(self, request, code, module_name, service_id):
         """验证验证码查看解绑实例的敏感信息字段"""
-        serializer = slzs.RetrieveServiceInstanceSensitiveField(data=request.data)
+        serializer = slzs.RetrieveUnboundServiceSensitiveFieldSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         # 验证验证码
         if settings.ENABLE_VERIFICATION_CODE:
-            verifier = make_verifier(request.session, FunctionType.RETRIEVE_SERVICE_SENSITIVE_FIELD.value)
+            verifier = make_verifier(request.session, FunctionType.RETRIEVE_UNBOUND_SERVICE_SENSITIVE_FIELD.value)
             is_valid = verifier.validate(data["verification_code"])
             if not is_valid:
                 raise ValidationError({"verification_code": [_("验证码错误")]})

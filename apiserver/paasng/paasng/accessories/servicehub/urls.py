@@ -141,6 +141,12 @@ urlpatterns = [
         views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
         name="api.services.attachment.unbound.delete",
     ),
+    # Retrieve unbound instance sensitive field
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/retrieve_field/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"post": "retrieve_sensitive_field"}),
+        name="api.services.attachment.unbound.retrieve_sensitive_field",
+    ),
 ]
 
 # Multi-editions specific start

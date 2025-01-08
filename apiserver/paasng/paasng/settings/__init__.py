@@ -1138,17 +1138,6 @@ BK_CONSOLE_DBCONF = get_database_conf(
 # 是否需要填写应用联系人
 APP_REQUIRE_CONTACTS = settings.get("APP_REQUIRE_CONTACTS", False)
 
-# ------------------
-# 应用监控服务相关配置
-# ------------------
-
-# 监控服务 phalanx 地址
-PHALANX_URL = settings.get("PHALANX_URL", "http://localhost:8080")
-
-# 监控服务 phalanx 访问 token
-PHALANX_AUTH_TOKEN = settings.get("PHALANX_AUTH_TOKEN", "")
-
-
 # --------------
 # 平台日志相关配置
 # --------------

@@ -519,14 +519,6 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 # APP_REQUIRE_CONTACTS: false
 
 
-## ------------------------------------ 应用监控服务相关配置 ------------------------------------
-
-## 监控服务 phalanx 地址
-# PHALANX_URL: http://localhost:8080
-## 监控服务 phalanx 访问 token
-# PHALANX_AUTH_TOKEN: ''
-
-
 ## ------------------------------------ 平台日志相关配置 ------------------------------------
 
 ## 是否将 PaaS API 请求日志发送给 Redis 队列

@@ -785,7 +785,9 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
                 raise ValidationError({"verification_code": [_("验证码错误")]})
         # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
         else:
-            logger.warning("Verification code is not currently supported, return snesitive field directly")
+            logger.warning(
+                "Verification code functionality is not currently supported. Returning the sensitive field directly."
+            )
 
         service_obj = mixed_service_mgr.get_or_404(service_id)
 

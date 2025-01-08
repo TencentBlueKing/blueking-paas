@@ -147,7 +147,7 @@ def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
 
     :return: The modified domain object
     """
-    cert = pick_shared_cert(app.region, d.host)
+    cert = pick_shared_cert(app.tenant_id, d.host)
     if not cert:
         d.tlsSecretName = None
         return d

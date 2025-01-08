@@ -66,6 +66,7 @@ def create_default_module(
         source_origin=source_origin.value,
         language=language,
         source_init_template=source_init_template,
+        tenant_id=application.tenant_id,
     )
     return module
 

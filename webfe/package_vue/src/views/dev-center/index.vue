@@ -6,124 +6,7 @@
       'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
     }"
   >
-    <div
-      v-if="!userHasApp"
-      class="no-app-list-wrap"
-    >
-      <div class="application-blank">
-        <h2>{{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }}</h2>
-        <p>
-          {{
-            $t(
-              '您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。'
-            )
-          }}
-        </p>
-        <p>
-          {{ $t('您可将应用发布到') }}
-          <a
-            class="blue"
-            :href="GLOBAL.LINK.APP_MARKET"
-            target="_blank"
-          >
-            {{ $t('蓝鲸应用市场') }}
-          </a>
-          {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }}
-        </p>
-        <p>
-          <router-link
-            :to="{ name: 'createApp' }"
-            class="paas-operation-icon"
-          >
-            <i class="paasng-icon paasng-plus" />
-            {{ $t('创建应用') }}
-          </router-link>
-          <router-link
-            v-if="userFeature.MGRLEGACY"
-            :to="{ name: 'appLegacyMigration' }"
-            class="btn-link spacing-h-x2"
-          >
-            {{ $t('迁移旧版应用') }}
-          </router-link>
-        </p>
-      </div>
-
-      <ul class="application-list">
-        <li>
-          <h2>
-            <a
-              href=""
-              target="_blank"
-            >
-              {{ $t('快速开始应用开发') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('新手福利，这里有详细的Step by Step入门指南') }}</p>
-            <p>
-              <a
-                href="javascript:"
-                target="_blank"
-              >
-                [{{ $t('新手入门') }}]
-              </a>
-              <a
-                href="javascript:"
-                target="_blank"
-              >
-                [{{ $t('开发指南') }}]
-              </a>
-            </p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-1.png" />
-          </a>
-        </li>
-        <li>
-          <h2>
-            <a
-              href="javascript:"
-              target="_blank"
-            >
-              {{ $t('使用预发布环境') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }}</p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-2.png" />
-          </a>
-        </li>
-        <li>
-          <h2>
-            <a
-              href="javascript:"
-              target="_blank"
-            >
-              {{ $t('发布到应用市场') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }}</p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-3.png" />
-          </a>
-        </li>
-      </ul>
-    </div>
     <paas-content-loader
-      v-else
       :is-loading="isFirstLoading"
       placeholder="apps-loading"
       offset-top="20"
@@ -256,6 +139,7 @@
           <table-empty
             :keyword="tableEmptyConf.keyword"
             :abnormal="tableEmptyConf.isAbnormal"
+            :empty-title="$t('暂无应用')"
             @reacquire="fetchAppList"
             @clear-filter="clearFilterKey"
           />
@@ -1273,27 +1157,6 @@ $customize-disabled-color: #c4c6cc;
   cursor: pointer;
 }
 
-.paas-operation-icon {
-  color: #fff;
-  font-size: 14px;
-  height: 36px;
-  line-height: 36px;
-  border-radius: 18px;
-  width: 120px;
-  text-align: center;
-  margin-left: 19px;
-  background: #3a84ff;
-  transition: all 0.5s;
-
-  &:hover {
-    background: #4b9cf2;
-  }
-
-  .paasng-icon {
-    margin-right: 5px;
-  }
-}
-
 div.choose-panel {
   input {
     appearance: none;
@@ -1438,78 +1301,6 @@ h2.application-title {
   padding-right: 8px;
 }
 
-.application-list {
-  overflow: hidden;
-  display: flex;
-  justify-content: space-between;
-}
-
-.application-list li {
-  float: left;
-  width: 360px;
-  text-align: center;
-  color: #333;
-  padding-bottom: 5px;
-}
-
-.application-list li h2 {
-  width: 100%;
-  height: 64px;
-  overflow: hidden;
-  font-weight: normal;
-}
-
-.application-list li h2 a {
-  color: #333;
-  font-size: 18px;
-  line-height: 64px;
-}
-
-.application-list-text {
-  height: 48px;
-  overflow: hidden;
-}
-
-.application-list-text a {
-  color: #3a84ff;
-  padding: 0 4px;
-}
-
-.application-list li img {
-  width: 360px;
-  height: 180px;
-  float: left;
-  margin-top: 24px;
-  box-shadow: 0 3px 5px #e5e5e5;
-  transition: all 0.5s;
-}
-
-.application-list li:hover img {
-  transform: translateY(-4px);
-}
-
-.application-blank {
-  background: #fff;
-  padding: 50px 30px;
-  text-align: center;
-  color: #666;
-  box-shadow: 0 2px 5px #e5e5e5;
-  margin-top: 2px;
-}
-
-.application-blank h2 {
-  font-size: 18px;
-  color: #333;
-  line-height: 42px;
-  padding: 14px 0;
-  font-weight: normal;
-}
-
-.application-blank .paas-operation-icon {
-  width: 140px;
-  margin: 34px auto 30px;
-}
-
 .choose-panel {
   position: absolute;
   right: 0;
@@ -1569,10 +1360,6 @@ h2.application-title {
 .ps-btn-visit:disabled .paasng-angle-down,
 .ps-btn-visit[disabled] .paasng-angle-down {
   color: #d7eadf !important;
-}
-.no-app-list-wrap {
-  width: 1180px;
-  margin: 0 auto;
 }
 .wrap {
   width: 100%;

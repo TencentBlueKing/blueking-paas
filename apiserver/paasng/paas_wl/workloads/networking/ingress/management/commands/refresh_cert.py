@@ -126,7 +126,6 @@ class Command(BaseCommand):
         cluster_names = []
         for cluster in Cluster.objects.all():
             for domain in cluster.ingress_config.sub_path_domains:
-                # TODO: Tenant_id
                 if pick_shared_cert(cluster.tenant_id, domain.name) == cert:
                     cluster_names.append(cluster.name)
                     break

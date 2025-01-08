@@ -88,13 +88,14 @@ class BkOauthClient:
                 request_id=resp.headers.get("x-request-id") or "",
             )
 
-    def create_client(self, bk_app_code: str):
+    def create_client(self, bk_app_code: str, app_tenant_mode: str, app_tenant_id: str):
         """创建 OAuth 应用默认会生成对应的 bk_app_secret"""
         url = f"{self.bk_oauth_url}/api/v1/apps"
         data = {
             "bk_app_code": bk_app_code,
             # BKAuth 未提供修改 name 的 API，name 也必须唯一，故 name 的值也是用 bk_app_code
             "name": bk_app_code,
+            "bk_tenant": {"mode": app_tenant_mode, "id": app_tenant_id},
         }
         with wrap_request_exc():
             resp = requests.post(url, json=data, headers=self.headers)

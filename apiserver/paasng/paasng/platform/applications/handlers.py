@@ -219,4 +219,3 @@ def turn_on_bk_log_feature(application: Application):
 
     logger.debug("turn on ENABLE_BK_LOG_COLLECTOR flag for application %s", application)
     application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_COLLECTOR, True)
-    application.feature_flag.set_feature(AppFeatureFlagConst.ENABLE_BK_LOG_CLIENT, True)

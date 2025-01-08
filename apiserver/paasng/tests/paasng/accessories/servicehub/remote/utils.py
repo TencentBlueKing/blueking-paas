@@ -18,7 +18,7 @@
 import uuid
 
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 from ..utils import SERVICE_COMMON_ARGS
 

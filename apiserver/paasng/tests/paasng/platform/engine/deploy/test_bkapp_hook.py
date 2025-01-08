@@ -24,7 +24,7 @@ from paas_wl.utils.constants import PodPhase
 from paasng.platform.engine.deploy.bg_command.bkapp_hook import PreReleaseDummyExecutor
 from paasng.platform.engine.handlers import attach_all_phases
 from paasng.platform.engine.utils.output import Style
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -37,14 +37,17 @@ class TestPreReleaseDummyExecutor:
         WlApp.objects.create(name=name, region=region)
 
     def test_start(self, bk_cnative_app, bk_module, bk_deployment):
-        with mock.patch(
-            "paasng.platform.engine.deploy.bg_command.bkapp_hook.BkAppHookHandler",
-            return_value=mock.MagicMock(
-                wait_for_logs_readiness=mock.MagicMock(return_value=PodPhase.RUNNING),
-                fetch_logs=mock.MagicMock(return_value=["1", "2"]),
-                wait_hook_finished=mock.MagicMock(return_value=PodPhase.SUCCEEDED),
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.bg_command.bkapp_hook.BkAppHookHandler",
+                return_value=mock.MagicMock(
+                    wait_for_logs_readiness=mock.MagicMock(return_value=PodPhase.RUNNING),
+                    fetch_logs=mock.MagicMock(return_value=["1", "2"]),
+                    wait_hook_finished=mock.MagicMock(return_value=PodPhase.SUCCEEDED),
+                ),
             ),
-        ), mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+        ):
             attach_all_phases(sender=bk_deployment.app_environment, deployment=bk_deployment)
 
             executor = PreReleaseDummyExecutor.from_deployment_id(bk_deployment.id)

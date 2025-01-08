@@ -42,7 +42,7 @@ def delete_env_resources(env: "ModuleEnvironment"):
     # 重要：由于云原生应用 1. 多模块共享命名空间 2. 下架时会删除 bkapp & domaingroupmapping，
     # 可通过 operator 进行资源回收，因此不需要在这里通过 删除命名空间 清理集群中的资源
     if env.application.type == ApplicationType.CLOUD_NATIVE:
-        # 清理部署失败时， 未通过下架操作删除的 bkapp & domaingroupmapping
+        # 清理部署失败时未通过下架操作删除的 bkapp & domaingroupmapping
         try:
             deployment = env.deployments.latest("created")
             if deployment.status == JobStatus.SUCCESSFUL:

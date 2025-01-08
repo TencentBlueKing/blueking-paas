@@ -31,7 +31,8 @@ from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.platform.modules.models import Module
-from tests.utils.helpers import create_app, generate_random_string, initialize_module
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_app, initialize_module
 
 from . import data_mocks
 

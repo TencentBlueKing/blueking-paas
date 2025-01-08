@@ -52,6 +52,8 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
@@ -96,11 +98,9 @@ from paasng.platform.applications.models import (
 from paasng.platform.applications.pagination import ApplicationListPagination
 from paasng.platform.applications.protections import AppResProtector, ProtectedRes, raise_if_protected
 from paasng.platform.applications.serializers import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ
-from paasng.platform.applications.signals import (
-    application_member_updated,
-    post_create_application,
-)
+from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (
     create_application,
     create_default_module,
@@ -578,9 +578,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         market_params = data["market_params"]
         operator = request.user.pk
 
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
         try:
             application = create_third_app(
-                data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator, market_params
+                data["region"],
+                data["code"],
+                data["name_zh_cn"],
+                data["name_en"],
+                operator,
+                app_tenant_mode,
+                app_tenant_id,
+                tenant.id,
+                market_params,
             )
         except DbIntegrityError as e:
             # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
@@ -618,13 +627,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
-
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
         # Guide: check if a bk_plugin can be created
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
         if source_origin == SourceOrigin.SCENE:
-            return self._init_scene_app(request, params, engine_params)
+            return self._init_scene_app(request, app_tenant_mode, app_tenant_id, tenant.id, params, engine_params)
 
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
@@ -637,7 +646,16 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:
                 raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
 
-        return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
+        return self._init_normal_app(
+            params,
+            engine_params,
+            source_origin,
+            cluster_name,
+            request.user.pk,
+            app_tenant_mode,
+            app_tenant_id,
+            tenant.id,
+        )
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateApplicationV2SLZ, tags=["创建蓝鲸可视化开发平台应用"])
@@ -672,7 +690,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         source_origin = SourceOrigin(engine_params["source_origin"])
         cluster_name = None
-        return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
+        return self._init_normal_app(
+            params,
+            engine_params,
+            source_origin,
+            cluster_name,
+            request.user.pk,
+            app_tenant_mode,
+            app_tenant_id,
+            tenant.id,
+        )
 
     def _create_app_in_lesscode(self, request, code: str, name: str):
         """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 产品上创建应用"""
@@ -690,6 +719,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
 
         advanced_options = params.get("advanced_options", {})
         cluster_name = None
@@ -724,6 +755,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             type_=ApplicationType.CLOUD_NATIVE.value,
             operator=request.user.pk,
             is_plugin_app=params["is_plugin_app"],
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant.id,
         )
         module = create_default_module(application, **module_src_cfg)
 
@@ -774,7 +808,17 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             "source_init_template": "bk-saas-plugin-python",
         }
         cluster_name = None
-        return self._init_normal_app(params, engine_params, source_origin, cluster_name, request.user.pk)
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
+        return self._init_normal_app(
+            params,
+            engine_params,
+            source_origin,
+            cluster_name,
+            request.user.pk,
+            app_tenant_mode,
+            app_tenant_id,
+            tenant.id,
+        )
 
     def get_creation_options(self, request):
         """[API] 获取创建应用模块时的选项信息"""
@@ -826,8 +870,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         source_origin: SourceOrigin,
         cluster_name: Optional[str],
         operator: str,
+        app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
+        app_tenant_id: str = "",
+        tenant_id: str = DEFAULT_TENANT_ID,
     ) -> Response:
-        """初始化普通应用，包含创建默认模块，应用市场配置等"""
+        """初始化应用，包含创建默认模块，应用市场配置等"""
         application = create_application(
             region=params["region"],
             code=params["code"],
@@ -837,6 +884,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
             operator=operator,
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant_id,
         )
 
         # Create engine related data
@@ -884,14 +934,24 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    def _init_scene_app(self, request, params: Dict, engine_params: Dict) -> Response:
+    def _init_scene_app(
+        self, request, app_tenant_mode: str, app_tenant_id: str, tenant_id: str, params: Dict, engine_params: Dict
+    ) -> Response:
         """初始化场景 SaaS 应用，包含根据 app_desc 文件创建一或多个模块，配置应用市场配置等"""
         tmpl_name = engine_params.get("source_init_template", "")
         app_name, app_code, region = params["name_en"], params["code"], params["region"]
 
         try:
             application, result = SceneAPPInitializer(
-                request.user, tmpl_name, app_name, app_code, region, engine_params
+                request.user,
+                tmpl_name,
+                app_name,
+                app_code,
+                region,
+                app_tenant_mode,
+                app_tenant_id,
+                tenant_id,
+                engine_params,
             ).execute()
         except DescriptionValidationError as e:
             logger.exception("Invalid app_desc.yaml cause create app failed")
@@ -1493,8 +1553,17 @@ class SysAppViewSet(viewsets.ViewSet):
 
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
-        application = create_third_app(data["region"], data["code"], data["name_zh_cn"], data["name_en"], operator)
-
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
+        application = create_third_app(
+            data["region"],
+            data["code"],
+            data["name_zh_cn"],
+            data["name_en"],
+            operator,
+            app_tenant_mode,
+            app_tenant_id,
+            tenant.id,
+        )
         # 返回应用的密钥信息
         secret = get_oauth2_client_secret(application.code)
         return Response(

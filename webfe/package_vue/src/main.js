@@ -86,75 +86,6 @@ window.$ = $;
 
 Vue.config.devtools = true;
 
-// components use
-// Vue.use(bkBadge);
-// Vue.use(bkButton);
-// Vue.use(bkLink);
-// Vue.use(bkCheckbox);
-// Vue.use(bkCheckboxGroup);
-// Vue.use(bkCol);
-// Vue.use(bkCollapse);
-// Vue.use(bkCollapseItem);
-// Vue.use(bkContainer);
-// Vue.use(bkDatePicker);
-// Vue.use(bkDialog, {
-//   headerPosition: 'left',
-// });
-// Vue.use(bkDropdownMenu);
-// Vue.use(bkException);
-// Vue.use(bkForm);
-// Vue.use(bkFormItem);
-// Vue.use(bkInput);
-// Vue.use(bkNavigation);
-// Vue.use(bkNavigationMenu);
-// Vue.use(bkNavigationMenuItem);
-// Vue.use(bkOption);
-// Vue.use(bkOptionGroup);
-// Vue.use(bkPagination);
-// Vue.use(bkPopover);
-// Vue.use(bkProcess);
-// Vue.use(bkProgress);
-// Vue.use(bkRadio);
-// Vue.use(bkRadioGroup);
-// Vue.use(bkRoundProgress);
-// Vue.use(bkRow);
-// Vue.use(bkSearchSelect);
-// Vue.use(bkSelect);
-// Vue.use(bkSideslider);
-// Vue.use(bkSlider);
-// Vue.use(bkSteps);
-// Vue.use(bkSwitcher);
-// Vue.use(bkTab);
-// Vue.use(bkOverflowTips);
-// Vue.use(bkTabPanel);
-// Vue.use(bkTable);
-// Vue.use(bkTableColumn, {
-//   showOverflowTooltip: true,
-// });
-// Vue.use(bkTagInput, {
-//   tooltipKey: 'name',
-// });
-// Vue.use(bkTimePicker);
-// Vue.use(bkTimeline);
-// Vue.use(bkTransfer, {
-//   showOverflowTips: true,
-// });
-// Vue.use(bkTree);
-// Vue.use(bkUpload);
-// Vue.use(bkSwiper);
-// Vue.use(bkRate);
-// Vue.use(bkAnimateNumber);
-// Vue.use(bkVirtualScroll);
-// Vue.use(bkPopconfirm);
-// // directives use
-// Vue.use(bkClickoutside);
-// Vue.use(bkTooltips);
-// Vue.use(bkLoading);
-// // Vue.use(bkOverflowTips)
-// Vue.use(bkAlert);
-// Vue.use(bkCard);
-// Vue.use(bkTag);
-
 Vue.use(Directives);
 Vue.component('PaasContentLoader', PaasContentLoader);
 Vue.component('PaasLoading', passLoading);
@@ -196,6 +127,7 @@ window.GLOBAL_CONFIG = {
   ...PLATFORM_CONFIG,
   ...window.GLOBAL_CONFIG,
   NOTICE_HEIGHT: 40,
+  OP_TYPE_TENANT_ID: 'system',
 };
 Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 

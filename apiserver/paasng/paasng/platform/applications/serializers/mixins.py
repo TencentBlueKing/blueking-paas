@@ -21,6 +21,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.core.region.states import get_region
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 from .fields import AppIDField, AppNameField
@@ -31,6 +32,9 @@ class AppBasicInfoMixin(serializers.Serializer):
     region = serializers.ChoiceField(choices=get_region().get_choices())
     code = AppIDField()
     name = I18NExtend(AppNameField())
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
 
 
 class MarketParamsMixin(serializers.Serializer):

@@ -102,20 +102,6 @@
             </template>
           </bk-table-column>
           <bk-table-column
-            :label="$t('共享信息')"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.ref_modules && row.ref_modules.length">
-                {{ $t('被') }} {{ row.ref_modules.map((e) => e.name).join(',') }} {{ $t('共享') }}
-              </span>
-              <span v-else-if="row.type === 'shared' && row.ref_module">
-                {{ $t('共享来自') }} {{ row.ref_module.name }}
-              </span>
-              <span v-else>--</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
             width="180"
             :label="$t('启/停')"
             class-name="services-table-cloumn"

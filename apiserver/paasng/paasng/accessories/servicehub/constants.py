@@ -77,3 +77,10 @@ class PrecedencePolicyCondType(StrStructuredEnum):
 
     # Test if the cluster is in the given list
     CLUSTER_IN = "cluster_in"
+
+
+# cond_type 转换为 cond_data 中 key 的映射关系
+COND_TYPE_TO_DATA_KEY_MAP = {
+    PrecedencePolicyCondType.REGION_IN.value: "region_in",
+    PrecedencePolicyCondType.CLUSTER_IN.value: "cluster_names",
+}

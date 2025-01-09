@@ -56,7 +56,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        ServiceBindingPolicyManager(dummy_service).set_static([dummy_service.get_plans()[0]])
+        ServiceBindingPolicyManager(dummy_service).set_static([dummy_service.get_plans()[0].uuid])
         yield
 
 

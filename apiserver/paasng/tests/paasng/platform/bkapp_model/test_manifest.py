@@ -101,7 +101,7 @@ def local_service(bk_app):
     service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    ServiceBindingPolicyManager(svc_obj).set_static([svc_obj.get_plans()[0]])
+    ServiceBindingPolicyManager(svc_obj).set_static([svc_obj.get_plans()[0].uuid])
     return svc_obj
 
 

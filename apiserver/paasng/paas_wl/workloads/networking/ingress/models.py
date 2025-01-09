@@ -34,6 +34,8 @@ class AppDomain(AuditedModel):
     """Domains of applications, each object(entry) represents an (domain + path_prefix) pair."""
 
     app = models.ForeignKey(WlApp, on_delete=models.CASCADE)
+    # TODO: The region field is not used anymore, remove it in the next release
+    region = models.CharField(max_length=32)
     host = models.CharField(max_length=128)
 
     # This field was designed for supported `path_prefix` customization, but only '/' (or None)
@@ -68,6 +70,8 @@ class AppDomain(AuditedModel):
 
 
 class BasicCert(AuditedModel):
+    # TODO: The region field is not used anymore, remove it in the next release
+    region = models.CharField(max_length=32)
     tenant_id = models.CharField(
         verbose_name="租户 ID",
         max_length=32,
@@ -138,6 +142,8 @@ class AppSubpath(AuditedModel):
     """stores application's subpaths"""
 
     app = models.ForeignKey(WlApp, on_delete=models.CASCADE, db_constraint=False)
+    # TODO: The region field is not used anymore, remove it in the next release
+    region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32)
     subpath = models.CharField(max_length=128)
     source = models.IntegerField()

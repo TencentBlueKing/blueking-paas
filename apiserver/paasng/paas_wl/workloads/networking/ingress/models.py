@@ -49,6 +49,7 @@ class AppDomain(AuditedModel):
     cert = models.ForeignKey("AppDomainCert", null=True, on_delete=models.SET_NULL)
     shared_cert = models.ForeignKey("AppDomainSharedCert", null=True, on_delete=models.SET_NULL)
 
+    # See `AppDomainSource` for possible values
     source = models.IntegerField(help_text="数据来源分类")
     tenant_id = models.CharField(
         verbose_name="租户 ID",

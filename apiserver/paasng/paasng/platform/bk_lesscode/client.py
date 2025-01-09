@@ -23,6 +23,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from django.utils.translation import get_language
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.platform.bk_lesscode.apigw.client import Client
 from paasng.platform.bk_lesscode.apigw.client import Group as LessCodeGroup
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
@@ -41,10 +42,11 @@ class DummyLessCodeClient:
 class LessCodeClient:
     """bk_lesscode 通过 APIGW 提供的 API"""
 
-    def __init__(self, login_cookie: str, client: Optional[LessCodeGroup] = None):
+    def __init__(self, login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
         self.client = client or self._make_api_client()
         self.login_cookie_name = settings.BK_COOKIE_NAME
         self.login_cookie = login_cookie
+        self.tenant_id = tenant_id
 
     def _make_api_client(self) -> LessCodeGroup:
         """Make a client object for requesting"""
@@ -58,7 +60,8 @@ class LessCodeClient:
                     "bk_app_secret": settings.BK_APP_SECRET,
                     self.login_cookie_name: self.login_cookie,
                 }
-            )
+            ),
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
 
         # 需要 lesscode 的 API 支持国际化
@@ -105,8 +108,8 @@ class LessCodeClient:
         return f"{settings.BK_LESSCODE_URL}{address_path}"
 
 
-def make_bk_lesscode_client(login_cookie: str, client: Optional[LessCodeGroup] = None):
+def make_bk_lesscode_client(login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
     if settings.ENABLE_BK_LESSCODE:
-        return LessCodeClient(login_cookie, client)
+        return LessCodeClient(login_cookie, tenant_id, client)
     else:
         return DummyLessCodeClient()

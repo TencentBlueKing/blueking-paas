@@ -41,6 +41,7 @@ from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -92,8 +93,10 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
+
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfgs = make_bk_log_management_client().list_custom_collector_config(
+        tenant_id = get_tenant_id_for_app(module.application.code)
+        cfgs = make_bk_log_management_client(tenant_id).list_custom_collector_config(
             biz_or_space_id=monitor_space.iam_resource_id
         )
         if not slz.validated_data.get("all", False):
@@ -133,7 +136,8 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         validated_data = slz.validated_data
 
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfg = make_bk_log_management_client().get_custom_collector_config_by_name_en(
+        tenant_id = get_tenant_id_for_app(module.application.code)
+        cfg = make_bk_log_management_client(tenant_id).get_custom_collector_config_by_name_en(
             biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=validated_data["name_en"]
         )
         if not cfg or cfg.id != validated_data["collector_config_id"]:

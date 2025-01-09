@@ -23,8 +23,8 @@ from typing import Dict, List, Optional
 
 from blue_krill.data_types.enum import EnumField, IntStructuredEnum
 
-from paas_wl.infras.cluster.models import Domain as DomainCfg
-from paas_wl.infras.cluster.models import IngressConfig, PortMap
+from paas_wl.infras.cluster.entities import Domain as DomainCfg
+from paas_wl.infras.cluster.entities import IngressConfig, PortMap
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.entrance.addrs import URL
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe

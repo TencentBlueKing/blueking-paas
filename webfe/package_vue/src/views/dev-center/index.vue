@@ -6,124 +6,7 @@
       'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
     }"
   >
-    <div
-      v-if="!userHasApp"
-      class="no-app-list-wrap"
-    >
-      <div class="application-blank">
-        <h2>{{ $t('蓝鲸应用是蓝鲸应用引擎提供的服务单位') }}</h2>
-        <p>
-          {{
-            $t(
-              '您可以创建自己的蓝鲸应用，使用您熟悉的编程语言（Python、Golang等）进行开发。开发完成后，您可以一键部署，使应用运行在蓝鲸 PaaS 平台上。'
-            )
-          }}
-        </p>
-        <p>
-          {{ $t('您可将应用发布到') }}
-          <a
-            class="blue"
-            :href="GLOBAL.LINK.APP_MARKET"
-            target="_blank"
-          >
-            {{ $t('蓝鲸应用市场') }}
-          </a>
-          {{ $t('后，其他蓝鲸平台的用户便可以通过应用市场搜索和访问您的应用') }}
-        </p>
-        <p>
-          <router-link
-            :to="{ name: 'createApp' }"
-            class="paas-operation-icon"
-          >
-            <i class="paasng-icon paasng-plus" />
-            {{ $t('创建应用') }}
-          </router-link>
-          <router-link
-            v-if="userFeature.MGRLEGACY"
-            :to="{ name: 'appLegacyMigration' }"
-            class="btn-link spacing-h-x2"
-          >
-            {{ $t('迁移旧版应用') }}
-          </router-link>
-        </p>
-      </div>
-
-      <ul class="application-list">
-        <li>
-          <h2>
-            <a
-              href=""
-              target="_blank"
-            >
-              {{ $t('快速开始应用开发') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('新手福利，这里有详细的Step by Step入门指南') }}</p>
-            <p>
-              <a
-                href="javascript:"
-                target="_blank"
-              >
-                [{{ $t('新手入门') }}]
-              </a>
-              <a
-                href="javascript:"
-                target="_blank"
-              >
-                [{{ $t('开发指南') }}]
-              </a>
-            </p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-1.png" />
-          </a>
-        </li>
-        <li>
-          <h2>
-            <a
-              href="javascript:"
-              target="_blank"
-            >
-              {{ $t('使用预发布环境') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('蓝鲸PaaS平台为所有应用提供预发布环境，使您的应用在上线到生产环境前经过充分的测试') }}</p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-2.png" />
-          </a>
-        </li>
-        <li>
-          <h2>
-            <a
-              href="javascript:"
-              target="_blank"
-            >
-              {{ $t('发布到应用市场') }}
-            </a>
-          </h2>
-          <div class="application-list-text">
-            <p>{{ $t('将应用部署到生产环境后，您就可以将其发布到蓝鲸应用市场了') }}</p>
-          </div>
-          <a
-            href="javascript:"
-            target="_blank"
-          >
-            <img src="/static/images/application-list-3.png" />
-          </a>
-        </li>
-      </ul>
-    </div>
     <paas-content-loader
-      v-else
       :is-loading="isFirstLoading"
       placeholder="apps-loading"
       offset-top="20"
@@ -256,6 +139,7 @@
           <table-empty
             :keyword="tableEmptyConf.keyword"
             :abnormal="tableEmptyConf.isAbnormal"
+            :empty-title="$t('暂无应用')"
             @reacquire="fetchAppList"
             @clear-filter="clearFilterKey"
           />
@@ -471,6 +355,24 @@
             </div>
           </template>
         </bk-table-column>
+        <template v-if="isShowTenant">
+          <bk-table-column
+            :label="$t('租户类型')"
+            prop="app_tenant_mode"
+            column-key="app_tenant_mode"
+            :filters="tenantFilters"
+            :filter-multiple="false"
+          >
+            <template slot-scope="{ row }">
+              {{ $t(appTenantMode[row.application.app_tenant_mode]) }}
+            </template>
+          </bk-table-column>
+          <bk-table-column :label="$t('所属租户')">
+            <template slot-scope="{ row }">
+              {{ row.application.app_tenant_id || '--' }}
+            </template>
+          </bk-table-column>
+        </template>
         <bk-table-column
           :label="$t('状态')"
           :render-header="statusRenderHeader"
@@ -595,7 +497,8 @@ import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';
-import { PAAS_APP_TYPE } from '@/common/constants';
+import { PAAS_APP_TYPE, APP_TENANT_MODE } from '@/common/constants';
+import { mapGetters } from 'vuex';
 
 const APP_TYPE_MAP = [
   {
@@ -758,8 +661,6 @@ export default {
       ],
       expandRowKeys: [],
       curHoverRowIndex: -1,
-      isFilterConditionPresent: false,
-      filterRegion: [],
       appExtraData: {},
       tableHeaderFilterValue: 'all',
       appMigrationDialogConfig: {
@@ -768,6 +669,12 @@ export default {
       },
       noMigrationNeededStatus: ['no_need_migration', 'confirmed'],
       appTypeList: APP_TYPE_MAP,
+      appTenantMode: APP_TENANT_MODE,
+      tenantFilters: [
+        { text: this.$t('单租户'), value: 'single' },
+        { text: this.$t('全租户'), value: 'global' },
+      ],
+      tableFilters: {},
     };
   },
   computed: {
@@ -794,15 +701,13 @@ export default {
         ? this.sortValue.indexOf('-') !== -1
         : !(this.sortValue.indexOf('-') !== -1);
     },
+    ...mapGetters(['isShowTenant']),
   },
   watch: {
     filterKey(newVal, oldVal) {
       if (newVal === '' && oldVal !== '') {
         this.fetchAppList();
       }
-    },
-    filterRegion() {
-      this.fetchAppList();
     },
   },
   created() {
@@ -949,7 +854,7 @@ export default {
       let url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?format=json`;
       // 筛选,搜索等操作时，强制切到 page 的页码
       // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
-      url = this.getParams(url);
+      url = this.concatenateFilters(url);
       this.fetchParams.order_by = this.sortValue;
       const params = Object.assign(this.fetchParams, {
         search_term: this.filterKey,
@@ -1071,18 +976,21 @@ export default {
       this.reset();
     },
 
-    getParams(url) {
-      // 应用版本
-      if (this.filterRegion.length) {
-        const region = this.filterRegion[0] === '内部版' ? 'ieod' : 'tencent';
+    concatenateFilters(url) {
+      const { region, tenant } = this.tableFilters;
+      if (region) {
+        const region = region === '内部版' ? 'ieod' : 'tencent';
         url += `&region=${region}`;
+      }
+      if (tenant) {
+        url += `&app_tenant_mode=${tenant}`;
       }
       return url;
     },
 
     // 是否存在筛选条件
     updateTableEmptyConfig() {
-      if (this.filterKey || this.isFilterConditionPresent) {
+      if (this.filterKey || this.tableFilters.region || this.tableFilters.tenant) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
@@ -1121,9 +1029,12 @@ export default {
     // 表格筛选
     handleFilterChange(filds) {
       if (filds.region_name) {
-        this.filterRegion = filds.region_name.length ? filds.region_name : [];
+        this.tableFilters['region'] = filds.region_name.length ? filds.region_name[0] : '';
       }
-      this.isFilterConditionPresent = !!filds.region_name.length;
+      if (filds.app_tenant_mode) {
+        this.tableFilters['tenant'] = filds.app_tenant_mode.length ? filds.app_tenant_mode[0] : '';
+      }
+      this.fetchAppList();
     },
 
     statusRenderHeader(h) {
@@ -1244,27 +1155,6 @@ $customize-disabled-color: #c4c6cc;
 .shaixuan,
 .shaixuan input {
   cursor: pointer;
-}
-
-.paas-operation-icon {
-  color: #fff;
-  font-size: 14px;
-  height: 36px;
-  line-height: 36px;
-  border-radius: 18px;
-  width: 120px;
-  text-align: center;
-  margin-left: 19px;
-  background: #3a84ff;
-  transition: all 0.5s;
-
-  &:hover {
-    background: #4b9cf2;
-  }
-
-  .paasng-icon {
-    margin-right: 5px;
-  }
 }
 
 div.choose-panel {
@@ -1411,78 +1301,6 @@ h2.application-title {
   padding-right: 8px;
 }
 
-.application-list {
-  overflow: hidden;
-  display: flex;
-  justify-content: space-between;
-}
-
-.application-list li {
-  float: left;
-  width: 360px;
-  text-align: center;
-  color: #333;
-  padding-bottom: 5px;
-}
-
-.application-list li h2 {
-  width: 100%;
-  height: 64px;
-  overflow: hidden;
-  font-weight: normal;
-}
-
-.application-list li h2 a {
-  color: #333;
-  font-size: 18px;
-  line-height: 64px;
-}
-
-.application-list-text {
-  height: 48px;
-  overflow: hidden;
-}
-
-.application-list-text a {
-  color: #3a84ff;
-  padding: 0 4px;
-}
-
-.application-list li img {
-  width: 360px;
-  height: 180px;
-  float: left;
-  margin-top: 24px;
-  box-shadow: 0 3px 5px #e5e5e5;
-  transition: all 0.5s;
-}
-
-.application-list li:hover img {
-  transform: translateY(-4px);
-}
-
-.application-blank {
-  background: #fff;
-  padding: 50px 30px;
-  text-align: center;
-  color: #666;
-  box-shadow: 0 2px 5px #e5e5e5;
-  margin-top: 2px;
-}
-
-.application-blank h2 {
-  font-size: 18px;
-  color: #333;
-  line-height: 42px;
-  padding: 14px 0;
-  font-weight: normal;
-}
-
-.application-blank .paas-operation-icon {
-  width: 140px;
-  margin: 34px auto 30px;
-}
-
 .choose-panel {
   position: absolute;
   right: 0;
@@ -1542,10 +1360,6 @@ h2.application-title {
 .ps-btn-visit:disabled .paasng-angle-down,
 .ps-btn-visit[disabled] .paasng-angle-down {
   color: #d7eadf !important;
-}
-.no-app-list-wrap {
-  width: 1180px;
-  margin: 0 auto;
 }
 .wrap {
   width: 100%;

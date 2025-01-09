@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, TypedDict, ove
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
-from paas_wl.infras.cluster.models import Cluster, Domain
+from paas_wl.infras.cluster.entities import Domain
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
@@ -295,12 +296,10 @@ class ModuleRuntimeManager:
             return False
 
     @overload
-    def get_slug_builder(self) -> AppSlugBuilder:
-        ...
+    def get_slug_builder(self) -> AppSlugBuilder: ...
 
     @overload
-    def get_slug_builder(self, raise_exception: bool = False) -> Optional[AppSlugBuilder]:
-        ...
+    def get_slug_builder(self, raise_exception: bool = False) -> Optional[AppSlugBuilder]: ...
 
     def get_slug_builder(self, raise_exception: bool = True) -> Optional[AppSlugBuilder]:
         """返回当前模块绑定的 AppSlugBuilder
@@ -312,12 +311,10 @@ class ModuleRuntimeManager:
         return self.build_config.buildpack_builder
 
     @overload
-    def get_slug_runner(self) -> AppSlugRunner:
-        ...
+    def get_slug_runner(self) -> AppSlugRunner: ...
 
     @overload
-    def get_slug_runner(self, raise_exception: bool = False) -> Optional[AppSlugRunner]:
-        ...
+    def get_slug_runner(self, raise_exception: bool = False) -> Optional[AppSlugRunner]: ...
 
     def get_slug_runner(self, raise_exception: bool = True) -> Optional[AppSlugRunner]:
         """返回当前模块绑定的 AppSlugRunner

@@ -2954,4 +2954,11 @@ export default {
   立即回收: 'Recycle now',
   未回收的增强服务实例: 'Unrecycled enhanced service instances',
   工具: 'Tools',
+  'Smart 包中声明的应用 ID 为：{n}': 'The application ID declared in the Smart package is: {n}',
+  'Smart 包中声明的应用名称为：{n}': 'The application name declared in the Smart package is: {n}',
+  '应用 ID 修改后，将导致应用访问地址、API 授权信息等发生变更，请务必确认相关风险。': 'After modifying the application ID, the application access address and API authorization information will change, please be sure to confirm the related risks.',
+  '修改应用 ID': 'Modify application ID',
+  将文件拖到此处或: 'Drag the file here or',
+  上传成功: 'Upload successful',
+  点击上传: 'Click to upload',
 };

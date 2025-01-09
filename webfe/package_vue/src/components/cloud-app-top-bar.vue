@@ -76,7 +76,7 @@
   </div>
 </template>
 <script>
-import { defineComponent, ref, watch, computed } from 'vue';
+import { defineComponent, ref, watch, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
 import { traceIds } from '@/common/trace-ids';
@@ -134,17 +134,14 @@ export default defineComponent({
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);
     const curModelName = ref(props.curModule.name || 'default');
+    const instance = getCurrentInstance();
     const route = router.currentRoute;
     const curAppInfo = computed(() => store.state.curAppInfo);
-
     const handleTabChange = () => {
       if (props.isTrace) {
-        if (window.NODE_ENV !== 'development') {
-          // 添加埋点
-          const category = curAppInfo.application?.type === 'cloud_native' ? '云原生应用' : '普通应用';
-          const label = props.navList.find((item) => item.name === curActive.value).label;
-          BKANALYSIS.sendEvent({ id: traceIds[label], action: 'view', category: category });
-        }
+        const category = curAppInfo.value.application?.type === 'cloud_native' ? '云原生应用' : '普通应用';
+        const label = props.navList.find((item) => item.name === curActive.value).label;
+        instance.proxy.sendEventTracking({ id: traceIds[label], action: 'view', category });
       }
       emit('change', curActive.value);
     };

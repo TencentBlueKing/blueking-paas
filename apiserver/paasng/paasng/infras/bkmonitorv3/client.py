@@ -22,6 +22,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from typing_extensions import Protocol
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bkmonitorv3.backend.apigw import Client
 from paasng.infras.bkmonitorv3.backend.esb import get_client_by_username
 from paasng.infras.bkmonitorv3.definitions import BkMonitorSpace
@@ -292,7 +293,7 @@ def _make_bk_minotor_backend(tenant_id) -> BkMonitorBackend:
         )
         apigw_client.update_headers(
             {
-                "X-Bk-Tenant-Id": tenant_id,
+                API_HERDER_TENANT_ID: tenant_id,
             }
         )
         return apigw_client.api

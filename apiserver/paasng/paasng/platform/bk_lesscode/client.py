@@ -23,6 +23,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from django.utils.translation import get_language
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.platform.bk_lesscode.apigw.client import Client
 from paasng.platform.bk_lesscode.apigw.client import Group as LessCodeGroup
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
@@ -60,7 +61,7 @@ class LessCodeClient:
                     self.login_cookie_name: self.login_cookie,
                 }
             ),
-            "X-Bk-Tenant-Id": self.tenant_id,
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
 
         # 需要 lesscode 的 API 支持国际化

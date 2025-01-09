@@ -23,6 +23,7 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bk_ci import entities
 from paasng.infras.bk_ci.apigw.client import Client
 from paasng.infras.bk_ci.apigw.client import Group as BkDevopsGroup
@@ -62,7 +63,7 @@ class BaseBkCIClient:
         # 应用态 API 需要添加 X-DEVOPS-UID，用户态 API 不需要
         return {
             "X-DEVOPS-UID": self.bk_username,
-            "X-Bk-Tenant-Id": self.tenant_id,
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
 
 

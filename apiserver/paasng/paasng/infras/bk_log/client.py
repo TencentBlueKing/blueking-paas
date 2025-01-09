@@ -21,6 +21,7 @@ import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bk_log.backend.apigw import Client as APIGWClient
 from paasng.infras.bk_log.backend.esb import get_client_by_username
 from paasng.infras.bk_log.definitions import CustomCollectorConfig, PlainCustomCollectorConfig
@@ -211,7 +212,7 @@ def make_bk_log_management_client(tenant_id: str) -> BkLogManagementClient:
         )
         apigw_client.update_headers(
             {
-                "X-Bk-Tenant-Id": tenant_id,
+                API_HERDER_TENANT_ID: tenant_id,
             }
         )
         return BkLogManagementClient(apigw_client.api)
@@ -232,7 +233,7 @@ def make_bk_log_esquery_client(tenant_id: str) -> BKLogQueryAPIProtocol:
         )
         apigw_client.update_headers(
             {
-                "X-Bk-Tenant-Id": tenant_id,
+                API_HERDER_TENANT_ID: tenant_id,
             }
         )
         return apigw_client.api

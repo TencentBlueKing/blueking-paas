@@ -22,6 +22,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from django.test.utils import override_settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError
 from tests.utils.basic import generate_random_string
@@ -99,7 +100,7 @@ class TestBkLesscode:
         assert fake_good_client.create_project_by_app.called
         _, kwargs = fake_good_client.create_project_by_app.call_args_list[0]
         assert kwargs["headers"]["x-bkapi-authorization"] != ""
-        assert kwargs["headers"]["X-Bk-Tenant-Id"] == tenant_id
+        assert kwargs["headers"][API_HERDER_TENANT_ID] == tenant_id
         assert kwargs["data"]["appCode"] == bk_app_code
         assert kwargs["data"]["moduleCode"] == bk_module_name
 

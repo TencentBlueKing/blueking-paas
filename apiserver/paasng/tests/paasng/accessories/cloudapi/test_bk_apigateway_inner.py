@@ -20,6 +20,7 @@ import json
 import pytest
 
 from paasng.accessories.cloudapi.components.bk_apigateway_inner import BkApigatewayInnerComponent
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 
 class TestBkApigatewayInnerComponent:
@@ -36,7 +37,7 @@ class TestBkApigatewayInnerComponent:
                             "bk_username": "admin",
                         },
                     ),
-                    "X-Bk-Tenant-Id": "system",
+                    API_HERDER_TENANT_ID: "system",
                 },
             ),
             (
@@ -50,7 +51,7 @@ class TestBkApigatewayInnerComponent:
                             "bk_username": "admin",
                         }
                     ),
-                    "X-Bk-Tenant-Id": "system",
+                    API_HERDER_TENANT_ID: "system",
                 },
             ),
         ],

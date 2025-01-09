@@ -18,6 +18,7 @@ from django.conf import settings
 
 from paas_wl.infras.resources.base.bcs.apigw import Client
 from paas_wl.infras.resources.base.bcs.apigw import Group as BcsGroup
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 
 class DummyBcsClient:
@@ -42,7 +43,7 @@ class BcsClient:
     def _prepare_headers(self) -> dict:
         # 添加公共的 header
         return {
-            "X-Bk-Tenant-Id": self.tenant_id,
+            API_HERDER_TENANT_ID: self.tenant_id,
             "Content-Type": "application/json",
         }
 

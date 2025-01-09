@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam import utils
 from paasng.infras.iam.apigw.client import Client
 from paasng.infras.iam.apigw.client import Group as BKIAMGroup
@@ -58,7 +59,7 @@ class BKIAMClient:
                     "bk_app_secret": settings.BK_APP_SECRET,
                 }
             ),
-            "X-Bk-Tenant-Id": self.tenant_id,
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
         return headers
 

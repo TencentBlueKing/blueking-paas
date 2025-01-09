@@ -20,6 +20,8 @@ import json
 from django.conf import settings
 from django.utils.translation import get_language
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
+
 from .component import BaseComponent
 from .http import http_get, http_post
 
@@ -47,7 +49,7 @@ class BkApigatewayInnerComponent(BaseComponent):
                     "bk_username": bk_username,
                 }
             ),
-            "X-Bk-Tenant-Id": tenant_id,
+            API_HERDER_TENANT_ID: tenant_id,
         }
 
         language = get_language()

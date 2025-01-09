@@ -72,11 +72,6 @@ class CommandType(StrStructuredEnum):
         return super()._missing_(value)
 
 
-def make_enum_choices(obj):
-    """Make django field choices form enum"""
-    return [(member.value, name) for name, member in obj.__members__.items()]
-
-
 class PodPhase(StrStructuredEnum):
     SUCCEEDED = EnumField("Succeeded", "成功")
     FAILED = EnumField("Failed", "失败")

@@ -325,7 +325,7 @@ class ModuleInitializer:
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
-        info = create_app_ignore_duplicated(self.application.region, name, app_type)
+        info = create_app_ignore_duplicated(self.application.region, name, app_type, self.application.tenant_id)
         engine_app = EngineApp.objects.create(
             id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
         )

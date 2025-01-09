@@ -394,10 +394,6 @@ def _mock_iam():
             new=StubBKIAMClient,
         ),
         mock.patch(
-            "paasng.infras.iam.helpers.IAM_CLI",
-            new=StubBKIAMClient(),
-        ),
-        mock.patch(
             "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
             new=mock_user_has_app_action_perm,
         ),
@@ -521,6 +517,11 @@ def bk_deployment(bk_module):
 def bk_deployment_full(bk_module_full):
     """Generate a simple deployment object for bk_module_full(which have source_obj)"""
     return create_fake_deployment(bk_module_full)
+
+
+@pytest.fixture()
+def tenant_id():
+    return "system"
 
 
 @pytest.fixture()

@@ -14,13 +14,18 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import Tenant, get_tenant
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, Tenant, get_tenant
 from paasng.infras.accounts.models import User
+from paasng.platform.applications.models import Application
+
+logger = logging.getLogger(__name__)
 
 
 def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> tuple[AppTenantMode, str, Tenant]:
@@ -42,3 +47,16 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
 
     app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
     return app_tenant_mode, app_tenant_id, tenant
+
+
+def get_tenant_id_for_app(app_code: str) -> str:
+    # 若果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
+    if not settings.ENABLE_MULTI_TENANT_MODE:
+        return DEFAULT_TENANT_ID
+
+    try:
+        app = Application.objects.get(code=app_code)
+    except Application.DoesNotExist:
+        logger.warning("Application: %s DoesNotExist", app_code)
+        return ""
+    return app.tenant_id

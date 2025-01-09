@@ -25,6 +25,7 @@ Examples:
     # 对全量应用用户组重新授权
     python manage.py regrant_user_group_policies --all --role operator
 """
+
 import logging
 from typing import Dict
 
@@ -36,6 +37,7 @@ from paasng.infras.iam.members.models import ApplicationUserGroup
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 logger = logging.getLogger(__name__)
 
@@ -72,12 +74,13 @@ class Command(BaseCommand):
         total = groups.count()
         regrant_failed_app_codes = set()
 
-        iam_client = BKIAMClient()
         for idx, group in enumerate(groups, start=1):
             print(
                 f"regrant app code {group.app_code} role {ApplicationRole(role).name} "
                 + f"iam user group: {group.user_group_id} ({idx}/{total})"
             )
+            tenant_id = get_tenant_id_for_app(group.app_code)
+            iam_client = BKIAMClient(tenant_id)
             try:
                 # 先回收用户组所有权限，再重新授权
                 iam_client.revoke_user_group_policies(group.user_group_id, list(AppAction.get_values()))

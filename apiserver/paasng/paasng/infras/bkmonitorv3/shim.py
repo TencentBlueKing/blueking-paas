@@ -23,6 +23,7 @@ from paasng.infras.bkmonitorv3.definitions import gen_bk_monitor_space
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.infras.iam.tasks import add_monitoring_space_permission
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
 def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
@@ -31,7 +32,8 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
     :param application:
     :return: BKMonitorSpace
     """
-    mgr = make_bk_monitor_space_manager()
+    tenant_id = get_tenant_id_for_app(application.code)
+    mgr = make_bk_monitor_space_manager(tenant_id)
     try:
         # 兼容多个 paas 环境对接同一个蓝鲸监控服务的情况, 先尝试获取同名的 space, 如果存在则不调用蓝鲸监控的创建接口
         space = mgr.get_space_detail(gen_bk_monitor_space(application))
@@ -75,7 +77,8 @@ def update_or_create_bk_monitor_space(application: Application) -> Tuple[BKMonit
     except BKMonitorSpace.DoesNotExist:
         return create_bk_monitor_space(application), True
 
-    mgr = make_bk_monitor_space_manager()
+    tenant_id = get_tenant_id_for_app(application.code)
+    mgr = make_bk_monitor_space_manager(tenant_id)
     space = mgr.update_space(gen_bk_monitor_space(application))
     db_space.id = space.id
     db_space.space_type_id = space.space_type_id

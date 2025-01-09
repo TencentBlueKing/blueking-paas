@@ -33,12 +33,7 @@ urlpatterns = [
         name="api.services.get_service_detail",
     ),
     re_path(
-        r"^api/services/regions/%s/$" % REGION,
-        views.ServiceViewSet.as_view({"get": "list_by_region"}),
-        name="api.services.list_service_by_region",
-    ),
-    re_path(
-        r"^api/services/regions/%s/init_templates/(?P<template>[\w-]+)$" % REGION,
+        r"^api/services/init_templates/(?P<template>[\w-]+)$",
         views.ServiceViewSet.as_view({"get": "list_by_template"}),
         name="api.services.list_service_by_template",
     ),

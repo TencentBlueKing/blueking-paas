@@ -43,6 +43,7 @@ import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/common/bkmagic.js';
+import '@/common/event-tracking.js';
 // eslint-disable-next-line
 import Blob from '@/common/Blob'
 // eslint-disable-next-line

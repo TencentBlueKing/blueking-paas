@@ -27,6 +27,32 @@ logger = logging.getLogger(__name__)
 
 
 def init_service_binding_policy(apps, schema_editor):
+    """
+    Initialize the service binding policy for all services.
+
+    Background:
+    This migration is part of the transition from an implicit service binding scheme
+    to an explicit one using ServiceBindingPolicy and ServiceBindingPrecedencePolicy.
+    Previously, service plans were implicitly bound to services. This migration aims
+    to establish explicit binding policies using existing plan data.
+
+    Purpose:
+    The goal is to create BindingPolicy models to replace the old implicit binding
+    scheme. By leveraging existing plan data, we ensure that services are correctly
+    configured with explicit binding policies, enhancing clarity and maintainability.
+
+    Applicable Scenarios:
+    This migration is applicable when transitioning from the old implicit binding
+    scheme to the new explicit binding policy model. It should be run when no
+    ServiceBindingPolicy or ServiceBindingPrecedencePolicy records exist, ensuring
+    a clean initialization.
+
+    Special Considerations:
+    - The migration will skip initialization if any binding policies already exist,
+      to prevent overwriting existing configurations.
+    - Existing plans will not be automatically filtered by environment or cluster.
+      Users will need to manually select plans when creating service bindings.
+    """
     ServiceBindingPolicy = apps.get_model('servicehub', 'ServiceBindingPolicy')
     ServiceBindingPrecedencePolicy = apps.get_model('servicehub', 'ServiceBindingPrecedencePolicy')
 
@@ -35,11 +61,11 @@ def init_service_binding_policy(apps, schema_editor):
         logger.info("Service binding policy already exists, skip init")
         return
 
-    logger.info("Init service binding policy")
     for service in mixed_service_mgr.list():
+        logger.info("Init service(%s) binding policy for service", service.name)
         plans = service.get_plans()
         ServiceBindingPolicyManager(service).set_static(plans)
-    logger.info("Service binding policy init done")
+        logger.info("Service(%s) binding policy init done", service.name)
 
 
 class Migration(migrations.Migration):

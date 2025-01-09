@@ -111,11 +111,12 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
 
             original_app_desc = get_app_description(stat)
             app_desc = self.validate_and_prepare_app_desc(original_app_desc, app_tenant_id)
+
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)
@@ -324,11 +325,12 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             filepath = get_filepath(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
 
             original_app_description = get_app_description(stat)
             app_desc = self.validate_and_prepare_app_desc(original_app_description, application)
+
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)

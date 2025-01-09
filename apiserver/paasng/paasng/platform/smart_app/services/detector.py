@@ -149,7 +149,7 @@ class SourcePackageStatReader:
             desc = get_desc_handler(meta_info).app_desc
         except DescriptionValidationError as e:
             logger.warning("failed to extract version from app_desc, detail: %s", e)
-            raise ValidationError(str(e))
+            return None
         # smart version was stored as one of app's plugin
         plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)
         return plugin["data"] if plugin else None

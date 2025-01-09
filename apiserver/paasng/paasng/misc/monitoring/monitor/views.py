@@ -16,18 +16,16 @@
 # to the current version of the project delivered to anyone in the future.
 
 from collections import defaultdict
-from typing import Text
 
 from django.conf import settings
 from django.db.models import Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
@@ -40,23 +38,12 @@ from paasng.misc.monitoring.monitor.alert_rules.manager import alert_rule_manage
 from paasng.misc.monitoring.monitor.models import AppDashboard
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import UserApplicationFilter
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 from .exceptions import BKMonitorNotSupportedError
 from .models import AppAlertRule
-from .phalanx import Client
-from .serializer import (
-    AppSummaryResultSLZ,
-    EventGenreListQuerySLZ,
-    EventGenreListSLZ,
-    EventRecordAppSummaryQuerySLZ,
-    EventRecordDetailsSLZ,
-    EventRecordListQuerySLZ,
-    EventRecordListSLZ,
-    EventRecordMetricsQuerySLZ,
-    EventRecordMetricsResultSLZ,
-)
 from .serializers import (
     AlarmStrategySLZ,
     AlertListByUserSLZ,
@@ -68,123 +55,6 @@ from .serializers import (
     ListAlertsSLZ,
     SupportedAlertSLZ,
 )
-
-
-class EventRecordView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
-
-    @swagger_auto_schema(
-        responses={200: EventRecordListSLZ}, request_body=EventRecordListQuerySLZ, tags=["查询告警记录"]
-    )
-    def query(self, request: Request, code: Text):
-        request_slz = EventRecordListQuerySLZ(data=request.data, partial=True)
-        request_slz.is_valid(raise_exception=True)
-
-        client = Client()
-        params = request_slz.validated_data
-        labels = params.setdefault("labels", {})
-        labels["app"] = code
-
-        result = client.get_event_records(**params)
-        if not result:
-            raise Http404()
-
-        slz = EventRecordListSLZ(result)
-
-        return Response(slz.data)
-
-    @swagger_auto_schema(
-        responses={200: AppSummaryResultSLZ}, query_serializer=EventRecordAppSummaryQuerySLZ, tags=["个人应用告警统计"]
-    )
-    def app_summary(self, request: Request):
-        request_slz = EventRecordAppSummaryQuerySLZ(data=request.query_params, partial=True)
-        request_slz.is_valid(raise_exception=True)
-
-        results = []
-        applications = {i.code: i for i in UserApplicationFilter(request.user).filter(order_by=["name"])}
-
-        # query only when applications is not empty
-        if applications:
-            client = Client()
-            params = request_slz.validated_data
-            labels = params.setdefault("labels", {})
-            labels["app"] = list(applications.keys())
-
-            records = client.get_grouped_records(groups=["app"], **params)
-            if not records:
-                raise Http404()
-
-            for i in records.results:
-                app = applications[i.labels["app"]]
-                results.append({"summary": i, "app": app})
-
-        slz = AppSummaryResultSLZ({"results": results})
-
-        return Response(slz.data)
-
-
-class EventRecordDetailsView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
-
-    @swagger_auto_schema(responses={200: EventRecordDetailsSLZ}, tags=["查询告警记录详情"])
-    def get(self, request: Request, code: Text, record: Text):
-        client = Client()
-
-        result = client.get_event_record_details(record, labels={"app": code})
-        if not result:
-            raise Http404()
-
-        slz = EventRecordDetailsSLZ(result)
-
-        return Response(slz.data)
-
-
-class EventRecordMetricsView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
-
-    @swagger_auto_schema(
-        responses={200: EventRecordMetricsResultSLZ},
-        query_serializer=EventRecordMetricsQuerySLZ,
-        tags=["查询告警记录指标趋势"],
-    )
-    def get(self, request: Request, code: Text, record: Text):
-        request_slz = EventRecordMetricsQuerySLZ(data=request.query_params)
-        request_slz.is_valid(raise_exception=True)
-
-        client = Client()
-        result = client.get_event_record_metrics(
-            record,
-            request_slz.validated_data["start"],
-            request_slz.validated_data["end"],
-            request_slz.validated_data["step"],
-        )
-        if not result:
-            raise Http404()
-
-        slz = EventRecordMetricsResultSLZ(result)
-
-        return Response(slz.data)
-
-
-class EventGenreView(ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
-
-    @swagger_auto_schema(
-        responses={200: EventGenreListSLZ}, query_serializer=EventGenreListQuerySLZ, tags=["查询告警类型"]
-    )
-    def list(self, request: Request, code: Text):
-        request_slz = EventGenreListQuerySLZ(data=request.query_params, partial=True)
-        request_slz.is_valid(raise_exception=True)
-
-        client = Client()
-
-        result = client.get_event_genre(**request_slz.validated_data)
-        if not result:
-            raise Http404()
-
-        slz = EventGenreListSLZ(result)
-
-        return Response(slz.data)
 
 
 class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
@@ -270,8 +140,9 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response([])
 
+        tenant_id = get_tenant_id_for_app(code)
         try:
-            alerts = make_bk_monitor_client().query_alerts(query_params)
+            alerts = make_bk_monitor_client(tenant_id).query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
             raise error_codes.QUERY_ALERTS_FAILED.f(str(e))
 
@@ -292,8 +163,10 @@ class ListAlertsView(ViewSet, ApplicationCodeInPathMixin):
             # 应用的 BkMonitorSpace 不存在（应用未部署或配置监控）时，返回空列表
             return Response([])
 
+        # 查询用户下所有应用的告警信息，这里直接按当前用户获取租户信息
+        tenant_id = get_tenant(request.user).id
         # 查询告警
-        bk_monitor_client = make_bk_monitor_client()
+        bk_monitor_client = make_bk_monitor_client(tenant_id)
         try:
             alerts = bk_monitor_client.query_alerts(query_params)
         except BkMonitorGatewayServiceError as e:
@@ -330,8 +203,9 @@ class ListAlarmStrategiesView(ViewSet, ApplicationCodeInPathMixin):
         serializer = ListAlarmStrategiesSLZ(data=request.data, context={"app_code": code})
         serializer.is_valid(raise_exception=True)
 
+        tenant_id = get_tenant_id_for_app(code)
         try:
-            alarm_strategies = make_bk_monitor_client().query_alarm_strategies(serializer.validated_data)
+            alarm_strategies = make_bk_monitor_client(tenant_id).query_alarm_strategies(serializer.validated_data)
         except BkMonitorSpaceDoesNotExist:
             # BkMonitorSpace 不存在（应用未部署）时，返回空字典
             return Response({})

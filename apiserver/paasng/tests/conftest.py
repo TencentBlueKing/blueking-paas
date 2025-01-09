@@ -363,9 +363,11 @@ def bk_user(request):
 def _mock_bk_auth():
     from tests.utils.mocks.bkauth import StubBkOauthClient
 
-    with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
-        "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
-    ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
+    with (
+        mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient),
+    ):
         yield
 
 
@@ -392,10 +394,6 @@ def _mock_iam():
         mock.patch(
             "paasng.platform.applications.helpers.BKIAMClient",
             new=StubBKIAMClient,
-        ),
-        mock.patch(
-            "paasng.infras.iam.helpers.IAM_CLI",
-            new=StubBKIAMClient(),
         ),
         mock.patch(
             "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
@@ -521,6 +519,11 @@ def bk_deployment(bk_module):
 def bk_deployment_full(bk_module_full):
     """Generate a simple deployment object for bk_module_full(which have source_obj)"""
     return create_fake_deployment(bk_module_full)
+
+
+@pytest.fixture()
+def tenant_id():
+    return "system"
 
 
 @pytest.fixture()

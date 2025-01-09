@@ -33,7 +33,7 @@ def _faked_remote_services():
     config_json = {
         "name": "obj_store_remote",
         "endpoint_url": "http://faked-host",
-        "provision_params_tmpl": {"username": "{engine_app.name}"},
+        "provision_params_tmpl": {"username": "{engine_app.name}", "tenant_id": "{application.tenant_id}"},
         "jwt_auth_conf": {"iss": "foo", "key": "s1"},
     }
     meta_info = {"version": None}

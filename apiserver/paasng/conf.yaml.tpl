@@ -492,14 +492,6 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ## RabbitMQ 增强服务地址
 # RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL: http://localhost:5672
 
-# 集群名与 app_zone 的映射，app_zone 会在应用申请增强服务实例时用到
-# 其默认值为 universal。如果你需要为集群配置特殊值，也可修改该配置项，
-# 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
-# APP_ZONE_CLUSTER_MAPPINGS:
-#   ce-dev: dev-default
-#   ce-prod: prod-default
-
-
 ## ------------------------------------ 应用市场相关配置 ------------------------------------
 
 ## 蓝鲸桌面数据库 Host
@@ -517,14 +509,6 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 
 ## 是否强制要求填写应用联系人
 # APP_REQUIRE_CONTACTS: false
-
-
-## ------------------------------------ 应用监控服务相关配置 ------------------------------------
-
-## 监控服务 phalanx 地址
-# PHALANX_URL: http://localhost:8080
-## 监控服务 phalanx 访问 token
-# PHALANX_AUTH_TOKEN: ''
 
 
 ## ------------------------------------ 平台日志相关配置 ------------------------------------

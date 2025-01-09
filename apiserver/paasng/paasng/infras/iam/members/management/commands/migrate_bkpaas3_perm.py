@@ -27,6 +27,7 @@ from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationMembership
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 # 打印应用 ID 信息时，每行展示数量
@@ -54,7 +55,6 @@ class Command(BaseCommand):
         self.dry_run: bool = dry_run
         self.apps: List[str] = apps
         self.exclude_users: List[str] = exclude_users or []
-        self.cli = BKIAMClient()
 
         self._prepare()
         self._migrate()
@@ -144,6 +144,8 @@ class Command(BaseCommand):
     def _migrate_single(self, idx: int, app: Dict) -> List:  # noqa: C901, PLR0912, PLR0915
         """迁移单个应用权限数据"""
         app_code, app_name, creator = app["code"], app["name"], app["creator"]
+        tenant_id = get_tenant_id_for_app(app_code)
+        iam_client = BKIAMClient(tenant_id)
         migrate_logs = []
 
         administrator_key = (app_code, ApplicationRole.ADMINISTRATOR)
@@ -175,7 +177,7 @@ class Command(BaseCommand):
             else:
                 migrate_logs.append(f"add {first_grade_manager} as grade manager members...")
 
-            grade_manager_id = self.cli.create_grade_managers(app_code, app_name, first_grade_manager)
+            grade_manager_id = iam_client.create_grade_managers(app_code, app_name, first_grade_manager)
 
             # 更新分级管理员映射表信息 & ApplicationGradeManager 表数据
             self.grade_manager_map[app_code] = grade_manager_id
@@ -192,7 +194,7 @@ class Command(BaseCommand):
                 migrate_logs.append(f"user {username} in exclude user list, skip add as grade manager")
                 continue
             try:
-                self.cli.add_grade_manager_members(grade_manager_id, [username])
+                iam_client.add_grade_manager_members(grade_manager_id, [username])
             except Exception as e:
                 migrate_logs.append(f"failed to add grade manager: {username}, maybe was resigned: {str(e)}")
 
@@ -203,10 +205,10 @@ class Command(BaseCommand):
         if len(exists_user_group_ids) < len(all_role_keys):
             if exists_user_group_ids:
                 migrate_logs.append(f"user groups {exists_user_group_ids} exists, clean them and recreate...")
-                self.cli.delete_user_groups(exists_user_group_ids)
+                iam_client.delete_user_groups(exists_user_group_ids)
                 ApplicationUserGroup.objects.filter(app_code=app_code).delete()
 
-            groups = self.cli.create_builtin_user_groups(grade_manager_id, app_code)
+            groups = iam_client.create_builtin_user_groups(grade_manager_id, app_code)
             for group in groups:
                 role, group_id, group_name = group["role"], group["id"], group["name"]
                 migrate_logs.append(
@@ -218,7 +220,7 @@ class Command(BaseCommand):
                 ApplicationUserGroup.objects.create(app_code=app_code, role=role, user_group_id=group_id)
 
             # 新创建用户组后，需要对用户组进行授权
-            self.cli.grant_user_group_policies(app_code, app_name, groups)
+            iam_client.grant_user_group_policies(app_code, app_name, groups)
 
         # 4. 将各类角色同步到权限中心用户组，迁移的权限都是永不过期
         user_group_id = self.user_group_map[administrator_key]
@@ -229,7 +231,7 @@ class Command(BaseCommand):
 
         for username in administrators:
             try:
-                self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
+                iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
             except Exception as e:
                 migrate_logs.append(f"failed to add app administrator: {username}, maybe was resigned: {str(e)}")
 
@@ -242,7 +244,7 @@ class Command(BaseCommand):
 
             for username in developers:
                 try:
-                    self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
+                    iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:
                     migrate_logs.append(f"failed to add app developer: {username}, maybe was resigned: {str(e)}")
 
@@ -255,7 +257,7 @@ class Command(BaseCommand):
 
             for username in operators:
                 try:
-                    self.cli.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
+                    iam_client.add_user_group_members(user_group_id, [username], NEVER_EXPIRE_DAYS)
                 except Exception as e:
                     migrate_logs.append(f"failed to add app operator: {username}, maybe was resigned: {str(e)}")
 

@@ -33,7 +33,7 @@ class DefaultServiceNameRequired(Exception):
 
 
 class PersistentAppDomainRequired(Exception):
-    """When performing some actions, a presistent(stored in database) AppDomain object is required,
+    """When performing some actions, a persistent(stored in database) AppDomain object is required,
     this includes generating an ingress name for a domain with customized subpath -- the primary key
     of AppDomain object is necessary part.
     """

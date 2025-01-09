@@ -25,6 +25,7 @@ from kubernetes.utils.quantity import parse_quantity
 from six import ensure_text
 
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.constants import MODULE_NAME_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
@@ -44,6 +45,7 @@ from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import ProcessTmpl
 
@@ -268,7 +270,10 @@ class ProcessManager:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
         cluster = get_cluster_by_app(self.wl_app)
-        return bcs_client_cls().create_web_console_sessions(
+        # 获取应用的租户信息
+        app_code = get_metadata(self.wl_app).get_paas_app_code()
+        tenant_id = get_tenant_id_for_app(app_code)
+        return bcs_client_cls(tenant_id).create_web_console_sessions(
             json={
                 "namespace": self.wl_app.namespace,
                 "pod_name": process_instance_name,

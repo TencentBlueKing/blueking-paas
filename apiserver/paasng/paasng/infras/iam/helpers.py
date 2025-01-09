@@ -22,11 +22,10 @@ from django.conf import settings
 
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 from .client import BKIAMClient
 from .constants import APP_DEFAULT_ROLES, NEVER_EXPIRE_DAYS
-
-IAM_CLI = BKIAMClient()
 
 
 def fetch_role_members(app_code: str, role: ApplicationRole) -> List[str]:
@@ -36,7 +35,8 @@ def fetch_role_members(app_code: str, role: ApplicationRole) -> List[str]:
     :param app_code: 蓝鲸应用 ID
     :param role: 应用角色
     """
-    return IAM_CLI.fetch_user_group_members(
+    tenant_id = get_tenant_id_for_app(app_code)
+    return BKIAMClient(tenant_id).fetch_user_group_members(
         user_group_id=ApplicationUserGroup.objects.get(app_code=app_code, role=role).user_group_id
     )
 
@@ -54,14 +54,16 @@ def add_role_members(
     """
     usernames = [usernames] if isinstance(usernames, str) else usernames
 
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
     # 如果是管理者，还要添加成分级管理员
     if role == ApplicationRole.ADMINISTRATOR:
-        IAM_CLI.add_grade_manager_members(
+        iam_client.add_grade_manager_members(
             grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
             usernames=usernames,
         )
 
-    return IAM_CLI.add_user_group_members(
+    return iam_client.add_user_group_members(
         user_group_id=ApplicationUserGroup.objects.get(app_code=app_code, role=role).user_group_id,
         usernames=usernames,
         expired_after_days=expired_after_days,
@@ -77,15 +79,16 @@ def delete_role_members(app_code: str, role: ApplicationRole, usernames: Union[L
     :param usernames: 待添加成员名称，支持单个或多个
     """
     usernames = [usernames] if isinstance(usernames, str) else usernames
-
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
     # 如果是管理者，还要从分级管理员中移除
     if role == ApplicationRole.ADMINISTRATOR:
-        IAM_CLI.delete_grade_manager_members(
+        iam_client.delete_grade_manager_members(
             grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
             usernames=usernames,
         )
 
-    return IAM_CLI.delete_user_group_members(
+    return iam_client.delete_user_group_members(
         user_group_id=ApplicationUserGroup.objects.get(app_code=app_code, role=role).user_group_id,
         usernames=usernames,
     )
@@ -97,8 +100,10 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
         return [ApplicationRole.ADMINISTRATOR]
 
     user_roles = []
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
-        if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
+        if username in iam_client.fetch_user_group_members(group.user_group_id):
             user_roles.append(group.role)
 
     if not user_roles:
@@ -112,8 +117,10 @@ def fetch_user_main_role(app_code: str, username: str) -> ApplicationRole:
     if username == settings.ADMIN_USERNAME:
         return ApplicationRole.ADMINISTRATOR
 
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
-        if username in IAM_CLI.fetch_user_group_members(group.user_group_id):
+        if username in iam_client.fetch_user_group_members(group.user_group_id):
             return group.role
 
     return ApplicationRole.NOBODY
@@ -131,8 +138,11 @@ def remove_user_all_roles(app_code: str, usernames: Union[List[str], str]):
     if not usernames:
         return
 
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
+
     # 先清理掉分级管理员权限
-    IAM_CLI.delete_grade_manager_members(
+    iam_client.delete_grade_manager_members(
         grade_manager_id=ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id,
         usernames=usernames,
     )
@@ -142,7 +152,7 @@ def remove_user_all_roles(app_code: str, usernames: Union[List[str], str]):
     }
     # 再将所有的内建角色权限清理掉
     for role in APP_DEFAULT_ROLES:
-        IAM_CLI.delete_user_group_members(role_group_id_map[role], usernames)
+        iam_client.delete_user_group_members(role_group_id_map[role], usernames)
 
 
 def fetch_application_members(app_code: str) -> List[Dict]:
@@ -150,9 +160,12 @@ def fetch_application_members(app_code: str) -> List[Dict]:
     获取一个蓝鲸应用所有用户（包含角色信息）
     顺序：管理员 - 开发者 - 运营者
     """
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
+
     member_map: Dict[str, Dict] = {}
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
-        for username in IAM_CLI.fetch_user_group_members(group.user_group_id):
+        for username in iam_client.fetch_user_group_members(group.user_group_id):
             if username not in member_map:
                 member_map[username] = {
                     "roles": [group.role],
@@ -168,7 +181,8 @@ def fetch_application_members(app_code: str) -> List[Dict]:
 def delete_builtin_user_groups(app_code: str):
     """删除应用的内建用户组"""
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code)
-    IAM_CLI.delete_user_groups(user_groups.values_list("user_group_id", flat=True))
+    tenant_id = get_tenant_id_for_app(app_code)
+    BKIAMClient(tenant_id).delete_user_groups(user_groups.values_list("user_group_id", flat=True))
     user_groups.delete()
 
 
@@ -178,7 +192,8 @@ def delete_grade_manager(app_code: str):
     if not grade_manager:
         return
 
-    IAM_CLI.delete_grade_manager(grade_manager.grade_manager_id)
+    tenant_id = get_tenant_id_for_app(app_code)
+    BKIAMClient(tenant_id).delete_grade_manager(grade_manager.grade_manager_id)
     grade_manager.delete()
 
 

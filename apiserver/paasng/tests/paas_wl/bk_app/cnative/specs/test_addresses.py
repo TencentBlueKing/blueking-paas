@@ -61,7 +61,11 @@ class TestToDomain:
     def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_wl_app):
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            tenant_id=bk_stag_wl_app.tenant_id,
+            name="foo",
+            cert_data="",
+            key_data="",
+            auto_match_cns="*-foo.example.com",
         )
         d = AppDomain.objects.create(
             app=bk_stag_wl_app,
@@ -87,7 +91,11 @@ class TestToSharedTLSDomain:
 
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            tenant_id=bk_stag_wl_app.tenant_id,
+            name="foo",
+            cert_data="",
+            key_data="",
+            auto_match_cns="*-foo.example.com",
         )
         d = to_shared_tls_domain(d, bk_stag_wl_app)
         assert d.tlsSecretName is not None

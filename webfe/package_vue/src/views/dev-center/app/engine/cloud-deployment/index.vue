@@ -82,6 +82,7 @@ import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { throttle } from 'lodash';
+import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
@@ -136,7 +137,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.panels.find(e => e.name === this.active);
+      const curPenel = this.panels.find((e) => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -159,9 +160,13 @@ export default {
       const hideTabItems = ['cloudAppDeployForProcess', 'cloudAppDeployForHook', 'cloudAppDeployForEnv'];
       return !hideTabItems.includes(this.active);
     },
+
+    categoryText() {
+      return this.isCloudNativeApp ? '云原生应用' : '普通应用';
+    },
   },
   watch: {
-    '$route'(newRoute) {
+    $route(newRoute) {
       if (this.active !== newRoute.name) {
         this.handleGoPage(newRoute.name);
       }
@@ -174,7 +179,7 @@ export default {
     },
   },
   created() {
-    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -189,6 +194,8 @@ export default {
   },
   methods: {
     handleGoPage(routeName) {
+      const label = this.panels.find((item) => item.name === routeName).label;
+      this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.active = routeName;
       this.$router.push({
@@ -324,7 +331,7 @@ export default {
     // 高度问题·
     height: 100%;
     min-height: auto;
-    background: #F5F7FA;
+    background: #f5f7fa;
 
     .details-router-cls {
       height: 100%;

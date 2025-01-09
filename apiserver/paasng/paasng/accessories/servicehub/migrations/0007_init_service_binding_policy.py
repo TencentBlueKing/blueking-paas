@@ -31,27 +31,16 @@ def init_service_binding_policy(apps, schema_editor):
     Initialize the service binding policy for all services.
 
     Background:
-    This migration is part of the transition from an implicit service binding scheme
-    to an explicit one using ServiceBindingPolicy and ServiceBindingPrecedencePolicy.
-    Previously, service plans were implicitly bound to services. This migration aims
-    to establish explicit binding policies using existing plan data.
+    Service binding scheme has been changed from implicit filtering to explicit
+    allocation based on ServiceBindingPolicy and ServiceBindingPrecedencePolicy.
 
     Purpose:
-    The goal is to create BindingPolicy models to replace the old implicit binding
-    scheme. By leveraging existing plan data, we ensure that services are correctly
-    configured with explicit binding policies, enhancing clarity and maintainability.
-
-    Applicable Scenarios:
-    This migration is applicable when transitioning from the old implicit binding
-    scheme to the new explicit binding policy model. It should be run when no
-    ServiceBindingPolicy or ServiceBindingPrecedencePolicy records exist, ensuring
-    a clean initialization.
+    This migration reads existing plan data and creates default ServiceBindingPolicy
+    model to ensure that existing services can continue to function properly.
 
     Special Considerations:
     - The migration will skip initialization if any binding policies already exist,
       to prevent overwriting existing configurations.
-    - Existing plans will not be automatically filtered by environment or cluster.
-      Users will need to manually select plans when creating service bindings.
     """
     ServiceBindingPolicy = apps.get_model('servicehub', 'ServiceBindingPolicy')
     ServiceBindingPrecedencePolicy = apps.get_model('servicehub', 'ServiceBindingPrecedencePolicy')

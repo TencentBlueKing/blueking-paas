@@ -32,7 +32,7 @@ from moby_distribution.registry.utils import parse_image
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.utils.blobstore import make_blob_store
-from paas_wl.utils.constants import BuildStatus, make_enum_choices
+from paas_wl.utils.constants import BuildStatus
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
@@ -278,7 +278,7 @@ class BuildProcess(UuidAuditedModel):
         verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True
     )
 
-    status = models.CharField(choices=make_enum_choices(BuildStatus), max_length=12, default=BuildStatus.PENDING.value)
+    status = models.CharField(max_length=12, default=BuildStatus.PENDING.value)
     output_stream = models.OneToOneField("OutputStream", null=True, on_delete=models.CASCADE)
 
     # A BuildProcess will result in a build and release, if succeeded

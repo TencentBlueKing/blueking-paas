@@ -42,6 +42,9 @@ class AppDomainSource(IntStructuredEnum):
     BUILT_IN = 1
     # Auto-generated sub-domains
     AUTO_GEN = 2
+
+    # Deprecated: The "independent" source is used for the custom domain in the old version,
+    # it became useless after the data was migrated to the `Domain` model.
     INDEPENDENT = 3
 
 

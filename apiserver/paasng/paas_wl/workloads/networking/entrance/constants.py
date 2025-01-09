@@ -18,14 +18,6 @@
 from blue_krill.data_types.enum import IntStructuredEnum, StrStructuredEnum
 
 
-class AppDomainSource(IntStructuredEnum):
-    # "BUILT_IN" is reserved for the default ingress's domain, it looks like '{engine_app_name}.apps.com'
-    BUILT_IN = 1
-    # Auto-generated sub-domains
-    AUTO_GEN = 2
-    INDEPENDENT = 3
-
-
 class AppSubpathSource(IntStructuredEnum):
     DEFAULT = 1
 

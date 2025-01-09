@@ -164,6 +164,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             type_=params.get("type"),
             # 已下架的应用默认展示在最末尾
             order_by=["-is_active", params.get("order_by")],
+            app_tenant_mode=params.get("app_tenant_mode"),
         )
 
         # 查询我创建的应用时，也需要返回总的应用数量给前端

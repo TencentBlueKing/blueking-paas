@@ -27,9 +27,6 @@ from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.models.deployment import Deployment
-from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -42,21 +39,7 @@ def delete_env_resources(env: "ModuleEnvironment"):
     # 重要：由于云原生应用 1. 多模块共享命名空间 2. 下架时会删除 bkapp & domaingroupmapping，
     # 可通过 operator 进行资源回收，因此不需要在这里通过 删除命名空间 清理集群中的资源
     if env.application.type == ApplicationType.CLOUD_NATIVE:
-        # 清理部署失败时未通过下架操作删除的 bkapp & domaingroupmapping
-        try:
-            deployment = env.deployments.latest("created")
-            if deployment.status == JobStatus.SUCCESSFUL:
-                return
-        except Deployment.DoesNotExist:
-            return
-
-        try:
-            offline = env.offlines.latest("created")
-            if offline.status == JobStatus.SUCCESSFUL:
-                return
-        except OfflineOperation.DoesNotExist:
-            pass
-
+        # 清理部署失败时可能残留的, 未通过下架操作删除的 bkapp & domaingroupmapping
         delete_bkapp(env)
         delete_networking(env)
         return

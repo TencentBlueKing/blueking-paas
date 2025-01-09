@@ -25,6 +25,7 @@ from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 # 打印应用 ID 信息时，每行展示数量
@@ -52,7 +53,6 @@ class Command(BaseCommand):
         self.dry_run: bool = dry_run
         self.apps: List[str] = apps
         self.exclude_users: List[str] = exclude_users or []
-        self.cli = BKIAMClient()
 
         self._prepare()
         self._sync()
@@ -143,20 +143,23 @@ class Command(BaseCommand):
         if not user_group_id:
             raise ValueError(f"app {app_code} user group id not find!")
 
-        administrators = self.cli.fetch_user_group_members(user_group_id)
+        tenant_id = get_tenant_id_for_app(app_code)
+        iam_client = BKIAMClient(tenant_id)
+
+        administrators = iam_client.fetch_user_group_members(user_group_id)
 
         grade_manager_id = self.grade_manager_map.get(app_code)
         if not grade_manager_id:
             raise ValueError(f"app {app_code} grade manager id not find!")
 
-        grade_managers = self.cli.fetch_grade_manager_members(grade_manager_id)
+        grade_managers = iam_client.fetch_grade_manager_members(grade_manager_id)
 
         sync_logs.append(f"app_code: {app_code}, user_group_id: {user_group_id}, grade_manager_id: {grade_manager_id}")
 
         # 待移除的分级管理员（不是应用管理员的，都删掉）
         if usernames := list(set(grade_managers) - set(administrators)):
             sync_logs.append(f"remove {len(usernames)} user from grade manager: {usernames}")
-            self.cli.delete_grade_manager_members(grade_manager_id, usernames)
+            iam_client.delete_grade_manager_members(grade_manager_id, usernames)
             unchanged = False
         else:
             sync_logs.append("no users need to be remove from grade manager")
@@ -169,7 +172,7 @@ class Command(BaseCommand):
                     sync_logs.append(f"user {user} in exclude user list, skip add as grade manager")
                     continue
                 try:
-                    self.cli.add_grade_manager_members(grade_manager_id, [user])
+                    iam_client.add_grade_manager_members(grade_manager_id, [user])
                     unchanged = False
                 except Exception as e:
                     sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {str(e)}")

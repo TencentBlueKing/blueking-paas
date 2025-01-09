@@ -132,14 +132,12 @@ export default {
   },
   methods: {
     handleTabChange(payload) {
-      if (window.NODE_ENV !== 'development') {
-        const traceIdMap = {
-          structured: 'StructuredLog',
-          stream: 'StdoutLog',
-          access: 'AccessLog',
-        };
-        BKANALYSIS.sendEvent({ id: traceIdMap[payload], action: 'view', category: this.categoryText });
-      }
+      const traceIdMap = {
+        structured: 'StructuredLog',
+        stream: 'StdoutLog',
+        access: 'AccessLog',
+      };
+      this.sendEventTracking({ id: traceIdMap[payload], action: 'view', category: this.categoryText });
       this.$router.push({
         name: 'appLog',
         params: {

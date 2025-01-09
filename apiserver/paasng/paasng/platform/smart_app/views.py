@@ -217,20 +217,26 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not original_app_desc.instance_existed:
             return original_app_desc
 
-        if SMartAppExtraInfo.objects.filter(
-            original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
-        ).exists():
-            raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=original_app_desc.code))
-
-        # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
-        app_desc = copy.deepcopy(original_app_desc)
-        app_desc.instance_existed = False
         try:
-            app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
-        except GenAppCodeError:
-            raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
+            smart_app = SMartAppExtraInfo.objects.get(
+                original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
+            )
+        except SMartAppExtraInfo.DoesNotExist:
+            # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
+            app_desc = copy.deepcopy(original_app_desc)
+            app_desc.instance_existed = False
+            try:
+                app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
+            except GenAppCodeError:
+                raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
+            else:
+                return app_desc
         else:
-            return app_desc
+            raise ValidationError(
+                _("应用ID 为 {original_app_code} 的 Smart 包已用于创建应用 {smart_app_code} !").format(
+                    original_app_code=original_app_desc.code, smart_app_code=smart_app.app.code
+                )
+            )
 
     @staticmethod
     def is_valid_tar_file(filepath: PathLike) -> bool:

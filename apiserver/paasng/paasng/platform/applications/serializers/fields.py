@@ -41,7 +41,9 @@ class AppIDField(serializers.RegexField):
                 DnsSafeNameValidator(_("应用 ID")),
                 AppIDUniqueValidator(),
             ],
-            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)")},
+            error_messages={
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，字符长度在 3-16 之间。")
+            },
         )
         preset_kwargs.update(kwargs)
         super().__init__(regex, *args, **preset_kwargs)
@@ -64,7 +66,11 @@ class AppIDSMartField(serializers.RegexField):
             required=True,
             help_text="应用 ID",
             validators=[ReservedWordValidator(_("应用 ID")), AppIDUniqueValidator()],
-            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)")},
+            error_messages={
+                "invalid": _(
+                    "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，字符长度在 3-20 之间。"
+                )
+            },
         )
         preset_kwargs.update(kwargs)
         super().__init__(self.pattern, *args, **preset_kwargs)

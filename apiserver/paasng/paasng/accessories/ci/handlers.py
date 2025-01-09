@@ -26,7 +26,7 @@ from paasng.accessories.ci.exceptions import NotSupportedRepoType, RepoNotFoundE
 from paasng.accessories.ci.managers import get_ci_manager_cls_by_backend
 from paasng.accessories.ci.models import CIAtomJob
 from paasng.infras.accounts.models import Oauth2TokenHolder
-from paasng.platform.applications.models import ApplicationEnvironment
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.signals import post_appenv_deploy
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_appenv_deploy)
-def start_ci_job(sender: "ApplicationEnvironment", deployment: "Deployment", **kwargs):  # noqa: PLR0911
+def start_ci_job(sender: "ModuleEnvironment", deployment: "Deployment", **kwargs):  # noqa: PLR0911
     """开始 CI 任务"""
     if deployment.status != JobStatus.SUCCESSFUL.value:
         logger.info("AppEnv<%s> deploy failed, skipping", sender)

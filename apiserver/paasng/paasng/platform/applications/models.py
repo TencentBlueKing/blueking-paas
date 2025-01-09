@@ -511,6 +511,14 @@ class ApplicationEnvironment(TimestampedModel):
     environment = models.CharField(verbose_name="部署环境", max_length=16)
     is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
+
     class Meta:
         unique_together = ("module", "environment")
 
@@ -551,7 +559,7 @@ class ApplicationEnvironment(TimestampedModel):
         self.save(update_fields=["is_offlined"])
 
 
-# Make an alias name to descrease misunderstanding
+# Create an alias name to reduce misunderstandings
 ModuleEnvironment = ApplicationEnvironment
 
 
@@ -595,7 +603,9 @@ class ApplicationFeatureFlagManager(models.Manager):
     def set_feature(self, key: Union[str, AppFeatureFlag], value: bool, application: Optional[Application] = None):
         """设置 feature 状态"""
         instance, qs = self._build_queryset(application)
-        return qs.update_or_create(application=instance, name=AppFeatureFlag(key), defaults={"effect": value})
+        return qs.update_or_create(
+            application=instance, name=AppFeatureFlag(key), defaults={"effect": value, "tenant_id": instance.tenant_id}
+        )
 
     def has_feature(self, key: Union[str, AppFeatureFlag], application: Optional[Application] = None) -> bool:
         """判断app是否具有feature,如果查数据库无记录，则返回默认值"""
@@ -631,12 +641,28 @@ class ApplicationFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=30)
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
+
     objects = ApplicationFeatureFlagManager()
 
 
 class UserMarkedApplication(OwnerTimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     objects = WithOwnerManager()
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
 
     class Meta:
         unique_together = ("application", "owner")
@@ -654,6 +680,14 @@ class ApplicationDeploymentModuleOrder(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
     order = models.IntegerField(verbose_name="顺序")
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
+
     class Meta:
         verbose_name = "模块顺序"
         unique_together = ("user", "module")
@@ -664,3 +698,11 @@ class SMartAppExtraInfo(models.Model):
 
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
     original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )

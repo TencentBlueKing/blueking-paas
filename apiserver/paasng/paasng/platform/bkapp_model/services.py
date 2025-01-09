@@ -78,7 +78,11 @@ def create_engine_apps(
             application.owner, application.region, engine_app_name, application.tenant_id
         )
         env = ModuleEnvironment.objects.create(
-            application=application, module=module, engine_app_id=engine_app.id, environment=environment
+            application=application,
+            module=module,
+            engine_app_id=engine_app.id,
+            environment=environment,
+            tenant_id=application.tenant_id,
         )
         EnvClusterService(env).bind_cluster(cluster_name)
         setup_env_log_model(env)

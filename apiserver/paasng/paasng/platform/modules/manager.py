@@ -147,7 +147,11 @@ class ModuleInitializer:
             name = self.make_engine_app_name(environment)
             engine_app = self._get_or_create_engine_app(name, wl_app_type)
             env = ModuleEnvironment.objects.create(
-                application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
+                application=self.application,
+                module=self.module,
+                engine_app_id=engine_app.id,
+                environment=environment,
+                tenant_id=self.application.tenant_id,
             )
             # bind env to cluster
             EnvClusterService(env).bind_cluster(cluster_name)

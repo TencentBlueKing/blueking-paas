@@ -17,29 +17,9 @@
 
 from django.urls import path
 
-from paasng.utils.basic import re_path
-
 from . import views
 
-# FIXME: phalanx 方案已经下线, 删除废弃 url
 urlpatterns = [
-    re_path(
-        r"api/monitor/applications/(?P<code>[^/]+)/record/query/$",
-        views.EventRecordView.as_view({"post": "query"}),
-    ),
-    re_path(
-        r"api/monitor/applications/(?P<code>[^/]+)/record/(?P<record>[^/]+)/$",
-        views.EventRecordDetailsView.as_view({"get": "get"}),
-    ),
-    re_path(
-        r"api/monitor/applications/(?P<code>[^/]+)/record_metrics/(?P<record>[^/]+)/$",
-        views.EventRecordMetricsView.as_view({"get": "get"}),
-    ),
-    re_path(r"api/monitor/applications/(?P<code>[^/]+)/genre/$", views.EventGenreView.as_view({"get": "list"})),
-    re_path(
-        r"api/monitor/record/applications/summary/$",
-        views.EventRecordView.as_view({"get": "app_summary"}),
-    ),
     path(
         "api/monitor/applications/<slug:code>/modules/<slug:module_name>/alert_rules/",
         views.AlertRulesView.as_view({"get": "list"}),

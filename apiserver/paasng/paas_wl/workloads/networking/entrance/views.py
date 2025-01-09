@@ -81,7 +81,6 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         - 注意 `path` 字段目前只支持一级子路径，多级子路径（如 '/foo/bar/'）暂不支持
         - 【客户端】建议使用文档里的正则进行校验
-        - 【客户端】模块与环境建议使用下拉框
         - 【客户端】`https_enabled` 暂不暴露给给用户
         """
         application = self.get_application()

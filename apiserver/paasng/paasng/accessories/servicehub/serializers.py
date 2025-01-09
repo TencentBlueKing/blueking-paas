@@ -17,6 +17,7 @@
 
 import json
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -24,6 +25,7 @@ from paasng.accessories.servicehub.remote.exceptions import ServiceConfigNotFoun
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.services.models import ServiceCategory
 from paasng.platform.modules.serializers import MinimalModuleSLZ
+from paasng.utils.serializers import VerificationCodeField
 
 
 class CategorySLZ(serializers.ModelSerializer):
@@ -39,11 +41,6 @@ class ServiceMinimalSLZ(serializers.Serializer):
     display_name = serializers.CharField()
     description = serializers.CharField()
     category = CategorySLZ()
-
-
-class ServiceCategoryByRegionSLZ(serializers.Serializer):
-    category = CategorySLZ()
-    services = serializers.ListField(child=ServiceMinimalSLZ())
 
 
 class ServiceSLZ(serializers.Serializer):
@@ -262,6 +259,17 @@ class UnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
 
 class DeleteUnboundServiceEngineAppAttachmentSLZ(serializers.Serializer):
     instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+
+
+class RetrieveUnboundServiceSensitiveFieldSLZ(serializers.Serializer):
+    instance_id = serializers.UUIDField(help_text="增强服务实例 id")
+    field_name = serializers.CharField(help_text="字段名称")
+    verification_code = VerificationCodeField(help_text="验证码", required=False)
+
+    def validate_verification_code(self, value):
+        if settings.ENABLE_VERIFICATION_CODE and not value:
+            raise serializers.ValidationError("verification_code is required.")
+        return value
 
 
 class PossiblePlansOutputSLZ(serializers.Serializer):

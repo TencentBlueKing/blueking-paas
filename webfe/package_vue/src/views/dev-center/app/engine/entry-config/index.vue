@@ -68,6 +68,7 @@ import accessAudit from './comps/access-audit';
 import accessProcess from './comps/access-process';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
@@ -125,6 +126,9 @@ export default {
       }
       return false;
     },
+    categoryText() {
+      return this.isCloudNativeApp ? '云原生应用' : '普通应用';
+    },
   },
   watch: {
     $route() {
@@ -155,6 +159,10 @@ export default {
       });
     },
     handleTabChange(v) {
+      if (window.NODE_ENV !== 'development') {
+        const label = this.panels.find((item) => item.name === v).label;
+        BKANALYSIS.sendEvent({ id: traceIds[label], action: 'view', category: this.categoryText });
+      }
       if (this.initPage) {
         this.active = this.tab || v;
       } else {

@@ -389,3 +389,11 @@ export const PLUGIN_ACTION = {
   reactivate: '重新上架',
   rollback: '回滚',
 };
+
+/**
+ * 租户类型
+ */
+export const APP_TENANT_MODE = {
+  single: '单租户',
+  global: '全租户',
+};

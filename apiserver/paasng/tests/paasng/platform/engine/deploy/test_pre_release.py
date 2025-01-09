@@ -25,7 +25,7 @@ from paasng.platform.engine.utils.output import Style
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
@@ -64,9 +64,12 @@ class TestApplicationPreReleaseExecutor:
                 enabled=hook.enabled,
             )
 
-        with mock.patch(
-            "paasng.platform.engine.deploy.bg_command.pre_release.ApplicationReleaseMgr"
-        ) as mocked_release_mgr, mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream:
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.bg_command.pre_release.ApplicationReleaseMgr"
+            ) as mocked_release_mgr,
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+        ):
             attach_all_phases(sender=deployment.app_environment, deployment=deployment)
             ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()
 

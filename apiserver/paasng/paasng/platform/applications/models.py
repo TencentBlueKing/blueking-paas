@@ -31,7 +31,8 @@ from pilkit.processors import ResizeToFill
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
-from paasng.infras.iam.helpers import fetch_role_members
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -282,9 +283,35 @@ class Application(OwnerTimestampedModel):
 
     id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     code = models.CharField(verbose_name="应用代号", max_length=20, unique=True)
-    name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
+    name = models.CharField(verbose_name="应用名称", max_length=20)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
+    # app_tenant_mode 和 app_tenant_id 字段共同控制了应用的“可用范围”，可能的组合包括：
+    #
+    # - app_tenant_mode: "global", app_tenant_id: ""，表示应用在全租户范围内可用。
+    # - app_tenant_mode: "single", app_tenant_id: "foo"，表示应用仅在 foo 租户范围内可用。
+    #
+    # 应用的“可用范围”将影响对应租户的用户是否可在桌面上看到此应用，以及是否能通过应用链接访问
+    # 应用（不在“可用范围”内的用户请求将被拦截）。
+    #
+    # ## app_tenant_id 和 tenant_id 字段的区别
+    #
+    # 虽然这两个字段都存储“租户”，且值可能相同，但二者有本质区别。tenant_id 是系统级字段，值
+    # 总是等于当前这条数据的所属租户，它确定了数据的所有权。而 app_tenant_id 是业务功能层面的
+    # 字段，它和 app_tenant_mode 共同控制前面提到的业务功能——应用“可用范围”。
+    #
+    app_tenant_mode = models.CharField(
+        verbose_name="应用租户模式",
+        max_length=16,
+        default=AppTenantMode.GLOBAL.value,
+        help_text="应用在租户层面的可用范围，可选值：全租户、指定租户",
+    )
+    app_tenant_id = models.CharField(
+        verbose_name="应用租户 ID",
+        max_length=32,
+        default="",
+        help_text="应用对哪个租户的用户可用，当应用租户模式为全租户时，本字段值为空",
+    )
     type = models.CharField(
         verbose_name="应用类型",
         max_length=16,
@@ -319,9 +346,20 @@ class Application(OwnerTimestampedModel):
         options={"quality": 95},
         null=True,
     )
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        db_index=True,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()
+
+    class Meta:
+        # 应用名称租户内唯一
+        unique_together = ("app_tenant_id", "name")
 
     @property
     def has_deployed(self) -> bool:
@@ -394,10 +432,14 @@ class Application(OwnerTimestampedModel):
 
     def get_administrators(self):
         """获取具有管理权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         return fetch_role_members(self.code, ApplicationRole.ADMINISTRATOR)
 
     def get_devopses(self) -> List[str]:
         """获取具有运营权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         devopses = fetch_role_members(self.code, ApplicationRole.OPERATOR) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -405,6 +447,8 @@ class Application(OwnerTimestampedModel):
 
     def get_developers(self) -> List[str]:
         """获取具有开发权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         developers = fetch_role_members(self.code, ApplicationRole.DEVELOPER) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -613,3 +657,10 @@ class ApplicationDeploymentModuleOrder(models.Model):
     class Meta:
         verbose_name = "模块顺序"
         unique_together = ("user", "module")
+
+
+class SMartAppExtraInfo(models.Model):
+    """SMart 应用额外信息"""
+
+    app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
+    original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)

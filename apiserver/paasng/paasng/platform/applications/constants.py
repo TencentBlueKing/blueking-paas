@@ -94,7 +94,6 @@ class AppFeatureFlag(FeatureFlag):  # type: ignore
         label="修改环境变量，已迁移到插件开发者中心的应用不允许修改环境变量", default=True
     )
     ENABLE_BK_LOG_COLLECTOR = FeatureFlagField(label=_("使用蓝鲸日志平台方案采集日志"), default=False)
-    ENABLE_BK_LOG_CLIENT = FeatureFlagField(label=_("使用蓝鲸日志平台接口查询日志"), default=True)
 
     TOGGLE_EGRESS_BINDING = FeatureFlagField(label=_("开启出口 IP 管理"), default=False)
 

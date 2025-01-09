@@ -37,9 +37,7 @@ urlpatterns = [
     ),
     path(
         "api/plat_mgt/infras/services/<str:service_id>/binding-policies/",
-        views.BindingPolicyViewSet.as_view(
-            {"get": "retrieve", "post": "upsert", "put": "upsert", "delete": "destroy"}
-        ),
+        views.BindingPolicyViewSet.as_view({"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}),
         name="plat_mgt.infras.services.binding-policies.detail",
     ),
 ]

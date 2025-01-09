@@ -45,7 +45,7 @@ class UnifiedAllocationConfigSLZ(BaseAllocationConfigSLZ):
 
 
 class RuleBasedAllocationConfigSLZ(BaseAllocationConfigSLZ):
-    cond_type = serializers.CharField(choices=PrecedencePolicyCondType.get_choices())
+    cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
     cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
 

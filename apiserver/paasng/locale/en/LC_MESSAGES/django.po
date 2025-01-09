@@ -2508,7 +2508,7 @@ msgid ""
 "间。"
 msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
-"half-corner ligatures (-), character length between 3-16."
+"half-corner ligatures (-), length between 3-16."
 
 #: paasng/platform/applications/serializers/fields.py:71
 #, fuzzy
@@ -2518,7 +2518,7 @@ msgid ""
 "度在 3-20 之间。"
 msgstr ""
 "Format error, can only contain lowercase letters (a-z), numbers (0-9), and "
-"half-width hyphens (-) and underscores (), character length between 3-20."
+"half-width hyphens (-) and underscores (), length between 3-20."
 
 #: paasng/platform/applications/serializers/member_role.py:40
 #, python-format

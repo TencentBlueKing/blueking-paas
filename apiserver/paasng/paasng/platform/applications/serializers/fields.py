@@ -42,7 +42,7 @@ class AppIDField(serializers.RegexField):
                 AppIDUniqueValidator(),
             ],
             error_messages={
-                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，字符长度在 3-16 之间。")
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。")
             },
         )
         preset_kwargs.update(kwargs)
@@ -68,7 +68,7 @@ class AppIDSMartField(serializers.RegexField):
             validators=[ReservedWordValidator(_("应用 ID")), AppIDUniqueValidator()],
             error_messages={
                 "invalid": _(
-                    "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，字符长度在 3-20 之间。"
+                    "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，长度在 3-20 之间。"
                 )
             },
         )

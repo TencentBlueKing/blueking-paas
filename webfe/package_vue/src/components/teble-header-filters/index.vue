@@ -77,6 +77,7 @@ export default {
   .tippy-tooltip.light-theme {
     box-shadow: 0 0 6px 0 #dcdee5 !important;
     border-radius: 4px !important;
+    padding: 0;
   }
 
   .panel-list-cls {

@@ -159,10 +159,8 @@ export default {
       });
     },
     handleTabChange(v) {
-      if (window.NODE_ENV !== 'development') {
-        const label = this.panels.find((item) => item.name === v).label;
-        BKANALYSIS.sendEvent({ id: traceIds[label], action: 'view', category: this.categoryText });
-      }
+      const label = this.panels.find((item) => item.name === v).label;
+      this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       if (this.initPage) {
         this.active = this.tab || v;
       } else {

@@ -194,10 +194,8 @@ export default {
   },
   methods: {
     handleGoPage(routeName) {
-      if (window.NODE_ENV !== 'development') {
-        const label = this.panels.find((item) => item.name === routeName).label;
-        BKANALYSIS.sendEvent({ id: traceIds[label], action: 'view', category: this.categoryText });
-      }
+      const label = this.panels.find((item) => item.name === routeName).label;
+      this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.active = routeName;
       this.$router.push({

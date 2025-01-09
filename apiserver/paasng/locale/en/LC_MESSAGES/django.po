@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-09 19:39+0800\n"
+"POT-Creation-Date: 2025-01-09 20:20+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2504,8 +2504,7 @@ msgstr "APP ID"
 #, fuzzy
 #| msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)"
 msgid ""
-"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，字符长度在 3-16 之"
-"间。"
+"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。"
 msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
 "half-corner ligatures (-), length between 3-16."
@@ -2514,8 +2513,8 @@ msgstr ""
 #, fuzzy
 #| msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)"
 msgid ""
-"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，字符长"
-"度在 3-20 之间。"
+"格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，长度在 "
+"3-20 之间。"
 msgstr ""
 "Format error, can only contain lowercase letters (a-z), numbers (0-9), and "
 "half-width hyphens (-) and underscores (), length between 3-20."
@@ -3482,8 +3481,8 @@ msgid "应用描述文件不存在或内容不是有效 YAML 格式"
 msgstr "The content of the app description file is not in valid YAML format"
 
 #: paasng/platform/smart_app/management/commands/smart_tool.py:57
-#: paasng/platform/smart_app/views.py:215
-#: paasng/platform/smart_app/views.py:292
+#: paasng/platform/smart_app/views.py:216
+#: paasng/platform/smart_app/views.py:293
 msgid "缺失应用市场配置（market)!"
 msgstr "Missing  Market  configuration (market)!"
 
@@ -3512,7 +3511,7 @@ msgstr "The content of the app description file is not in valid YAML format"
 msgid "源码包文件格式错误，文件可能已经损坏"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:267
+#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:268
 #: paasng/platform/sourcectl/views.py:291
 msgid "请联系管理员"
 msgstr "Please contact administrator"
@@ -3521,31 +3520,30 @@ msgstr "Please contact administrator"
 msgid "你无法创建 SMart 应用"
 msgstr "You cannot create a S-mart APP"
 
-#: paasng/platform/smart_app/views.py:142
+#: paasng/platform/smart_app/views.py:143
 msgid "你无法创建 S-Mart 应用"
 msgstr "You cannot create a S-mart APP"
 
-#: paasng/platform/smart_app/views.py:160
+#: paasng/platform/smart_app/views.py:161
 msgid "源码文件加载不完整，请重试或联系管理员"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:231
+#: paasng/platform/smart_app/views.py:232
 msgid "自动生成应用 ID 失败，请重试或联系管理员"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:236
+#: paasng/platform/smart_app/views.py:237
 #, python-brace-format
-msgid ""
-"应用ID 为 {original_app_code} 的 Smart 包已用于创建应用 {smart_app_code} !"
-msgstr "The Smart package with ID {original_app_code} has been used to create the application {smart_app_code}!"
+msgid "S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
+msgstr "The S-Mart package has been used to create the application (ID: {smart_app_code}), duplication is not allowed!"
 
-#: paasng/platform/smart_app/views.py:289
+#: paasng/platform/smart_app/views.py:290
 msgid "非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"
 msgstr ""
 "Non-cloud native application, please use the app_desc.yaml with "
 "version(spec_version: 2)"
 
-#: paasng/platform/smart_app/views.py:296
+#: paasng/platform/smart_app/views.py:297
 #, fuzzy, python-brace-format
 #| msgid ""
 #| "应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）"
@@ -3555,7 +3553,7 @@ msgstr ""
 "The APP ID ({app_desc_code}) declared in the app_desc.yaml does not match "
 "the current APP ID ({app_code})"
 
-#: paasng/platform/smart_app/views.py:368
+#: paasng/platform/smart_app/views.py:370
 msgid "文件签名不一致"
 msgstr ""
 
@@ -4315,6 +4313,13 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr ""
+
+#, python-brace-format
+#~ msgid ""
+#~ "应用ID 为 {original_app_code} 的 Smart 包已用于创建应用 {smart_app_code} !"
+#~ msgstr ""
+#~ "The Smart package with ID {original_app_code} has been used to create the "
+#~ "application {smart_app_code}!"
 
 #~ msgid "静态分配"
 #~ msgstr "Allocate statically"

@@ -234,8 +234,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 return app_desc
         else:
             raise ValidationError(
-                _("应用ID 为 {original_app_code} 的 Smart 包已用于创建应用 {smart_app_code} !").format(
-                    original_app_code=original_app_desc.code, smart_app_code=smart_app.app.code
+                _("S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!").format(
+                    smart_app_code=smart_app.app.code
                 )
             )
 

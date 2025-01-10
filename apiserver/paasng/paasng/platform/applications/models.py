@@ -512,11 +512,7 @@ class ApplicationEnvironment(TimestampedModel):
     is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     class Meta:
@@ -642,11 +638,7 @@ class ApplicationFeatureFlag(TimestampedModel):
     name = models.CharField("特性名称(key)", max_length=30)
 
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     objects = ApplicationFeatureFlagManager()
@@ -657,11 +649,7 @@ class UserMarkedApplication(OwnerTimestampedModel):
     objects = WithOwnerManager()
 
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     class Meta:
@@ -681,11 +669,7 @@ class ApplicationDeploymentModuleOrder(models.Model):
     order = models.IntegerField(verbose_name="顺序")
 
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     class Meta:
@@ -700,9 +684,5 @@ class SMartAppExtraInfo(models.Model):
     original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
 
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )

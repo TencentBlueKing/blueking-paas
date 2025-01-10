@@ -52,10 +52,7 @@ class AppDomain(AuditedModel):
     # See `AppDomainSource` for possible values
     source = models.IntegerField(help_text="数据来源分类")
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     def has_customized_path_prefix(self) -> bool:
@@ -74,10 +71,7 @@ class BasicCert(AuditedModel):
     # TODO: The region field is not used anymore, remove it in the next release
     region = models.CharField(max_length=32)
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
     name = models.CharField(max_length=128, validators=[RegexValidator(DNS_SAFE_PATTERN)])
     cert_data = EncryptField()
@@ -149,10 +143,7 @@ class AppSubpath(AuditedModel):
     subpath = models.CharField(max_length=128)
     source = models.IntegerField()
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     objects = AppSubpathManager()
@@ -177,10 +168,7 @@ class Domain(TimestampedModel):
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
     https_enabled = models.BooleanField(default=False, null=True, help_text="该域名是否开启 https")
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
 
     module = ModuleAttrFromID()

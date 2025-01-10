@@ -54,11 +54,7 @@ class Module(OwnerTimestampedModel):
 
     last_deployed_date = models.DateTimeField(verbose_name="最近部署时间", null=True)  # 范围：模块下的所有环境
     tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
     )
     creator = BkUserField(null=True)
 

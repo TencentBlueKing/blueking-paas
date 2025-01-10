@@ -68,6 +68,16 @@ class TestListClusters:
         }
 
 
+class TestListAvailableClusters:
+    """获取可用集群列表"""
+
+    def test_list(self, init_default_cluster, init_system_cluster, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.available"))
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert resp.json() == [{"name": init_system_cluster.name}]
+
+
 class TestRetrieveCluster:
     """获取集群详情"""
 
@@ -144,7 +154,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -192,7 +202,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -226,7 +236,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -270,7 +280,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -305,7 +315,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.tencent.com",
             "component_preferred_namespace": "blueking",
             "feature_flags": init_default_cluster.feature_flags,
@@ -343,7 +353,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.bk.tencent.com",
             "component_preferred_namespace": "blueking-system",
             "feature_flags": init_default_cluster.feature_flags,
@@ -388,7 +398,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "bk.tencent.com",
             "component_preferred_namespace": "blueking",
             "feature_flags": init_default_cluster.feature_flags,

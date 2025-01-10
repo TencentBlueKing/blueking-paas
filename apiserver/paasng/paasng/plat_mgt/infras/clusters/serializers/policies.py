@@ -17,6 +17,7 @@
 
 from typing import Any, Dict, List
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -91,9 +92,11 @@ def _validate_allocation_policy_clusters(
                 for clusters in p.policy.env_clusters.values():
                     cluster_names |= set(clusters)
 
-    # 校验集群是否存在 & 指定的租户可用
+    # 校验集群是否存在 & 指定的租户可用（本租户的集群，本租户一定可用）
     exists_cluster_names = set(
-        Cluster.objects.filter(available_tenant_ids__contains=tenant_id).values_list("name", flat=True)
+        Cluster.objects.filter(
+            Q(tenant_id=tenant_id) | Q(available_tenant_ids__contains=tenant_id),
+        ).values_list("name", flat=True)
     )
     if not_exists_cluster_names := (cluster_names - exists_cluster_names):
         raise ValidationError(_("集群名 {} 不存在或不可用").format(", ".join(not_exists_cluster_names)))

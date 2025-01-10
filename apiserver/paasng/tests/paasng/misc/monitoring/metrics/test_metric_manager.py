@@ -45,8 +45,8 @@ class TestResourceMetricManager:
         self.worker_process.instances = [create_wl_instance(self.app)]
 
     @pytest.fixture()
-    def metric_client(self):
-        return BkMonitorMetricClient(bk_biz_id="123")
+    def metric_client(self, tenant_id):
+        return BkMonitorMetricClient(bk_biz_id="123", tenant_id=tenant_id)
 
     def test_normal_gen_series_query(self, metric_client):
         manager = ResourceMetricManager(process=self.web_process, metric_client=metric_client, bcs_cluster_id="")

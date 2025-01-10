@@ -46,6 +46,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.platform.templates.urls")),
     re_path(r"^", include("paasng.platform.smart_app.urls")),
     re_path(r"^", include("paasng.plat_admin.api_doc.urls")),
+    re_path(r"^", include("paasng.plat_mgt.urls")),
     re_path(r"^", include("paasng.accessories.publish.market.urls")),
     re_path(r"^", include("paasng.accessories.publish.sync_market.urls")),
     re_path(r"^", include("paasng.accessories.publish.entrance.urls")),

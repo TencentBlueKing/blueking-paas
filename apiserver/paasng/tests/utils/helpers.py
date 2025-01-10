@@ -17,7 +17,6 @@
 
 import copy
 import datetime
-import random
 import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
@@ -33,6 +32,8 @@ from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.core.region.states import load_regions_from_settings
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -47,7 +48,8 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
-from .auth import create_user
+from . import auth
+from .basic import generate_random_string
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationTag
@@ -58,7 +60,7 @@ except ImportError:
 def initialize_application(application, *args, **kwargs):
     """Initialize an application"""
     module = create_default_module(application)
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     initialize_module(module, *args, **kwargs)
 
@@ -141,9 +143,9 @@ def create_app(
         additional_modules = []
 
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
 
     region = region or settings.DEFAULT_REGION_NAME
 
@@ -152,7 +154,18 @@ def create_app(
     name = app_code.replace("-", "")
     fields = dict(name=name, name_en=name, language="Python", region=region)
 
-    application = G(Application, owner=user.pk, creator=user.pk, code=app_code, logo=None, **fields)
+    # 默认为全租户应用
+    application = G(
+        Application,
+        owner=user.pk,
+        creator=user.pk,
+        code=app_code,
+        logo=None,
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
+        **fields,
+    )
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -335,21 +348,6 @@ def configure_regions(regions: List[str]):
     load_regions_from_settings()
 
 
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
-
-
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable OAuth token
-
-    OAuth (1 and 2) does not specify the format of tokens except that they
-    should be strings of random characters. Tokens should not be guessable
-    and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
-    """
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
-
-
 # Stores pending actions related with workloads during app creation
 _faked_wl_apps = {}
 _faked_env_metadata = {}
@@ -360,11 +358,11 @@ def _mock_wl_services_in_creation():
     mocked will be stored and can be used for restoring data later.
     """
 
-    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str):
+    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
         obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
 
         # Store params in global, so we can manually create the objects later.
-        _faked_wl_apps[obj.uuid] = (region, name, type_)
+        _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
         return obj
 
     def fake_update_metadata_by_env(env, metadata_part):
@@ -408,10 +406,12 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
         for env in module.envs.all():
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
-                region, name, type_ = args
+                region, name, type_, tenant_id = args
                 if WlApp.objects.filter(name=name).exists():
                     continue
-                wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                wl_app = WlApp.objects.create(
+                    uuid=env.engine_app_id, region=region, name=name, type=type_, tenant_id=tenant_id
+                )
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name
                 latest_config.save()
@@ -500,9 +500,9 @@ def create_cnative_app(
     :param owner_username: username of owner
     """
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
     region = region or settings.DEFAULT_REGION_NAME
 
     # Create the Application object
@@ -519,8 +519,12 @@ def create_cnative_app(
         logo=None,
         name=name,
         name_en=name,
+        # 默认为全租户应用
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
     )
-    create_oauth2_client(application.code)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -561,10 +565,12 @@ def register_iam_after_create_application(application: Application):
     """
     from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
     from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+    from paasng.platform.applications.tenant import get_tenant_id_for_app
     from paasng.utils.basic import get_username_by_bkpaas_user_id
     from tests.utils.mocks.iam import StubBKIAMClient
 
-    cli = StubBKIAMClient()
+    tenant_id = get_tenant_id_for_app(application.code)
+    cli = StubBKIAMClient(tenant_id)
     creator = get_username_by_bkpaas_user_id(application.creator or application.owner)
 
     # 1. 创建分级管理员，并记录分级管理员 ID

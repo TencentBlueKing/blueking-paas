@@ -33,12 +33,7 @@ urlpatterns = [
         name="api.services.get_service_detail",
     ),
     re_path(
-        r"^api/services/regions/%s/$" % REGION,
-        views.ServiceViewSet.as_view({"get": "list_by_region"}),
-        name="api.services.list_service_by_region",
-    ),
-    re_path(
-        r"^api/services/regions/%s/init_templates/(?P<template>[\w-]+)$" % REGION,
+        r"^api/services/init_templates/(?P<template>[\w-]+)$",
         views.ServiceViewSet.as_view({"get": "list_by_template"}),
         name="api.services.list_service_by_template",
     ),
@@ -140,6 +135,12 @@ urlpatterns = [
         make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/$", include_envs=False),
         views.UnboundServiceEngineAppAttachmentViewSet.as_view({"delete": "delete"}),
         name="api.services.attachment.unbound.delete",
+    ),
+    # Retrieve unbound instance sensitive field
+    re_path(
+        make_app_pattern(f"/services/{SERVICE_UUID}/unbound_attachments/retrieve_field/$", include_envs=False),
+        views.UnboundServiceEngineAppAttachmentViewSet.as_view({"post": "retrieve_sensitive_field"}),
+        name="api.services.attachment.unbound.retrieve_sensitive_field",
     ),
 ]
 

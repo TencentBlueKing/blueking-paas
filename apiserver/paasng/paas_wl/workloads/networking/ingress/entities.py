@@ -33,7 +33,7 @@ class AutoGenDomain:
 class PIngressDomain:
     """Ingress Domain object
 
-    :param path_prefix_list: Accessable paths for current domain, default value: ['/']
+    :param path_prefix_list: Accessible paths for current domain, default value: ['/']
     """
 
     host: str

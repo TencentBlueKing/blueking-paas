@@ -46,3 +46,13 @@ class SiteAction(StrStructuredEnum):
     MANAGE_APP_TEMPLATES = EnumField("manage_app_templates", label=_("应用模板管理"))
     # 平台运营（查看平台运营数据）
     OPERATE_PLATFORM = EnumField("operate_platform", label=_("平台运营"))
+
+
+class PlatMgtAction(StrStructuredEnum):
+    """平台管理功能相关权限
+
+    FIXME: (多租户)切换为权限中心 -> 租户管理员 / 平台管理员权限 Action
+    """
+
+    # 允许所有平台管理功能
+    ALL = EnumField("all", label=_("临时权限限制"))

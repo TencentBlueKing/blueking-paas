@@ -251,7 +251,8 @@ def _instantiate_log_client(
         return log_client, search_params
     # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
     # 插件开发中心只部署主模块的生产环境
-    env = Application.objects.get(code=instance.id).envs.get(environment="prod", module__is_default=True)
+    app = Application.objects.get(code=instance.id)
+    env = app.envs.get(environment="prod", module__is_default=True)
     # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
     setup_env_log_model(env)
     if log_type == LogType.INGRESS:
@@ -266,8 +267,10 @@ def _instantiate_log_client(
         search_params = log_config.search_params
 
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
-    # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), search_params
+    # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致
+    return LogClientAdaptor(
+        instantiate_bksaas_log_client(log_config, tenant_id=app.tenant_id, bk_username=operator)
+    ), search_params
 
 
 def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:

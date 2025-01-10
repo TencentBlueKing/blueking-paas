@@ -22,7 +22,7 @@ from unittest.mock import Mock
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.platform.applications.models import Application
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 def get_fake_alerts(start_time: int, end_time: int) -> List:

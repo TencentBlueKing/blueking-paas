@@ -59,12 +59,12 @@ def load_regions_from_settings():
             module_mobile_config=module_mobile_config,
             mul_modules_config=RegionMulModulesConfig(**cfg.pop("mul_modules_config")),
             enabled_feature_flags=set(cfg.pop("enabled_feature_flags", [])),
-            allow_user_modify_custom_domain=cfg.pop("allow_user_modify_custom_domain", None),
+            allow_user_modify_custom_domain=cfg.pop("allow_user_modify_custom_domain", True),
             provide_env_vars_platform=cfg.pop("provide_env_vars_platform", None),
         )
         register_region(region)
 
-        # Update choice fileds
+        # Update choice fields
         setattr(RegionTypeContainer, name.upper(), name)
         g_choice_labels.append((name, display_name))
 

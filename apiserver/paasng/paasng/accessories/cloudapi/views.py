@@ -33,6 +33,7 @@ from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
@@ -217,8 +218,10 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "user_auth_type": get_user_auth_type(app.region),
             }
         )
-
-        result = bk_apigateway_inner_component.get(apigw_url, params=params, bk_username=request.user.username)
+        tenant_id = get_tenant_id_for_app(app.code)
+        result = bk_apigateway_inner_component.get(
+            apigw_url, params=params, tenant_id=tenant_id, bk_username=request.user.username
+        )
         return Response(result)
 
     def _post(
@@ -245,8 +248,10 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "user_auth_type": get_user_auth_type(app.region),
             }
         )
-
-        result = bk_apigateway_inner_component.post(apigw_url, json=data, bk_username=request.user.username)
+        tenant_id = get_tenant_id_for_app(app.code)
+        result = bk_apigateway_inner_component.post(
+            apigw_url, json=data, tenant_id=tenant_id, bk_username=request.user.username
+        )
 
         try:
             # 云 API 申请记录 ID，用于操作详情的展示

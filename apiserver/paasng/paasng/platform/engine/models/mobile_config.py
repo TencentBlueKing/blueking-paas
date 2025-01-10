@@ -19,6 +19,7 @@ from django.conf import settings
 from django.db import models
 from rest_framework.serializers import SkipField
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import LBPlans
 from paasng.utils.models import TimestampedModel
@@ -42,6 +43,10 @@ class MobileConfig(TimestampedModel):
         help_text="which one-level load balancer plan the domain use",
     )
     access_url = models.URLField("移动端访问地址", blank=True, null=True, default="")
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     def __str__(self):
         if self.is_enabled:
@@ -68,4 +73,4 @@ class MobileConfig(TimestampedModel):
 
 def get_mobile_config(env: ModuleEnvironment) -> MobileConfig:
     """Get MobileConfig object by environment object, will auto create object"""
-    return MobileConfig.objects.get_or_create(environment=env)[0]
+    return MobileConfig.objects.get_or_create(environment=env, defaults={"tenant_id": env.tenant_id})[0]

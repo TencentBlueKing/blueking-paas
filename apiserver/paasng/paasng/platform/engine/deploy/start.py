@@ -87,6 +87,7 @@ def initialize_deployment(
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
         ),
         bkapp_revision_id=bkapp_revision_id,
+        tenant_id=module.tenant_id,
     )
     deployment.refresh_from_db()
     ModuleEnvironmentOperations.objects.create(

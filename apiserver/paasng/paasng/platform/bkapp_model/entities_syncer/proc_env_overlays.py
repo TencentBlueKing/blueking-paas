@@ -81,7 +81,15 @@ def clean_empty_overlays(module):
 
     # If new fields were added to the module, the clean up process should abort to avoid data loss.
     fields = {f.name for f in ProcessSpecEnvOverlay._meta.fields}
-    if set(fields) - set(empty_values) != {"id", "region", "proc_spec", "updated", "environment_name", "created"}:
+    if set(fields) - set(empty_values) != {
+        "id",
+        "region",
+        "proc_spec",
+        "updated",
+        "environment_name",
+        "created",
+        "tenant_id",
+    }:
         raise RuntimeError("unexpected fields found on ProcessSpecEnvOverlay")
 
     for proc_spec in ModuleProcessSpec.objects.filter(module=module):

@@ -100,8 +100,5 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str, tena
     info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE, tenant_id)
     # Create EngineApp and binding relationships
     return EngineApp.objects.create(
-        id=info.uuid,
-        name=engine_app_name,
-        owner=owner,
-        region=region,
+        id=info.uuid, name=engine_app_name, owner=owner, region=region, tenant_id=tenant_id
     )

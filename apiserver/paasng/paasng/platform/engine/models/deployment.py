@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Union
 from attrs import define
 from django.db import models
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
@@ -136,6 +137,10 @@ class Deployment(OperationVersionBase):
     # such as logs of the service provision actions and hook command executions from cloud-native applications.
     preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
     main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     objects = DeploymentQuerySet().as_manager()
 

@@ -20,6 +20,7 @@ import logging
 from django.db import models
 from django.utils import timezone
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.sourcectl.models import VersionInfo
@@ -58,6 +59,10 @@ class OfflineOperation(OperationVersionBase):
 
     log = models.TextField("下线日志", null=True, blank=True)
     err_detail = models.TextField("下线异常原因", null=True, blank=True)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     objects = OfflineOperationQuerySet().as_manager()
 

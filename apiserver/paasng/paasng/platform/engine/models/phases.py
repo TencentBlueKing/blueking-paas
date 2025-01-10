@@ -23,6 +23,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import CharField, DateTimeField, Serializer
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.platform.engine.models import Deployment, EngineApp, MarkStatusMixin
@@ -58,6 +59,10 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
     status = models.CharField(_("状态"), choices=JobStatus.get_choices(), null=True, max_length=32)
     start_time = models.DateTimeField(_("阶段开始时间"), null=True)
     complete_time = models.DateTimeField(_("阶段完成时间"), null=True)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     class Meta:
         ordering = ["created"]

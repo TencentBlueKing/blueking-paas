@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
@@ -82,6 +83,10 @@ class ConfigVar(TimestampedModel):
     description = models.CharField(max_length=200, null=True)
     is_builtin = models.BooleanField(default=False)
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
+
     objects = ConfigVarQuerySet.as_manager()
 
     class Meta:
@@ -129,6 +134,7 @@ class ConfigVar(TimestampedModel):
             # 差异点
             environment_id=environment_id,
             module=module,
+            tenant_id=self.tenant_id,
         )
 
 
@@ -152,7 +158,10 @@ class BuiltInEnvVarDetail:
 
 
 class BuiltinConfigVar(AuditedModel):
-    """Default config vars for global, can be added or edited in admin42."""
+    """Default config vars for global, can be added or edited in admin42.
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     key = models.CharField(verbose_name="环境变量名", max_length=128, null=False, unique=True)
     value = models.TextField(verbose_name="环境变量值", max_length=512, null=False)

@@ -20,6 +20,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.modules.models import Module
 
@@ -33,6 +34,10 @@ class PresetEnvVariable(AuditedModel):
     )
     key = models.CharField(max_length=128, null=False)
     value = EncryptField(null=False)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     class Meta:
         unique_together = ("module", "environment_name", "key")

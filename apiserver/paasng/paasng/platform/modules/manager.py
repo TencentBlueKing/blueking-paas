@@ -331,7 +331,11 @@ class ModuleInitializer:
         """Create or get existed engine app by given name"""
         info = create_app_ignore_duplicated(self.application.region, name, app_type, self.application.tenant_id)
         engine_app = EngineApp.objects.create(
-            id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
+            id=info.uuid,
+            name=info.name,
+            owner=self.application.owner,
+            region=self.application.region,
+            tenant_id=self.application.tenant_id,
         )
         return engine_app
 

@@ -20,6 +20,7 @@ from unittest.mock import patch
 import cattrs
 import pytest
 from attr import define, field
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -70,6 +71,11 @@ class TestListClusters:
 
 class TestListAvailableClusters:
     """获取可用集群列表"""
+
+    @pytest.fixture(autouse=True)
+    def _patch_settings(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            yield
 
     def test_list(self, init_default_cluster, init_system_cluster, plat_mgt_api_client):
         resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.available"))
@@ -126,6 +132,11 @@ class TestRetrieveCluster:
 
 class TestCreateCluster:
     """创建集群"""
+
+    @pytest.fixture(autouse=True)
+    def _patch_settings(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            yield
 
     def test_create_cluster_from_bcs(self, plat_mgt_api_client):
         """基于 bcs 集群创建集群"""

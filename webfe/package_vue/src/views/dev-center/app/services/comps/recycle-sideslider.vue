@@ -85,11 +85,21 @@
                     :key="fieldsIndex"
                   >
                     <span class="gray">{{ key }}:</span>
-                    ******
-                    <i
-                      v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
-                      class="paasng-icon paasng-question-circle"
-                    />
+                    <span v-if="sensitiveFields[row.instance_id]">
+                      {{ sensitiveFields[row.instance_id][key] }}
+                      <i
+                        class="paasng-icon paasng-general-copy copy-icon"
+                        v-copy="sensitiveFields[row.instance_id][key]"
+                      />
+                    </span>
+                    <span v-else>
+                      <span>******</span>
+                      <i
+                        class="paasng-icon paasng-eye-slash view-password"
+                        v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
+                        @click="hanldleViewSecret(row, key)"
+                      />
+                    </span>
                   </div>
                   <div
                     v-for="(value, key) in row.service_instance.hidden_fields"
@@ -208,12 +218,21 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <!-- 获取验证码 -->
+    <VerificationCodeDialog
+      :show.sync="isVerificationCodeDialog"
+      func="RETRIEVE_UNBOUND_SERVICE_SENSITIVE_FIELD"
+      @confirm="handleDialogConfirm"
+    />
   </div>
 </template>
 
 <script>
+import VerificationCodeDialog from '@/components/verification-code-dialog';
 export default {
   name: 'RecycleSideslider',
+  components: { VerificationCodeDialog },
   props: {
     show: {
       type: Boolean,
@@ -245,6 +264,10 @@ export default {
         appCode: '',
         row: {},
       },
+      viewSecretData: {},
+      isVerificationCodeDialog: false,
+      // 敏感字段
+      sensitiveFields: {},
     };
   },
   computed: {
@@ -268,6 +291,9 @@ export default {
     recycleValidated() {
       return this.appCode === this.recycleyDialog.appCode;
     },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
   },
   watch: {
     list(newList) {
@@ -284,6 +310,7 @@ export default {
         const fristInstance = this.list[0];
         this.setInstance(fristInstance.service?.uuid);
       }
+      this.sensitiveFields = {};
     },
     handlerChange(active) {
       // 切换对应服务实例详情
@@ -353,6 +380,45 @@ export default {
         this.recycleyDialog.isLoading = false;
       }
     },
+    // 查看敏感字段
+    hanldleViewSecret(row, key) {
+      this.viewSecretData = row;
+      this.viewSecretData.fieldName = key;
+      if (!this.platformFeature.VERIFICATION_CODE) {
+        // 无需要获取验证码校验，直接请求
+        this.submitVerificationCode();
+        return;
+      }
+      this.showVerificationCodeDialog();
+    },
+    // 获取验证码弹窗
+    showVerificationCodeDialog() {
+      this.isVerificationCodeDialog = true;
+    },
+    handleDialogConfirm(code) {
+      this.submitVerificationCode(code);
+    },
+    //  提交验证码获取敏感信息字段
+    async submitVerificationCode(code = '') {
+      try {
+        const data = {
+          instance_id: this.viewSecretData.instance_id,
+          field_name: this.viewSecretData.fieldName,
+          // VERIFICATION_CODE 为 true 需要发验证码
+          ...(this.platformFeature.VERIFICATION_CODE && { verification_code: code }),
+        };
+        const res = await this.$store.dispatch('service/queryUnbindInstanceSensitiveFields', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          serviceId: this.activeInstanceData.service?.uuid,
+          data,
+        });
+        const field = { [this.viewSecretData.fieldName]: res };
+        this.$set(this.sensitiveFields, this.viewSecretData.instance_id, field);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
@@ -374,6 +440,19 @@ export default {
   }
   .credential-information {
     overflow: hidden;
+    .copy-icon,
+    .view-password {
+      margin-left: 2px;
+      font-size: 14px;
+      cursor: pointer;
+      &.paasng-eye-slash {
+        transform: translateY(-3px);
+        margin-left: 6px;
+      }
+      &:hover {
+        color: #3a84ff;
+      }
+    }
   }
   .gray {
     color: #c4c6cc;

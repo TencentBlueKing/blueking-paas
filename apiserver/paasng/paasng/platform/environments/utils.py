@@ -63,7 +63,11 @@ def batch_save_protections(
     for _env in create_envs:
         module_env = module.get_envs(_env)
         for role in allowed_roles:
-            protections.append(EnvRoleProtection(module_env=module_env, operation=operation, allowed_role=role))
+            protections.append(
+                EnvRoleProtection(
+                    module_env=module_env, operation=operation, allowed_role=role, tenant_id=module_env.tenant_id
+                )
+            )
 
     EnvRoleProtection.objects.bulk_create(protections)
 

@@ -17,6 +17,7 @@
 
 from django.db import models
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -24,8 +25,14 @@ from paasng.utils.models import TimestampedModel
 
 
 class EnvRoleProtection(TimestampedModel):
-    """模块环境角色保护"""
+    """模块环境角色保护
+
+    限制应用角色在特定环境中执行特定操作，比如，禁止开发者在生产环境中部署应用。"""
 
     allowed_role = models.IntegerField(choices=ApplicationRole.get_django_choices())
     module_env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, related_name="role_protections")
     operation = models.CharField(choices=EnvRoleOperation.get_choices(), max_length=64)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )

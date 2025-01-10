@@ -21,6 +21,7 @@ from bkpaas_auth import get_user_by_user_id
 from django.db import models
 from jsonfield import JSONField
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.engine.models.deployment import Deployment
@@ -42,6 +43,10 @@ class CIResourceAppEnvRelation(TimestampedModel):
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
+
     class Meta:
         get_latest_by = "created"
 
@@ -57,6 +62,10 @@ class CIResourceAtom(TimestampedModel):
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     resource = models.ForeignKey(CIResourceAppEnvRelation, on_delete=models.CASCADE, related_name="related_atoms")
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     @property
     def task_id(self):
@@ -87,6 +96,10 @@ class CIAtomJob(OperationVersionBase):
     atom = models.ForeignKey(CIResourceAtom, on_delete=models.CASCADE, related_name="related_jobs")
     build_id = models.CharField(verbose_name="构建ID", max_length=128)
     output = JSONField(default={})
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     def finish(self, status: JobStatus):
         self.status = status

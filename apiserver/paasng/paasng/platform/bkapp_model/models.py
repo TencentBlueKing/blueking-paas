@@ -23,6 +23,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
@@ -90,6 +91,10 @@ class ModuleProcessSpec(TimestampedModel):
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
     probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     class Meta:
         unique_together = ("module", "name")
@@ -168,6 +173,7 @@ class ProcessSpecEnvOverlayManager(models.Manager):
                 "target_replicas": target_replicas,
                 "autoscaling": autoscaling,
                 "scaling_config": scaling_config_dict,
+                "tenant_id": proc_spec.tenant_id,
             },
         )
 
@@ -187,6 +193,10 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     autoscaling = models.BooleanField("是否启用自动扩缩容", null=True)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
+
     objects = ProcessSpecEnvOverlayManager()
 
     class Meta:
@@ -199,6 +209,10 @@ class ProcessServicesFlag(TimestampedModel):
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
     # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设计 implicit_needed 字段来标记是否需要平台隐式创建
     implicit_needed = models.BooleanField("是否隐式需要 process services 配置", default=False)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
 
 class ModuleDeployHookManager(models.Manager):
@@ -274,6 +288,10 @@ class ModuleDeployHook(TimestampedModel):
     args: Optional[List[str]] = models.JSONField(help_text="命令参数", default=None, null=True)
     enabled = models.BooleanField(help_text="是否已开启", default=False)
 
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
+
     objects = ModuleDeployHookManager()
 
     class Meta:
@@ -305,8 +323,11 @@ class SvcDiscConfig(AuditedModel):
     """服务发现配置"""
 
     application = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False, unique=True)
-
     bk_saas: List[SvcDiscEntryBkSaaS] = BkSaaSField(default=list, help_text="")
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
 
 class DomainResolution(AuditedModel):
@@ -316,6 +337,10 @@ class DomainResolution(AuditedModel):
 
     nameservers: List[str] = NameServersField(default=list, help_text="k8s dnsConfig nameServers")
     host_aliases: List[HostAlias] = HostAliasesField(default=list, help_text="k8s hostAliases")
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
 
 def get_svc_disc_as_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
@@ -342,7 +367,9 @@ class ObservabilityConfigManager(models.Manager):
         try:
             obj = ObservabilityConfig.objects.get(module=module)
         except ObservabilityConfig.DoesNotExist:
-            return ObservabilityConfig.objects.create(module=module, monitoring=monitoring), True
+            return ObservabilityConfig.objects.create(
+                module=module, monitoring=monitoring, tenant_id=module.tenant_id
+            ), True
         else:
             last_monitoring = obj.monitoring
             obj.monitoring = monitoring
@@ -357,6 +384,10 @@ class ObservabilityConfig(TimestampedModel):
     )
     monitoring: Optional[Monitoring] = MonitoringField("监控配置", default=None, null=True)
     last_monitoring: Optional[Monitoring] = MonitoringField("最近的一次监控配置", default=None, null=True)
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     objects = ObservabilityConfigManager()
 
@@ -394,6 +425,10 @@ class BkAppManagedFields(TimestampedModel):
     )
     manager = models.CharField(help_text="管理者类型", max_length=20)
     fields = models.JSONField(help_text="所管理的字段", default=[])
+
+    tenant_id = models.CharField(
+        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
+    )
 
     class Meta:
         unique_together = ("module", "manager")

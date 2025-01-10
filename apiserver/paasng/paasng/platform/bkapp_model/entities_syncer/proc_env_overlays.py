@@ -119,10 +119,14 @@ class OverlayDataSyncer:
         # Build the index of existing data first to clean data later.
         existing_specs, existing_index = self._build_specs_and_index(module)
 
+        tenant_fields = {"tenant_id": module.tenant_id}
+
         # 空列表时, 表示主动置空所有
         if not items:
             for (proc, env), pk in existing_index.items():
-                ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+                ProcessSpecEnvOverlay.objects.update_or_create(
+                    pk=pk, defaults=self.algo.get_empty_values() | tenant_fields
+                )
                 # Reset the field manager too.
                 fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
                 ret.deleted_num += 1
@@ -135,7 +139,9 @@ class OverlayDataSyncer:
                 continue
 
             _, created = ProcessSpecEnvOverlay.objects.update_or_create(
-                proc_spec=proc_spec, environment_name=input_p.env_name, defaults=self.algo.get_values(input_p)
+                proc_spec=proc_spec,
+                environment_name=input_p.env_name,
+                defaults=self.algo.get_values(input_p) | tenant_fields,
             )
             ret.incr_by_created_flag(created)
 
@@ -151,7 +157,9 @@ class OverlayDataSyncer:
             if (proc, env) in not_managed_envs and not base_value_is_set:
                 continue
 
-            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+            ProcessSpecEnvOverlay.objects.update_or_create(
+                pk=pk, defaults=self.algo.get_empty_values() | tenant_fields
+            )
             fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
             ret.deleted_num += 1
         return ret
@@ -166,6 +174,8 @@ class OverlayDataSyncer:
         _, existing_index = self._build_specs_and_index(module)
         not_managed_envs = self._get_not_managed_proc_envs(module, manager, list(existing_index.keys()))
 
+        tenant_fields = {"tenant_id": module.tenant_id}
+
         # Reset existing data
         for (proc, env), pk in existing_index.items():
             base_value_is_set = proc_value_is_set and proc_value_is_set.get(proc)
@@ -173,7 +183,9 @@ class OverlayDataSyncer:
             if (proc, env) in not_managed_envs and not base_value_is_set:
                 continue
 
-            ProcessSpecEnvOverlay.objects.update_or_create(pk=pk, defaults=self.algo.get_empty_values())
+            ProcessSpecEnvOverlay.objects.update_or_create(
+                pk=pk, defaults=self.algo.get_empty_values() | tenant_fields
+            )
             # Reset the field manager too.
             fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(proc, env)).reset()
             ret.deleted_num += 1

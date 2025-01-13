@@ -304,6 +304,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             application_id=application.id,
             defaults={
                 "bk_saas": validated_data["bk_saas"],
+                "tenant_id": application.tenant_id,
             },
         )
         svc_disc.refresh_from_db()
@@ -358,7 +359,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
-        defaults = {}
+        defaults = {"tenant_id": application.tenant_id}
         nameservers = validated_data.get("nameservers")
         if nameservers is not None:
             defaults["nameservers"] = nameservers

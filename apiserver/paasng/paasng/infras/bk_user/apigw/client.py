@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -13,25 +14,17 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-class AppTenantMode(StrStructuredEnum):
-    """The tenant mode of the application. The mode controls the accessibility of
-    the application to different tenants. For example, an application is available
-    for all tenants when the mode is GLOBAL.
-    """
-
-    GLOBAL = EnumField("global", "全租户可用")
-    SINGLE = EnumField("single", "单租户")
+class Group(OperationGroup):
+    # 获取所有租户列表
+    list_tenants = bind_property(Operation, name="list_tenant", method="GET", path="/api/v3/open/tenants/")
 
 
-class TenantStatus(StrStructuredEnum):
-    """租户状态"""
+class Client(APIGatewayClient):
+    """蓝鲸用户管理 API"""
 
-    ENABLED = EnumField("enabled", "启用")
-    DISABLED = EnumField("disabled", "禁用")
-
-
-# API 请求头中用于指定租户 ID 的字段
-API_HERDER_TENANT_ID = "X-Bk-Tenant-Id"
+    _api_name = "bk-user"
+    api = bind_property(Group, name="api")

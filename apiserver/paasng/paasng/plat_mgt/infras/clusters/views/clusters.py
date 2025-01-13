@@ -17,6 +17,7 @@
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -37,6 +38,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
+from paasng.plat_mgt.infras.clusters.serializers.clusters import AvailableClusterListOutputSLZ
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.utils.error_codes import error_codes
 
@@ -65,6 +67,17 @@ class ClusterViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],
+        operation_description="获取本租户可用集群",
+        responses={status.HTTP_200_OK: AvailableClusterListOutputSLZ(many=True)},
+    )
+    def list_available(self, request, *args, **kwargs):
+        tenant_id = get_tenant(request.user).id
+        # 本租户的集群本租户一定是可用的，其他租户的集群，如果有对应的配置，则可用
+        clusters = Cluster.objects.filter(Q(tenant_id=tenant_id) | Q(available_tenant_ids__contains=tenant_id))
+        return Response(data=AvailableClusterListOutputSLZ(clusters, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster"],
         operation_description="获取集群详情",
         responses={status.HTTP_200_OK: ClusterRetrieveOutputSLZ()},
     )
@@ -80,7 +93,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, *args, **kwargs):
-        slz = ClusterCreateInputSLZ(data=request.data)
+        cur_tenant_id = get_tenant(request.user).id
+
+        slz = ClusterCreateInputSLZ(
+            data=request.data,
+            context={"cur_tenant_id": cur_tenant_id},
+        )
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -89,7 +107,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster = Cluster.objects.create(
                 # 集群分划属性
                 region=settings.DEFAULT_REGION_NAME,
-                tenant_id=get_tenant(request.user).id,
+                tenant_id=cur_tenant_id,
                 available_tenant_ids=data["available_tenant_ids"],
                 # 集群基本属性
                 name=data["name"],

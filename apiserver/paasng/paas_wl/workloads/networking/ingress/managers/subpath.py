@@ -39,9 +39,9 @@ def assign_subpaths(app: WlApp, subpaths: List[str], default_service_name: str):
         as default.
     """
     affected_apps = save_subpaths(app, subpaths)
-    for app in affected_apps:
-        logger.info("Syncing app %s's subpaths ingress...", app.name)
-        SubPathAppIngressMgr(app).sync(default_service_name=default_service_name, delete_when_empty=True)
+    for a_app in affected_apps:
+        logger.info("Syncing app %s's subpaths ingress...", a_app.name)
+        SubPathAppIngressMgr(a_app).sync(default_service_name=default_service_name, delete_when_empty=True)
 
 
 def save_subpaths(app: WlApp, subpaths: List[str]) -> Set[WlApp]:
@@ -50,13 +50,13 @@ def save_subpaths(app: WlApp, subpaths: List[str]) -> Set[WlApp]:
     :param subpaths: List of subpaths
     """
     existed_subpaths = AppSubpath.objects.filter(
-        region=app.region, subpath__in=subpaths, source=AppSubpathSource.DEFAULT
+        tenant_id=app.tenant_id, subpath__in=subpaths, source=AppSubpathSource.DEFAULT
     )
     affected_apps = {obj.app for obj in existed_subpaths}
 
     for subpath in subpaths:
         AppSubpath.objects.update_or_create(
-            region=app.region, subpath=subpath, defaults={"app": app, "source": AppSubpathSource.DEFAULT}
+            tenant_id=app.tenant_id, subpath=subpath, defaults={"app": app, "source": AppSubpathSource.DEFAULT}
         )
     # Remove subpaths which are no longer bound with app
     AppSubpath.objects.filter(app=app, source=AppSubpathSource.DEFAULT).exclude(subpath__in=subpaths).delete()
@@ -98,7 +98,7 @@ class SubPathAppIngressMgr(AppIngressMgr):
         if not https_enabled:
             return PIngressDomain(host=host, path_prefix_list=path_prefix_list, tls_enabled=False)
 
-        cert = pick_shared_cert(self.app.region, host)
+        cert = pick_shared_cert(self.app.tenant_id, host)
         if cert:
             secret_name, created = update_or_create_secret_by_cert(self.app, cert)
             if created:

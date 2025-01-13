@@ -74,7 +74,9 @@ def create_engine_apps(
     for environment in environments:
         engine_app_name = make_engine_app_name(module, application.code, environment)
         # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
-        engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
+        engine_app = get_or_create_engine_app(
+            application.owner, application.region, engine_app_name, application.tenant_id
+        )
         env = ModuleEnvironment.objects.create(
             application=application, module=module, engine_app_id=engine_app.id, environment=environment
         )
@@ -86,12 +88,12 @@ def create_engine_apps(
         update_metadata_by_env(env, engine_app_meta_info)
 
 
-def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:
+def get_or_create_engine_app(owner: str, region: str, engine_app_name: str, tenant_id: str) -> EngineApp:
     """get or create engine app from workload
 
     :return: EngineApp object
     """
-    info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE)
+    info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE, tenant_id)
     # Create EngineApp and binding relationships
     return EngineApp.objects.create(
         id=info.uuid,

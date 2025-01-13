@@ -59,7 +59,7 @@ def init_default_cluster() -> Cluster:
             ClusterFeatureFlag.ENABLE_AUTOSCALING: True,
             ClusterFeatureFlag.ENABLE_BCS_EGRESS: True,
         },
-        available_tenant_ids=["default"],
+        available_tenant_ids=[DEFAULT_TENANT_ID],
     )
     # ApiServers
     APIServer.objects.create(
@@ -116,7 +116,7 @@ def init_system_cluster() -> Cluster:
             ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
             ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
         },
-        available_tenant_ids=["system", "default"],
+        available_tenant_ids=[OP_TYPE_TENANT_ID, DEFAULT_TENANT_ID],
     )
     # ApiServers
     APIServer.objects.bulk_create(

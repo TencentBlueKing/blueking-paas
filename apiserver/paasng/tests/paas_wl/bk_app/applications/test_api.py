@@ -32,17 +32,18 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.django_db(databases=["workloads"])
 def test_create_app_ignore_duplicated():
-    info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
+    info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT, "tenant-1")
     assert info.name == "foo-app"
 
-    # re-create using the same name
-    recreated_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT)
+    # re-create using the same properties
+    recreated_info = create_app_ignore_duplicated(
+        settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT, "tenant-1"
+    )
     assert recreated_info.uuid == info.uuid
 
-    # re-create using a different type
-    _cnative_info = create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.CLOUD_NATIVE)
-    assert _cnative_info.uuid == info.uuid
-    assert _cnative_info.type == WlAppType.CLOUD_NATIVE
+    # re-create using a different tenant_id
+    with pytest.raises(RuntimeError):
+        create_app_ignore_duplicated(settings.DEFAULT_REGION_NAME, "foo-app", WlAppType.DEFAULT, "tenant-2")
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

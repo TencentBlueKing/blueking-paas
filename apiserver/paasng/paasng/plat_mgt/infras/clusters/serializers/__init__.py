@@ -15,6 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from .bcs_resources import (
+    BCSClusterListOutputSLZ,
+    BCSProjectListOutputSLZ,
+)
 from .clusters import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -43,4 +47,7 @@ __all__ = [
     "ClusterAllocationPolicyCreateInputSLZ",
     "ClusterAllocationPolicyCreateOutputSLZ",
     "ClusterAllocationPolicyUpdateInputSLZ",
+    # bcs_resources
+    "BCSClusterListOutputSLZ",
+    "BCSProjectListOutputSLZ",
 ]

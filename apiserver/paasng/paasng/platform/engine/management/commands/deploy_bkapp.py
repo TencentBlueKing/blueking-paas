@@ -102,7 +102,7 @@ class Command(BaseCommand):
             "--image-pull-policy",
             dest="image_pull_policy",
             required=False,
-            choices=[value for value, _label in ImagePullPolicy.get_choices()],
+            choices=ImagePullPolicy.get_values(),
             default=ImagePullPolicy.IF_NOT_PRESENT,
             help="镜像拉取策略",
         )

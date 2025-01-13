@@ -226,7 +226,6 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             configmap_source = validated_data.get("configmap_source") or {}
             controller = init_volume_source_controller(mount_instance.source_type)
             data = configmap_source.get("source_config_data", {})
-            # 文件是否覆盖原有目录下的文件
             use_sub_path = configmap_source.get("use_sub_path")
             controller.create_by_env(
                 app_id=mount_instance.module.application.id,
@@ -234,10 +233,10 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
                 data=data,
-                overwrite=use_sub_path,
+                use_sub_path=use_sub_path,
             )
 
-            # 如果文件覆盖原有目录下的文件，则更新挂载的 source_config.subPaths 字段
+            # 如果开启子路径模式，则更新挂载的 source_config.subPaths 字段
             if use_sub_path:
                 mount_instance.source_config.configMap.subPaths = list(data.keys())  # type: ignore
                 mount_instance.save(update_fields=["source_config"])

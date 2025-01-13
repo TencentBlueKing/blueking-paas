@@ -41,7 +41,8 @@ class ConfigMapSource(TimestampedModel):
     name = models.CharField(max_length=63, help_text=_("挂载资源名"))
     data = models.JSONField(default=dict)
     display_name = models.CharField(max_length=63, null=True, help_text=_("挂载资源展示名称"))
-    use_sub_path = models.BooleanField(default=False, help_text="是否覆盖目录下的文件")
+    # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
+    use_sub_path = models.BooleanField(default=False, help_text="是否使用子路径模式")
 
     def get_display_name(self):
         return self.display_name or f"ConfigMap-{self.created.strftime('%y%m%d%H%M')}"

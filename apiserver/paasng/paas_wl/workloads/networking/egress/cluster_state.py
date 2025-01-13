@@ -18,7 +18,7 @@
 import copy
 import hashlib
 import logging
-from typing import List
+from typing import Dict, List
 
 from django.utils.encoding import force_bytes
 from kubernetes.dynamic.resource import ResourceInstance
@@ -31,8 +31,8 @@ from .models import RegionClusterState
 logger = logging.getLogger(__name__)
 
 
-def generate_state(cluster_name: str, client, ignore_labels: List) -> RegionClusterState:
-    """Generate region state for a single cluster"""
+def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> RegionClusterState:
+    """Generate region state for a single region"""
 
     nodes = get_nodes(client)
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))
@@ -61,11 +61,11 @@ def generate_state(cluster_name: str, client, ignore_labels: List) -> RegionClus
     )
 
 
-def filter_nodes_with_labels(nodes: List[ResourceInstance], ignore_labels):
+def filter_nodes_with_labels(nodes: List[ResourceInstance], ignore_labels: Dict[str, str]):
     for node in nodes:
         # If node contains any label in ignore_labels, ignore this node
         labels = node.metadata.get("labels", {})
-        should_ignore = any(True for k, v in ignore_labels if labels.get(k) == v)
+        should_ignore = any(True for k, v in ignore_labels.items() if labels.get(k) == v)
         if not should_ignore:
             yield node
 

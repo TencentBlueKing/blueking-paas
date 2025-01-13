@@ -42,6 +42,33 @@
               :placeholder="$t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
             ></bk-input>
           </bk-form-item>
+          <!-- 多租户 -->
+          <template v-if="isShowTenant">
+            <bk-form-item
+              :required="true"
+              :property="'tenant'"
+              error-display-type="normal"
+              ext-cls="form-item-cls"
+              :label="$t('租户类型')"
+            >
+              <bk-radio-group v-model="formData.tenantMode">
+                <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
+                <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="formData.tenantMode === 'single'"
+              :required="true"
+              ext-cls="form-item-cls"
+              :label="$t('所属租户')"
+            >
+              <bk-input
+                class="form-input-width"
+                :value="curUserInfo.tenantId"
+                :disabled="true"
+              ></bk-input>
+            </bk-form-item>
+          </template>
         </bk-form>
       </div>
     </div>
@@ -106,6 +133,7 @@
 </template>
 <script>
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import { mapGetters } from 'vuex';
 export default {
   mixins: [sidebarDiffMixin],
   data() {
@@ -115,6 +143,7 @@ export default {
       formData: {
         code: '',
         name: '',
+        tenantMode: 'single',
         region: 'default',
       },
       // 应用市场
@@ -162,14 +191,22 @@ export default {
       },
     };
   },
+  computed: {
+    ...mapGetters(['isShowTenant']),
+    curUserInfo() {
+      return this.$store.state.curUserInfo;
+    },
+  },
   created() {
     this.fetchSpecsByRegion();
   },
   methods: {
     // 格式化参数
     formatParams() {
+      const { tenantMode, ...result } = this.formData;
       const params = {
-        ...this.formData,
+        ...result,
+        ...(this.isShowTenant && { app_tenant_mode: tenantMode }),
         market_params: {
           source_tp_url: this.appMarketData.sourceTpUrl,
         },

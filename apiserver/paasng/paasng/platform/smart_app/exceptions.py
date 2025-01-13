@@ -18,3 +18,7 @@
 
 class PreparedPackageNotFound(Exception):
     """raised when prepared package was not found"""
+
+
+class GenAppCodeError(Exception):
+    """raised when generate app code failed"""

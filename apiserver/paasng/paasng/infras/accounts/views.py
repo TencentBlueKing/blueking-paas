@@ -58,10 +58,12 @@ class UserInfoViewSet(APIView):
         user = request.user
         user_logo = get_user_avatar(user.username)
         data = {
-            "chinese_name": user.chinese_name,
-            "avatar_url": user.avatar_url if user.avatar_url else user_logo,
             "bkpaas_user_id": user.bkpaas_user_id,
             "username": user.username,
+            "tenant_id": getattr(user, "tenant_id", None),
+            "display_name": getattr(user, "display_name", None),
+            "chinese_name": user.chinese_name,
+            "avatar_url": user.avatar_url if user.avatar_url else user_logo,
         }
         return Response(data)
 

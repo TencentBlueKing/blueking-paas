@@ -33,7 +33,7 @@ from paasng.platform.modules.helpers import get_module_clusters
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -134,10 +134,12 @@ class TestAppNewModuleUseRightCluster:
 
         # Create a new module called "new" by handle the modified YAML again
         yaml_content_new_module = yaml_content + indent(
-            dedent("""
+            dedent(
+                """
         new:
             language: python
-        """),
+        """
+            ),
             prefix="    ",
         )
         app = get_desc_handler(yaml_content_new_module).handle_app(bk_user)

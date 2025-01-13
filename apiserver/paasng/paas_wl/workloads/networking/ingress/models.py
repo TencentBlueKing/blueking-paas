@@ -24,23 +24,23 @@ from django.db import models
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnvAttrFromID
 from paas_wl.infras.cluster.utils import get_cluster_by_app
-from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
+from paas_wl.workloads.networking.ingress.constants import AppSubpathSource
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 
 
 class AppDomain(AuditedModel):
     """Domains of applications, each object(entry) represents an (domain + path_prefix) pair."""
 
     app = models.ForeignKey(WlApp, on_delete=models.CASCADE)
+    # TODO: The region field is not used anymore, remove it in the next release
     region = models.CharField(max_length=32)
     host = models.CharField(max_length=128)
 
-    # Only source="independent" domain may set it's "path_prefix" field to non-default values.
-    # domains managed by other sources('built_in', 'custom') does not support customizing
-    # 'path_prefix', only '/'(or None) are supported for those domains.
-    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessable path for current domain")
+    # This field was designed for supported `path_prefix` customization, but only '/' (or None)
+    # values are currently used.
+    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessible path for current domain")
 
     # HTTPS related fields
     https_enabled = models.BooleanField(default=False)
@@ -49,7 +49,14 @@ class AppDomain(AuditedModel):
     cert = models.ForeignKey("AppDomainCert", null=True, on_delete=models.SET_NULL)
     shared_cert = models.ForeignKey("AppDomainSharedCert", null=True, on_delete=models.SET_NULL)
 
-    source = models.IntegerField(choices=make_enum_choices(AppDomainSource))
+    # See `AppDomainSource` for possible values
+    source = models.IntegerField(help_text="数据来源分类")
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
 
     def has_customized_path_prefix(self) -> bool:
         """Check if current domain has configured a custom path prefix"""
@@ -59,13 +66,20 @@ class AppDomain(AuditedModel):
         return f"<AppDomain: https_enabled={self.https_enabled} host={self.host}>"
 
     class Meta:
-        unique_together = ("region", "host", "path_prefix")
+        unique_together = ("tenant_id", "host", "path_prefix")
         db_table = "services_appdomain"
 
 
 class BasicCert(AuditedModel):
+    # TODO: The region field is not used anymore, remove it in the next release
     region = models.CharField(max_length=32)
-    name = models.CharField(max_length=128, unique=True, validators=[RegexValidator(DNS_SAFE_PATTERN)])
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
+    name = models.CharField(max_length=128, validators=[RegexValidator(DNS_SAFE_PATTERN)])
     cert_data = EncryptField()
     key_data = EncryptField()
 
@@ -85,6 +99,7 @@ class AppDomainCert(BasicCert):
 
     class Meta:
         db_table = "services_appdomaincert"
+        unique_together = ("tenant_id", "name")
 
 
 class AppDomainSharedCert(BasicCert):
@@ -99,6 +114,7 @@ class AppDomainSharedCert(BasicCert):
 
     class Meta:
         db_table = "services_appdomainsharedcert"
+        unique_together = ("tenant_id", "name")
 
     def match_hostname(self, hostname: str) -> bool:
         """Check if current certificate object matches the given hostname
@@ -116,24 +132,28 @@ class AppDomainSharedCert(BasicCert):
 
 class AppSubpathManager(models.Manager):
     def create_obj(self, app: WlApp, subpath: str, source=AppSubpathSource.DEFAULT) -> "AppSubpath":
-        """Create an subpath object"""
+        """Create an subpath object."""
         cluster = get_cluster_by_app(app)
         return self.get_queryset().create(
-            app=app, region=app.region, cluster_name=cluster.name, subpath=subpath, source=source
+            app=app, tenant_id=app.tenant_id, cluster_name=cluster.name, subpath=subpath, source=source
         )
-
-    class Meta:
-        db_table = "services_appdomainsharedcert"
 
 
 class AppSubpath(AuditedModel):
     """stores application's subpaths"""
 
     app = models.ForeignKey(WlApp, on_delete=models.CASCADE, db_constraint=False)
+    # TODO: The region field is not used anymore, remove it in the next release
     region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32)
     subpath = models.CharField(max_length=128)
     source = models.IntegerField()
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
 
     objects = AppSubpathManager()
 
@@ -141,7 +161,7 @@ class AppSubpath(AuditedModel):
         return f"<AppSubpath: subpath={self.subpath}>"
 
     class Meta:
-        unique_together = ("region", "subpath")
+        unique_together = ("tenant_id", "subpath")
         db_table = "services_appsubpath"
 
 
@@ -149,19 +169,25 @@ class AppSubpath(AuditedModel):
 
 
 class Domain(TimestampedModel):
-    """custom domain for application"""
+    """The custom domains of applications."""
 
     name = models.CharField(help_text="域名", max_length=253, null=False)
-    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessable path for current domain")
+    path_prefix = models.CharField(max_length=64, default="/", help_text="the accessible path for current domain")
     module_id = models.UUIDField(help_text="关联的模块 ID", null=False)
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
     https_enabled = models.BooleanField(default=False, null=True, help_text="该域名是否开启 https")
+    tenant_id = models.CharField(
+        verbose_name="租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="本条数据的所属租户",
+    )
 
     module = ModuleAttrFromID()
     environment = ModuleEnvAttrFromID()
 
     class Meta:
-        unique_together = ("name", "path_prefix", "module_id", "environment_id")
+        unique_together = ("tenant_id", "name", "path_prefix", "module_id", "environment_id")
         db_table = "services_domain"
 
     @property

@@ -19,6 +19,7 @@ import logging
 from collections import defaultdict
 from typing import Any, Dict, List
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404
@@ -27,6 +28,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -50,6 +52,8 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -313,7 +317,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(service)
         return Response({"result": serializer.data})
 
-    def list_by_template(self, request, region, template):
+    def list_by_template(self, request, template):
         """根据初始模板获取相关增强服务"""
         tmpl = Template.objects.get(name=template, type=TemplateType.NORMAL)
         services = {}
@@ -338,23 +342,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             services[service.name] = slz.data
 
         return Response({"result": services})
-
-    def list_by_region(self, request, region):
-        """根据region获取所有增强服务"""
-        # INFO: region 参数已经废弃，总是拉去所有的增强服务
-        results = []
-        for category in ServiceCategory.objects.order_by("sort_priority").all():
-            services = []
-            for service in mixed_service_mgr.list_by_category(category_id=category.id):
-                if not service.is_visible:
-                    continue
-
-                services.append(service)
-
-            if services:
-                results.append({"category": category, "services": services})
-        serializer = slzs.ServiceCategoryByRegionSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
 
     @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
     def list_related_apps(self, request, service_id):
@@ -720,7 +707,6 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.UnboundServiceEngineAppAttachmentSLZ(many=True))
     def list_by_module(self, request, code, module_name):
         """查看模块所有已解绑增强服务实例，按增强服务归类"""
-        application = self.get_application()
         module = self.get_module_via_path()
 
         categorized_rels = defaultdict(list)
@@ -742,9 +728,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
         results = []
         for service_id, rels in categorized_rels.items():
-            results.append(
-                {"service": mixed_service_mgr.get_or_404(service_id, application.region), "unbound_instances": rels}
-            )
+            results.append({"service": mixed_service_mgr.get_or_404(service_id), "unbound_instances": rels})
 
         serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
         return Response(serializer.data)
@@ -757,7 +741,7 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         try:
             unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
                 service_obj, data["instance_id"]
@@ -767,4 +751,41 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
         unbound_instance.recycle_resource()
 
+        return Response()
+
+    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
+    @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveUnboundServiceSensitiveFieldSLZ)
+    def retrieve_sensitive_field(self, request, code, module_name, service_id):
+        """验证验证码查看解绑实例的敏感信息字段"""
+        serializer = slzs.RetrieveUnboundServiceSensitiveFieldSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        # 验证验证码
+        if settings.ENABLE_VERIFICATION_CODE:
+            verifier = make_verifier(request.session, FunctionType.RETRIEVE_UNBOUND_SERVICE_SENSITIVE_FIELD.value)
+            is_valid = verifier.validate(data["verification_code"])
+            if not is_valid:
+                raise ValidationError({"verification_code": [_("验证码错误")]})
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        else:
+            logger.warning(
+                "Verification code functionality is not currently supported. Returning the sensitive field directly."
+            )
+
+        service_obj = mixed_service_mgr.get_or_404(service_id)
+
+        try:
+            unbound_instance_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service_obj, data["instance_id"]
+            )
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        instance = unbound_instance_rel.get_instance()
+        if not instance:
+            raise NotFound(detail="Resource has been recycled.", code=404)
+
+        credentials = instance.credentials
+        if data["field_name"] in instance.should_remove_fields and data["field_name"] in credentials:
+            return Response(credentials[data["field_name"]])
         return Response()

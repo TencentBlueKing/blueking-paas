@@ -47,11 +47,18 @@ class CreatedAppInfo(NamedTuple):
     type: WlAppType
 
 
-def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> CreatedAppInfo:
-    """Create an WlApp object, if the object already exists, return it directly. The object's type
-    will be set to the given type.
+def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType, tenant_id: str) -> CreatedAppInfo:
+    """Create an WlApp object, if the object already exists, return it directly.
+
+    :raise RuntimeError: If the app already exists with different properties.
     """
-    obj, _ = WlApp.objects.update_or_create(name=name, defaults={"type": type_.value, "region": region})
+    obj, created = WlApp.objects.get_or_create(
+        name=name, defaults={"type": type_.value, "region": region, "tenant_id": tenant_id}
+    )
+    # If the object already exists, check the properties
+    if not created and ((obj.type, obj.region, obj.tenant_id) != (type_.value, region, tenant_id)):
+        # This should not happen in normal cases
+        raise RuntimeError(f"WlApp {name} already exists with different properties")
     return CreatedAppInfo(obj.uuid, obj.name, WlAppType(obj.type))
 
 

@@ -72,7 +72,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import customLog from './custom-log.vue';
 import standartLog from './standart-log.vue';
@@ -99,6 +100,9 @@ export default {
   computed: {
     curAppInfo() {
       return this.$store.state.curAppInfo;
+    },
+    categoryText() {
+      return this.isCloudNativeApp ? '云原生应用' : '普通应用';
     },
   },
   watch: {
@@ -128,6 +132,12 @@ export default {
   },
   methods: {
     handleTabChange(payload) {
+      const traceIdMap = {
+        structured: 'StructuredLog',
+        stream: 'StdoutLog',
+        access: 'AccessLog',
+      };
+      this.sendEventTracking({ id: traceIdMap[payload], action: 'view', category: this.categoryText });
       this.$router.push({
         name: 'appLog',
         params: {

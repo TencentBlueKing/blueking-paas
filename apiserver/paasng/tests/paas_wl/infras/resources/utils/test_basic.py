@@ -16,13 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
-from django.core.management import call_command
 
-from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations, standardize_tolerations
-from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -41,19 +37,6 @@ class TestGetFullNodeSelector:
         cluster.save()
 
         assert get_full_node_selector(wl_app) == {"key1": "value1", "key-c": "value-new", "key-c2": "value-c2"}
-
-    def test_with_cluster_state(self, wl_app):
-        assert get_full_node_selector(wl_app) == {}
-
-        # Bind the app with a cluster state object
-        call_command(
-            "region_gen_state", region=settings.DEFAULT_REGION_NAME, no_input=True, ignore_labels=["kind-node=true"]
-        )
-        cluster_names = Cluster.objects.filter(region=settings.DEFAULT_REGION_NAME).values_list("name", flat=True)
-        state = RegionClusterState.objects.filter(cluster_name__in=cluster_names).latest()
-        RCStateAppBinding.objects.create(app=wl_app, state=state)
-
-        assert get_full_node_selector(wl_app) != {}, "The result should contain cluster state related labels"
 
 
 class TestGetFullTolerations:

@@ -137,7 +137,9 @@ class PluginLoggingClient:
         # ).inc()
         module = self.application.get_module(module_name=self._module_name)
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(module.get_envs("prod")).json
-        return instantiate_log_client(log_config=log_config, bk_username="blueking"), log_config
+        return instantiate_log_client(
+            log_config=log_config, tenant_id=self.application.tenant_id, bk_username="blueking"
+        ), log_config
 
     def make_search(self, mappings: dict, trace_id: str) -> SmartSearch:
         """构造日志查询语句

@@ -17,12 +17,10 @@ clusters:
 - name: "hostname-of-baz-a"
   cluster:
     server: https://hostname-of-baz-a:6553
-    overridden-hostname: baz-a.domain.com
     certificate-authority: certs_for_k8s_config/ca.pem
 - name: "hostname-of-baz-b"
   cluster:
     server: https://hostname-of-baz-b:6553
-    overridden-hostname: baz-b.domain.com
     certificate-authority: certs_for_k8s_config/ca.pem
 
 

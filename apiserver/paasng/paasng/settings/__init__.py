@@ -167,6 +167,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.admin42",
     "paasng.plat_admin.system",
     "paasng.plat_admin.admin_cli",
+    "paasng.plat_mgt.infras.clusters",
     "paasng.misc.monitoring.monitor",
     "paasng.misc.monitoring.healthz",
     "paasng.misc.monitoring.metrics",
@@ -556,7 +557,8 @@ REDIS_CONNECTION_OPTIONS = {
 }
 
 # == 缓存相关配置项
-# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存，否则使用临时文件作为缓存
+# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)
+# WARNING: 生产环境请配置远程服务缓存, 如 RedisCache, DatabaseCache 等, 以保证多副本多 worker 时, 缓存数据一致, 否则可能无法正常工作
 DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
@@ -653,6 +655,9 @@ UNIQUE_ID_GEN_FUNC = "paasng.accessories.services.utils.gen_unique_id"
 BK_APP_CODE = settings.get("BK_APP_CODE", "bk_paas3")
 BK_APP_SECRET = settings.get("BK_APP_SECRET", "")
 
+# 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
+ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
+
 # PaaS 2.0 在权限中心注册的系统ID （并非是平台的 Code）
 IAM_SYSTEM_ID = settings.get("IAM_SYSTEM_ID", default="bk_paas")
 
@@ -676,7 +681,6 @@ BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 # 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
 IAM_PERM_EFFECTIVE_TIMEDELTA = 5 * 60
 
-BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
 BK_COMPONENT_API_URL = settings.get("BK_COMPONENT_API_URL", "")
@@ -954,17 +958,32 @@ REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAU
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
+
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
+
 # 解析通过 API Gateway 的请求，该值为空时跳过解析
 APIGW_PUBLIC_KEY = settings.get("APIGW_PUBLIC_KEY", "")
 
+# 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
+BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE
+
+BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 BKAUTH_BACKEND_TYPE = settings.get("BKAUTH_BACKEND_TYPE", "bk_token")
 BKAUTH_TOKEN_APP_CODE = settings.get("BKAUTH_TOKEN_APP_CODE", BK_APP_CODE)
 BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", BK_APP_SECRET)
 
+# 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
+# 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
+# 多租户模式下(BKAUTH_ENABLE_MULTI_TENANT_MODE=True)必须设置有效的 BKAUTH_USER_INFO_APIGW_URL, 否则无法使用租户功能
+BKAUTH_BK_LOGIN_APIGW_STAGE = settings.get("BKAUTH_BK_LOGIN_APIGW_STAGE", "prod")
+BKAUTH_USER_INFO_APIGW_URL = settings.get(
+    "BKAUTH_USER_INFO_APIGW_URL",
+    f'{BK_API_URL_TMPL.format(api_name="bk-login")}/{BKAUTH_BK_LOGIN_APIGW_STAGE}/login/api/v3/open/bk-tokens/userinfo/',
+)
 BKAUTH_USER_COOKIE_VERIFY_URL = settings.get("BKAUTH_USER_COOKIE_VERIFY_URL", f"{BK_LOGIN_API_URL}/api/v3/is_login/")
+
 BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get(
     "BKAUTH_TOKEN_USER_INFO_ENDPOINT", f"{BK_COMPONENT_API_URL}/api/c/compapi/v2/bk_login/get_user/"
 )
@@ -1118,17 +1137,6 @@ BK_CONSOLE_DBCONF = get_database_conf(
 
 # 是否需要填写应用联系人
 APP_REQUIRE_CONTACTS = settings.get("APP_REQUIRE_CONTACTS", False)
-
-# ------------------
-# 应用监控服务相关配置
-# ------------------
-
-# 监控服务 phalanx 地址
-PHALANX_URL = settings.get("PHALANX_URL", "http://localhost:8080")
-
-# 监控服务 phalanx 访问 token
-PHALANX_AUTH_TOKEN = settings.get("PHALANX_AUTH_TOKEN", "")
-
 
 # --------------
 # 平台日志相关配置

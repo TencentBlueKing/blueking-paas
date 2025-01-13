@@ -19,7 +19,7 @@ import pytest
 
 from paasng.accessories.publish.sync_market.managers import AppTagManger
 from paasng.core.core.storages.sqlalchemy import console_db
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 @pytest.fixture()

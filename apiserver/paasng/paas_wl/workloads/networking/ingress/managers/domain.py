@@ -43,9 +43,9 @@ def assign_custom_hosts(app: WlApp, domains: List[AutoGenDomain], default_servic
     :raise ValidCertNotFound: raise if any domain requires https, but the cert cannot be found
     """
     affected_apps = save_subdomains(app, domains)
-    for app in affected_apps:
-        logger.info("Syncing app %s's default ingress...", app.name)
-        SubdomainAppIngressMgr(app).sync(default_service_name=default_service_name, delete_when_empty=True)
+    for a_app in affected_apps:
+        logger.info("Syncing app %s's default ingress...", a_app.name)
+        SubdomainAppIngressMgr(a_app).sync(default_service_name=default_service_name, delete_when_empty=True)
 
 
 def save_subdomains(app: WlApp, domains: List[AutoGenDomain]) -> Set[WlApp]:
@@ -54,12 +54,14 @@ def save_subdomains(app: WlApp, domains: List[AutoGenDomain]) -> Set[WlApp]:
     :param domains: List of AutoGenDomain
     """
     hosts = [domain.host for domain in domains]
-    existed_domains = AppDomain.objects.filter(region=app.region, host__in=hosts, source=AppDomainSource.AUTO_GEN)
+    existed_domains = AppDomain.objects.filter(
+        tenant_id=app.tenant_id, host__in=hosts, source=AppDomainSource.AUTO_GEN
+    )
     affected_apps = {obj.app for obj in existed_domains}
 
     for domain in domains:
         obj, _ = AppDomain.objects.update_or_create(
-            region=app.region,
+            tenant_id=app.tenant_id,
             host=domain.host,
             defaults={"app": app, "source": AppDomainSource.AUTO_GEN, "https_enabled": domain.https_enabled},
         )
@@ -117,11 +119,7 @@ class CustomDomainIngressMgr(AppIngressMgr):
 
     def list_desired_domains(self) -> List[PIngressDomain]:
         factory = IngressDomainFactory(self.app)
-        return [
-            factory.create(
-                DomainWithCert.from_custom_domain(region=self.app.region, domain=self.domain), raise_on_no_cert=False
-            )
-        ]
+        return [factory.create(DomainWithCert.from_custom_domain(domain=self.domain), raise_on_no_cert=False)]
 
     def get_annotations(self) -> Dict:
         """update annotations if custom domain ingress class is set"""

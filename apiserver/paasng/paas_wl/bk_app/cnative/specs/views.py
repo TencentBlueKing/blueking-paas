@@ -285,7 +285,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         configmap_source = validated_data.get("configmap_source") or {}
         data = configmap_source.get("source_config_data", {})
         use_sub_path = configmap_source.get("use_sub_path")
-        if use_sub_path and mount_instance.source_config.configMap is not None:
+        if use_sub_path and mount_instance.source_config.configMap:
             mount_instance.source_config.configMap.subPaths = list(data.keys())
         try:
             mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])

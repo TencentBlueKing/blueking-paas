@@ -19,7 +19,7 @@ from django.conf import settings
 from django.db import models
 from rest_framework.serializers import SkipField
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import LBPlans
 from paasng.utils.models import TimestampedModel
@@ -44,9 +44,7 @@ class MobileConfig(TimestampedModel):
     )
     access_url = models.URLField("移动端访问地址", blank=True, null=True, default="")
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         if self.is_enabled:

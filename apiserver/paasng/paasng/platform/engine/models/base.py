@@ -23,7 +23,7 @@ from django.db import models
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.models import WlApp
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
@@ -59,9 +59,7 @@ class EngineApp(OwnerTimestampedModel):
     region = models.CharField(max_length=32)
     is_active = models.BooleanField(verbose_name="是否活跃", default=True)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)

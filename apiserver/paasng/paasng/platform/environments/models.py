@@ -17,7 +17,7 @@
 
 from django.db import models
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -33,6 +33,4 @@ class EnvRoleProtection(TimestampedModel):
     module_env = models.ForeignKey(ModuleEnvironment, on_delete=models.CASCADE, related_name="role_protections")
     operation = models.CharField(choices=EnvRoleOperation.get_choices(), max_length=64)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()

@@ -29,7 +29,7 @@
 from blue_krill.models.fields import EncryptField
 from django.db import models
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import TimestampedModel
 
 
@@ -50,9 +50,7 @@ class BkAppSecretInEnvVar(TimestampedModel):
 
     bk_app_code = models.CharField(max_length=20, unique=True)
     bk_app_secret_id = models.IntegerField(verbose_name="应用密钥的 ID", help_text="不存储密钥的信息，仅存储密钥 ID")
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self) -> str:
         return f"[{self.bk_app_code}]{self.bk_app_secret_id}"

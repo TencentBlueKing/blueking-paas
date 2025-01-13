@@ -21,7 +21,7 @@ from attr import define
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import RuntimeType
 from paasng.utils.models import UuidAuditedModel, make_json_field
 
@@ -84,8 +84,6 @@ class BuildConfig(UuidAuditedModel):
     # 高级选项
     use_bk_ci_pipeline = models.BooleanField(help_text="是否使用蓝盾流水线构建", default=False)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     objects = BuildConfigManager()

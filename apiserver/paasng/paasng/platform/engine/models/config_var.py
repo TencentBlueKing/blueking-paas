@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
@@ -83,9 +83,7 @@ class ConfigVar(TimestampedModel):
     description = models.CharField(max_length=200, null=True)
     is_builtin = models.BooleanField(default=False)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     objects = ConfigVarQuerySet.as_manager()
 

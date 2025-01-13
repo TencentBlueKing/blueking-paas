@@ -32,7 +32,7 @@ from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -346,13 +346,7 @@ class Application(OwnerTimestampedModel):
         options={"quality": 95},
         null=True,
     )
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory()
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()
@@ -511,9 +505,7 @@ class ApplicationEnvironment(TimestampedModel):
     environment = models.CharField(verbose_name="部署环境", max_length=16)
     is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("module", "environment")
@@ -637,9 +629,7 @@ class ApplicationFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=30)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     objects = ApplicationFeatureFlagManager()
 
@@ -648,9 +638,7 @@ class UserMarkedApplication(OwnerTimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     objects = WithOwnerManager()
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("application", "owner")
@@ -668,9 +656,7 @@ class ApplicationDeploymentModuleOrder(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
     order = models.IntegerField(verbose_name="顺序")
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         verbose_name = "模块顺序"
@@ -683,6 +669,4 @@ class SMartAppExtraInfo(models.Model):
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
     original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()

@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import CharField, DateTimeField, Serializer, SerializerMethodField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -151,9 +151,7 @@ class DeployStep(UuidAuditedModel, MarkStatusMixin):
         DeployStepMeta, on_delete=models.CASCADE, verbose_name=_("元信息"), related_name="instances", null=True
     )
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         ordering = ["created"]

@@ -17,7 +17,7 @@
 
 from django.db import models
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.evaluation.constants import BatchTaskStatus, OperationIssueType
 from paasng.utils.models import AuditedModel, BkUserField
@@ -108,9 +108,7 @@ class IdleAppNotificationMuteRule(AuditedModel):
     environment = models.CharField("部署环境", max_length=32)
     expired_at = models.DateTimeField("过期时间")
 
-    tenant_id = models.CharField(
-        verbose_name="租户 ID", max_length=32, db_index=True, default=DEFAULT_TENANT_ID, help_text="本条数据的所属租户"
-    )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("user", "app_code", "module_name", "environment")

@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from rest_framework import viewsets
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
@@ -30,10 +32,22 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.bcs-resource"],
+        operation_description="获取用户有权限的项目",
+        responses={status.HTTP_200_OK: BCSProjectListOutputSLZ(many=True)},
+    )
     def list_projects(self, request, *args, **kwargs):
-        projects = BCSClient(request.user.username).list_projects()
+        client = BCSClient(get_tenant(request.user).id, request.user.username)
+        projects = client.list_projects()
         return Response(data=BCSProjectListOutputSLZ(projects, many=True).data)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.bcs-resource"],
+        operation_description="获取项目下的集群",
+        responses={status.HTTP_200_OK: BCSClusterListOutputSLZ(many=True)},
+    )
     def list_clusters(self, request, project_id, *args, **kwargs):
-        clusters = BCSClient(request.user.username).list_clusters(project_id)
+        client = BCSClient(get_tenant(request.user).id, request.user.username)
+        clusters = client.list_clusters(project_id)
         return Response(data=BCSClusterListOutputSLZ(clusters, many=True).data)

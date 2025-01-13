@@ -23,6 +23,7 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bcs import entities
 from paasng.infras.bcs.apigw.client import Client
 from paasng.infras.bcs.apigw.client import Group as BCSGroup
@@ -42,17 +43,23 @@ def wrap_request_exc():
 class BCSClient:
     """BCS 通过 APIGW 提供的 API
 
+    :param tenant_id: 租户 ID
     :param bk_username: 用户名
     :param stage: 网关环境
     """
 
-    def __init__(self, bk_username: str, stage: str = "prod"):
+    def __init__(self, tenant_id: str, bk_username: str, stage: str = "prod"):
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=stage)
         client.update_bkapi_authorization(
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
-        client.update_headers({"X-Bcs-Username": bk_username})
+        client.update_headers(
+            {
+                API_HERDER_TENANT_ID: tenant_id,
+                "X-Bcs-Username": bk_username,
+            }
+        )
         self.client: BCSGroup = client.api
 
     def list_projects(self) -> List[entities.Project]:

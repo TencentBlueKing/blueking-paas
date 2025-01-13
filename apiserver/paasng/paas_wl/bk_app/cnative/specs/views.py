@@ -32,7 +32,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
@@ -227,18 +227,18 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             controller = init_volume_source_controller(mount_instance.source_type)
             data = configmap_source.get("source_config_data", {})
             # 文件是否覆盖原有目录下的文件
-            overwrite = configmap_source.get("overwrite")
+            use_sub_path = configmap_source.get("use_sub_path")
             controller.create_by_env(
                 app_id=mount_instance.module.application.id,
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
                 data=data,
-                overwrite=overwrite,
+                overwrite=use_sub_path,
             )
 
             # 如果文件覆盖原有目录下的文件，则更新挂载的 source_config.subPaths 字段
-            if overwrite:
+            if use_sub_path:
                 mount_instance.source_config.configMap.subPaths = list(data.keys())  # type: ignore
                 mount_instance.save(update_fields=["source_config"])
 
@@ -283,10 +283,10 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             mount_instance.source_config = controller.build_volume_source(source_name)
 
         configmap_source = validated_data.get("configmap_source") or {}
-        data = configmap_source.get("source_config_data")
-        overwrite = configmap_source.get("overwrite")
-        if overwrite and mount_instance.source_type == VolumeSourceType.ConfigMap.value:
-            mount_instance.source_config.configMap.subPaths = list(data.keys())  # type: ignore
+        data = configmap_source.get("source_config_data", {})
+        use_sub_path = configmap_source.get("use_sub_path")
+        if use_sub_path and mount_instance.source_config.configMap is not None:
+            mount_instance.source_config.configMap.subPaths = list(data.keys())
         try:
             mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
         except IntegrityError:
@@ -300,7 +300,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             env_name=mount_instance.environment_name,
             source_name=mount_instance.get_source_name,
             data=configmap_source.get("source_config_data"),
-            overwrite=overwrite,
+            use_sub_path=use_sub_path,
         )
 
         try:

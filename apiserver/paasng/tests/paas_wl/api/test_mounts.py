@@ -147,7 +147,7 @@ class TestVolumeMountViewSet:
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
-            "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}, "overwrite": True},
+            "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}, "use_sub_path": True},
             "mount_path": "/path/",
             "name": "mount-configmap-test",
             "source_type": "ConfigMap",
@@ -277,7 +277,7 @@ class TestVolumeMountViewSet:
         body = MountSLZ(mount_configmap).data
         body["configmap_source"] = {
             "source_config_data": {"configmap_z": "configmap_z_data_updated"},
-            "overwrite": True,
+            "use_sub_path": True,
         }
         body["environment_name"] = "prod"
 

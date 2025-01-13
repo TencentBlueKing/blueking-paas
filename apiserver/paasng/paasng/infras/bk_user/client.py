@@ -23,6 +23,7 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bk_user import entities
 from paasng.infras.bk_user.apigw.client import Client
 from paasng.infras.bk_user.apigw.client import Group as BkUserGroup
@@ -42,12 +43,13 @@ def wrap_request_exc():
 class BkUserClient:
     """用户管理通过 APIGW 提供的 API"""
 
-    def __init__(self, stage: str = "prod"):
+    def __init__(self, tenant_id: str, stage: str = "prod"):
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=stage)
         client.update_bkapi_authorization(
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
+        client.update_headers({API_HERDER_TENANT_ID: tenant_id})
         self.client: BkUserGroup = client.api
 
     def list_tenants(self) -> List[entities.Tenant]:

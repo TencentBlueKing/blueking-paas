@@ -15,17 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from rest_framework import viewsets
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.core.tenant.serializers import TenantListOutputSLZ
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.bk_user.client import BkUserClient
 
 
 class TenantViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        tags=["paasng.core.tenant"],
+        operation_description="获取所有租户列表",
+        responses={status.HTTP_200_OK: TenantListOutputSLZ(many=True)},
+    )
     def list(self, request, *args, **kwargs):
-        tenants = BkUserClient().list_tenants()
+        user_tenant_id = get_tenant(request.user).id
+        tenants = BkUserClient(user_tenant_id).list_tenants()
         return Response(data=TenantListOutputSLZ(tenants, many=True).data)

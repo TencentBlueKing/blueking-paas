@@ -422,6 +422,7 @@ class PluginConfigurationViewSet(viewsets.ViewSet):
                     "description": item["description"],
                     "is_global": False,
                     "is_builtin": False,
+                    "tenant_id": module.tenant_id,
                 },
             )
         # 删除多余的环境变量

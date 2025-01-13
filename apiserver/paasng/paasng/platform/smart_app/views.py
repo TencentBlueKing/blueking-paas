@@ -189,7 +189,9 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     application.tenant_id = tenant.id
                     application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
                     # 创建 SMartAppExtraInfo, 记录应用原始 code
-                    SMartAppExtraInfo.objects.create(app=application, original_code=original_app_desc.code)
+                    SMartAppExtraInfo.objects.create(
+                        app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
+                    )
 
             # Step 3. dispatch package as Image to registry
             try:

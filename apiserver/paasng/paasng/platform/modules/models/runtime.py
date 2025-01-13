@@ -71,7 +71,10 @@ class BuildpackManager(models.Manager):
 
 
 class AppBuildPack(TimestampedModel):
-    """buildpack 配置"""
+    """buildpack 配置
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     language = models.CharField(verbose_name="编程语言", max_length=32)
     type = models.CharField(verbose_name="引用类型", max_length=32, choices=BuildPackType.get_choices())
@@ -227,6 +230,11 @@ class AppImageStackManager(models.Manager):
 
 
 class AppImage(TimestampedModel):
+    """应用基础镜像
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
     # 代表其基础镜像,如 ceder14 或 heroku18,相同的名称表示运行环境一致
     name = models.CharField(verbose_name="名称", max_length=64, unique=True)
     display_name = TranslatedFieldWithFallback(
@@ -271,7 +279,10 @@ class AppImage(TimestampedModel):
 
 
 class AppSlugRunner(AppImage):
-    """应用运行环境"""
+    """应用运行环境
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField("modules.Module", related_name="slugrunners")
@@ -280,7 +291,10 @@ class AppSlugRunner(AppImage):
 
 
 class AppSlugBuilder(AppImage):
-    """应用构建环境"""
+    """应用构建环境
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # 字段指示该环境可用的 buildpacks
     buildpacks = models.ManyToManyField(AppBuildPack, related_name="slugbuilders")

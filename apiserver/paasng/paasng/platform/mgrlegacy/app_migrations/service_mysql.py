@@ -53,15 +53,16 @@ class MysqlServiceMigration(BaseRemoteServiceMigration):
         module = self.context.app.get_default_module()
 
         data = []
-        for key in db_credentials:
+        for key, value in db_credentials.items():
             kwargs = {
                 "key": key_maps.get(key, key),
-                "value": db_credentials[key],
+                "value": value,
                 "description": "Generated when migrating from PaaS2.0",
                 "is_builtin": True,
                 "module": module,
                 "environment": environment,
                 "is_global": False,
+                "tenant_id": module.tenant_id,
             }
             data.append(ConfigVar(**kwargs))
         ConfigVar.objects.bulk_create(data)

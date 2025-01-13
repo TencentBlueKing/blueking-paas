@@ -1605,6 +1605,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
                 module=module_name_to_module_dict[item["module_name"]],
                 defaults={
                     "order": item["order"],
+                    "tenant_id": application.tenant_id,
                 },
             )
 

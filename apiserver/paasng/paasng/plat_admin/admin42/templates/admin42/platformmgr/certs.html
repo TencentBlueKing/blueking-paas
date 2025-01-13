@@ -20,7 +20,7 @@
             </template>
         </bk-table-column>
         <bk-table-column label="证书名称" prop="name"></bk-table-column>
-        <bk-table-column label="所属区域" prop="region"></bk-table-column>
+        <bk-table-column label="所属租户" prop="tenant_id"></bk-table-column>
         <bk-table-column label="证书通配符" prop="auto_match_cns"></bk-table-column>
         <bk-table-column label="操作">
             <template slot-scope="props">
@@ -35,14 +35,8 @@
             $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]共享证书
         </div>
         <bk-form :label-width="120" :model="dialog.form" :rules="rules">
-            <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
-                <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
-                    <bk-option v-for="region in regionList"
-                        :key="region.value"
-                        :id="region.value"
-                        :name="region.text">
-                    </bk-option>
-                </bk-select>
+            <bk-form-item label="所属租户" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
+                <bk-input v-model="dialog.form.tenant_id" :disabled="dialog.type !== 'create'" placeholder="租户 ID"></bk-input>
             </bk-form-item>
             <bk-form-item label="证书名称" :property="'name'" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
                 <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
@@ -75,7 +69,6 @@
 
 {% block main_script %}
 <script>
-const regionList = {{ region_list | to_json }}
 
 const URLRouter = {
     create: decodeURI("{% url 'wl_api.shared_app_certs' %}"),
@@ -91,12 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         data: function () {
             return {
                 data: [],
-                regionList: regionList,
                 dialog: {
                     fullscreen: false,
                     form: {
                         id: '',
-                        region: '',
+                        tenant_id: '',
                         name: '',
                         auto_match_cns: '',
                         cert_data: undefined,
@@ -184,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.row = undefined
 
                 this.dialog.form.id = undefined
-                this.dialog.form.region = this.regionList[0].value
+                this.dialog.form.tenant_id =undefined 
                 this.dialog.form.name = undefined
                 this.dialog.form.auto_match_cns = undefined
                 this.dialog.form.cert_data = undefined

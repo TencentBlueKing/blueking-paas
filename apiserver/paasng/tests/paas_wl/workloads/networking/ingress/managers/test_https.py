@@ -25,18 +25,18 @@ from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestSubdomainAppIngressMgrWithHTTPS:
     @pytest.fixture()
     def cert(self, bk_stag_wl_app):
         return AppDomainCert.objects.create(
-            region=bk_stag_wl_app.region, name="cert-foo.com", cert_data="faked", key_data="faked"
+            tenant_id=bk_stag_wl_app.tenant_id, name="cert-foo.com", cert_data="faked", key_data="faked"
         )
 
     @pytest.fixture()
     def shared_cert(self, bk_stag_wl_app):
         return AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             name="cert-wildcard-foo.com",
             cert_data="faked",
             key_data="faked",
@@ -45,7 +45,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
 
     def test_domain_with_default_cert(self, bk_stag_wl_app, cert):
         app_domain = AppDomain.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             app=bk_stag_wl_app,
             source=AppDomainSource.AUTO_GEN,
             host="foo.com",
@@ -69,7 +69,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
 
     def test_domain_with_shared_cert(self, bk_stag_wl_app, shared_cert):
         AppDomain.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             app=bk_stag_wl_app,
             source=AppDomainSource.AUTO_GEN,
             host="anything.foo.com",
@@ -85,7 +85,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
 
     def test_domain_with_not_matched_shared_cert(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             app=bk_stag_wl_app,
             source=AppDomainSource.AUTO_GEN,
             host="anything.foo.com",
@@ -99,7 +99,7 @@ class TestSubdomainAppIngressMgrWithHTTPS:
 
     def test_domain_with_no_https(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             app=bk_stag_wl_app,
             source=AppDomainSource.AUTO_GEN,
             host="anything.foo.com",
@@ -113,13 +113,13 @@ class TestSubdomainAppIngressMgrWithHTTPS:
         assert ingress.domains[0].tls_secret_name == ""
 
 
-@pytest.mark.auto_create_ns()
-@pytest.mark.mock_get_structured_app()
+@pytest.mark.auto_create_ns
+@pytest.mark.mock_get_structured_app
 class TestCustomDomainIngressWithHTTPS:
     @pytest.fixture()
     def shared_cert(self, bk_stag_wl_app):
         return AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             name="cert-wildcard-foo.com",
             cert_data="faked",
             key_data="faked",

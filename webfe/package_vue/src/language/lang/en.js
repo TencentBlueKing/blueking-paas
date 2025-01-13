@@ -2953,4 +2953,5 @@ export default {
   回收: 'Recycle',
   立即回收: 'Recycle now',
   未回收的增强服务实例: 'Unrecycled enhanced service instances',
+  工具: 'Tools',
 };

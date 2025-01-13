@@ -39,7 +39,7 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
     )
     def list_projects(self, request, *args, **kwargs):
         client = BCSClient(get_tenant(request.user).id, request.user.username)
-        projects = client.list_projects()
+        projects = client.list_auth_projects()
         return Response(data=BCSProjectListOutputSLZ(projects, many=True).data)
 
     @swagger_auto_schema(
@@ -49,5 +49,5 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
     )
     def list_clusters(self, request, project_id, *args, **kwargs):
         client = BCSClient(get_tenant(request.user).id, request.user.username)
-        clusters = client.list_clusters(project_id)
+        clusters = client.list_project_clusters(project_id)
         return Response(data=BCSClusterListOutputSLZ(clusters, many=True).data)

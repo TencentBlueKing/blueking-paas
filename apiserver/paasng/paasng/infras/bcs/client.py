@@ -62,8 +62,8 @@ class BCSClient:
         )
         self.client: BCSGroup = client.api
 
-    def list_projects(self) -> List[entities.Project]:
-        """获取项目列表"""
+    def list_auth_projects(self) -> List[entities.Project]:
+        """获取有权限的项目列表"""
         with wrap_request_exc():
             resp = self.client.list_auth_projects()
             self._validate_resp(resp)
@@ -72,8 +72,8 @@ class BCSClient:
         # 只保留还没下线，且有绑定业务信息的项目
         return [p for p in projects if not p.isOffline and p.businessID and p.businessName]
 
-    def list_clusters(self, project_id: str) -> List[entities.Cluster]:
-        """获取集群列表"""
+    def list_project_clusters(self, project_id: str) -> List[entities.Cluster]:
+        """获取项目下的集群列表"""
         path_params = {"projectID": project_id}
 
         with wrap_request_exc():

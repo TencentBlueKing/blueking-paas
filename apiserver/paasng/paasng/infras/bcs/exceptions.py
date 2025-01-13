@@ -15,9 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
 
-__all__ = ["BCSResourceViewSet", "ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]
+class BCSGatewayServiceError(Exception):
+    """This error indicates that there's something wrong when operating bcs
+    API Gateway resource. It's a wrapper class of API SDK original exceptions
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class BCSApiError(BCSGatewayServiceError):
+    """When calling the bcs api, bcs returns an error message,
+    which needs to be captured and displayed to the user on the page
+    """

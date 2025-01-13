@@ -62,7 +62,7 @@ class ClusterAllocationPolicyListOutputSLZ(serializers.Serializer):
 
     id = serializers.UUIDField(help_text="分配策略 ID", source="uuid")
     tenant_id = serializers.CharField(help_text="所属租户")
-    type = serializers.CharField(help_text="分配策略类型")
+    type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
     allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
     allocation_precedence_policies = serializers.ListField(
         help_text="分配规则列表", child=AllocationPrecedencePolicySLZ()

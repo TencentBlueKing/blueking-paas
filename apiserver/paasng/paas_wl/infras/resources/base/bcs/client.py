@@ -22,7 +22,7 @@ from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 
 class DummyBcsClient:
-    """Dummy BCS Clientwhen BCS is disabled."""
+    """Dummy BCS Client when BCS is disabled."""
 
     def create_web_console_sessions(*args, **kwargs): ...
 

@@ -15,9 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from rest_framework import serializers
 
-__all__ = ["BCSResourceViewSet", "ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]
+
+class BCSProjectListOutputSLZ(serializers.Serializer):
+    """BCS 项目信息"""
+
+    id = serializers.CharField(help_text="项目 ID", source="projectID")
+    code = serializers.CharField(help_text="项目 Code", source="projectCode")
+    name = serializers.CharField(help_text="项目名称")
+    description = serializers.CharField(help_text="项目描述")
+    biz_id = serializers.CharField(help_text="业务 ID", source="businessID")
+    biz_name = serializers.CharField(help_text="业务名称", source="businessName")
+
+
+class BCSClusterListOutputSLZ(serializers.Serializer):
+    """BCS 集群信息"""
+
+    id = serializers.CharField(help_text="集群 ID", source="clusterID")
+    name = serializers.CharField(help_text="集群名称", source="clusterName")
+    environment = serializers.CharField(help_text="集群环境")

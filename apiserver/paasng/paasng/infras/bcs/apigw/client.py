@@ -15,9 +15,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
-__all__ = ["BCSResourceViewSet", "ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]
+
+class Group(OperationGroup):
+    # 获取用户有权限的项目
+    list_auth_projects = bind_property(
+        Operation,
+        name="list_auth_projects",
+        method="GET",
+        path="/bcsproject/v1/authorized_projects",
+    )
+
+    # 查询项目下的集群列表
+    list_project_clusters = bind_property(
+        Operation,
+        name="list_project_clusters",
+        method="GET",
+        path="/v4/clustermanager/v1/projects/{projectID}/clusters",
+    )
+
+
+class Client(APIGatewayClient):
+    """蓝鲸容器平台 API"""
+
+    _api_name = "bcs-api-gateway"
+    api = bind_property(Group, name="api")

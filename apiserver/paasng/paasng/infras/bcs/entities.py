@@ -15,9 +15,31 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from pydantic import BaseModel
 
-__all__ = ["BCSResourceViewSet", "ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]
+from paasng.utils.structure import register
+
+
+@register
+class Project(BaseModel):
+    """蓝鲸容器项目"""
+
+    # 项目新信息
+    projectID: str
+    projectCode: str
+    name: str
+    description: str
+    isOffline: bool
+    # 业务 ID，名称
+    businessID: str
+    businessName: str
+
+
+@register
+class Cluster(BaseModel):
+    """蓝鲸容器集群"""
+
+    clusterID: str
+    clusterName: str
+    environment: str
+    is_shared: bool

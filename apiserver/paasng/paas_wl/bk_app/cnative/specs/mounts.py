@@ -151,7 +151,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
         source.environment_name = env_name
         source.data = data
         source.overwrite = use_sub_path
-        source.save(update_fields=["environment_name", "data", "overwrite"])
+        source.save(update_fields=["environment_name", "data", "use_sub_path"])
         return source
 
     def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:

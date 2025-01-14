@@ -237,8 +237,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             )
 
             # 如果开启子路径模式，则更新挂载的 source_config.subPaths 字段
-            if use_sub_path:
-                mount_instance.source_config.configMap.subPaths = list(data.keys())  # type: ignore
+            if use_sub_path and mount_instance.source_config.configMap:
+                mount_instance.source_config.configMap.subPaths = list(data.keys())
                 mount_instance.save(update_fields=["source_config"])
 
         try:

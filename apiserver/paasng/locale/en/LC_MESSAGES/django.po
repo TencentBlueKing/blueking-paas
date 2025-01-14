@@ -1658,7 +1658,6 @@ msgid "成功"
 msgstr "success"
 
 #: paasng/infras/bk_ci/constants.py:26 paasng/misc/audit/constants.py:34
-#| msgid "下架失败"
 msgid "失败"
 msgstr "failed"
 

@@ -129,7 +129,7 @@ def add_app_audit_record(
     :param data_before: 操作前的数据，包含数据类型的对应的数据
     :param data_after: 操作后的数据，包含数据类型的对应的数据
     """
-    app = Application.objects.get(code=app_code)
+    app = Application.default_objects.get(code=app_code)
     record = AppOperationRecord.objects.create(
         app_code=app_code,
         user=user,

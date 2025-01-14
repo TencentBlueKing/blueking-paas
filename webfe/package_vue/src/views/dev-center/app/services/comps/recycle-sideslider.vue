@@ -186,9 +186,9 @@
             slot="title"
             class="flex-row"
           >
-            <i class="paasng-icon paasng-remind mr10"></i>
+            <i class="paasng-icon paasng-remind"></i>
             <div>
-              <span>{{ $t('回收后，增强服务实例将被永久删除，无法恢复。请在回收前务必自行备份数据。') }}</span>
+              <span>{{ $t('增强服务实例将被永久删除，无法恢复，如有需要务必先自行备份数据。') }}</span>
               <!-- <bk-button
                 text
                 size="small"
@@ -198,7 +198,11 @@
             </div>
           </div>
         </bk-alert>
-        <div class="label">{{ $t('请完整输入应用 ID（{i}）确认', { i: appCode }) }}</div>
+        <div class="label">
+          {{ $t('请完整输入应用 ID ') }}
+          <code>{{ appCode }}</code>
+          {{ $t('确认：') }}
+        </div>
         <bk-input v-model="recycleyDialog.appCode"></bk-input>
       </div>
       <template slot="footer">
@@ -501,6 +505,9 @@ export default {
 }
 .recycle-alert-cls {
   margin-bottom: 16px;
+  .paasng-remind {
+    margin-right: 9px;
+  }
   .bk-button-text {
     line-height: 1 !important;
     height: 12px !important;

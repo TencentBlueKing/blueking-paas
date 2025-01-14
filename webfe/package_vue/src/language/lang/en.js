@@ -2949,7 +2949,7 @@ export default {
   '请完整输入应用 ID（{i}）确认': 'Please enter the full APP ID ({i}) to confirm',
   '您有 {n} 个已解绑但未回收的增强服务实例，未回收的实例仍会计入应用成本，请及时回收。': 'You have {n} unbound but unreclaimed enhanced service instances. Unreclaimed instances will still count towards application costs. Please reclaim them in a timely manner.',
   '共有 {n} 个增强服务实例未回收': 'There are {n} unreclaimed enhanced service instances',
-  '回收后，增强服务实例将被永久删除，无法恢复。请在回收前务必自行备份数据。': 'Once reclaimed, the enhanced service instances will be permanently deleted and cannot be restored. Please make sure to back up your data before reclaiming.',
+  '增强服务实例将被永久删除，无法恢复，如有需要务必先自行备份数据。': 'Enhanced service instances will be permanently deleted and cannot be recovered. If needed, please back up the data yourself beforehand.',
   回收: 'Recycle',
   立即回收: 'Recycle now',
   未回收的增强服务实例: 'Unrecycled enhanced service instances',

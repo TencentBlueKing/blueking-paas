@@ -125,10 +125,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 container_log_dir=data["container_log_dir"],
             )
             # 创建 ApiServers
-            api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+            api_servers = [
+                APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+            ]
             APIServer.objects.bulk_create(api_servers)
             # 创建 ElasticSearch 配置
-            ClusterElasticSearchConfig.objects.create(cluster=cluster, **data["elastic_search_config"])
+            ClusterElasticSearchConfig.objects.create(
+                cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
+            )
 
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
@@ -195,7 +199,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除，再插入的方式
                 cluster.api_servers.all().delete()
-                api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+                api_servers = [
+                    APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+                ]
                 APIServer.objects.bulk_create(api_servers)
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池

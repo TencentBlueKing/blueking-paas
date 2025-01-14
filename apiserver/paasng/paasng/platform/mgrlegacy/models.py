@@ -69,7 +69,10 @@ class MigrationProcessManager(models.Manager):
 
 
 class MigrationProcess(OwnerTimestampedModel):
-    """An migration process"""
+    """An migration process
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     legacy_app_id = models.IntegerField()
     app = models.ForeignKey(Application, on_delete=models.CASCADE, null=True)
@@ -229,6 +232,10 @@ ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
 
 
 class CNativeMigrationProcess(OwnerTimestampedModel):
+    """
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
     app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(
         choices=CNativeMigrationStatus.get_choices(), default=CNativeMigrationStatus.DEFAULT.value, max_length=20
@@ -321,7 +328,10 @@ class MigrationRegister(type):
 
 
 class WlAppBackupRel(TimestampedModel):
-    """WlApp 的备份关系表"""
+    """WlApp 的备份关系表
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
     original_id = models.UUIDField(verbose_name="原 WlApp uuid")

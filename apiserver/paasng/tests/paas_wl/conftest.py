@@ -324,4 +324,4 @@ def wl_build(bk_stag_wl_app, bk_user) -> Build:
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         "artifact_type": "slug",
     }
-    return Build.objects.create(**build_params)
+    return Build.objects.create(tenant_id=bk_stag_wl_app.tenant_id, **build_params)

@@ -70,6 +70,7 @@ def on_app_operation_created(sender, instance, created, raw, using, update_field
         defaults={
             "operation_id": instance.pk,
             "latest_operated_at": instance.created,
+            "tenant_id": instance.application.tenant_id,
         },
     )
 

@@ -129,6 +129,7 @@ def add_app_audit_record(
     :param data_before: 操作前的数据，包含数据类型的对应的数据
     :param data_after: 操作后的数据，包含数据类型的对应的数据
     """
+    app = Application.objects.get(code=app_code)
     record = AppOperationRecord.objects.create(
         app_code=app_code,
         user=user,
@@ -142,6 +143,7 @@ def add_app_audit_record(
         result_code=result_code,
         data_before=asdict(data_before) if data_before else None,
         data_after=asdict(data_after) if data_after else None,
+        tenant_id=app.tenant_id,
     )
     report_event_to_bk_audit(record)
     return record

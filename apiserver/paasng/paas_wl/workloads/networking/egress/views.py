@@ -70,7 +70,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
         cluster = get_cluster_by_app(wl_app)
         try:
             state = RegionClusterState.objects.filter(cluster_name=cluster.name).latest()
-            binding = RCStateAppBinding.objects.create(app=wl_app, state=state)
+            binding = RCStateAppBinding.objects.create(app=wl_app, state=state, tenant_id=cluster.tenant_id)
         except RegionClusterState.DoesNotExist:
             logger.warning("No cluster state can be found for cluster=%s", cluster.name)
             raise error_codes.ERROR_ACQUIRING_EGRESS_GATEWAY_INFO.f("集群数据未初始化，请稍候再试")

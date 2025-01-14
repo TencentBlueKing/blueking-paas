@@ -26,12 +26,16 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 @pytest.mark.usefixtures("_with_wl_apps")
 def test_mark_as_latest_artifact(bk_module, bk_stag_env):
-    build_1 = Build.objects.create(module_id=bk_module.id, artifact_type=ArtifactType.IMAGE, image="nginx:latest")
+    build_1 = Build.objects.create(
+        module_id=bk_module.id, artifact_type=ArtifactType.IMAGE, image="nginx:latest", tenant_id=bk_module.tenant_id
+    )
     mark_as_latest_artifact(build_1)
     assert Build.objects.filter(module_id=bk_module.id, image="nginx:latest").count() == 1
     assert Build.objects.filter(module_id=bk_module.id, image="nginx:latest", artifact_deleted=False).count() == 1
 
-    build_2 = Build.objects.create(module_id=bk_module.id, artifact_type=ArtifactType.IMAGE, image="nginx:latest")
+    build_2 = Build.objects.create(
+        module_id=bk_module.id, artifact_type=ArtifactType.IMAGE, image="nginx:latest", tenant_id=bk_module.tenant_id
+    )
     mark_as_latest_artifact(build_2)
     assert Build.objects.filter(module_id=bk_module.id, image="nginx:latest").count() == 2
     assert Build.objects.filter(module_id=bk_module.id, image="nginx:latest", artifact_deleted=False).count() == 1

@@ -53,6 +53,7 @@ class EngineDeployClient:
             image=image,
             artifact_type=artifact_type,
             artifact_metadata=artifact_metadata or {},
+            tenant_id=self.wl_app.tenant_id,
         )
         return str(build.uuid)
 

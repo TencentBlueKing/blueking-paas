@@ -3534,8 +3534,8 @@ msgstr ""
 
 #: paasng/platform/smart_app/views.py:237
 #, python-brace-format
-msgid "S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
-msgstr "The S-Mart package has been used to create the application (ID: {smart_app_code}), duplication is not allowed!"
+msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
+msgstr "The S-mart package has been used to create the application (ID: {smart_app_code}), duplication is not allowed!"
 
 #: paasng/platform/smart_app/views.py:290
 msgid "非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"
@@ -3548,7 +3548,7 @@ msgstr ""
 #| msgid ""
 #| "应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）"
 #| "不一致"
-msgid "应用描述文件中声明的应用 ID（{app_desc_code} 未创建过 Smart 应用"
+msgid "应用描述文件中声明的应用 ID ({app_desc_code}) 未创建过 S-mart 应用"
 msgstr ""
 "The APP ID ({app_desc_code}) declared in the app_desc.yaml does not match "
 "the current APP ID ({app_code})"

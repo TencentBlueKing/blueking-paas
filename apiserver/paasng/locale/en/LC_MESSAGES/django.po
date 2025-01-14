@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-13 16:07+0800\n"
+"POT-Creation-Date: 2025-01-14 15:07+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -94,8 +94,8 @@ msgstr ""
 #: paas_wl/bk_app/cnative/specs/models/mount.py:39
 #: paas_wl/bk_app/cnative/specs/models/mount.py:58
 #: paas_wl/bk_app/cnative/specs/models/mount.py:79
-#: paasng/platform/bkapp_model/models.py:182
-#: paasng/platform/engine/models/preset_envvars.py:32
+#: paasng/platform/bkapp_model/models.py:186
+#: paasng/platform/engine/models/preset_envvars.py:33
 msgid "环境名称"
 msgstr "Env Name"
 
@@ -104,8 +104,8 @@ msgid "Deploy 名称"
 msgstr "Deploy Name"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:178
-#: paasng/platform/engine/models/phases.py:58
-#: paasng/platform/engine/models/steps.py:139
+#: paasng/platform/engine/models/phases.py:59
+#: paasng/platform/engine/models/steps.py:146
 msgid "状态"
 msgstr "Status"
 
@@ -2013,22 +2013,22 @@ msgstr "{env}"
 #: paasng/misc/audit/models.py:120
 #, python-brace-format
 msgid "{user} {operation}{module_env_info}{result}"
-msgstr "{user} {operation}{module_env_info} {result}"
+msgstr "{user} {operation} {module_env_info} {result}"
 
 #: paasng/misc/audit/models.py:125
 #, python-brace-format
 msgid "{user} {operation}{module_env_info} {attribute} 网关 API 权限"
-msgstr "{user} {operation}{module_env_info} {attribute} Gateway API permission"
+msgstr "{user} {operation} {module_env_info} {attribute} Gateway API permission"
 
 #: paasng/misc/audit/models.py:127
 #, python-brace-format
 msgid "{user} {operation}{module_env_info} {attribute} {target}{result}"
-msgstr "{user} {operation}{module_env_info} {attribute} {target}{result}"
+msgstr "{user} {operation} {module_env_info} {attribute} {target} {result}"
 
 #: paasng/misc/audit/models.py:130
 #, python-brace-format
 msgid "{user} {operation}{module_env_info}{target}{result}"
-msgstr "{user} {operation}{module_env_info}{target}{result}"
+msgstr "{user} {operation} {module_env_info} {target} {result}"
 
 #: paasng/misc/monitoring/healthz/probes.py:153
 #, python-brace-format
@@ -2934,35 +2934,35 @@ msgid ""
 "repository to confirm."
 msgstr ""
 
-#: paasng/platform/engine/deploy/building.py:174
-#: paasng/platform/engine/deploy/image_release.py:142
+#: paasng/platform/engine/deploy/building.py:175
+#: paasng/platform/engine/deploy/image_release.py:143
 #, fuzzy
 #| msgid "应用描述文件校验失败：{exception}"
 msgid "处理应用描述文件失败：{}"
 msgstr "APP description file verification failed: {exception}"
 
-#: paasng/platform/engine/deploy/building.py:176
+#: paasng/platform/engine/deploy/building.py:177
 #, fuzzy
 #| msgid "分析应用描述文件异常"
 msgid "应用描述文件解析异常: {}"
 msgstr "Analyzing APP Description File Exceptions"
 
-#: paasng/platform/engine/deploy/building.py:179
-#: paasng/platform/engine/deploy/image_release.py:145
+#: paasng/platform/engine/deploy/building.py:180
+#: paasng/platform/engine/deploy/image_release.py:146
 msgid "处理应用描述文件时出现异常, 请检查应用描述文件"
 msgstr ""
 "An exception occurred while processing the app description file, please "
 "Check APP description file "
 
-#: paasng/platform/engine/deploy/building.py:222
+#: paasng/platform/engine/deploy/building.py:223
 #, python-brace-format
 msgid ""
 "The predefined Add-ons {unbound_service_names} in the initial template are "
 "not enabled, please check if they need to be enabled"
 msgstr ""
 
-#: paasng/platform/engine/deploy/building.py:310
-#: paasng/platform/engine/deploy/building.py:408
+#: paasng/platform/engine/deploy/building.py:311
+#: paasng/platform/engine/deploy/building.py:409
 msgid "发布时自动构建"
 msgstr "Automatically build when deploying"
 
@@ -2974,73 +2974,73 @@ msgstr "Cannot interrupt deployment initiated by others"
 msgid "无法中断，部署已处于结束状态"
 msgstr "cannot be interrupted, deployment has ended"
 
-#: paasng/platform/engine/models/phases.py:38
+#: paasng/platform/engine/models/phases.py:39
 msgid "准备阶段"
 msgstr "Preparation Phase"
 
-#: paasng/platform/engine/models/phases.py:39
+#: paasng/platform/engine/models/phases.py:40
 msgid "构建阶段"
 msgstr "Build Phase"
 
-#: paasng/platform/engine/models/phases.py:40
+#: paasng/platform/engine/models/phases.py:41
 msgid "部署阶段"
 msgstr "Deploy Phase"
 
-#: paasng/platform/engine/models/phases.py:55
+#: paasng/platform/engine/models/phases.py:56
 msgid "部署阶段类型"
 msgstr "deployment phase type"
 
-#: paasng/platform/engine/models/phases.py:56
+#: paasng/platform/engine/models/phases.py:57
 msgid "关联引擎应用"
 msgstr "engine_app"
 
-#: paasng/platform/engine/models/phases.py:57
+#: paasng/platform/engine/models/phases.py:58
 msgid "关联部署操作"
 msgstr "deployment"
 
-#: paasng/platform/engine/models/phases.py:59
-#: paasng/platform/engine/models/steps.py:140
+#: paasng/platform/engine/models/phases.py:60
+#: paasng/platform/engine/models/steps.py:147
 msgid "阶段开始时间"
 msgstr "phase start time"
 
-#: paasng/platform/engine/models/phases.py:60
-#: paasng/platform/engine/models/steps.py:141
+#: paasng/platform/engine/models/phases.py:61
+#: paasng/platform/engine/models/steps.py:148
 msgid "阶段完成时间"
 msgstr "phase Completion time"
 
-#: paasng/platform/engine/models/steps.py:55
-#: paasng/platform/engine/models/steps.py:137
+#: paasng/platform/engine/models/steps.py:59
+#: paasng/platform/engine/models/steps.py:144
 msgid "关联阶段"
 msgstr "phase"
 
-#: paasng/platform/engine/models/steps.py:56
-#: paasng/platform/engine/models/steps.py:135
+#: paasng/platform/engine/models/steps.py:60
+#: paasng/platform/engine/models/steps.py:142
 msgid "步骤名称"
 msgstr "step name"
 
-#: paasng/platform/engine/models/steps.py:57
-#: paasng/platform/engine/models/steps.py:136
+#: paasng/platform/engine/models/steps.py:61
+#: paasng/platform/engine/models/steps.py:143
 msgid "步骤名称(展示用)"
 msgstr "display name"
 
-#: paasng/platform/engine/models/steps.py:59
-#: paasng/platform/engine/models/steps.py:60
+#: paasng/platform/engine/models/steps.py:63
+#: paasng/platform/engine/models/steps.py:64
 msgid "匹配规则"
 msgstr "match rules"
 
-#: paasng/platform/engine/models/steps.py:85
+#: paasng/platform/engine/models/steps.py:92
 msgid "步骤集名称"
 msgstr "step set name"
 
-#: paasng/platform/engine/models/steps.py:87
+#: paasng/platform/engine/models/steps.py:94
 msgid "是否为默认步骤集"
 msgstr "is default step set"
 
-#: paasng/platform/engine/models/steps.py:138
+#: paasng/platform/engine/models/steps.py:145
 msgid "是否跳过"
 msgstr "skip"
 
-#: paasng/platform/engine/models/steps.py:144
+#: paasng/platform/engine/models/steps.py:151
 msgid "元信息"
 msgstr "meta"
 
@@ -3238,39 +3238,39 @@ msgstr "Change of APP code"
 msgid "部署到预发布环境和生产环境"
 msgstr "Deployment to s'tag and prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:146
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:147
 msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
 msgstr ""
 "Older versions of the test environment are not deployed or have been "
 "archive, skip the test environment deployment"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:150
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:151
 msgid "开始部署预发布环境"
 msgstr "Start deploying a stag e'nv"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:153
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:154
 msgid "预发布环境部署失败"
 msgstr "stag env deployment failure"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:155
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:156
 msgid "预发布环境部署成功"
 msgstr "stag env deployed successfully"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:159
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:160
 msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
 msgstr ""
 "Older versions of the test environment are not deployed or have been "
 "archive, Skip formal environment deployment"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:161
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:162
 msgid "开始部署生产环境"
 msgstr "Start deploying a prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:166
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:167
 msgid "生产环境部署失败"
 msgstr "Failure to deploy to a prod env"
 
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:168
+#: paasng/platform/mgrlegacy/app_migrations/deploy.py:169
 msgid "生产环境部署成功"
 msgstr "Successful deployment in prod env"
 
@@ -3367,13 +3367,13 @@ msgstr ""
 msgid "即将解绑增强服务实例<{service_instance_id}>"
 msgstr "About to unbind Add-ons instance <{service_instance_id}>"
 
-#: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:85
+#: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:86
 msgid "当前应用尚未部署过预发布环境, 跳过创建预发布环境的数据库实例。"
 msgstr ""
 "The current APP has not yet deployed the stag env, skip creating the "
 "database instance of the stag env"
 
-#: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:106
+#: paasng/platform/mgrlegacy/app_migrations/service_mysql.py:107
 msgid "当前应用尚未部署过生产环境, 跳过创建生产环境的数据库实例。"
 msgstr ""
 "The current APP has not been deployed to the prod env, skip creating a "
@@ -3423,52 +3423,52 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:365
-#: paasng/platform/modules/manager.py:403
+#: paasng/platform/modules/manager.py:373
+#: paasng/platform/modules/manager.py:411
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:368
-#: paasng/platform/modules/manager.py:439
+#: paasng/platform/modules/manager.py:376
+#: paasng/platform/modules/manager.py:447
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:373
-#: paasng/platform/modules/manager.py:429
-#: paasng/platform/modules/manager.py:433
+#: paasng/platform/modules/manager.py:381
+#: paasng/platform/modules/manager.py:437
+#: paasng/platform/modules/manager.py:441
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:409
+#: paasng/platform/modules/manager.py:417
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:436
+#: paasng/platform/modules/manager.py:444
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:443
+#: paasng/platform/modules/manager.py:451
 #, fuzzy
 #| msgid "代码初始化过程失败，请稍候再试"
 msgid "初始化应用模型失败, 请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/models/build_cfg.py:56
+#: paasng/platform/modules/models/build_cfg.py:57
 msgid "构建方式"
 msgstr ""
 
-#: paasng/platform/modules/models/build_cfg.py:71
+#: paasng/platform/modules/models/build_cfg.py:72
 msgid ""
 "Dockerfile文件路径, 必须保证 Dockerfile 在构建目录下, 填写时无需包含构建目录"
 msgstr ""
 
-#: paasng/platform/modules/models/build_cfg.py:77
+#: paasng/platform/modules/models/build_cfg.py:78
 #, fuzzy
 #| msgid "容器镜像仓库"
 msgid "镜像仓库"
 msgstr "Image repository"
 
-#: paasng/platform/modules/models/build_cfg.py:78
+#: paasng/platform/modules/models/build_cfg.py:79
 msgid "镜像凭证名称"
 msgstr ""
 
@@ -3583,8 +3583,8 @@ msgid "应用描述文件不存在或内容不是有效 YAML 格式"
 msgstr "The content of the app description file is not in valid YAML format"
 
 #: paasng/platform/smart_app/management/commands/smart_tool.py:57
-#: paasng/platform/smart_app/views.py:216
-#: paasng/platform/smart_app/views.py:293
+#: paasng/platform/smart_app/views.py:218
+#: paasng/platform/smart_app/views.py:295
 msgid "缺失应用市场配置（market)!"
 msgstr "Missing  Market  configuration (market)!"
 
@@ -3613,7 +3613,7 @@ msgstr "The content of the app description file is not in valid YAML format"
 msgid "源码包文件格式错误，文件可能已经损坏"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:268
+#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:270
 #: paasng/platform/sourcectl/views.py:291
 msgid "请联系管理员"
 msgstr "Please contact administrator"
@@ -3630,41 +3630,35 @@ msgstr "You cannot create a S-mart APP"
 msgid "源码文件加载不完整，请重试或联系管理员"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:232
+#: paasng/platform/smart_app/views.py:234
 msgid "自动生成应用 ID 失败，请重试或联系管理员"
 msgstr ""
 
-#: paasng/platform/smart_app/views.py:237
-<<<<<<< HEAD
+#: paasng/platform/smart_app/views.py:239
 #, fuzzy, python-brace-format
-#| msgid "S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
-msgid "S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!"
+#| msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
+msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!"
 msgstr ""
-"The S-Mart package has been used to create the application (ID: "
+"The S-mart package has been used to create the application (ID: "
 "{smart_app_code}), duplication is not allowed!"
-=======
-#, python-brace-format
-msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建 !"
-msgstr "The S-mart package has been used to create the application (ID: {smart_app_code}), duplication is not allowed!"
->>>>>>> upstream/main
 
-#: paasng/platform/smart_app/views.py:290
+#: paasng/platform/smart_app/views.py:292
 msgid "非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"
 msgstr ""
 "Non-cloud native application, please use the app_desc.yaml with "
 "version(spec_version: 2)"
 
-#: paasng/platform/smart_app/views.py:297
+#: paasng/platform/smart_app/views.py:299
 #, fuzzy, python-brace-format
 #| msgid ""
 #| "应用描述文件中声明的应用 ID（{app_desc_code}）与当前应用 ID（{app_code}）"
 #| "不一致"
-msgid "应用描述文件中声明的应用 ID ({app_desc_code}) 未创建过 S-mart 应用"
+msgid "应用描述文件中声明的应用 ID({app_desc_code}) 未创建过 S-mart 应用"
 msgstr ""
 "The APP ID ({app_desc_code}) declared in the app_desc.yaml does not match "
 "the current APP ID ({app_code})"
 
-#: paasng/platform/smart_app/views.py:370
+#: paasng/platform/smart_app/views.py:372
 msgid "文件签名不一致"
 msgstr ""
 

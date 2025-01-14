@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Callable, Optional
 
 from django.db import models
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.models import BkUserField, OwnerTimestampedModel
 
@@ -53,13 +53,7 @@ class Module(OwnerTimestampedModel):
     user_preferred_root_domain = models.CharField(max_length=255, verbose_name="用户偏好的根域名", null=True)
 
     last_deployed_date = models.DateTimeField(verbose_name="最近部署时间", null=True)  # 范围：模块下的所有环境
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory()
     creator = BkUserField(null=True)
 
     class Meta:

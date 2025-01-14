@@ -31,6 +31,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.accessories.log.urls")),
     re_path(r"^", include("paasng.platform.modules.urls")),
     re_path(r"^", include("paasng.core.region.urls")),
+    re_path(r"^", include("paasng.core.tenant.urls")),
     re_path(r"^", include("paasng.misc.audit.urls")),
     re_path(r"^", include("paasng.misc.operations.urls")),
     re_path(r"^", include("paasng.platform.environments.urls")),

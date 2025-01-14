@@ -27,7 +27,7 @@ from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 from paas_wl.workloads.networking.ingress.constants import AppSubpathSource
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 
 class AppDomain(AuditedModel):
@@ -51,12 +51,7 @@ class AppDomain(AuditedModel):
 
     # See `AppDomainSource` for possible values
     source = models.IntegerField(help_text="数据来源分类")
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     def has_customized_path_prefix(self) -> bool:
         """Check if current domain has configured a custom path prefix"""
@@ -73,12 +68,7 @@ class AppDomain(AuditedModel):
 class BasicCert(AuditedModel):
     # TODO: The region field is not used anymore, remove it in the next release
     region = models.CharField(max_length=32)
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory(db_index=False)
     name = models.CharField(max_length=128, validators=[RegexValidator(DNS_SAFE_PATTERN)])
     cert_data = EncryptField()
     key_data = EncryptField()
@@ -107,7 +97,7 @@ class AppDomainSharedCert(BasicCert):
     long as the domain matched the certificate's common names.
     """
 
-    # Multiple CN are seperated by ";", for example: "foo.com;*.bar.com"
+    # Multiple CN are separated by ";", for example: "foo.com;*.bar.com"
     auto_match_cns = models.TextField(max_length=2048)
 
     type = "shared"
@@ -148,12 +138,7 @@ class AppSubpath(AuditedModel):
     cluster_name = models.CharField(max_length=32)
     subpath = models.CharField(max_length=128)
     source = models.IntegerField()
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     objects = AppSubpathManager()
 
@@ -176,13 +161,7 @@ class Domain(TimestampedModel):
     module_id = models.UUIDField(help_text="关联的模块 ID", null=False)
     environment_id = models.BigIntegerField(help_text="关联的环境 ID", null=False)
     https_enabled = models.BooleanField(default=False, null=True, help_text="该域名是否开启 https")
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
-
+    tenant_id = tenant_id_field_factory(db_index=False)
     module = ModuleAttrFromID()
     environment = ModuleEnvAttrFromID()
 

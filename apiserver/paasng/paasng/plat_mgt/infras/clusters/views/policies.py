@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -43,11 +44,22 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群分配策略列表
         return ClusterAllocationPolicy.objects.all()
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        operation_description="获取集群分配策略",
+        responses={status.HTTP_200_OK: ClusterAllocationPolicyListOutputSLZ(many=True)},
+    )
     def list(self, request, *args, **kwargs):
         """获取集群分配策略"""
         policies = self.get_queryset()
         return Response(data=ClusterAllocationPolicyListOutputSLZ(policies, many=True).data)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        operation_description="新建集群分配策略",
+        request_body=ClusterAllocationPolicyCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: ClusterAllocationPolicyCreateOutputSLZ()},
+    )
     def create(self, request, *args, **kwargs):
         """新建集群分配策略"""
         slz = ClusterAllocationPolicyCreateInputSLZ(data=request.data)
@@ -60,6 +72,12 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
             data=ClusterAllocationPolicyCreateOutputSLZ(policy).data,
         )
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        operation_description="更新集群分配策略",
+        request_body=ClusterAllocationPolicyUpdateInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
     def update(self, request, *args, **kwargs):
         """更新集群分配策略"""
         policy = self.get_object()

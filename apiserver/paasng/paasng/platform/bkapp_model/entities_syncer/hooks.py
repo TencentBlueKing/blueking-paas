@@ -60,6 +60,7 @@ def sync_hooks(module: Module, hooks: Hooks | NotSetType | None, manager: fieldm
                 "command": pre_release_hook.command,
                 "args": pre_release_hook.args,
                 "proc_command": None,
+                "tenant_id": module.tenant_id,
             },
         )
         ret.incr_by_created_flag(created)

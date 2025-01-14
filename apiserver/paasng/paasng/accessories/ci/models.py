@@ -21,6 +21,7 @@ from bkpaas_auth import get_user_by_user_id
 from django.db import models
 from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.engine.models.deployment import Deployment
@@ -42,6 +43,8 @@ class CIResourceAppEnvRelation(TimestampedModel):
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         get_latest_by = "created"
 
@@ -57,6 +60,8 @@ class CIResourceAtom(TimestampedModel):
     enabled = models.BooleanField(verbose_name="是否启用", default=True)
     resource = models.ForeignKey(CIResourceAppEnvRelation, on_delete=models.CASCADE, related_name="related_atoms")
     backend = models.CharField(verbose_name="CI引擎", choices=CIBackend.get_django_choices(), max_length=32)
+
+    tenant_id = tenant_id_field_factory()
 
     @property
     def task_id(self):
@@ -87,6 +92,8 @@ class CIAtomJob(OperationVersionBase):
     atom = models.ForeignKey(CIResourceAtom, on_delete=models.CASCADE, related_name="related_jobs")
     build_id = models.CharField(verbose_name="构建ID", max_length=128)
     output = JSONField(default={})
+
+    tenant_id = tenant_id_field_factory()
 
     def finish(self, status: JobStatus):
         self.status = status

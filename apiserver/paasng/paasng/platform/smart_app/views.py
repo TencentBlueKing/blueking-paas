@@ -189,7 +189,9 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     application.tenant_id = tenant.id
                     application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
                     # 创建 SMartAppExtraInfo, 记录应用原始 code
-                    SMartAppExtraInfo.objects.create(app=application, original_code=original_app_desc.code)
+                    SMartAppExtraInfo.objects.create(
+                        app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
+                    )
 
             # Step 3. dispatch package as Image to registry
             try:
@@ -234,7 +236,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 return app_desc
         else:
             raise ValidationError(
-                _("S-Mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!").format(
+                _("S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!").format(
                     smart_app_code=smart_app.app.code
                 )
             )
@@ -294,7 +296,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
         if not SMartAppExtraInfo.objects.filter(original_code=original_app_desc.code, app=app).exists():
             raise ValidationError(
-                _("应用描述文件中声明的应用 ID（{app_desc_code} 未创建过 Smart 应用").format(
+                _("应用描述文件中声明的应用 ID({app_desc_code}) 未创建过 S-mart 应用").format(
                     app_desc_code=original_app_desc.code
                 )
             )

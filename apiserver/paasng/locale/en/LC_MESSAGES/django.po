@@ -1776,8 +1776,6 @@ msgid "网页"
 msgstr "WEB"
 
 #: paasng/misc/audit/constants.py:33
-#, fuzzy
-#| msgid "进行中"
 msgid "执行中"
 msgstr "Ongoing"
 

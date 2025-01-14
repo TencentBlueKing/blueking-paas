@@ -144,5 +144,29 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${service}/possible_plans`;
       return http.get(url, {}, config);
     },
+
+    /**
+     * 查询模块的已解绑增强服务
+     */
+    getServicesUnboundAttachments({}, { appCode, moduleId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/unbound_attachments/`;
+      return http.get(url, {}, config);
+    },
+
+    /**
+     * 手动回收已解绑实例
+     */
+    recyclingService({}, { appCode, moduleId, serviceId, instanceId }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/unbound_attachments/?instance_id=${instanceId}`;
+      return http.delete(url, {}, config);
+    },
+
+    /**
+     * 查询解绑实例敏感字段
+     */
+    queryUnbindInstanceSensitiveFields({}, { appCode, moduleId, serviceId, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/${serviceId}/unbound_attachments/retrieve_field/`;
+      return http.post(url, data, config);
+    },
   },
 };

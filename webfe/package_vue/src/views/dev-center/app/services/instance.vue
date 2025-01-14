@@ -749,6 +749,7 @@ export default {
 }
 
 .gray {
+  margin-right: 6px;
   color: #b7b8be;
 }
 

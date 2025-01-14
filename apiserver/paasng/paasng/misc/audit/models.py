@@ -93,17 +93,17 @@ class BaseOperation(UuidAuditedModel):
     @property
     def need_to_report_bk_audit(self) -> bool:
         # 仅操作为终止状态时才记录到审计中心
-        return bool(self.action_id and self.is_terminated)
+        return self.action_id and self.is_terminated
 
     def get_display_text(self) -> str:
         """操作记录描述，用于首页、应用概览页面前 5 条部署记录的展示"""
         env = self.get_environment_display()
         if self.module_name and self.environment:
-            module_env_info = _(f" {self.module_name} 模块{env}")
+            module_env_info = _(" {module_name} 模块{env}").format(module_name=self.module_name, env=env)
         elif self.module_name:
-            module_env_info = _(f" {self.module_name} 模块")
+            module_env_info = _(" {module_name} 模块").format(module_name=self.module_name)
         elif self.environment:
-            module_env_info = _(f"{env}")
+            module_env_info = _("{env}").format(env=env)
         else:
             module_env_info = ""
 

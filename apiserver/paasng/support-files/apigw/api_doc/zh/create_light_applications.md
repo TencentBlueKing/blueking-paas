@@ -22,6 +22,7 @@
 | introduction | string   | 否       | 应用的简介                                                   |
 | width        | int      | 否       | 应用在桌面打开窗口宽度，默认为父应用宽度                     |
 | height       | int      | 否       | 应用在桌面打开窗口高度，默认为父应用高度                     |
+| app_tenant_mode | string | 否     |运营租户下的用户创建轻应用时需求，可选值：global(全租户)，single(单租户)，不传则默认为单租户 |
 
 ### 请求示例
 

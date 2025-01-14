@@ -431,6 +431,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user.pk
+        validated_data["tenant_id"] = validated_data["application"].tenant_id
         return super(ApplicationMarkedSLZ, self).create(validated_data)
 
     def __repr__(self):

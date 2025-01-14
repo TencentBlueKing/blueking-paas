@@ -43,6 +43,7 @@ class IdleAppNotificationMuteRuleViewSet(ApplicationCodeInPathMixin, viewsets.Ge
             environment=env.environment,
             defaults={
                 "expired_at": timezone.now() + timedelta(days=180),
+                "tenant_id": app.tenant_id,
             },
         )
 

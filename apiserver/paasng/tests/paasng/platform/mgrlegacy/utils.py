@@ -50,9 +50,15 @@ def global_mock(context: MigrationContext):
             for env in ModuleInitializer.default_environments:
                 uuid = str(uuid4())
                 name = f"{app.name}-{uuid4()}"
-                engine_app = EngineApp.objects.create(id=uuid, name=name, owner=app.owner, region=app.region)
+                engine_app = EngineApp.objects.create(
+                    id=uuid, name=name, owner=app.owner, region=app.region, tenant_id=app.tenant_id
+                )
                 ModuleEnvironment.objects.create(
-                    application=app, module=app.get_default_module(), engine_app_id=engine_app.id, environment=env
+                    application=app,
+                    module=app.get_default_module(),
+                    engine_app_id=engine_app.id,
+                    environment=env,
+                    tenant_id=app.tenant_id,
                 )
 
         create_engine_apps.side_effect = _create_engine_apps

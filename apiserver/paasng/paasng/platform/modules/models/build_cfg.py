@@ -21,6 +21,7 @@ from attr import define
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import RuntimeType
 from paasng.utils.models import UuidAuditedModel, make_json_field
 
@@ -45,7 +46,7 @@ ImageTagOptionsField = make_json_field("ImageTagOptionsField", ImageTagOptions)
 
 class BuildConfigManager(models.Manager):
     def get_or_create_by_module(self, module) -> "BuildConfig":
-        obj, _ = self.get_or_create(module=module)
+        obj, _ = self.get_or_create(module=module, defaults={"tenant_id": module.tenant_id})
         return obj
 
 
@@ -82,5 +83,7 @@ class BuildConfig(UuidAuditedModel):
 
     # 高级选项
     use_bk_ci_pipeline = models.BooleanField(help_text="是否使用蓝盾流水线构建", default=False)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = BuildConfigManager()

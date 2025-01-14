@@ -75,6 +75,7 @@ class BaseArchiveManager:
             source_version_name=deployment.source_version_name,
             source_revision=deployment.source_revision,
             source_comment=deployment.source_comment,
+            tenant_id=deployment.tenant_id,
         )
         ModuleEnvironmentOperations.objects.create(
             operator=operator,

@@ -113,6 +113,8 @@ class RowGroupStore:
         """Save a row_group to make the data persistent."""
         for record in row_group.get_updated_rows():
             BkAppManagedFields.objects.update_or_create(
-                module=self.module, manager=record.manager, defaults={"fields": record.fields}
+                module=self.module,
+                manager=record.manager,
+                defaults={"fields": record.fields, "tenant_id": self.module.tenant_id},
             )
         row_group.clean_updated()

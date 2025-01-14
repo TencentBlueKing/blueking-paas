@@ -69,6 +69,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "ApplicationMembersViewSet.get_roles",
     "CorpProductViewSet.list",
     "RegionViewSet.retrieve",
+    "TenantViewSet.list",
     "TagViewSet",
     "MixDocumentSearch",
     "BkDocsSearchViewset",

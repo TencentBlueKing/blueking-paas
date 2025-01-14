@@ -28,6 +28,7 @@ ignore_imports =
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.bkapp_model.entities
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
+    paasng.core.tenant.views -> paasng.infras.bk_user.client
     # legacydb
     paasng.infras.legacydb.adaptors -> paasng.accessories.publish.sync_market.*
     paasng.infras.legacydb.adaptors -> paasng.platform.mgrlegacy.constants

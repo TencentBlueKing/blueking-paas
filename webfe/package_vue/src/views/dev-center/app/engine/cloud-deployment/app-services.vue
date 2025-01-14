@@ -9,6 +9,30 @@
       placeholder="roles-loading"
     >
       <div class="middle ps-main">
+        <bk-alert
+          v-if="recyclingCount"
+          type="warning"
+          :show-icon="false"
+          class="recycle-alert-cls"
+        >
+          <div slot="title">
+            <i class="paasng-icon paasng-remind mr5"></i>
+            <span>
+              {{
+                $t('您有 {n} 个已解绑但未回收的增强服务实例，未回收的实例仍会计入应用成本，请及时回收。', {
+                  n: recyclingCount,
+                })
+              }}
+            </span>
+            <bk-button
+              text
+              size="small"
+              @click="isShowSideslider = true"
+            >
+              {{ $t('立即回收') }}
+            </bk-button>
+          </div>
+        </bk-alert>
         <bk-table
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
           :data="tableList"
@@ -343,6 +367,14 @@
           </div>
         </div>
       </bk-sideslider>
+
+      <RecycleSideslider
+        ref="recycleSideslider"
+        :show.sync="isShowSideslider"
+        :list="instanceList"
+        :count="recyclingCount"
+        @refresh="getServicesUnboundAttachments"
+      />
     </paas-content-loader>
   </div>
 </template>
@@ -350,11 +382,13 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import SharedDialog from './comps/shared-dialog';
+import RecycleSideslider from '../../services/comps/recycle-sideslider.vue';
 import { marked } from 'marked';
 
 export default {
   components: {
     SharedDialog,
+    RecycleSideslider,
   },
   mixins: [appBaseMixin],
   data() {
@@ -406,6 +440,9 @@ export default {
       serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
       guideLoading: false,
       serviceConfig: {},
+      isShowSideslider: false,
+      instanceList: [],
+      recyclingCount: 0,
     };
   },
   computed: {
@@ -472,6 +509,7 @@ export default {
   methods: {
     init() {
       this.gettableList();
+      this.getServicesUnboundAttachments();
     },
 
     // 获取表格列表
@@ -790,6 +828,29 @@ export default {
         return {};
       }
     },
+    // 获取服务回收数据
+    async getServicesUnboundAttachments() {
+      this.$refs.recycleSideslider?.toggleLoading(true);
+      try {
+        const res = await this.$store.dispatch('service/getServicesUnboundAttachments', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        res.forEach((item) => {
+          item.unbound_instances.forEach((instance) => {
+            instance.service_instance.credentials = JSON.parse(instance.service_instance.credentials);
+          });
+        });
+        this.instanceList = res;
+        this.recyclingCount = res.reduce((accumulator, currentItem) => {
+          return accumulator + currentItem.count;
+        }, 0);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.$refs.recycleSideslider?.toggleLoading(false);
+      }
+    },
   },
 };
 </script>
@@ -891,6 +952,19 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+.recycle-alert-cls {
+  margin-bottom: 16px;
+  .paasng-remind {
+    transform: translateY(0px);
+    font-size: 14px;
+    color: #f59500;
+  }
+  .bk-button-text {
+    line-height: 1 !important;
+    height: 12px !important;
+    padding: 0;
   }
 }
 </style>

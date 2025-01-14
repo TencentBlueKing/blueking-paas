@@ -98,11 +98,11 @@ class BaseOperation(UuidAuditedModel):
         """操作记录描述，用于首页、应用概览页面前 5 条部署记录的展示"""
         env = self.get_environment_display()
         if self.module_name and self.environment:
-            module_env_info = _(" {module_name} 模块{env}").format(self.module_name, env)
+            module_env_info = _(" {module_name} 模块{env}").format(module_name=self.module_name, env=env)
         elif self.module_name:
-            module_env_info = _(" {module_name} 模块").format(self.module_name)
+            module_env_info = _(" {module_name} 模块").format(module_name=self.module_name)
         elif self.environment:
-            module_env_info = _("{env}").format(env)
+            module_env_info = _("{env}").format(env=env)
         else:
             module_env_info = ""
 

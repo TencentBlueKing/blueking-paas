@@ -24,3 +24,14 @@ class AppTenantMode(StrStructuredEnum):
 
     GLOBAL = EnumField("global", "全租户可用")
     SINGLE = EnumField("single", "单租户")
+
+
+class TenantStatus(StrStructuredEnum):
+    """租户状态"""
+
+    ENABLED = EnumField("enabled", "启用")
+    DISABLED = EnumField("disabled", "禁用")
+
+
+# API 请求头中用于指定租户 ID 的字段
+API_HERDER_TENANT_ID = "X-Bk-Tenant-Id"

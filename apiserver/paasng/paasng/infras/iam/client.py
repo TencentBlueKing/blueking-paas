@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam import utils
 from paasng.infras.iam.apigw.client import Client
 from paasng.infras.iam.apigw.client import Group as BKIAMGroup
@@ -44,8 +45,9 @@ logger = logging.getLogger(__name__)
 class BKIAMClient:
     """bk-iam 通过 APIGW 提供的 API"""
 
-    def __init__(self):
+    def __init__(self, tenant_id: str):
         self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE)
+        self.tenant_id = tenant_id
         self._client.update_headers(self._prepare_headers())
         self.client: BKIAMGroup = self._client.api
 
@@ -56,7 +58,8 @@ class BKIAMClient:
                     "bk_app_code": settings.BK_APP_CODE,
                     "bk_app_secret": settings.BK_APP_SECRET,
                 }
-            )
+            ),
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
         return headers
 

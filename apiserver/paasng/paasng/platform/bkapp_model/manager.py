@@ -37,7 +37,7 @@ class ModuleProcessSpecManager:
             ProcessSpecEnvOverlay.objects.update_or_create(
                 proc_spec=proc_spec,
                 environment_name=AppEnvName(env_name).value,
-                defaults={"target_replicas": replicas},
+                defaults={"target_replicas": replicas, "tenant_id": proc_spec.tenant_id},
             )
 
     def set_autoscaling(
@@ -45,7 +45,7 @@ class ModuleProcessSpecManager:
     ):
         """Set the autoscaling for the given process and environment."""
         proc_spec = ModuleProcessSpec.objects.get(module=self.module, name=proc_name)
-        defaults: Dict[str, Union[bool, Dict, None]] = {"autoscaling": enabled}
+        defaults: Dict[str, Union[bool, Dict, None]] = {"tenant_id": proc_spec.tenant_id, "autoscaling": enabled}
         if config is not None:
             defaults.update(scaling_config=asdict(config))
 

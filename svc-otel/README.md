@@ -117,6 +117,7 @@ SERVICE_REMOTE_ENDPOINTS:
       key: xxx # 与增强服务中配置的 PAAS_SERVICE_JWT_CLIENTS_KEY 的值一致
     provision_params_tmpl:
       app_code: "{application.code}"
+      tenant_id: "{application.tenant_id}"
       bk_monitor_space_id: "{bk_monitor_space_id}"
       env: "{env.environment}"
 ```

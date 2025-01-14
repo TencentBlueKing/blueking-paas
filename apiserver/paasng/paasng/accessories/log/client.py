@@ -72,9 +72,9 @@ class LogClientProtocol(Protocol):
 class BKLogClient:
     """BKLogClient is an implement of LogClientProtocol, the log search backend is bk log search"""
 
-    def __init__(self, config: BKLogConfig, bk_username: str):
+    def __init__(self, config: BKLogConfig, tenant_id: str, bk_username: str):
         self.config = config
-        self._esclient = make_bk_log_esquery_client()
+        self._esclient = make_bk_log_esquery_client(tenant_id)
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with bk-log"""
@@ -314,11 +314,11 @@ class ESLogClient:
         ]
 
 
-def instantiate_log_client(log_config: ElasticSearchConfig, bk_username: str) -> LogClientProtocol:
+def instantiate_log_client(log_config: ElasticSearchConfig, tenant_id: str, bk_username: str) -> LogClientProtocol:
     """实例化 log client 实例"""
     if log_config.backend_type == "bkLog":
         assert log_config.bk_log_config
-        return BKLogClient(log_config.bk_log_config, bk_username=bk_username)
+        return BKLogClient(log_config.bk_log_config, tenant_id=tenant_id, bk_username=bk_username)
     elif log_config.backend_type == "es":
         assert log_config.elastic_search_host
         return ESLogClient(log_config.elastic_search_host)

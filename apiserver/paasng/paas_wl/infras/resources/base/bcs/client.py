@@ -18,10 +18,11 @@ from django.conf import settings
 
 from paas_wl.infras.resources.base.bcs.apigw import Client
 from paas_wl.infras.resources.base.bcs.apigw import Group as BcsGroup
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 
 class DummyBcsClient:
-    """Dummy BCS Clientwhen BCS is disabled."""
+    """Dummy BCS Client when BCS is disabled."""
 
     def create_web_console_sessions(*args, **kwargs): ...
 
@@ -29,7 +30,8 @@ class DummyBcsClient:
 class BcsClient:
     """bcs 通过 APIGW 提供的 API"""
 
-    def __init__(self):
+    def __init__(self, tenant_id):
+        self.tenant_id = tenant_id
         client = Client(stage=settings.APIGW_ENVIRONMENT, endpoint=settings.BK_API_URL_TMPL)
         client.update_bkapi_authorization(
             bk_app_code=settings.BK_APP_CODE,
@@ -40,7 +42,10 @@ class BcsClient:
 
     def _prepare_headers(self) -> dict:
         # 添加公共的 header
-        return {"Content-Type": "application/json"}
+        return {
+            API_HERDER_TENANT_ID: self.tenant_id,
+            "Content-Type": "application/json",
+        }
 
     def create_web_console_sessions(self, *args, **kwargs):
         return self.client.create_web_console_sessions(*args, **kwargs)

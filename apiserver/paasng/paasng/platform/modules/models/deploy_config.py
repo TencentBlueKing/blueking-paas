@@ -110,6 +110,8 @@ cattr.register_unstructure_hook(Union[str, List[str]], lambda value: value)  # t
 
 # TODO: Replace this models with ModuleProcessSpec && ModuleDeployHook
 class DeployConfig(UuidAuditedModel):
+    """Deprecated: This model is not used anymore."""
+
     module = models.OneToOneField(
         "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="deploy_config"
     )

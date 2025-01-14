@@ -30,6 +30,7 @@ from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.alert_rules.config import RuleConfig
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 from .exceptions import AsCodeAPIError
 
@@ -130,7 +131,8 @@ class AsCodeClient:
         """
         space, _ = get_or_create_bk_monitor_space(Application.objects.get(code=self.app_code))
         try:
-            make_bk_monitor_client().as_code_import_config(
+            tenant_id = get_tenant_id_for_app(self.app_code)
+            make_bk_monitor_client(tenant_id).as_code_import_config(
                 configs,
                 int(space.iam_resource_id),
                 config_group or self.app_code,

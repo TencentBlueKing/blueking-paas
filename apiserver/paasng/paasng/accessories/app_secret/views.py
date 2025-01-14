@@ -216,6 +216,7 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("密钥已被禁用，不能设置为内置密钥"))
 
         BkAppSecretInEnvVar.objects.update_or_create(
-            bk_app_code=application.code, defaults={"bk_app_secret_id": bk_app_secret_id}
+            bk_app_code=application.code,
+            defaults={"bk_app_secret_id": bk_app_secret_id, "tenant_id": application.tenant_id},
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

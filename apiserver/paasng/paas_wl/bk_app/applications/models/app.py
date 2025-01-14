@@ -24,6 +24,7 @@ from jsonfield import JSONField
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.bk_app.applications.models.validators import validate_app_name, validate_app_structure
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class App(UuidAuditedModel):
     # deprecated field
     structure = JSONField(default={}, blank=True, validators=[validate_app_structure])
     type = models.CharField(verbose_name="应用类型", max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
+    tenant_id = tenant_id_field_factory()
 
     @cached_property
     def scheduler_safe_name(self):

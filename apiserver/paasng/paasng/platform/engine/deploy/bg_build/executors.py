@@ -36,6 +36,7 @@ from paasng.infras.bk_ci import entities
 from paasng.infras.bk_ci.client import BkCIPipelineClient
 from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.infras.bk_ci.exceptions import BkCIGatewayServiceError
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
     BkCIPipelineBuildNotSuccess,
@@ -265,7 +266,8 @@ class PipelineBuildProcessExecutor(DeployStep):
 
         self.bp = bp
         self.wl_app: "WlApp" = bp.app
-        self.ctl = BkCIPipelineClient(bk_username=settings.BK_CI_CLIENT_USERNAME)
+        tenant_id = get_tenant_id_for_app(deployment.get_application().code)
+        self.ctl = BkCIPipelineClient(tenant_id, bk_username=settings.BK_CI_CLIENT_USERNAME)
 
     def execute(self, metadata: Dict):
         """Execute the build process"""

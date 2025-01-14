@@ -19,6 +19,7 @@ from celery import shared_task
 
 from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
 @shared_task
@@ -30,15 +31,16 @@ def add_monitoring_space_permission(app_code: str, app_name: str, bk_space_id: s
     :param app_name: 应用名称
     :param bk_space_id: 蓝鲸监控空间ID
     """
-    cli = BKIAMClient()
+    tenant_id = get_tenant_id_for_app(app_code)
+    iam_client = BKIAMClient(tenant_id)
 
     # 1. 更新分级管理员的授权范围
     grade_manager_id = ApplicationGradeManager.objects.get(app_code=app_code).grade_manager_id
-    cli.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
+    iam_client.update_grade_managers_with_bksaas_space(grade_manager_id, app_code, app_name, bk_space_id)
 
     user_groups = ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role")
     user_groups_list = [{"id": user_group.user_group_id, "role": user_group.role} for user_group in user_groups]
 
     # 2. 给应用的管理员、开发者、运营者添加监控平台、日志平台权限
-    cli.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups_list)
-    cli.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups_list)
+    iam_client.grant_user_group_policies_in_bk_monitor(bk_space_id, app_name, user_groups_list)
+    iam_client.grant_user_group_policies_in_bk_log(bk_space_id, app_name, user_groups_list)

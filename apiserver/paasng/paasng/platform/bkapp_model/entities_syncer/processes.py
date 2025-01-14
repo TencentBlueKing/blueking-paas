@@ -61,6 +61,7 @@ def sync_processes(
             "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
             "probes": process.probes,
             "services": process.services,
+            "tenant_id": module.tenant_id,
         }
         if not use_proc_command:
             defaults.update({"command": process.command, "args": process.args})

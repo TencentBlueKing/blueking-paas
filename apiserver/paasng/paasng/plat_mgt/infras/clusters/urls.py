@@ -26,6 +26,11 @@ urlpatterns = [
         name="plat_mgt.infras.cluster.bulk",
     ),
     path(
+        "api/plat_mgt/infras/available_clusters/",
+        views.ClusterViewSet.as_view({"get": "list_available"}),
+        name="plat_mgt.infras.cluster.available",
+    ),
+    path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/",
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster.detail",
@@ -75,5 +80,17 @@ urlpatterns = [
         "api/plat_mgt/infras/cluster_allocation_policies/<str:policy_id>/",
         views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
         name="plat_mgt.infras.cluster_allocation_policy.detail",
+    ),
+    # BCS 项目列表
+    path(
+        "api/plat_mgt/infras/bcs/projects/",
+        views.BCSResourceViewSet.as_view({"get": "list_projects"}),
+        name="plat_mgt.infras.bcs.project.list",
+    ),
+    # BCS 集群列表
+    path(
+        "api/plat_mgt/infras/bcs/projects/<str:project_id>/clusters/",
+        views.BCSResourceViewSet.as_view({"get": "list_clusters"}),
+        name="plat_mgt.infras.bcs.cluster.list",
     ),
 ]

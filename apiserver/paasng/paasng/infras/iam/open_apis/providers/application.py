@@ -25,6 +25,7 @@ from iam.resource.utils import Page
 from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 
 
 class ApplicationProvider(ResourceProvider):
@@ -91,8 +92,7 @@ class ApplicationProvider(ResourceProvider):
         :param app_codes: 蓝鲸应用 ID 列表
         :returns: 审批人信息，格式：{app_code: single_app_approvers}
         """
-        cli = BKIAMClient()
         return {
-            m.app_code: cli.fetch_grade_manager_members(m.grade_manager_id)
+            m.app_code: BKIAMClient(get_tenant_id_for_app(m.app_code)).fetch_grade_manager_members(m.grade_manager_id)
             for m in ApplicationGradeManager.objects.filter(app_code__in=app_codes)
         }

@@ -42,7 +42,7 @@ class TestLegacyAppIngressMgr:
             == cluster.ingress_config.default_ingress_domain_tmpl % bk_stag_wl_app.scheduler_safe_name_with_region
         )
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_set_header_x_script_name(self, bk_stag_wl_app):
         ingress_mgr = LegacyAppIngressMgr(bk_stag_wl_app)
         ingress_mgr.sync(default_service_name="foo")
@@ -55,8 +55,8 @@ class TestLegacyAppIngressMgr:
         ingress_mgr.delete()
 
 
-@pytest.mark.mock_get_structured_app()
-@pytest.mark.auto_create_ns()
+@pytest.mark.mock_get_structured_app
+@pytest.mark.auto_create_ns
 class TestAppDefaultIngresses:
     def test_integrated(self, bk_stag_wl_app):
         app_default_ingresses = AppDefaultIngresses(bk_stag_wl_app)
@@ -64,7 +64,7 @@ class TestAppDefaultIngresses:
         assert len(ingress_kmodel.list_by_app(bk_stag_wl_app)) == 1
 
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
 
         app_default_ingresses.sync_ignore_empty(default_service_name="foo")
@@ -84,7 +84,7 @@ class TestAppDefaultIngresses:
 
     def test_set_header_x_script_name(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
         ingress_mgr = AppDefaultIngresses(bk_stag_wl_app)
         ingress_mgr.sync_ignore_empty(default_service_name="foo")

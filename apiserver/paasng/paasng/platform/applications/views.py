@@ -976,7 +976,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credential)
+            AppUserCredential.objects.create(
+                application_id=application.id, tenant_id=application.tenant_id, **image_credential
+            )
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 

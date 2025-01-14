@@ -118,6 +118,7 @@ def release_by_k8s_operator(
             revision=revision,
             status=DeployStatus.PENDING.value,
             operator=operator,
+            tenant_id=application.tenant_id,
         )
     except IntegrityError:
         logger.warning("Name conflicts when creating new AppModelDeploy object, name: %s.", default_name)

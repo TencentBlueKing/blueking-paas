@@ -266,7 +266,9 @@ def set_structure(default_process_spec_plan):
     def handler(app, procfile: Dict, plan: ProcessSpecPlan = default_process_spec_plan):
         ProcessSpec.objects.filter(engine_app_id=app.uuid).delete()
         for proc, replicas in procfile.items():
-            ProcessSpec.objects.create(name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan)
+            ProcessSpec.objects.create(
+                name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan, tenant_id=app.tenant_id
+            )
 
     return handler
 

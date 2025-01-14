@@ -838,30 +838,30 @@ msgstr ""
 
 #: paasng/bk_plugins/pluginscenter/constants.py:141
 msgid "创建"
-msgstr "Create "
+msgstr "create "
 
 #: paasng/bk_plugins/pluginscenter/constants.py:142
 #: paasng/misc/audit/constants.py:100
 msgid "新建"
-msgstr "Create"
+msgstr "create"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:143
 msgid "重新发布"
-msgstr "Republish"
+msgstr "republish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:144
 msgid "终止发布"
-msgstr "Unpublish"
+msgstr "unpublish"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:145
 #: paasng/misc/audit/constants.py:102 paasng/platform/sourcectl/constants.py:60
 msgid "修改"
-msgstr "Modify"
+msgstr "modify"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:146
 #: paasng/misc/audit/constants.py:101 paasng/platform/sourcectl/constants.py:61
 msgid "删除"
-msgstr "Delete"
+msgstr "delete"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:147
 #: paasng/misc/audit/constants.py:119
@@ -870,11 +870,11 @@ msgstr "archive"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:148
 msgid "重新上架"
-msgstr ""
+msgstr "reactivate"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:149
 msgid "回滚"
-msgstr ""
+msgstr "rollback"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:155
 msgid "插件"
@@ -882,85 +882,79 @@ msgstr "Plugin"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:156
 msgid "测试版本"
-msgstr ""
+msgstr "Test Version"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:157
 msgid "版本"
 msgstr "Version"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:158
-#, fuzzy
-#| msgid "同步应用基本信息"
 msgid "基本信息"
-msgstr "Basic information about the Sync APP"
+msgstr "Basic Information"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:159
 msgid "logo"
-msgstr "logo"
+msgstr "Logo"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:160
-#, fuzzy
-#| msgid "同步应用市场信息"
 msgid "市场信息"
-msgstr "Synchronise Market information"
+msgstr "Market Information"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:161
 msgid "配置信息"
-msgstr "config info"
+msgstr "Config Information"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:162
 msgid "可见范围"
-msgstr "visible range"
+msgstr "Visible Range"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:163
-#, fuzzy
-#| msgid "预发布"
 msgid "发布者"
-msgstr "stag env"
+msgstr "Publisher"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:164
 msgid "发布策略"
-msgstr ""
+msgstr "Release Strategy"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:170
 msgid "正式发布"
-msgstr ""
+msgstr "official release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:171
 msgid "测试发布"
-msgstr ""
+msgstr "testing release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:177
 msgid "灰度发布"
-msgstr ""
+msgstr "gray release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:178
 msgid "全量发布"
-msgstr ""
+msgstr "full release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:184
 msgid "后台 API 轮询"
-msgstr ""
+msgstr "backend api polling"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:185
 msgid "前端轮询，如通过 Iframe message 通信等"
-msgstr ""
+msgstr "frontend polling, e.g., via iframe message communication"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:191
 msgid "不限制"
-msgstr ""
+msgstr "no restriction"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:192
 msgid "仅可选择主分支发布"
-msgstr ""
+msgstr "only main branch can be selected for release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:193
 msgid "Tag 发布"
-msgstr ""
+msgstr "tag release"
 
 #: paasng/bk_plugins/pluginscenter/constants.py:194
 msgid "已经测试通过的版本"
-msgstr ""
+msgstr "version that has passed testing"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:23
 msgid "创建插件项目(源码)失败, 请联系管理员"
@@ -982,11 +976,11 @@ msgstr "Failed to delete plug project, please contact the administrator"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:28
 msgid "该代码分支/Tag 已经发布过，不能重复发布"
-msgstr ""
+msgstr "This code branch/Tag has already been released and cannot be released again."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:29
 msgid "该代码分支/Tag 正在发布，不能重复发布"
-msgstr ""
+msgstr "This code branch/Tag is currently being released and cannot be released again."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:30
 #, fuzzy
@@ -1111,7 +1105,7 @@ msgstr "version release"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:66
 msgid "上一次灰度发布还未审批完成"
-msgstr ""
+msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
 #: paasng/utils/error_codes.py:206
@@ -1157,34 +1151,34 @@ msgstr "BK plugin"
 msgid ""
 "{pd_name}（{resource_name}）分级管理员，拥有审批用户加入管理者/开发者用户组权"
 "限。"
-msgstr ""
+msgstr "{pd_name} ({resource_name}) hierarchical administrator, has the authority to approve users joining the administrator/developer user groups."
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/definitions.py:108
 #, python-brace-format
 msgid "{pd_name}-{plugin_name}-管理者"
-msgstr ""
+msgstr "{pd_name}-{plugin_name}-administrator"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/definitions.py:110
 #, python-brace-format
 msgid "{pd_name}-{plugin_name}-开发者"
-msgstr ""
+msgstr "{pd_name}-{plugin_name}-developer"
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/definitions.py:117
 #, python-brace-format
 msgid "{pd_name}（{plugin_name}）管理者，拥有应用的全部权限。"
-msgstr ""
+msgstr "{pd_name} ({plugin_name}) administrator, has full permissions for the application."
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/definitions.py:121
 #, python-brace-format
 msgid ""
 "{pd_name}（{plugin_name}）开发者，拥有应用的开发权限，如基础开发，版本发布"
 "等。"
-msgstr ""
+msgstr "{pd_name} ({plugin_name}) developer, has application development permissions, such as basic development, version releases, etc."
 
 #: paasng/bk_plugins/pluginscenter/iam_adaptor/policy/permissions.py:35
 #, python-brace-format
 msgid "用户无以下权限 {actions}"
-msgstr ""
+msgstr "User lacks the following permissions: {actions}"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:25
 msgid "插件上线审批"
@@ -1192,25 +1186,23 @@ msgstr "Plugin online approval"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:26
 msgid "插件创建审批流程"
-msgstr "Plugin Creation Approval Process"
+msgstr "Plugin creation approval process"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:27
-#, fuzzy
-#| msgid "插件创建审批流程"
 msgid "插件可见范围修改审批流程"
-msgstr "Plugin Creation Approval Process"
+msgstr "Plugin visible scope modification approval process"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:29
 msgid "Codecc 全量发布审批流程"
-msgstr ""
+msgstr "Codecc full release approval process"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:31
 msgid "Codecc 灰度发布审批流程"
-msgstr ""
+msgstr "Codecc gray release approval process"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:34
 msgid "Codecc 按组织灰度发布审批流程"
-msgstr ""
+msgstr "Codecc Gray-scale release approval process by organization"
 
 #: paasng/bk_plugins/pluginscenter/itsm_adaptor/constants.py:41
 msgid "处理中"

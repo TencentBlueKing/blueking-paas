@@ -1658,8 +1658,6 @@ msgid "成功"
 msgstr "success"
 
 #: paasng/infras/bk_ci/constants.py:26 paasng/misc/audit/constants.py:34
-#, fuzzy
-#| msgid "下架失败"
 msgid "失败"
 msgstr "failed"
 
@@ -1778,14 +1776,12 @@ msgid "网页"
 msgstr "WEB"
 
 #: paasng/misc/audit/constants.py:33
-#, fuzzy
-#| msgid "进行中"
 msgid "执行中"
 msgstr "Ongoing"
 
 #: paasng/misc/audit/constants.py:35
 msgid "中断"
-msgstr "interrupt"
+msgstr "Interrupt"
 
 #: paasng/misc/audit/constants.py:60
 msgid "应用"
@@ -1797,11 +1793,11 @@ msgstr "Module"
 
 #: paasng/misc/audit/constants.py:62
 msgid "进程"
-msgstr "process"
+msgstr "Process"
 
 #: paasng/misc/audit/constants.py:63
 msgid "环境变量"
-msgstr "environment variables"
+msgstr "Environment Variables"
 
 #: paasng/misc/audit/constants.py:64
 msgid "增强服务"
@@ -1813,7 +1809,7 @@ msgstr "API permissions"
 
 #: paasng/misc/audit/constants.py:66
 msgid "密钥"
-msgstr "secret"
+msgstr "Secret"
 
 #: paasng/misc/audit/constants.py:67
 msgid "访问地址"
@@ -1829,7 +1825,7 @@ msgstr "Build Configuration"
 
 #: paasng/misc/audit/constants.py:70
 msgid "挂载卷"
-msgstr "Volume Name"
+msgstr "Volume"
 
 #: paasng/misc/audit/constants.py:71
 msgid "服务发现"
@@ -1849,7 +1845,7 @@ msgstr "EXIT IP "
 
 #: paasng/misc/audit/constants.py:75
 msgid "用户限制"
-msgstr "access control"
+msgstr "Access Control"
 
 #: paasng/misc/audit/constants.py:77
 msgid "集群"
@@ -1917,7 +1913,7 @@ msgstr "create APP"
 
 #: paasng/misc/audit/constants.py:105
 msgid "发布到应用市场"
-msgstr " publish to APP market"
+msgstr "publish to APP market"
 
 #: paasng/misc/audit/constants.py:106 paasng/misc/operations/constant.py:64
 msgid "从应用市场下架"
@@ -1965,7 +1961,7 @@ msgstr "renew"
 
 #: paasng/misc/audit/constants.py:118
 msgid "部署"
-msgstr "Deploy"
+msgstr "deploy"
 
 #: paasng/misc/audit/constants.py:121
 msgid "切换资源方案"
@@ -1996,12 +1992,12 @@ msgid "回收增强服务实例"
 msgstr "recycle add-ons instance"
 
 #: paasng/misc/audit/models.py:101
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid " {module_name} 模块{env}"
 msgstr " {module_name} module {env}"
 
 #: paasng/misc/audit/models.py:103
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid " {module_name} 模块"
 msgstr " {module_name} module "
 

@@ -1996,12 +1996,12 @@ msgid "回收增强服务实例"
 msgstr "recycle add-ons instance"
 
 #: paasng/misc/audit/models.py:101
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid " {module_name} 模块{env}"
 msgstr " {module_name} module {env}"
 
 #: paasng/misc/audit/models.py:103
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid " {module_name} 模块"
 msgstr " {module_name} module "
 

@@ -140,7 +140,7 @@ class BaseApplicationFilter:
     """Base Application Filter"""
 
     @classmethod
-    def filter_queryset(
+    def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
         include_inactive=False,
@@ -151,6 +151,7 @@ class BaseApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
         market_enabled: Optional[bool] = None,
     ):
         """Filter applications by given parameters"""
@@ -178,6 +179,8 @@ class BaseApplicationFilter:
             queryset = queryset.filter(market_config__enabled=market_enabled)
         if type_ is not None:
             queryset = queryset.filter(type=type_)
+        if app_tenant_mode:
+            queryset = queryset.filter(app_tenant_mode=app_tenant_mode)
         return queryset
 
     @staticmethod
@@ -247,6 +250,7 @@ class UserApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:
@@ -267,6 +271,7 @@ class UserApplicationFilter:
             source_origin=source_origin,
             order_by=order_by,
             type_=type_,
+            app_tenant_mode=app_tenant_mode,
         )
 
 

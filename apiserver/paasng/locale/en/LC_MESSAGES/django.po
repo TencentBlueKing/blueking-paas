@@ -2501,8 +2501,6 @@ msgid "应用 ID"
 msgstr "APP ID"
 
 #: paasng/platform/applications/serializers/fields.py:45
-#, fuzzy
-#| msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)"
 msgid ""
 "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。"
 msgstr ""
@@ -3387,10 +3385,10 @@ msgstr ""
 "Before deleting the module, please make sure all domains have been archived"
 
 #: paasng/platform/modules/serializers.py:65
-msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)"
+msgid "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度不超过 16 位"
 msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
-"half-corner ligatures (-)"
+"half-corner ligatures (-), length no more than 16"
 
 #: paasng/platform/modules/serializers.py:157
 #: paasng/platform/templates/models.py:41
@@ -3405,7 +3403,7 @@ msgstr " APP name %s already exists "
 #: paasng/platform/modules/serializers.py:172
 #: paasng/platform/modules/serializers.py:271
 msgid "模板 {} 不可用"
-msgstr "Template {} is unavailabl"
+msgstr "Template {} is unavailable"
 
 #: paasng/platform/modules/serializers.py:346
 msgid "镜像凭证信息"

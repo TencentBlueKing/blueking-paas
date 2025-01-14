@@ -28,6 +28,8 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, 
 from paasng.accessories.publish.sync_market.models import TagMap, market_models
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import get_random_secret_key
 
 logger = logging.getLogger(__name__)
@@ -159,7 +161,15 @@ class Command(BaseCommand):
         with console_db.session_scope() as session:
             app = AppManger(session).get(code)
             if not app:
-                app = AppManger(session).create(code, name, deploy_ver, from_paasv3=False)
+                app = AppManger(session).create(
+                    code=code,
+                    name=name,
+                    deploy_ver=deploy_ver,
+                    app_tenant_mode=AppTenantMode.GLOBAL,
+                    app_tenant_id="",
+                    tenant_id=DEFAULT_TENANT_ID,
+                    from_paasv3=False,
+                )
             # legacy db 通过外键绑定了 tag, 因此创建 App 时需要使用真实存在的 tag
             tagmap = Command.get_or_create_tagmap(deploy_ver)
             AppManger(session).update(

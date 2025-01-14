@@ -208,7 +208,14 @@ def register_app_core_data(sender, application: Application, **kwargs):
     :raises: IntegrityError when application with the same code already exists in legacy database
     """
     try:
-        register_application_with_default(application.region, application.code, application.name)
+        register_application_with_default(
+            application.region,
+            application.code,
+            application.name,
+            application.app_tenant_mode,
+            application.app_tenant_id,
+            application.tenant_id,
+        )
     except SqlIntegrityError as e:
         if len(e.args) > 0:
             error_msg = e.args[0]
@@ -243,11 +250,13 @@ def on_change_application_name(sender, code: str, name: Optional[str] = None, na
             raise IntegrityError(field="name")
 
 
-def register_application_with_default(region, code, name):
+def register_application_with_default(region, code, name, app_tenant_mode, app_tenant_id, tenant_id):
     """使用默认数据注册到蓝鲸桌面DB（占用code和name字段）"""
     deploy_ver = get_region(region).basic_info.legacy_deploy_version
     with console_db.session_scope() as session:
-        app = AppManger(session).create(code, name, deploy_ver, from_paasv3=True)
+        app = AppManger(session).create(
+            code, name, deploy_ver, app_tenant_mode, app_tenant_id, tenant_id, from_paasv3=True
+        )
         # 应用注册完毕, 开始同步开发者信息
         try:
             application = Application.objects.get(code=code)

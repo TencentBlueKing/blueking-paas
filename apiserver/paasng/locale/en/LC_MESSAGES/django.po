@@ -952,7 +952,7 @@ msgstr "Failed to initialize project code, please contact administrator"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:25
 msgid "插件后台系统异常, 请联系管理员"
-msgstr "Plugin backend system exception, please contact the administrator"
+msgstr "Plugin backend system encountered an exception, please contact the administrator"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:26
 msgid "删除插件项目(源码)失败, 请联系管理员"
@@ -1617,11 +1617,11 @@ msgstr "canceled"
 
 #: paasng/infras/bkmonitorv3/constants.py:23
 msgid "蓝鲸应用"
-msgstr "BK APP"
+msgstr "BK SAAS"
 
 #: paasng/infras/bkmonitorv3/constants.py:24
 msgid "业务"
-msgstr ""
+msgstr "BKCC"
 
 #: paasng/infras/iam/exceptions.py:59
 #, python-brace-format
@@ -1630,19 +1630,19 @@ msgstr "The user {user} has exceeded the group quota of {quota}."
 
 #: paasng/infras/iam/permissions/resources/application.py:41
 msgid "基础信息查看"
-msgstr ""
+msgstr "View Basic Information"
 
 #: paasng/infras/iam/permissions/resources/application.py:43
 msgid "基础信息编辑"
-msgstr ""
+msgstr "Edit Basic Information"
 
 #: paasng/infras/iam/permissions/resources/application.py:45
 msgid "应用删除"
-msgstr "APP deletion"
+msgstr "APP Deletion"
 
 #: paasng/infras/iam/permissions/resources/application.py:49
 msgid "访问控制管理"
-msgstr ""
+msgstr "Access Control Management"
 
 #: paasng/infras/iam/permissions/resources/application.py:51
 msgid "应用市场管理"
@@ -2117,12 +2117,12 @@ msgstr "Create {module_name} module"
 #: paasng/misc/operations/models.py:292
 #, python-brace-format
 msgid "申请 {gateway_name} 网关的 API 权限"
-msgstr ""
+msgstr "Request API permissions for the {gateway_name} gateway"
 
 #: paasng/misc/operations/models.py:293
 #, python-brace-format
 msgid "续期 {gateway_name} 网关的 API 权限"
-msgstr ""
+msgstr "Renew API permissions for the {gateway_name} gateway"
 
 #: paasng/plat_admin/admin42/serializers/config_vars.py:35
 #: paasng/plat_admin/admin42/serializers/config_vars.py:44
@@ -2398,7 +2398,7 @@ msgstr "Enable persistent storage mount volumes."
 
 #: paasng/platform/applications/exceptions.py:23
 msgid "应用编码"
-msgstr "APP ID"
+msgstr "APP Code"
 
 #: paasng/platform/applications/exceptions.py:24
 msgid "应用名称"
@@ -2497,7 +2497,7 @@ msgstr "You cannot use the advanced creation option"
 #: paasng/platform/applications/views.py:633
 #: paasng/platform/applications/views.py:740
 msgid "当前版本下无法创建蓝鲸插件应用"
-msgstr "The  bk-plugin APP cannot be created under the current version"
+msgstr "The bk-plugin APP cannot be created under the current version"
 
 #: paasng/platform/applications/views.py:847
 msgid "你无法在所指定的 region 中创建应用"
@@ -2529,7 +2529,7 @@ msgstr "Market"
 
 #: paasng/platform/bkapp_model/serializers/serializers.py:143
 msgid "至多设置一个探活配置"
-msgstr "At most, one liveness probe configuration can be set."
+msgstr "At most one liveness probe configuration can be set."
 
 #: paasng/platform/bkapp_model/serializers/serializers.py:145
 msgid "至少设置一个探活配置"
@@ -3009,7 +3009,7 @@ msgstr ""
 #: paasng/platform/engine/views/deploy.py:130
 #: paasng/platform/engine/views/deploy.py:132
 msgid "历史版本不存在或已被清理"
-msgstr ""
+msgstr "The historical version does not exist or has been cleaned up"
 
 #: paasng/platform/engine/views/deploy.py:211
 #, python-brace-format
@@ -3529,11 +3529,11 @@ msgstr "You cannot create a S-mart APP"
 
 #: paasng/platform/smart_app/views.py:161
 msgid "源码文件加载不完整，请重试或联系管理员"
-msgstr ""
+msgstr "The source code file is incomplete. Please try again or contact the administrator."
 
 #: paasng/platform/smart_app/views.py:234
 msgid "自动生成应用 ID 失败，请重试或联系管理员"
-msgstr ""
+msgstr "Failed to automatically generate the application ID. Please try again or contact the administrator."
 
 #: paasng/platform/smart_app/views.py:239
 msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!"
@@ -3600,7 +3600,7 @@ msgstr "Image repository"
 
 #: paasng/platform/sourcectl/models.py:621
 msgid "服务名称"
-msgstr ""
+msgstr "Service Name"
 
 #: paasng/platform/sourcectl/svn/admin.py:110
 #, python-format
@@ -3629,7 +3629,7 @@ msgstr "Open Source Community GitHub"
 
 #: paasng/platform/sourcectl/type_specs.py:85
 msgid "Gitee 服务"
-msgstr "Gitee Service"
+msgstr "Gitee Services"
 
 #: paasng/platform/sourcectl/type_specs.py:86
 msgid "开源社区 Gitee"
@@ -4044,7 +4044,7 @@ msgstr "Custom log collection is not currently supported"
 
 #: paasng/utils/error_codes.py:87
 msgid "ElasticSearch 未配置"
-msgstr ""
+msgstr "ElasticSearch is not configured"
 
 #: paasng/utils/error_codes.py:89
 msgid "当前项不允许变更"
@@ -4197,7 +4197,7 @@ msgstr ""
 
 #: paasng/utils/error_codes.py:144
 msgid "应用不是“蓝鲸插件”类型"
-msgstr ""
+msgstr "The application is not of the 'BlueKing Plugin' type"
 
 #: paasng/utils/error_codes.py:145
 msgid "无法设置插件使用方，请稍候重试"

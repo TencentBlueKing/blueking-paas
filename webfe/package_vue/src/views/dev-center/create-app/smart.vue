@@ -322,7 +322,7 @@ export default {
         this.$router.push({
           name: 'createSmartAppSucc',
           params: {
-            id: this.modifiedAppData ? this.modifiedAppData.code : code,
+            id: this.modifiedAppData?.code || code,
           },
           query: { objectKey },
         });

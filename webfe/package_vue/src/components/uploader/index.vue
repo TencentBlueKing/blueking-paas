@@ -188,8 +188,7 @@ export default {
     // 文件变更
     handleChange(e) {
       this.isdrag = false;
-      const { files } = e.target;
-      const [file] = Array.from(files);
+      const file = e.target.files[0];
       this.$emit('file-change', e);
       if (this.validateFile(file)) {
         this.file = {};
@@ -313,10 +312,8 @@ export default {
       const formData = new FormData();
       formData.append(option.filename, option.file, option.file.name);
       // append 自定义参数
-      if (Object.keys(this.otherParams).length) {
-        for (const key in this.otherParams) {
-          formData.append(key, this.otherParams[key]);
-        }
+      for (const key in this.otherParams) {
+        formData.append(key, this.otherParams[key]);
       }
       xhr.onerror = (e) => {
         option.onError(e);
@@ -472,7 +469,6 @@ article {
   }
   &-file {
     width: 100%;
-    // 设置固定高度？？
     .file-abort {
       position: absolute;
       right: 0;

@@ -41,7 +41,7 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         """获取集群分配策略列表"""
-        # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群分配策略列表
+        # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的集群分配策略列表
         return ClusterAllocationPolicy.objects.all()
 
     @swagger_auto_schema(

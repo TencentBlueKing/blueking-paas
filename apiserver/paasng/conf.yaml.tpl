@@ -186,6 +186,9 @@
 # - bkpaas-app-operator
 # - bcs-general-pod-autoscaler
 
+## 开发者安装的集群组件镜像 Hub 地址
+# CLUSTER_COMPONENT_IMAGE_REGISTRY: hub.bktencent.com
+
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 
 ## 调用 Healthz API 需要的 Token

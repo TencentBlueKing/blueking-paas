@@ -14,3 +14,52 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+from rest_framework import serializers
+
+from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus, HelmChartDeployStatus
+
+
+class ClusterComponentListOutputSLZ(serializers.Serializer):
+    """集群组件列表"""
+
+    name = serializers.CharField(help_text="组件名称")
+    required = serializers.BooleanField(help_text="是否为必要组件")
+    status = serializers.ChoiceField(help_text="组件状态", choices=ClusterComponentStatus.get_choices())
+
+
+class HelmChartSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="Chart 名称")
+    version = serializers.CharField(help_text="Chart 版本")
+    app_version = serializers.CharField(help_text="应用版本")
+    description = serializers.CharField(help_text="Chart 描述")
+
+
+class HelmReleaseSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="Release 名称")
+    namespace = serializers.CharField(help_text="部署的命名空间")
+    created_at = serializers.DateTimeField(help_text="部署时间")
+    description = serializers.CharField(help_text="部署描述")
+    status = serializers.ChoiceField(help_text="部署状态", choices=HelmChartDeployStatus.get_choices())
+
+
+class WorkloadSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="名称")
+    kind = serializers.CharField(help_text="资源类型")
+    summary = serializers.CharField(help_text="状态小结")
+    conditions = serializers.JSONField(help_text="详情")
+
+
+class ClusterComponentRetrieveOutputSLZ(serializers.Serializer):
+    """集群组件详情"""
+
+    chart = HelmChartSLZ(help_text="Helm Chart 信息")
+    release = HelmReleaseSLZ(help_text="Helm Release 信息")
+    values = serializers.JSONField(help_text="组件配置（特殊指定部分，非全量）")
+    workloads = serializers.ListField(help_text="工作负载列表", child=WorkloadSLZ())
+
+
+class ClusterComponentUpsertInputSLZ(serializers.Serializer):
+    """创建/更新集群组件"""
+
+    values = serializers.JSONField(help_text="组件安装配置")

@@ -733,6 +733,9 @@ BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
     ],
 )
 
+# 开发者安装的集群组件镜像 Hub 地址
+CLUSTER_COMPONENT_IMAGE_REGISTRY = settings.get("CLUSTER_COMPONENT_IMAGE_REGISTRY", "hub.bktencent.com")
+
 # ---------------
 # HealthZ 配置
 # ---------------

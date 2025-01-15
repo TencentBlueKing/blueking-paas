@@ -52,7 +52,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     lookup_url_kwarg = "cluster_name"
 
     def get_queryset(self):
-        # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群列表
+        # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的集群列表
         return Cluster.objects.all()
 
     @swagger_auto_schema(

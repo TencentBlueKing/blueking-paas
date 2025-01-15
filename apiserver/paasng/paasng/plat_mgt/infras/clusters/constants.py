@@ -17,6 +17,9 @@
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
+# Helm 存储 Release 信息的 Secret 类型
+HELM_RELEASE_SECRET_TYPE = "helm.sh/release.v1"
+
 
 class ClusterSource(StrStructuredEnum):
     """集群来源"""
@@ -45,3 +48,48 @@ class TolerationEffect(StrStructuredEnum):
     NO_EXECUTE = EnumField("NoExecute", "不执行")
     NO_SCHEDULE = EnumField("NoSchedule", "不调度")
     PREFER_NO_SCHEDULE = EnumField("PreferNoSchedule", "倾向不调度")
+
+
+class HelmChartDeployStatus(StrStructuredEnum):
+    """
+    Helm Chart 部署状态
+
+    ref: https://github.com/helm/helm/blob/fb54996b001697513cdb1ffa5915c0ba90149fff/pkg/release/status.go#L19
+    """
+
+    UNKNOWN = EnumField("unknown", "未知")
+    FAILED = EnumField("failed", "失败")
+    DEPLOYED = EnumField("deployed", "部署完成")
+    SUPERSEDED = EnumField("superseded", "被取代")
+    UNINSTALLING = EnumField("uninstalling", "卸载中")
+    UNINSTALLED = EnumField("uninstalled", "已卸载")
+
+    PENDING_INSTALL = EnumField("pending-install", "待安装")
+    PENDING_UPGRADE = EnumField("pending-upgrade", "待升级")
+    PENDING_ROLLBACK = EnumField("pending-rollback", "待回滚")
+
+
+class ClusterComponentStatus(StrStructuredEnum):
+    """集群组件状态"""
+
+    NOT_INSTALLED = EnumField("not_installed", "未安装")
+    INSTALLING = EnumField("installing", "安装中")
+    INSTALLED = EnumField("installed", "已安装")
+    INSTALLATION_FAILED = EnumField("installation_failed", "安装失败")
+
+    @classmethod
+    def from_helm_release_status(cls, status: HelmChartDeployStatus) -> "ClusterComponentStatus":
+        if status == HelmChartDeployStatus.DEPLOYED:
+            return cls.INSTALLED
+
+        if status == HelmChartDeployStatus.FAILED:
+            return cls.INSTALLATION_FAILED
+
+        if status in [
+            HelmChartDeployStatus.PENDING_INSTALL,
+            HelmChartDeployStatus.PENDING_UPGRADE,
+            HelmChartDeployStatus.PENDING_ROLLBACK,
+        ]:
+            return cls.INSTALLING
+
+        return cls.NOT_INSTALLED

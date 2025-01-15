@@ -236,11 +236,7 @@
           :max-size="maxPackageSize"
           :with-credentials="true"
           :name="'package'"
-          :accept-tips="
-            $t(
-              '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件'
-            )
-          "
+          :accept-tips="$t('仅支持蓝鲸 S-mart 包，上传成功后即可部署应用。支持的文件格式包括 .tar、.tgz 和 .tar.gz。')"
           :headers="uploadHeader"
           :on-upload-success="handleSuccess"
           :on-upload-error="handleError"

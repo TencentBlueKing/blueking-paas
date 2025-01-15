@@ -1145,7 +1145,7 @@ export default {
   '应用名称：': 'APP Name: ',
   '开发语言：': 'Development language：',
   '增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）': 'Add-ons can only be added, not deleted (even if an Add-ons is deleted in the configuration file, the service will be retained on the platform)',
-  '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件': 'Only supports BlueKing S-mart package, which can be obtained from "BlueKing S-mart", and the APP can be deployed after uploading successfully. Only files in .tar or .tar.gz format are supported',
+  '仅支持蓝鲸 S-mart 包，上传成功后即可部署应用。支持的文件格式包括 .tar、.tgz 和 .tar.gz。': 'Only Blue Whale S-mart packages are supported. Once uploaded successfully, the application can be deployed. Supported file formats include .tar, .tgz, and .tar.gz.',
   上传新版本成功: 'Upload new version successfully',
   版本包详情: 'Version package details',
   进程管理: 'Processes',

@@ -3,188 +3,181 @@
     class="smart-app"
     data-test-id="createSmart_content_appData"
   >
-    <div
-      data-test-id="createSmart_btn_appUploader"
-      class="card-style smart-upload"
-    >
-      <div class="top-title">
-        <div class="title mb10">
-          {{ $t('基本信息') }}
-        </div>
-        <a
-          href="https://bk.tencent.com/s-mart"
-          target="_blank"
-          class="f12"
-        >
-          {{ $t('什么是 S-mart 应用？') }}
-        </a>
-      </div>
-      <bk-form
-        :label-width="100"
-        :model="formData"
-        ref="smartForm"
-        ext-cls="create-samrt-form-cls"
+    <div v-bkloading="{ isLoading: isDataLoading, zIndex: 10 }">
+      <div
+        data-test-id="createSmart_btn_appUploader"
+        class="card-style smart-upload"
       >
-        <bk-form-item
-          :required="true"
-          :label="$t('S-mart 包')"
+        <div class="top-title">
+          <div class="title mb10">
+            {{ $t('基本信息') }}
+          </div>
+          <a
+            href="https://bk.tencent.com/s-mart"
+            target="_blank"
+            class="f12"
+          >
+            {{ $t('什么是 S-mart 应用？') }}
+          </a>
+        </div>
+        <bk-form
+          :label-width="100"
+          :model="formData"
+          ref="smartForm"
+          ext-cls="create-samrt-form-cls"
         >
-          <!-- 选择文件 -->
-          <template v-if="!packageData">
-            <uploader
-              :key="renderUploaderIndex"
-              :action="uploadUrl"
-              :validate-name="/^[a-zA-Z0-9-_. ]+$/"
-              :with-credentials="true"
-              :name="'package'"
-              :max-size="maxPackageSize"
-              :accept-tips="
-                $t(
-                  '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件'
-                )
-              "
-              :other-params="formData"
-              :headers="uploadHeader"
-              :on-upload-success="handleSuccess"
-              :on-upload-error="handleError"
-              @file-change="handleFileChange"
-            >
+          <bk-form-item
+            :required="true"
+            :label="$t('S-mart 包')"
+          >
+            <!-- 选择文件 -->
+            <template v-if="!packageData">
+              <uploader
+                :key="renderUploaderIndex"
+                :action="uploadUrl"
+                :validate-name="/^[a-zA-Z0-9-_. ]+$/"
+                :with-credentials="true"
+                :name="'package'"
+                :max-size="maxPackageSize"
+                :other-params="formData"
+                :headers="uploadHeader"
+                :on-upload-success="handleSuccess"
+                :on-upload-error="handleError"
+                @file-change="handleFileChange"
+              >
+                <p
+                  slot="tip"
+                  class="uploader-tip"
+                  style="font-size: 12px"
+                >
+                  {{ $t('将文件拖到此处或') }}
+                  <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
+                </p>
+              </uploader>
               <p
                 slot="tip"
-                class="uploader-tip"
-                style="font-size: 12px"
+                class="form-tip"
               >
-                {{ $t('将文件拖到此处或') }}
-                <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
+                {{ $t('仅支持蓝鲸 S-mart 包，上传成功后即可部署应用。支持的文件格式包括 .tar、.tgz 和 .tar.gz。') }}
               </p>
-            </uploader>
-            <p
-              slot="tip"
-              class="form-tip"
+            </template>
+            <!-- 成功后展示 -->
+            <section v-else>
+              <SmartFilePreview :file="fileInfo" />
+              <SmartInfo
+                :data="packageData"
+                @change-app="handleChangeApp"
+              />
+            </section>
+          </bk-form-item>
+          <template v-if="isShowTenant">
+            <bk-form-item
+              :required="true"
+              :property="'tenant'"
+              error-display-type="normal"
+              :label="$t('租户类型')"
             >
-              {{
-                $t(
-                  '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件'
-                )
-              }}
-            </p>
+              <bk-radio-group v-model="formData.app_tenant_mode">
+                <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
+                <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="formData.app_tenant_mode === 'single'"
+              :required="true"
+              :label="$t('所属租户')"
+            >
+              <bk-input
+                class="form-input-width"
+                :value="curUserInfo.tenantId"
+                :disabled="true"
+              ></bk-input>
+            </bk-form-item>
           </template>
-          <!-- 成功后展示 -->
-          <section v-else>
-            <SmartFilePreview :file="fileInfo" />
-            <SmartInfo
-              :data="packageData"
-              @change-app="handleChangeApp"
-            />
-          </section>
-        </bk-form-item>
-        <template v-if="isShowTenant">
-          <bk-form-item
-            :required="true"
-            :property="'tenant'"
-            error-display-type="normal"
-            :label="$t('租户类型')"
-          >
-            <bk-radio-group v-model="formData.app_tenant_mode">
-              <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
-              <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
-            </bk-radio-group>
-          </bk-form-item>
-          <bk-form-item
-            v-if="formData.app_tenant_mode === 'single'"
-            :required="true"
-            :label="$t('所属租户')"
-          >
-            <bk-input
-              class="form-input-width"
-              :value="curUserInfo.tenantId"
-              :disabled="true"
-            ></bk-input>
-          </bk-form-item>
-        </template>
-      </bk-form>
-    </div>
-    <div v-if="packageData">
-      <div
-        class="bk-alert bk-alert-success mb20"
-        data-test-id="createSmart_header_appUpload"
-      >
-        <i class="paasng-icon paasng-check-circle-shape" />
-        <div class="bk-alert-content">
-          <div class="bk-alert-title">
-            {{ $t('源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息') }}
-          </div>
-          <div class="bk-alert-description" />
-        </div>
-        <div class="bk-alert-close close-text">
-          <bk-button
-            class="f12"
-            :text="true"
-            @click="handleReUpload"
-          >
-            {{ $t('重新上传') }}
-          </bk-button>
-        </div>
+        </bk-form>
       </div>
-      <div
-        v-for="(packageItem, key) of packageData.app_description.modules"
-        :key="key"
-        class="package-data-box card-style"
-      >
-        <p class="package-data-title">
-          <span>{{ key }}</span>
-          <span
-            v-if="packageItem.is_default"
-            class="paas-tag"
-          >
-            {{ $t('主模块') }}
-          </span>
-        </p>
-        <div>
-          <KeyValueRow>
-            <template #key>{{ $t('开发语言') }}：</template>
-            <template #value>{{ packageItem.language }}</template>
-          </KeyValueRow>
-          <KeyValueRow>
-            <template #key>
-              <span
-                v-bk-tooltips="{
-                  content: $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）'),
-                  width: 280,
-                }"
-                class="has-desc"
-              >
-                {{ $t('增强服务') }}：
-              </span>
-            </template>
-            <!-- 增强服务 -->
-            <template #value>
-              <ul
-                class="package-data-services"
-                data-test-id="createSmart_list_appName"
-                v-if="packageItem.services?.length"
-              >
-                <li
-                  v-for="(service, index) of packageItem.services"
-                  :key="index"
-                  :class="packageData.supported_services.includes(service.name) ? 'added' : 'not_supported'"
-                  class="package-data-rel"
+      <div v-if="packageData">
+        <div
+          class="bk-alert bk-alert-success mb20"
+          data-test-id="createSmart_header_appUpload"
+        >
+          <i class="paasng-icon paasng-check-circle-shape" />
+          <div class="bk-alert-content">
+            <div class="bk-alert-title">
+              {{ $t('源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息') }}
+            </div>
+            <div class="bk-alert-description" />
+          </div>
+          <div class="bk-alert-close close-text">
+            <bk-button
+              class="f12"
+              :text="true"
+              @click="handleReUpload"
+            >
+              {{ $t('重新上传') }}
+            </bk-button>
+          </div>
+        </div>
+        <div
+          v-for="(packageItem, key) of packageData.app_description.modules"
+          :key="key"
+          class="package-data-box card-style"
+        >
+          <p class="package-data-title">
+            <span>{{ key }}</span>
+            <span
+              v-if="packageItem.is_default"
+              class="paas-tag"
+            >
+              {{ $t('主模块') }}
+            </span>
+          </p>
+          <div>
+            <KeyValueRow>
+              <template #key>{{ $t('开发语言') }}：</template>
+              <template #value>{{ packageItem.language }}</template>
+            </KeyValueRow>
+            <KeyValueRow>
+              <template #key>
+                <span
                   v-bk-tooltips="{
-                    content: $t('平台不支持该增强服务'),
-                    disabled: packageData.supported_services.includes(service.name),
+                    content: $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）'),
+                    width: 280,
                   }"
+                  class="has-desc"
                 >
-                  {{ service.name }}
-                  <i
-                    v-if="service.shared_from"
-                    v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
-                    class="paasng-icon paasng-info-circle info-icon"
-                  />
-                </li>
-              </ul>
-              <span v-else>{{ $t('无') }}</span>
-            </template>
-          </KeyValueRow>
+                  {{ $t('增强服务') }}：
+                </span>
+              </template>
+              <!-- 增强服务 -->
+              <template #value>
+                <ul
+                  class="package-data-services"
+                  data-test-id="createSmart_list_appName"
+                  v-if="packageItem.services?.length"
+                >
+                  <li
+                    v-for="(service, index) of packageItem.services"
+                    :key="index"
+                    :class="packageData.supported_services.includes(service.name) ? 'added' : 'not_supported'"
+                    class="package-data-rel"
+                    v-bk-tooltips="{
+                      content: $t('平台不支持该增强服务'),
+                      disabled: packageData.supported_services.includes(service.name),
+                    }"
+                  >
+                    {{ service.name }}
+                    <i
+                      v-if="service.shared_from"
+                      v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
+                      class="paasng-icon paasng-info-circle info-icon"
+                    />
+                  </li>
+                </ul>
+                <span v-else>{{ $t('无') }}</span>
+              </template>
+            </KeyValueRow>
+          </div>
         </div>
       </div>
     </div>

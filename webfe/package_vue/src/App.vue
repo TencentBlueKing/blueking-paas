@@ -4,7 +4,7 @@
     :style="{
       '--app-notice-height': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT : 0}px`,
       '--app-content-pd': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
-      'background-color': isDefaultBackgroundColor ? '#F5F7FA' : '',
+      'background-color': appBackgroundColor,
     }"
   >
     <!-- 通知中心 -->
@@ -20,7 +20,6 @@
       :style="{ 'padding-top': `${pluginPaddingTop}px` }"
       :class="{
         'plugin-min-width': isPlugin,
-        'full-screen-height-cls': isDefaultBackgroundColor,
         'sandbox-page': sandboxPage,
       }"
     >
@@ -71,6 +70,10 @@ export default {
     },
     isDefaultBackgroundColor() {
       return this.$route.meta?.isDefaultBackgroundColor;
+    },
+    appBackgroundColor() {
+      const color = this.$route.meta?.appBackgroundColor || '#f5f7fa';
+      return this.isDefaultBackgroundColor ? color : '';
     },
     sandboxPage() {
       return this.$route.meta?.sandboxPage;
@@ -133,10 +136,6 @@ export default {
   height: 40px;
   width: 100%;
   z-index: 1001;
-}
-
-.full-screen-height-cls {
-  background-color: #f5f7fa;
 }
 
 .gray-bg {

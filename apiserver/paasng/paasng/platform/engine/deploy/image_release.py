@@ -65,6 +65,10 @@ class ImageReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "image release interrupted")
+            return
+
         if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
             # 如果是云原生应用，更新 deployment 的 bkapp_revision_id
             bkapp_revision_id = self.create_bkapp_revision()

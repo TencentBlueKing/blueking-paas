@@ -71,7 +71,6 @@ from paasng.platform.bkapp_model.utils import (
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
-from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
@@ -468,7 +467,6 @@ def get_bkapp_resource_for_deploy(
     force_image: Optional[str] = None,
     image_pull_policy: Optional[str] = None,
     use_cnb: bool = False,
-    deployment: Optional[Deployment] = None,
 ) -> crd.BkAppResource:
     """Get the BkApp manifest for deploy.
 
@@ -477,7 +475,6 @@ def get_bkapp_resource_for_deploy(
     :param force_image: If given, set the image of the application to this value.
     :param image_pull_policy: If given, set the imagePullPolicy to this value.
     :param use_cnb: A bool flag describe if the bkapp image is built with cnb
-    :param deployment: The related deployment instance
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)

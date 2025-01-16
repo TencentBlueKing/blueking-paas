@@ -17,7 +17,6 @@
 
 import logging
 import time
-from typing import Optional
 
 from django.db import IntegrityError
 
@@ -56,6 +55,10 @@ class BkAppReleaseMgr(DeployStep):
         NOTE: 云原生应用不再使用 paas_wl.bk_app.processes.models.ProcessSpec 来管理进程, 因此不需要像普通应用那样同步进程信息,
         如 ApplicationReleaseMgr.start 方法中的 proc_mgr.sync_processes_specs(procs)
         """
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "BkApp release interrupted")
+            return
+
         build = Build.objects.get(pk=self.deployment.build_id)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
@@ -81,11 +84,7 @@ class BkAppReleaseMgr(DeployStep):
 
 
 def release_by_k8s_operator(
-    env: ModuleEnvironment,
-    revision: AppModelRevision,
-    operator: str,
-    build: Optional[Build] = None,
-    deployment: Optional[Deployment] = None,
+    env: ModuleEnvironment, revision: AppModelRevision, operator: str, build: Build, deployment: Deployment
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
@@ -93,10 +92,11 @@ def release_by_k8s_operator(
     :param env: The environment to create the release for.
     :param revision: The revision to be released.
     :param operator: current operator's user_id
+    :param build: build config of the release
     :param deployment: the deployment of the release
 
     :raises: ValueError when image credential_refs is invalid  TODO: 抛更具体的异常
-    :raises: UnprocessibleEntityError when k8s can not process this manifest
+    :raises: kubernetes.dynamic.exceptions.UnprocessibleEntityError when k8s can not process this manifest
     :raises: other unknown exceptions...
     """
     application = env.application
@@ -124,14 +124,13 @@ def release_by_k8s_operator(
         raise
 
     try:
-        advanced_options = deployment.advanced_options if deployment else None
+        advanced_options = deployment.advanced_options
         bkapp_res = get_bkapp_resource_for_deploy(
             env,
             deploy_id=str(app_model_deploy.id),
-            force_image=build.image if build else None,
+            force_image=build.image,
             image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
-            use_cnb=build.is_build_from_cnb() if build else False,
-            deployment=deployment,
+            use_cnb=build.is_build_from_cnb(),
         )
 
         # 下发 k8s 资源前需要确保命名空间存在
@@ -171,7 +170,7 @@ def release_by_k8s_operator(
 
     # Poll status in background
     WaitAppModelReady.start(
-        {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id if deployment else None},
+        {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id},
         DeployStatusHandler,
     )
     return str(app_model_deploy.id)

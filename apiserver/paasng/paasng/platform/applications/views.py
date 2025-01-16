@@ -53,7 +53,7 @@ from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import AccountFeatureFlag, make_verifier
@@ -164,6 +164,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             type_=params.get("type"),
             # 已下架的应用默认展示在最末尾
             order_by=["-is_active", params.get("order_by")],
+            app_tenant_mode=params.get("app_tenant_mode"),
         )
 
         # 查询我创建的应用时，也需要返回总的应用数量给前端
@@ -640,7 +641,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
             try:
                 # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
-                make_bk_lesscode_client(login_cookie=bk_token).create_app(
+                make_bk_lesscode_client(login_cookie=bk_token, tenant_id=get_tenant(request.user).id).create_app(
                     params["code"], params["name_zh_cn"], ModuleName.DEFAULT.value
                 )
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:
@@ -707,7 +708,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 产品上创建应用"""
         bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
         try:
-            make_bk_lesscode_client(login_cookie=bk_token).create_app(code, name, ModuleName.DEFAULT.value)
+            make_bk_lesscode_client(login_cookie=bk_token, tenant_id=get_tenant(request.user).id).create_app(
+                code, name, ModuleName.DEFAULT.value
+            )
         except (LessCodeApiError, LessCodeGatewayServiceError) as e:
             raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
 
@@ -1603,6 +1606,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
                 module=module_name_to_module_dict[item["module_name"]],
                 defaults={
                     "order": item["order"],
+                    "tenant_id": application.tenant_id,
                 },
             )
 

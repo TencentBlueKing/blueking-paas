@@ -43,11 +43,6 @@ class ServiceMinimalSLZ(serializers.Serializer):
     category = CategorySLZ()
 
 
-class ServiceCategoryByRegionSLZ(serializers.Serializer):
-    category = CategorySLZ()
-    services = serializers.ListField(child=ServiceMinimalSLZ())
-
-
 class ServiceSLZ(serializers.Serializer):
     uuid = serializers.CharField()
     name = serializers.CharField()

@@ -15,20 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.basic import make_app_pattern, re_path
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
-from . import views
 
-# Deprecated 新版 API 上线并确认后再删除原来的 API
-urlpatterns = [
-    re_path(
-        r"^api/bkapps/applications/lists/latest/deprecated/",
-        views.LatestApplicationsViewSet.as_view(),
-        name="api.applications.latest.deprecated",
-    ),
-    re_path(
-        make_app_pattern(r"/operations/", include_envs=False),
-        views.ApplicationOperationsViewSet.as_view({"get": "list"}),
-        name="api.bkapps.application.operations",
-    ),
-]
+class Group(OperationGroup):
+    # 获取所有租户列表
+    list_tenants = bind_property(Operation, name="list_tenant", method="GET", path="/api/v3/open/tenants/")
+
+
+class Client(APIGatewayClient):
+    """蓝鲸用户管理 API"""
+
+    _api_name = "bk-user"
+    api = bind_property(Group, name="api")

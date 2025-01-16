@@ -24,6 +24,7 @@ from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.models import AppDashboard, AppDashboardTemplate
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,8 @@ class BkDashboardManager:
     def __init__(self, application: Application):
         self.application = application
         self.app_code = self.application.code
-        self.client = make_bk_monitor_client()
+        tenant_id = get_tenant_id_for_app(self.app_code)
+        self.client = make_bk_monitor_client(tenant_id)
 
     def init_builtin_dashboard(self):
         """初始化内置仪表盘"""

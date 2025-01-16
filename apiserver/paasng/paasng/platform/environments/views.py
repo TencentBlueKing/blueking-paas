@@ -88,7 +88,9 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
 
         protections = []
         for role in allowed_roles:
-            protections.append(EnvRoleProtection(module_env=env, operation=operation, allowed_role=role))
+            protections.append(
+                EnvRoleProtection(module_env=env, operation=operation, allowed_role=role, tenant_id=env.tenant_id)
+            )
 
         protections = EnvRoleProtection.objects.bulk_create(protections)
 

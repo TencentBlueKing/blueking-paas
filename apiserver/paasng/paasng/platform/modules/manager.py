@@ -147,7 +147,11 @@ class ModuleInitializer:
             name = self.make_engine_app_name(environment)
             engine_app = self._get_or_create_engine_app(name, wl_app_type)
             env = ModuleEnvironment.objects.create(
-                application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
+                application=self.application,
+                module=self.module,
+                engine_app_id=engine_app.id,
+                environment=environment,
+                tenant_id=self.application.tenant_id,
             )
             # bind env to cluster
             EnvClusterService(env).bind_cluster(cluster_name)
@@ -325,9 +329,13 @@ class ModuleInitializer:
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
-        info = create_app_ignore_duplicated(self.application.region, name, app_type)
+        info = create_app_ignore_duplicated(self.application.region, name, app_type, self.application.tenant_id)
         engine_app = EngineApp.objects.create(
-            id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
+            id=info.uuid,
+            name=info.name,
+            owner=self.application.owner,
+            region=self.application.region,
+            tenant_id=self.application.tenant_id,
         )
         return engine_app
 

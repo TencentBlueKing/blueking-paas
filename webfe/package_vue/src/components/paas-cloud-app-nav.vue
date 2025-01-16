@@ -798,7 +798,7 @@ export default {
   }
 
   > li {
-    width: 100%;
+    width: 239px;
     position: relative;
 
     &.on {

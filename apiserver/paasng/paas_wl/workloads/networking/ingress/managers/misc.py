@@ -57,7 +57,7 @@ class AppDefaultIngresses:
             env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
         except ModuleEnvironment.DoesNotExist:
             logger.warning(
-                f"app({self.app.name}) has no ApplicationEnvironment queryset, "
+                f"app({self.app.name}) has no ModuleEnvironment queryset, "
                 f"skip custom domain ingress managers. Check whether the app was backup data"
             )
         else:

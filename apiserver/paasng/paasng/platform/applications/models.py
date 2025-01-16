@@ -32,8 +32,7 @@ from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from paasng.infras.iam.helpers import fetch_role_members
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -141,7 +140,7 @@ class BaseApplicationFilter:
     """Base Application Filter"""
 
     @classmethod
-    def filter_queryset(
+    def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
         include_inactive=False,
@@ -152,6 +151,7 @@ class BaseApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
         market_enabled: Optional[bool] = None,
     ):
         """Filter applications by given parameters"""
@@ -179,6 +179,8 @@ class BaseApplicationFilter:
             queryset = queryset.filter(market_config__enabled=market_enabled)
         if type_ is not None:
             queryset = queryset.filter(type=type_)
+        if app_tenant_mode:
+            queryset = queryset.filter(app_tenant_mode=app_tenant_mode)
         return queryset
 
     @staticmethod
@@ -248,6 +250,7 @@ class UserApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:
@@ -268,6 +271,7 @@ class UserApplicationFilter:
             source_origin=source_origin,
             order_by=order_by,
             type_=type_,
+            app_tenant_mode=app_tenant_mode,
         )
 
 
@@ -347,13 +351,7 @@ class Application(OwnerTimestampedModel):
         options={"quality": 95},
         null=True,
     )
-    tenant_id = models.CharField(
-        verbose_name="租户 ID",
-        max_length=32,
-        db_index=True,
-        default=DEFAULT_TENANT_ID,
-        help_text="本条数据的所属租户",
-    )
+    tenant_id = tenant_id_field_factory()
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()
@@ -433,10 +431,14 @@ class Application(OwnerTimestampedModel):
 
     def get_administrators(self):
         """获取具有管理权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         return fetch_role_members(self.code, ApplicationRole.ADMINISTRATOR)
 
     def get_devopses(self) -> List[str]:
         """获取具有运营权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         devopses = fetch_role_members(self.code, ApplicationRole.OPERATOR) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -444,6 +446,8 @@ class Application(OwnerTimestampedModel):
 
     def get_developers(self) -> List[str]:
         """获取具有开发权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         developers = fetch_role_members(self.code, ApplicationRole.DEVELOPER) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -506,6 +510,8 @@ class ApplicationEnvironment(TimestampedModel):
     environment = models.CharField(verbose_name="部署环境", max_length=16)
     is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         unique_together = ("module", "environment")
 
@@ -546,7 +552,7 @@ class ApplicationEnvironment(TimestampedModel):
         self.save(update_fields=["is_offlined"])
 
 
-# Make an alias name to descrease misunderstanding
+# Create an alias name to reduce misunderstandings
 ModuleEnvironment = ApplicationEnvironment
 
 
@@ -590,7 +596,9 @@ class ApplicationFeatureFlagManager(models.Manager):
     def set_feature(self, key: Union[str, AppFeatureFlag], value: bool, application: Optional[Application] = None):
         """设置 feature 状态"""
         instance, qs = self._build_queryset(application)
-        return qs.update_or_create(application=instance, name=AppFeatureFlag(key), defaults={"effect": value})
+        return qs.update_or_create(
+            application=instance, name=AppFeatureFlag(key), defaults={"effect": value, "tenant_id": instance.tenant_id}
+        )
 
     def has_feature(self, key: Union[str, AppFeatureFlag], application: Optional[Application] = None) -> bool:
         """判断app是否具有feature,如果查数据库无记录，则返回默认值"""
@@ -626,12 +634,16 @@ class ApplicationFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=30)
 
+    tenant_id = tenant_id_field_factory()
+
     objects = ApplicationFeatureFlagManager()
 
 
 class UserMarkedApplication(OwnerTimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     objects = WithOwnerManager()
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("application", "owner")
@@ -649,6 +661,8 @@ class ApplicationDeploymentModuleOrder(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
     order = models.IntegerField(verbose_name="顺序")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         verbose_name = "模块顺序"
         unique_together = ("user", "module")
@@ -659,3 +673,5 @@ class SMartAppExtraInfo(models.Model):
 
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
     original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
+
+    tenant_id = tenant_id_field_factory()

@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
 from django.conf import settings
 from django.http import HttpRequest
@@ -23,6 +24,9 @@ from rest_framework.exceptions import ValidationError
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, Tenant, get_tenant
 from paasng.infras.accounts.models import User
+from paasng.platform.applications.models import Application
+
+logger = logging.getLogger(__name__)
 
 
 def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> tuple[AppTenantMode, str, Tenant]:
@@ -62,3 +66,16 @@ def vailidate_tenant_id_header(request: HttpRequest) -> str:
         raise ValidationError(_("请求头中未包含 X-Bk-Tenant-Id 字段"))
 
     return tenant_id
+
+
+def get_tenant_id_for_app(app_code: str) -> str:
+    # 若果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
+    if not settings.ENABLE_MULTI_TENANT_MODE:
+        return DEFAULT_TENANT_ID
+
+    try:
+        app = Application.objects.get(code=app_code)
+    except Application.DoesNotExist:
+        logger.warning("Application: %s DoesNotExist", app_code)
+        return ""
+    return app.tenant_id

@@ -283,6 +283,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), required=False)
     order_by = serializers.CharField(default="name")
     prefer_marked = serializers.BooleanField(default=True)
+    app_tenant_mode = serializers.CharField(required=False)
 
     def validate_order_by(self, value):
         if value.startswith("-"):
@@ -431,6 +432,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user.pk
+        validated_data["tenant_id"] = validated_data["application"].tenant_id
         return super(ApplicationMarkedSLZ, self).create(validated_data)
 
     def __repr__(self):

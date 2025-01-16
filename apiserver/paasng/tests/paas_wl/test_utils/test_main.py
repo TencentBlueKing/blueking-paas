@@ -14,25 +14,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from enum import Enum
-
 import pytest
 from attrs import define
 from django.utils.crypto import get_random_string
 
 from paas_wl.utils.basic import convert_key_to_camel, digest_if_length_exceeded
-from paas_wl.utils.constants import make_enum_choices
 from paas_wl.utils.models import make_json_field
-
-
-class TestConstants:
-    def test_make_enum_choices(self):
-        class FooEnum(Enum):
-            RED = 1
-            BLUE = 2
-
-        assert make_enum_choices(FooEnum) == [(1, "RED"), (2, "BLUE")]
 
 
 class TestDigestIfLengthExceeded:

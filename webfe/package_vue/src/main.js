@@ -16,7 +16,7 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-
+/* global global */
 import Vue from 'vue';
 import App from './App';
 import router from '@/router';
@@ -43,6 +43,7 @@ import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/common/bkmagic.js';
+import '@/common/event-tracking.js';
 // eslint-disable-next-line
 import Blob from '@/common/Blob'
 // eslint-disable-next-line

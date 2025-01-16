@@ -966,8 +966,7 @@ export default {
     async fetchRegionsServices() {
       // console.warn('fetchRegionsServices')
       try {
-        const res = await this.$store.dispatch('createApp/getRegionsServices', {
-          region: this.regionChoose,
+        const res = await this.$store.dispatch('createApp/getServicesByTmpl', {
           language: this.sourceInitTemplate,
         });
         this.regionsServices = JSON.parse(JSON.stringify(res.result));

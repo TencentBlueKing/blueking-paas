@@ -876,6 +876,7 @@ class TestDeploymentModuleOrder:
         """
         from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
         from paasng.infras.iam.members.models import ApplicationUserGroup
+        from paasng.platform.applications.tenant import get_tenant_id_for_app
         from tests.utils.mocks.iam import StubBKIAMClient
 
         bk_user_1 = create_user()
@@ -883,7 +884,10 @@ class TestDeploymentModuleOrder:
         api_client_1.force_authenticate(user=bk_user_1)
 
         user_group = ApplicationUserGroup.objects.get(app_code=bk_app.code, role=ApplicationRole.DEVELOPER)
-        StubBKIAMClient().add_user_group_members(user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS)
+        tenant_id = get_tenant_id_for_app(bk_app.code)
+        StubBKIAMClient(tenant_id).add_user_group_members(
+            user_group.user_group_id, [bk_user_1.username], NEVER_EXPIRE_DAYS
+        )
         return api_client_1
 
     def test_module_order(self, api_client, bk_app, api_client_1):
@@ -1038,3 +1042,36 @@ class TestDeploymentModuleOrder:
         )
         response_data = response.json()
         assert response_data["detail"] == "No module named as test2."
+
+
+class TestApplicationList:
+    @pytest.fixture()
+    def single_tenant_app(self, bk_user) -> Application:
+        app = create_app(owner_username=bk_user.username)
+        app.app_tenant_mode = AppTenantMode.SINGLE.value
+        app.save()
+        return app
+
+    @pytest.fixture()
+    def global_tenant_app(self, bk_user) -> Application:
+        app = create_app(owner_username=bk_user.username)
+        app.app_tenant_mode = AppTenantMode.GLOBAL.value
+        app.save()
+        return app
+
+    def test_list_detailed(self, api_client, single_tenant_app, global_tenant_app):
+        with mock.patch("paasng.platform.applications.views.get_exposed_links", return_value={}):
+            response = api_client.get(reverse("api.applications.lists.detailed"))
+            assert response.data["count"] == 2
+
+            global_response = api_client.get(
+                reverse("api.applications.lists.detailed"), {"app_tenant_mode": AppTenantMode.GLOBAL}
+            )
+            assert global_response.data["count"] == 1
+            assert global_response.data["results"][0]["application"]["app_tenant_mode"] == AppTenantMode.GLOBAL
+
+            single_response = api_client.get(
+                reverse("api.applications.lists.detailed"), {"app_tenant_mode": AppTenantMode.SINGLE}
+            )
+            assert single_response.data["count"] == 1
+            assert single_response.data["results"][0]["application"]["app_tenant_mode"] == AppTenantMode.SINGLE

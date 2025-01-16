@@ -22,6 +22,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from django.test.utils import override_settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError
 from tests.utils.basic import generate_random_string
@@ -91,30 +92,31 @@ def bk_module_name():
 
 
 class TestBkLesscode:
-    def test_call_api_succeeded(self, bk_token, bk_app_code, bk_app_name, bk_module_name, fake_good_client):
-        lesscode_client = make_bk_lesscode_client(bk_token, fake_good_client)
+    def test_call_api_succeeded(self, bk_token, tenant_id, bk_app_code, bk_app_name, bk_module_name, fake_good_client):
+        lesscode_client = make_bk_lesscode_client(bk_token, tenant_id, fake_good_client)
         is_created = lesscode_client.create_app(bk_app_code, bk_app_name, bk_module_name)
 
         assert is_created is True
         assert fake_good_client.create_project_by_app.called
         _, kwargs = fake_good_client.create_project_by_app.call_args_list[0]
         assert kwargs["headers"]["x-bkapi-authorization"] != ""
+        assert kwargs["headers"][API_HERDER_TENANT_ID] == tenant_id
         assert kwargs["data"]["appCode"] == bk_app_code
         assert kwargs["data"]["moduleCode"] == bk_module_name
 
-    def test_call_api_failed(self, bk_token, bk_app_code, bk_app_name, bk_module_name, fake_bad_client):
-        lesscode_client = make_bk_lesscode_client(bk_token, fake_bad_client)
+    def test_call_api_failed(self, bk_token, tenant_id, bk_app_code, bk_app_name, bk_module_name, fake_bad_client):
+        lesscode_client = make_bk_lesscode_client(bk_token, tenant_id, fake_bad_client)
         with pytest.raises(LessCodeApiError):
             _ = lesscode_client.create_app(bk_app_code, bk_app_name, bk_module_name)
 
-    def test_get_address_succeeded(self, bk_token, bk_app_code, bk_module_name, fake_good_client):
-        lesscode_client = make_bk_lesscode_client(bk_token, fake_good_client)
+    def test_get_address_succeeded(self, bk_token, tenant_id, bk_app_code, bk_module_name, fake_good_client):
+        lesscode_client = make_bk_lesscode_client(bk_token, tenant_id, fake_good_client)
         address = lesscode_client.get_address(bk_app_code, bk_module_name)
 
         assert address == f"{settings.BK_LESSCODE_URL}/project/168/pages"
 
-    def test_get_address_failed(self, bk_token, bk_app_code, bk_module_name, fake_bad_client):
-        lesscode_client = make_bk_lesscode_client(bk_token, fake_bad_client)
+    def test_get_address_failed(self, bk_token, tenant_id, bk_app_code, bk_module_name, fake_bad_client):
+        lesscode_client = make_bk_lesscode_client(bk_token, tenant_id, fake_bad_client)
         # 获取地址失败时不抛异常，只返回空地址
         address = lesscode_client.get_address(bk_app_code, bk_module_name)
         assert address == ""

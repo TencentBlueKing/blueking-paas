@@ -43,6 +43,7 @@ from paasng.accessories.log.models import ElasticSearchParams, ProcessLogQueryCo
 from paasng.accessories.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.utils import clean_logs, parse_request_to_es_dsl
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_required
@@ -94,7 +95,10 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
         log_config = self._get_log_query_config()
-        return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
+        tenant_id = get_tenant(self.request.user).id
+        return instantiate_log_client(
+            log_config=log_config, tenant_id=tenant_id, bk_username=self.request.user.username
+        ), log_config
 
     def parse_time_range(self) -> SmartTimeRange:
         """parse time range from request.query_params"""
@@ -440,16 +444,13 @@ class ModuleLogAPIMixin(_MixinBase):
         return search.limit_offset(limit=limit, offset=offset)
 
 
-class ModuleStdoutLogAPIView(ModuleLogAPIMixin, StdoutLogAPIView):
-    ...
+class ModuleStdoutLogAPIView(ModuleLogAPIMixin, StdoutLogAPIView): ...
 
 
-class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView):
-    ...
+class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView): ...
 
 
-class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView):
-    ...
+class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView): ...
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):

@@ -48,16 +48,16 @@ class DomainWithCert:
         """Get DomainWithCert from `AppDomain`, will set shared_cert if found some matched"""
         cert = domain.cert or domain.shared_cert
         if not cert:
-            cert = pick_shared_cert(domain.app.region, domain.host)
+            cert = pick_shared_cert(domain.tenant_id, domain.host)
             if cert:
                 domain.shared_cert = cert
                 domain.save(update_fields=["shared_cert", "updated"])
         return cls(host=domain.host, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
     @classmethod
-    def from_custom_domain(cls, region: str, domain: Domain) -> "DomainWithCert":
-        """get DomainWithCert from `Domain`, will pick shared cert by domain.name for backward compatibility"""
-        cert = pick_shared_cert(region, domain.name)
+    def from_custom_domain(cls, domain: Domain) -> "DomainWithCert":
+        """Get DomainWithCert by `Domain`, will pick shared cert by domain.name for backward compatibility"""
+        cert = pick_shared_cert(domain.tenant_id, domain.name)
         return cls(host=domain.name, path_prefix=domain.path_prefix, https_enabled=domain.https_enabled, cert=cert)
 
 
@@ -88,13 +88,14 @@ def update_or_create_secret_by_cert(app: WlApp, cert: BasicCert) -> Tuple[str, b
     return secret_name, created
 
 
-def pick_shared_cert(region: str, host: str) -> Optional[AppDomainSharedCert]:
-    """Try to pick a shared cert for current app domain
+def pick_shared_cert(tenant_id: str, host: str) -> Optional[AppDomainSharedCert]:
+    """Try to select a shared certificate for the current application domain, search
+    only within a given tenant.
 
-    :param region: Filter certs by given region
-    :param host: Hostname for finding valid cert object
+    :param tenant_id: The tenant_id.
+    :param host: Hostname for finding valid cert object.
     """
-    for cert in AppDomainSharedCert.objects.filter(region=region):
+    for cert in AppDomainSharedCert.objects.filter(tenant_id=tenant_id):
         if cert.match_hostname(host):
             return cert
     return None

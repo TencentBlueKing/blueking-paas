@@ -17,13 +17,17 @@
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.evaluation.constants import BatchTaskStatus, OperationIssueType
 from paasng.utils.models import AuditedModel, BkUserField
 
 
 class AppOperationReportCollectionTask(models.Model):
-    """应用运营报告采集任务"""
+    """应用运营报告采集任务
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     start_at = models.DateTimeField(verbose_name="任务开始时间", auto_now_add=True)
     end_at = models.DateTimeField(verbose_name="任务结束时间", null=True)
@@ -40,7 +44,10 @@ class AppOperationReportCollectionTask(models.Model):
 
 
 class AppOperationReport(models.Model):
-    """应用运营报告（含资源使用，用户活跃，运维操作等）"""
+    """应用运营报告（含资源使用，用户活跃，运维操作等）
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
     # 资源使用
@@ -72,7 +79,10 @@ class AppOperationReport(models.Model):
 
 
 class AppOperationEmailNotificationTask(models.Model):
-    """应用运营报告邮件通知任务"""
+    """应用运营报告邮件通知任务
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     start_at = models.DateTimeField(verbose_name="任务开始时间", auto_now_add=True)
     end_at = models.DateTimeField(verbose_name="任务结束时间", null=True)
@@ -97,6 +107,8 @@ class IdleAppNotificationMuteRule(AuditedModel):
     module_name = models.CharField("模块名称", max_length=32)
     environment = models.CharField("部署环境", max_length=32)
     expired_at = models.DateTimeField("过期时间")
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("user", "app_code", "module_name", "environment")

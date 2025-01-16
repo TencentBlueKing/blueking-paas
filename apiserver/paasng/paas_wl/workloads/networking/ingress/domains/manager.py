@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Manage application's custom domains"""
+
 import logging
 from typing import Protocol
 
@@ -88,6 +89,7 @@ class DftCustomDomainManager:
                 path_prefix=path_prefix,
                 module_id=env.module_id,
                 environment_id=env.id,
+                tenant_id=self.application.tenant_id,
                 defaults={"https_enabled": https_enabled},
             )
             CustomDomainIngressMgr(domain).sync(default_service_name=service_name)

@@ -57,7 +57,7 @@ DEPLOY_STATUS_TO_RESULT_CODE = {
 @receiver(post_save)
 def on_app_operation_created(sender, instance, created, raw, using, update_fields, *args, **kwargs):
     """When an app operation object was created, we should also update the application's
-    corresponding ApplicationLatestOp object.
+    corresponding AppLatestOperationRecord object.
     """
     if not (isinstance(instance, AppOperationRecord) and created):
         return

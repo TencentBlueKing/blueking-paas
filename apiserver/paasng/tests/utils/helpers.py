@@ -358,11 +358,11 @@ def _mock_wl_services_in_creation():
     mocked will be stored and can be used for restoring data later.
     """
 
-    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str):
+    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
         obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
 
         # Store params in global, so we can manually create the objects later.
-        _faked_wl_apps[obj.uuid] = (region, name, type_)
+        _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
         return obj
 
     def fake_update_metadata_by_env(env, metadata_part):
@@ -406,10 +406,12 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
         for env in module.envs.all():
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
-                region, name, type_ = args
+                region, name, type_, tenant_id = args
                 if WlApp.objects.filter(name=name).exists():
                     continue
-                wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                wl_app = WlApp.objects.create(
+                    uuid=env.engine_app_id, region=region, name=name, type=type_, tenant_id=tenant_id
+                )
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name
                 latest_config.save()
@@ -563,10 +565,12 @@ def register_iam_after_create_application(application: Application):
     """
     from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
     from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+    from paasng.platform.applications.tenant import get_tenant_id_for_app
     from paasng.utils.basic import get_username_by_bkpaas_user_id
     from tests.utils.mocks.iam import StubBKIAMClient
 
-    cli = StubBKIAMClient()
+    tenant_id = get_tenant_id_for_app(application.code)
+    cli = StubBKIAMClient(tenant_id)
     creator = get_username_by_bkpaas_user_id(application.creator or application.owner)
 
     # 1. 创建分级管理员，并记录分级管理员 ID

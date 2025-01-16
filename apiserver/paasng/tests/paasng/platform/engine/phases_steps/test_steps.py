@@ -142,7 +142,10 @@ class TestUpdateStepByLine:
 
         def _make(phase_type: DeployPhaseTypes, pattern_maps: dict):
             phase = DeployPhase.objects.create(
-                type=phase_type.value, engine_app=bk_deployment.get_engine_app(), deployment=bk_deployment
+                type=phase_type.value,
+                engine_app=bk_deployment.get_engine_app(),
+                deployment=bk_deployment,
+                tenant_id=bk_deployment.tenant_id,
             )
 
             for step_name, patterns in pattern_maps.items():

@@ -23,6 +23,8 @@ from typing import Any, Dict
 from django.db import models
 from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
@@ -63,16 +65,14 @@ class MigrationProcessManager(models.Manager):
                 legacy_app_is_already_online=legacy_app.is_already_online,
                 legacy_app_state=legacy_app.state,
                 legacy_app_has_all_deployed=legacy_app_proxy.has_prod_deployed(),
+                tenant_id=getattr(legacy_app, "tenant_id", DEFAULT_TENANT_ID),
             )
             created = True
         return migration_process, created
 
 
 class MigrationProcess(OwnerTimestampedModel):
-    """An migration process
-
-    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
-    """
+    """An migration process"""
 
     legacy_app_id = models.IntegerField()
     app = models.ForeignKey(Application, on_delete=models.CASCADE, null=True)
@@ -94,6 +94,8 @@ class MigrationProcess(OwnerTimestampedModel):
     legacy_app_is_already_online = models.BooleanField(default=True)
     legacy_app_state = models.IntegerField(default=4)
     legacy_app_has_all_deployed = models.BooleanField(default=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = MigrationProcessManager()
 
@@ -232,9 +234,7 @@ ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
 
 
 class CNativeMigrationProcess(OwnerTimestampedModel):
-    """
-    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
-    """
+    """cloud-native app migration process"""
 
     app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(
@@ -248,6 +248,8 @@ class CNativeMigrationProcess(OwnerTimestampedModel):
     confirm_at = models.DateTimeField(null=True, help_text="用户确认的时间")
 
     details: ProcessDetails = ProcessDetailsField(default=ProcessDetails, help_text="迁移过程详情")
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         get_latest_by = "created_at"
@@ -328,11 +330,10 @@ class MigrationRegister(type):
 
 
 class WlAppBackupRel(TimestampedModel):
-    """WlApp 的备份关系表
-
-    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
-    """
+    """WlApp 的备份关系表"""
 
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
     original_id = models.UUIDField(verbose_name="原 WlApp uuid")
     backup_id = models.UUIDField(verbose_name="对应备份的 WlApp uuid")
+
+    tenant_id = tenant_id_field_factory()

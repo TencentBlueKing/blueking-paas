@@ -12,6 +12,8 @@ def tenant_id_field_factory(db_index: bool = True, unique: bool = False) -> mode
         it off when the model already has a compound index on the tenant_id field.
     :param unique: Whether to create a unique index for the field, defaults to False. If unique is True,
         param db_index will be ignored because unique implies the creation of an index.
+
+    NOTE: https://github.com/TencentBlueKing/blueking-paas/pull/1877#discussion_r1912873811 中有相关的设计讨论
     """
     if unique:
         return models.CharField(

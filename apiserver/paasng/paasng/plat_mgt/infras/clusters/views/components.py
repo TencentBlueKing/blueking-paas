@@ -118,6 +118,11 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         }
         return Response(data=ClusterComponentRetrieveOutputSLZ(component).data)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.cluster_components"],
+        operation_description="对比组件版本",
+        responses={status.HTTP_200_OK: ClusterComponentDiffVersionOutputSLZ()},
+    )
     def diff_version(self, request, cluster_name, component_name, *args, **kwargs):
         # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
         cluster = Cluster.objects.filter(name=cluster_name).first()

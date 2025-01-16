@@ -122,6 +122,7 @@ class BCSUserClient:
         self.client: BCSGroup = client.api
 
     def get_chart_versions(self, project_id: str, repo_name: str, chart_name: str):
+        """获取 Chart 的可用版本（按时间逆序）"""
         path_params = {"projectCode": project_id, "repoName": repo_name, "name": chart_name}
 
         with wrap_request_exc():
@@ -143,7 +144,6 @@ class BCSUserClient:
     ):
         """更新集群中的 helm release"""
         path_params = {
-            # 已与 BCS 确认，ID / Code 都可以
             "projectCode": project_id,
             "clusterID": cluster_id,
             "namespace": namespace,

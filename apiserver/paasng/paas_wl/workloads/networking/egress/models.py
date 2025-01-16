@@ -25,6 +25,7 @@ from jsonfield import JSONField
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.infras.resources.utils.basic import label_toleration_providers
 from paas_wl.workloads.networking.constants import NetworkProtocol
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ class RegionClusterState(AuditedModel):
     nodes_cnt = models.IntegerField(default=0)
     nodes_name = JSONField(default=[], blank=True)
     nodes_data = JSONField(default=[], blank=True)
+
+    tenant_id = tenant_id_field_factory()
 
     def to_labels(self) -> Dict:
         """To kubernetes lables. The labels will be patched into all kubernetes nodes and also
@@ -65,12 +68,16 @@ class RCStateAppBinding(AuditedModel):
     app = models.OneToOneField(WlApp, on_delete=models.CASCADE)
     state = models.ForeignKey(RegionClusterState, null=True, on_delete=models.CASCADE)
 
+    tenant_id = tenant_id_field_factory()
+
 
 class EgressSpec(AuditedModel):
     wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     replicas = models.IntegerField(default=1)
     cpu_limit = models.CharField(max_length=16)
     memory_limit = models.CharField(max_length=16)
+
+    tenant_id = tenant_id_field_factory()
 
     def build_manifest(self):
         return {
@@ -125,6 +132,8 @@ class EgressRule(AuditedModel):
     # 一般来说，service 与 host 值相同，dport 与 sport 值相同
     src_port = models.IntegerField("源端口")
     service = models.CharField("服务名", max_length=128)
+
+    tenant_id = tenant_id_field_factory()
 
 
 @label_toleration_providers.register_labels

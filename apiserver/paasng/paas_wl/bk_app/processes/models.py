@@ -31,6 +31,7 @@ from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, Pro
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.bkapp_model.entities import ProbeHandler
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.utils.models import make_json_field
@@ -57,6 +58,10 @@ class ProcessSpecPlanManager(models.Manager):
 
 
 class ProcessSpecPlan(models.Model):
+    """
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
     name = models.CharField("进程规格方案名称", max_length=32, db_index=True)
     max_replicas = models.IntegerField("最大副本数")
     limits = JSONField(default={})
@@ -96,6 +101,8 @@ class ProcessSpec(TimestampedModel):
     plan = models.ForeignKey(ProcessSpecPlan, on_delete=models.CASCADE)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
+
+    tenant_id = tenant_id_field_factory()
 
     def save(self, *args, **kwargs):
         if self.target_replicas > self.plan.max_replicas:
@@ -170,6 +177,7 @@ class ProcessSpecManager:
                 proc_command=process.command,
                 autoscaling=process.autoscaling,
                 scaling_config=process.scaling_config.dict() if process.scaling_config else None,
+                tenant_id=self.wl_app.tenant_id,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -274,6 +282,11 @@ ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
 
 
 class ProcessProbe(models.Model):
+    """[multi-tenancy] This model is not tenant-aware.
+
+    # TODO 使用 ModuleProcessSpec.probes 替代
+    """
+
     app = models.ForeignKey("api.App", related_name="process_probe", on_delete=models.CASCADE, db_constraint=False)
     # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
     process_type = models.CharField(max_length=255)

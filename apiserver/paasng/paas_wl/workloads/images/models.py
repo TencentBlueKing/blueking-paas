@@ -23,6 +23,7 @@ from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel, WlApp
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 
 from .entities import ImageCredentialRef
@@ -39,7 +40,9 @@ class AppImageCredentialManager(models.Manager):
         for ref in references:
             pair = AppUserCredential.objects.get(application_id=application.id, name=ref.credential_name)
             AppImageCredential.objects.update_or_create(
-                app=wl_app, registry=ref.image, defaults={"username": pair.username, "password": pair.password}
+                app=wl_app,
+                registry=ref.image,
+                defaults={"username": pair.username, "password": pair.password, "tenant_id": wl_app.tenant_id},
             )
 
 
@@ -51,6 +54,8 @@ class AppImageCredential(UuidAuditedModel):
     registry = models.CharField(max_length=255)
     username = models.CharField(max_length=32, blank=False)
     password = EncryptField(verbose_name="镜像凭证", help_text="镜像凭证")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = AppImageCredentialManager()
 
@@ -64,7 +69,10 @@ class AppUserCredentialManager(models.Manager):
 
 
 class AppUserCredential(UuidAuditedModel):
-    """App owned UserCredential, aka (Username + Password) pair"""
+    """App owned UserCredential, aka (Username + Password) pair
+
+    NOTE: AppUserCredential 存储用户通过表单配置的镜像凭证(适用于云原生应用). 在实际应用时, 会同步到 AppImageCredential 表中.
+    """
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
 
@@ -72,6 +80,8 @@ class AppUserCredential(UuidAuditedModel):
     username = models.CharField(max_length=64, help_text="账号")
     password = EncryptField(verbose_name="镜像凭证", help_text="镜像凭证")
     description = models.TextField(help_text="描述")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = AppUserCredentialManager()
 

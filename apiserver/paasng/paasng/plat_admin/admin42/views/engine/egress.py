@@ -98,6 +98,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
                 replicas=slz.data["replicas"],
                 cpu_limit=slz.data["cpu_limit"],
                 memory_limit=slz.data["memory_limit"],
+                tenant_id=wl_app.tenant_id,
             )
 
         # 批量创建规则，src/dst 的 host/port 保持一致
@@ -109,6 +110,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
                 protocol=r["protocol"],
                 src_port=r["port"],
                 service=r["host"],
+                tenant_id=wl_app.tenant_id,
             )
             for r in slz.data["rules"]
         ]

@@ -74,7 +74,10 @@ class WlAppBackupManager:
 
             # 建立备份关系
             WlAppBackupRel.objects.create(
-                app_environment=self.env, original_id=self.original_wl_app.uuid, backup_id=wl_app.uuid
+                app_environment=self.env,
+                original_id=self.original_wl_app.uuid,
+                backup_id=wl_app.uuid,
+                tenant_id=wl_app.tenant_id,
             )
 
             # 创建对应的 Config 副本. 用于 get_cluster_by_app 中 app.config_set.latest().cluster 逻辑

@@ -19,14 +19,15 @@
 entities 用于存放 Helm Charts 对应的 Values（仅特殊指定部分，非存量）的模型定义
 """
 
-from typing import Dict
+from typing import Any, Dict
 
-from django.conf import settings
 from pydantic import BaseModel, Field
+
+from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
 
 
 class ImageConfig(BaseModel):
-    registry: str = settings.CLUSTER_COMPONENT_IMAGE_REGISTRY
+    registry: str
 
 
 class NodePortsConfig(BaseModel):
@@ -41,16 +42,17 @@ class IngressServiceConfig(BaseModel):
 class BkIngressNginxValues(BaseModel):
     hostNetwork: bool
     image: ImageConfig
-    service: IngressServiceConfig
+    service: IngressServiceConfig = Field(default_factory=IngressServiceConfig)
     nodeSelector: Dict[str, str] = Field(default_factory=dict)
+    resources: Dict[str, Any] = CLUSTER_COMPONENT_DEFAULT_QUOTA
 
 
 class BkAppLogCollectionGlobalValues(BaseModel):
-    elasticSearchHost: str
-    elasticSearchPassword: str
-    elasticSearchPort: int
-    elasticSearchSchema: str
     elasticSearchUsername: str
+    elasticSearchPassword: str
+    elasticSearchScheme: str
+    elasticSearchHost: str
+    elasticSearchPort: int
 
 
 class BkAppFilebeatValues(BaseModel):
@@ -66,10 +68,15 @@ class BkAppLogstashValues(BaseModel):
 
 class BkAppLogCollectionValues(BaseModel):
     global_: BkAppLogCollectionGlobalValues = Field(alias="global")
-    bkapp_filebeat: BkAppFilebeatValues = Field(alias="bkapp-filebeat")
-    bkapp_logstash: BkAppLogstashValues = Field(alias="bkapp-logstash")
+    bkappFilebeat: BkAppFilebeatValues = Field(alias="bkapp-filebeat")
+    bkappLogstash: BkAppLogstashValues = Field(alias="bkapp-logstash")
 
 
 class BkPaaSAppOperatorValues(BaseModel):
     image: ImageConfig
     proxyImage: ImageConfig
+
+
+class BCSGPAValues(BaseModel):
+    image: ImageConfig
+    resources: Dict[str, Any] = CLUSTER_COMPONENT_DEFAULT_QUOTA

@@ -20,6 +20,12 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 # Helm 存储 Release 信息的 Secret 类型
 HELM_RELEASE_SECRET_TYPE = "helm.sh/release.v1"
 
+# 目前 bk-ingress-nginx，bcs-general-pod-autoscaler 没有默认的 Quota，通过平台下发时需默认带上
+CLUSTER_COMPONENT_DEFAULT_QUOTA = {
+    "requests": {"cpu": "250m", "memory": "512Mi"},
+    "limits": {"cpu": "4", "memory": "4Gi"},
+}
+
 
 class ClusterSource(StrStructuredEnum):
     """集群来源"""

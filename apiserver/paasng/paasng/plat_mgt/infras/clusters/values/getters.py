@@ -31,6 +31,9 @@ class ValuesGetter(abc.ABC):
     def __init__(self, release: HelmRelease):
         self.release = release
 
+    def raw(self) -> Dict[str, Any]:
+        return self.release.values
+
     @abc.abstractmethod
     def get(self) -> Dict[str, Any]: ...
 
@@ -52,7 +55,7 @@ class DefaultValuesGetter(ValuesGetter):
     """默认：全量返回 Release 使用的 values"""
 
     def get(self) -> Dict[str, Any]:
-        return self.release.values
+        return self.raw()
 
 
 class BkIngressNginxValuesGetter(ValuesGetter):

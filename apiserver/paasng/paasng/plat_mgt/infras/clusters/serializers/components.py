@@ -63,3 +63,10 @@ class ClusterComponentUpsertInputSLZ(serializers.Serializer):
     """创建/更新集群组件"""
 
     values = serializers.JSONField(help_text="组件安装配置")
+
+
+class ClusterComponentDiffVersionOutputSLZ(serializers.Serializer):
+    """集群组件版本对比"""
+
+    current_version = serializers.CharField(help_text="当前版本", allow_null=True)
+    latest_version = serializers.CharField(help_text="最新版本", allow_null=True)

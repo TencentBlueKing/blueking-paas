@@ -186,8 +186,8 @@
 # - bkpaas-app-operator
 # - bcs-general-pod-autoscaler
 
-## 开发者安装的集群组件镜像 Hub 地址
-# CLUSTER_COMPONENT_IMAGE_REGISTRY: hub.bktencent.com
+## 开发者安装的集群组件 Helm 仓库名（默认为 BCS 的公共仓库 -> public-repo）
+# CLUSTER_COMPONENT_HELM_REPO: public-repo
 
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 

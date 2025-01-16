@@ -51,14 +51,17 @@ class HelmClient:
     def _filter_latest_version(secrets: List[ResourceInstance]) -> List[ResourceInstance]:
         """过滤出最新的 Helm Release"""
         secret_map: Dict[str, ResourceInstance] = {}
+        release_version_map: Dict[str, int] = {}
         for s in secrets:
-            release_name, version = s.labels.get("name"), int(s.labels.get("version", 0))
+            labels = s.metadata.labels
+            release_name, version = labels.get("name"), int(labels.get("version", 0))
             # 忽略异常数据
             if not (release_name and version):
                 continue
 
-            if release_name not in secret_map or version > secret_map[release_name].labels["version"]:
+            if release_name not in release_version_map or version > release_version_map[release_name]:
                 secret_map[release_name] = s
+                release_version_map[release_name] = version
 
         return list(secret_map.values())
 

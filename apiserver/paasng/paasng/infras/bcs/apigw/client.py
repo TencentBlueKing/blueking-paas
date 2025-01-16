@@ -35,6 +35,22 @@ class Group(OperationGroup):
         path="/v4/clustermanager/v1/projects/{projectID}/clusters",
     )
 
+    # 查询 chart 可用的版本
+    get_chart_versions = bind_property(
+        Operation,
+        name="get_chart_versions",
+        method="GET",
+        path="/helmmanager/v1/projects/{projectCode}/repos/{repoName}/charts/{name}/versions",
+    )
+
+    # 更新集群中的 helm release
+    upgrade_release = bind_property(
+        Operation,
+        name="update_release",
+        method="PUT",
+        path="/helmmanager/v1/projects/{projectCode}/clusters/{clusterID}/namespaces/{namespace}/releases/{name}",
+    )
+
 
 class Client(APIGatewayClient):
     """蓝鲸容器平台 API"""

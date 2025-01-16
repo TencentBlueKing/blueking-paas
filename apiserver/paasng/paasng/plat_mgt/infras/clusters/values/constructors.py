@@ -19,13 +19,23 @@ import abc
 from typing import Any, Dict, Type
 
 from paas_wl.infras.cluster.constants import ClusterComponentName
+from paas_wl.infras.cluster.models import Cluster, ClusterElasticSearchConfig
+from paasng.plat_mgt.infras.clusters.values.entities import (
+    BCSGPAValues,
+    BkAppLogCollectionValues,
+    BkIngressNginxValues,
+    BkPaaSAppOperatorValues,
+)
 
 
 class ValuesConstructor(abc.ABC):
     """Chart values 构造器"""
 
+    def __init__(self, cluster: Cluster):
+        self.cluster = cluster
+
     @abc.abstractmethod
-    def construct(self) -> Dict[str, Any]:
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
         """生成特殊指定的 values（部署与默认配置合并 & 覆盖）"""
         ...
 
@@ -44,40 +54,80 @@ def get_values_constructor_cls(name: str) -> Type[ValuesConstructor]:
 
 
 class DefaultValuesConstructor(ValuesConstructor):
-    """默认：使用 Chart 默认 values，无需额外追加"""
+    """默认：直接使用用户提供的 values"""
 
-    def __init__(self, *args, **kwargs): ...
-
-    def construct(self) -> Dict[str, Any]:
-        return {}
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
+        return user_values
 
 
 class BkIngressNginxValuesConstructor(ValuesConstructor):
     """bk-ingress-nginx 需要使用用户填写的配置"""
 
-    def __init__(self, cluster_name: str, values: Dict[str, Any]):
-        """
-        :param values: 用户配置的 values
-        """
-        self.values = values
-
-    def construct(self) -> Dict[str, Any]:
-        return self.values
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
+        values = BkIngressNginxValues(**user_values)
+        # 覆盖默认的镜像源地址
+        values.image.registry = self.cluster.component_image_registry
+        return values.dict(by_alias=True)
 
 
 class BkAppLogCollectionValuesConstructor(ValuesConstructor):
     """bkapp-log-collection 使用 DB 中的配置"""
 
-    def __init__(self, *args, **kwargs): ...
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
+        # 从数据库中获取 ES 集群配置
+        es_cfg = ClusterElasticSearchConfig.objects.filter(cluster=self.cluster).first()
+        if not es_cfg:
+            raise ValueError("elastic search config for cluster %s not found" % self.cluster.name)
 
-    def construct(self) -> Dict[str, Any]:
-        return {}
+        raw_values = {
+            "global": {
+                "elasticSearchUsername": es_cfg.username,
+                "elasticSearchPassword": es_cfg.password,
+                "elasticSearchScheme": es_cfg.scheme,
+                "elasticSearchHost": es_cfg.host,
+                "elasticSearchPort": es_cfg.port,
+            },
+            "bkapp-filebeat": {
+                "image": {
+                    "registry": self.cluster.component_image_registry,
+                },
+            },
+            "bkapp-logstash": {
+                "image": {
+                    "registry": self.cluster.component_image_registry,
+                },
+            },
+        }
+        values = BkAppLogCollectionValues(**raw_values)
+        return values.dict(by_alias=True)
 
 
 class BkPaaSAppOperatorValuesConstructor(ValuesConstructor):
-    """bkpaas-app-operator 使用 Chart 默认配置，只需设置镜像信息"""
+    """bkpaas-app-operator 使用 Chart 默认配置，只需设置镜像源信息"""
 
-    def __init__(self, *args, **kwargs): ...
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
+        # 覆盖默认的镜像源地址
+        raw_values = {
+            "image": {
+                "registry": self.cluster.component_image_registry,
+            },
+            "proxyImage": {
+                "registry": self.cluster.component_image_registry,
+            },
+        }
+        values = BkPaaSAppOperatorValues(**raw_values)
+        return values.dict(by_alias=True)
 
-    def construct(self) -> Dict[str, Any]:
-        return {}
+
+class BCSGPAValuesConstructor(ValuesConstructor):
+    """bcs-general-pod-autoscaler 使用 Chart 默认配置，只需设置镜像源信息"""
+
+    def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
+        # 覆盖默认的镜像源地址
+        raw_values = {
+            "image": {
+                "registry": self.cluster.component_image_registry,
+            }
+        }
+        values = BCSGPAValues(**raw_values)
+        return values.dict(by_alias=True)

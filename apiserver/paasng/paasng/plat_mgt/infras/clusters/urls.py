@@ -72,6 +72,11 @@ urlpatterns = [
         name="plat_mgt.infras.cluster.component.detail",
     ),
     path(
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/operation/diff_version/",
+        views.ClusterComponentViewSet.as_view({"get": "diff_version"}),
+        name="plat_mgt.infras.cluster.component.diff_version",
+    ),
+    path(
         "api/plat_mgt/infras/cluster_allocation_policies/",
         views.ClusterAllocationPolicyViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.cluster_allocation_policy.bulk",

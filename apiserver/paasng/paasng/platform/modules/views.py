@@ -203,6 +203,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # 执行失败
             add_app_audit_record(
                 app_code=application.code,
+                tenant_id=application.tenant_id,
                 user=request.user.pk,
                 action_id=AppAction.MANAGE_MODULE,
                 operation=OperationEnum.DELETE,
@@ -215,6 +216,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 执行成功
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_MODULE,
             operation=OperationEnum.DELETE,
@@ -507,6 +509,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=module.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,

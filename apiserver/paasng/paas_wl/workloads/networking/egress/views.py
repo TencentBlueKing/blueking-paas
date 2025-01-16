@@ -84,6 +84,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE,
@@ -106,6 +107,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=wl_app.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.DELETE,

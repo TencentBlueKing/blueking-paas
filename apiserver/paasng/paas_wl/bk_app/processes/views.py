@@ -139,6 +139,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 审计记录
         add_app_audit_record(
             app_code=self.get_application().code,
+            tenant_id=wl_app.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             module_name=module_env.module.name,

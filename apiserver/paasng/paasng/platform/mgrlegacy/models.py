@@ -71,7 +71,7 @@ class MigrationProcessManager(models.Manager):
 class MigrationProcess(OwnerTimestampedModel):
     """An migration process
 
-    [multi-tenancy] This model is not tenant-aware.
+    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
     """
 
     legacy_app_id = models.IntegerField()
@@ -233,7 +233,7 @@ ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
 
 class CNativeMigrationProcess(OwnerTimestampedModel):
     """
-    [multi-tenancy] This model is not tenant-aware.
+    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
     """
 
     app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
@@ -330,7 +330,7 @@ class MigrationRegister(type):
 class WlAppBackupRel(TimestampedModel):
     """WlApp 的备份关系表
 
-    [multi-tenancy] This model is not tenant-aware.
+    NOTE: 非长期维护功能, 有需要再增加 tenant_id 字段
     """
 
     app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)

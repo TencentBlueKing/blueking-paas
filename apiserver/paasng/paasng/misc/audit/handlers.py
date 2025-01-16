@@ -82,6 +82,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
     if isinstance(instance, Application) and created:
         add_app_audit_record(
             app_code=instance.code,
+            tenant_id=instance.tenant_id,
             # 创建应用未在权限中心注册，因此操作也不能上报到审计中心
             action_id="",
             user=instance.owner,
@@ -92,6 +93,7 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
     elif isinstance(instance, Module) and created:
         add_app_audit_record(
             app_code=instance.application.code,
+            tenant_id=instance.application.tenant_id,
             user=instance.creator,
             action_id=AppAction.MANAGE_MODULE,
             operation=constants.OperationEnum.CREATE,
@@ -109,6 +111,7 @@ def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwar
     result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, constants.ResultCode.ONGOING)
     add_app_audit_record(
         app_code=application.code,
+        tenant_id=application.tenant_id,
         user=deployment.operator,
         action_id=AppAction.BASIC_DEVELOP,
         operation=constants.OperationEnum.DEPLOY,
@@ -135,6 +138,7 @@ def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy
     last_revision_id = last_deploy.revision.id if last_deploy else None
     add_app_audit_record(
         app_code=application.code,
+        tenant_id=application.tenant_id,
         user=deploy.operator,
         action_id=AppAction.BASIC_DEVELOP,
         operation=constants.OperationEnum.DEPLOY,

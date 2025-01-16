@@ -478,6 +478,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # 执行失败
             add_app_audit_record(
                 app_code=application.code,
+                tenant_id=application.tenant_id,
                 user=request.user.pk,
                 action_id=AppAction.DELETE_APPLICATION,
                 operation=OperationEnum.DELETE,
@@ -489,6 +490,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 执行成功
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.DELETE_APPLICATION,
             operation=OperationEnum.DELETE,
@@ -548,6 +550,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.EDIT_BASIC_INFO,
             operation=OperationEnum.MODIFY_BASIC_INFO,
@@ -1621,6 +1624,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,

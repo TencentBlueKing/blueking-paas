@@ -23,7 +23,6 @@ from typing import Dict, List
 from django.utils.encoding import force_bytes
 from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.kres import KNode
 from paas_wl.infras.resources.utils.basic import EnhancedApiClient
 
@@ -32,7 +31,7 @@ from .models import RegionClusterState
 logger = logging.getLogger(__name__)
 
 
-def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> RegionClusterState:
+def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str], tenant_id: str) -> RegionClusterState:
     """Generate region state for a single region"""
 
     nodes = get_nodes(client)
@@ -52,7 +51,6 @@ def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> 
     else:
         return state
 
-    cluster = Cluster.objects.get(name=cluster_name)
     return RegionClusterState.objects.create(
         cluster_name=cluster_name,
         name=name,
@@ -60,7 +58,7 @@ def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> 
         nodes_cnt=len(nodes),
         nodes_name=list(nodes_name),
         nodes_data=[compact_node_data(node.to_dict()) for node in nodes],
-        tenant_id=cluster.tenant_id,
+        tenant_id=tenant_id,
     )
 
 

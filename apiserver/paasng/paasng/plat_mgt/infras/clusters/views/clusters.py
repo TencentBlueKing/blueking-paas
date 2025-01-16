@@ -276,7 +276,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         client = get_client_by_cluster_name(cluster_name=cluster.name)
 
         ignore_labels = {"node-role.kubernetes.io/master": "true"}
-        state = generate_state(cluster.name, client, ignore_labels)
+        state = generate_state(cluster.name, client, ignore_labels, cluster.tenant_id)
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

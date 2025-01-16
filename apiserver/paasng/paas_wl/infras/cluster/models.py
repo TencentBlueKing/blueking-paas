@@ -256,7 +256,7 @@ class ClusterAllocationPolicy(UuidAuditedModel):
         help_text="规则分配优先策略", default=list
     )
 
-    tenant_id = tenant_id_field_factory()
+    tenant_id = tenant_id_field_factory(unique=True)
 
 
 class ClusterElasticSearchConfig(UuidAuditedModel):

@@ -290,17 +290,17 @@ class BkPluginAppQuerySet:
         self,
         search_term: str,
         order_by: List[str],
+        tenant_id: str,
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
         tag_id: Optional[int] = None,
-        tenant_id: Optional[str] = None,
     ) -> QuerySet:
         """filter queryset by given term
 
         :param has_deployed: If given, only return applications whose `has_deployed` property matches
         :param distributor_code_name: If given, only return results which have granted permissions to distributor
         """
-        applications = Application.objects.filter(is_plugin_app=True)
+        applications = Application.objects.filter(is_plugin_app=True, tenant_id=tenant_id)
         # Reuse the original application filter
         # Use `prefetch_related` to reduce database queries
         applications = (
@@ -314,8 +314,6 @@ class BkPluginAppQuerySet:
             # tag_id 的值为未分类时，过滤所有没有分类信息的插件
             tag_id = None if tag_id == PluginTagIdType.UNTAGGED.value else tag_id
             applications = applications.filter(bk_plugin_profile__tag=tag_id)
-        if tenant_id:
-            applications = applications.filter(tenant_id=tenant_id)
         return applications
 
 

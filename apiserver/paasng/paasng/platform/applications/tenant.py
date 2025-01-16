@@ -15,11 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
+from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import Tenant, get_tenant
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, Tenant, get_tenant
 from paasng.infras.accounts.models import User
 
 
@@ -42,3 +44,21 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
 
     app_tenant_id = "" if app_tenant_mode == AppTenantMode.GLOBAL else tenant.id
     return app_tenant_mode, app_tenant_id, tenant
+
+
+def vailidate_tenant_id_header(request: HttpRequest) -> str:
+    """多租户环境下开发者中心注册的网关都是全租户网关，可以被所有应用调用，在获取列表类的应用态 API 中需要处理请求头中的租户 ID
+
+    :param request: HTTP 请求，多租户模式下请求头中必须有租户 ID 信息
+    :return: 租户 ID，如果未启用多租户模式则返回默认租户 ID
+    :raises ValidationError: 多租户模式下，请求头中未包含租户 ID 字段
+    """
+    # 未开启多租户，请求头中不一定有租户ID，直接返回默认的租户 ID 即可
+    if not settings.ENABLE_MULTI_TENANT_MODE:
+        return DEFAULT_TENANT_ID
+
+    tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+    if not tenant_id:
+        raise ValidationError(_("请求头中未包含 X-Bk-Tenant-Id 字段"))
+
+    return tenant_id

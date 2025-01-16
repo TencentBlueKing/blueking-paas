@@ -21,13 +21,16 @@ from unittest import mock
 import arrow
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
+from rest_framework.reverse import reverse
 
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import ServiceObjNotFound
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.plat_admin.system.applications import (
     query_default_apps_by_ids,
     query_legacy_apps_by_ids,
@@ -42,7 +45,7 @@ from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils.auth import create_user
 from tests.utils.basic import generate_random_string
-from tests.utils.helpers import create_legacy_application
+from tests.utils.helpers import create_app, create_legacy_application
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -52,7 +55,7 @@ class TestQueryDefaultApps:
 
     def test_normal(self, bk_app):
         results = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True, tenant_id=DEFAULT_TENANT_ID
         )
         item = results[bk_app.code]
         assert item.name == bk_app.name
@@ -63,10 +66,10 @@ class TestQueryDefaultApps:
         bk_app.save()
 
         active_apps = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True
+            ids=[bk_app.code], include_inactive_apps=False, include_developers_info=True, tenant_id=DEFAULT_TENANT_ID
         )
         all_apps = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True
+            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True, tenant_id=DEFAULT_TENANT_ID
         )
         item = all_apps[bk_app.code]
         assert not active_apps
@@ -79,7 +82,6 @@ class TestQueryLegacyApps:
 
     def test_normal(self):
         app = create_legacy_application()
-
         results = query_legacy_apps_by_ids(ids=[app.code], include_inactive_apps=False, include_developers_info=True)
         item = results[app.code]
         assert item.name == app.name
@@ -92,7 +94,10 @@ class TestQueryUniApps:
         legacy_app = create_legacy_application()
 
         results = query_uni_apps_by_ids(
-            ids=[bk_app.code, legacy_app.code], include_inactive_apps=False, include_developers_info=True
+            ids=[bk_app.code, legacy_app.code],
+            include_inactive_apps=False,
+            include_developers_info=True,
+            tenant_id=DEFAULT_TENANT_ID,
         )
         assert len(results) == 2
         assert results[bk_app.code].name == bk_app.name
@@ -100,17 +105,6 @@ class TestQueryUniApps:
         assert results[bk_app.code].type == ApplicationType.DEFAULT.value
         assert results[legacy_app.code].name == legacy_app.name
         assert results[legacy_app.code].type == ApplicationType.DEFAULT.value
-
-    def test_query_by_tenant_id(self, bk_app):
-        default_tenant_apps = query_uni_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True, tenant_id="default"
-        )
-        assert default_tenant_apps[bk_app.code].name == bk_app.name
-
-        tenant2_apps = query_default_apps_by_ids(
-            ids=[bk_app.code], include_inactive_apps=True, include_developers_info=True, tenant_id="tenant2"
-        )
-        assert tenant2_apps == {}
 
     @pytest.mark.parametrize(
         ("keyword", "expected_count", "language", "name_field", "tenant_id"),
@@ -138,6 +132,100 @@ class TestQueryUniApps:
 
             uni_apps_dict = {app.code: app.name for app in uni_apps_list}
             uni_apps_dict[keyword_app.code] = attrgetter(name_field)(keyword_app)
+
+
+class TestTenantSysApi:
+    @pytest.fixture()
+    def tenant1_bk_user_app(self, bk_user):
+        app = create_app(owner_username=bk_user.username)
+        app.tenant_id = "tenant1"
+        app.save()
+        return app
+
+    @pytest.fixture()
+    def tenant2_app(self):
+        app = create_app()
+        app.tenant_id = "tenant2"
+        app.save()
+        return app
+
+    @pytest.mark.parametrize(
+        ("enable_multi_tenant", "header_tenant_id", "status_code", "expect_tenant_id"),
+        [
+            # 未开启多租户，请求头中不用传租户 ID，只返回租户 ID 为 default 的应用
+            (False, "", 200, DEFAULT_TENANT_ID),
+            # 开启多租户，请求头中不用传租户 ID，抛出 400 异常
+            (True, "", 400, ""),
+            (True, "tenant1", 200, "tenant1"),
+            (True, "tenant2", 200, "tenant2"),
+        ],
+    )
+    def test_query_uni_apps(
+        self,
+        sys_api_client,
+        bk_app,
+        tenant1_bk_user_app,
+        tenant2_app,
+        enable_multi_tenant,
+        header_tenant_id,
+        status_code,
+        expect_tenant_id,
+    ):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=enable_multi_tenant):
+            url = reverse("sys.api.uni_applications.list_by_ids")
+            headers = {
+                "HTTP_X_BK_TENANT_ID": header_tenant_id,
+            }
+            response = sys_api_client.get(
+                url, {"id": [bk_app.code, tenant1_bk_user_app.code, tenant2_app.code]}, **headers
+            )
+            assert response.status_code == status_code
+
+            if response.status_code == 200:
+                data = response.json()
+                for d in data:
+                    if d is not None:
+                        assert d["tenant_id"] == expect_tenant_id
+
+    @pytest.mark.usefixtures("bk_app")
+    @pytest.mark.usefixtures("tenant1_bk_user_app")
+    @pytest.mark.usefixtures("tenant2_app")
+    @pytest.mark.parametrize(
+        ("enable_multi_tenant", "header_tenant_id", "status_code", "expect_count", "expect_tenant_id"),
+        [
+            # 未开启多租户，请求头中不用传租户 ID，只返回租户 ID 为 default 的应用
+            (False, "", 200, 1, DEFAULT_TENANT_ID),
+            # 开启多租户，请求头中不用传租户 ID，抛出 400 异常
+            (True, "", 400, 0, ""),
+            (True, "tenant1", 200, 1, "tenant1"),
+            # # tenant2 的应用不属于 bk_user，所以也查不到
+            (True, "tenant2", 200, 0, "tenant2"),
+        ],
+    )
+    def test_query_by_username(
+        self,
+        sys_api_client,
+        bk_user,
+        enable_multi_tenant,
+        header_tenant_id,
+        status_code,
+        expect_count,
+        expect_tenant_id,
+    ):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=enable_multi_tenant):
+            url = reverse("sys.api.uni_applications.list_by_username")
+            headers = {
+                "HTTP_X_BK_TENANT_ID": header_tenant_id,
+            }
+            response = sys_api_client.get(url, {"username": bk_user.username}, **headers)
+            assert response.status_code == status_code
+
+            if response.status_code == 200:
+                data = response.json()
+                assert len(data) == expect_count
+                for d in data:
+                    if d is not None:
+                        assert d["tenant_id"] == expect_tenant_id
 
 
 class TestGetContactInfo:

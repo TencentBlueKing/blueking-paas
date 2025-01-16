@@ -53,6 +53,7 @@ from paasng.plat_admin.system.serializers import (
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.operators import get_contact_info_by_appids
+from paasng.platform.applications.tenant import vailidate_tenant_id_header
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.utils.error_codes import error_codes
 
@@ -126,7 +127,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         include_market_info = request_data["include_market_info"]
 
         # 获取请求头中的租户信息
-        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+        tenant_id = vailidate_tenant_id_header(request)
         # 查询应用信息
         uni_apps = query_uni_apps_by_ids(app_ids, include_inactive_apps, include_developers_info, tenant_id)
         # 所有应用联系人信息（不包含 PaaS2.0 应用）
@@ -155,7 +156,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
 
         username = data["username"]
         # 获取请求头中的租户信息
-        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+        tenant_id = vailidate_tenant_id_header(request)
         uni_apps = query_uni_apps_by_username(username, tenant_id)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
@@ -176,7 +177,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         keyword = data.get("keyword")
         include_inactive_apps = data.get("include_inactive_apps")
         # 获取请求头中的租户信息
-        tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
+        tenant_id = vailidate_tenant_id_header(request)
         applications = query_uni_apps_by_keyword(keyword, offset, limit, include_inactive_apps, tenant_id)
 
         # Paginate results

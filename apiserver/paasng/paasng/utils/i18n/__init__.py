@@ -35,7 +35,6 @@ def to_translated_field(field_name: str, language_code: Optional[str] = None) ->
 
 
 def gettext(translated: TranslatedValue) -> str:
-    return ""
     return translated[get_language()]
 
 

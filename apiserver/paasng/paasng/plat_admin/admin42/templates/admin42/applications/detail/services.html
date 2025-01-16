@@ -10,7 +10,7 @@
     <bk-table style="margin-top: 15px;"
         :data="service_instance_list"
         :cell-class-name="cellStyleCallback">
-        <bk-table-column label="服务logo" prop="module">
+        <bk-table-column label="服务logo" prop="module" width="100px">
             <template slot-scope="props">
                 <img class="service-logo" :src="props.row.service.logo"/>
             </template>
@@ -98,27 +98,26 @@
                 this.fetchData()
             },
             methods: {
-                fetchData: function () {
+                async fetchData () {
                     if (this.loading) {
                         return;
                     }
     
                     this.loading = true;
     
-                    Promise.all([
-                        this.$http.get(URLRouter.list),
-                        this.$http.get(URLRouter.list_unbound)
-                    ])
-                    .then(([listResp, listUnboundResp]) => { 
+                    try {
+                        const [listResp, listUnboundResp] = await Promise.all([
+                            this.$http.get(URLRouter.list),
+                            this.$http.get(URLRouter.list_unbound)
+                        ]);
+                        
                         this.service_instance_list = listResp || [];
                         this.unbound_service_instance_list = listUnboundResp || [];
-                    })
-                    .catch(err => {
+                    } catch (err) {
                         console.error("Error fetching data:", err);
-                    })
-                    .finally(() => {
+                    } finally {
                         this.loading = false;
-                    });
+                    }
                 },
                 handleProvision: function (row) {
                     let url = URLRouter.provision.replace("${module}", row.module).replace("${env}", row.environment.environment).replace("${service_id}", row.service.uuid)
@@ -142,7 +141,7 @@
                                 this.$bkMessage({theme: 'error', message: '分配增强服务实例失败.'})
                                 return false
                             } finally {
-                            await this.fetchData()
+                                await this.fetchData()
                             }
                         }
                     })

@@ -25,7 +25,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound, SvcAttachmentDoesNotExist
+from paasng.accessories.servicehub.exceptions import (
+    ServiceObjNotFound,
+    SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
+)
 from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
 from paasng.accessories.servicehub.services import EngineAppInstanceRel
@@ -47,6 +51,7 @@ from paasng.plat_admin.admin42.serializers.services import (
     ServiceInstanceBindInfoSLZ,
     ServiceInstanceSLZ,
     ServiceObjSLZ,
+    UnboundServiceInstanceInfoSLZ,
 )
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
@@ -60,29 +65,6 @@ class ApplicationServicesView(ApplicationDetailBaseView):
     template_name = "admin42/applications/detail/services.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "增强服务"
-
-    def get_context_data(self, **kwargs):
-        kwargs = super().get_context_data(**kwargs)
-        service_instance_list = []
-        for module in self.get_application().modules.all():
-            for env in module.envs.all():
-                for rel in mixed_service_mgr.list_all_rels(engine_app=env.engine_app):
-                    instance = None
-                    if rel.is_provisioned():
-                        instance = rel.get_instance()
-
-                    service_instance_list.append(
-                        dict(
-                            environment=env,
-                            module=env.module.name,
-                            instance=instance,
-                            service=rel.get_service(),
-                            plan=rel.get_plan(),
-                        )
-                    )
-
-        kwargs["service_instance_list"] = ServiceInstanceBindInfoSLZ(service_instance_list, many=True).data
-        return kwargs
 
 
 class ApplicationServicesManageViewSet(GenericViewSet):
@@ -175,6 +157,46 @@ class ApplicationServicesManageViewSet(GenericViewSet):
                 module_name=module_name,
                 data_before=data_before,
             )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ApplicationUnboundServicesManageViewSet(GenericViewSet):
+    """应用增强服务管理-回收管理API"""
+
+    # schema = None
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list(self, request, code):
+        result = []
+        application = get_object_or_404(Application, code=code)
+        for module in application.modules.all():
+            for env in module.envs.all():
+                for rel in mixed_service_mgr.list_unbound_instance_rels(engine_app=env.engine_app):
+                    instance = rel.get_instance()
+                    if not instance:
+                        # 如果已经回收了，获取不到 instance，跳过
+                        continue
+
+                    result.append(
+                        dict(
+                            environment=env.environment,
+                            module=module.name,
+                            instance=instance,
+                            service=mixed_service_mgr.get_or_404(rel.db_obj.service_id),
+                        )
+                    )
+        return Response(UnboundServiceInstanceInfoSLZ(result, many=True).data)
+
+    def recycle_resource(self, request, code, service_id, instance_id):
+        service = mixed_service_mgr.get_or_404(service_id)
+
+        try:
+            rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(service, instance_id)
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        rel.recycle_resource()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

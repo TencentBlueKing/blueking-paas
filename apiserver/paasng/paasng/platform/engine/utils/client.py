@@ -14,8 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Engine services module
-"""
+"""Engine services module"""
+
 from typing import Dict, Optional
 
 from django.utils.functional import cached_property
@@ -53,6 +53,7 @@ class EngineDeployClient:
             image=image,
             artifact_type=artifact_type,
             artifact_metadata=artifact_metadata or {},
+            tenant_id=self.wl_app.tenant_id,
         )
         return str(build.uuid)
 
@@ -61,5 +62,5 @@ class EngineDeployClient:
         AppImageCredential.objects.update_or_create(
             app=self.wl_app,
             registry=registry,
-            defaults={"username": username, "password": password},
+            defaults={"username": username, "password": password, "tenant_id": self.wl_app.tenant_id},
         )

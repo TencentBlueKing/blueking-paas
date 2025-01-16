@@ -122,6 +122,6 @@ class TestUpdateImageRuntimeConfig:
             "revision": "1",
             "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         }
-        wl_build = Build.objects.create(**build_params)
+        wl_build = Build.objects.create(tenant_id=bk_module.tenant_id, **build_params)
         bk_deployment.update_fields(build_id=wl_build.pk)
         update_image_runtime_config(bk_deployment)

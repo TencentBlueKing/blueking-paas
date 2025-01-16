@@ -23,7 +23,8 @@ import cattrs
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
-from paasng.core.tenant.constants import API_HERDER_TENANT_ID
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID, TenantStatus
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.bk_user import entities
 from paasng.infras.bk_user.apigw.client import Client
 from paasng.infras.bk_user.apigw.client import Group as BkUserGroup
@@ -54,6 +55,10 @@ class BkUserClient:
 
     def list_tenants(self) -> List[entities.Tenant]:
         """获取租户列表"""
+        # 如果没有启用多租户模式，则一直只会有一个默认租户
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return [entities.Tenant(id=DEFAULT_TENANT_ID, name=DEFAULT_TENANT_ID, status=TenantStatus.ENABLED)]
+
         with wrap_request_exc():
             resp = self.client.list_tenants()
 

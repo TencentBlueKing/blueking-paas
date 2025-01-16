@@ -163,6 +163,7 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_APP_MARKET,
             operation=OperationEnum.MODIFY_MARKET_INFO,
@@ -187,6 +188,7 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         operation = OperationEnum.RELEASE_TO_MARKET if enabled else OperationEnum.OFFLINE_MARKET
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_APP_MARKET,
             operation=operation,
@@ -208,6 +210,7 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_APP_MARKET,
             operation=OperationEnum.MODIFY_MARKET_URL,

@@ -313,6 +313,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         data = SvcDiscConfigSLZ(svc_disc).data
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
@@ -377,6 +378,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         data = DomainResolutionSLZ(domain_resolution).data
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,

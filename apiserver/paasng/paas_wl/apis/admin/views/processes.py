@@ -134,6 +134,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
             "target_replicas": 1,
             "target_status": ProcessTargetStatus.START,
             "plan": plan,
+            "tenant_id": wl_app.tenant_id,
         }
 
         process_spec, _ = ProcessSpec.objects.get_or_create(

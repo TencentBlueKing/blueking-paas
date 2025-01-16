@@ -86,6 +86,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE,
@@ -111,6 +112,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.ENABLE if enabled else OperationEnum.DISABLE,
@@ -146,6 +148,7 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.DELETE,

@@ -36,6 +36,8 @@ class PluginGradeManager(AuditedModel):
     IAM 分级管理员与插件的关系
 
     分级管理员管理用户加入用户组的申请，理论上来说，某个应用的分级管理员与管理者的成员是一致的
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
@@ -53,6 +55,8 @@ class PluginUserGroup(AuditedModel):
     IAM 用户组与插件开发中心用户组的关系
 
     每个插件默认会有 2 个用户组（不可删除）：管理者，开发者
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)

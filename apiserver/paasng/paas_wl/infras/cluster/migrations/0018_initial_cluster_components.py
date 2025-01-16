@@ -42,7 +42,7 @@ def forwards_func(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("cluster", "0016_alter_cluster_exposed_url_type_and_more"),
+        ("cluster", "0017_clustercomponent"),
     ]
 
     operations = [migrations.RunPython(forwards_func)]

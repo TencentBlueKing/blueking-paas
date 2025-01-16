@@ -54,7 +54,7 @@ class AppUserCredentialViewSet(ApplicationCodeInPathMixin, GenericViewSet):
         slz = UsernamePasswordPairSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         try:
-            instance = slz.save(application_id=application.id)
+            instance = slz.save(application_id=application.id, tenant_id=application.tenant_id)
         except IntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
         return Response(data=UsernamePasswordPairSLZ(instance).data, status=status.HTTP_201_CREATED)

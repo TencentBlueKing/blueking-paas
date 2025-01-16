@@ -225,6 +225,7 @@ class DefaultBuildProcessExecutor(DeployStep):
             bkapp_revision_id=bkapp_revision_id,
             artifact_type=artifact_type,
             artifact_metadata=artifact_metadata,
+            tenant_id=self.wl_app.tenant_id,
         )
         mark_as_latest_artifact(build_instance)
 
@@ -423,6 +424,7 @@ class PipelineBuildProcessExecutor(DeployStep):
                 "use_dockerfile": metadata.get("use_dockerfile", False),
                 "use_cnb": metadata.get("use_cnb", False),
             },
+            tenant_id=self.wl_app.tenant_id,
         )
         mark_as_latest_artifact(build_inst)
 

@@ -49,6 +49,7 @@ def upsert_app_monitor(
             "port": port,
             "target_port": target_port,
             "is_enabled": True,
+            "tenant_id": env.tenant_id,
         },
         app=env.wl_app,
     )

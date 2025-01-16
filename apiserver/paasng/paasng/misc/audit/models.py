@@ -19,6 +19,7 @@ from typing import Optional
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
@@ -131,7 +132,10 @@ class BaseOperation(UuidAuditedModel):
 
 
 class AdminOperationRecord(BaseOperation):
-    """后台管理操作记录，用于记录平台管理员在 Admin 系统上的操作"""
+    """后台管理操作记录，用于记录平台管理员在 Admin 系统上的操作
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     app_code = models.CharField(max_length=32, verbose_name="应用ID, 非必填", null=True, blank=True)
 
@@ -157,6 +161,8 @@ class AppOperationRecord(BaseOperation):
         help_text="开发者中心注册的资源都为蓝鲸应用",
     )
 
+    tenant_id = tenant_id_field_factory()
+
     @property
     def application(self) -> Optional[Application]:
         return Application.default_objects.filter(code=self.app_code).first()
@@ -172,3 +178,5 @@ class AppLatestOperationRecord(models.Model):
     )
     operation = models.OneToOneField(AppOperationRecord, on_delete=models.CASCADE, db_constraint=False)
     latest_operated_at = models.DateTimeField(db_index=True)
+
+    tenant_id = tenant_id_field_factory()

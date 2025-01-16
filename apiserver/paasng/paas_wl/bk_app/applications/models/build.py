@@ -34,6 +34,7 @@ from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
 
@@ -81,6 +82,8 @@ class Build(UuidAuditedModel):
     artifact_metadata = models.JSONField(
         default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息"
     )
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         get_latest_by = "created"
@@ -252,6 +255,7 @@ class BuildProcessManager(models.Manager):
             revision=version_info.revision,
             branch=version_info.version_name,
             output_stream=OutputStream.objects.create(),
+            tenant_id=wl_app.tenant_id,
         )
         return build_process
 
@@ -283,6 +287,9 @@ class BuildProcess(UuidAuditedModel):
 
     # A BuildProcess will result in a build and release, if succeeded
     build = models.OneToOneField("Build", null=True, related_name="build_process", on_delete=models.CASCADE)
+
+    tenant_id = tenant_id_field_factory()
+
     objects = BuildProcessManager()
 
     class Meta:

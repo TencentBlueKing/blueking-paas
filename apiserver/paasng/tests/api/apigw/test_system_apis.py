@@ -109,7 +109,7 @@ class TestQueryUniApps:
     @pytest.mark.parametrize(
         ("keyword", "expected_count", "language", "name_field", "tenant_id"),
         [
-            ("", 2, "", "name", ""),
+            ("", 2, "", "name", "default"),
             ("bk_app", 1, "en", "name_en", "default"),
             ("legacy_app", 1, "en", "name", "default"),
         ],

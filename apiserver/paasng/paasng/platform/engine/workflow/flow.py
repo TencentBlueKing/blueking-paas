@@ -273,11 +273,6 @@ class DeploymentCoordinator:
         """Get current deployment"""
         deployment_id = self.redis.get(self.key_name_deployment)
         if deployment_id:
-            # 若存在部署进程，但数据上报已经超时，则认为部署失败，主动解锁并失效
-            if self.status_polling_timeout:
-                self.release_lock()
-                return None
-
             return Deployment.objects.get(pk=force_str(deployment_id))
         return None
 

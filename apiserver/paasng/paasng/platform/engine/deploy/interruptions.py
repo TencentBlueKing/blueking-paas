@@ -13,6 +13,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
 from bkpaas_auth.models import User
 from django.utils import timezone
@@ -22,6 +23,9 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_build.bg_build import interrupt_build_proc
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.workflow import DeploymentCoordinator
+
+logger = logging.getLogger(__name__)
 
 
 def interrupt_deployment(deployment: Deployment, user: User):
@@ -48,6 +52,19 @@ def interrupt_deployment(deployment: Deployment, user: User):
     deployment.build_int_requested_at = now
     deployment.release_int_requested_at = now
     deployment.save(update_fields=["build_int_requested_at", "release_int_requested_at", "updated"])
+
+    coordinator = DeploymentCoordinator(deployment.app_environment)
+    if (
+        (current_deployment := coordinator.get_current_deployment())
+        and coordinator.status_polling_timeout
+        and current_deployment.pk == deployment.pk
+    ):
+        # 若部署进程的数据上报已经超时(超时仅出现在构建和 hook 环节)，则认为部署失败，主动解锁
+        # Release deploy lock
+        try:
+            coordinator.release_lock(expected_deployment=deployment)
+        except ValueError as e:
+            logger.warning("Failed to release the deployment lock: %s", e)
 
     if deployment.build_process_id:
         try:

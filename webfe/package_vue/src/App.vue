@@ -3,7 +3,7 @@
     id="app"
     :style="{
       '--app-notice-height': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT : 0}px`,
-      '--app-content-pd': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
+      '--app-content-pd': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 52 : 52}px`,
       'background-color': appBackgroundColor,
     }"
   >

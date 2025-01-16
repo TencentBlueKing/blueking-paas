@@ -1,0 +1,371 @@
+<template>
+  <div class="platform-config">
+    <paas-content-loader
+      placeholder="apps-loading"
+      :offset-top="30"
+      :is-loading="isContentLoading"
+    >
+      <div class="top-box flex-row">
+        <SwitchDisplay
+          class="mr10"
+          :list="filterList"
+          :active="filterValue"
+          @change="handlerChange"
+        />
+        <bk-input
+          v-model="searchValue"
+          :placeholder="$t('搜索租户')"
+          :right-icon="'bk-icon icon-search'"
+          style="width: 480px"
+        ></bk-input>
+      </div>
+      <bk-table
+        :data="platformList"
+        :size="'small'"
+        :shift-multi-checked="true"
+        dark-header
+        :row-class-name="isConfigured"
+        style="width: 100%"
+        ext-cls="platform-table-cls"
+      >
+        <bk-table-column
+          :label="$t('租户')"
+          prop="name"
+          width="160"
+        ></bk-table-column>
+        <bk-table-column
+          :label="$t('集群分配')"
+          class-name="cluster-allocation-cls"
+        >
+          <template slot-scope="{ row }">
+            <template v-if="row.policies">
+              <!-- 统一分配 -->
+              <div
+                v-if="row.policies.type === 'uniform'"
+                class="tag-list"
+              >
+                <!-- 按环境分配 env_specific -->
+                <template v-if="row.policies.allocation_policy?.env_specific">
+                  <span
+                    v-for="item in row.policies.allocation_policy.env_clusters.stag"
+                    class="tag"
+                  >
+                    集群（预发布环境）：{{ item }}
+                  </span>
+                  <span
+                    v-for="item in row.policies.allocation_policy.env_clusters.prod"
+                    class="tag"
+                  >
+                    集群（生产环境）：{{ item }}
+                  </span>
+                </template>
+                <!-- 不按环境分配 -->
+                <template v-else>
+                  <span
+                    v-for="item in row.policies.allocation_policy.clusters"
+                    class="tag"
+                  >
+                    集群：{{ item }}
+                  </span>
+                </template>
+              </div>
+              <!-- 按规则 -->
+              <div
+                v-else
+                class="rules-list"
+              >
+                <div
+                  class="row-rules"
+                  v-for="(item, i) in row.policies?.allocation_precedence_policies"
+                  :key="i"
+                >
+                  <!-- 一行规则 -->
+                  <span class="tag if">
+                    {{ getConditionalType(row.policies?.allocation_precedence_policies?.length, i) }}
+                  </span>
+                  <!-- 匹配规则 -->
+                  <span
+                    v-for="(k, v) in item.matcher"
+                    class="tag rule"
+                    :key="k"
+                  >
+                    {{ `${k} = ${v}` }}
+                  </span>
+                  <!-- 集群-不按环境 -->
+                  <template v-if="item.policy?.env_specific">
+                    <span
+                      v-for="item in item.policy.env_clusters?.stag"
+                      class="tag"
+                      :key="item"
+                    >
+                      集群（预发布环境）：{{ item }}
+                    </span>
+                    <span
+                      v-for="item in item.policy.env_clusters?.prod"
+                      class="tag"
+                      :key="item"
+                    >
+                      集群（生产环境）：{{ item }}
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span
+                      v-for="item in item.policy.clusters"
+                      class="tag"
+                      :key="item"
+                    >
+                      集群：{{ item }}
+                    </span>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <div
+              v-else
+              class="not-configured"
+            >
+              <span class="small-circle"></span>
+              <span>{{ $t('未配置，应用无法部署') }}，</span>
+              <bk-button
+                theme="primary"
+                text
+                @click="handleClusterAllocation(row)"
+              >
+                {{ $t('配置') }}
+              </bk-button>
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          label="操作"
+          width="150"
+        >
+          <template
+            slot-scope="{ row }"
+            v-if="row.policies"
+          >
+            <bk-button
+              theme="primary"
+              text
+              @click="handleClusterAllocation(row)"
+            >
+              {{ $t('编辑') }}
+            </bk-button>
+          </template>
+        </bk-table-column>
+      </bk-table>
+    </paas-content-loader>
+    <ClusterAllocationSideslider
+      :show.sync="isShowSideslider"
+      :data="operationRow"
+    />
+  </div>
+</template>
+
+<script>
+import SwitchDisplay from './comps/switch-display.vue';
+import ClusterAllocationSideslider from './comps/cluster-allocation-sideslider.vue';
+export default {
+  name: 'PlatformConfig',
+  components: {
+    SwitchDisplay,
+    ClusterAllocationSideslider,
+  },
+  data() {
+    return {
+      filterValue: 'all',
+      filterList: [
+        { name: 'all', label: '全部', count: 0 },
+        { name: 'notConfigured', label: '未配置', count: 0 },
+        { name: 'configured', label: '已配置', count: 0 },
+      ],
+      searchValue: '',
+      isTableLoading: false,
+      isContentLoading: true,
+      platformList: [],
+      isShowSideslider: false,
+      operationRow: {},
+      // 全量集群策略
+      allPolicies: [],
+      // 所有租户
+      tenants: [],
+      // 可用集群
+      availableClusters: [],
+    };
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.isTableLoading = true;
+      Promise.all([this.getTenants(), this.getClusterAllocationPolicies()]).finally(() => {
+        this.isTableLoading = false;
+        this.isContentLoading = false;
+        // 将策略与租户数据重组
+        this.platformList = this.tenants
+          .map((tenant) => ({
+            ...tenant,
+            policies: this.allPolicies.find((v) => v.tenant_id === tenant.id) ?? null,
+          }))
+          .sort((a, b) => {
+            if (a.policies === null && b.policies !== null) {
+              return -1;
+            }
+            if (a.policies !== null && b.policies === null) {
+              return 1;
+            }
+            return 0;
+          });
+      });
+    },
+    handlerChange(data) {
+      this.filterValue = data.name;
+    },
+    // 是否配置，未配置添加指定样式
+    isConfigured({ row }) {
+      return !row.policies ? 'cell-not-configured' : '';
+    },
+    // 获取当前规则语句分支
+    getConditionalType(arrayLength, currentIndex) {
+      if (currentIndex === 0) {
+        return 'if';
+      } else if (currentIndex === arrayLength - 1) {
+        return 'else';
+      } else {
+        return 'else if';
+      }
+    },
+    // 获取所有租户
+    async getTenants() {
+      try {
+        const res = await this.$store.dispatch('tenant/getTenants');
+        this.tenants = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取全量集群策略，一个租户最多有一个策略
+    async getClusterAllocationPolicies() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterAllocationPolicies');
+        this.allPolicies = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取当前租户可用的集群
+    async getAvailableClusters() {
+      try {
+        const res = await this.$store.dispatch('tenant/getAvailableClusters');
+        // -----s
+        res.push(
+          ...[
+            { name: 'test' },
+            { name: 'ieod-cluster-test' },
+            { name: 'bk-test-ieod' },
+            { name: 'ieod-web-test222222' },
+          ]
+        );
+        // -----end
+        this.availableClusters = res;
+        // 存入store
+        this.$store.commit('tenant/updateAvailableClusters', res);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 集群分配
+    async handleClusterAllocation(row) {
+      this.operationRow = row;
+      // 前置判断是否存在可分配集群
+      await this.getAvailableClusters();
+      if (this.availableClusters.length) {
+        this.isShowSideslider = true;
+        return;
+      }
+      // 如果没有集群，出现居中弹窗引导
+    },
+  },
+};
+</script>
+
+<style lang="scss" scoped>
+.platform-config {
+  .filter-group {
+    width: fit-content;
+    background: #eaebf0;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    .group-item {
+      height: 24px;
+      line-height: 24px;
+      padding: 0 12px;
+      font-size: 12px;
+      background: #eaebf0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      &.active {
+        background: #fff;
+        color: #3a84ff;
+      }
+    }
+  }
+  .platform-table-cls {
+    margin-top: 16px;
+    /deep/ .bk-table-body-wrapper .cell-not-configured {
+      background: #fdf4e8;
+    }
+    .not-configured {
+      color: #e38b02;
+      .small-circle {
+        display: inline-block;
+        margin-right: 8px;
+        width: 8px;
+        height: 8px;
+        background: #fce5c0;
+        border: 1px solid #f59500;
+        border-radius: 50%;
+      }
+    }
+  }
+  .tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    font-size: 12px;
+    padding: 0 8px;
+    color: #63656e;
+    background: #f0f1f5;
+    border-radius: 2px;
+    &.if {
+      color: #3a84ff;
+      background: #edf4ff;
+    }
+    &.rule {
+      color: #788779;
+      background: #dde9de;
+    }
+  }
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 10px 0;
+  }
+  .rules-list {
+    margin: 10px 0;
+    .row-rules {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+  }
+}
+</style>

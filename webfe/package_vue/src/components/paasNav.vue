@@ -82,6 +82,12 @@ export default {
         return [];
       },
     },
+    groups: {
+      type: Array,
+      default() {
+        return [];
+      },
+    },
   },
   data() {
     return {
@@ -93,22 +99,24 @@ export default {
   computed: {
     // 创建分组结构
     displayNavTree() {
-      const groups = [
-        {
-          name: this.$t('开发者工具'),
+      // 转换 receivedGroups 格式为所需的格式
+      const groups = this.groups.map((group) => {
+        const key = Object.keys(group)[0];
+        return {
+          name: group[key],
+          groupId: key,
           children: [],
-        },
-        {
-          name: this.$t('服务'),
-          children: [],
-        },
-      ];
+        };
+      });
       // 遍历 navTree 进行分组
       this.navTree.forEach((item) => {
-        const groupIndex = item.groupId === 'devTools' ? 0 : 1;
-        groups[groupIndex].children.push(item);
+        const group = groups.find((g) => g.groupId === item.groupId);
+        if (group) {
+          group.children.push(item);
+        }
       });
-      return groups;
+      // 返回过滤后的分组
+      return groups.filter((item) => item.children.length > 0);
     },
   },
   watch: {
@@ -247,6 +255,7 @@ export default {
   padding-top: 8px;
 
   .group-title {
+    margin-bottom: 4px;
     padding-left: 20px;
     font-size: 12px;
     color: #979ba5;

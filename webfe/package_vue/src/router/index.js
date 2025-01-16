@@ -19,6 +19,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import { pluginRouter } from './plugin';
+import { platformRouters } from './platform';
 import store from '@/store';
 
 const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/index').then(module => module).catch((error) => {
@@ -379,6 +380,7 @@ const router = new Router({
   },
   routes: [
     ...pluginRouter,
+    ...platformRouters,
     {
       path: '/',
       name: 'home',

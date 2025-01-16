@@ -53,6 +53,7 @@ import authenticationInfo from './modules/authentication-info';
 import migration from './modules/migration';
 import sandbox from './modules/sandbox';
 import tool from './modules/tool';
+import tenant from './modules/tenant';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -426,6 +427,7 @@ export default new Vuex.Store({
     migration,
     sandbox,
     tool,
+    tenant,
   },
   state,
   getters,

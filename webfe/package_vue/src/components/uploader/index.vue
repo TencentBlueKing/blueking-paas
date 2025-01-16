@@ -13,8 +13,10 @@
         v-bind="{ acceptTips }"
       >
         <span class="content-icon"><i class="paasng-icon paasng-upload-2" /></span>
-        <span class="content-drop">{{ $t('点击选择或拖拽文件至此') }}</span>
-        <span class="content-tip">{{ acceptTips }}</span>
+        <slot name="tip">
+          <span class="content-drop">{{ $t('点击选择或拖拽文件至此') }}</span>
+          <span class="content-tip">{{ acceptTips }}</span>
+        </slot>
       </slot>
     </section>
     <!--上传过程-->
@@ -99,7 +101,7 @@ export default {
     // mime类型
     accept: {
       type: String,
-      default: 'application/x-tar,application/x-gzip,application/gzip',
+      default: 'application/x-tar,application/x-gzip,application/gzip,application/x-compressed',
     },
     // 接受类型提示信息
     acceptTips: {
@@ -125,6 +127,10 @@ export default {
     withCredentials: {
       type: Boolean,
       default: false,
+    },
+    otherParams: {
+      type: Object,
+      default: () => ({}),
     },
     // 文件状态
     fileStatusMap: {
@@ -182,8 +188,8 @@ export default {
     // 文件变更
     handleChange(e) {
       this.isdrag = false;
-      const { files } = e.target;
-      const [file] = Array.from(files);
+      const file = e.target.files[0];
+      this.$emit('file-change', e);
       if (this.validateFile(file)) {
         this.file = {};
         this.handleUploadFiles(file);
@@ -305,6 +311,10 @@ export default {
 
       const formData = new FormData();
       formData.append(option.filename, option.file, option.file.name);
+      // append 自定义参数
+      for (const key in this.otherParams) {
+        formData.append(key, this.otherParams[key]);
+      }
       xhr.onerror = (e) => {
         option.onError(e);
       };
@@ -395,7 +405,7 @@ export default {
 <style lang="scss" scoped>
 @import './common';
 $contentBackground: #f5f9ff;
-$whiteBackground: #fff;
+$whiteBackground: #fafbfd;
 $contentTipColor: #979ba5;
 $grayBackground: #f0f1f5;
 
@@ -459,7 +469,6 @@ article {
   }
   &-file {
     width: 100%;
-    padding: 80px 0;
     .file-abort {
       position: absolute;
       right: 0;
@@ -482,20 +491,17 @@ article {
 
       @include layout-flex(column, center, flex-start);
       .info-icon {
-        height: 56px;
-        width: 48px;
-        font-size: 50px;
+        font-size: 40px;
         color: $primaryFontColor;
       }
       .info-name {
-        margin-top: 14px;
+        margin-top: 8px;
         font-size: 14px;
         font-weight: bold;
         color: $defaultFontColor;
-        line-height: 19px;
       }
       .info-progress {
-        margin-top: 21px;
+        margin-top: 8px;
         width: 76%;
         height: 6px;
         background: $grayBackground;
@@ -512,7 +518,7 @@ article {
         }
       }
       .info-status {
-        margin-top: 17px;
+        margin-top: 12px;
         padding: 0 20px;
         line-height: 16px;
         color: $primaryFontColor;

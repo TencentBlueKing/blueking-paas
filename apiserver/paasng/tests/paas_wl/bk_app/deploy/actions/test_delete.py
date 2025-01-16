@@ -27,7 +27,7 @@ class TestDeleteModuleRelatedRes:
     def test_normal(self, bk_user, bk_module, bk_stag_env, bk_stag_wl_app):
         # Setup data
         Domain.objects.create(name="example.com", module_id=bk_module.id, environment_id=bk_stag_env.id)
-        build = Build.objects.create(owner=bk_user.username, app=bk_stag_wl_app)
+        build = Build.objects.create(owner=bk_user.username, app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id)
         bk_stag_wl_app.release_set.new(bk_user.username, build=build, procfile={"web": "true"})
 
         assert Domain.objects.filter(module_id=bk_module.id).exists()

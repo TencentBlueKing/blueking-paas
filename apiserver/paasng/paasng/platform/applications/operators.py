@@ -41,7 +41,7 @@ class AppContactInfo:
 
 def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str, AppContactInfo]:
     """Gets the contact infos for multiple applications."""
-    applications = Application.objects.prefetch_related("latest_op__operation").filter(code__in=ids)
+    applications = Application.objects.prefetch_related("latest_op_record").filter(code__in=ids)
 
     # 获取所有应用的最新操作用户
     latest_operators = {

@@ -25,7 +25,7 @@ from django.utils import timezone
 
 from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
-from paasng.misc.operations.models import Operation
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application, JustLeaveAppManager
 from paasng.platform.engine.constants import AppEnvName
@@ -88,7 +88,7 @@ def _update_or_create_operation_report(app: Application):
     # 最近部署记录
     latest_deployment = Deployment.objects.filter(app_environment__application=app).order_by("-created").first()
     # 最新的操作记录
-    latest_operation = Operation.objects.filter(application=app).order_by("-created").first()
+    latest_operation = AppOperationRecord.objects.filter(app_code=app.code).order_by("-created").first()
 
     defaults = {
         # 资源使用
@@ -107,8 +107,8 @@ def _update_or_create_operation_report(app: Application):
         "latest_deployed_at": latest_deployment.created if latest_deployment else None,
         "latest_deployer": get_username_by_bkpaas_user_id(latest_deployment.operator) if latest_deployment else None,
         "latest_operated_at": latest_operation.created if latest_operation else None,
-        "latest_operator": latest_operation.get_operator() if latest_operation else None,
-        "latest_operation": latest_operation.get_operate_display() if latest_operation else None,
+        "latest_operator": latest_operation.username if latest_operation else None,
+        "latest_operation": latest_operation.get_display_text() if latest_operation else None,
         "deploy_summary": asdict(deploy_summary),
         # 应用开发者 / 管理员
         "administrators": fetch_role_members(app.code, ApplicationRole.ADMINISTRATOR),

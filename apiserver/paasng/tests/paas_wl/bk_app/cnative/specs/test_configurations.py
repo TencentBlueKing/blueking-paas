@@ -36,7 +36,7 @@ class TestEnvVarsReader:
     def test_global_envs(self, bk_app, bk_module, envs):
         res = create_app_resource("foo", "nginx")
         res.spec.configuration.env = envs
-        AppModelResource.objects.create_from_resource(bk_app.id, bk_module.id, res)
+        AppModelResource.objects.create_from_resource(bk_app, bk_module.id, res)
         config_vars = EnvVarsReader(res).read_all(bk_module)
 
         for _var in config_vars:
@@ -52,7 +52,7 @@ class TestEnvVarsReader:
     def test_overlay(self, bk_app, bk_module, overlays, expected_env):
         res = create_app_resource("foo", "nginx")
         res.spec.envOverlay = EnvOverlay(envVariables=overlays)
-        AppModelResource.objects.create_from_resource(bk_app.id, bk_module.id, res)
+        AppModelResource.objects.create_from_resource(bk_app, bk_module.id, res)
         config_vars = EnvVarsReader(res).read_all(bk_module)
         for _var in config_vars:
             assert _var.environment == bk_module.get_envs(expected_env)

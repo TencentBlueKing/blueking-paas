@@ -164,6 +164,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             type_=params.get("type"),
             # 已下架的应用默认展示在最末尾
             order_by=["-is_active", params.get("order_by")],
+            app_tenant_mode=params.get("app_tenant_mode"),
         )
 
         # 查询我创建的应用时，也需要返回总的应用数量给前端
@@ -477,6 +478,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # 执行失败
             add_app_audit_record(
                 app_code=application.code,
+                tenant_id=application.tenant_id,
                 user=request.user.pk,
                 action_id=AppAction.DELETE_APPLICATION,
                 operation=OperationEnum.DELETE,
@@ -488,6 +490,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 执行成功
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.DELETE_APPLICATION,
             operation=OperationEnum.DELETE,
@@ -547,6 +550,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.EDIT_BASIC_INFO,
             operation=OperationEnum.MODIFY_BASIC_INFO,
@@ -976,7 +980,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
     def _init_image_credential(self, application: Application, image_credential: Dict):
         try:
-            AppUserCredential.objects.create(application_id=application.id, **image_credential)
+            AppUserCredential.objects.create(
+                application_id=application.id, tenant_id=application.tenant_id, **image_credential
+            )
         except DbIntegrityError:
             raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
 
@@ -1618,6 +1624,7 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,

@@ -99,7 +99,7 @@ def create_wl_release(
         default_build_params.update(build_params)
 
     build_info = default_build_params
-    fake_build = Build.objects.create(**build_info)
+    fake_build = Build.objects.create(tenant_id=wl_app.tenant_id, **build_info)
 
     default_release_params = {
         "owner": create_user(username="somebody"),

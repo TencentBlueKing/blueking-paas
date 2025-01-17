@@ -315,6 +315,27 @@ export default {
         this.conditionTypes = res;
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.submitLoading = false;
+      }
+    },
+    // 更新集群策略
+    async updateClusterAllocationPolicies(data) {
+      try {
+        await this.$store.dispatch('tenant/updateClusterAllocationPolicies', {
+          id: this.curTenantData.policies?.id,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('集群分配成功！'),
+        });
+        this.handleCancel();
+        this.$emit('refresh');
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.submitLoading = false;
       }
     },
   },

@@ -18,6 +18,7 @@
 from unittest.mock import patch
 
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -50,6 +51,7 @@ class TestBCSResourceViewSet:
             yield
 
     def test_list_tenants(self, api_client):
-        resp = api_client.get(reverse("api.tenant.list"))
-        assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.json()) == 3
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            resp = api_client.get(reverse("api.tenant.list"))
+            assert resp.status_code == status.HTTP_200_OK
+            assert len(resp.json()) == 3

@@ -4295,9 +4295,6 @@ msgstr ""
 msgid "zh-cn"
 msgstr ""
 
-#~ msgid "同步回收增强服务实例"
-#~ msgstr "recycle add-ons instance synchronously"
-
 #~ msgid "未知操作类型"
 #~ msgstr "Unknown operation type"
 

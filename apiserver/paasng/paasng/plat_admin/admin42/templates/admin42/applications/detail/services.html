@@ -93,26 +93,27 @@
                 this.fetchData()
             },
             methods: {
-                async fetchData () {
+                fetchData () {
                     if (this.loading) {
                         return;
                     }
     
                     this.loading = true;
     
-                    try {
-                        const [listResp, listUnboundResp] = await Promise.all([
-                            this.$http.get(URLRouter.list),
-                            this.$http.get(URLRouter.list_unbound)
-                        ]);
-                        
+                    Promise.all([
+                        this.$http.get(URLRouter.list),
+                        this.$http.get(URLRouter.list_unbound)
+                    ])
+                    .then(([listResp, listUnboundResp]) => { 
                         this.service_instance_list = listResp || [];
                         this.unbound_service_instance_list = listUnboundResp || [];
-                    } catch (err) {
+                    })
+                    .catch(err => {
                         console.error("Error fetching data:", err);
-                    } finally {
+                    })
+                    .finally(() => {
                         this.loading = false;
-                    }
+                    });
                 },
                 handleProvision: function (row) {
                     let url = URLRouter.provision.replace("${module}", row.module).replace("${env}", row.environment.environment).replace("${service_id}", row.service.uuid)

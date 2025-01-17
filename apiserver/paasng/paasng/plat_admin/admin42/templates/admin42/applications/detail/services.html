@@ -77,7 +77,7 @@
         delete: decodeURI("{% url 'admin.applications.services.recycle_resource' application.code '${module}' '${service_id}' '${instance_id}' %}"),
         provision: decodeURI("{% url 'admin.applications.services.provision' application.code '${module}' '${env}' '${service_id}' %}"),
         list_unbound: decodeURI("{% url 'admin.applications.services.unbound.list' application.code %}"),
-        recycle: decodeURI("{% url 'admin.applications.services.unbound.recycle_resource' application.code '${service_id}' '${instance_id}' %}"),
+        recycle: decodeURI("{% url 'admin.applications.services.unbound.recycle_resource' application.code '${module}' '${service_id}' '${instance_id}' %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -182,7 +182,7 @@
                     this.recycleInstanceDialogVisible = true;
                 },
                 handleRecycle: function (row) {
-                    let url = URLRouter.recycle.replace("${service_id}", row.service.uuid).replace("${instance_id}", row.instance.uuid)
+                    let url = URLRouter.recycle.replace("${module}", row.module).replace("${service_id}", row.service.uuid).replace("${instance_id}", row.instance.uuid)
                     const h = this.$createElement
                     this.$bkInfo({
                         width: 500,

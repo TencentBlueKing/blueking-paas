@@ -366,7 +366,7 @@ urlpatterns = [
         name="admin.applications.services.unbound.list",
     ),
     re_path(
-        r"^api/applications/(?P<code>[^/]+)/services/"
+        r"^api/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/services/"
         r"(?P<service_id>[^/]+)/unbound/instances/(?P<instance_id>[^/]+)/$",
         services.ApplicationUnboundServicesManageViewSet.as_view({"delete": "recycle_resource"}),
         name="admin.applications.services.unbound.recycle_resource",

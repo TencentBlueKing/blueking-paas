@@ -32,7 +32,7 @@ from paasng.accessories.servicehub.exceptions import (
 )
 from paasng.accessories.servicehub.manager import LocalServiceMgr, mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
-from paasng.accessories.servicehub.services import EngineAppInstanceRel
+from paasng.accessories.servicehub.services import EngineAppInstanceRel, UnboundEngineAppInstanceRel
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.accessories.services.providers import (
     get_instance_schema_by_service_name,
@@ -164,8 +164,20 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 class ApplicationUnboundServicesManageViewSet(GenericViewSet):
     """应用增强服务管理-回收管理API"""
 
-    # schema = None
+    schema = None
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    @staticmethod
+    def _gen_service_data_detail(rel: UnboundEngineAppInstanceRel) -> DataDetail:
+        service_data = ServiceObjSLZ(mixed_service_mgr.get_or_404(rel.db_obj.service_id)).data
+
+        return DataDetail(
+            type=DataType.RAW_DATA,
+            data={
+                "instance": ServiceInstanceSLZ(rel.get_instance()).data,
+                "service": service_data,
+            },
+        )
 
     def list(self, request, code):
         result = []
@@ -188,7 +200,7 @@ class ApplicationUnboundServicesManageViewSet(GenericViewSet):
                     )
         return Response(UnboundServiceInstanceInfoSLZ(result, many=True).data)
 
-    def recycle_resource(self, request, code, service_id, instance_id):
+    def recycle_resource(self, request, code, module_name, service_id, instance_id):
         service = mixed_service_mgr.get_or_404(service_id)
 
         try:
@@ -196,7 +208,17 @@ class ApplicationUnboundServicesManageViewSet(GenericViewSet):
         except UnboundSvcAttachmentDoesNotExist:
             raise Http404
 
+        data_before = self._gen_service_data_detail(rel)
         rel.recycle_resource()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.RECYCLE_RESOURCE_SYNCHRONOUSLY,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            data_before=data_before,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

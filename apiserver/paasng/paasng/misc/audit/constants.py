@@ -125,3 +125,4 @@ class OperationEnum(StrStructuredEnum):
     MODIFY_LOG_CONFIG = EnumField("modify_log_config", label=_("日志采集管理"))
     PROVISION_INSTANCE = EnumField("provision_instance", label=_("分配增强服务实例"))
     RECYCLE_RESOURCE = EnumField("recycle_resource", label=_("回收增强服务实例"))
+    RECYCLE_RESOURCE_SYNCHRONOUSLY = EnumField("recycle_resource_synchronously", label=_("同步回收增强服务实例"))

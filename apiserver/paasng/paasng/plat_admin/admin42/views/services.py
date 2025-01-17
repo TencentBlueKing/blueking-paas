@@ -164,7 +164,6 @@ class ApplicationServicesManageViewSet(GenericViewSet):
 class ApplicationUnboundServicesManageViewSet(GenericViewSet):
     """应用增强服务管理-回收管理API"""
 
-    schema = None
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     @staticmethod
@@ -213,7 +212,7 @@ class ApplicationUnboundServicesManageViewSet(GenericViewSet):
 
         add_admin_audit_record(
             user=request.user.pk,
-            operation=OperationEnum.RECYCLE_RESOURCE_SYNCHRONOUSLY,
+            operation=OperationEnum.RECYCLE_RESOURCE,
             target=OperationTarget.APP,
             app_code=code,
             module_name=module_name,

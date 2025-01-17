@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-17 10:29+0800\n"
+"POT-Creation-Date: 2025-01-17 11:03+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1956,10 +1956,6 @@ msgstr "provision add-ons instance"
 #: paasng/misc/audit/constants.py:127
 msgid "回收增强服务实例"
 msgstr "recycle add-ons instance"
-
-#: paasng/misc/audit/constants.py:128
-msgid "同步回收增强服务实例"
-msgstr "recycle add-ons instance synchronously"
 
 #: paasng/misc/audit/models.py:102
 #, python-brace-format
@@ -4298,6 +4294,9 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr ""
+
+#~ msgid "同步回收增强服务实例"
+#~ msgstr "recycle add-ons instance synchronously"
 
 #~ msgid "未知操作类型"
 #~ msgstr "Unknown operation type"

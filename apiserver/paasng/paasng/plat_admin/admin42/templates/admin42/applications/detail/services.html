@@ -5,7 +5,7 @@
 <div id="app-memberships-wrapper">
     <h3>实例详情</h3>
     <div v-if="unbound_service_instance_list.length > 0">
-        已解绑待回收实例数量: $[ unbound_service_instance_list.length ]。 <a href="javascript:void(0)" @click="showRecycleInstanceDialog">立即回收</a>
+        应用有 $[ unbound_service_instance_list.length ] 个已解绑但未回收的增强服务实例。 <a href="javascript:void(0)" @click="showRecycleInstanceDialog">立即回收</a>
     </div>
     <bk-table style="margin-top: 15px;"
         :data="service_instance_list"
@@ -37,16 +37,11 @@
 
     <bk-dialog v-model="recycleInstanceDialogVisible" header-position="left" width="1500px">
         <div slot="header">
-            回收增强服务
+            未回收的增强服务实例
         </div>
         <bk-table
             :data="unbound_service_instance_list"
             :cell-class-name="cellStyleCallback">
-            <bk-table-column label="服务logo" prop="module" width="100px">
-                <template slot-scope="props">
-                    <img class="service-logo" :src="props.row.service.logo"/>
-                </template>
-            </bk-table-column>
             <bk-table-column label="服务名称" prop="service.display_name"></bk-table-column>
             <bk-table-column label="绑定模块" prop="module">
                 <template slot-scope="props">

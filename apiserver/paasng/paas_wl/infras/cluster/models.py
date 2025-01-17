@@ -247,6 +247,8 @@ class ClusterComponent(UuidAuditedModel):
     name = models.CharField(max_length=64, help_text="组件名称")
     required = models.BooleanField(help_text="是否为必要组件")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         unique_together = ("cluster", "name")
 

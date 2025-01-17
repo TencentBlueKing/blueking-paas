@@ -21,6 +21,7 @@ from typing import Any, Dict, Type
 from paas_wl.infras.cluster.constants import ClusterComponentName
 from paasng.plat_mgt.infras.clusters.entities import HelmRelease
 from paasng.plat_mgt.infras.clusters.values.entities import (
+    BCSGPAValues,
     BkAppLogCollectionValues,
     BkIngressNginxValues,
     BkPaaSAppOperatorValues,
@@ -47,6 +48,9 @@ def get_values_getter_cls(name: str) -> Type[ValuesGetter]:
 
     if name == ClusterComponentName.BKPAAS_APP_OPERATOR:
         return BkPaaSAppOperatorValuesGetter
+
+    if name == ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
+        return BCSGPAValuesGetter
 
     return DefaultValuesGetter
 
@@ -79,4 +83,12 @@ class BkPaaSAppOperatorValuesGetter(ValuesGetter):
 
     def get(self) -> Dict[str, Any]:
         values = BkPaaSAppOperatorValues(**self.release.values)
+        return values.dict(by_alias=True)
+
+
+class BCSGPAValuesGetter(ValuesGetter):
+    """bcs-general-pod-autoscaler"""
+
+    def get(self) -> Dict[str, Any]:
+        values = BCSGPAValues(**self.release.values)
         return values.dict(by_alias=True)

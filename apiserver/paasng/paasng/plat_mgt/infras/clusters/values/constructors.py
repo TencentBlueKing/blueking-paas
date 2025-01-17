@@ -50,6 +50,9 @@ def get_values_constructor_cls(name: str) -> Type[ValuesConstructor]:
     if name == ClusterComponentName.BKPAAS_APP_OPERATOR:
         return BkPaaSAppOperatorValuesConstructor
 
+    if name == ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
+        return BCSGPAValuesConstructor
+
     return DefaultValuesConstructor
 
 

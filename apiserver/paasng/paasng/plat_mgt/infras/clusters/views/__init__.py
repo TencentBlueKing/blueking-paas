@@ -20,4 +20,9 @@ from .clusters import ClusterViewSet
 from .components import ClusterComponentViewSet
 from .policies import ClusterAllocationPolicyViewSet
 
-__all__ = ["BCSResourceViewSet", "ClusterViewSet", "ClusterComponentViewSet", "ClusterAllocationPolicyViewSet"]
+__all__ = [
+    "BCSResourceViewSet",
+    "ClusterViewSet",
+    "ClusterComponentViewSet",
+    "ClusterAllocationPolicyViewSet",
+]

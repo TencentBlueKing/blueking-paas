@@ -26,11 +26,6 @@ urlpatterns = [
         name="plat_mgt.infras.cluster.bulk",
     ),
     path(
-        "api/plat_mgt/infras/available_clusters/",
-        views.ClusterViewSet.as_view({"get": "list_available"}),
-        name="plat_mgt.infras.cluster.available",
-    ),
-    path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/",
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster.detail",

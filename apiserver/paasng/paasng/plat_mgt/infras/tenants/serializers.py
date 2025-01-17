@@ -15,9 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from rest_framework import serializers
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.infras.clusters.urls")),
-    path("", include("paasng.plat_mgt.infras.tenants.urls")),
-]
+
+class AvailableClusterListOutputSLZ(serializers.Serializer):
+    """可用集群列表"""
+
+    name = serializers.CharField(help_text="集群名称")

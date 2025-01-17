@@ -86,8 +86,8 @@ class ModuleRepoConnector(abc.ABC):
 
 
 class DBBasedMixin:
-    """Databased based repo connector which provides some utils for setting/getting repo object
-    in database
+    """Repo connector, which provides some utilities to set/get repo object, stores
+    data in database.
     """
 
     @property
@@ -106,6 +106,7 @@ class DBBasedMixin:
             "server_name": self.repo_type,
             "repo_url": repo_url,
             "source_dir": source_dir,
+            "tenant_id": self.application.tenant_id,
         }
         # Not using `get_or_create` because it might return more than 1 results
         repo_objs = self.repository_model.objects.filter(**repo_kwargs)[:1]
@@ -254,6 +255,7 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
             defaults={
                 "username": repo_auth_info.get("username", ""),
                 "password": repo_auth_info.get("password", ""),
+                "tenant_id": self.module.tenant_id,
             },
         )
         if created:

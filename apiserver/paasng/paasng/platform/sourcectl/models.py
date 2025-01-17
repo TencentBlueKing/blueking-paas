@@ -32,6 +32,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 from typing_extensions import Protocol
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
@@ -106,6 +107,7 @@ class SvnRepository(OwnerTimestampedModel, RepositoryMixin):
     server_name = models.CharField(verbose_name="SVN 服务名称", max_length=32)
     repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     def get_repo_fullname(self) -> str:
         """返回当前源码库的全称
@@ -180,7 +182,11 @@ class SvnAccountManager(models.Manager):
 
 
 class SvnAccount(TimestampedModel):
-    """svn account for developer"""
+    """svn account for developer
+
+    [multi-tenancy] This model is not tenant-aware. Should add tenant_id field if
+    it's more convenient to get tenant_id from user.
+    """
 
     account = models.CharField(max_length=64, help_text="目前仅支持固定格式", unique=True)
     user = BkUserField()
@@ -198,6 +204,7 @@ class GitRepository(OwnerTimestampedModel, RepositoryMixin):
     server_name = models.CharField(verbose_name="GIT 服务名称", max_length=32)
     repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     def get_repo_fullname(self) -> str:
         try:
@@ -226,6 +233,7 @@ class DockerRepository(OwnerTimestampedModel, RepositoryMixin):
         help_text="形如 registry.hub.docker.com/library/python, 也可省略 registry 地址",
     )
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     @property
     def display_name(self):
@@ -298,6 +306,7 @@ class SourcePackageManager(models.Manager):
                 storage_path=policy.path,
                 storage_url=policy.url,
                 owner=getattr(operator, "pk", None),
+                tenant_id=module.tenant_id,
             ),
             module=module,
             version=policy.stat.version,
@@ -332,6 +341,7 @@ class SourcePackage(OwnerTimestampedModel):
         verbose_name="源码包是否已被清理",
         help_text="如果 SourcePackage 指向的源码包已被清理, 则设置该值为 True",
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = SourcePackageManager()
     default_objects = models.Manager()
@@ -593,6 +603,7 @@ class RepoBasicAuthHolder(TimestampedModel):
 
     # 不同 module 相同 repo，保存多份账号密码
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
+    tenant_id = tenant_id_field_factory()
 
     objects = BasicAuthHolderManager()
 
@@ -615,7 +626,10 @@ class SourceTypeSpecConfigMgr(models.Manager):
 
 
 class SourceTypeSpecConfig(AuditedModel):
-    """SourceTypeSpec 数据存储"""
+    """SourceTypeSpec 数据存储
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # Source Type Spec 配置
     name = models.CharField(verbose_name=_("服务名称"), unique=True, max_length=32)

@@ -15,14 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from rest_framework import serializers
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterAllocationPolicyViewSet",
-]
+
+class AvailableClusterListOutputSLZ(serializers.Serializer):
+    """可用集群列表"""
+
+    name = serializers.CharField(help_text="集群名称")

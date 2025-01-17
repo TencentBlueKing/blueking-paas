@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from typing import Any, Dict
 from unittest.mock import patch
 
@@ -67,21 +68,6 @@ class TestListClusters:
             ],
             "nodes": ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
         }
-
-
-class TestListAvailableClusters:
-    """获取可用集群列表"""
-
-    @pytest.fixture(autouse=True)
-    def _patch_settings(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
-            yield
-
-    def test_list(self, init_default_cluster, init_system_cluster, plat_mgt_api_client):
-        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.available"))
-        assert resp.status_code == status.HTTP_200_OK
-
-        assert resp.json() == [{"name": init_system_cluster.name}]
 
 
 class TestRetrieveCluster:

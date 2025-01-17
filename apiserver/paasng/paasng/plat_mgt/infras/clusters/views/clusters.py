@@ -17,7 +17,6 @@
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -38,7 +37,6 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
-from paasng.plat_mgt.infras.clusters.serializers.clusters import AvailableClusterListOutputSLZ
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.utils.error_codes import error_codes
 
@@ -64,17 +62,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         """获取集群列表"""
         clusters = self.get_queryset()
         return Response(data=ClusterListOutputSLZ(clusters, many=True).data)
-
-    @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
-        operation_description="获取本租户可用集群",
-        responses={status.HTTP_200_OK: AvailableClusterListOutputSLZ(many=True)},
-    )
-    def list_available(self, request, *args, **kwargs):
-        tenant_id = get_tenant(request.user).id
-        # 本租户的集群本租户一定是可用的，其他租户的集群，如果有对应的配置，则可用
-        clusters = Cluster.objects.filter(Q(tenant_id=tenant_id) | Q(available_tenant_ids__contains=tenant_id))
-        return Response(data=AvailableClusterListOutputSLZ(clusters, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],

@@ -82,12 +82,6 @@ class ClusterListOutputSLZ(serializers.Serializer):
         return state.nodes_name
 
 
-class AvailableClusterListOutputSLZ(serializers.Serializer):
-    """可用集群列表"""
-
-    name = serializers.CharField(help_text="集群名称")
-
-
 class ClusterRetrieveOutputSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="集群名称")
     description = serializers.CharField(help_text="集群描述")

@@ -15,14 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from django.urls import path
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterAllocationPolicyViewSet",
+from paasng.plat_mgt.infras.tenants import views
+
+urlpatterns = [
+    # 租户可用集群列表
+    path(
+        "api/plat_mgt/infras/tenants/<str:tenant_id>/available_clusters/",
+        views.TenantAvailableClusterViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.tenant.available_clusters",
+    ),
 ]

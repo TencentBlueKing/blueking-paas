@@ -53,13 +53,13 @@ def interrupt_deployment(deployment: Deployment, user: User):
     deployment.release_int_requested_at = now
     deployment.save(update_fields=["build_int_requested_at", "release_int_requested_at", "updated"])
 
+    # 若部署进程的数据上报已经超时，则认为部署失败，主动解锁
     coordinator = DeploymentCoordinator(deployment.app_environment)
     if (
         (current_deployment := coordinator.get_current_deployment())
         and coordinator.status_polling_timeout
         and current_deployment.pk == deployment.pk
     ):
-        # 若部署进程的数据上报已经超时(超时仅出现在构建和 hook 环节)，则认为部署失败，主动解锁
         # Release deploy lock
         try:
             coordinator.release_lock(expected_deployment=deployment)

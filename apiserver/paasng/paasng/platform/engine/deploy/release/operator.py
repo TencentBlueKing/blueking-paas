@@ -128,6 +128,7 @@ def release_by_k8s_operator(
         bkapp_res = get_bkapp_resource_for_deploy(
             env,
             deploy_id=str(app_model_deploy.id),
+            deployment=deployment,
             force_image=build.image,
             image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
             use_cnb=build.is_build_from_cnb(),

@@ -282,7 +282,7 @@ class DeploymentCoordinator:
 
     @property
     def status_polling_timeout(self) -> bool:
-        """检查报告时间是否超时"""
+        """检查报告时间是否超时. 目前用于 build 和 hook 流程的控制"""
         latest_polling_time = self.redis.get(self.key_name_latest_polling_time)
         # 如果没有上次报告状态时间，则认为未超时，并设置查询时间为上次报告时间
         if not latest_polling_time:

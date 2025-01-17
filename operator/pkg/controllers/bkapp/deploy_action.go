@@ -36,6 +36,7 @@ import (
 	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
 	procres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
+	platform "bk.tencent.com/paas-app-operator/pkg/platform/deploy"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.
@@ -106,6 +107,11 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 
 // validate that there are no running hooks currently, return error if found any running hooks.
 func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
+	// 如果上一次的部署是被用户主动中断, 则继续执行后续的部署调和流程, 忽略可能处于 progressing 状态的旧 hook
+	// TODO 考虑支持更实时的中断请求, 包括直接删除执行中的 hook 等?
+	if platform.GetLastDeployStatus(bkapp) == "interrupted" {
+		return nil
+	}
 	// Check pre-release hook
 	if hookres.IsPreReleaseProgressing(bkapp) {
 		_, err := hooks.CheckAndUpdatePreReleaseHookStatus(

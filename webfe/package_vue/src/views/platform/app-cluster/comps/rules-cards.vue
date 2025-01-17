@@ -1,25 +1,55 @@
 <template>
   <div class="rules-cards">
-    <div class="conditional">{{ conditional }}</div>
+    <div class="conditional">{{ getConditionalType(allLength, order) }}</div>
     <bk-form
-      :label-width="200"
       form-type="vertical"
+      ref="rulesCard"
+      :rules="rules"
     >
-      <bk-form-item
-        :label="$t('匹配规则')"
-        :required="true"
-      >
-        <div class="matching-rules">
-          <bk-input v-model="formData.name"></bk-input>
-          <span class="equal">=</span>
-          <bk-input v-model="formData.value"></bk-input>
+      <div>
+        <div
+          class="matching-rules-box"
+          v-if="!isLastCard"
+        >
+          <!-- 匹配规则 -->
+          <bk-form-item
+            :required="true"
+            :property="'matcherKey'"
+            :icon-offset="31"
+          >
+            <div class="matching-rules">
+              <bk-select
+                :disabled="false"
+                v-model="data.matcher.key"
+                ext-cls="rules-select-custom"
+              >
+                <bk-option
+                  v-for="option in rulesList"
+                  :key="option.id"
+                  :id="option.id"
+                  :name="option.name"
+                ></bk-option>
+              </bk-select>
+              <span class="equal">=</span>
+            </div>
+          </bk-form-item>
+          <bk-form-item
+            :required="true"
+            :property="'matcherValue'"
+            ext-cls="rules-vlaue"
+          >
+            <bk-input v-model="data.matcher.value"></bk-input>
+          </bk-form-item>
         </div>
-        <p class="select-env">
-          <bk-checkbox v-model="isAllocatedByEnv">{{ $t('按环境分配') }}</bk-checkbox>
+        <p
+          class="select-env"
+          slot="tip"
+        >
+          <bk-checkbox v-model="data.hasEnv">{{ $t('按环境分配') }}</bk-checkbox>
         </p>
-      </bk-form-item>
+      </div>
       <bk-form-item
-        v-if="!isAllocatedByEnv"
+        v-if="!data.hasEnv"
         :label="$t('集群')"
         :required="true"
         :property="'cluster'"
@@ -28,6 +58,7 @@
         <ClusterSelect
           @change="clusterSelectChange"
           key="not"
+          :edit-data="data?.clusters"
           class="cluster-select-cls"
         />
       </bk-form-item>
@@ -44,6 +75,7 @@
             :label="$t('预发布环境')"
             :env="'stag'"
             class="cluster-select-cls"
+            :edit-data="data?.envClusters?.stag"
             @change="envClusterSelectChange"
           />
         </bk-form-item>
@@ -57,6 +89,7 @@
             :label="$t('生产环境')"
             :env="'prod'"
             class="cluster-select-cls"
+            :edit-data="data?.envClusters?.prod"
             @change="envClusterSelectChange"
           />
         </bk-form-item>
@@ -69,22 +102,41 @@
         <p>开发者在创建应用时，需要选择集群；如开发者没选择任何值，则使用默认集群。</p>
       </div>
     </div>
-    <div class="tools">
+    <div
+      v-if="!isLastCard"
+      class="tools"
+    >
       <div
         class="icon-box plus"
+        v-bk-tooltips="$t('添加规则')"
         @click="handleAdd"
       >
         <i class="paasng-icon paasng-plus-thick"></i>
       </div>
-      <div class="icon-box down">
-        <i class="paasng-icon paasng-back"></i>
-      </div>
-      <div
-        class="icon-box delete"
-        @click="handleDelete"
-      >
-        <i class="paasng-icon paasng-delete"></i>
-      </div>
+      <template v-if="allLength > 2">
+        <!-- 上移 -->
+        <div
+          v-if="order === 0"
+          class="icon-box down"
+          @click="handleMove('down')"
+        >
+          <i class="paasng-icon paasng-back"></i>
+        </div>
+        <!-- 下移 -->
+        <div
+          v-else
+          class="icon-box up"
+          @click="handleMove('up')"
+        >
+          <i class="paasng-icon paasng-back"></i>
+        </div>
+        <div
+          class="icon-box delete"
+          @click="handleDelete"
+        >
+          <i class="paasng-icon paasng-delete"></i>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -98,6 +150,18 @@ export default {
       type: String,
       default: 'if',
     },
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+    allLength: {
+      type: Number,
+      default: 0,
+    },
+    order: {
+      type: Number,
+      default: 0,
+    },
   },
   components: {
     ClusterSelect,
@@ -106,22 +170,85 @@ export default {
     return {
       isAllocatedByEnv: false,
       formData: {
-        name: '',
+        key: '',
         value: '',
       },
-      clusters: [],
       envClusters: {},
+      // 规则展示为固定选项值
+      rulesList: [{ id: 'region_is', name: 'app.region' }],
+      rules: {
+        matcherKey: [
+          {
+            validator: () => {
+              return this.data.matcher?.key !== '';
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        matcherValue: [
+          {
+            validator: () => {
+              return this.data.matcher?.value !== '';
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        cluster: [
+          {
+            validator: () => {
+              return this.data.clusters.length;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        stagCluster: [
+          {
+            validator: () => {
+              return this.data.envClusters?.stag?.length;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+        prodCluster: [
+          {
+            validator: () => {
+              return this.data.envClusters?.prod?.length;
+            },
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
+      },
     };
   },
+  computed: {
+    isLastCard() {
+      return this.allLength - 1 === this.order;
+    },
+  },
   methods: {
+    // 获取当前规则语句分支
+    getConditionalType(arrayLength, currentIndex) {
+      if (currentIndex === 0) {
+        return 'if';
+      } else if (currentIndex === arrayLength - 1) {
+        return 'else';
+      } else {
+        return 'else if';
+      }
+    },
     // 不按环境
     clusterSelectChange(data) {
-      this.clusters = data;
+      this.data.clusters = data;
     },
     // 按环境
     envClusterSelectChange(data) {
-      this.envClusters = {
-        ...this.envClusters,
+      this.data.envClusters = {
+        ...this.data.envClusters,
         ...data,
       };
     },
@@ -129,7 +256,13 @@ export default {
       this.$emit('add');
     },
     handleDelete() {
-      this.$emit('delete');
+      this.$emit('delete', this.order);
+    },
+    handleMove(key) {
+      this.$emit('move', this.order, key);
+    },
+    validate() {
+      return this.$refs.rulesCard?.validate();
     },
   },
 };
@@ -157,15 +290,28 @@ export default {
     background: #3a84ff;
     border-radius: 2px 0 8px 0;
   }
+  .matching-rules-box {
+    display: flex;
+    align-items: flex-end;
+    .rules-vlaue {
+      flex: 1;
+    }
+  }
   .matching-rules {
     display: flex;
     align-items: center;
+    .rules-select-custom {
+      flex-shrink: 0;
+      width: 160px;
+      background: #fff;
+    }
     .equal {
       padding: 0 8px;
     }
   }
   .select-env {
     margin-top: 12px;
+    margin-bottom: 6px;
     line-height: 22px;
   }
   .cluster-select-cls {
@@ -203,6 +349,9 @@ export default {
       }
       &.down i {
         transform: rotate(-90deg);
+      }
+      &.up i {
+        transform: rotate(90deg);
       }
       &.delete {
         color: #ea3636;

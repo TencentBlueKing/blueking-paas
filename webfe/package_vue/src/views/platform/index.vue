@@ -24,6 +24,7 @@
 <script>
 import paasNav from '@/components/paasNav';
 import { processNavData } from '@/common/utils';
+import { bus } from '@/common/bus';
 import platformNavigationData from '@/json/platform-navigation-data';
 import TopBar from './comps/top-bar.vue';
 
@@ -49,6 +50,9 @@ export default {
     panels() {
       return this.$route.meta?.panels || [];
     },
+    routeTabActive() {
+      return this.$route.query.active;
+    },
     isShowNotice() {
       return this.$store.state.isShowNotice;
     },
@@ -59,7 +63,14 @@ export default {
     },
   },
   created() {
-    this.active = this.panels.length ? this.panels[0].name : '';
+    bus.$on('tool-table-change', (active) => {
+      this.handleTabChange(active);
+    });
+    this.setDefaultTabActive();
+    // 组件销毁前
+    this.$once('hook:beforeDestroy', () => {
+      bus.$off('tool-table-change');
+    });
   },
   mounted() {
     const { navCategories = [], navItems = [] } = processNavData(platformNavigationData);
@@ -75,6 +86,11 @@ export default {
     }
   },
   methods: {
+    setDefaultTabActive() {
+      const defaultActive = this.panels[0]?.name || '';
+      this.active = this.routeTabActive || defaultActive;
+      this.handleTabChange(this.active);
+    },
     handleTabChange(active) {
       this.$router.push({
         path: this.$route.path,

@@ -24,11 +24,15 @@ import http from '@/api';
 export default {
   namespaced: true,
   state: {
-    availableClusters: {}
+    availableClusters: {},
+    curTenantData: {}
   },
   mutations: {
     updateAvailableClusters(state, data) {
       state.availableClusters = data;
+    },
+    updateTenantData(state, data) {
+      state.curTenantData = data;
     },
   },
   actions: {
@@ -49,8 +53,8 @@ export default {
     /**
      * 获取当前租户可用的集群
      */
-    getAvailableClusters({}) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/available_clusters/`;
+    getAvailableClusters({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/tenants/${id}/available_clusters/`;
       return http.get(url);
     },
     /**
@@ -59,6 +63,13 @@ export default {
     createClusterAllocationPolicies({}, { data }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policies/`;
       return http.post(url, data);
+    },
+    /**
+     * 更新集群策略
+     */
+    updateClusterAllocationPolicies({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policies/${id}`;
+      return http.put(url, data);
     },
   },
 };

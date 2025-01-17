@@ -26,6 +26,7 @@
         dark-header
         :row-class-name="isConfigured"
         style="width: 100%"
+        v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
         ext-cls="platform-table-cls"
       >
         <bk-table-column
@@ -85,11 +86,11 @@
                   </span>
                   <!-- 匹配规则 -->
                   <span
-                    v-for="(k, v) in item.matcher"
+                    v-for="(v, k) in item.matcher"
                     class="tag rule"
                     :key="k"
                   >
-                    {{ `${k} = ${v}` }}
+                    {{ `${matchingRulesMap[k]} = ${v}` }}
                   </span>
                   <!-- 集群-不按环境 -->
                   <template v-if="item.policy?.env_specific">
@@ -129,7 +130,7 @@
               <bk-button
                 theme="primary"
                 text
-                @click="handleClusterAllocation(row)"
+                @click="handleClusterAllocation(row, 'new')"
               >
                 {{ $t('配置') }}
               </bk-button>
@@ -147,7 +148,7 @@
             <bk-button
               theme="primary"
               text
-              @click="handleClusterAllocation(row)"
+              @click="handleClusterAllocation(row, 'edit')"
             >
               {{ $t('编辑') }}
             </bk-button>
@@ -158,11 +159,14 @@
     <ClusterAllocationSideslider
       :show.sync="isShowSideslider"
       :data="operationRow"
+      :type="sidesliderType"
+      @refresh="init"
     />
   </div>
 </template>
 
 <script>
+import { bus } from '@/common/bus';
 import SwitchDisplay from './comps/switch-display.vue';
 import ClusterAllocationSideslider from './comps/cluster-allocation-sideslider.vue';
 export default {
@@ -184,6 +188,7 @@ export default {
       isContentLoading: true,
       platformList: [],
       isShowSideslider: false,
+      sidesliderType: '',
       operationRow: {},
       // 全量集群策略
       allPolicies: [],
@@ -191,6 +196,9 @@ export default {
       tenants: [],
       // 可用集群
       availableClusters: [],
+      matchingRulesMap: {
+        region_is: 'app.region',
+      },
     };
   },
   created() {
@@ -200,8 +208,6 @@ export default {
     init() {
       this.isTableLoading = true;
       Promise.all([this.getTenants(), this.getClusterAllocationPolicies()]).finally(() => {
-        this.isTableLoading = false;
-        this.isContentLoading = false;
         // 将策略与租户数据重组
         this.platformList = this.tenants
           .map((tenant) => ({
@@ -217,6 +223,8 @@ export default {
             }
             return 0;
           });
+        this.isTableLoading = false;
+        this.isContentLoading = false;
       });
     },
     handlerChange(data) {
@@ -255,19 +263,9 @@ export default {
       }
     },
     // 获取当前租户可用的集群
-    async getAvailableClusters() {
+    async getAvailableClusters(id) {
       try {
-        const res = await this.$store.dispatch('tenant/getAvailableClusters');
-        // -----s
-        res.push(
-          ...[
-            { name: 'test' },
-            { name: 'ieod-cluster-test' },
-            { name: 'bk-test-ieod' },
-            { name: 'ieod-web-test222222' },
-          ]
-        );
-        // -----end
+        const res = await this.$store.dispatch('tenant/getAvailableClusters', { id });
         this.availableClusters = res;
         // 存入store
         this.$store.commit('tenant/updateAvailableClusters', res);
@@ -276,21 +274,55 @@ export default {
       }
     },
     // 集群分配
-    async handleClusterAllocation(row) {
+    async handleClusterAllocation(row, type) {
+      this.$store.commit('tenant/updateTenantData', {
+        ...row,
+        isEdit: type === 'edit',
+      });
       this.operationRow = row;
       // 前置判断是否存在可分配集群
-      await this.getAvailableClusters();
+      await this.getAvailableClusters(row.id);
       if (this.availableClusters.length) {
+        this.sidesliderType = type;
         this.isShowSideslider = true;
         return;
       }
+      const h = this.$createElement;
       // 如果没有集群，出现居中弹窗引导
+      this.$bkInfo({
+        type: 'warning',
+        width: 480,
+        title: this.$t('暂无集群可供分配'),
+        subHeader: h(
+          'div',
+          {
+            class: ['cluster-info-header-cls'],
+          },
+          this.$t('请先在 [集群列表] 添加集群，方可分配集群。')
+        ),
+        okText: this.$t('前往添加'),
+        confirmFn: () => {
+          // 跳转集群列表
+          bus.$emit('tool-table-change', 'list');
+        },
+      });
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+.cluster-info-header-cls {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  text-align: left;
+  font-size: 14px;
+  padding: 0 16px;
+  color: #4d4f56;
+  background: #f5f6fa;
+  border-radius: 2px;
+}
 .platform-config {
   .filter-group {
     width: fit-content;

@@ -41,6 +41,20 @@
           </span>
         </div>
       </div>
+      <div
+        slot="target-option"
+        slot-scope="data, index"
+        class="transfer-source-item"
+      >
+        <div
+          class="text"
+          v-bk-overflow-tips="{ content: data.name, allowHTML: true }"
+        >
+          {{ data.name }}
+        </div>
+        <span class="default">{{ $t('默认') }}</span>
+        <i class="bk-icon icon-close"></i>
+      </div>
     </bk-transfer>
   </div>
 </template>
@@ -53,6 +67,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    defaultTargetList: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -62,6 +80,9 @@ export default {
       targetList: [],
       targetValueList: [],
     };
+  },
+  created() {
+    this.targetList.push(...this.defaultTargetList);
   },
   methods: {
     handleChange(sourceList, targetList, targetValueList) {
@@ -91,6 +112,57 @@ export default {
 .cluster-transfer-cls {
   /deep/ .slot-header {
     padding: 0 16px !important;
+  }
+  /deep/ .source-list,
+  /deep/ .target-list {
+    min-width: auto !important;
+  }
+  /deep/ .target-list {
+    .content li:first-child .default {
+      display: inline-block;
+    }
+    .content li:hover {
+      .transfer-source-item {
+        padding-right: 12px;
+      }
+      i {
+        display: block;
+      }
+    }
+  }
+  .transfer-source-item {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    .text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+      flex-grow: 1;
+      /* 确保最小宽度为0，允许收缩 */
+      min-width: 0;
+    }
+    .default {
+      flex-shrink: 0;
+      margin-left: 2px;
+      display: none;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+      font-size: 10px;
+      color: #ffffff;
+      background: #ea3636;
+      border-radius: 10px;
+    }
+    .icon-close {
+      display: none;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #3a84ff;
+    }
   }
 }
 .title {

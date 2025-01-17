@@ -14,8 +14,9 @@
         :error-display-type="'normal'"
       >
         <ClusterSelect
-          @change="clusterSelectChange"
           key="not"
+          :edit-data="allocationPolicy?.clusters"
+          @change="clusterSelectChange"
         />
       </bk-form-item>
       <!-- 统一分配-按环境 -->
@@ -30,6 +31,7 @@
             :has-label="true"
             :label="$t('预发布环境')"
             :env="'stag'"
+            :edit-data="allocationPolicy?.env_clusters?.stag"
             @change="envClusterSelectChange"
           />
         </bk-form-item>
@@ -42,6 +44,7 @@
             :has-label="true"
             :label="$t('生产环境')"
             :env="'prod'"
+            :edit-data="allocationPolicy?.env_clusters?.prod"
             @change="envClusterSelectChange"
           />
         </bk-form-item>
@@ -66,6 +69,14 @@ export default {
     hasEnv: {
       type: Boolean,
       default: false,
+    },
+    isEdit: {
+      type: Boolean,
+      default: false,
+    },
+    data: {
+      type: Object,
+      default: () => ({}),
     },
   },
   components: {
@@ -108,6 +119,17 @@ export default {
       },
     };
   },
+  computed: {
+    curTenantData() {
+      return this.$store.state.tenant.curTenantData;
+    },
+    allocationPolicy() {
+      if (!this.curTenantData.policies) {
+        return {};
+      }
+      return this.curTenantData.policies.allocation_policy || {};
+    },
+  },
   methods: {
     // 不按环境
     clusterSelectChange(data) {
@@ -125,7 +147,6 @@ export default {
       return new Promise((resolve, reject) => {
         this.$refs.uniformForm?.validate().then(
           () => {
-            console.log('成功');
             resolve({
               clusters: this.clusters,
               env_clusters: this.envClusters,

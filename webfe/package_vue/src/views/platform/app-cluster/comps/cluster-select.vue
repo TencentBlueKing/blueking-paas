@@ -44,6 +44,7 @@
         <ClusterTransfer
           ref="clusterTransfer"
           :list="availableClusters"
+          :default-target-list="editData"
           @change="transferChange"
         />
       </bk-option>
@@ -67,6 +68,10 @@ export default {
       type: String,
       default: '',
     },
+    editData: {
+      type: Array,
+      default: () => [],
+    },
   },
   components: {
     ClusterTransfer,
@@ -79,6 +84,9 @@ export default {
   computed: {
     availableClusters() {
       return this.$store.state.tenant.availableClusters;
+    },
+    curTenantData() {
+      return this.$store.state.tenant.curTenantData;
     },
   },
   watch: {

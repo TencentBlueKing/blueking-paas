@@ -147,4 +147,5 @@ def cpu_usage_alert_rule_obj(bk_app):
         application=bk_app,
         environment="stag",
         module=bk_app.get_default_module(),
+        tenant_id=bk_app.tenant_id,
     )

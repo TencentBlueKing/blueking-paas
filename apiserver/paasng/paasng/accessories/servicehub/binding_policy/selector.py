@@ -99,7 +99,7 @@ class PlanSelector:
 
         # Get plans based on the binding policy
         try:
-            policy = ServiceBindingPolicy.objects.get(service_id=service.uuid)
+            policy = ServiceBindingPolicy.objects.get(service_id=service.uuid, tenant_id=env.application.tenant_id)
         except ServiceBindingPolicy.DoesNotExist:
             return []
 
@@ -112,9 +112,9 @@ class PlanSelector:
         :return: A list plans based on the precedence policies. `None` means no precedence
             policies are evaluated.
         """
-        precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(service_id=service.uuid).order_by(
-            "-priority"
-        )
+        precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(
+            service_id=service.uuid, tenant_id=env.application.tenant_id
+        ).order_by("-priority")
         for pre_policy in precedence_policies:
             policy_obj = precedence_policy_factory(
                 pre_policy.cond_type,

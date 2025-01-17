@@ -58,6 +58,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import Plan, Service
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -76,6 +77,7 @@ class LocalPlanObj(PlanObj):
         config = json.loads(plan.config or "{}")
         instance = cls(
             uuid=str(plan.uuid),
+            tenant_id=plan.tenant_id,
             name=plan.name,
             description=plan.description,
             is_active=plan.is_active,
@@ -116,10 +118,22 @@ class LocalServiceObj(ServiceObj):
         result.category = service.category
         return result
 
-    def get_plans(self, is_active=True) -> List[PlanObj]:
+    def _get_plans(self, is_active=True) -> QuerySet:
         qs = Plan.objects.filter(service=self.db_object)
         if is_active is not NOTSET:
             qs = qs.filter(is_active=is_active)
+        return qs
+
+    def get_plans(self, is_active=True) -> List[PlanObj]:
+        qs = self._get_plans(is_active)
+        return [LocalPlanObj.from_db(p).with_service(self) for p in qs]
+
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        qs = self._get_plans(is_active)
+        # 若不为运营租户，则返回该租户下的方案
+        if tenant_id != OP_TYPE_TENANT_ID:
+            qs = qs.filter(tenant_id=tenant_id)
+
         return [LocalPlanObj.from_db(p).with_service(self) for p in qs]
 
 
@@ -451,12 +465,21 @@ class LocalPlanMgr(BasePlanMgr):
     def __init__(self):
         self.service_mgr = LocalServiceMgr()
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def _get_services(self, service: Optional[ServiceObj] = None) -> Generator[ServiceObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
+            yield svc
 
+    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+        for svc in self._get_services(service):
             yield from svc.get_plans(is_active=NOTSET)
+
+    def list_plans_by_tenant_id(
+        self, tenant_id: str, service: Optional[ServiceObj] = None
+    ) -> Generator[PlanObj, None, None]:
+        for svc in self._get_services(service):
+            yield from svc.get_plans_by_tenant_id(is_active=NOTSET, tenant_id=tenant_id)
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         svc = self._get_service_in_db(service)

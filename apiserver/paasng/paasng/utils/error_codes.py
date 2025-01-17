@@ -193,6 +193,9 @@ class ErrorCodes:
     DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode("dev sandbox count over limit")
     DEV_SANDBOX_API_ERROR = ErrorCode("dev sandbox's api return error", status_code=500)
 
+    # 租户相关
+    TENANT_PERMISSION_DENIED = ErrorCode("tenant permission denied")
+
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""
         attrs = [attr for attr in dir(self) if attr.isupper()]

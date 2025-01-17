@@ -363,9 +363,11 @@ def bk_user(request):
 def _mock_bk_auth():
     from tests.utils.mocks.bkauth import StubBkOauthClient
 
-    with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
-        "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
-    ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
+    with (
+        mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient),
+    ):
         yield
 
 

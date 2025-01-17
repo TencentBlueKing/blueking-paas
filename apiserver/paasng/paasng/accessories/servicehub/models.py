@@ -24,6 +24,7 @@ from django.db import models
 from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
@@ -257,13 +258,18 @@ class ServiceBindingPolicy(AuditedModel):
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    service_id = models.UUIDField(verbose_name="增强服务 ID")
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+
+    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
 
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
     data = models.JSONField(help_text="策略数据", default={})
+
+    class Meta:
+        unique_together = ("service_id", "tenant_id")
 
 
 class ServiceBindingPrecedencePolicy(AuditedModel):
@@ -277,6 +283,8 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+
+    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
 
     # See `PrecedencePolicyCondType`
     cond_type = models.CharField(verbose_name="条件类型", max_length=16)

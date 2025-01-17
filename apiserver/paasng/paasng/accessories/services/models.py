@@ -25,6 +25,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -199,8 +200,10 @@ class Plan(UuidAuditedModel):
     contain provider and resource spec
     """
 
+    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
     service = models.ForeignKey("Service", on_delete=models.CASCADE)
     name = models.CharField("方案名称", max_length=64)
+    display_name = models.CharField("方案展示名称", max_length=64, default="")
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)

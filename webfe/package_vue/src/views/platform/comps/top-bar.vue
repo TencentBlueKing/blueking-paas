@@ -78,6 +78,7 @@ export default {
 }
 .platform-tab-cls {
   min-width: 0;
+  padding-left: 12px;
   /deep/ .bk-tab-section {
     padding: 0 !important;
   }

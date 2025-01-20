@@ -253,7 +253,7 @@ export default {
       };
     },
     handleAdd() {
-      this.$emit('add');
+      this.$emit('add', this.order);
     },
     handleDelete() {
       this.$emit('delete', this.order);

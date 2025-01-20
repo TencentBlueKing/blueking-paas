@@ -10,6 +10,8 @@
           class="mr10"
           :list="filterList"
           :active="filterValue"
+          :has-icon="true"
+          :has-count="true"
           @change="handlerChange"
         />
         <bk-input
@@ -20,7 +22,7 @@
         ></bk-input>
       </div>
       <bk-table
-        :data="platformList"
+        :data="displayPlatformList"
         :size="'small'"
         :shift-multi-checked="true"
         dark-header
@@ -50,14 +52,16 @@
                   <span
                     v-for="item in row.policies.allocation_policy.env_clusters.stag"
                     class="tag"
+                    :key="`stag-${item}`"
                   >
-                    集群（预发布环境）：{{ item }}
+                    {{ $t('集群（预发布环境）') }}：{{ item }}
                   </span>
                   <span
                     v-for="item in row.policies.allocation_policy.env_clusters.prod"
                     class="tag"
+                    :key="`prod-${item}`"
                   >
-                    集群（生产环境）：{{ item }}
+                    {{ $t('集群（生产环境）') }}：{{ item }}
                   </span>
                 </template>
                 <!-- 不按环境分配 -->
@@ -65,8 +69,9 @@
                   <span
                     v-for="item in row.policies.allocation_policy.clusters"
                     class="tag"
+                    :key="`not-${item}`"
                   >
-                    集群：{{ item }}
+                    {{ $t('集群') }}：{{ item }}
                   </span>
                 </template>
               </div>
@@ -88,7 +93,7 @@
                   <span
                     v-for="(v, k) in item.matcher"
                     class="tag rule"
-                    :key="k"
+                    :key="`rule-${v}`"
                   >
                     {{ `${matchingRulesMap[k]} = ${v}` }}
                   </span>
@@ -97,25 +102,25 @@
                     <span
                       v-for="item in item.policy.env_clusters?.stag"
                       class="tag"
-                      :key="item"
+                      :key="`stag-${item}`"
                     >
-                      集群（预发布环境）：{{ item }}
+                      {{ $t('集群（预发布环境）') }}：{{ item }}
                     </span>
                     <span
                       v-for="item in item.policy.env_clusters?.prod"
                       class="tag"
-                      :key="item"
+                      :key="`prod-${item}`"
                     >
-                      集群（生产环境）：{{ item }}
+                      {{ $t('集群（生产环境）') }}：{{ item }}
                     </span>
                   </template>
                   <template v-else>
                     <span
                       v-for="item in item.policy.clusters"
                       class="tag"
-                      :key="item"
+                      :key="`uniform-${item}`"
                     >
-                      集群：{{ item }}
+                      {{ $t('集群') }}：{{ item }}
                     </span>
                   </template>
                 </div>
@@ -138,7 +143,7 @@
           </template>
         </bk-table-column>
         <bk-table-column
-          label="操作"
+          :label="$t('操作')"
           width="150"
         >
           <template
@@ -179,9 +184,9 @@ export default {
     return {
       filterValue: 'all',
       filterList: [
-        { name: 'all', label: '全部', count: 0 },
-        { name: 'notConfigured', label: '未配置', count: 0 },
-        { name: 'configured', label: '已配置', count: 0 },
+        { name: 'all', label: this.$t('全部'), count: 0 },
+        { name: 'notConfigured', label: this.$t('未配置'), count: 0 },
+        { name: 'configured', label: this.$t('已配置'), count: 0 },
       ],
       searchValue: '',
       isTableLoading: false,
@@ -204,6 +209,19 @@ export default {
   created() {
     this.init();
   },
+  computed: {
+    displayPlatformList() {
+      const filterCondition =
+        this.filterValue === 'all'
+          ? () => true
+          : this.filterValue === 'notConfigured'
+          ? (item) => !item.policies
+          : (item) => item.policies;
+
+      const filteredTable = this.platformList.filter(filterCondition);
+      return this.searchValue ? this.filterByKeyword(filteredTable) : filteredTable;
+    },
+  },
   methods: {
     init() {
       this.isTableLoading = true;
@@ -223,9 +241,23 @@ export default {
             }
             return 0;
           });
+        this.filterList.forEach((v) => {
+          if (v.name === 'all') {
+            v.count = this.platformList.length;
+          } else if (v.name === 'notConfigured') {
+            v.count = this.platformList.filter((item) => !item.policies).length;
+          } else {
+            v.count = this.platformList.filter((item) => item.policies).length;
+          }
+        });
         this.isTableLoading = false;
         this.isContentLoading = false;
       });
+    },
+    // 关键字搜索
+    filterByKeyword(list) {
+      const lowerCaseKeyword = this.searchValue.toLowerCase();
+      return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
     },
     handlerChange(data) {
       this.filterValue = data.name;

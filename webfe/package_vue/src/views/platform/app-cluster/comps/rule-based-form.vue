@@ -75,8 +75,8 @@ export default {
   },
   methods: {
     // 添加卡片
-    handleAdd() {
-      this.cardsList.push(cloneDeep(defaultCardItem));
+    handleAdd(index) {
+      this.cardsList.splice(index + 1, 0, cloneDeep(defaultCardItem));
     },
     // 删除单项规则
     handleDelete(index) {

@@ -4,10 +4,22 @@
     width="480"
     :theme="'primary'"
     :mask-close="false"
-    :ok-text="$t('提交')"
-    @confirm="handleConfirm"
     @value-change="handleValueChange"
   >
+    <div slot="footer">
+      <bk-button
+        theme="primary"
+        @click="handleConfirm"
+      >
+        {{ $t('提交') }}
+      </bk-button>
+      <bk-button
+        theme="default"
+        @click="dialogVisible = false"
+      >
+        {{ $t('取消') }}
+      </bk-button>
+    </div>
     <div class="dialog-content">
       <p>{{ $t('验证码已发送至您的企业微信，请注意查收！') }}</p>
       <div class="mt15 flex-row align-items-center">
@@ -70,7 +82,6 @@ export default {
   },
   methods: {
     handleConfirm() {
-      this.dialogVisible = false;
       if (!this.appSecretVerificationCode) {
         this.$paasMessage({
           theme: 'error',

@@ -9,6 +9,7 @@
       display-tag
       ext-cls="cluster-select-cls"
       ext-popover-cls="cluster-select-popover-cls"
+      @toggle="handleToggle"
     >
       <div
         slot="trigger"
@@ -54,7 +55,9 @@
 
 <script>
 import ClusterTransfer from './cluster-transfer.vue';
+import transferDrag from '@/mixins/transfer-drag';
 export default {
+  mixins: [transferDrag],
   props: {
     hasLabel: {
       type: Boolean,
@@ -102,11 +105,31 @@ export default {
       },
       deep: true,
     },
+    mixinTargetBuildpackIds(newValue) {
+      this.selectValue = newValue;
+    },
   },
   methods: {
+    // 拖拽初始化
+    transferDragInit() {
+      this.$nextTick(() => {
+        const content = document.querySelector('.cluster-transfer-cls .target-list .content');
+        if (!content) return;
+        const targetLiClass = '.cluster-transfer-cls .target-list .content li';
+        this.mixinSetDraggableProp(targetLiClass);
+        // 目标容器拖拽
+        this.mixinBindDragEvent(content, targetLiClass);
+      });
+    },
+    handleToggle(flag) {
+      if (flag) {
+        this.transferDragInit();
+      }
+    },
     // 穿梭框change
     transferChange(data) {
       this.selectValue = data;
+      this.transferDragInit();
     },
     // 取消选择当前的tag
     handleDeselect(data) {

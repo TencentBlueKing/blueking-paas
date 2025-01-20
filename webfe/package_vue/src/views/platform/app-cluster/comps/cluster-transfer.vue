@@ -9,8 +9,9 @@
       :target-list="targetList"
       :display-key="'name'"
       :setting-key="'name'"
-      @change="handleChange"
+      :searchable="true"
       :show-overflow-tips="true"
+      @change="handleChange"
       ext-cls="cluster-transfer-cls"
     >
       <div
@@ -45,6 +46,7 @@
         slot="target-option"
         slot-scope="data, index"
         class="transfer-source-item"
+        :data-id="data.name"
       >
         <div
           class="text"
@@ -54,6 +56,15 @@
         </div>
         <span class="default">{{ $t('默认') }}</span>
         <i class="bk-icon icon-close"></i>
+      </div>
+      <div slot="right-empty-content">
+        <bk-exception
+          class="cluster-exception-empty"
+          type="empty"
+          scene="part"
+        >
+          <span>{{ $t('暂无已选集群') }}</span>
+        </bk-exception>
       </div>
     </bk-transfer>
   </div>
@@ -129,6 +140,11 @@ export default {
         display: block;
       }
     }
+    .content li.moving {
+      background: transparent;
+      color: transparent;
+      border: 1px dashed #ccc;
+    }
   }
   .transfer-source-item {
     display: flex;
@@ -182,6 +198,12 @@ export default {
       cursor: not-allowed;
       opacity: 0.5;
     }
+  }
+}
+.cluster-exception-empty {
+  .part-text {
+    font-size: 14px;
+    color: #4d4f56;
   }
 }
 </style>

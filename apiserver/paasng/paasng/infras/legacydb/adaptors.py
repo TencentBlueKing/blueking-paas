@@ -116,6 +116,9 @@ class AppAdaptor:
         code: str,
         name: str,
         deploy_ver: str,
+        app_tenant_mode: str,
+        app_tenant_id: str,
+        tenant_id: str,
         from_paasv3: bool = True,
         logo: str = "",
         is_lapp: bool = False,
@@ -130,7 +133,8 @@ class AppAdaptor:
         is_already_online: int = 0,
     ) -> "legacy_models.LApplication":
         datetime_now = timezone.now()
-        app = self.model(
+        # 应用的基本信息
+        app_data = dict(
             name=name,  # 应用名称
             code=code,  # 应用编码
             logo=logo,  # 应用 logo 的访问地址
@@ -163,6 +167,18 @@ class AppAdaptor:
             migrated_to_paasv3=0,  # 是否已经迁移到Paas3.0
             open_mode="new_tab",  # 应用打开方式, desktop: 桌面打开, new_tab: 新标签页打开
         )
+        # 桌面的应用表里面已经定义了租户相关字段，则写入
+        if hasattr(self.model, "app_tenant_mode"):
+            app_data.update(
+                {
+                    "app_tenant_mode": app_tenant_mode,
+                    "app_tenant_id": app_tenant_id,
+                    "tenant_id": tenant_id,
+                }
+            )
+
+        # 创建应用实例
+        app = self.model(**app_data)
         try:
             self.session.add(app)
             self.session.commit()

@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Testcases for application entrance management
-"""
+"""Testcases for application entrance management"""
+
 from contextlib import contextmanager
 from unittest import mock
 
@@ -133,7 +133,14 @@ class TestUpdateExposedURLType:
             session = console_db.get_scoped_session()
             app = AppManger(session).get(bk_app.code)
             if not app:
-                app = register_application_with_default(region=bk_app.region, code=bk_app.code, name=bk_app.name)
+                app = register_application_with_default(
+                    bk_app.region,
+                    bk_app.code,
+                    bk_app.name,
+                    bk_app.app_tenant_mode,
+                    bk_app.app_tenant_id,
+                    bk_app.tenant_id,
+                )
             yield app
 
         with ensure_app_in_market():

@@ -66,7 +66,9 @@ class TestAppMembers:
         init_users = [bk_user.username, "user1", "user2", "user3"]
         app = create_custom_app(bk_user, developers=init_users, ops=init_users)
         # 创建应用后，将应用注册到 console
-        register_application_with_default(app.region, app.code, app.name)
+        register_application_with_default(
+            app.region, app.code, app.name, app.app_tenant_mode, app.app_tenant_id, app.tenant_id
+        )
         return app, init_users
 
     def test_init_members(self, init_data):
@@ -162,7 +164,9 @@ class TestApp:
 
     def test_app_state(self, bk_user, create_custom_app):
         app = create_custom_app(bk_user)
-        app = register_application_with_default(app.region, app.code, app.name)
+        app = register_application_with_default(
+            app.region, app.code, app.name, app.app_tenant_mode, app.app_tenant_id, app.tenant_id
+        )
         # 默认创建的应用未开发状态，不能同步显示到桌面
         assert app.state == LegacyAppState.DEVELOPMENT.value
         assert app.is_already_test == 0

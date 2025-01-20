@@ -95,6 +95,27 @@ export default {
       background: #cbf0da;
       border: 1px solid #2caf5e;
     }
+    i {
+      font-size: 14px;
+      margin-right: 3px;
+      transform: translateY(0px);
+    }
+    .count {
+      margin-left: 3px;
+    }
+  }
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fce5c0;
+    border: 1px solid #f59500;
+    margin-right: 4px;
+    &.configured {
+      background: #cbf0da;
+      border: 1px solid #2caf5e;
+    }
   }
 }
 </style>

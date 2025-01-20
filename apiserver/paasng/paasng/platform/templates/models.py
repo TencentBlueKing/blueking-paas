@@ -36,7 +36,10 @@ class TemplateManager(models.Manager):
 
 
 class Template(AuditedModel):
-    """开发模板配置"""
+    """开发模板配置
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     name = models.CharField(verbose_name=_("模板名称"), unique=True, max_length=64)
     type = models.CharField(verbose_name=_("模板类型"), choices=TemplateType.get_django_choices(), max_length=16)

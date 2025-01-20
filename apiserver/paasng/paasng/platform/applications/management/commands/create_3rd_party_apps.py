@@ -184,6 +184,7 @@ class Command(BaseCommand):
                 "introduction_en": app_desc.introduction_en,
                 "type": AppType.THIRD_PARTY.value,
                 "state": AppState.RELEASED.value,
+                "tenant_id": application.tenant_id,
             },
         )
         img_format, img_str = app_desc.logo.split(";base64,")
@@ -195,7 +196,9 @@ class Command(BaseCommand):
         # Send signal to trigger extra processes for logo
         application_logo_updated.send(sender=application, application=application)
         # 默认为从新标签页面打开
-        DisplayOptions.objects.update_or_create(product=product, open_mode=OpenMode.NEW_TAB.value)
+        DisplayOptions.objects.update_or_create(
+            product=product, open_mode=OpenMode.NEW_TAB.value, defaults={"tenant_id": application.tenant_id}
+        )
 
         # 同步应用基本信息、市场信息到桌面
         product_create_or_update_by_operator.send(

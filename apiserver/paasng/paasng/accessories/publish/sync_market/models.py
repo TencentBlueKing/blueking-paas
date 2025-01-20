@@ -34,5 +34,7 @@ class TagData:
 
 
 class TagMap(django_models.Model):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     tag = django_models.OneToOneField(market_models.Tag, on_delete=django_models.CASCADE)
     remote_id = django_models.IntegerField(db_index=True)

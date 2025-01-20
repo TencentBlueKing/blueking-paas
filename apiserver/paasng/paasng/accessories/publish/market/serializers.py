@@ -169,6 +169,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
         """Validate creation params"""
         data["code"] = data["application"].code
         data["owner"] = data["application"].owner
+        data["tenant_id"] = data["application"].tenant_id
         return data
 
     def create(self, validated_data: Dict):
@@ -178,7 +179,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
         instance = super().create(validated_data)
         # Create DisplayOptions object
         if display_options:
-            DisplayOptions.objects.create(product=instance, **display_options)
+            DisplayOptions.objects.create(product=instance, tenant_id=instance.tenant_id, **display_options)
             product_contact_updated.send(sender=instance, product=instance)
 
         product_create_or_update_by_operator.send(

@@ -23,6 +23,7 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.utils.models import make_json_field
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
@@ -48,6 +49,8 @@ class DevSandbox(OwnerTimestampedModel):
     expired_at = models.DateTimeField(null=True, help_text="到期时间")
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
 
+    tenant_id = tenant_id_field_factory()
+
     def renew_expired_at(self):
         self.expired_at = timezone.now() + timezone.timedelta(hours=2)
         self.save(update_fields=["expired_at"])
@@ -63,3 +66,5 @@ class CodeEditor(UuidAuditedModel):
         DevSandbox, on_delete=models.CASCADE, db_constraint=False, related_name="code_editor"
     )
     password = EncryptField(max_length=32, verbose_name="登录密码", help_text="登录密码")
+
+    tenant_id = tenant_id_field_factory()

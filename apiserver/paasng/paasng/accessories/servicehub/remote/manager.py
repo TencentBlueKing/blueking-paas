@@ -302,6 +302,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
                     engine_app=self.db_engine_app,
                     service_id=self.db_obj.service_id,
                     service_instance_id=self.db_obj.service_instance_id,
+                    tenant_id=self.db_obj.tenant_id,
                 )
 
         self.db_obj.service_instance_id = None
@@ -843,6 +844,7 @@ class RemoteServiceBinder:
         svc_module_attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
             module=module,
             service_id=self.service.uuid,
+            defaults={"tenant_id": module.tenant_id},
         )
 
         # bind plans to each engineApp without creating
@@ -866,6 +868,7 @@ class RemoteServiceBinder:
         svc_module_attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
             module=module,
             service_id=self.service.uuid,
+            defaults={"tenant_id": module.tenant_id},
         )
 
         # bind plans to each environment
@@ -883,7 +886,7 @@ class RemoteServiceBinder:
     def bind_without_plan(self, module: Module):
         """bind the Service to Module, without binding any RemoteServiceEngineAppAttachment"""
         attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
-            service_id=self.service.uuid, module=module
+            service_id=self.service.uuid, module=module, defaults={"tenant_id": module.tenant_id}
         )
         return attachment
 
@@ -891,7 +894,7 @@ class RemoteServiceBinder:
         attachment, created = RemoteServiceEngineAppAttachment.objects.get_or_create(
             engine_app=env.engine_app,
             service_id=self.service.uuid,
-            defaults={"plan_id": plan.uuid},
+            defaults={"plan_id": plan.uuid, "tenant_id": env.tenant_id},
         )
 
         if created or attachment.plan_id == constants.LEGACY_PLAN_ID:

@@ -54,6 +54,7 @@ class ProductMigration(BaseMigration):
             description_zh_cn=self.context.legacy_app_proxy.get_app_description(),
             tag=tag,
             type=self.context.legacy_app_proxy.get_app_type(),
+            tenant_id=app.tenant_id,
         )
         product = Product.objects.create(**kwargs)
         product.created = self.legacy_app.created_date
@@ -66,6 +67,7 @@ class ProductMigration(BaseMigration):
             height=self.legacy_app.height or 550,
             is_win_maximize=self.legacy_app.is_max,
             resizable=self.context.legacy_app_proxy.is_app_resizable(),
+            tenant_id=app.tenant_id,
         )
 
         # 迁移logo到rgw

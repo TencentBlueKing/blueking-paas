@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Applications related stuff
-"""
+"""Applications related stuff"""
+
 import datetime
 from dataclasses import dataclass
 from typing import Any, Collection, Dict, List, Optional
@@ -29,6 +29,7 @@ from django.utils.translation import get_language
 
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, UserApplicationFilter
 
@@ -62,6 +63,7 @@ class UniSimpleApp:
     created: datetime.datetime
     creator: str
     type: str
+    tenant_id: str
     developers: Optional[List[str]] = None
     _db_object: Optional[Any] = None
 
@@ -85,6 +87,7 @@ class UniSimpleApp:
             type=app.type,
             logo_url=app.get_logo_url(),
             developers=app.get_developers() if include_developers_info else None,
+            tenant_id=app.tenant_id,
             _db_object=app,
         )
 
@@ -114,13 +117,24 @@ class UniSimpleApp:
             developers=normalizer.get_developers() if include_developers_info else None,
             # PaaS2.0 的应用都为普通应用
             type=ApplicationType.DEFAULT.value,
+            # PaaS2.0 的应用都是非多租户模式下的应用
+            tenant_id=DEFAULT_TENANT_ID,
             _db_object=app,
         )
 
 
-def query_uni_apps_by_ids(ids: List[str], include_inactive_apps, include_developers_info) -> Dict[str, UniSimpleApp]:
-    """Query universal applications by app ids, it will combine the results of both default and legacy platforms"""
-    results = query_default_apps_by_ids(ids, include_inactive_apps, include_developers_info)
+def query_uni_apps_by_ids(
+    ids: List[str], include_inactive_apps: bool, include_developers_info: bool, tenant_id: str
+) -> Dict[str, UniSimpleApp]:
+    """
+    Query universal applications by app ids, it will combine the results of both default and legacy platforms
+
+    :param ids: APP ID, supports querying PaaS 2.0 apps.
+    :param include_inactive_apps: whether to include inactive apps.
+    :param include_developers_info: Whether to include developer information; requires calling the IAM API and is not recommended unless necessary.
+    :param tenant_id: Tenant ID of the app
+    """
+    results = query_default_apps_by_ids(ids, include_inactive_apps, include_developers_info, tenant_id)
 
     # Only query missing app ids on legacy platform
     missing_ids = set(ids) - set(results)
@@ -130,10 +144,17 @@ def query_uni_apps_by_ids(ids: List[str], include_inactive_apps, include_develop
 
 
 def query_default_apps_by_ids(
-    ids: Collection[str], include_inactive_apps, include_developers_info
+    ids: Collection[str], include_inactive_apps: bool, include_developers_info: bool, tenant_id: str
 ) -> Dict[str, UniSimpleApp]:
-    """Query applications by application ids, returns universal model"""
-    apps = Application.objects.filter(code__in=ids).select_related("product")
+    """
+    Query applications by application ids, returning only PaaS 3.0 applications.
+
+    :param ids: APP ID, supports querying only PaaS 3.0 applications..
+    :param include_inactive_apps: whether to include inactive apps.
+    :param include_developers_info: Whether to include developer information; requires calling the IAM API and is not recommended unless necessary.
+    :param tenant_id: Tenant ID of the app
+    """
+    apps = Application.objects.filter(code__in=ids, tenant_id=tenant_id).select_related("product")
     if not include_inactive_apps:
         apps = apps.filter(is_active=True)
 
@@ -159,16 +180,28 @@ def query_legacy_apps_by_ids(
     return results
 
 
-def query_uni_apps_by_username(username: str) -> List[UniSimpleApp]:
-    """Query universal applications by username, it will combine the results of both default and legacy platforms"""
-    default_apps = query_default_apps_by_username(username)
+def query_uni_apps_by_username(username: str, tenant_id: str) -> List[UniSimpleApp]:
+    """
+    Query universal applications by username, it will combine the results of both default and legacy platforms
+
+    :param username: User ID.
+    :param tenant_id: Tenant ID of the app
+    """
+    default_apps = query_default_apps_by_username(username, tenant_id)
     legacy_apps = query_legacy_apps_by_username(username)
     return default_apps + legacy_apps
 
 
-def query_default_apps_by_username(username: str) -> List[UniSimpleApp]:
+def query_default_apps_by_username(username: str, tenant_id: str) -> List[UniSimpleApp]:
+    """
+    Query applications by username, returning only PaaS 3.0 applications.
+
+    :param username: User ID.
+    :param tenant_id: Tenant ID of the app;
+    """
     user = BasicUser(settings.USER_TYPE, username)
     applications = UserApplicationFilter(user).filter()
+    applications = applications.filter(tenant_id=tenant_id)
 
     results = []
     for app in applications:
@@ -197,7 +230,7 @@ class UniMinimalApp:
 
 
 def query_uni_apps_by_keyword(
-    keyword: str, offset: int, limit: int, include_inactive_apps: bool
+    keyword: str, offset: int, limit: int, include_inactive_apps: bool, tenant_id: str
 ) -> List[UniMinimalApp]:
     """Query application basic info by keywords (APP ID, APP Name)
 
@@ -205,13 +238,14 @@ def query_uni_apps_by_keyword(
     :param offset: the offset of the query
     :param limit: the limit of the query
     :param include_inactive_apps: whether to include inactive apps
+    :param tenant_id: Tenant ID of the app
     """
     # 应用名称的字段需要根据请求语言来确定
     language = get_language()
     name_field = "name_en" if language == "en" else "name"
 
     # 蓝鲸统一的规范，默认排序为字母顺序，而不是按最近创建时间排序
-    default_apps = Application.objects.all().order_by("code")
+    default_apps = Application.objects.filter(tenant_id=tenant_id).order_by("code")
     if not include_inactive_apps:
         default_apps = default_apps.filter(is_active=True)
     if keyword:

@@ -168,6 +168,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
                 engine_app=self.db_obj.engine_app,
                 service=self.db_obj.service,
                 service_instance=service_instance,
+                tenant_id=self.db_obj.tenant_id,
             )
 
     def get_instance(self) -> ServiceInstanceObj:
@@ -539,7 +540,7 @@ class LocalServiceBinder:
         :raises BindServicePlanError: When no appropriate plans can be found.
         """
         svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
-            service=self.service.db_object, module=module
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
         )
 
         # bind plans to each environment
@@ -561,7 +562,7 @@ class LocalServiceBinder:
         :raises BindServicePlanError: When no appropriate plans can be found.
         """
         svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
-            service=self.service.db_object, module=module
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
         )
 
         # bind plans to each environment
@@ -579,7 +580,7 @@ class LocalServiceBinder:
     def bind_without_plan(self, module: Module):
         """bind the Service to Module, without binding any ServiceEngineAppAttachment"""
         svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
-            service=self.service.db_object, module=module
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
         )
         return svc_module_attachment
 
@@ -587,7 +588,7 @@ class LocalServiceBinder:
         svc_engine_app_attachment, created = ServiceEngineAppAttachment.objects.get_or_create(
             engine_app=env.engine_app,
             service=self.service.db_object,
-            defaults=dict(plan=plan.db_object),
+            defaults={"plan": plan.db_object, "tenant_id": env.tenant_id},
         )
 
         if created or svc_engine_app_attachment.plan_id == constants.LEGACY_PLAN_ID:

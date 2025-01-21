@@ -26,7 +26,13 @@ from paasng.plat_mgt.infras.clusters.entities import HelmRelease
 
 
 class K8SWorkloadStateGetter:
-    """k8s 工作负载状态获取器"""
+    """
+    k8s 工作负载状态获取器
+
+    根据 HelmRelease 中记录的资源信息，获取组件工作负载的状态
+    使用场景：集群/平台管理员通过页面可以查看组件部署情况
+    （目前支持 Deployment、StatefulSet、DaemonSet 的状态获取）
+    """
 
     def __init__(self, cluster_name: str, release: HelmRelease):
         self.client = get_client_by_cluster_name(cluster_name)

@@ -61,7 +61,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         ).order_by("-required", "name")
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_components"],
+        tags=["plat_mgt.infras.cluster_components"],
         operation_description="获取集群组件列表",
         responses={status.HTTP_200_OK: ClusterComponentListOutputSLZ(many=True)},
     )
@@ -80,7 +80,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterComponentListOutputSLZ(components, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_components"],
+        tags=["plat_mgt.infras.cluster_components"],
         operation_description="获取集群组件详情",
         responses={status.HTTP_200_OK: ClusterComponentRetrieveOutputSLZ()},
     )
@@ -119,7 +119,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterComponentRetrieveOutputSLZ(component).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_components"],
+        tags=["plat_mgt.infras.cluster_components"],
         operation_description="对比组件版本",
         responses={status.HTTP_200_OK: ClusterComponentDiffVersionOutputSLZ()},
     )
@@ -146,7 +146,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterComponentDiffVersionOutputSLZ(resp_data).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_components"],
+        tags=["plat_mgt.infras.cluster_components"],
         operation_description="更新或新建集群组件",
         request_body=ClusterComponentUpsertInputSLZ,
         responses={status.HTTP_204_NO_CONTENT: ""},
@@ -190,7 +190,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         )
         try:
             # bcs upgrade 接口默认带上 --install 参数，因此调用时无需区分是新建还是更新
-            bcs_client.upgrade_release_with_latest_chart_version(
+            bcs_client.upgrade_release_to_latest_chart_version(
                 cluster.bcs_project_id,
                 cluster.bcs_cluster_id,
                 namespace,

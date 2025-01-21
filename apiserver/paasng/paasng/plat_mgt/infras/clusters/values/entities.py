@@ -40,8 +40,8 @@ class IngressServiceConfig(BaseModel):
 
 
 class BkIngressNginxValues(BaseModel):
-    hostNetwork: bool
     image: ImageConfig
+    hostNetwork: bool = False
     service: IngressServiceConfig = Field(default_factory=IngressServiceConfig)
     nodeSelector: Dict[str, str] = Field(default_factory=dict)
     resources: Dict[str, Any] = CLUSTER_COMPONENT_DEFAULT_QUOTA

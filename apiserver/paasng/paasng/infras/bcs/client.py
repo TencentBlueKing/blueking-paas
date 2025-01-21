@@ -121,7 +121,7 @@ class BCSUserClient:
         )
         self.client: BCSGroup = client.api
 
-    def get_chart_versions(self, project_id: str, repo_name: str, chart_name: str):
+    def get_chart_versions(self, project_id: str, repo_name: str, chart_name: str) -> List[entities.ChartVersion]:
         """获取 Chart 的可用版本（按时间逆序）"""
         path_params = {"projectCode": project_id, "repoName": repo_name, "name": chart_name}
 
@@ -160,7 +160,7 @@ class BCSUserClient:
             resp = self.client.upgrade_release(path_params=path_params, data=data)
             self._validate_resp(resp)
 
-    def upgrade_release_with_latest_chart_version(
+    def upgrade_release_to_latest_chart_version(
         self,
         project_id: str,
         cluster_id: str,

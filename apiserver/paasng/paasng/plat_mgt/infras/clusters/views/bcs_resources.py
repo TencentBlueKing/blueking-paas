@@ -33,7 +33,7 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.bcs-resource"],
+        tags=["plat_mgt.infras.bcs-resource"],
         operation_description="获取用户有权限的项目",
         responses={status.HTTP_200_OK: BCSProjectListOutputSLZ(many=True)},
     )
@@ -43,7 +43,7 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
         return Response(data=BCSProjectListOutputSLZ(projects, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.bcs-resource"],
+        tags=["plat_mgt.infras.bcs-resource"],
         operation_description="获取项目下的集群",
         responses={status.HTTP_200_OK: BCSClusterListOutputSLZ(many=True)},
     )

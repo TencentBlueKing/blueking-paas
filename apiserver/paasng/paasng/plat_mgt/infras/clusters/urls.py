@@ -58,7 +58,7 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/",
         views.ClusterComponentViewSet.as_view({"get": "list"}),
-        name="plat_mgt.infras.cluster.component.bulk",
+        name="plat_mgt.infras.cluster.component.list",
     ),
     # 单一集群组件相关操作
     path(

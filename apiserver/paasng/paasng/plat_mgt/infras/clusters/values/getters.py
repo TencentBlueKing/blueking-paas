@@ -40,17 +40,18 @@ class ValuesGetter(abc.ABC):
 
 
 def get_values_getter_cls(name: str) -> Type[ValuesGetter]:
-    if name == ClusterComponentName.BK_INGRESS_NGINX:
-        return BkIngressNginxValuesGetter
+    match name:
+        case ClusterComponentName.BK_INGRESS_NGINX:
+            return BkIngressNginxValuesGetter
 
-    if name == ClusterComponentName.BKAPP_LOG_COLLECTION:
-        return BkAppLogCollectionValuesGetter
+        case ClusterComponentName.BKAPP_LOG_COLLECTION:
+            return BkAppLogCollectionValuesGetter
 
-    if name == ClusterComponentName.BKPAAS_APP_OPERATOR:
-        return BkPaaSAppOperatorValuesGetter
+        case ClusterComponentName.BKPAAS_APP_OPERATOR:
+            return BkPaaSAppOperatorValuesGetter
 
-    if name == ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
-        return BCSGPAValuesGetter
+        case ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
+            return BCSGPAValuesGetter
 
     return DefaultValuesGetter
 

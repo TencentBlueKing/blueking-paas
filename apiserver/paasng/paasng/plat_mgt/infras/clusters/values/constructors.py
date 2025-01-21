@@ -41,17 +41,18 @@ class ValuesConstructor(abc.ABC):
 
 
 def get_values_constructor_cls(name: str) -> Type[ValuesConstructor]:
-    if name == ClusterComponentName.BK_INGRESS_NGINX:
-        return BkIngressNginxValuesConstructor
+    match name:
+        case ClusterComponentName.BK_INGRESS_NGINX:
+            return BkIngressNginxValuesConstructor
 
-    if name == ClusterComponentName.BKAPP_LOG_COLLECTION:
-        return BkAppLogCollectionValuesConstructor
+        case ClusterComponentName.BKAPP_LOG_COLLECTION:
+            return BkAppLogCollectionValuesConstructor
 
-    if name == ClusterComponentName.BKPAAS_APP_OPERATOR:
-        return BkPaaSAppOperatorValuesConstructor
+        case ClusterComponentName.BKPAAS_APP_OPERATOR:
+            return BkPaaSAppOperatorValuesConstructor
 
-    if name == ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
-        return BCSGPAValuesConstructor
+        case ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
+            return BCSGPAValuesConstructor
 
     return DefaultValuesConstructor
 
@@ -67,10 +68,9 @@ class BkIngressNginxValuesConstructor(ValuesConstructor):
     """bk-ingress-nginx 需要使用用户填写的配置"""
 
     def construct(self, user_values: Dict[str, Any]) -> Dict[str, Any]:
-        values = BkIngressNginxValues(**user_values)
         # 覆盖默认的镜像源地址
-        values.image.registry = self.cluster.component_image_registry
-        return values.dict(by_alias=True)
+        user_values["image"] = {"registry": self.cluster.component_image_registry}
+        return BkIngressNginxValues(**user_values).dict(by_alias=True)
 
 
 class BkAppLogCollectionValuesConstructor(ValuesConstructor):
@@ -94,6 +94,7 @@ class BkAppLogCollectionValuesConstructor(ValuesConstructor):
                 "image": {
                     "registry": self.cluster.component_image_registry,
                 },
+                "containersLogPath": self.cluster.container_log_dir,
             },
             "bkapp-logstash": {
                 "image": {

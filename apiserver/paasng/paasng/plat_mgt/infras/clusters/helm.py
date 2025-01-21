@@ -37,10 +37,12 @@ class HelmClient:
         self.client = get_client_by_cluster_name(cluster_name)
 
     def list_releases(self, namespace: str | None = None) -> List[HelmRelease]:
+        """获取所有 Helm Release 信息（当前部署的最新版本）"""
         secrets = KSecret(self.client).ops_batch.list(labels={"owner": "helm"}, namespace=namespace).items
         return self._parse_secrets_to_releases(self._filter_latest_version(secrets))
 
     def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
+        """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
         for rel in self.list_releases(namespace):
             if rel.name == name:
                 return rel

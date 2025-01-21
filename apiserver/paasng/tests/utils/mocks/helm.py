@@ -24,7 +24,6 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
 from paasng.plat_mgt.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
 from paasng.plat_mgt.infras.clusters.values.constructors import get_values_constructor_cls
-from tests.utils.basic import generate_random_string
 
 
 class StubHelmClient:
@@ -66,7 +65,9 @@ class StubHelmClient:
                 continue
 
             # 同名组件放在一样的命名空间下
-            namespace = namespace or component_namespace_map.get(component_name) or generate_random_string(8)
+            namespace = (
+                namespace or component_namespace_map.get(component_name) or self.cluster.component_preferred_namespace
+            )
             component_namespace_map[component_name] = namespace
 
             # 同名组件的版本号递增

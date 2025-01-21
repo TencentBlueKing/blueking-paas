@@ -15,8 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import abc
 from typing import Any, Dict, Type
+
+from pydantic import BaseModel
 
 from paas_wl.infras.cluster.constants import ClusterComponentName
 from paasng.plat_mgt.infras.clusters.entities import HelmRelease
@@ -28,68 +29,36 @@ from paasng.plat_mgt.infras.clusters.values.entities import (
 )
 
 
-class ValuesGetter(abc.ABC):
+class ValuesSimplifier:
+    """获取简化后的 values"""
+
     def __init__(self, release: HelmRelease):
         self.release = release
+        self.values_model = get_values_model(release.name)
 
     def raw(self) -> Dict[str, Any]:
         return self.release.values
 
-    @abc.abstractmethod
-    def get(self) -> Dict[str, Any]: ...
+    def get(self) -> Dict[str, Any]:
+        if not self.values_model:
+            return self.raw()
+
+        values = self.values_model(**self.raw())
+        return values.dict(by_alias=True)
 
 
-def get_values_getter_cls(name: str) -> Type[ValuesGetter]:
+def get_values_model(name: str) -> Type[BaseModel] | None:
     match name:
         case ClusterComponentName.BK_INGRESS_NGINX:
-            return BkIngressNginxValuesGetter
+            return BkIngressNginxValues
 
         case ClusterComponentName.BKAPP_LOG_COLLECTION:
-            return BkAppLogCollectionValuesGetter
+            return BkAppLogCollectionValues
 
         case ClusterComponentName.BKPAAS_APP_OPERATOR:
-            return BkPaaSAppOperatorValuesGetter
+            return BkPaaSAppOperatorValues
 
         case ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER:
-            return BCSGPAValuesGetter
+            return BCSGPAValues
 
-    return DefaultValuesGetter
-
-
-class DefaultValuesGetter(ValuesGetter):
-    """默认：全量返回 Release 使用的 values"""
-
-    def get(self) -> Dict[str, Any]:
-        return self.raw()
-
-
-class BkIngressNginxValuesGetter(ValuesGetter):
-    """bk-ingress-nginx"""
-
-    def get(self) -> Dict[str, Any]:
-        values = BkIngressNginxValues(**self.release.values)
-        return values.dict(by_alias=True)
-
-
-class BkAppLogCollectionValuesGetter(ValuesGetter):
-    """bkapp-log-collection"""
-
-    def get(self) -> Dict[str, Any]:
-        values = BkAppLogCollectionValues(**self.release.values)
-        return values.dict(by_alias=True)
-
-
-class BkPaaSAppOperatorValuesGetter(ValuesGetter):
-    """bkpaas-app-operator"""
-
-    def get(self) -> Dict[str, Any]:
-        values = BkPaaSAppOperatorValues(**self.release.values)
-        return values.dict(by_alias=True)
-
-
-class BCSGPAValuesGetter(ValuesGetter):
-    """bcs-general-pod-autoscaler"""
-
-    def get(self) -> Dict[str, Any]:
-        values = BCSGPAValues(**self.release.values)
-        return values.dict(by_alias=True)
+    return None

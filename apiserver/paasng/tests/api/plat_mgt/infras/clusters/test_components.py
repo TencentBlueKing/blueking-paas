@@ -21,6 +21,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
 from tests.utils.mocks.helm import StubHelmClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -72,6 +73,19 @@ class TestRetrieveClusterComponent:
         )
         assert resp.status_code == status.HTTP_200_OK
 
+        resp_data = resp.json()
+        assert resp_data["chart"]["name"] == "bk-ingress-nginx"
+        assert resp_data["release"]["name"] == "bk-ingress-nginx"
+        assert resp_data["release"]["namespace"] == "blueking"
+        assert resp_data["release"]["status"] == "deployed"
+        assert resp_data["values"] == {
+            "image": {"registry": "hub.bktencent.com"},
+            "hostNetwork": False,
+            "service": {"nodePorts": {"http": 30180, "https": 30543}},
+            "nodeSelector": {},
+            "resources": CLUSTER_COMPONENT_DEFAULT_QUOTA,
+        }
+
     def test_retrieve_install_failed_component(self, plat_mgt_api_client, init_system_cluster):
         resp = plat_mgt_api_client.get(
             reverse(
@@ -81,6 +95,28 @@ class TestRetrieveClusterComponent:
         )
         assert resp.status_code == status.HTTP_200_OK
 
+        resp_data = resp.json()
+        assert resp_data["release"]["name"] == "bkapp-log-collection"
+        assert resp_data["release"]["status"] == "failed"
+        assert resp_data["values"] == {
+            "global": {
+                "elasticSearchUsername": "blueking",
+                "elasticSearchPassword": "blueking",
+                "elasticSearchScheme": "https",
+                "elasticSearchHost": "127.0.0.12",
+                "elasticSearchPort": 9200,
+            },
+            "bkapp-filebeat": {
+                "image": {"registry": "hub.bktencent.com"},
+                "containersLogPath": "/var/lib/docker/containers",
+            },
+            "bkapp-logstash": {
+                "image": {"registry": "hub.bktencent.com"},
+                "appLogPrefix": "bk_paas3_app",
+                "ingressLogPrefix": "bk_paas3_ingress",
+            },
+        }
+
     def test_retrieve_not_installed(self, plat_mgt_api_client, init_system_cluster):
         resp = plat_mgt_api_client.get(
             reverse(
@@ -89,10 +125,6 @@ class TestRetrieveClusterComponent:
             )
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
-
-
-class TestDiffClusterComponentVersion:
-    def test_diff_version(self, plat_mgt_api_client): ...
 
 
 class TestUpsertClusterComponent:

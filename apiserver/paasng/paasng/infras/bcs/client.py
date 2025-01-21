@@ -155,6 +155,8 @@ class BCSUserClient:
             "version": chart_version,
             "chart": chart_name,
             "values": [yaml.dump(values)],
+            # 要求 Helm 等待服务就绪（10 min 超时）
+            "args": ["--wait", "--timeout=600s"],
         }
         with wrap_request_exc():
             resp = self.client.upgrade_release(path_params=path_params, data=data)

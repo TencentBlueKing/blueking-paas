@@ -2224,8 +2224,6 @@ export default {
   环境变量默认密钥: 'Environment variable default key',
   '内置环境变量 BKPAAS_APP_SECRET 使用的密钥。': 'The secret used by the built-in environment variable BKPAAS_APP_SECRET.',
   '文档：什么是内置环境变量？': 'Documentation: What are built-in environment variables?',
-  验证查看: 'Verify to view',
-  点击查看: 'Click to view',
   '密钥使用情况概览（仅包含已部署环境）': 'Key usage overview (deployed environments only)',
   最近部署时间: 'Last deployment time',
   '与默认密钥不一致，': 'Inconsistent with the default key,',

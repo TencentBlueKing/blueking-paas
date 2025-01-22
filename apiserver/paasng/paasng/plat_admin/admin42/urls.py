@@ -360,6 +360,17 @@ urlpatterns = [
         services.ApplicationServicesManageViewSet.as_view({"delete": "recycle_resource"}),
         name="admin.applications.services.recycle_resource",
     ),
+    re_path(
+        r"^api/applications/(?P<code>[^/]+)/services/unbound/$",
+        services.ApplicationUnboundServicesManageViewSet.as_view({"get": "list"}),
+        name="admin.applications.services.unbound.list",
+    ),
+    re_path(
+        r"^api/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/services/"
+        r"(?P<service_id>[^/]+)/unbound/instances/(?P<instance_id>[^/]+)/$",
+        services.ApplicationUnboundServicesManageViewSet.as_view({"delete": "recycle_resource"}),
+        name="admin.applications.services.unbound.recycle_resource",
+    ),
     # 应用详情-成员管理
     re_path(
         r"^applications/(?P<code>[^/]+)/base_info/memberships/$",

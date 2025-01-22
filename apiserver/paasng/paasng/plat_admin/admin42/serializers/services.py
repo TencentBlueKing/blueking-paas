@@ -113,3 +113,10 @@ class ServiceInstanceBindInfoSLZ(serializers.Serializer):
     module = serializers.CharField(help_text="模块名称")
     plan = PlanObjSLZ()
     service = ServiceObjSLZ()
+
+
+class UnboundServiceInstanceInfoSLZ(serializers.Serializer):
+    environment = serializers.CharField(help_text="部署环境")
+    module = serializers.CharField(help_text="模块名称")
+    instance = ServiceInstanceSLZ(help_text="服务实例信息")
+    service = ServiceObjSLZ(help_text="增强服务信息")

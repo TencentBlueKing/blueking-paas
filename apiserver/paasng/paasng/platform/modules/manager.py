@@ -533,7 +533,7 @@ class ModuleCleaner:
                     application_id=self.module.application_id,
                     environment_name=m.environment_name,
                 ).delete()
-            m.delete()
+                m.delete()
 
     def delete_module(self):
         """删除模块的数据库记录(真删除)"""

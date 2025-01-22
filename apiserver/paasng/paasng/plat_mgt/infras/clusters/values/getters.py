@@ -29,22 +29,20 @@ from paasng.plat_mgt.infras.clusters.values.entities import (
 )
 
 
-class ValuesSimplifier:
-    """获取简化后的 values"""
+class UserValuesGetter:
+    """获取简化后的 values（用户指定的）"""
 
     def __init__(self, release: HelmRelease):
         self.release = release
         self.values_model = get_values_model(release.name)
 
-    def raw(self) -> Dict[str, Any]:
-        return self.release.values
-
     def get(self) -> Dict[str, Any]:
-        if not self.values_model:
-            return self.raw()
+        values = self.release.values
 
-        values = self.values_model(**self.raw())
-        return values.dict(by_alias=True)
+        if not self.values_model:
+            return values
+
+        return self.values_model(**values).dict(by_alias=True)
 
 
 def get_values_model(name: str) -> Type[BaseModel] | None:

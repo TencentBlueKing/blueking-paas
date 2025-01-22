@@ -42,7 +42,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
 )
 from paasng.plat_mgt.infras.clusters.serializers.components import ClusterComponentDiffVersionOutputSLZ
 from paasng.plat_mgt.infras.clusters.values.constructors import get_values_constructor_cls
-from paasng.plat_mgt.infras.clusters.values.simplifiers import ValuesSimplifier
+from paasng.plat_mgt.infras.clusters.values.getters import UserValuesGetter
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -93,16 +93,13 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         if not release:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        workload_states = K8SWorkloadStateGetter(cluster_name, release).get_states()
-        values_simplifier = ValuesSimplifier(release)
-
         try:
-            values = values_simplifier.get()
+            values = UserValuesGetter(release).get()
         except PDValidationError:
             # 仅记录日志，不影响查询组件的其他信息 / 状态
             logger.exception("failed to get values for cluster %s component %s", cluster_name, component_name)
             # 如果获取简化后的 values 失败，则返回原始 values
-            values = values_simplifier.raw()
+            values = release.values
 
         component = {
             "chart": release.chart,
@@ -114,7 +111,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
                 "status": release.deploy_result.status,
             },
             "values": values,
-            "workloads": workload_states,
+            "workloads": K8SWorkloadStateGetter(cluster_name, release).get_states(),
         }
         return Response(data=ClusterComponentRetrieveOutputSLZ(component).data)
 

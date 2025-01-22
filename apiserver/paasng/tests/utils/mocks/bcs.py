@@ -28,9 +28,9 @@ class StubBCSUserClient:
     def get_chart_versions(self, project_id: str, repo_name: str, chart_name: str) -> List[ChartVersion]:
         """获取 Chart 的可用版本（按时间逆序）"""
         return [
-            ChartVersion(name=chart_name, version="1.0.0", appVersion="v1.0.0"),
-            ChartVersion(name=chart_name, version="2.0.0", appVersion="v2.0.0"),
             ChartVersion(name=chart_name, version="3.0.0", appVersion="v3.0.0"),
+            ChartVersion(name=chart_name, version="2.0.0", appVersion="v2.0.0"),
+            ChartVersion(name=chart_name, version="1.0.0", appVersion="v1.0.0"),
         ]
 
     def upgrade_release(self, *args, **kwargs):

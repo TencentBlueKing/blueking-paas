@@ -33,6 +33,8 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.cnative.specs.models.mount import Mount
+from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
@@ -467,6 +469,9 @@ class ModuleCleaner:
         logger.info("going to delete EngineApp related to Module<%s>", self.module)
         self.delete_engine_apps()
 
+        logger.info("going to delete Mount related to Module<%s>", self.module)
+        self.delete_mounts()
+
         # 数据记录删除(module 是真删除)
         logger.info("going to delete Module<%s>", self.module)
         self.delete_module()
@@ -499,6 +504,27 @@ class ModuleCleaner:
     def delete_engine_apps(self):
         """删除与当前模块关联的 EngineApp"""
         delete_module_related_res(self.module)
+
+    def delete_mounts(self):
+        mounts = Mount.objects.filters(module_id=self.module.id)
+        for m in mounts:
+            controller = init_volume_source_controller(m.source_type)
+            try:
+                controller.delete_by_env(
+                    app_id=self.module.application_id,
+                    module_id=m.module_id,
+                    env_name=m.environment_name,
+                    source_name=m.get_source_name,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Error deleting mounts, app: %s, module: %s, env_name: %s, source_name: %s, error: %s",
+                    self.module.application.code,
+                    self.module.name,
+                    m.environment_name,
+                    m.get_source_name,
+                    e,
+                )
 
     def delete_module(self):
         """删除模块的数据库记录(真删除)"""

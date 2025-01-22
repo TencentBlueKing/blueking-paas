@@ -55,16 +55,7 @@ def interrupt_deployment(deployment: Deployment, user: User):
 
     # 若部署进程的数据上报已经超时，则认为部署失败，主动解锁
     coordinator = DeploymentCoordinator(deployment.app_environment)
-    if (
-        (current_deployment := coordinator.get_current_deployment())
-        and coordinator.status_polling_timeout
-        and current_deployment.pk == deployment.pk
-    ):
-        # Release deploy lock
-        try:
-            coordinator.release_lock(expected_deployment=deployment)
-        except ValueError as e:
-            logger.warning("Failed to release the deployment lock: %s", e)
+    coordinator.release_if_polling_timed_out(expected_deployment=deployment)
 
     if deployment.build_process_id:
         try:

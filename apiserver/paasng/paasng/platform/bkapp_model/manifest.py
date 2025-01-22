@@ -616,8 +616,9 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
 
 
 def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> str:
+    """获取上一次部署的状态"""
     try:
-        latest_dp = Deployment.objects.exclude(pk=deployment.pk).filter_by_env(env=env).latest("created")
+        latest_dp = Deployment.objects.filter_by_env(env).filter(created__lt=deployment.created).latest("created")
     except Deployment.DoesNotExist:
         return ""
     else:

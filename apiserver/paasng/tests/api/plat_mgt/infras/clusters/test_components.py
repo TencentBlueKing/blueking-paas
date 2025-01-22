@@ -22,6 +22,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
+from tests.utils.mocks.bcs import StubBCSUserClient
 from tests.utils.mocks.helm import StubHelmClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -128,4 +129,35 @@ class TestRetrieveClusterComponent:
 
 
 class TestUpsertClusterComponent:
-    def test_upsert(self, plat_mgt_api_client): ...
+    @pytest.fixture(autouse=True)
+    def _patch_bcs_user_client(self):
+        with patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient", new=StubBCSUserClient):
+            yield
+
+    def test_upsert_bk_ingress_nginx(self, plat_mgt_api_client, init_system_cluster):
+        resp = plat_mgt_api_client.post(
+            reverse(
+                "plat_mgt.infras.cluster.component.detail",
+                kwargs={"cluster_name": init_system_cluster.name, "component_name": "bk-ingress-nginx"},
+            ),
+            data={
+                "values": {
+                    "hostNetwork": False,
+                    "service": {"nodePorts": {"http": 31180, "https": 31543}},
+                    "nodeSelector": {
+                        "kubernetes.io/os": "linux",
+                    },
+                }
+            },
+        )
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_upsert_bkapp_log_collection(self, plat_mgt_api_client, init_system_cluster):
+        resp = plat_mgt_api_client.post(
+            reverse(
+                "plat_mgt.infras.cluster.component.detail",
+                kwargs={"cluster_name": init_system_cluster.name, "component_name": "bkapp-log-collection"},
+            ),
+            data={"values": {}},
+        )
+        assert resp.status_code == status.HTTP_204_NO_CONTENT

@@ -33,7 +33,8 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.models.mount import Mount
+from paas_wl.bk_app.cnative.specs.constants import VolumeSourceType
+from paas_wl.bk_app.cnative.specs.models.mount import ConfigMapSource, Mount
 from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
@@ -506,25 +507,33 @@ class ModuleCleaner:
         delete_module_related_res(self.module)
 
     def delete_mounts(self):
-        mounts = Mount.objects.filters(module_id=self.module.id)
+        """删除与当前模块关联的 Mount, 即 ConfigMapSource 和 Mount"""
+        mounts = Mount.objects.filter(module_id=self.module.id)
         for m in mounts:
-            controller = init_volume_source_controller(m.source_type)
-            try:
-                controller.delete_by_env(
-                    app_id=self.module.application_id,
-                    module_id=m.module_id,
-                    env_name=m.environment_name,
-                    source_name=m.get_source_name,
-                )
-            except Exception as e:
-                logger.warning(
-                    "Error deleting mounts, app: %s, module: %s, env_name: %s, source_name: %s, error: %s",
-                    self.module.application.code,
-                    self.module.name,
-                    m.environment_name,
-                    m.get_source_name,
-                    e,
-                )
+            if m.source_type == VolumeSourceType.ConfigMap:
+                controller = init_volume_source_controller(m.source_type)
+                try:
+                    controller.delete_by_env(
+                        app_id=self.module.application_id,
+                        module_id=m.module_id,
+                        env_name=m.environment_name,
+                        source_name=m.get_source_name,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Error deleting mounts, app: %s, module: %s, env_name: %s, source_name: %s, error: %s",
+                        self.module.application.code,
+                        self.module.name,
+                        m.environment_name,
+                        m.get_source_name,
+                        e,
+                    )
+                ConfigMapSource.objects.filter(
+                    name=m.get_source_name,
+                    application_id=self.module.application_id,
+                    environment_name=m.environment_name,
+                ).delete()
+            m.delete()
 
     def delete_module(self):
         """删除模块的数据库记录(真删除)"""

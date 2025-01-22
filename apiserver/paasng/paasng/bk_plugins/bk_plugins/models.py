@@ -31,6 +31,7 @@ from pydantic import BaseModel, PrivateAttr
 from paasng.accessories.publish.entrance.exposer import env_is_deployed
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
 from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.accounts.utils import id_to_username
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
 from paasng.platform.engine.configurations.provider import env_vars_providers
@@ -56,7 +57,9 @@ class BkPluginProfileManager(models.Manager):
         except ObjectDoesNotExist:
             # Use application's creator as contact by default
             creator = id_to_username(plugin_app.creator)
-            return super().create(application=plugin_app, introduction="", contact=creator), True
+            return super().create(
+                application=plugin_app, introduction="", contact=creator, tenant_id=plugin_app.tenant_id
+            ), True
 
 
 class BkPluginProfile(OwnerTimestampedModel):
@@ -91,6 +94,7 @@ class BkPluginProfile(OwnerTimestampedModel):
     # 预设的插件使用方，创建插件时指定的插件使用方
     # 在插件部署、或者用户手动在基本信息页面修改插件使用方信息时，才会在 APIGW 上创建网关并给插件使用方授权
     pre_distributor_codes = models.JSONField("预设的插件使用方的 code 列表", blank=True, null=True)
+    tenant_id = tenant_id_field_factory()
 
     objects = BkPluginProfileManager()
 
@@ -129,7 +133,9 @@ class BkPluginProfile(OwnerTimestampedModel):
 
 class BkPluginDistributor(TimestampedModel):
     """A "Distributor" is responsible for providing a collection of BkPlugins to a group of users,
-    A plugin's developers can decide that whether the plugin was accessable from a distributor.
+    A plugin's developers can decide that whether the plugin was accessible from a distributor.
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = models.CharField("名称", help_text="插件使用方名称", max_length=32, unique=True)
@@ -148,7 +154,10 @@ class BkPluginDistributor(TimestampedModel):
 
 
 class BkPluginTag(AuditedModel):
-    """Plugins and applications use different markets, and plugins should have their own separate tags"""
+    """Plugins and applications use different markets, and plugins should have their own separate tags
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     name = models.CharField("分类名称", help_text="插件使用方名称", max_length=32, unique=True)
     code_name = models.CharField("分类英文名称", help_text="分类英文名称，可替代主键使用", max_length=32, unique=True)
@@ -245,7 +254,7 @@ class DeployedStatus(BaseModel):
 
 
 class DeployedStatusNoAddresses(BaseModel):
-    """Simliar to `DeployedStatus`, but have no `addresses`"""
+    """Similar to `DeployedStatus`, but have no `addresses`"""
 
     deployed: bool
 

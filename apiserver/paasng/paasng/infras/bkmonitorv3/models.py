@@ -17,6 +17,7 @@
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.bkmonitorv3.constants import SpaceType
 from paasng.platform.applications.models import Application
 from paasng.utils.models import UuidAuditedModel
@@ -43,6 +44,7 @@ class BKMonitorSpace(UuidAuditedModel):
         verbose_name="蓝鲸监控空间 uid", help_text="{space_type_id}__{space_id}", max_length=48
     )
     extra_info = models.JSONField(help_text="蓝鲸监控API-metadata_get_space_detail 的原始返回值")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("space_type_id", "space_id")

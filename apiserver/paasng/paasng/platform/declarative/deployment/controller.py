@@ -107,6 +107,7 @@ class DeploymentDeclarativeController:
             defaults={
                 "runtime": {"source_dir": desc.source_dir},
                 "spec": desc.spec,
+                "tenant_id": self.deployment.tenant_id,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )

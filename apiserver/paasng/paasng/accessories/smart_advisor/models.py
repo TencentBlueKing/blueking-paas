@@ -20,6 +20,8 @@ from django.utils import timezone
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.core.tenant.fields import tenant_id_field_factory
+
 from .constants import DeployFailurePatternType
 from .tags import get_default_tagset, get_dynamic_tag
 
@@ -36,7 +38,9 @@ class AppModuleTagManager(models.Manager):
         """Tag tags on given module"""
         get_default_tagset().validate_tags(tags)
         for tag in tags:
-            self.get_queryset().update_or_create(module=app_module, tag_str=str(tag), defaults={"source": source})
+            self.get_queryset().update_or_create(
+                module=app_module, tag_str=str(tag), defaults={"source": source, "tenant_id": app_module.tenant_id}
+            )
 
     def cleanup_module(self, app_module):
         """Clean up all tags on given module"""
@@ -52,6 +56,8 @@ class AppModuleTagRel(models.Model):
     tag_str = models.CharField(max_length=128, blank=False)
     source = models.CharField(max_length=32, blank=False)
     created = models.DateTimeField(auto_now_add=True)
+    tenant_id = tenant_id_field_factory()
+
     objects = AppModuleTagManager()
 
     class Meta:
@@ -65,7 +71,10 @@ cleanup_module = AppModuleTagRel.objects.cleanup_module
 
 
 class DocumentaryLink(models.Model):
-    """Links from document systems including blueking doc and other opensource documentations"""
+    """Links from document systems including blueking doc and other open-source documentations
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     title = TranslatedFieldWithFallback(models.CharField(max_length=256, blank=False))
     short_description = TranslatedFieldWithFallback(models.CharField(max_length=512, blank=True))
@@ -90,7 +99,10 @@ class DocumentaryLink(models.Model):
 
 
 class DeployFailurePattern(models.Model):
-    """Stores common failure patterns for failed deployments"""
+    """Stores common failure patterns for failed deployments.
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     type = models.IntegerField(default=DeployFailurePatternType.REGULAR_EXPRESSION)
     value = models.CharField(max_length=2048, blank=False)

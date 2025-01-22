@@ -106,7 +106,7 @@ class HelmReleaseParser:
                 description=release_info["description"],
                 created_at=arrow.get(release_info["last_deployed"]).datetime,
             ),
-            values=release["config"],
+            values=release.get("config", {}),
             resources=list(yaml.safe_load_all(release["manifest"])),
             secret_name=self.secret.metadata.name,
         )

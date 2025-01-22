@@ -117,7 +117,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster_components"],
-        operation_description="对比组件版本",
+        operation_description="对比待更新组件版本",
         responses={status.HTTP_200_OK: ClusterComponentDiffVersionOutputSLZ()},
     )
     def diff_version(self, request, cluster_name, component_name, *args, **kwargs):
@@ -126,9 +126,12 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         if not cluster:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
+            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群不支持对比组件版本"))
+
         cur_version, latest_version = None, None
         if release := HelmClient(cluster_name).get_release(component_name):
-            cur_version = release.version
+            cur_version = release.chart.version
 
         bcs_client = BCSUserClient(
             get_tenant(request.user).id, request.user.username, request.COOKIES.get(settings.BK_COOKIE_NAME)
@@ -153,6 +156,9 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         cluster = Cluster.objects.filter(name=cluster_name).first()
         if not cluster:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
+            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群需要手动更新组件"))
 
         slz = ClusterComponentUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

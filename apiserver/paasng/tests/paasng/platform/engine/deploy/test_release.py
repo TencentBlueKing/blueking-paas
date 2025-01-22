@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import datetime
 import uuid
 from unittest import mock
 
@@ -23,6 +24,7 @@ from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
 from paasng.platform.engine.constants import JobStatus, ReleaseStatus
 from paasng.platform.engine.deploy.release.legacy import ApplicationReleaseMgr, ReleaseResultHandler
+from paasng.platform.engine.deploy.release.operator import BkAppReleaseMgr
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
@@ -103,6 +105,29 @@ class TestApplicationReleaseMgr:
             ProcessTmpl(name="web", command="start web", replicas=2, plan=None),
             ProcessTmpl(name="worker", command="start worker", replicas=None, plan=None),
         ]
+
+    def test_interrupted(self, bk_deployment):
+        Deployment.objects.filter(pk=bk_deployment.id).update(
+            release_int_requested_at=datetime.datetime.now(), build_int_requested_at=datetime.datetime.now()
+        )
+
+        release_mgr = ApplicationReleaseMgr.from_deployment_id(bk_deployment.id)
+        release_mgr.start()
+
+        assert Deployment.objects.get(pk=bk_deployment.id).status == JobStatus.INTERRUPTED
+
+
+@pytest.mark.usefixtures("_auto_binding_phases")
+class TestBkAppReleaseMgr:
+    def test_interrupted(self, bk_deployment):
+        Deployment.objects.filter(pk=bk_deployment.id).update(
+            release_int_requested_at=datetime.datetime.now(), build_int_requested_at=datetime.datetime.now()
+        )
+
+        release_mgr = BkAppReleaseMgr.from_deployment_id(bk_deployment.id)
+        release_mgr.start()
+
+        assert Deployment.objects.get(pk=bk_deployment.id).status == JobStatus.INTERRUPTED
 
 
 class TestReleaseResultHandler:

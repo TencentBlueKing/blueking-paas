@@ -451,7 +451,7 @@ class BuildProcessPoller(DeployPoller):
         else:
             coordinator = DeploymentCoordinator(deployment.app_environment)
             # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
-            if coordinator.status_polling_timeout:
+            if coordinator.is_status_polling_timeout:
                 logger.warning(
                     "Polling status of build process [%s] timed out, consider it failed, deployment: %s",
                     self.params["build_process_id"],

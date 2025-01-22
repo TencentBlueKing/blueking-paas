@@ -264,6 +264,19 @@ class DeploymentCoordinator:
 
         self.redis.transaction(execute_release, self.key_name_deployment)
 
+    def release_if_polling_timed_out(self, expected_deployment: Deployment):
+        """release the deploy lock if status polling time out of the deployment"""
+        if (
+            (current_deployment := self.get_current_deployment())
+            and self.is_status_polling_timeout
+            and current_deployment.pk == expected_deployment.pk
+        ):
+            # Release deploy lock
+            try:
+                self.release_lock(expected_deployment=expected_deployment)
+            except ValueError as e:
+                logger.warning("Failed to release the deployment lock: %s", e)
+
     def set_deployment(self, deployment: Deployment):
         """Set current deployment"""
         self.redis.set(self.key_name_deployment, str(deployment.pk), px=self.timeout_ms)
@@ -273,11 +286,6 @@ class DeploymentCoordinator:
         """Get current deployment"""
         deployment_id = self.redis.get(self.key_name_deployment)
         if deployment_id:
-            # 若存在部署进程，但数据上报已经超时，则认为部署失败，主动解锁并失效
-            if self.status_polling_timeout:
-                self.release_lock()
-                return None
-
             return Deployment.objects.get(pk=force_str(deployment_id))
         return None
 
@@ -286,8 +294,8 @@ class DeploymentCoordinator:
         self.redis.set(self.key_name_latest_polling_time, time.time(), px=self.timeout_ms)
 
     @property
-    def status_polling_timeout(self) -> bool:
-        """检查报告时间是否超时"""
+    def is_status_polling_timeout(self) -> bool:
+        """检查报告时间是否超时. 目前用于 build 和 hook 流程的控制"""
         latest_polling_time = self.redis.get(self.key_name_latest_polling_time)
         # 如果没有上次报告状态时间，则认为未超时，并设置查询时间为上次报告时间
         if not latest_polling_time:

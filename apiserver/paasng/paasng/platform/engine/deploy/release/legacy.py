@@ -54,6 +54,10 @@ class ApplicationReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "app release interrupted")
+            return
+
         with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
             procs = self.deployment.get_processes()

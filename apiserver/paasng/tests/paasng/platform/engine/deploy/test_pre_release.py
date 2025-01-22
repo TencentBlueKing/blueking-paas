@@ -15,12 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import datetime
 from unittest import mock
 
 import pytest
 
+from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.deploy.bg_command.pre_release import ApplicationPreReleaseExecutor
 from paasng.platform.engine.handlers import attach_all_phases
+from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.modules.constants import DeployHookType
 from paasng.platform.modules.models.deploy_config import Hook
@@ -78,3 +82,21 @@ class TestApplicationPreReleaseExecutor:
         assert mocked_stream().write_message.call_args[0][0] == Style.Warning(
             "The Pre-release command is not configured, skip the Pre-release phase."
         )
+
+    def test_interrupted(self, bk_module_full):
+        deployment = create_fake_deployment(bk_module_full)
+        ModuleEnvironmentOperations.objects.create(
+            application=bk_module_full.application,
+            operation_type=OperationTypes.ONLINE.value,
+            object_uid=deployment.pk,
+        )
+
+        deployment.build_int_requested_at = datetime.datetime.now()
+        deployment.release_int_requested_at = datetime.datetime.now()
+        deployment.save()
+
+        attach_all_phases(sender=deployment.app_environment, deployment=deployment)
+        ApplicationPreReleaseExecutor.from_deployment_id(deployment.pk).start()
+
+        assert Deployment.objects.get(pk=deployment.pk).status == JobStatus.INTERRUPTED
+        assert ModuleEnvironmentOperations.objects.get(object_uid=deployment.pk).status == JobStatus.INTERRUPTED

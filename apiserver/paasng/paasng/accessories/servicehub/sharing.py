@@ -88,6 +88,7 @@ class ServiceSharingManager:
             service_type=db_properties.col_service_type,
             service_id=service.uuid,
             ref_attachment_pk=rel.pk,
+            tenant_id=self.application.tenant_id,
         )
 
     def list_all_shared_info(self) -> Iterable[SharedServiceInfo]:

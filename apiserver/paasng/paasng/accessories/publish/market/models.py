@@ -32,6 +32,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.accessories.publish.market import constant
 from paasng.core.core.storages.object_storage import app_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.models import Module
@@ -51,8 +52,9 @@ class TagManager(models.Manager):
 
 
 class Tag(models.Model):
-    """
-    按用途分类
+    """按用途分类
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     parent = models.ForeignKey(
@@ -101,10 +103,11 @@ class ProductManager(WithOwnerManager):
                 "name_zh_cn": application.name,
                 "introduction_en": application.name,
                 "introduction_zh_cn": application.name,
+                "tenant_id": application.tenant_id,
             },
         )
         if created:
-            DisplayOptions.objects.create(product=product)
+            DisplayOptions.objects.create(product=product, tenant_id=application.tenant_id)
         return product
 
 
@@ -160,6 +163,8 @@ class Product(OwnerTimestampedModel):
     related_corp_products = JSONField(default=[], help_text="所属业务")
     # 可见范围
     visiable_labels = JSONField("可见范围标签", blank=True, null=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = ProductManager()
 
@@ -227,6 +232,8 @@ class DisplayOptions(models.Model):
         default=constant.OpenMode.NEW_TAB.value,
     )
 
+    tenant_id = tenant_id_field_factory()
+
 
 class MarketConfigManager(models.Manager):
     def get_or_create_by_app(self, application: Application) -> Tuple["MarketConfig", bool]:
@@ -280,6 +287,7 @@ class MarketConfig(TimestampedModel):
     prefer_https = models.BooleanField(
         null=True, verbose_name="[deprecated] 仅为 False 时强制使用 http, 否则保持与集群 https_enabled 状态一致"
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = MarketConfigManager()
 

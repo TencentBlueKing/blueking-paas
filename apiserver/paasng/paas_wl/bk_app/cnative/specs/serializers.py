@@ -60,6 +60,7 @@ class ConfigMapSLZ(serializers.Serializer):
         child=serializers.CharField(),
         allow_null=True,
     )
+    use_sub_path = serializers.BooleanField(help_text="是否使用子路径模式", default=False)
 
     def validate_source_config_data(self, data):
         if not data:

@@ -225,13 +225,22 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
             controller = init_volume_source_controller(mount_instance.source_type)
+            data = configmap_source.get("source_config_data", {})
+            use_sub_path = configmap_source.get("use_sub_path")
             controller.create_by_env(
                 app_id=mount_instance.module.application.id,
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
-                data=configmap_source.get("source_config_data"),
+                data=data,
+                use_sub_path=use_sub_path,
             )
+
+            # 如果开启子路径模式，则更新挂载的 source_config.subPaths 字段
+            if use_sub_path and mount_instance.source_config.configMap:
+                mount_instance.source_config.configMap.subPaths = list(data.keys())
+                mount_instance.save(update_fields=["source_config"])
+
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -272,6 +281,12 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.mount_path = validated_data["mount_path"]
         if source_name := validated_data.get("source_name"):
             mount_instance.source_config = controller.build_volume_source(source_name)
+
+        configmap_source = validated_data.get("configmap_source") or {}
+        data = configmap_source.get("source_config_data", {})
+        use_sub_path = configmap_source.get("use_sub_path")
+        if use_sub_path and mount_instance.source_config.configMap:
+            mount_instance.source_config.configMap.subPaths = list(data.keys())
         try:
             mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
         except IntegrityError:
@@ -285,6 +300,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             env_name=mount_instance.environment_name,
             source_name=mount_instance.get_source_name,
             data=configmap_source.get("source_config_data"),
+            use_sub_path=use_sub_path,
         )
 
         try:

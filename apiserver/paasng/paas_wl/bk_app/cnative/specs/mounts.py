@@ -123,6 +123,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
         data = kwargs.get("data", {})
+        use_sub_path = kwargs.get("use_sub_path", False)
 
         return self.model_class.objects.create(
             application_id=app_id,
@@ -130,6 +131,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             environment_name=env_name,
             name=source_name,
             data=data,
+            use_sub_path=use_sub_path,
         )
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
@@ -145,9 +147,11 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
         # 更新 source 对象
         data = kwargs.get("data", {})
+        use_sub_path = kwargs.get("use_sub_path", False)
         source.environment_name = env_name
         source.data = data
-        source.save(update_fields=["environment_name", "data"])
+        source.overwrite = use_sub_path
+        source.save(update_fields=["environment_name", "data", "use_sub_path"])
         return source
 
     def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:

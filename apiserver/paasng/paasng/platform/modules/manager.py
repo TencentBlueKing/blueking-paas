@@ -34,7 +34,7 @@ from django.utils.translation import gettext as _
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.constants import VolumeSourceType
-from paas_wl.bk_app.cnative.specs.models.mount import ConfigMapSource, Mount
+from paas_wl.bk_app.cnative.specs.models.mount import Mount
 from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
 from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
@@ -528,11 +528,6 @@ class ModuleCleaner:
                         m.get_source_name,
                         e,
                     )
-                ConfigMapSource.objects.filter(
-                    name=m.get_source_name,
-                    application_id=self.module.application_id,
-                    environment_name=m.environment_name,
-                ).delete()
                 m.delete()
 
     def delete_module(self):

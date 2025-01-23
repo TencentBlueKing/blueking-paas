@@ -34,7 +34,7 @@ from paasng.infras.bcs.client import BCSUserClient
 from paasng.infras.bcs.exceptions import BCSGatewayServiceError, HelmChartNotFound
 from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus
 from paasng.plat_mgt.infras.clusters.helm import HelmClient
-from paasng.plat_mgt.infras.clusters.k8s import K8SWorkloadStateGetter
+from paasng.plat_mgt.infras.clusters.k8s import K8SWorkloadStateGetter, ensure_k8s_namespace
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterComponentListOutputSLZ,
     ClusterComponentRetrieveOutputSLZ,
@@ -175,9 +175,12 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             # 2. 需要使用已有的 release 名称
             release_name = release.name
 
+        # 确保命名空间一定存在
+        ensure_k8s_namespace(cluster_name, namespace)
+
         # 基于用户提交的 values，构造最终的 values
-        values_constructor = get_values_constructor_cls(component_name)(cluster)
         try:
+            values_constructor = get_values_constructor_cls(component_name)(cluster)
             values = values_constructor.construct(data["values"])
         except PDValidationError as e:
             raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(to_error_string(e))

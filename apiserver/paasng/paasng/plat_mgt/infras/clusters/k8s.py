@@ -21,7 +21,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
-from paas_wl.infras.resources.base.kres import KDaemonSet, KDeployment, KStatefulSet
+from paas_wl.infras.resources.base.kres import KDaemonSet, KDeployment, KNamespace, KStatefulSet
 from paasng.plat_mgt.infras.clusters.entities import HelmRelease
 
 
@@ -90,3 +90,20 @@ class K8SWorkloadStateGetter:
         updated = res.status.get("updatedNumberScheduled", 0)
         available = res.status.get("numberAvailable", 0)
         return f"Desired: {desired}, Current: {current}, Ready: {ready}, Up-to-date: {updated}, Available: {available}"
+
+
+def ensure_k8s_namespace(cluster_name: str, namespace: str, max_wait_seconds: int = 15) -> bool:
+    """确保命名空间存在, 如果命名空间不存在, 那么将创建一个 Namespace 和 ServiceAccount
+
+    :param cluster_name: 集群名称
+    :param namespace: 命名空间
+    :param max_wait_seconds: 等待 ServiceAccount 就绪的时间
+    :return: whether an namespace was created.
+    """
+    client = KNamespace(get_client_by_cluster_name(cluster_name))
+
+    _, created = client.get_or_create(name=namespace)
+    if created:
+        client.wait_for_default_sa(namespace=namespace, timeout=max_wait_seconds)
+
+    return created

@@ -186,9 +186,6 @@
 # - bkpaas-app-operator
 # - bcs-general-pod-autoscaler
 
-## 开发者安装的集群组件 Helm 仓库名（默认为 BCS 的公共仓库 -> public-repo）
-# CLUSTER_COMPONENT_HELM_REPO: public-repo
-
 ## ------------------------------------------ Healthz 配置 ------------------------------------------
 
 ## 调用 Healthz API 需要的 Token

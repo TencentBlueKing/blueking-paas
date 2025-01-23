@@ -129,6 +129,10 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
             raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群不支持对比组件版本"))
 
+        cluster_component = ClusterComponent.objects.filter(cluster=cluster, name=component_name).first()
+        if not cluster_component:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
         cur_version, latest_version = None, None
         if release := HelmClient(cluster_name).get_release(component_name):
             cur_version = release.chart.version
@@ -137,7 +141,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             get_tenant(request.user).id, request.user.username, request.COOKIES.get(settings.BK_COOKIE_NAME)
         )
         if chart_versions := bcs_client.get_chart_versions(
-            cluster.bcs_project_id, settings.CLUSTER_COMPONENT_HELM_REPO, component_name
+            cluster.bcs_project_id, cluster_component.repository, component_name
         ):
             # API 返回是按时间逆序，因此第一个就是最新版本
             latest_version = chart_versions[0].version
@@ -147,7 +151,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster_components"],
-        operation_description="更新或新建集群组件",
+        operation_description="更新或安装集群组件",
         request_body=ClusterComponentUpsertInputSLZ,
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
@@ -159,6 +163,10 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
 
         if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
             raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群需要手动更新组件"))
+
+        cluster_component = ClusterComponent.objects.filter(cluster=cluster, name=component_name).first()
+        if not cluster_component:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         slz = ClusterComponentUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -201,7 +209,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
                 cluster.bcs_cluster_id,
                 namespace,
                 release_name,
-                settings.CLUSTER_COMPONENT_HELM_REPO,
+                cluster_component.repository,
                 component_name,
                 values,
             )

@@ -91,3 +91,12 @@ class ClusterAllocationPolicyCondType(StrStructuredEnum):
     """集群分配策略匹配条件"""
 
     REGION_IS = EnumField("region_is", label=_("可用区域为"))
+
+
+class ClusterComponentName(StrStructuredEnum):
+    """集群组件名称"""
+
+    BK_INGRESS_NGINX = EnumField("bk-ingress-nginx")
+    BKAPP_LOG_COLLECTION = EnumField("bkapp-log-collection")
+    BKPAAS_APP_OPERATOR = EnumField("bkpaas-app-operator")
+    BCS_GENERAL_POD_AUTOSCALER = EnumField("bcs-general-pod-autoscaler")

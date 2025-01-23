@@ -41,11 +41,11 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         """获取集群分配策略列表"""
-        # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群分配策略列表
+        # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的集群分配策略列表
         return ClusterAllocationPolicy.objects.all()
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        tags=["plat_mgt.infras.cluster_allocation_policy"],
         operation_description="获取集群分配策略",
         responses={status.HTTP_200_OK: ClusterAllocationPolicyListOutputSLZ(many=True)},
     )
@@ -55,7 +55,7 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterAllocationPolicyListOutputSLZ(policies, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        tags=["plat_mgt.infras.cluster_allocation_policy"],
         operation_description="新建集群分配策略",
         request_body=ClusterAllocationPolicyCreateInputSLZ(),
         responses={status.HTTP_201_CREATED: ClusterAllocationPolicyCreateOutputSLZ()},
@@ -73,7 +73,7 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         )
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster_allocation_policy"],
+        tags=["plat_mgt.infras.cluster_allocation_policy"],
         operation_description="更新集群分配策略",
         request_body=ClusterAllocationPolicyUpdateInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},

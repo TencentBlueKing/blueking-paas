@@ -33,7 +33,7 @@ class TenantAvailableClusterViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="获取本租户可用集群",
         responses={status.HTTP_200_OK: AvailableClusterListOutputSLZ(many=True)},
     )

@@ -732,6 +732,9 @@ BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
     ],
 )
 
+# 开发者安装的集群组件 Helm 仓库名（默认为 BCS 的公共仓库 -> public-repo）
+CLUSTER_COMPONENT_HELM_REPO = settings.get("CLUSTER_COMPONENT_HELM_REPO", "public-repo")
+
 # ---------------
 # HealthZ 配置
 # ---------------

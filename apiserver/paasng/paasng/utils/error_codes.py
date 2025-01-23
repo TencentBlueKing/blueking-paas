@@ -185,7 +185,9 @@ class ErrorCodes:
     IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
 
     # 应用集群
-    CANNOT_DELETE_CLUSTER = ErrorCode("无法删除应用集群")
+    CANNOT_DELETE_CLUSTER = ErrorCode(_("无法删除应用集群"))
+    # 集群组件
+    CANNOT_UPDATE_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
 
     # dev sandbox
     DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)

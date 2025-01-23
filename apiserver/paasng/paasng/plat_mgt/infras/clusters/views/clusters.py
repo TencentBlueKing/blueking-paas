@@ -50,11 +50,11 @@ class ClusterViewSet(viewsets.GenericViewSet):
     lookup_url_kwarg = "cluster_name"
 
     def get_queryset(self):
-        # FIXME: (多租户)根据平台/租户管理员身份，返回不同的集群列表
+        # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的集群列表
         return Cluster.objects.all()
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="集群列表",
         responses={status.HTTP_200_OK: ClusterListOutputSLZ(many=True)},
     )
@@ -64,7 +64,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterListOutputSLZ(clusters, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="获取集群详情",
         responses={status.HTTP_200_OK: ClusterRetrieveOutputSLZ()},
     )
@@ -74,7 +74,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(data=ClusterRetrieveOutputSLZ(cluster).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="新建集群",
         request_body=ClusterCreateInputSLZ(),
         responses={status.HTTP_201_CREATED: ""},
@@ -127,7 +127,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="更新集群",
         request_body=ClusterUpdateInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
@@ -198,7 +198,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="删除集群",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
@@ -231,7 +231,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         # FIXME: (多租户)提供集群基础信息，组件状态，集群特性配置完成度
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="获取集群默认特性",
         responses={status.HTTP_200_OK: ClusterDefaultFeatureFlagsRetrieveOutputSLZ()},
     )
@@ -244,7 +244,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(ClusterDefaultFeatureFlagsRetrieveOutputSLZ({"feature_flags": feature_flags}).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="获取集群使用情况",
         responses={status.HTTP_200_OK: ClusterUsageRetrieveOutputSLZ()},
     )
@@ -254,7 +254,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         return Response(ClusterUsageRetrieveOutputSLZ(state).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
+        tags=["plat_mgt.infras.cluster"],
         operation_description="同步集群节点",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )

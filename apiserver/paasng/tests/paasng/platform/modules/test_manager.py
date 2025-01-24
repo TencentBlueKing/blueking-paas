@@ -23,19 +23,21 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.mounts import ConfigMapSourceController, MountManager, init_volume_source_controller
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.utils import create_default_module
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
-from paasng.platform.modules.manager import ModuleInitializer
+from paasng.platform.modules.manager import ModuleCleaner, ModuleInitializer
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.templates.models import Template
 from tests.utils.helpers import register_iam_after_create_application
 
-pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
+pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.mark.xdist_group(name="legacy-db")]
 
 
 @pytest.fixture()
@@ -175,3 +177,37 @@ class TestModuleInitializer:
 
         assert ModuleInitializer(raw_module)._should_initialize_vcs() is False
         assert ModuleSpecs(raw_module).has_template_code is False
+
+
+class TestModuleCleaner:
+    @pytest.fixture()
+    def mount_configmap(self, bk_app, bk_module):
+        mount = MountManager.new(
+            app_code=bk_app.code,
+            module_id=bk_module.id,
+            mount_path="/path/",
+            environment_name=MountEnvName.GLOBAL,
+            name="mount-configmap",
+            source_type=VolumeSourceType.ConfigMap.value,
+        )
+        source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
+        controller = init_volume_source_controller(mount.source_type)
+        controller.create_by_env(
+            app_id=mount.module.application.id,
+            module_id=mount.module.id,
+            env_name=mount.environment_name,
+            source_name=mount.get_source_name,
+            data=source_data,
+        )
+        return mount
+
+    @mock.patch.object(ConfigMapSourceController, "delete_k8s_resource")
+    def test_delete_mounts(self, mock_delete_k8s_resource, bk_app, bk_module, mount_configmap):
+        controller = ConfigMapSourceController()
+        mount_before_clean = controller.list_by_app(bk_app.id)
+        assert len(mount_before_clean) == 1
+
+        ModuleCleaner(bk_module).clean()
+
+        mount_after_clean = controller.list_by_app(bk_app.id)
+        assert len(mount_after_clean) == 0

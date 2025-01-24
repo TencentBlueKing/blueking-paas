@@ -417,6 +417,8 @@ export default {
           serviceId: this.activeInstanceData.service?.uuid,
           data,
         });
+        // 关闭弹窗
+        this.isVerificationCodeDialog = false;
         const field = { [this.viewSecretData.fieldName]: res };
         this.$set(this.sensitiveFields, this.viewSecretData.instance_id, field);
       } catch (e) {

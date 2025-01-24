@@ -7,7 +7,7 @@
     >
       <template v-if="type === 'bare_git'">
         <bk-form-item
-          :label="$t('源代码地址:')"
+          :label="$t('源代码地址')"
           :required="edited"
           :property="'url'"
           :rules="rules.gitUrl"
@@ -27,7 +27,7 @@
       </template>
       <template v-else>
         <bk-form-item
-          :label="$t('源代码地址:')"
+          :label="$t('源代码地址')"
           :required="edited"
           :property="'url'"
           :rules="rules.svnUrl"
@@ -49,7 +49,7 @@
       <!-- 普通应用 -->
       <bk-form-item
         v-if="deploymentIsShow && !isCloudCreated"
-        :class="{ 'mt15': !edited }"
+        :class="{ mt15: !edited }"
         :label="$t(sourceDirLabel)"
         :desc="sourceDirTip"
         :property="'sourceDir'"
@@ -68,7 +68,7 @@
       </bk-form-item>
 
       <bk-form-item
-        :class="{ 'mt15': !edited }"
+        :class="{ mt15: !edited }"
         :label="accountLabel"
         :required="edited"
         :property="'account'"
@@ -86,8 +86,8 @@
         </p>
       </bk-form-item>
       <bk-form-item
-        :class="{ 'mt15': !edited }"
-        :label="$t('密码:')"
+        :class="{ mt15: !edited }"
+        :label="$t('密码')"
         :required="edited"
         :property="'password'"
         :rules="rules.password"
@@ -101,15 +101,13 @@
           type="password"
           :placeholder="$t('请输入')"
         />
-        <p v-else>
-          ******
-        </p>
+        <p v-else>******</p>
       </bk-form-item>
 
       <!-- 云原生应用 -->
       <bk-form-item
         v-if="deploymentIsShow && isCloudCreated"
-        :class="[{ 'mt15': !edited }]"
+        :class="[{ mt15: !edited }]"
         :label="$t(sourceDirLabel)"
         :property="'sourceDir'"
         :rules="rules.sourceDir"
@@ -130,7 +128,8 @@
   </div>
 </template>
 
-<script>export default {
+<script>
+export default {
   props: {
     edited: {
       type: Boolean,
@@ -207,7 +206,9 @@
         sourceDir: [
           {
             regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
-            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
+            message: this.$t(
+              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
+            ),
             trigger: 'blur',
           },
         ],
@@ -230,14 +231,16 @@
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t('如何设置部署目录')}</a>`,
+        html: `<a target="_blank" href="${this.GLOBAL.DOC.DEPLOY_DIR}" style="color: #3a84ff">${this.$t(
+          '如何设置部署目录'
+        )}</a>`,
         placements: ['right'],
       },
     };
   },
   computed: {
     accountLabel() {
-      return this.type === 'bare_git' ? this.$t('Git账号:') : this.$t('SVN账号:');
+      return this.type === 'bare_git' ? this.$t('Git账号') : this.$t('SVN账号');
     },
   },
   watch: {
@@ -269,9 +272,11 @@
   },
   methods: {
     async validate(callback) {
-      this.$refs.repoInfo.validate().then(() => {
-        callback && callback();
-      })
+      this.$refs.repoInfo
+        .validate()
+        .then(() => {
+          callback && callback();
+        })
         .catch((error) => {
           const { field } = error;
           this.$refs[field].focus();
@@ -316,7 +321,7 @@
 </script>
 
 <style lang="scss" scoped>
-.form-input-width{
+.form-input-width {
   width: 650px;
 }
 </style>

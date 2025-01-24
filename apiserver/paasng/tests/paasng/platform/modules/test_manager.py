@@ -24,6 +24,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
+from paas_wl.bk_app.cnative.specs.models.mount import Mount
 from paas_wl.bk_app.cnative.specs.mounts import ConfigMapSourceController, MountManager, init_volume_source_controller
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.models import Application, ApplicationEnvironment
@@ -203,11 +204,12 @@ class TestModuleCleaner:
 
     @mock.patch.object(ConfigMapSourceController, "delete_k8s_resource")
     def test_delete_mounts(self, mock_delete_k8s_resource, bk_app, bk_module, mount_configmap):
-        controller = ConfigMapSourceController()
-        mount_before_clean = controller.list_by_app(bk_app.id)
-        assert len(mount_before_clean) == 1
+        controller = init_volume_source_controller(mount_configmap.source_type)
+        volume_before_clean = controller.list_by_app(bk_app.id)
+        assert len(volume_before_clean) == 1
 
         ModuleCleaner(bk_module).clean()
 
-        mount_after_clean = controller.list_by_app(bk_app.id)
-        assert len(mount_after_clean) == 0
+        volume_after_clean = controller.list_by_app(bk_app.id)
+        assert len(volume_after_clean) == 0
+        assert len(Mount.objects.filter(module_id=bk_module.id)) == 0

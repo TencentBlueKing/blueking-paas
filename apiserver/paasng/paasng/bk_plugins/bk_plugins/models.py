@@ -290,6 +290,7 @@ class BkPluginAppQuerySet:
         self,
         search_term: str,
         order_by: List[str],
+        tenant_id: str,
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
         tag_id: Optional[int] = None,
@@ -299,7 +300,7 @@ class BkPluginAppQuerySet:
         :param has_deployed: If given, only return applications whose `has_deployed` property matches
         :param distributor_code_name: If given, only return results which have granted permissions to distributor
         """
-        applications = Application.objects.filter(is_plugin_app=True)
+        applications = Application.objects.filter(is_plugin_app=True, tenant_id=tenant_id)
         # Reuse the original application filter
         # Use `prefetch_related` to reduce database queries
         applications = (

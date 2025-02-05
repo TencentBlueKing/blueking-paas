@@ -48,7 +48,9 @@ def cluster_creator(ca_data, cert_data, key_data):
         )
 
         for api_server in servers:
-            APIServer.objects.update_or_create(host=api_server["host"], cluster=cluster)
+            APIServer.objects.update_or_create(
+                host=api_server["host"], cluster=cluster, defaults={"tenant_id": cluster.tenant_id}
+            )
 
     return get_or_create
 

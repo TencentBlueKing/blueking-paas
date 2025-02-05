@@ -17,7 +17,6 @@
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -38,7 +37,6 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
-from paasng.plat_mgt.infras.clusters.serializers.clusters import AvailableClusterListOutputSLZ
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.utils.error_codes import error_codes
 
@@ -64,17 +62,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         """获取集群列表"""
         clusters = self.get_queryset()
         return Response(data=ClusterListOutputSLZ(clusters, many=True).data)
-
-    @swagger_auto_schema(
-        tags=["plat-mgt.infras.cluster"],
-        operation_description="获取本租户可用集群",
-        responses={status.HTTP_200_OK: AvailableClusterListOutputSLZ(many=True)},
-    )
-    def list_available(self, request, *args, **kwargs):
-        tenant_id = get_tenant(request.user).id
-        # 本租户的集群本租户一定是可用的，其他租户的集群，如果有对应的配置，则可用
-        clusters = Cluster.objects.filter(Q(tenant_id=tenant_id) | Q(available_tenant_ids__contains=tenant_id))
-        return Response(data=AvailableClusterListOutputSLZ(clusters, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.cluster"],
@@ -125,10 +112,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 container_log_dir=data["container_log_dir"],
             )
             # 创建 ApiServers
-            api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+            api_servers = [
+                APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+            ]
             APIServer.objects.bulk_create(api_servers)
             # 创建 ElasticSearch 配置
-            ClusterElasticSearchConfig.objects.create(cluster=cluster, **data["elastic_search_config"])
+            ClusterElasticSearchConfig.objects.create(
+                cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
+            )
 
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
@@ -195,7 +186,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除，再插入的方式
                 cluster.api_servers.all().delete()
-                api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+                api_servers = [
+                    APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+                ]
                 APIServer.objects.bulk_create(api_servers)
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池
@@ -270,7 +263,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         client = get_client_by_cluster_name(cluster_name=cluster.name)
 
         ignore_labels = {"node-role.kubernetes.io/master": "true"}
-        state = generate_state(cluster.name, client, ignore_labels)
+        state = generate_state(cluster.name, client, ignore_labels, cluster.tenant_id)
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

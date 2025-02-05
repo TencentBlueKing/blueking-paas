@@ -89,6 +89,7 @@ class TestAppOperationRecord:
     ):
         record = add_app_audit_record(
             app_code=bk_app.code,
+            tenant_id=bk_app.tenant_id,
             user=bk_user,
             action_id="xxxxx",
             operation=operation,
@@ -105,6 +106,7 @@ class TestAppLatestOp:
     def test_post_save_handler(self, bk_app, bk_user):
         record = add_app_audit_record(
             app_code=bk_app.code,
+            tenant_id=bk_app.tenant_id,
             user=bk_user,
             action_id="",
             operation=OperationEnum.RELEASE_TO_MARKET,

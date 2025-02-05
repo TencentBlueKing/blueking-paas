@@ -118,7 +118,9 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         data = slz.validated_data
         cluster = self.get_object()
         data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        api_server, _ = APIServer.objects.update_or_create(cluster=cluster, host=data["host"])
+        api_server, _ = APIServer.objects.update_or_create(
+            cluster=cluster, host=data["host"], defaults={"tenant_id": cluster.tenant_id}
+        )
 
         add_admin_audit_record(
             user=request.user.pk,
@@ -155,7 +157,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
         logger.info(f"generating state for [{cluster.name}]...")
         # 强制忽略 master 节点
         ignore_labels = {"node-role.kubernetes.io/master": "true"}
-        state = generate_state(cluster.name, client, ignore_labels)
+        state = generate_state(cluster.name, client, ignore_labels, cluster.tenant_id)
 
         logger.info("syncing the state to nodes...")
         sync_state_to_nodes(client, state)

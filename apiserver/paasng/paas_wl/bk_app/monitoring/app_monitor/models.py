@@ -18,6 +18,7 @@
 from django.db import models
 
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 
 class AppMetricsMonitor(AuditedModel):
@@ -25,6 +26,8 @@ class AppMetricsMonitor(AuditedModel):
     is_enabled = models.BooleanField(help_text="是否启动 AppMetrics", default=True)
     port = models.IntegerField(help_text="Service 端口")
     target_port = models.IntegerField(help_text="容器内的端口")
+
+    tenant_id = tenant_id_field_factory()
 
     def disable(self):
         self.is_enabled = False

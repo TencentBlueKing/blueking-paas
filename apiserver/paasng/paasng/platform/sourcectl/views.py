@@ -391,6 +391,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,

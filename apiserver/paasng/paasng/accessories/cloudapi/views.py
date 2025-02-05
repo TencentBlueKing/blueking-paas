@@ -262,6 +262,7 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             gateway_name = data.get("gateway_name", "")
             add_app_audit_record(
                 app_code=app.code,
+                tenant_id=tenant_id,
                 user=request.user.pk,
                 action_id=AppAction.MANAGE_CLOUD_API,
                 operation=operation_type,

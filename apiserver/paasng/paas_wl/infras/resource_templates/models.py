@@ -23,10 +23,14 @@ from django.db import models
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel, WlApp
 from paas_wl.infras.resource_templates.constants import AppAddOnType
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 
 class AppAddOnTemplate(UuidAuditedModel):
-    """应用挂件模版"""
+    """应用挂件模版
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     region = models.CharField(max_length=32)
     name = models.CharField("模版名", max_length=64)
@@ -42,7 +46,7 @@ class AppAddOnTemplate(UuidAuditedModel):
         return hashlib.sha256(self.spec).hexdigest()
 
     def link_to_app(self, app: WlApp) -> "AppAddOn":
-        add_on, _ = AppAddOn.objects.get_or_create(app=app, template=self)
+        add_on, _ = AppAddOn.objects.get_or_create(app=app, template=self, defaults={"tenant_id": app.tenant_id})
         add_on.sync_with_template()
         return add_on
 
@@ -59,6 +63,7 @@ class AppAddOn(UuidAuditedModel):
     template = models.ForeignKey(AppAddOnTemplate, related_name="instances", on_delete=models.CASCADE)
     enabled = models.BooleanField("是否启用", default=True)
     spec = models.TextField("资源内容")
+    tenant_id = tenant_id_field_factory()
 
     objects = AppAddOnManager()
     default_objects = models.Manager()

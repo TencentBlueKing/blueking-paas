@@ -31,7 +31,7 @@ from .models import RegionClusterState
 logger = logging.getLogger(__name__)
 
 
-def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> RegionClusterState:
+def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str], tenant_id: str) -> RegionClusterState:
     """Generate region state for a single region"""
 
     nodes = get_nodes(client)
@@ -58,6 +58,7 @@ def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str]) -> 
         nodes_cnt=len(nodes),
         nodes_name=list(nodes_name),
         nodes_data=[compact_node_data(node.to_dict()) for node in nodes],
+        tenant_id=tenant_id,
     )
 
 

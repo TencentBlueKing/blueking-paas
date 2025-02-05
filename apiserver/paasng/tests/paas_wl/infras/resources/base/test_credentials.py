@@ -31,7 +31,7 @@ from paas_wl.workloads.images.utils import make_image_pull_secret_name
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestImageCredentialsHandler:
     @pytest.fixture()
     def kube_res_name(self, wl_app):
@@ -53,7 +53,9 @@ class TestImageCredentialsHandler:
         username = get_random_string(12)
         password = get_random_string(12)
 
-        AppImageCredential.objects.create(app=wl_app, registry=registry, username=username, password=password)
+        AppImageCredential.objects.create(
+            app=wl_app, registry=registry, username=username, password=password, tenant_id=wl_app.tenant_id
+        )
 
         ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
@@ -70,7 +72,9 @@ class TestImageCredentialsHandler:
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 0
 
-        AppImageCredential.objects.create(app=wl_app, registry="foo", username="bar", password="baz")
+        AppImageCredential.objects.create(
+            app=wl_app, registry="foo", username="bar", password="baz", tenant_id=wl_app.tenant_id
+        )
         ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 1

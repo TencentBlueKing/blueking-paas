@@ -40,6 +40,7 @@ class TestGetDashboardInfoViewSet:
             name="bksaas/framework-fake_language",
             display_name="fake_language 开发框架内置仪表盘",
             template_version="v1",
+            tenant_id=bk_app.tenant_id,
         )
 
         default_dashboard = AppDashboard.objects.create(
@@ -48,6 +49,7 @@ class TestGetDashboardInfoViewSet:
             name="bksaas/framework-python",
             display_name="Python 开发框架内置仪表盘",
             template_version="v1",
+            tenant_id=bk_app.tenant_id,
         )
         return [other_language_dashboard, default_dashboard]
 

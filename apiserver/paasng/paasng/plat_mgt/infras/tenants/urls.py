@@ -15,20 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.basic import make_app_pattern, re_path
+from django.urls import path
 
-from . import views
+from paasng.plat_mgt.infras.tenants import views
 
-# Deprecated 新版 API 上线并确认后再删除原来的 API
 urlpatterns = [
-    re_path(
-        r"^api/bkapps/applications/lists/latest/deprecated/",
-        views.LatestApplicationsViewSet.as_view(),
-        name="api.applications.latest.deprecated",
-    ),
-    re_path(
-        make_app_pattern(r"/operations/", include_envs=False),
-        views.ApplicationOperationsViewSet.as_view({"get": "list"}),
-        name="api.bkapps.application.operations",
+    # 租户可用集群列表
+    path(
+        "api/plat_mgt/infras/tenants/<str:tenant_id>/available_clusters/",
+        views.TenantAvailableClusterViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.tenant.available_clusters",
     ),
 ]

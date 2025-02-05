@@ -45,5 +45,6 @@ def get_or_create_dev_sandbox(bk_module: Module, operator: str) -> DevSandbox:
                 version_name="develop",
                 version_type=VersionType.BRANCH,
             ),
+            "tenant_id": bk_module.tenant_id,
         },
     )

@@ -124,6 +124,7 @@ class ArchiveResultHandler(CallbackHandler):
         # 审计记录
         add_app_audit_record(
             app_code=offline_op.app_environment.application.code,
+            tenant_id=offline_op.tenant_id,
             user=offline_op.operator,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.OFFLINE,

@@ -100,6 +100,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE,
@@ -133,6 +134,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,
@@ -159,6 +161,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.DELETE,

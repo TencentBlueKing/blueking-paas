@@ -33,7 +33,6 @@ urlpatterns = [
     re_path(r"^", include("paasng.core.region.urls")),
     re_path(r"^", include("paasng.core.tenant.urls")),
     re_path(r"^", include("paasng.misc.audit.urls")),
-    re_path(r"^", include("paasng.misc.operations.urls")),
     re_path(r"^", include("paasng.platform.environments.urls")),
     re_path(r"^", include("paasng.platform.engine.urls")),
     re_path(r"^", include("paasng.platform.engine.processes.urls")),

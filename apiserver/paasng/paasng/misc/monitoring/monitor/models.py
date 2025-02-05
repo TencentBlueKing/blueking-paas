@@ -19,6 +19,7 @@ from typing import Optional
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.utils.models import AuditedModel
 
@@ -56,6 +57,8 @@ class AppAlertRule(AuditedModel):
     module = models.ForeignKey(
         "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="alert_rules", null=True
     )
+    tenant_id = tenant_id_field_factory()
+
     objects = AppAlertRuleManager()
 
     def __str__(self):
@@ -63,7 +66,10 @@ class AppAlertRule(AuditedModel):
 
 
 class AppDashboardTemplate(AuditedModel):
-    """仪表盘模板，只需要记录名称和版本号，模板的内容在蓝鲸监控侧维护"""
+    """仪表盘模板，只需要记录名称和版本号，模板的内容在蓝鲸监控侧维护
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     name = models.CharField(
         max_length=64,
@@ -86,6 +92,8 @@ class AppDashboard(AuditedModel):
     display_name = models.CharField(max_length=512, help_text="仪表盘展示名称，如：Python 开发框架内置仪表盘")
     template_version = models.CharField(max_length=32, help_text="模板版本更新时，可以根据该字段作为批量刷新仪表盘")
     language = models.CharField(verbose_name="仪表盘所属语言", max_length=32)
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("application", "name")

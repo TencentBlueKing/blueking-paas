@@ -60,7 +60,10 @@ class TestMigrateCNativeMigrationViewSet:
 class TestRollbackCNativeMigrationViewSet:
     def test_rollback(self, api_client, bk_cnative_app, bk_user):
         CNativeMigrationProcess.objects.create(
-            app=bk_cnative_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            app=bk_cnative_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            tenant_id=bk_cnative_app.tenant_id,
         )
 
         with mock.patch("paasng.platform.mgrlegacy.tasks.rollback_cnative_to_default.delay") as mock_task:
@@ -72,7 +75,10 @@ class TestRollbackCNativeMigrationViewSet:
 
     def test_rollback_when_last_migration_failed(self, api_client, bk_user, bk_cnative_app):
         CNativeMigrationProcess.objects.create(
-            app=bk_cnative_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_FAILED.value
+            app=bk_cnative_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_FAILED.value,
+            tenant_id=bk_cnative_app.tenant_id,
         )
 
         response = api_client.post(f"/api/mgrlegacy/cloud-native/applications/{bk_cnative_app.code}/rollback/")
@@ -98,6 +104,7 @@ class TestQueryProcessCNativeMigrationViewSet:
                     ),
                 ],
             ),
+            tenant_id=bk_app.tenant_id,
         )
         response = api_client.get(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/")
         assert response.data["status"] == "migration_succeeded"
@@ -115,11 +122,13 @@ class TestQueryProcessCNativeMigrationViewSet:
             app=bk_app,
             owner=bk_user.pk,
             status=CNativeMigrationStatus.DEFAULT.value,
+            tenant_id=bk_app.tenant_id,
         )
         CNativeMigrationProcess.objects.create(
             app=bk_app,
             owner=bk_user.pk,
             status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            tenant_id=bk_app.tenant_id,
         )
 
         response = api_client.get(
@@ -143,9 +152,13 @@ class TestQueryProcessCNativeMigrationViewSet:
             owner=bk_user.pk,
             status=CNativeMigrationStatus.MIGRATION_FAILED.value,
             details=ProcessDetails(migrations=migrations),
+            tenant_id=bk_app.tenant_id,
         )
         CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            app=bk_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            tenant_id=bk_app.tenant_id,
         )
 
         response = api_client.get(f"/api/mgrlegacy/cloud-native/applications/{bk_app.code}/migration_processes/")
@@ -164,14 +177,20 @@ class TestConfirmCNativeMigrationViewSet:
             "paasng.infras.accounts.permissions.application.user_has_app_action_perm", return_value=has_app_permission
         ):
             process = CNativeMigrationProcess.objects.create(
-                app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+                app=bk_app,
+                owner=bk_user.pk,
+                status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+                tenant_id=bk_app.tenant_id,
             )
             response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
             assert response.status_code == status_code
 
     def test_confirm_failed(self, api_client, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_FAILED.value
+            app=bk_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_FAILED.value,
+            tenant_id=bk_app.tenant_id,
         )
         response = api_client.put(f"/api/mgrlegacy/cloud-native/migration_processes/{process.id}/confirm/")
         assert response.data["detail"] == "应用迁移确认失败: 该应用记录未表明应用已成功迁移, 无法确认"
@@ -219,7 +238,10 @@ class TestDefaultAppEntranceViewSet:
     @pytest.fixture(autouse=True)
     def _save_entrances(self, bk_app, bk_user):
         process = CNativeMigrationProcess.objects.create(
-            app=bk_app, owner=bk_user.pk, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+            app=bk_app,
+            owner=bk_user.pk,
+            status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value,
+            tenant_id=bk_app.tenant_id,
         )
         process.legacy_data.entrances = [
             {

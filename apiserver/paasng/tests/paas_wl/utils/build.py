@@ -68,7 +68,7 @@ def create_build(
         "procfile": procfile,
         "artifact_type": artifact_type,
     }
-    wl_build = Build.objects.create(**build_params)
+    wl_build = Build.objects.create(tenant_id=wl_app.tenant_id, **build_params)
     mark_as_latest_artifact(wl_build)
     if bp:
         bp.build = wl_build

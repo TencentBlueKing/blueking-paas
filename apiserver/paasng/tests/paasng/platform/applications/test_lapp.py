@@ -16,12 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from tests.conftest import check_legacy_enabled
 from tests.utils.basic import generate_random_string
-from tests.utils.helpers import adaptive_lapplicationtag_fields
+from tests.utils.helpers import adaptive_lapplicationtag_fields, create_legacy_application
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, legacy_models
@@ -33,13 +32,8 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture()
 def legacy_app():
-    if not check_legacy_enabled():
-        raise pytest.skip("Legacy db engine is not initialized")
     code = generate_random_string(length=15)
-    name = generate_random_string(length=15)
-
-    with legacy_db.session_scope() as session:
-        return AppAdaptor(session).create(code=code, name=name, deploy_ver=settings.DEFAULT_REGION_NAME)
+    return create_legacy_application(code)
 
 
 @pytest.fixture()

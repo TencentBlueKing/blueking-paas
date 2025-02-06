@@ -60,7 +60,6 @@ class ConfigMapSLZ(serializers.Serializer):
         child=serializers.CharField(),
         allow_null=True,
     )
-    use_sub_path = serializers.BooleanField(help_text="是否使用子路径模式", default=False)
 
     def validate_source_config_data(self, data):
         if not data:
@@ -73,47 +72,6 @@ class ConfigMapSLZ(serializers.Serializer):
 
 class PersistentStorageSLZ(serializers.Serializer):
     storage_size = serializers.ChoiceField(choices=PersistentStorageSize.get_choices(), allow_null=True)
-
-
-class UpsertMountSLZ(serializers.Serializer):
-    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
-    name = serializers.RegexField(
-        help_text=_("挂载卷名称"), regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63, required=True
-    )
-    # 该正则匹配以'/'开头，不包含空字符(\0)和连续'/'的文件路径，且根目录'/'不合法
-    # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
-    mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
-    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
-    # TODO: 更改为 resource_name 更合适
-    source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
-    configmap_source = ConfigMapSLZ(required=False, allow_null=True)
-    persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
-
-    def validate(self, attrs):
-        environment_name = attrs["environment_name"]
-        name = attrs["name"]
-
-        module_id = self.context.get("module_id")
-
-        # 验证重名挂载卷
-        filtered_mounts = Mount.objects.filter(
-            module_id=module_id,
-            name=name,
-            environment_name__in=[environment_name, MountEnvName.GLOBAL.value],
-        )
-        # 传入了 mount_instance 表示更新操作，否则表示创建操作。更新操作时候，排除被更新 mount 对象
-        if mount_id := self.context.get("mount_id", None):
-            filtered_mounts = filtered_mounts.exclude(id=mount_id)
-
-        if filtered_mounts.exists():
-            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
-
-        # 根据 source_type 验证 source_config_data
-        source_type = attrs["source_type"]
-        configmap_source = attrs.get("configmap_source") or {}
-        if source_type == VolumeSourceType.ConfigMap.value and not configmap_source.get("source_config_data"):
-            raise serializers.ValidationError(_("挂载卷内容不可为空"))
-        return attrs
 
 
 class MountSLZ(serializers.ModelSerializer):
@@ -173,6 +131,48 @@ class MountSLZ(serializers.ModelSerializer):
             "bound_modules": bound_modules,
             "display_name": source.display_name,
         }
+
+
+class UpsertMountSLZ(serializers.Serializer):
+    environment_name = serializers.ChoiceField(choices=MountEnvName.get_choices(), required=True)
+    name = serializers.RegexField(
+        help_text=_("挂载卷名称"), regex=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63, required=True
+    )
+    # 该正则匹配以'/'开头，不包含空字符(\0)和连续'/'的文件路径，且根目录'/'不合法
+    # 合法路径：/xxx/ 和 /xxx  非法路径：/ 和 /xxx//
+    mount_path = serializers.RegexField(regex=r"^/([^/\0]+(/)?)+$", required=True)
+    source_type = serializers.ChoiceField(choices=VolumeSourceType.get_choices(), required=True)
+    # TODO: 更改为 resource_name 更合适
+    source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
+    configmap_source = ConfigMapSLZ(required=False, allow_null=True)
+    persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
+    sub_paths = serializers.ListField(child=serializers.CharField(), help_text="子路径列表")
+
+    def validate(self, attrs):
+        environment_name = attrs["environment_name"]
+        name = attrs["name"]
+
+        module_id = self.context.get("module_id")
+
+        # 验证重名挂载卷
+        filtered_mounts = Mount.objects.filter(
+            module_id=module_id,
+            name=name,
+            environment_name__in=[environment_name, MountEnvName.GLOBAL.value],
+        )
+        # 传入了 mount_instance 表示更新操作，否则表示创建操作。更新操作时候，排除被更新 mount 对象
+        if mount_id := self.context.get("mount_id", None):
+            filtered_mounts = filtered_mounts.exclude(id=mount_id)
+
+        if filtered_mounts.exists():
+            raise serializers.ValidationError(_("该环境(包括 global )中已存在同名挂载卷"))
+
+        # 根据 source_type 验证 source_config_data
+        source_type = attrs["source_type"]
+        configmap_source = attrs.get("configmap_source") or {}
+        if source_type == VolumeSourceType.ConfigMap.value and not configmap_source.get("source_config_data"):
+            raise serializers.ValidationError(_("挂载卷内容不可为空"))
+        return attrs
 
 
 class QueryMountsSLZ(serializers.Serializer):

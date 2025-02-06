@@ -147,10 +147,11 @@ class TestVolumeMountViewSet:
         url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
-            "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}, "use_sub_path": True},
+            "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
             "mount_path": "/path/",
             "name": "mount-configmap-test",
             "source_type": "ConfigMap",
+            "sub_paths": ["configmap_z"],
         }
         response = api_client.post(url, request_body)
         mount = Mount.objects.filter(module_id=bk_module.id, mount_path="/path/", name="mount-configmap-test").first()
@@ -161,7 +162,7 @@ class TestVolumeMountViewSet:
             source_name=mount.get_source_name,
         )
         assert response.status_code == 201
-        assert mount.source_config.configMap.subPaths == ["configmap_z"]
+        assert mount.sub_paths == ["configmap_z"]
         assert source.data == {"configmap_z": "configmap_z_data"}
 
     def test_create_pvc(self, api_client, bk_app, bk_module, pvc_source):
@@ -277,9 +278,9 @@ class TestVolumeMountViewSet:
         body = MountSLZ(mount_configmap).data
         body["configmap_source"] = {
             "source_config_data": {"configmap_z": "configmap_z_data_updated"},
-            "use_sub_path": True,
         }
         body["environment_name"] = "prod"
+        body["sub_paths"] = ["configmap_z"]
 
         response = api_client.put(url, body)
         mount_updated = Mount.objects.get(pk=mount_configmap.pk)
@@ -291,7 +292,7 @@ class TestVolumeMountViewSet:
         )
         assert response.status_code == 200
         assert mount_updated.name == mount_configmap.name
-        assert mount_updated.source_config.configMap.subPaths == ["configmap_z"]
+        assert mount_updated.sub_paths == ["configmap_z"]
         assert source.data == {"configmap_z": "configmap_z_data_updated"}
         assert source.environment_name == "prod"
 

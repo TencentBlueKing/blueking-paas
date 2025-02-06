@@ -190,7 +190,6 @@ class BkAppConfiguration(BaseModel):
 @register
 class ConfigMapSource(BaseModel):
     name: str
-    subPaths: Optional[List[str]] = None
 
 
 @register
@@ -208,6 +207,7 @@ class Mount(BaseModel):
     mountPath: str
     name: str
     source: VolumeSource
+    subPaths: Optional[List[str]] = None
 
 
 class MountOverlay(BaseModel):

@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -123,7 +123,6 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
     def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
         data = kwargs.get("data", {})
-        use_sub_path = kwargs.get("use_sub_path", False)
 
         return self.model_class.objects.create(
             application_id=app_id,
@@ -131,7 +130,6 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             environment_name=env_name,
             name=source_name,
             data=data,
-            use_sub_path=use_sub_path,
         )
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
@@ -147,11 +145,9 @@ class ConfigMapSourceController(BaseVolumeSourceController):
 
         # 更新 source 对象
         data = kwargs.get("data", {})
-        use_sub_path = kwargs.get("use_sub_path", False)
         source.environment_name = env_name
         source.data = data
-        source.overwrite = use_sub_path
-        source.save(update_fields=["environment_name", "data", "use_sub_path"])
+        source.save(update_fields=["environment_name", "data"])
         return source
 
     def delete_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str) -> None:
@@ -285,6 +281,7 @@ class MountManager:
         mount_path: str,
         source_type: str,
         source_name: Optional[str] = None,
+        sub_paths: Optional[List[str]] = None,
     ) -> Mount:
         source_config_name = source_name or generate_source_config_name(app_code=app_code)
         controller = init_volume_source_controller(source_type)
@@ -297,6 +294,7 @@ class MountManager:
             mount_path=mount_path,
             source_type=source_type,
             source_config=source_config,
+            sub_paths=sub_paths or [],
         )
 
 

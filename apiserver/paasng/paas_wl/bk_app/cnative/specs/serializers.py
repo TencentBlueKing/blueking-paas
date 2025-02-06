@@ -134,6 +134,7 @@ class MountSLZ(serializers.ModelSerializer):
             "source_config",
             "configmap_source",
             "persistent_storage_source",
+            "sub_paths",
         )
 
     def get_configmap_source(self, obj):

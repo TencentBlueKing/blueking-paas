@@ -212,4 +212,4 @@ class TestModuleCleaner:
 
         volume_after_clean = controller.list_by_app(bk_app.id)
         assert len(volume_after_clean) == 0
-        assert len(Mount.objects.filter(module_id=bk_module.id)) == 0
+        assert not Mount.objects.filter(module_id=bk_module.id).exists()

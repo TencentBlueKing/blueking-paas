@@ -132,6 +132,7 @@ class Command(BaseCommand):
         cluster = Cluster.objects.register_cluster(pk=data.cluster_id, **asdict(data.cluster_data))
 
         for _url in data.api_server_urls:
-            APIServer.objects.get_or_create(cluster=cluster, host=_url)
+            APIServer.objects.get_or_create(cluster=cluster, host=_url, tenant_id=cluster.tenant_id)
+
         APIServer.objects.exclude(host__in=data.api_server_urls).delete()
         logger.info("The cluster was initialized successfully")

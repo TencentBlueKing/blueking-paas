@@ -19,6 +19,7 @@ from typing import Optional
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
@@ -92,19 +93,17 @@ class BaseOperation(UuidAuditedModel):
     @property
     def need_to_report_bk_audit(self) -> bool:
         # 仅操作为终止状态时才记录到审计中心
-        if self.action_id and self.is_terminated:
-            return True
-        return False
+        return self.action_id and self.is_terminated
 
     def get_display_text(self) -> str:
         """操作记录描述，用于首页、应用概览页面前 5 条部署记录的展示"""
         env = self.get_environment_display()
         if self.module_name and self.environment:
-            module_env_info = _(f" {self.module_name} 模块{env}")
+            module_env_info = _(" {module_name} 模块{env}").format(module_name=self.module_name, env=env)
         elif self.module_name:
-            module_env_info = _(f" {self.module_name} 模块")
+            module_env_info = _(" {module_name} 模块").format(module_name=self.module_name)
         elif self.environment:
-            module_env_info = _(f"{env}")
+            module_env_info = _("{env}").format(env=env)
         else:
             module_env_info = ""
 
@@ -133,7 +132,10 @@ class BaseOperation(UuidAuditedModel):
 
 
 class AdminOperationRecord(BaseOperation):
-    """后台管理操作记录，用于记录平台管理员在 Admin 系统上的操作"""
+    """后台管理操作记录，用于记录平台管理员在 Admin 系统上的操作
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     app_code = models.CharField(max_length=32, verbose_name="应用ID, 非必填", null=True, blank=True)
 
@@ -159,6 +161,8 @@ class AppOperationRecord(BaseOperation):
         help_text="开发者中心注册的资源都为蓝鲸应用",
     )
 
+    tenant_id = tenant_id_field_factory()
+
     @property
     def application(self) -> Optional[Application]:
         return Application.default_objects.filter(code=self.app_code).first()
@@ -174,3 +178,5 @@ class AppLatestOperationRecord(models.Model):
     )
     operation = models.OneToOneField(AppOperationRecord, on_delete=models.CASCADE, db_constraint=False)
     latest_operated_at = models.DateTimeField(db_index=True)
+
+    tenant_id = tenant_id_field_factory()

@@ -15,20 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.basic import make_app_pattern, re_path
+from rest_framework import serializers
 
-from . import views
+from paasng.core.tenant.constants import TenantStatus
 
-# Deprecated 新版 API 上线并确认后再删除原来的 API
-urlpatterns = [
-    re_path(
-        r"^api/bkapps/applications/lists/latest/deprecated/",
-        views.LatestApplicationsViewSet.as_view(),
-        name="api.applications.latest.deprecated",
-    ),
-    re_path(
-        make_app_pattern(r"/operations/", include_envs=False),
-        views.ApplicationOperationsViewSet.as_view({"get": "list"}),
-        name="api.bkapps.application.operations",
-    ),
-]
+
+class TenantListOutputSLZ(serializers.Serializer):
+    id = serializers.CharField(help_text="租户 ID")
+    name = serializers.CharField(help_text="租户名称")
+    status = serializers.ChoiceField(help_text="租户状态", choices=TenantStatus.get_choices())

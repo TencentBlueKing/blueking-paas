@@ -25,6 +25,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.models import UuidAuditedModel
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models.build import Build
@@ -73,6 +74,7 @@ class CommandManager(models.Manager):
             output_stream=OutputStream.objects.create(),
             build=build,
             config=cfg,
+            tenant_id=app.tenant_id,
         )
         return obj
 
@@ -95,6 +97,8 @@ class Command(UuidAuditedModel):
     build = models.ForeignKey("api.Build", on_delete=models.CASCADE, null=True, db_constraint=False)
     config = models.ForeignKey("api.Config", on_delete=models.CASCADE, db_constraint=False)
     operator = models.CharField(max_length=64, help_text="操作者(被编码的 username), 目前该字段无意义")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = CommandManager()
 
@@ -143,6 +147,5 @@ class Command(UuidAuditedModel):
         """Check if current command allows interruptions"""
         if CommandStatus(self.status) in CommandStatus.get_finished_states():
             return False
-        if not self.logs_was_ready_at:
-            return False
-        return True
+
+        return bool(self.logs_was_ready_at)

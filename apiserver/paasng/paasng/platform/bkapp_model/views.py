@@ -304,6 +304,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             application_id=application.id,
             defaults={
                 "bk_saas": validated_data["bk_saas"],
+                "tenant_id": application.tenant_id,
             },
         )
         svc_disc.refresh_from_db()
@@ -312,6 +313,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         data = SvcDiscConfigSLZ(svc_disc).data
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
@@ -358,7 +360,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
 
-        defaults = {}
+        defaults = {"tenant_id": application.tenant_id}
         nameservers = validated_data.get("nameservers")
         if nameservers is not None:
             defaults["nameservers"] = nameservers
@@ -376,6 +378,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         data = DomainResolutionSLZ(domain_resolution).data
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,

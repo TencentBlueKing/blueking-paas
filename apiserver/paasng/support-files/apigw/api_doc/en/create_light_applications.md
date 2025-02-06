@@ -22,7 +22,7 @@ None.
 | introduction    | string         | No       | Application introduction                                                                                 |
 | width           | int            | No       | Application window width when opened on the desktop, default to parent application width                |
 | height          | int            | No       | Application window height when opened on the desktop, default to parent application height              |
-
+| app_tenant_mode | string | No     |When creating lightweight apps under the operation tenant, users can choose: `global` (all tenants) or `single` (single tenant). Default is single tenant if not specified.|
 ### Request Example
 
 ```

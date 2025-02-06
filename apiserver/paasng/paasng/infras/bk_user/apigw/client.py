@@ -15,8 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.apps import AppConfig
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-class ClusterAppConfig(AppConfig):
-    name = "paasng.plat_mgt.infras.clusters"
+class Group(OperationGroup):
+    # 获取所有租户列表
+    list_tenants = bind_property(Operation, name="list_tenant", method="GET", path="/api/v3/open/tenants/")
+
+
+class Client(APIGatewayClient):
+    """蓝鲸用户管理 API"""
+
+    _api_name = "bk-user"
+    api = bind_property(Group, name="api")

@@ -3,168 +3,183 @@
     class="smart-app"
     data-test-id="createSmart_content_appData"
   >
-    <div v-if="packageData">
+    <div v-bkloading="{ isLoading: isDataLoading, zIndex: 10 }">
       <div
-        class="bk-alert bk-alert-success mb20"
-        data-test-id="createSmart_header_appUpload"
+        data-test-id="createSmart_btn_appUploader"
+        class="card-style smart-upload"
       >
-        <i class="paasng-icon paasng-check-circle-shape" />
-        <div class="bk-alert-content">
-          <div class="bk-alert-title">
-            {{ $t('源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息') }}
+        <div class="top-title">
+          <div class="title mb10">
+            {{ $t('基本信息') }}
           </div>
-          <div class="bk-alert-description" />
-        </div>
-        <div class="bk-alert-close close-text">
-          <bk-button
+          <a
+            href="https://bk.tencent.com/s-mart"
+            target="_blank"
             class="f12"
-            :text="true"
-            @click="handleReUpload"
           >
-            {{ $t('重新上传') }}
-          </bk-button>
+            {{ $t('什么是 S-mart 应用？') }}
+          </a>
+        </div>
+        <bk-form
+          :label-width="100"
+          :model="formData"
+          ref="smartForm"
+          ext-cls="create-samrt-form-cls"
+        >
+          <bk-form-item
+            :required="true"
+            :label="$t('S-mart 包')"
+          >
+            <!-- 选择文件 -->
+            <template v-if="!packageData">
+              <uploader
+                :key="renderUploaderIndex"
+                :action="uploadUrl"
+                :validate-name="/^[a-zA-Z0-9-_. ]+$/"
+                :with-credentials="true"
+                :name="'package'"
+                :max-size="maxPackageSize"
+                :other-params="formData"
+                :headers="uploadHeader"
+                :on-upload-success="handleSuccess"
+                :on-upload-error="handleError"
+                @file-change="handleFileChange"
+              >
+                <p
+                  slot="tip"
+                  class="uploader-tip"
+                  style="font-size: 12px"
+                >
+                  {{ $t('将文件拖到此处或') }}
+                  <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
+                </p>
+              </uploader>
+              <p
+                slot="tip"
+                class="form-tip"
+              >
+                {{ $t('仅支持蓝鲸 S-mart 包，上传成功后即可部署应用。支持的文件格式包括 .tar、.tgz 和 .tar.gz。') }}
+              </p>
+            </template>
+            <!-- 成功后展示 -->
+            <section v-else>
+              <SmartFilePreview :file="fileInfo" />
+              <SmartInfo
+                :data="packageData"
+                @change-app="handleChangeApp"
+              />
+            </section>
+          </bk-form-item>
+          <template v-if="isShowTenant">
+            <bk-form-item
+              :required="true"
+              :property="'tenant'"
+              error-display-type="normal"
+              :label="$t('租户类型')"
+            >
+              <bk-radio-group v-model="formData.app_tenant_mode">
+                <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
+                <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="formData.app_tenant_mode === 'single'"
+              :required="true"
+              :label="$t('所属租户')"
+            >
+              <bk-input
+                class="form-input-width"
+                :value="curUserInfo.tenantId"
+                :disabled="true"
+              ></bk-input>
+            </bk-form-item>
+          </template>
+        </bk-form>
+      </div>
+      <div v-if="packageData">
+        <div
+          class="bk-alert bk-alert-success mb20"
+          data-test-id="createSmart_header_appUpload"
+        >
+          <i class="paasng-icon paasng-check-circle-shape" />
+          <div class="bk-alert-content">
+            <div class="bk-alert-title">
+              {{ $t('源码包上传成功，以下为从 app_desc.yml 文件中解析出的信息') }}
+            </div>
+            <div class="bk-alert-description" />
+          </div>
+          <div class="bk-alert-close close-text">
+            <bk-button
+              class="f12"
+              :text="true"
+              @click="handleReUpload"
+            >
+              {{ $t('重新上传') }}
+            </bk-button>
+          </div>
+        </div>
+        <div
+          v-for="(packageItem, key) of packageData.app_description.modules"
+          :key="key"
+          class="package-data-box card-style"
+        >
+          <p class="package-data-title">
+            <span>{{ key }}</span>
+            <span
+              v-if="packageItem.is_default"
+              class="paas-tag"
+            >
+              {{ $t('主模块') }}
+            </span>
+          </p>
+          <div>
+            <KeyValueRow>
+              <template #key>{{ $t('开发语言') }}：</template>
+              <template #value>{{ packageItem.language }}</template>
+            </KeyValueRow>
+            <KeyValueRow>
+              <template #key>
+                <span
+                  v-bk-tooltips="{
+                    content: $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）'),
+                    width: 280,
+                  }"
+                  class="has-desc"
+                >
+                  {{ $t('增强服务') }}：
+                </span>
+              </template>
+              <!-- 增强服务 -->
+              <template #value>
+                <ul
+                  class="package-data-services"
+                  data-test-id="createSmart_list_appName"
+                  v-if="packageItem.services?.length"
+                >
+                  <li
+                    v-for="(service, index) of packageItem.services"
+                    :key="index"
+                    :class="packageData.supported_services.includes(service.name) ? 'added' : 'not_supported'"
+                    class="package-data-rel"
+                    v-bk-tooltips="{
+                      content: $t('平台不支持该增强服务'),
+                      disabled: packageData.supported_services.includes(service.name),
+                    }"
+                  >
+                    {{ service.name }}
+                    <i
+                      v-if="service.shared_from"
+                      v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
+                      class="paasng-icon paasng-info-circle info-icon"
+                    />
+                  </li>
+                </ul>
+                <span v-else>{{ $t('无') }}</span>
+              </template>
+            </KeyValueRow>
+          </div>
         </div>
       </div>
-      <div
-        class="package-data-box mb20"
-        data-test-id="createSmart_header_appBaseInfo"
-      >
-        <p class="package-data-title">
-          {{ $t('基本信息') }}
-        </p>
-        <bk-container
-          :col="12"
-          :margin="0"
-        >
-          <bk-row class="mb15">
-            <bk-col
-              class="pr0 f14"
-              :span="2"
-            >
-              <span class="confirm-key">{{ $t('应用ID：') }}</span>
-            </bk-col>
-            <bk-col
-              class="pl0 f14"
-              :span="8"
-            >
-              <span class="confirm-value">{{ packageData.app_description.code }}</span>
-            </bk-col>
-          </bk-row>
-          <bk-row>
-            <bk-col
-              class="pr0 f14"
-              :span="2"
-            >
-              <span class="confirm-key">{{ $t('应用名称：') }}</span>
-            </bk-col>
-            <bk-col
-              class="pl0 f14"
-              :span="8"
-            >
-              <span class="confirm-value">{{ packageData.app_description.name }}</span>
-            </bk-col>
-          </bk-row>
-        </bk-container>
-      </div>
-
-      <div
-        v-for="(packageItem, key) of packageData.app_description.modules"
-        :key="key"
-        class="package-data-box mb20"
-      >
-        <p class="package-data-title">
-          {{ key }}
-          <span v-if="packageItem.is_default">({{ $t('主') }})</span>
-        </p>
-        <bk-container
-          :col="12"
-          :margin="0"
-          data-test-id="createSmart_container_appLanguage"
-        >
-          <bk-row class="mb15">
-            <bk-col
-              class="pr0 f14"
-              :span="2"
-            >
-              <span class="confirm-key">{{ $t('开发语言：') }}</span>
-            </bk-col>
-            <bk-col
-              class="pl0 f14"
-              :span="8"
-            >
-              <span class="confirm-value">{{ packageItem.language }}</span>
-            </bk-col>
-          </bk-row>
-          <bk-row class="mb15">
-            <bk-col
-              class="pr0 f14"
-              :span="2"
-            >
-              <span class="confirm-key">{{ $t('增强服务') }}</span>
-            </bk-col>
-            <bk-col
-              class="f12 pr0 pl0 mt2"
-              :span="10"
-            >
-              <span class="confirm-value">
-                {{ $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）') }}
-              </span>
-            </bk-col>
-          </bk-row>
-        </bk-container>
-        <ul
-          class="package-data-services"
-          data-test-id="createSmart_list_appName"
-        >
-          <li
-            v-for="(service, index) of packageItem.services"
-            :key="index"
-            :class="packageData.supported_services.includes(service.name) ? 'added' : 'not_supported'"
-            class="package-data-rel"
-            v-bk-tooltips="{
-              content: $t('平台不支持该增强服务'),
-              disabled: packageData.supported_services.includes(service.name),
-            }"
-          >
-            {{ service.name }}
-            <i
-              v-if="service.shared_from"
-              v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
-              class="paasng-icon paasng-info-circle info-icon"
-            />
-          </li>
-        </ul>
-      </div>
-    </div>
-    <div
-      v-else
-      data-test-id="createSmart_btn_appUploader"
-    >
-      <uploader
-        :key="renderUploaderIndex"
-        :action="uploadUrl"
-        :validate-name="/^[a-zA-Z0-9-_. ]+$/"
-        :with-credentials="true"
-        :name="'package'"
-        :max-size="maxPackageSize"
-        :accept-tips="
-          $t(
-            '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件'
-          )
-        "
-        :headers="uploadHeader"
-        :on-upload-success="handleSuccess"
-        :on-upload-error="handleError"
-      >
-        <a
-          slot="upload-footer"
-          href="https://bk.tencent.com/s-mart"
-          target="_blank"
-          class="f12"
-        >
-          {{ $t('什么是 S-mart 应用？') }}
-        </a>
-      </uploader>
     </div>
     <div
       v-if="isDataLoading"
@@ -182,7 +197,7 @@
         size="large"
         style="font-size: 14px"
         type="submit"
-        :disabled="!packageData"
+        :disabled="!packageData || isConflict"
         @click="handleCommit"
       >
         {{ $t('确认并创建应用') }}
@@ -201,18 +216,31 @@
 
 <script>
 import uploader from '@/components/uploader';
+import { mapGetters } from 'vuex';
+import SmartFilePreview from './comps/smart-file-preview.vue';
+import SmartInfo from './comps/smart-info.vue';
+import KeyValueRow from '@/components/key-value-row';
 export default {
   components: {
     uploader,
+    SmartFilePreview,
+    SmartInfo,
+    KeyValueRow,
   },
   data() {
     return {
       isDataLoading: false,
       packageData: null,
       renderUploaderIndex: 0,
+      fileInfo: {},
+      formData: {
+        app_tenant_mode: 'single',
+      },
+      modifiedAppData: null,
     };
   },
   computed: {
+    ...mapGetters(['isShowTenant']),
     uploadHeader() {
       return {
         name: 'X-CSRFToken',
@@ -225,6 +253,18 @@ export default {
     maxPackageSize() {
       return Number(window.BK_MAX_PACKAGE_SIZE) || 500;
     },
+    curUserInfo() {
+      return this.$store.state.curUserInfo;
+    },
+    isConflict() {
+      if (
+        this.packageData &&
+        this.packageData.app_description?.code === this.packageData.original_app_description?.code
+      ) {
+        return false;
+      }
+      return !this.modifiedAppData;
+    },
   },
   methods: {
     handleSuccess(res) {
@@ -233,6 +273,16 @@ export default {
 
     handleError() {
       this.packageData = null;
+      this.modifiedAppData = null;
+    },
+
+    // 文件选择
+    handleFileChange(e) {
+      const file = e.target.files[0];
+      this.fileInfo = {
+        name: file.name,
+        size: (file.size / (1024 * 1024)).toFixed(2),
+      };
     },
 
     back() {
@@ -243,14 +293,24 @@ export default {
 
     handleReUpload() {
       this.packageData = null;
+      this.modifiedAppData = null;
+    },
+
+    // 修改应用信息
+    handleChangeApp(data) {
+      this.modifiedAppData = { ...data };
     },
 
     async handleCommit() {
       this.isDataLoading = true;
       try {
+        const { code, name } = this.packageData.app_description;
+        const params = {
+          ...(this.modifiedAppData ? this.modifiedAppData : { code, name }),
+          app_tenant_mode: this.formData.app_tenant_mode,
+        };
         await this.$store.dispatch('packages/createSmartApp', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
+          params,
         });
 
         this.$bkMessage({
@@ -259,21 +319,13 @@ export default {
         });
 
         const objectKey = `SourceInitResult${Math.random().toString(36)}`;
-        const appCode = this.packageData.app_description.code;
         this.$router.push({
           name: 'createSmartAppSucc',
           params: {
-            id: appCode,
+            id: this.modifiedAppData?.code || code,
           },
           query: { objectKey },
         });
-
-        // this.$router.push({
-        //     name: 'appDeploy',
-        //     params: {
-        //         id: this.packageData.app_description.code
-        //     }
-        // })
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -295,9 +347,57 @@ export default {
   font-size: 12px;
 }
 .smart-app {
-  padding-top: 20px;
   width: 1200px;
   margin: auto;
+  .uploader-tip {
+    font-size: 12px;
+    font-weight: 400;
+    span {
+      color: #3a84ff;
+    }
+  }
+  .smart-upload {
+    padding: 24px;
+    margin-bottom: 16px;
+    .top-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      .title {
+        line-height: 21px;
+        color: #313238;
+        font-size: 14px;
+        font-weight: 600;
+      }
+    }
+    .create-samrt-form-cls {
+      width: 750px;
+    }
+    .form-tip {
+      margin-top: 4px;
+      font-size: 12px;
+    }
+    /deep/ .config-upload-content,
+    /deep/ .config-upload-file {
+      height: 180px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    // /deep/ .config-upload-content {
+    //   height: 180px;
+    //   padding: 0;
+    //   display: flex;
+    //   justify-content: center;
+    // }
+    // /deep/ .config-upload-file {
+    //   height: 180px;
+    //   display: flex;
+    //   align-items: center;
+    //   padding: 0;
+    // }
+  }
 }
 
 .action-box {
@@ -307,15 +407,42 @@ export default {
 
 .package-data-box {
   padding: 20px;
-  border: 1px solid #dcdee5;
-  border-radius: 2px;
+  margin-bottom: 16px;
+  .paas-tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 0 8px;
+    color: #4d4f56;
+    border-radius: 2px;
+    background: #f0f1f5;
+  }
+  .has-desc {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      width: calc(100% - 14px);
+      border-bottom: 1px dashed;
+      left: 50%;
+      transform: translateX(-62%);
+      bottom: -1px;
+    }
+  }
 }
 
 .package-data-title {
   font-size: 14px;
-  font-weight: 500;
+  margin-bottom: 16px;
+  font-weight: 700;
   color: #313238;
-  margin-bottom: 12px;
+  line-height: 22px;
+  .confirm-key {
+    text-align: right;
+  }
 }
 
 .package-data-desc {
@@ -326,17 +453,16 @@ export default {
 
 .package-data-services {
   overflow: hidden;
-  margin-top: 10px;
+  display: flex;
+  gap: 8px;
   li {
-    min-width: 100px;
-    height: 24px;
-    line-height: 24px;
+    height: 22px;
+    line-height: 22px;
     display: inline-block;
     background: #f0f1f5;
     border-radius: 2px;
     padding: 0 2px;
     border-radius: 2px;
-    margin: 0 8px 8px 0;
     text-align: center;
     font-size: 12px;
     color: #63656e;

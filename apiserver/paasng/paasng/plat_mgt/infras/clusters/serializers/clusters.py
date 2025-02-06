@@ -221,6 +221,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         self._validate_cluster_source(attrs)
         # 认证配置校验
         self._validate_auth(attrs)
+        # 可用租户 ID 列表校验
+        self._validate_available_tenant_ids(attrs)
 
         # 清理无效的认证数据，避免混淆
         if attrs["auth_type"] == ClusterAuthType.CERT:
@@ -247,6 +249,10 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
             raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
+
+    def _validate_available_tenant_ids(self, attrs: Dict[str, Any]):
+        if self.context["cur_tenant_id"] not in attrs["available_tenant_ids"]:
+            raise ValidationError(_("集群所属租户 ID {} 不在可用租户 ID 列表中").format(self.context["cur_tenant_id"]))
 
     def validate_name(self, name: str) -> str:
         if Cluster.objects.filter(name=name).exists():
@@ -372,6 +378,12 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
             # ca, cert, key 均为假值（None/空字符串）是可接受的，但是如果任意一项提供了，则都需要提供
             if (ca or cert or key) and not (ca and cert and key):
                 raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
+
+    def _validate_available_tenant_ids(self, attrs: Dict[str, Any]):
+        cur_tenant_id = self.context["cur_cluster"].tenant_id
+
+        if cur_tenant_id not in attrs["available_tenant_ids"]:
+            raise ValidationError(_("集群所属租户 ID {} 不在可用租户 ID 列表中").format(cur_tenant_id))
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data = super().to_internal_value(data)

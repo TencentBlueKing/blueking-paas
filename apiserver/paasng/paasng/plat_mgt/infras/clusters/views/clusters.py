@@ -80,7 +80,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, *args, **kwargs):
-        slz = ClusterCreateInputSLZ(data=request.data)
+        cur_tenant_id = get_tenant(request.user).id
+
+        slz = ClusterCreateInputSLZ(
+            data=request.data,
+            context={"cur_tenant_id": cur_tenant_id},
+        )
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -89,7 +94,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster = Cluster.objects.create(
                 # 集群分划属性
                 region=settings.DEFAULT_REGION_NAME,
-                tenant_id=get_tenant(request.user).id,
+                tenant_id=cur_tenant_id,
                 available_tenant_ids=data["available_tenant_ids"],
                 # 集群基本属性
                 name=data["name"],
@@ -107,10 +112,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 container_log_dir=data["container_log_dir"],
             )
             # 创建 ApiServers
-            api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+            api_servers = [
+                APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+            ]
             APIServer.objects.bulk_create(api_servers)
             # 创建 ElasticSearch 配置
-            ClusterElasticSearchConfig.objects.create(cluster=cluster, **data["elastic_search_config"])
+            ClusterElasticSearchConfig.objects.create(
+                cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
+            )
 
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
@@ -177,7 +186,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除，再插入的方式
                 cluster.api_servers.all().delete()
-                api_servers = [APIServer(cluster=cluster, host=host) for host in data["api_servers"]]
+                api_servers = [
+                    APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
+                ]
                 APIServer.objects.bulk_create(api_servers)
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池
@@ -252,7 +263,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         client = get_client_by_cluster_name(cluster_name=cluster.name)
 
         ignore_labels = {"node-role.kubernetes.io/master": "true"}
-        state = generate_state(cluster.name, client, ignore_labels)
+        state = generate_state(cluster.name, client, ignore_labels, cluster.tenant_id)
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

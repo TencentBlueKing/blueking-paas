@@ -23,6 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import CharField, DateTimeField, Serializer, SerializerMethodField
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -50,7 +51,10 @@ class DeployStepMetaManager(models.Manager):
 
 
 class DeployStepMeta(AuditedModel):
-    """部署步骤元信息"""
+    """部署步骤元信息
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     phase = models.CharField(verbose_name=_("关联阶段"), max_length=16, choices=DeployPhaseTypes.get_choices())
     name = models.CharField(_("步骤名称"), db_index=True, max_length=32)
@@ -77,7 +81,10 @@ class StepMetaSetManager(models.Manager):
 
 
 class StepMetaSet(AuditedModel):
-    """部署步骤元信息集"""
+    """部署步骤元信息集
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # Q: 为什么不从一个大的 StepMeta 池直接过滤 image 和 buildpack 获得一个 StepMeta 列表？为什么要额外增加一个模型？
     # A: StepMeta 之间可能没有绝对的顺序关系，需要用 StepMetaSet 定义
@@ -97,7 +104,7 @@ class StepMetaSet(AuditedModel):
     def create_step_instances(self, phase: "DeployPhase") -> List["DeployStep"]:
         instances = []
         for step_meta in self.list_metas_by_phase(DeployPhaseTypes(phase.type)):
-            attrs = {"name": step_meta.name, "phase": phase, "meta": step_meta}
+            attrs = {"name": step_meta.name, "phase": phase, "meta": step_meta, "tenant_id": phase.tenant_id}
             for field in DeployStepMeta.display_name.fields:
                 attrs[field] = getattr(step_meta, field)
             instances.append(DeployStep(**attrs))
@@ -143,6 +150,8 @@ class DeployStep(UuidAuditedModel, MarkStatusMixin):
     meta = models.ForeignKey(
         DeployStepMeta, on_delete=models.CASCADE, verbose_name=_("元信息"), related_name="instances", null=True
     )
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         ordering = ["created"]

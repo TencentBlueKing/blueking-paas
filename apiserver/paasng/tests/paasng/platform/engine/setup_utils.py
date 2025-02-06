@@ -44,5 +44,6 @@ def create_fake_deployment(module, app_environment="prod", operator=None, **kwar
             proc_spec.name: {"name": proc_spec.name, "command": proc_spec.get_proc_command()}
             for proc_spec in ModuleProcessSpec.objects.filter(module=module)
         },
+        tenant_id=application.tenant_id,
         **kwargs,
     )

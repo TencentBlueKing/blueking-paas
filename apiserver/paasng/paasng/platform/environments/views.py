@@ -77,6 +77,7 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
             protections.delete()
             add_app_audit_record(
                 app_code=code,
+                tenant_id=env.tenant_id,
                 user=request.user.pk,
                 action_id=AppAction.MANAGE_ENV_PROTECTION,
                 operation=OperationEnum.DISABLE,
@@ -88,12 +89,15 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
 
         protections = []
         for role in allowed_roles:
-            protections.append(EnvRoleProtection(module_env=env, operation=operation, allowed_role=role))
+            protections.append(
+                EnvRoleProtection(module_env=env, operation=operation, allowed_role=role, tenant_id=env.tenant_id)
+            )
 
         protections = EnvRoleProtection.objects.bulk_create(protections)
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=env.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_ENV_PROTECTION,
             operation=OperationEnum.ENABLE,
@@ -131,6 +135,7 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_ENV_PROTECTION,
             operation=OperationEnum.MODIFY,

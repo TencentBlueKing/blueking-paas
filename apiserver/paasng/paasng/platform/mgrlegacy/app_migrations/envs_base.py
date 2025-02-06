@@ -52,7 +52,12 @@ class BaseEnvironmentVariableMigration(BaseMigration):
             var = asdict(v)
             for module in self.context.app.modules.all():
                 var.pop("environment_name", None)
-                kwargs = {"module": module, "is_global": bool(environment is None), **var}
+                kwargs = {
+                    "module": module,
+                    "tenant_id": module.tenant_id,
+                    "is_global": bool(environment is None),
+                    **var,
+                }
                 if environment is not None:
                     kwargs["environment"] = environment
                 else:

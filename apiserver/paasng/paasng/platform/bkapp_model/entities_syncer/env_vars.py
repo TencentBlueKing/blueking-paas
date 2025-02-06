@@ -53,7 +53,10 @@ def sync_env_vars(
     for var in env_vars:
         env_name = ConfigVarEnvName.GLOBAL
         _, created = PresetEnvVariable.objects.update_or_create(
-            module=module, environment_name=env_name.value, key=var.name, defaults={"value": var.value}
+            module=module,
+            environment_name=env_name.value,
+            key=var.name,
+            defaults={"value": var.value, "tenant_id": module.tenant_id},
         )
         ret.incr_by_created_flag(created)
         existing_index.pop((env_name.value, var.name), None)
@@ -61,7 +64,10 @@ def sync_env_vars(
     for overlay_var in overlay_env_vars:
         env_name = ConfigVarEnvName(overlay_var.env_name)
         _, created = PresetEnvVariable.objects.update_or_create(
-            module=module, environment_name=env_name.value, key=overlay_var.name, defaults={"value": overlay_var.value}
+            module=module,
+            environment_name=env_name.value,
+            key=overlay_var.name,
+            defaults={"value": overlay_var.value, "tenant_id": module.tenant_id},
         )
         ret.incr_by_created_flag(created)
         existing_index.pop((env_name.value, overlay_var.name), None)

@@ -27,10 +27,17 @@ class TestAuditAPI:
     def test_latest_apps(self, api_client, bk_user, bk_app):
         """最近操作的应用列表"""
         add_app_audit_record(
-            app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
+            app_code=bk_app.code,
+            tenant_id=bk_app.tenant_id,
+            action_id="",
+            user=bk_user,
+            operation="enable",
+            target="addon",
+            attribute="mysql",
         )
         add_app_audit_record(
             app_code=bk_app.code,
+            tenant_id=bk_app.tenant_id,
             action_id="",
             user=bk_user,
             operation="disable",
@@ -50,7 +57,13 @@ class TestAuditAPI:
     def test_latest_apps_filter_by_operator(self, api_client, bk_user, bk_app):
         """最近操作的应用列表"""
         add_app_audit_record(
-            app_code=bk_app.code, action_id="", user=bk_user, operation="enable", target="addon", attribute="mysql"
+            app_code=bk_app.code,
+            tenant_id=bk_app.tenant_id,
+            action_id="",
+            user=bk_user,
+            operation="enable",
+            target="addon",
+            attribute="mysql",
         )
 
         # 创建另一条操作记录，应用属于 bk_user, 但操作人是 test_user
@@ -58,6 +71,7 @@ class TestAuditAPI:
         test_user = create_user(generate_random_string(6))
         add_app_audit_record(
             app_code=bk_app2.code,
+            tenant_id=bk_app2.tenant_id,
             action_id="",
             user=test_user,
             operation="disable",

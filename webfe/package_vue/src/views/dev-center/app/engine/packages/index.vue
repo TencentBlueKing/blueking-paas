@@ -136,43 +136,36 @@
       :width="640"
     >
       <div v-if="uploadDialogConf.package">
+        <bk-alert
+          v-if="isAppCodeChanged || isAppNameChanged"
+          class="mb15"
+          type="warning"
+          :title="$t('创建应用时，已修改 Smart 包中的应用信息，上传新版本将自动根据创建时的选择进行更新')"
+        ></bk-alert>
         <div class="package-data-box mb20">
-          <p class="package-data-title">
-            {{ $t('基本信息') }}
-          </p>
-          <bk-container
-            :col="12"
-            :margin="0"
-          >
-            <bk-row class="mb15">
-              <bk-col
-                class="pr0 f14"
-                :span="2"
-              >
-                <span class="confirm-key">{{ $t('应用ID：') }}</span>
-              </bk-col>
-              <bk-col
-                class="pl0 f14"
-                :span="8"
-              >
-                <span class="confirm-value">{{ uploadDialogConf.package.app_description.code }}</span>
-              </bk-col>
-            </bk-row>
-            <bk-row class="mb15">
-              <bk-col
-                class="pr0 f14"
-                :span="2"
-              >
-                <span class="confirm-key">{{ $t('应用名称：') }}</span>
-              </bk-col>
-              <bk-col
-                class="pl0 f14"
-                :span="8"
-              >
-                <span class="confirm-value">{{ uploadDialogConf.package.app_description.name }}</span>
-              </bk-col>
-            </bk-row>
-          </bk-container>
+          <p class="package-data-title">{{ $t('基本信息') }}</p>
+          <KeyValueRow>
+            <template #key>{{ $t('应用 ID') }}：</template>
+            <template #value>
+              <span :class="{ 'has-change': isAppCodeChanged }">{{ appDescription.code }}</span>
+              <i
+                v-if="isAppCodeChanged"
+                class="paasng-icon paasng-info-line ml5"
+                v-bk-tooltips="$t('Smart 包中声明的应用 ID 为：{n}', { n: originalCode })"
+              ></i>
+            </template>
+          </KeyValueRow>
+          <KeyValueRow>
+            <template #key>{{ $t('应用名称') }}：</template>
+            <template #value>
+              <span :class="{ 'has-change': isAppNameChanged }">{{ appDescription.name }}</span>
+              <i
+                v-if="isAppNameChanged"
+                class="paasng-icon paasng-info-line ml5"
+                v-bk-tooltips="$t('Smart 包中声明的应用名称为：{n}', { n: originalName })"
+              ></i>
+            </template>
+          </KeyValueRow>
         </div>
 
         <div
@@ -182,62 +175,57 @@
         >
           <p class="package-data-title">
             {{ key }}
-            <span v-if="packageItem.is_default">({{ $t('主') }})</span>
-          </p>
-          <bk-container
-            :col="12"
-            :margin="0"
-          >
-            <bk-row class="mb15">
-              <bk-col
-                class="pr0 f14"
-                :span="2"
-              >
-                <span class="confirm-key">{{ $t('开发语言：') }}</span>
-              </bk-col>
-              <bk-col
-                class="pl0 f14"
-                :span="8"
-              >
-                <span class="confirm-value">{{ packageItem.language }}</span>
-              </bk-col>
-            </bk-row>
-            <bk-row class="mb15">
-              <bk-col
-                class="pr0 f14"
-                :span="2"
-              >
-                <span class="confirm-key">{{ $t('增强服务') }}</span>
-              </bk-col>
-              <bk-col
-                class="f12 pr0 pl0 mt2"
-                :span="10"
-              >
-                <span class="confirm-value">
-                  {{ $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）') }}
-                </span>
-              </bk-col>
-            </bk-row>
-          </bk-container>
-          <ul class="package-data-services">
-            <li
-              v-for="(service, index) of packageItem.services"
-              :key="index"
-              :class="uploadDialogConf.package.supported_services.includes(service.name) ? 'added' : 'not_supported'"
-              class="package-data-rel"
-              v-bk-tooltips="{
-                content: $t('平台不支持该增强服务'),
-                disabled: uploadDialogConf.package.supported_services.includes(service.name),
-              }"
+            <span
+              v-if="packageItem.is_default"
+              class="paas-tag"
             >
-              {{ service.name }}
-              <i
-                v-if="service.shared_from"
-                v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
-                class="paasng-icon paasng-info-circle info-icon"
-              />
-            </li>
-          </ul>
+              {{ $t('主模块') }}
+            </span>
+          </p>
+          <KeyValueRow>
+            <template #key>{{ $t('开发语言') }}：</template>
+            <template #value>{{ packageItem.language }}</template>
+          </KeyValueRow>
+          <KeyValueRow>
+            <template #key>
+              <span
+                v-bk-tooltips="{
+                  content: $t('增强服务只可新增，不可删除（即使在配置文件中删除了某增强服务，在平台也会保留该服务）'),
+                  width: 280,
+                }"
+                class="has-desc"
+              >
+                {{ $t('增强服务') }}：
+              </span>
+            </template>
+            <template #value>
+              <ul
+                v-if="packageItem.services?.length"
+                class="package-data-services"
+              >
+                <li
+                  v-for="(service, index) of packageItem.services"
+                  :key="index"
+                  :class="
+                    uploadDialogConf.package.supported_services.includes(service.name) ? 'added' : 'not_supported'
+                  "
+                  class="package-data-rel"
+                  v-bk-tooltips="{
+                    content: $t('平台不支持该增强服务'),
+                    disabled: uploadDialogConf.package.supported_services.includes(service.name),
+                  }"
+                >
+                  {{ service.name }}
+                  <i
+                    v-if="service.shared_from"
+                    v-bk-tooltips="`${$t('共享自')}${service.shared_from}${$t('模块')}`"
+                    class="paasng-icon paasng-info-circle info-icon"
+                  />
+                </li>
+              </ul>
+              <div v-else>{{ $t('无') }}</div>
+            </template>
+          </KeyValueRow>
         </div>
       </div>
       <div v-else>
@@ -248,11 +236,7 @@
           :max-size="maxPackageSize"
           :with-credentials="true"
           :name="'package'"
-          :accept-tips="
-            $t(
-              '仅支持蓝鲸 S-mart 包，可以从“蓝鲸 S-mart”获取，上传成功后即可进行应用部署 仅支持 .tar 或 .tar.gz 格式的文件'
-            )
-          "
+          :accept-tips="$t('仅支持蓝鲸 S-mart 包，上传成功后即可部署应用。支持的文件格式包括 .tar、.tgz 和 .tar.gz。')"
           :headers="uploadHeader"
           :on-upload-success="handleSuccess"
           :on-upload-error="handleError"
@@ -283,11 +267,13 @@
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import appTopBar from '@/components/paas-app-bar';
 import uploader from '@/components/uploader';
+import KeyValueRow from '@/components/key-value-row';
 
 export default {
   components: {
     appTopBar,
     uploader,
+    KeyValueRow,
   },
   mixins: [appBaseMixin],
   data() {
@@ -328,6 +314,24 @@ export default {
     },
     maxPackageSize() {
       return window.BK_MAX_PACKAGE_SIZE || 500;
+    },
+    appDescription() {
+      return this.uploadDialogConf.package.app_description || {};
+    },
+    originalAppDescription() {
+      return this.uploadDialogConf.package.original_app_description || {};
+    },
+    originalCode() {
+      return this.originalAppDescription.code;
+    },
+    originalName() {
+      return this.originalAppDescription.name;
+    },
+    isAppCodeChanged() {
+      return this.originalCode !== this.appDescription.code;
+    },
+    isAppNameChanged() {
+      return this.originalName !== this.appDescription.name;
     },
   },
   watch: {
@@ -392,7 +396,6 @@ export default {
       try {
         await this.$store.dispatch('packages/commitPackage', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
           signature: this.uploadDialogConf.package.signature,
         });
 
@@ -505,9 +508,10 @@ export default {
 }
 .package-data-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   color: #313238;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  line-height: 22px;
 }
 
 .package-data-desc {
@@ -516,13 +520,49 @@ export default {
   color: #979ba5;
 }
 
+.package-data-box {
+  .paas-tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 0 8px;
+    color: #4d4f56;
+    border-radius: 2px;
+    background: #f0f1f5;
+  }
+  .has-change {
+    color: #e38b02;
+  }
+  .paasng-info-line {
+    cursor: pointer;
+    color: #979ba5;
+    &:hover {
+      color: #4d4f56;
+    }
+  }
+  .has-desc {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      width: calc(100% - 14px);
+      border-bottom: 1px dashed;
+      left: 50%;
+      transform: translateX(-62%);
+      bottom: -1px;
+    }
+  }
+}
+
 .package-data-services {
   overflow: hidden;
   margin-top: 10px;
   li {
-    min-width: 100px;
-    height: 24px;
-    line-height: 24px;
+    height: 22px;
+    line-height: 22px;
     display: inline-block;
     background: #f0f1f5;
     border-radius: 2px;

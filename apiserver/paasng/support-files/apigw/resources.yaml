@@ -454,7 +454,7 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
-  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/dimension/path:
+  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/path:
     get:
       operationId: analysis_dimension_path
       description: 访问统计：按路径维度查看
@@ -470,7 +470,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/dimension/path
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/path
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -479,7 +479,7 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
-  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/dimension/user:
+  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user:
     get:
       operationId: analysis_dimension_user
       description: 访问统计：按用户维度查看
@@ -495,7 +495,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/dimension/user
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -504,7 +504,7 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn:
-  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/total:
+  /bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/total:
     get:
       operationId: analysis_total
       description: '访问统计: 站点访问总数'
@@ -520,7 +520,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{metric_source_type}/metrics/total
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/total
           matchSubpath: false
           timeout: 0
           upstreams: {}

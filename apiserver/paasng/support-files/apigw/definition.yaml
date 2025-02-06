@@ -9,8 +9,8 @@ apigateway:
 # 更新了 resource.yaml 后必须修改 title
 release:
   version: 1.3.4
-  title: "Change path of analysis_dimension_path, analysis_dimension_user and analysis_total"
-  comment: "analysis_dimension_path and analysis_dimension_user change 'ingress' to path parameter {metric_source_type}. analysis_total change path parameter {source_type} to {metric_source_type}."
+  title: "Corrected the path parameters of analysis related API parameters"
+  comment: "Corrected the path parameters of analysis related API parameters"
 
 
 stage:

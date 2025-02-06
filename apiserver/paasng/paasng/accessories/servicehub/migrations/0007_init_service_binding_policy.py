@@ -42,8 +42,8 @@ def init_service_binding_policy(apps, schema_editor):
     - The migration will skip initialization if any binding policies already exist,
       to prevent overwriting existing configurations.
     """
-    ServiceBindingPolicy = apps.get_model('servicehub', 'ServiceBindingPolicy')
-    ServiceBindingPrecedencePolicy = apps.get_model('servicehub', 'ServiceBindingPrecedencePolicy')
+    ServiceBindingPolicy = apps.get_model("servicehub", "ServiceBindingPolicy")
+    ServiceBindingPrecedencePolicy = apps.get_model("servicehub", "ServiceBindingPrecedencePolicy")
 
     # Check if either policy already exists
     if ServiceBindingPolicy.objects.exists() or ServiceBindingPrecedencePolicy.objects.exists():
@@ -59,7 +59,7 @@ def init_service_binding_policy(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('servicehub', '0006_unboundserviceengineappattachment_and_more'),
+        ("servicehub", "0006_unboundserviceengineappattachment_and_more"),
     ]
 
     operations = [

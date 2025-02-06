@@ -236,6 +236,29 @@ class APIServer(UuidAuditedModel):
     class Meta:
         unique_together = ("cluster", "host")
 
+    def __str__(self):
+        return f"{self.__class__.__name__}(cluster={self.cluster.name}, host={self.host}"
+
+
+class ClusterComponent(UuidAuditedModel):
+    """集群组件（由 Helm Chart 进行安装）"""
+
+    cluster = models.ForeignKey(to=Cluster, related_name="components", on_delete=models.CASCADE)
+    repository = models.CharField(max_length=64, help_text="Helm 组件仓库", default="public-repo")
+    name = models.CharField(max_length=64, help_text="组件名称")
+    required = models.BooleanField(help_text="是否为必要组件")
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("cluster", "name")
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__}(cluster={self.cluster.name}, "
+            + f"repository={self.repository}, name={self.name}, required={self.required})"
+        )
+
 
 AllocationPolicyField = make_json_field("AllocationPolicyField", AllocationPolicy)
 

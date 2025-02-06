@@ -27,6 +27,11 @@ from .clusters import (
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
+from .components import (
+    ClusterComponentListOutputSLZ,
+    ClusterComponentRetrieveOutputSLZ,
+    ClusterComponentUpsertInputSLZ,
+)
 from .policies import (
     ClusterAllocationPolicyCreateInputSLZ,
     ClusterAllocationPolicyCreateOutputSLZ,
@@ -42,6 +47,10 @@ __all__ = [
     "ClusterUpdateInputSLZ",
     "ClusterUsageRetrieveOutputSLZ",
     "ClusterDefaultFeatureFlagsRetrieveOutputSLZ",
+    # components
+    "ClusterComponentListOutputSLZ",
+    "ClusterComponentRetrieveOutputSLZ",
+    "ClusterComponentUpsertInputSLZ",
     # policies
     "ClusterAllocationPolicyListOutputSLZ",
     "ClusterAllocationPolicyCreateInputSLZ",

@@ -30,3 +30,7 @@ class BCSApiError(BCSGatewayServiceError):
     """When calling the bcs api, bcs returns an error message,
     which needs to be captured and displayed to the user on the page
     """
+
+
+class HelmChartNotFound(Exception):
+    pass

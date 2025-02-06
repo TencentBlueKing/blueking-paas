@@ -51,9 +51,6 @@ type VolumeSourceValidator interface {
 // populate this volume
 type ConfigMapSource struct {
 	Name string `json:"name"`
-	// SubPaths is a list of file name of the configmap
-	// These file names will be used as SubPath in VolumeMount to mount specific keys.
-	SubPaths []string `json:"subPaths,omitempty"`
 }
 
 // Validate ConfigMap name

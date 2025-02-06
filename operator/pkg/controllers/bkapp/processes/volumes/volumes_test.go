@@ -156,6 +156,29 @@ var _ = Describe("test apply to deployment", func() {
 		}
 	})
 
+	It("subPaths", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+		subPaths := []string{"nginx.conf", "nginx2.conf"}
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			},
+			MountPath: mountPath,
+			SubPaths:  subPaths,
+		}
+		_ = vm.ApplyToDeployment(nil, deployment)
+		volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+		for idx, mount := range volumeMounts {
+			Expect(mount.Name).To(Equal(mountName))
+			Expect(mount.MountPath).To(Equal(filepath.Join(mountPath, subPaths[idx])))
+			Expect(mount.SubPath).To(Equal(subPaths[idx]))
+		}
+	})
+
 	It("configmap source", func() {
 		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
 
@@ -170,31 +193,6 @@ var _ = Describe("test apply to deployment", func() {
 
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
-
-		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
-	})
-
-	It("configmap source with subPath", func() {
-		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
-		subPaths := []string{"nginx.conf", "nginx2.conf"}
-
-		vm := GenericVolumeMount{
-			Volume: Volume{
-				Name: mountName,
-				Source: &paasv1alpha2.VolumeSource{
-					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap", SubPaths: subPaths},
-				},
-			},
-			MountPath: mountPath,
-		}
-		_ = vm.ApplyToDeployment(nil, deployment)
-
-		volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
-		for idx, mount := range volumeMounts {
-			Expect(mount.Name).To(Equal(mountName))
-			Expect(mount.MountPath).To(Equal(filepath.Join(mountPath, subPaths[idx])))
-			Expect(mount.SubPath).To(Equal(subPaths[idx]))
-		}
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
 	})

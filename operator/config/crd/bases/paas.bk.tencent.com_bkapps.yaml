@@ -1343,13 +1343,6 @@ spec:
                               properties:
                                 name:
                                   type: string
-                                subPaths:
-                                  description: |-
-                                    SubPaths is a list of file name of the configmap
-                                    These file names will be used as SubPath in VolumeMount to mount specific keys.
-                                  items:
-                                    type: string
-                                  type: array
                               required:
                               - name
                               type: object
@@ -1363,6 +1356,13 @@ spec:
                               - name
                               type: object
                           type: object
+                        subPaths:
+                          description: |-
+                            SubPaths is a list of file name of the configmap
+                            These file names will be used as SubPath in VolumeMount to mount specific keys.
+                          items:
+                            type: string
+                          type: array
                       required:
                       - envName
                       - mountPath
@@ -1454,13 +1454,6 @@ spec:
                           properties:
                             name:
                               type: string
-                            subPaths:
-                              description: |-
-                                SubPaths is a list of file name of the configmap
-                                These file names will be used as SubPath in VolumeMount to mount specific keys.
-                              items:
-                                type: string
-                              type: array
                           required:
                           - name
                           type: object
@@ -1474,6 +1467,13 @@ spec:
                           - name
                           type: object
                       type: object
+                    subPaths:
+                      description: |-
+                        SubPaths is a list of file name of the configmap
+                        These file names will be used as SubPath in VolumeMount to mount specific keys.
+                      items:
+                        type: string
+                      type: array
                   required:
                   - mountPath
                   - name

@@ -67,6 +67,7 @@ type Volume struct {
 type GenericVolumeMount struct {
 	Volume    Volume
 	MountPath string
+	SubPaths  []string
 }
 
 // ApplyToDeployment 将 GenericVolumeMount 应用到 deployment
@@ -123,18 +124,16 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 }
 
 func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
-	if configMap := vm.Volume.Source.ConfigMap; configMap != nil && configMap.SubPaths != nil {
-		// configMap 不为空，且 configMap.SubPaths 不为空
-		// 使用 subPath 挂载多个文件
-		for _, subPath := range configMap.SubPaths {
-			return []corev1.VolumeMount{
-				{
-					Name:      vm.Volume.Name,
-					MountPath: filepath.Join(vm.MountPath, subPath),
-					SubPath:   subPath,
-				},
-			}
+	if vm.SubPaths != nil && len(vm.SubPaths) > 0 {
+		var volumeMounts []corev1.VolumeMount
+		for _, subPath := range vm.SubPaths {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      vm.Volume.Name,
+				MountPath: filepath.Join(vm.MountPath, subPath),
+				SubPath:   subPath,
+			})
 		}
+		return volumeMounts
 	}
 
 	return []corev1.VolumeMount{{
@@ -198,6 +197,7 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 				Source: mount.Source,
 			},
 			MountPath: mount.MountPath,
+			SubPaths:  mount.SubPaths,
 		}
 	}
 
@@ -214,6 +214,7 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 					Source: mount.Source,
 				},
 				MountPath: mount.Mount.MountPath,
+				SubPaths:  mount.SubPaths,
 			}
 		}
 	}

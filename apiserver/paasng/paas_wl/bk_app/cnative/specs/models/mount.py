@@ -83,7 +83,7 @@ class Mount(TimestampedModel):
     source_type = models.CharField(choices=VolumeSourceType.get_choices(), max_length=32)
     source_config: VolumeSource = SourceConfigField()
     # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
-    sub_paths = models.JSONField(default=[], help_text="子路径配置")
+    sub_paths = models.JSONField(default=[], help_text="子路径配置", required=False)
 
     @property
     def get_source_name(self):

@@ -1321,10 +1321,14 @@ class LightAppViewSet(viewsets.ViewSet):
             else:
                 logo_url = ""
 
+            app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
             try:
                 light_app = AppAdaptor(session=session).create(
                     code=app_code,
                     name=data["name"],
+                    app_tenant_mode=app_tenant_mode,
+                    app_tenant_id=app_tenant_id,
+                    tenant_id=tenant.id,
                     logo=logo_url,
                     is_lapp=True,
                     creator=data["creator"],

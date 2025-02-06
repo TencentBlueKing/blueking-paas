@@ -215,6 +215,7 @@ class MountOverlay(BaseModel):
     mountPath: str
     name: str
     source: VolumeSource
+    subPaths: Optional[List[str]] = None
 
 
 class ReplicasOverlay(BaseModel):

@@ -290,7 +290,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/1.10/topics/i18n/
+# https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "zh-cn"
 LANGUAGES = (
@@ -313,7 +313,7 @@ LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 CHANGELOG_PATH = os.path.join(BASE_DIR, "changelog")
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.10/howto/static-files/
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
 SITE_URL = "/"
 STATIC_ROOT = str(BASE_DIR / "public" / "static")
 

@@ -131,14 +131,16 @@ class TestRetrieveClusterComponent:
 class TestUpsertClusterComponent:
     @pytest.fixture(autouse=True)
     def _patch_bcs_user_client(self):
-        with patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient", new=StubBCSUserClient):
+        with patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient", new=StubBCSUserClient), patch(
+            "paasng.plat_mgt.infras.clusters.views.components.ensure_k8s_namespace", return_value=None
+        ):
             yield
 
-    def test_upsert_bk_ingress_nginx(self, plat_mgt_api_client, init_system_cluster):
+    def test_upsert_bk_ingress_nginx(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.post(
             reverse(
                 "plat_mgt.infras.cluster.component.detail",
-                kwargs={"cluster_name": init_system_cluster.name, "component_name": "bk-ingress-nginx"},
+                kwargs={"cluster_name": init_default_cluster.name, "component_name": "bk-ingress-nginx"},
             ),
             data={
                 "values": {
@@ -152,11 +154,11 @@ class TestUpsertClusterComponent:
         )
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_upsert_bkapp_log_collection(self, plat_mgt_api_client, init_system_cluster):
+    def test_upsert_bkapp_log_collection(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.post(
             reverse(
                 "plat_mgt.infras.cluster.component.detail",
-                kwargs={"cluster_name": init_system_cluster.name, "component_name": "bkapp-log-collection"},
+                kwargs={"cluster_name": init_default_cluster.name, "component_name": "bkapp-log-collection"},
             ),
             data={"values": {}},
         )

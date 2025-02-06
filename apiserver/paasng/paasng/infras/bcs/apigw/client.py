@@ -46,7 +46,7 @@ class Group(OperationGroup):
     # 更新集群中的 helm release
     upgrade_release = bind_property(
         Operation,
-        name="update_release",
+        name="upgrade_release",
         method="PUT",
         path="/helmmanager/v1/projects/{projectCode}/clusters/{clusterID}/namespaces/{namespace}/releases/{name}",
     )

@@ -18,9 +18,10 @@
 import pytest
 from django.conf import settings
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.constants import ClusterComponentName, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
+from paas_wl.infras.resources.base.base import invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import get_digest_of_nodes_name
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
@@ -59,12 +60,13 @@ def init_default_cluster() -> Cluster:
             ClusterFeatureFlag.ENABLE_AUTOSCALING: True,
             ClusterFeatureFlag.ENABLE_BCS_EGRESS: True,
         },
-        available_tenant_ids=["default"],
+        available_tenant_ids=[DEFAULT_TENANT_ID],
     )
     # ApiServers
     APIServer.objects.create(
         cluster=cluster,
         host="http://bcs-api.example.com/clusters/BCS-K8S-00000",
+        tenant_id=cluster.tenant_id,
     )
     # ES 配置
     ClusterElasticSearchConfig.objects.create(
@@ -74,6 +76,7 @@ def init_default_cluster() -> Cluster:
         port=9200,
         username="admin",
         password="admin",
+        tenant_id=cluster.tenant_id,
     )
     # 节点信息
     nodes_name = ["127.0.0.1", "127.0.0.2", "127.0.0.3"]
@@ -83,7 +86,21 @@ def init_default_cluster() -> Cluster:
         name=f"eng-cstate-{nodes_digest[:8]}-1",
         nodes_digest=nodes_digest,
         nodes_name=nodes_name,
+        tenant_id=cluster.tenant_id,
     )
+    # 集群组件
+    components = [
+        ClusterComponent(
+            cluster=cluster,
+            name=comp_name,
+            required=bool(comp_name != ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER),
+        )
+        for comp_name in ClusterComponentName.get_values()
+    ]
+    ClusterComponent.objects.bulk_create(components)
+    # 新添加集群后，需要刷新配置池
+    invalidate_global_configuration_pool()
+
     return cluster
 
 
@@ -116,13 +133,13 @@ def init_system_cluster() -> Cluster:
             ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
             ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
         },
-        available_tenant_ids=["system", "default"],
+        available_tenant_ids=[OP_TYPE_TENANT_ID, DEFAULT_TENANT_ID],
     )
     # ApiServers
     APIServer.objects.bulk_create(
         [
-            APIServer(cluster=cluster, host="http://127.0.0.8:6553"),
-            APIServer(cluster=cluster, host="http://127.0.0.9:6553"),
+            APIServer(cluster=cluster, host="http://127.0.0.8:6553", tenant_id=cluster.tenant_id),
+            APIServer(cluster=cluster, host="http://127.0.0.9:6553", tenant_id=cluster.tenant_id),
         ]
     )
     # ES 配置
@@ -133,6 +150,7 @@ def init_system_cluster() -> Cluster:
         port=9200,
         username="blueking",
         password="blueking",
+        tenant_id=cluster.tenant_id,
     )
     # 节点信息
     nodes_name = ["127.0.0.8", "127.0.0.9"]
@@ -142,5 +160,19 @@ def init_system_cluster() -> Cluster:
         name=f"eng-cstate-{nodes_digest[:8]}-1",
         nodes_digest=nodes_digest,
         nodes_name=nodes_name,
+        tenant_id=cluster.tenant_id,
     )
+    # 集群组件
+    components = [
+        ClusterComponent(
+            cluster=cluster,
+            name=comp_name,
+            required=bool(comp_name != ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER),
+        )
+        for comp_name in ClusterComponentName.get_values()
+    ]
+    ClusterComponent.objects.bulk_create(components)
+    # 新添加集群后，需要刷新配置池
+    invalidate_global_configuration_pool()
+
     return cluster

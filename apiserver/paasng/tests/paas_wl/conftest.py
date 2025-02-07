@@ -266,7 +266,9 @@ def set_structure(default_process_spec_plan):
     def handler(app, procfile: Dict, plan: ProcessSpecPlan = default_process_spec_plan):
         ProcessSpec.objects.filter(engine_app_id=app.uuid).delete()
         for proc, replicas in procfile.items():
-            ProcessSpec.objects.create(name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan)
+            ProcessSpec.objects.create(
+                name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan, tenant_id=app.tenant_id
+            )
 
     return handler
 
@@ -322,4 +324,4 @@ def wl_build(bk_stag_wl_app, bk_user) -> Build:
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         "artifact_type": "slug",
     }
-    return Build.objects.create(**build_params)
+    return Build.objects.create(tenant_id=bk_stag_wl_app.tenant_id, **build_params)

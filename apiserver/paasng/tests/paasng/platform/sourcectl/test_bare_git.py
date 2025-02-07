@@ -49,6 +49,7 @@ class TestGeneralGitController:
             repo_id=repo.pk,
             repo_type=get_sourcectl_names().bare_git,
             module=bk_module,
+            tenant_id=repo.tenant_id,
         )
 
     @pytest.mark.parametrize(

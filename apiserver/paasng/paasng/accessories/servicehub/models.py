@@ -24,6 +24,7 @@ from django.db import models
 from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
@@ -37,6 +38,7 @@ class ServiceModuleAttachment(OwnerTimestampedModel):
 
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("service", "module")
@@ -57,6 +59,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
         ServiceInstance, on_delete=models.CASCADE, null=True, blank=True, related_name="service_attachment"
     )
     credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("service", "engine_app")
@@ -124,7 +127,10 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
 
 
 class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Unbound attachment between local service and engine app"""
+    """Attachments between local service and engine application that are no longer bound,
+    these instances behave like a temporary record so that the user or platform can recycle
+    the associated resources later.
+    """
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",
@@ -142,6 +148,7 @@ class UnboundServiceEngineAppAttachment(OwnerTimestampedModel):
         db_constraint=False,
         verbose_name="增强服务实例",
     )
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         verbose_name = "unbound attachment between local service and engine app"
@@ -157,6 +164,7 @@ class RemoteServiceModuleAttachment(OwnerTimestampedModel):
 
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("service_id", "module")
@@ -175,13 +183,17 @@ class RemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     plan_id = models.UUIDField(verbose_name="远程增强服务 Plan ID")
     service_instance_id = models.UUIDField(null=True)
     credentials_enabled = models.BooleanField(default=True, verbose_name="是否使用凭证")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("service_id", "engine_app")
 
 
 class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
-    """Unbound attachment between remote service and engine app"""
+    """Attachments between remote service and engine application that are no longer bound,
+    these instances behave like a temporary record so that the user or platform can recycle
+    the associated resources later.
+    """
 
     engine_app = models.ForeignKey(
         "engine.EngineApp",
@@ -192,6 +204,7 @@ class UnboundRemoteServiceEngineAppAttachment(OwnerTimestampedModel):
     )
     service_id = models.UUIDField(verbose_name="远程增强服务 ID")
     service_instance_id = models.UUIDField(null=True, verbose_name="远程增强服务实例 ID")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         verbose_name = "unbound attachment between remote service and engine app"
@@ -243,6 +256,7 @@ class SharedServiceAttachment(TimestampedModel):
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16)
     service_id = models.UUIDField(verbose_name="增强服务 ID")
     ref_attachment_pk = models.IntegerField(verbose_name="被共享的服务绑定关系主键")
+    tenant_id = tenant_id_field_factory()
 
     objects = SharedServiceAttachmentManager()
 

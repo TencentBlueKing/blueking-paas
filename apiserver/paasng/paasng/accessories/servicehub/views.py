@@ -164,6 +164,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.ENABLE,
@@ -272,6 +273,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         add_app_audit_record(
             app_code=code,
+            tenant_id=application.tenant_id,
             user=request.user.pk,
             action_id=AppAction.MANAGE_ADDONS_SERVICES,
             operation=OperationEnum.DISABLE,

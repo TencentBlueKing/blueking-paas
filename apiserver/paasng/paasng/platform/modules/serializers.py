@@ -56,16 +56,18 @@ def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin
 class ModuleNameField(serializers.RegexField):
     """Field for validating Module Name"""
 
-    def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
+    def __init__(self, regex=RE_APP_CODE, **kwargs):
         preset_kwargs = dict(
             max_length=16,
             required=True,
             help_text="模块名称",
             validators=[ReservedWordValidator("模块名称"), DnsSafeNameValidator("模块名称")],
-            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)")},
+            error_messages={
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度不超过 16 位")
+            },
         )
         preset_kwargs.update(kwargs)
-        super().__init__(regex, *args, **preset_kwargs)
+        super().__init__(regex, **preset_kwargs)
 
 
 class ModuleSLZ(serializers.ModelSerializer):

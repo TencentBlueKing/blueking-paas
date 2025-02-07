@@ -15,20 +15,40 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.basic import make_app_pattern, re_path
+from pydantic import BaseModel
 
-from . import views
+from paasng.utils.structure import register
 
-# Deprecated 新版 API 上线并确认后再删除原来的 API
-urlpatterns = [
-    re_path(
-        r"^api/bkapps/applications/lists/latest/deprecated/",
-        views.LatestApplicationsViewSet.as_view(),
-        name="api.applications.latest.deprecated",
-    ),
-    re_path(
-        make_app_pattern(r"/operations/", include_envs=False),
-        views.ApplicationOperationsViewSet.as_view({"get": "list"}),
-        name="api.bkapps.application.operations",
-    ),
-]
+
+@register
+class Project(BaseModel):
+    """蓝鲸容器项目"""
+
+    # 项目新信息
+    projectID: str
+    projectCode: str
+    name: str
+    description: str
+    isOffline: bool
+    # 业务 ID，名称
+    businessID: str
+    businessName: str
+
+
+@register
+class Cluster(BaseModel):
+    """蓝鲸容器集群"""
+
+    clusterID: str
+    clusterName: str
+    environment: str
+    is_shared: bool
+
+
+@register
+class ChartVersion(BaseModel):
+    """Chart 版本"""
+
+    name: str
+    version: str
+    appVersion: str

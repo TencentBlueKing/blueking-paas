@@ -572,7 +572,9 @@ def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleE
     :param model_res: The bkapp model resource object.
     :param env: The environment object.
     """
-    flag, _ = ProcessServicesFlag.objects.get_or_create(app_environment=env, defaults={"implicit_needed": False})
+    flag, _ = ProcessServicesFlag.objects.get_or_create(
+        app_environment=env, defaults={"implicit_needed": False, "tenant_id": env.tenant_id}
+    )
     model_res.set_proc_services_annotation("true")
 
     if flag.implicit_needed:

@@ -140,13 +140,14 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             status=DevSandboxStatus.ACTIVE.value,
             version_info=version_info,
             code=dev_sandbox_code,
+            tenant_id=app.tenant_id,
         )
         # 更新过期时间
         dev_sandbox.renew_expired_at()
 
         # 生成代码编辑器密码
         password = generate_password()
-        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password)
+        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password, tenant_id=app.tenant_id)
 
         controller = DevSandboxWithCodeEditorController(
             app=app,

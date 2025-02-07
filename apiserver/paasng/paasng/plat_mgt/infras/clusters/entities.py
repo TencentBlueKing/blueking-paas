@@ -15,8 +15,51 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.apps import AppConfig
+from datetime import datetime
+from typing import Any, Dict, List
+
+from attr import define
+
+from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
 
 
-class ClusterAppConfig(AppConfig):
-    name = "paasng.plat_mgt.infras.clusters"
+@define
+class DeployResult:
+    # 部署状态
+    status: HelmChartDeployStatus
+    # 部署详情
+    description: str
+    # 部署时间
+    created_at: datetime
+
+
+@define
+class HelmChart:
+    # Chart 名称
+    name: str
+    # Chart 版本
+    version: str
+    # App 版本
+    app_version: str
+    # Chart 描述
+    description: str
+
+
+@define
+class HelmRelease:
+    # release 名称
+    name: str
+    # 部署的命名空间
+    namespace: str
+    # release 版本
+    version: int
+    # chart 信息
+    chart: HelmChart
+    # 部署信息
+    deploy_result: DeployResult
+    # 部署配置信息
+    values: Dict
+    # 部署的 k8s 资源信息
+    resources: List[Dict[str, Any]]
+    # 存储 release secret 名称
+    secret_name: str

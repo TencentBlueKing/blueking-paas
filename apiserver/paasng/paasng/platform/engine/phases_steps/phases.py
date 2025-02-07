@@ -82,7 +82,9 @@ class DeployPhaseManager:
         try:
             return self._get_unattached_phase(phase_type)
         except NoUnlinkedDeployPhaseError:
-            deploy_phase = DeployPhase.objects.create(type=phase_type.value, engine_app=self.env.engine_app)
+            deploy_phase = DeployPhase.objects.create(
+                type=phase_type.value, engine_app=self.env.engine_app, tenant_id=self.env.tenant_id
+            )
             try:
                 # pick 是一个一次性的操作，当 pick 出匹配的 step meta set 之后，
                 # 将 Phase 和 step 关联，step meta set 也就没有其他用处了

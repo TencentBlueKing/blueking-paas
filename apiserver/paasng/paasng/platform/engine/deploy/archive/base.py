@@ -75,6 +75,7 @@ class BaseArchiveManager:
             source_version_name=deployment.source_version_name,
             source_revision=deployment.source_revision,
             source_comment=deployment.source_comment,
+            tenant_id=deployment.tenant_id,
         )
         ModuleEnvironmentOperations.objects.create(
             operator=operator,
@@ -123,6 +124,7 @@ class ArchiveResultHandler(CallbackHandler):
         # 审计记录
         add_app_audit_record(
             app_code=offline_op.app_environment.application.code,
+            tenant_id=offline_op.tenant_id,
             user=offline_op.operator,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.OFFLINE,

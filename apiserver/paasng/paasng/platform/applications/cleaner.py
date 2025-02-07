@@ -64,6 +64,7 @@ def delete_all_modules(application: Application, operator: str):
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
+            tenant_id=application.tenant_id,
             user=operator,
             action_id=AppAction.MANAGE_MODULE,
             operation=OperationEnum.DELETE,

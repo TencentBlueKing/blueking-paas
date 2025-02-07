@@ -14,12 +14,14 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from typing import Any, Dict
 from unittest.mock import patch
 
 import cattrs
 import pytest
 from attr import define, field
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -117,6 +119,11 @@ class TestRetrieveCluster:
 class TestCreateCluster:
     """创建集群"""
 
+    @pytest.fixture(autouse=True)
+    def _patch_settings(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            yield
+
     def test_create_cluster_from_bcs(self, plat_mgt_api_client):
         """基于 bcs 集群创建集群"""
 
@@ -144,7 +151,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -192,7 +199,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -226,7 +233,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -270,7 +277,7 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
 
@@ -305,7 +312,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.tencent.com",
             "component_preferred_namespace": "blueking",
             "feature_flags": init_default_cluster.feature_flags,
@@ -343,7 +350,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.bk.tencent.com",
             "component_preferred_namespace": "blueking-system",
             "feature_flags": init_default_cluster.feature_flags,
@@ -388,7 +395,7 @@ class TestUpdateCluster:
                 "port": "9000",
                 "username": "admin",
             },
-            "available_tenant_ids": ["cobra", "viper"],
+            "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "bk.tencent.com",
             "component_preferred_namespace": "blueking",
             "feature_flags": init_default_cluster.feature_flags,

@@ -42,7 +42,7 @@ class EgressGatewayMigration(BaseMigration):
                 wl_app = engine_app.to_wl_obj()
                 cluster = get_cluster_by_app(wl_app)
                 state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
-                RCStateAppBinding.objects.create(app=wl_app, state=state)
+                RCStateAppBinding.objects.create(app=wl_app, state=state, tenant_id=cluster.tenant_id)
             except ObjectDoesNotExist:
                 self.add_log(
                     _("{env} 环境绑定出口IP异常, 详情: {detail}").format(

@@ -71,6 +71,7 @@ class BkDashboardManager:
                 display_name=template.display_name,
                 template_version=template.version,
                 language=template.language,
+                tenant_id=self.application.tenant_id,
             )
 
 

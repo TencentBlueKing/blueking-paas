@@ -255,6 +255,7 @@ class AppDeclarativeController:
         if market_desc.tag_id:
             product_defaults["tag_id"] = market_desc.tag_id
 
+        product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)
         if logo:
             # Logo was now migrated to Application model
@@ -268,6 +269,8 @@ class AppDeclarativeController:
             display_options = market_desc.display_options.dict()
         except NotImplementedError:
             display_options = {}
+
+        display_options["tenant_id"] = application.tenant_id
         DisplayOptions.objects.update_or_create(product=product, defaults=display_options)
 
         # Send signal

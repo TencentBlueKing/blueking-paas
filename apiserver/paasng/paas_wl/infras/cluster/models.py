@@ -36,7 +36,7 @@ from paas_wl.infras.cluster.exceptions import (
 )
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.models import UuidAuditedModel
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.models import make_json_field
 
@@ -151,7 +151,6 @@ class Cluster(UuidAuditedModel):
     """应用集群"""
 
     region = models.CharField(help_text="可用区域", max_length=32, db_index=True)
-    tenant_id = models.CharField(help_text="所属租户", max_length=128, default=DEFAULT_TENANT_ID)
     available_tenant_ids = models.JSONField(help_text="可用的租户 ID 列表", default=list)
 
     name = models.CharField(help_text="集群名称", max_length=32, unique=True)
@@ -193,6 +192,8 @@ class Cluster(UuidAuditedModel):
     # 集群特性，具体枚举值 -> ClusterFeatureFlag
     feature_flags = JSONField(help_text="集群特性集", default=dict)
 
+    tenant_id = tenant_id_field_factory()
+
     objects = ClusterManager()
 
     def __str__(self):
@@ -230,8 +231,33 @@ class APIServer(UuidAuditedModel):
     cluster = models.ForeignKey(to=Cluster, related_name="api_servers", on_delete=models.CASCADE)
     host = models.CharField(max_length=255, help_text="API Server 的后端地址")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         unique_together = ("cluster", "host")
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(cluster={self.cluster.name}, host={self.host}"
+
+
+class ClusterComponent(UuidAuditedModel):
+    """集群组件（由 Helm Chart 进行安装）"""
+
+    cluster = models.ForeignKey(to=Cluster, related_name="components", on_delete=models.CASCADE)
+    repository = models.CharField(max_length=64, help_text="Helm 组件仓库", default="public-repo")
+    name = models.CharField(max_length=64, help_text="组件名称")
+    required = models.BooleanField(help_text="是否为必要组件")
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("cluster", "name")
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__}(cluster={self.cluster.name}, "
+            + f"repository={self.repository}, name={self.name}, required={self.required})"
+        )
 
 
 AllocationPolicyField = make_json_field("AllocationPolicyField", AllocationPolicy)
@@ -244,7 +270,6 @@ AllocationPrecedencePoliciesField = make_json_field(
 class ClusterAllocationPolicy(UuidAuditedModel):
     """集群分配策略"""
 
-    tenant_id = models.CharField(max_length=128, unique=True, help_text="所属租户")
     # 枚举值 -> ClusterAllocationPolicyType
     type = models.CharField(max_length=32, help_text="分配策略类型")
     allocation_policy: AllocationPolicy | None = AllocationPolicyField(
@@ -253,6 +278,8 @@ class ClusterAllocationPolicy(UuidAuditedModel):
     allocation_precedence_policies: List[AllocationPrecedencePolicy] = AllocationPrecedencePoliciesField(
         help_text="规则分配优先策略", default=list
     )
+
+    tenant_id = tenant_id_field_factory(unique=True)
 
 
 class ClusterElasticSearchConfig(UuidAuditedModel):
@@ -264,6 +291,8 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     port = models.IntegerField(help_text="ES 集群端口")
     username = models.CharField(help_text="ES 集群用户名", max_length=64)
     password = EncryptField(help_text="ES 集群密码")
+
+    tenant_id = tenant_id_field_factory()
 
     def as_dict(self, include_password=False) -> Dict[str, Any]:
         data = {

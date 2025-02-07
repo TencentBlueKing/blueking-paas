@@ -38,7 +38,7 @@ def get_or_create_repo_obj(
     repo_objs = DockerRepository.objects.filter(**repo_kwargs)[:1]
     if repo_objs:
         return repo_objs[0]
-    return DockerRepository.objects.create(owner=application.owner, **repo_kwargs)
+    return DockerRepository.objects.create(owner=application.owner, tenant_id=application.tenant_id, **repo_kwargs)
 
 
 def init_image_repo(module: Module, repo_url: str, source_dir: str, repo_auth_info: Dict):
@@ -62,5 +62,6 @@ def init_image_repo(module: Module, repo_url: str, source_dir: str, repo_auth_in
         defaults={
             "username": repo_auth_info.get("username", ""),
             "password": repo_auth_info.get("password", ""),
+            "tenant_id": module.tenant_id,
         },
     )

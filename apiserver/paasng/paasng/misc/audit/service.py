@@ -100,6 +100,7 @@ def report_event_to_bk_audit(record: AppOperationRecord):
 
 def add_app_audit_record(
     app_code: str,
+    tenant_id: str,
     user: str,
     action_id: str,
     operation: str,
@@ -117,6 +118,7 @@ def add_app_audit_record(
     说明：已讨论确认在操作过程结束的时候记录操作记录即可，比如部署成功、失败时，所以不需要记录 end_time, 也不需要提供更新操作记录的方法
 
     :param app_code: 应用 ID
+    :param tenant_id: 租户 ID
     :param user: encode 后的用户名，形如 0335cce79c92
     :param action_id: 注册到权限中心的操作ID, 如：基础开发、模块管理
     :param operation: 操作类型，如：新建、部署、扩容等
@@ -142,6 +144,7 @@ def add_app_audit_record(
         result_code=result_code,
         data_before=asdict(data_before) if data_before else None,
         data_after=asdict(data_after) if data_after else None,
+        tenant_id=tenant_id,
     )
     report_event_to_bk_audit(record)
     return record

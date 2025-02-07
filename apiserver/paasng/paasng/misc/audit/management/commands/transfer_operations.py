@@ -178,6 +178,7 @@ class Command(BaseCommand):
                 target=OPRATION_TRANSFER_MAP.get(op.type, {}).get("target"),
                 attribute=attribute,
                 result_code=result_code,
+                tenant_id=op.application.tenant_id,
             )
 
             # 时间字段都是自动添加的，只能通过 update 方法来自定义
@@ -190,6 +191,7 @@ class Command(BaseCommand):
                 defaults={
                     "operation_id": new_record.pk,
                     "latest_operated_at": op.created,
+                    "tenant_id": new_record.application.tenant_id,
                 },
             )
         self.stdout.write("Transfer complete.")

@@ -111,11 +111,12 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
 
             original_app_desc = get_app_description(stat)
             app_desc = self.validate_and_prepare_app_desc(original_app_desc, app_tenant_id)
+
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(create_prepared)
             PreparedSourcePackage(request).store(filepath)
@@ -188,7 +189,9 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     application.tenant_id = tenant.id
                     application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
                     # 创建 SMartAppExtraInfo, 记录应用原始 code
-                    SMartAppExtraInfo.objects.create(app=application, original_code=original_app_desc.code)
+                    SMartAppExtraInfo.objects.create(
+                        app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
+                    )
 
             # Step 3. dispatch package as Image to registry
             try:
@@ -217,20 +220,26 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not original_app_desc.instance_existed:
             return original_app_desc
 
-        if SMartAppExtraInfo.objects.filter(
-            original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
-        ).exists():
-            raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=original_app_desc.code))
-
-        # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
-        app_desc = copy.deepcopy(original_app_desc)
-        app_desc.instance_existed = False
         try:
-            app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
-        except GenAppCodeError:
-            raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
+            smart_app = SMartAppExtraInfo.objects.get(
+                original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
+            )
+        except SMartAppExtraInfo.DoesNotExist:
+            # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
+            app_desc = copy.deepcopy(original_app_desc)
+            app_desc.instance_existed = False
+            try:
+                app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
+            except GenAppCodeError:
+                raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
+            else:
+                return app_desc
         else:
-            return app_desc
+            raise ValidationError(
+                _("S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!").format(
+                    smart_app_code=smart_app.app.code
+                )
+            )
 
     @staticmethod
     def is_valid_tar_file(filepath: PathLike) -> bool:
@@ -287,7 +296,7 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
 
         if not SMartAppExtraInfo.objects.filter(original_code=original_app_desc.code, app=app).exists():
             raise ValidationError(
-                _("应用描述文件中声明的应用 ID（{app_desc_code} 未创建过 Smart 应用").format(
+                _("应用描述文件中声明的应用 ID({app_desc_code}) 未创建过 S-mart 应用").format(
                     app_desc_code=original_app_desc.code
                 )
             )
@@ -318,11 +327,12 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             filepath = get_filepath(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
 
             original_app_description = get_app_description(stat)
             app_desc = self.validate_and_prepare_app_desc(original_app_description, application)
+
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)

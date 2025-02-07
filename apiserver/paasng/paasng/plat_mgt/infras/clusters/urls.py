@@ -58,13 +58,18 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/",
         views.ClusterComponentViewSet.as_view({"get": "list"}),
-        name="plat_mgt.infras.cluster.component.bulk",
+        name="plat_mgt.infras.cluster.component.list",
     ),
     # 单一集群组件相关操作
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/",
-        views.ClusterComponentViewSet.as_view({"post": "upsert"}),
+        views.ClusterComponentViewSet.as_view({"post": "upsert", "get": "retrieve"}),
         name="plat_mgt.infras.cluster.component.detail",
+    ),
+    path(
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/operations/diff_version/",
+        views.ClusterComponentViewSet.as_view({"get": "diff_version"}),
+        name="plat_mgt.infras.cluster.component.diff_version",
     ),
     path(
         "api/plat_mgt/infras/cluster_allocation_policies/",
@@ -75,5 +80,17 @@ urlpatterns = [
         "api/plat_mgt/infras/cluster_allocation_policies/<str:policy_id>/",
         views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
         name="plat_mgt.infras.cluster_allocation_policy.detail",
+    ),
+    # BCS 项目列表
+    path(
+        "api/plat_mgt/infras/bcs/projects/",
+        views.BCSResourceViewSet.as_view({"get": "list_projects"}),
+        name="plat_mgt.infras.bcs.project.list",
+    ),
+    # BCS 集群列表
+    path(
+        "api/plat_mgt/infras/bcs/projects/<str:project_id>/clusters/",
+        views.BCSResourceViewSet.as_view({"get": "list_clusters"}),
+        name="plat_mgt.infras.bcs.cluster.list",
     ),
 ]

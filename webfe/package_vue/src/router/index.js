@@ -431,6 +431,10 @@ const router = new Router({
       path: '/developer-center/app/create',
       name: 'createApp',
       component: createApp,
+      meta: {
+        isDefaultBackgroundColor: true,
+        appBackgroundColor: '#fafafa',
+      },
     },
     {
       path: '/developer-center/apps/:id/module/create',

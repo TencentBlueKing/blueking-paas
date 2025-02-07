@@ -1358,7 +1358,7 @@ spec:
                           type: object
                         subPaths:
                           description: |-
-                            SubPaths is a list of file name of the mount
+                            SubPaths is a list of file/directory name
                             These file names will be used as SubPath in VolumeMount to mount specific keys.
                           items:
                             type: string
@@ -1469,7 +1469,7 @@ spec:
                       type: object
                     subPaths:
                       description: |-
-                        SubPaths is a list of file name of the mount
+                        SubPaths is a list of file/directory name
                         These file names will be used as SubPath in VolumeMount to mount specific keys.
                       items:
                         type: string

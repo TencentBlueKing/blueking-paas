@@ -224,7 +224,7 @@ type Mount struct {
 	Name string `json:"name"`
 	// Source of the mount
 	Source *VolumeSource `json:"source"`
-	// SubPaths is a list of file name of the mount
+	// SubPaths is a list of file/directory name
 	// These file names will be used as SubPath in VolumeMount to mount specific keys.
 	SubPaths []string `json:"subPaths,omitempty"`
 }

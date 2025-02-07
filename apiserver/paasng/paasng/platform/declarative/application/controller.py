@@ -329,6 +329,7 @@ class AppDeclarativeController:
             # TODO: basic info
             basic_info={},
             is_creation=is_creation,
+            tenant_id=application.tenant_id,
         )
 
 

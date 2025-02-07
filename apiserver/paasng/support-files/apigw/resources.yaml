@@ -470,7 +470,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/ingress/metrics/dimension/path
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/path
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -495,7 +495,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/ingress/metrics/dimension/user
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/envs/{env}/analysis/m/{source_type}/metrics/dimension/user
           matchSubpath: false
           timeout: 0
           upstreams: {}

@@ -124,7 +124,7 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 }
 
 func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
-	if vm.SubPaths != nil && len(vm.SubPaths) > 0 {
+	if len(vm.SubPaths) > 0 {
 		var volumeMounts []corev1.VolumeMount
 		for _, subPath := range vm.SubPaths {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{

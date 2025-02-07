@@ -63,6 +63,9 @@ EGRESS_CLUSTER_STATE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/egress-cluster-s
 # 轮询云原生应用的部署状态时，如果获取到失败状态的次数超过最大容忍次数，就认为部署失败
 CNATIVE_DEPLOY_STATUS_POLLING_FAILURE_LIMITS = 3
 
+# 上次部署的状态
+LAST_DEPLOY_STATUS_ANNO_KEY = "bkapp.paas.bk.tencent.com/last-deploy-status"
+
 # PROC_SERVICES_ENABLED_ANNOTATION_KEY 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
 # true 表示 operator 将根据 process services 的配置来创建和关联 k8s service.
 # 该注解实际为了向后兼容 spec_version: 2 而设计, 当版本 <= spec_version: 2 时, 设置值为 "false", 否则设置为 "true".

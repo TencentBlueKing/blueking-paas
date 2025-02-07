@@ -154,7 +154,12 @@ def setup_saas_elk_model(env: ModuleEnvironment):
         ProcessLogQueryConfig.objects.update_or_create(
             env=env,
             process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER,
-            defaults={"stdout": stdout_config, "json": structured_config, "ingress": ingress_config},
+            defaults={
+                "stdout": stdout_config,
+                "json": structured_config,
+                "ingress": ingress_config,
+                "tenant_id": env.tenant_id,
+            },
         )
     except IntegrityError:
         logger.info("unique constraint conflict in the database when creating ProcessLogQueryConfig, can be ignored.")

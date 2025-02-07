@@ -22,6 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
@@ -80,7 +81,10 @@ ContainerLogCollectorConfigField = make_json_field("ContainerLogCollectorConfigF
 
 
 class ProcessStructureLogCollectorConfig(AuditedModel):
-    """进程结构化日志采集配置"""
+    """【废弃】进程结构化日志采集配置
+
+    该表并未实际使用，线上表中没有任何数据。
+    """
 
     collector_config_id = models.BigAutoField(_("采集配置ID"), primary_key=True)
 
@@ -148,6 +152,7 @@ class ProcessLogQueryConfig(UuidAuditedModel):
         null=True,
         related_name="related_ingress",
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = ProcessLogQueryConfigManager()
 
@@ -175,6 +180,7 @@ class CustomCollectorConfig(UuidAuditedModel):
 
     is_builtin = models.BooleanField(_("是否为内置采集项"), default=False)
     is_enabled = models.BooleanField(_("是否启用"), default=True)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("module", "name_en")

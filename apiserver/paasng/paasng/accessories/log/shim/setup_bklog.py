@@ -156,6 +156,7 @@ def update_or_create_es_search_config(
     )
 
     config, _ = ProcessLogQueryConfig.objects.get_or_create(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
+    config.tenant_id = env.tenant_id
     if collector_config.log_type == "stdout":
         config.stdout = search_config
     elif collector_config.log_type == "json":

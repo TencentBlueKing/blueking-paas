@@ -99,6 +99,9 @@ class ProcessStructureLogCollectorConfig(AuditedModel):
 class ElasticSearchConfig(UuidAuditedModel):
     """ES查询配置"""
 
+    # collector_config_id 为：elk-ingress、elk-stdout、elk-structured 为 开发者中心自有日志采集链路的 ES 配置
+    # release-1.7 版本开始修改为按集群级别设置，将 ES 配置信息存储在 ClusterElasticSearchConfig 表
+    # 并将 collector_config_id 的格式变更为：elk-ingress-{cluster_id}
     collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
     backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
     elastic_search_host: Optional[ElasticSearchHost] = ElasticSearchHostField(
@@ -108,6 +111,7 @@ class ElasticSearchConfig(UuidAuditedModel):
         null=True, help_text="required when backend_type is 'bkLog'"
     )
     search_params: ElasticSearchParams = ElasticSearchParamsField(help_text="ES 搜索相关配置")
+    tenant_id = tenant_id_field_factory()
 
 
 class ProcessLogQueryConfigManager(models.Manager):

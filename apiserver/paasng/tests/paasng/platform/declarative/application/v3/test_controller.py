@@ -199,7 +199,7 @@ class TestAppDeclarativeControllerUpdate:
             controller.perform_action(get_app_description(app_json))
         assert "region" in exc_info.value.detail
 
-    def test_name_modified(self, bk_user, existed_app):
+    def test_name_not_modified(self, bk_user, existed_app):
         # Use new name
         new_name = existed_app.name + "2"
         new_name_en = existed_app.name + "en"
@@ -215,8 +215,8 @@ class TestAppDeclarativeControllerUpdate:
         controller.perform_action(get_app_description(app_json))
         application = controller.perform_action(get_app_description(app_json))
         application.refresh_from_db()
-        assert application.name == new_name
-        assert application.name_en == new_name_en
+        assert application.name == existed_app.name
+        assert application.name_en == existed_app.name
 
     def test_normal(self, bk_user, existed_app):
         app_json = builder.make_app_desc(

@@ -41,7 +41,7 @@ from paasng.platform.applications.handlers import application_logo_updated
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
-from paasng.platform.declarative.application.fields import AppNameField, AppRegionField
+from paasng.platform.declarative.application.fields import AppRegionField
 from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc, ServiceSpec
 from paasng.platform.declarative.application.serializers import AppDescriptionSLZ
 from paasng.platform.declarative.basic import remove_omitted
@@ -63,7 +63,7 @@ class AppDeclarativeController:
 
     # 默认是 Smart 应用，场景模板应用需要特殊指定
     source_origin = SourceOrigin.S_MART
-    update_allowed_fields = [AppNameField, AppRegionField]
+    update_allowed_fields = [AppRegionField]
 
     def __init__(self, user: User, source_origin: Optional[SourceOrigin] = None):
         if source_origin:
@@ -144,6 +144,7 @@ class AppDeclarativeController:
             raise DescriptionValidationError({APP_CODE_FIELD: _("你没有权限操作当前应用")})
 
         # Handle field modifications
+        # NOTE: 更新时, 不修改应用名称
         for field_cls in self.update_allowed_fields:
             field_cls(application).handle_desc(desc)
 
@@ -257,7 +258,8 @@ class AppDeclarativeController:
 
         product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)
-        if logo:
+        if logo and created:
+            # NOTE: 更新时，不覆盖原 logo
             # Logo was now migrated to Application model
             # TODO: Refactor more to make this look more natural
             application.logo.save(logo.name, logo)

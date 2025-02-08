@@ -23,6 +23,7 @@ from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
     ServiceBindingPolicyType,
 )
+from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -131,3 +132,50 @@ def get_service_type(service: ServiceObj) -> str:
     from paasng.accessories.servicehub.manager import get_db_properties
 
     return get_db_properties(service).col_service_type
+
+
+@define
+class UnifiedAllocationConfig:
+    """The configuration for building static policy."""
+
+    plans: list[str] | None = None
+    env_plans: dict[str, list[str]] | None = None
+
+    @classmethod
+    def create_by_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
+        return cls(
+            plans=policy.data.get("plan_ids", None),
+            env_plans=policy.data.get("env_plan_ids", None),
+        )
+
+
+@define
+class RuleBasedAllocationConfig:
+    """The configuration for building precedence policy."""
+
+    cond_type: str
+    cond_data: dict[str, list[str]]
+    priority: int
+    plans: list[str] | None = None
+    env_plans: dict[str, list[str]] | None = None
+
+    @classmethod
+    def create_by_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationConfig":
+        return cls(
+            cond_type=policy.cond_type,
+            cond_data=policy.cond_data,
+            priority=policy.priority,
+            plans=policy.data.get("plan_ids", None),
+            env_plans=policy.data.get("env_plan_ids", None),
+        )
+
+
+@define
+class PolicyCombinationConfig:
+    """The configuration for building policy combination."""
+
+    tenant_id: str
+    # 按规则分配
+    rule_based_allocation_configs: list[RuleBasedAllocationConfig]
+    # 统一分配，也是按规则分配最终的保底选项
+    unified_allocation_config: UnifiedAllocationConfig

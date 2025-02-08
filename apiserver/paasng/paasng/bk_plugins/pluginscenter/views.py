@@ -80,6 +80,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field
 from paasng.utils.views import action_perms
@@ -232,6 +233,9 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request.user, validated_data["app_tenant_mode"]
+        )
 
         plugin_status = (
             constants.PluginStatus.WAITING_APPROVAL
@@ -247,6 +251,10 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             publisher=request.user.username,
             # 如果插件不需要审批，则状态设置为开发中
             status=plugin_status,
+            # 写入租户相关信息
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant.id,
         )
         plugin.save()
         plugin.refresh_from_db()
@@ -263,6 +271,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.CREATE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=tenant.id,
         )
         return Response(
             data=self.get_serializer(plugin).data,
@@ -308,6 +317,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -341,6 +351,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -370,6 +381,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.PUBLISHER,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -400,6 +412,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.LOGO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
@@ -436,6 +449,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.ARCHIVE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -462,6 +476,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.REACTIVATE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -634,12 +649,16 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, creator=request.user.pk, **data
+            plugin=plugin,
+            source_location=plugin.repository,
+            creator=request.user.pk,
+            tenant_id=plugin.tenant_id,
+            **data,
         )
 
         release_definition = plugin.pd.get_release_revision_by_type(type)
         if release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
-            PluginReleaseStrategy.objects.create(release=release, **release_strategy)
+            PluginReleaseStrategy.objects.create(release=release, tenant_id=plugin.tenant_id, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
         # 操作记录: 新建 xx 版本
@@ -657,6 +676,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.ADD,
             specific=release.version,
             subject=subject,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
@@ -702,6 +722,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.RE_RELEASE,
             specific=release.version,
             subject=constants.SubjectTypes.VERSION,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
@@ -725,6 +746,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.TERMINATE,
             specific=release.version,
             subject=constants.SubjectTypes.VERSION,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
@@ -755,6 +777,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.ROLLBACK,
             subject=constants.SubjectTypes.VERSION,
             specific=release.version,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(release).data)
 
@@ -903,6 +926,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
+        data["tenant_id"] = plugin.tenant_id
         market_info, created = PluginMarketInfo.objects.update_or_create(
             defaults=data,
             plugin=plugin,
@@ -926,6 +950,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.MARKET_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(market_info).data)
 
@@ -1279,6 +1304,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.CONFIG_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_200_OK)
 
@@ -1297,6 +1323,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.CONFIG_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1349,6 +1376,7 @@ class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, 
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.VISIBLE_RANGE,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(visible_range_obj).data)
 
@@ -1383,7 +1411,9 @@ class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
         # 更新灰度策略，同时发起审批流程
-        release_strategy = PluginReleaseStrategy.objects.create(release=release, **validated_data)
+        release_strategy = PluginReleaseStrategy.objects.create(
+            release=release, tenant_id=plugin.tenant_id, **validated_data
+        )
         submit_canary_release_ticket(plugin.pd, plugin, release, request.user.username)
 
         # 操作记录: 修改发布策略
@@ -1392,5 +1422,6 @@ class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.RELEASE_STRATEGY,
+            tenant_id=plugin.tenant_id,
         )
         return Response(serializers.PluginReleaseStrategySLZ(release_strategy).data)

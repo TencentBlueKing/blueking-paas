@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Serializer for third-party api"""
+
 from typing import Optional
 
 from rest_framework import serializers
@@ -53,6 +54,10 @@ class PluginRequestSLZ(serializers.Serializer):
     operator = serializers.SerializerMethodField()
     logo_url = serializers.CharField(source="get_logo_url", required=False)
     publisher = serializers.CharField(required=False)
+    # 租户相关信息
+    app_tenant_mode = serializers.CharField(help_text="租户模式")
+    app_tenant_id = serializers.CharField(help_text="租户 ID")
+    tenant_id = serializers.CharField(help_text="所属租户")
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]

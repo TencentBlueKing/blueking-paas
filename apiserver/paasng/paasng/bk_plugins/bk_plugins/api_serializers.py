@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Serializer for third-party api"""
+
 from rest_framework import serializers
 
 from paasng.platform.applications.constants import ApplicationRole
@@ -44,6 +45,10 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.CharField()
+    # 租户相关信息
+    app_tenant_mode = serializers.CharField(help_text="租户模式")
+    app_tenant_id = serializers.CharField(help_text="租户 ID")
+    tenant_id = serializers.CharField(help_text="所属租户")
 
 
 class PluginArchiveRequestSLZ(serializers.Serializer):

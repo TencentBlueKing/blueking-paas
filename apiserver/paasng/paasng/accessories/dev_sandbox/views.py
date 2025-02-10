@@ -135,7 +135,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_CREATE_FAILED
 
-        return Response(data=DevSandboxCreateOutputSLZ(dev_sandbox), status=status.HTTP_201_CREATED)
+        return Response(data=DevSandboxCreateOutputSLZ(dev_sandbox).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
@@ -220,5 +220,5 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def pre_deploy_check(self, request, *args, **kwargs):
         # 判断开发沙箱数量是否超过限制
-        result = bool(DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT)
+        result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)

@@ -171,6 +171,7 @@ class DevWlAppConstructor:
         # TODO 考虑更规范的方式处理这两个 cached_property 属性. 如考虑使用 WlAppProtocol 满足 AppEntityManager 模式
         setattr(dev_wl_app, "namespace", self._make_namespace_name())
         setattr(dev_wl_app, "module_name", self.module.name)
+        setattr(dev_wl_app, "paas_app_code", self.app.code)
 
         return dev_wl_app
 

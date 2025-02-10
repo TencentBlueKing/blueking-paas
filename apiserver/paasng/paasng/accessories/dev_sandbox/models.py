@@ -39,7 +39,7 @@ DEV_SANDBOX_CODE_CHARSETS = string.ascii_lowercase + string.digits
 class DevSandboxQuerySet(models.QuerySet):
     """开发沙箱 QuerySet 类"""
 
-    def create(self, module: Module, version_info: VersionInfo, owner: str) -> "DevSandbox":
+    def create(self, module: Module, version_info: VersionInfo | None, owner: str) -> "DevSandbox":
         # 生成唯一的沙箱标识
         while True:
             code = get_random_string(8, DEV_SANDBOX_CODE_CHARSETS)

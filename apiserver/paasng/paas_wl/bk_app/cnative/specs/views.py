@@ -217,6 +217,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
                 source_name=validated_data.get("source_name"),
+                sub_paths=validated_data.get("sub_paths"),
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
@@ -225,13 +226,15 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
             controller = init_volume_source_controller(mount_instance.source_type)
+            data = configmap_source.get("source_config_data", {})
             controller.create_by_env(
                 app_id=mount_instance.module.application.id,
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
-                data=configmap_source.get("source_config_data"),
+                data=data,
             )
+
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
@@ -270,10 +273,11 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.name = validated_data["name"]
         mount_instance.environment_name = validated_data["environment_name"]
         mount_instance.mount_path = validated_data["mount_path"]
+        mount_instance.sub_paths = validated_data["sub_paths"]
         if source_name := validated_data.get("source_name"):
             mount_instance.source_config = controller.build_volume_source(source_name)
         try:
-            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
+            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config", "sub_paths"])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 

@@ -21,6 +21,7 @@ package volumes
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,6 +67,7 @@ type Volume struct {
 type GenericVolumeMount struct {
 	Volume    Volume
 	MountPath string
+	SubPaths  []string
 }
 
 // ApplyToDeployment 将 GenericVolumeMount 应用到 deployment
@@ -85,10 +87,8 @@ func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deplo
 
 	containers := deployment.Spec.Template.Spec.Containers
 	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      vm.Volume.Name,
-			MountPath: vm.MountPath,
-		})
+		volumeMounts := vm.getVolumeMounts()
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, volumeMounts...)
 	}
 	return nil
 }
@@ -121,6 +121,25 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 		}, nil
 	}
 	return corev1.VolumeSource{}, errors.New("unknown volume source")
+}
+
+func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
+	if len(vm.SubPaths) > 0 {
+		var volumeMounts []corev1.VolumeMount
+		for _, subPath := range vm.SubPaths {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      vm.Volume.Name,
+				MountPath: filepath.Join(vm.MountPath, subPath),
+				SubPath:   subPath,
+			})
+		}
+		return volumeMounts
+	}
+
+	return []corev1.VolumeMount{{
+		Name:      vm.Volume.Name,
+		MountPath: vm.MountPath,
+	}}
 }
 
 // BuiltinLogsVolumeMount 内置日志挂载卷
@@ -178,6 +197,7 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 				Source: mount.Source,
 			},
 			MountPath: mount.MountPath,
+			SubPaths:  mount.SubPaths,
 		}
 	}
 
@@ -194,6 +214,7 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 					Source: mount.Source,
 				},
 				MountPath: mount.Mount.MountPath,
+				SubPaths:  mount.SubPaths,
 			}
 		}
 	}

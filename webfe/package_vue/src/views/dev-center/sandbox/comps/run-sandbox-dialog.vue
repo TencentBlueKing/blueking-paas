@@ -69,7 +69,7 @@ export default {
       default: false,
     },
     processData: {
-      type: Object,
+      type: Array,
       default: () => [],
     },
   },

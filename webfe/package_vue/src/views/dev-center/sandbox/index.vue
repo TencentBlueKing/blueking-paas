@@ -7,24 +7,26 @@
   >
     <section class="top-bar card-style">
       <div class="title">
-        <span>{{ $t('应用') }}：</span>
-        <bk-breadcrumb>
-          <bk-breadcrumb-item
-            v-for="(item, index) in breadcrumbList"
-            :key="index"
-            :class="{ fore: item.title !== $t('沙箱开发') }"
-          >
-            {{ item.title }}
-          </bk-breadcrumb-item>
-        </bk-breadcrumb>
+        <div
+          class="back"
+          @click="back"
+        >
+          <i class="paasng-icon paasng-arrows-left icon-cls-back mr5"></i>
+          <span class="title-text">{{ $t('沙箱开发') }}</span>
+        </div>
+        <span class="line"></span>
+        <div class="info flex-row">
+          <div>{{ $t('应用') }}：{{ this.code }}</div>
+          <div>{{ $t('模块') }}：{{ this.module }}</div>
+        </div>
       </div>
-      <div
-        class="back"
-        @click="back"
+      <bk-button
+        v-if="isLoadingSandbox"
+        :theme="'primary'"
+        @click="showRequestDialog"
       >
-        <i class="paasng-icon paasng-arrows-left icon-cls-back mr5"></i>
-        <span>{{ $t('返回') }}</span>
-      </div>
+        {{ $t('获取沙箱环境密码') }}
+      </bk-button>
     </section>
     <paas-content-loader
       :is-loading="isLoading"
@@ -33,14 +35,10 @@
     >
       <div class="sandbox-content">
         <div class="top-box">
-          <bk-button
-            :theme="'primary'"
-            @click="showRequestDialog"
-          >
-            {{ $t('获取沙箱环境密码') }}
-          </bk-button>
           <bk-alert
-            type="warning"
+            type="info"
+            closable
+            @close="alertClose"
             class="sandbox-alert-cls"
           >
             <div slot="title">
@@ -68,7 +66,7 @@
             </div>
           </bk-alert>
         </div>
-        <section :class="['sandbox-editor', { collapse: !isCollapse }, { 'is-footer': isLoadingSandbox }]">
+        <section :class="['sandbox-editor', { collapse: !isCollapse }, { 'is-alert': isShowTopAlert }]">
           <bk-resize-layout
             placement="right"
             :min="360"
@@ -107,68 +105,21 @@
               :runLog="runLog"
               :loading="isLogsLoading"
               :env="env"
+              :is-load-complete="isLoadingSandbox"
+              :is-rerun="isProcessRunning || isBuildSuccess"
+              :btn-loading="isRunNowLoading"
+              :is-show-status="isShowRunningStatus"
+              :is-build-success="isBuildSuccess"
+              @rerun="handleRunNow"
+              @run-now="showRunSandboxDialog"
+              @submit-code="showSubmitCodeDialog"
+              @jump="handleVisitNow"
               @tab-change="rightTabChange"
               @collapse-change="handleRightTabCollapseChange"
             />
           </bk-resize-layout>
         </section>
       </div>
-      <section
-        v-if="isLoadingSandbox"
-        class="footer-tools-box"
-      >
-        <!-- 运行状态 -->
-        <div
-          class="run-tip"
-          v-if="buildStatus && ['Failed', 'Success'].includes(buildStatus)"
-        >
-          <bk-alert
-            :type="isBuildSuccess ? 'success' : 'error'"
-            :title="isBuildSuccess ? $t('运行成功') : $t('运行失败')"
-            closable
-          ></bk-alert>
-        </div>
-        <div class="left">
-          <template v-if="isProcessRunning || isBuildSuccess">
-            <bk-button
-              :theme="'default'"
-              :loading="isRunNowLoading"
-              @click="handleRunNow"
-            >
-              <i class="paasng-icon paasng-refresh-line"></i>
-              {{ $t('重新运行') }}
-            </bk-button>
-          </template>
-          <template v-else>
-            <bk-button
-              :theme="'primary'"
-              :loading="isRunNowLoading"
-              bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"
-              @click="showRunSandboxDialog"
-            >
-              <i class="paasng-icon paasng-right-shape"></i>
-              {{ $t('立即运行') }}
-            </bk-button>
-          </template>
-          <bk-button
-            :theme="'default'"
-            class="ml8"
-            @click="showSubmitCodeDialog"
-          >
-            {{ $t('提交代码') }}
-          </bk-button>
-        </div>
-        <!-- 访问链接 -->
-        <bk-button
-          v-if="isProcessRunning || isBuildSuccess"
-          :theme="'primary'"
-          text
-          @click="handleVisitNow"
-        >
-          {{ $t('立即访问') }}
-          <i class="paasng-icon paasng-jump-link"></i>
-        </bk-button>
-      </section>
     </paas-content-loader>
     <!-- 密码获取 -->
     <password-request-dialog
@@ -241,6 +192,7 @@ export default {
         fileTotal: 0,
         tree: {},
       },
+      isShowTopAlert: true,
     };
   },
   computed: {
@@ -255,14 +207,6 @@ export default {
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;
-    },
-    breadcrumbList() {
-      const list = [
-        { title: this.code },
-        { title: `${this.$t('模块')}：${this.module}` },
-        { title: this.$t('沙箱开发') },
-      ];
-      return list;
     },
     iframeUrl() {
       const url = this.sandboxData.urls?.code_editor_url || '';
@@ -279,6 +223,10 @@ export default {
     // 是否存在进程信息
     isProcessRunning() {
       return !!Object.keys(this.processInfo).length;
+    },
+    // 是否显示运行状态
+    isShowRunningStatus() {
+      return !!(this.buildStatus && ['Failed', 'Success'].includes(this.buildStatus));
     },
   },
   created() {
@@ -633,6 +581,9 @@ export default {
       this.submitCode.loading = false;
       this.submitCode.isConfirm = false;
     },
+    alertClose() {
+      this.isShowTopAlert = false;
+    },
   },
 };
 </script>
@@ -689,17 +640,29 @@ export default {
     .title {
       display: flex;
       align-items: center;
+      .title-text {
+        font-size: 16px;
+        color: #313238;
+      }
+      .line {
+        display: inline-block;
+        width: 1px;
+        height: 14px;
+        background-color: #dcdee5;
+        margin: 0 8px;
+      }
+      .info {
+        gap: 16px;
+        font-size: 14px;
+        color: #979ba5;
+      }
     }
     .back {
       cursor: pointer;
       color: #3a84ff;
-      font-size: 16px;
+      font-size: 18px;
       i {
-        transform: translateY(0px);
         font-weight: 700;
-      }
-      span {
-        font-size: 14px;
       }
     }
   }
@@ -708,10 +671,8 @@ export default {
     align-items: center;
   }
   .sandbox-content {
-    padding-top: 16px;
     .top-box {
       display: flex;
-      margin: 0 24px 16px;
       /deep/ .bk-button {
         flex-shrink: 0;
         margin-right: 12px;
@@ -721,11 +682,10 @@ export default {
       }
     }
     .sandbox-editor {
-      height: calc(100vh - 192px);
-      &.is-footer {
-        height: calc(100vh - 236px);
+      height: calc(100vh - 103px);
+      &.is-alert {
+        height: calc(100vh - 136px);
       }
-      margin: 0 24px;
       &.collapse {
         margin-right: 0;
         /deep/ .bk-resize-layout-aside {

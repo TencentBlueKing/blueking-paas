@@ -1,7 +1,7 @@
 <template>
   <content-loader
     :width="baseWidth"
-    :height="500"
+    :height="600"
     :speed="loadingConf.speed"
     :primaryColor="loadingConf.primaryColor"
     :secondaryColor="loadingConf.secondaryColor"

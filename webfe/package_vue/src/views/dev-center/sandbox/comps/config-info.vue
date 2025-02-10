@@ -19,6 +19,7 @@
       :placeholder="$t('请输入关键字搜索环境变量')"
       :right-icon="'bk-icon icon-search'"
       v-model="searchValue"
+      ext-cls="env-search"
     ></bk-input>
     <!-- 环境变量 -->
     <ul class="env-variables-box">
@@ -86,13 +87,16 @@ export default {
   height: 100%;
   padding: 16px 24px;
   .alert {
-    color: #63656e;
+    color: #979ba5;
     font-size: 12px;
     i {
       color: #979ba5;
       font-size: 14px;
       margin-right: 10px;
     }
+  }
+  .env-search /deep/ input {
+    background: #1a1a1a;
   }
   .info {
     .info-item {
@@ -102,10 +106,10 @@ export default {
       line-height: 40px;
       .label {
         flex-shrink: 0;
-        color: #63656e;
+        color: #979ba5;
       }
       .value {
-        color: #313238;
+        color: #dcdee5;
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
@@ -133,8 +137,9 @@ export default {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #f5f7fa;
       &:nth-child(odd) {
-        background: #f5f7fa;
+        background: #2e2e2e;
       }
     }
   }

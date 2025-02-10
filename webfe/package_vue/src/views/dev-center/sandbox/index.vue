@@ -22,7 +22,7 @@
         class="back"
         @click="back"
       >
-        <i class="paasng-icon paasng-arrows-left icon-cls-back mr5"></i>
+        <i class="paasng-arrows-left paasng-icon icon-cls-back mr5"></i>
         <span>{{ $t('返回') }}</span>
       </div>
     </section>
@@ -53,7 +53,7 @@
               >
                 <div slot="content">
                   <div class="custom">
-                    <i class="bk-icon icon-info-circle-shape pr5 content-icon"></i>
+                    <i class="content-icon bk-icon icon-info-circle-shape pr5"></i>
                     <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
                   </div>
                 </div>
@@ -68,7 +68,7 @@
             </div>
           </bk-alert>
         </div>
-        <section :class="['sandbox-editor', { collapse: !isCollapse }, { 'is-footer': isLoadingSandbox }]">
+        <section :class="['sandbox-editor', { collapse: !isCollapse }, { 'is-footer': isSandboxReady }]">
           <bk-resize-layout
             placement="right"
             :min="360"
@@ -81,7 +81,7 @@
               class="iframe-box"
             >
               <iframe
-                v-if="isLoadingSandbox"
+                v-if="isSandboxReady"
                 ref="iframeRef"
                 id="iframe-embed"
                 :src="iframeUrl"
@@ -106,7 +106,6 @@
               :buildLog="buildLog"
               :runLog="runLog"
               :loading="isLogsLoading"
-              :env="env"
               @tab-change="rightTabChange"
               @collapse-change="handleRightTabCollapseChange"
             />
@@ -114,7 +113,7 @@
         </section>
       </div>
       <section
-        v-if="isLoadingSandbox"
+        v-if="isSandboxReady"
         class="footer-tools-box"
       >
         <!-- 运行状态 -->
@@ -135,7 +134,7 @@
               :loading="isRunNowLoading"
               @click="handleRunNow"
             >
-              <i class="paasng-icon paasng-refresh-line"></i>
+              <i class="paasng-refresh-line paasng-icon"></i>
               {{ $t('重新运行') }}
             </bk-button>
           </template>
@@ -146,7 +145,7 @@
               bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"
               @click="showRunSandboxDialog"
             >
-              <i class="paasng-icon paasng-right-shape"></i>
+              <i class="paasng-right-shape paasng-icon"></i>
               {{ $t('立即运行') }}
             </bk-button>
           </template>
@@ -166,14 +165,14 @@
           @click="handleVisitNow"
         >
           {{ $t('立即访问') }}
-          <i class="paasng-icon paasng-jump-link"></i>
+          <i class="paasng-jump-link paasng-icon"></i>
         </bk-button>
       </section>
     </paas-content-loader>
     <!-- 密码获取 -->
     <password-request-dialog
       :show.sync="isDialogVisible"
-      :passwrod="sandboxPassword"
+      :password="sandboxData.code_editor_password"
     />
     <!-- 立即运行二次确认 -->
     <run-sandbox-dialog
@@ -233,7 +232,6 @@ export default {
       processInfo: {},
       processData: [],
       isRunSandboxVisible: false,
-      sandboxPassword: '',
       isSubmitCodeVisible: false,
       submitCode: {
         loading: false,
@@ -250,8 +248,8 @@ export default {
     module() {
       return this.$route.query.module;
     },
-    env() {
-      return this.$route.query.env;
+    devSandboxCode() {
+      return this.$route.query.devSandboxCode;
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;
@@ -265,12 +263,12 @@ export default {
       return list;
     },
     iframeUrl() {
-      const url = this.sandboxData.urls?.code_editor_url || '';
+      const url = this.sandboxData.code_editor_url || '';
       return this.ensureHttpProtocol(url);
     },
     // 沙箱加载完成
-    isLoadingSandbox() {
-      return this.sandboxData.code_editor_status === 'Healthy' && this.sandboxData.dev_sandbox_status === 'Healthy';
+    isSandboxReady() {
+      return this.sandboxData.status === 'Running';
     },
     // 构建成功
     isBuildSuccess() {
@@ -282,13 +280,13 @@ export default {
     },
   },
   created() {
-    Promise.all([this.getSandboxWithCodeEditorData(), this.getEnhancedServices()]).finally(() => {
+    Promise.all([this.getSandboxData(), this.getEnhancedServices()]).finally(() => {
       setTimeout(() => {
         this.isLoading = false;
       }, 1000);
     });
     this.sandboxIntervalId = setInterval(() => {
-      this.getSandboxWithCodeEditorData();
+      this.getSandboxData();
     }, 3000);
   },
   mounted() {
@@ -326,25 +324,7 @@ export default {
       clearInterval(this.sandboxIntervalId);
       this.back();
     },
-    // 获取沙箱密码
-    async getSandboxPassword() {
-      try {
-        const res = await this.$store.dispatch('sandbox/getSandboxPassword', {
-          appCode: this.code,
-          moduleId: this.module,
-        });
-        this.sandboxPassword = res.password;
-      } catch (e) {
-        if (e.code === 'DEV_SANDBOX_NOT_FOUND') {
-          this.sandboxDeletionHandled();
-          return;
-        }
-        this.catchErrorHandler(e);
-      }
-    },
     showRequestDialog() {
-      this.sandboxPassword = '';
-      this.getSandboxPassword();
       this.isDialogVisible = true;
     },
     rightTabChange(name) {
@@ -388,19 +368,20 @@ export default {
       }
     },
     // 获取界面数据
-    async getSandboxWithCodeEditorData() {
-      if (this.isLoadingSandbox && this.sandboxIntervalId) {
+    async getSandboxData() {
+      if (this.isSandboxReady && this.sandboxIntervalId) {
         clearInterval(this.sandboxIntervalId);
         return;
       }
       try {
-        const res = await this.$store.dispatch('sandbox/getSandboxWithCodeEditor', {
+        const res = await this.$store.dispatch('sandbox/getSandbox', {
           appCode: this.code,
           moduleId: this.module,
+          devSandboxCode: this.devSandboxCode,
         });
         setTimeout(() => {
           this.sandboxData = res;
-          if (this.isLoadingSandbox) {
+          if (this.isSandboxReady) {
             this.getSandboxStatus();
           }
         }, 1000);
@@ -432,15 +413,11 @@ export default {
           url: this.ensureHttpProtocol(url),
           data,
           headers: {
-            Authorization: `Bearer ${this.sandboxData.token}`,
+            Authorization: `Bearer ${this.sandboxData.devserver_token}`,
           },
         });
         return response.data;
       } catch (e) {
-        // 沙箱相关接口报错，通过获取密码接口判定沙箱是否已删除
-        if (e.code === 'ERR_NETWORK') {
-          this.getSandboxPassword();
-        }
         this.catchErrorHandler(e);
         return e;
       }
@@ -448,7 +425,7 @@ export default {
     // 获取当前沙箱进程状态
     async getSandboxStatus() {
       try {
-        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}processes/status`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/status`);
         const res = await this.executeRequest(url, 'get');
         this.processInfo = res.status || {};
         if (!!Object.keys(this.processInfo).length) {
@@ -466,7 +443,7 @@ export default {
     },
     // 获取沙箱进程列表
     async getSandboxProcesses() {
-      const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}processes/list`);
+      const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/list`);
       const res = await this.executeRequest(url, 'get');
       this.processData = res.processes;
     },
@@ -486,7 +463,7 @@ export default {
       this.buildStatus = '';
       try {
         this.switchLogTab();
-        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}deploys`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}deploys`);
         const res = await this.executeRequest(url, 'post');
         this.deployId = res.deployID;
         // 如果tab为折叠状态时，运行需打开
@@ -510,7 +487,7 @@ export default {
       if (this.isBuildSuccess && isAutomaticRefresh) return;
       try {
         const url = this.ensureHttpProtocol(
-          `${this.sandboxData.urls?.devserver_url}deploys/${this.deployId}/results?log=true`
+          `${this.sandboxData.devserver_url}deploys/${this.deployId}/results?log=true`
         );
         const res = await this.executeRequest(url);
         this.buildLog = res.log;
@@ -526,7 +503,7 @@ export default {
     // 运行日志
     async getRunLog() {
       try {
-        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}app_logs`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}app_logs`);
         const res = await this.executeRequest(url);
 
         this.runLog = res.logs ?? '';
@@ -558,6 +535,7 @@ export default {
         await this.$store.dispatch('sandbox/destroySandbox', {
           appCode: this.code,
           moduleId: this.module,
+          devSandboxCode: this.devSandboxCode,
         });
         this.$paasMessage({
           theme: 'success',
@@ -576,7 +554,7 @@ export default {
     async getDiffs() {
       this.submitCode.loading = true;
       try {
-        const url = this.ensureHttpProtocol(`${this.sandboxData.urls?.devserver_url}codes/diffs?tree=true`);
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}codes/diffs?tree=true`);
         const res = await this.executeRequest(url);
         this.submitCode.isConfirm = !(res.total > 0);
         this.submitCode.fileTotal = res.total;

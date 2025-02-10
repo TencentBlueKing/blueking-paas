@@ -245,9 +245,12 @@ export default {
       try {
         const curBranchData = this.branchList.find((v) => v.name === this.formData.branch);
         const data = {
-          revision: curBranchData.revision,
-          version_type: curBranchData.type,
-          version_name: curBranchData.name,
+          enable_code_editor: true,
+          source_code_version_info: {
+            revision: curBranchData.revision,
+            version_type: curBranchData.type,
+            version_name: curBranchData.name,
+          }
         };
         await this.$store.dispatch('sandbox/createSandbox', {
           appCode: this.appCode,

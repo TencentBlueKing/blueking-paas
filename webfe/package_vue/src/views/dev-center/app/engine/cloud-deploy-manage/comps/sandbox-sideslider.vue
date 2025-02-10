@@ -15,7 +15,7 @@
             @click="toSandboxGuide"
           >
             {{ $t('沙箱开发指引') }}
-            <i class="paasng-icon paasng-jump-link"></i>
+            <i class="paasng-jump-link paasng-icon"></i>
           </bk-button>
         </div>
       </div>
@@ -72,7 +72,7 @@
               >
                 <div slot="content">
                   <div class="custom">
-                    <i class="bk-icon icon-info-circle-shape pr5 content-icon"></i>
+                    <i class="content-icon bk-icon icon-info-circle-shape pr5"></i>
                     <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
                   </div>
                 </div>
@@ -192,7 +192,7 @@ export default {
         query: {
           code: this.appCode,
           module: row.module_name,
-          env: this.env,
+          devSandboxCode: row.code,
         },
       });
     },
@@ -216,6 +216,7 @@ export default {
         await this.$store.dispatch('sandbox/destroySandbox', {
           appCode: this.appCode,
           moduleId: row.module_name,
+          devSandboxCode: row.code,
         });
         this.$paasMessage({
           theme: 'success',

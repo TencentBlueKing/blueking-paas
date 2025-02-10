@@ -152,4 +152,4 @@ class _GlobalConfigLastModified:
 
     @staticmethod
     def _get_time_now() -> str:
-        return timezone.now().strftime("%Y%m%d%H%M%S")
+        return timezone.now().strftime("%Y%m%d%H%M%S%f")

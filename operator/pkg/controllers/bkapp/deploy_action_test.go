@@ -172,5 +172,28 @@ var _ = Describe("Test DeployActionReconciler", func() {
 			Expect(bkapp.Status.Phase).To(Equal(paasv1alpha2.AppFailed))
 			Expect(bkapp.Status.DeployId).To(Equal("1"))
 		})
+
+		It("deploy ID changed with running hook when last deploy is interrupted", func() {
+			bkapp.SetAnnotations(
+				map[string]string{
+					paasv1alpha2.DeployIDAnnoKey:         "2",
+					paasv1alpha2.LastDeployStatusAnnoKey: "interrupted",
+				},
+			)
+			bkapp.Status.DeployId = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(hook.Pod).NotTo(BeNil())
+
+			client := builder.WithObjects(bkapp, hook.Pod).Build()
+			ret := NewDeployActionReconciler(client).Reconcile(context.Background(), bkapp)
+
+			expectDeployActionInitialized(ret, bkapp, "2")
+		})
 	})
 })

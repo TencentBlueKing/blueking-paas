@@ -43,3 +43,12 @@ class Cluster(BaseModel):
     clusterName: str
     environment: str
     is_shared: bool
+
+
+@register
+class ChartVersion(BaseModel):
+    """Chart 版本"""
+
+    name: str
+    version: str
+    appVersion: str

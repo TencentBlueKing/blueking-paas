@@ -34,6 +34,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
+    LAST_DEPLOY_STATUS_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
@@ -474,19 +475,19 @@ def get_bkapp_resource(module: Module) -> crd.BkAppResource:
 def get_bkapp_resource_for_deploy(
     env: ModuleEnvironment,
     deploy_id: str,
+    deployment: Deployment,
     force_image: Optional[str] = None,
     image_pull_policy: Optional[str] = None,
     use_cnb: bool = False,
-    deployment: Optional[Deployment] = None,
 ) -> crd.BkAppResource:
     """Get the BkApp manifest for deploy.
 
     :param env: The environment object.
     :param deploy_id: The ID of the AppModelDeploy object.
+    :param deployment: The related deployment instance.
     :param force_image: If given, set the image of the application to this value.
     :param image_pull_policy: If given, set the imagePullPolicy to this value.
-    :param use_cnb: A bool flag describe if the bkapp image is built with cnb
-    :param deployment: The related deployment instance
+    :param use_cnb: A bool flag describe if the bkapp image is built with cnb.
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)
@@ -509,6 +510,9 @@ def get_bkapp_resource_for_deploy(
     # Set log collector type to inform operator do some special logic.
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
+
+    # 设置上一次部署的状态
+    model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
     # 由于 bkapp 新增了 process services 配置特性，部分旧模块需要平台创建 process services 并注入到 model_res 中
     apply_proc_svc_if_implicit_needed(model_res, env)
@@ -618,3 +622,13 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
         pass
     else:
         model_res.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] = binding.state.name
+
+
+def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> str:
+    """获取上一次部署的状态"""
+    try:
+        latest_dp = Deployment.objects.filter_by_env(env).filter(created__lt=deployment.created).latest("created")
+    except Deployment.DoesNotExist:
+        return ""
+    else:
+        return latest_dp.status

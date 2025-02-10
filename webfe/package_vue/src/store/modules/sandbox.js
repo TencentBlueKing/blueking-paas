@@ -38,7 +38,7 @@ export default {
      * 获取沙箱列表
      */
     getSandboxList({}, { appCode }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/dev_sandboxes/lists/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/dev_sandboxes/`;
       return http.get(url, config);
     },
     /**

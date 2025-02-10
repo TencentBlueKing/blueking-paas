@@ -37,9 +37,9 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
-ELK_STDOUT_COLLECTOR_CONFIG_ID_FORMAT = "elk-stdout-{cluster_uuid}"
-ELK_STRUCTURED_COLLECTOR_CONFIG_ID_FORMAT = "elk-structured-{cluster_uuid}"
-ELK_INGRESS_COLLECTOR_CONFIG_ID_FORMAT = "elk-ingress-{cluster_uuid}"
+ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL = "elk-stdout-{cluster_uuid}"
+ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL = "elk-structured-{cluster_uuid}"
+ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL = "elk-ingress-{cluster_uuid}"
 
 
 @define
@@ -124,9 +124,9 @@ def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
 
     # 定义 index 和 ES 查询参数的对应关系
     collector_configs = [
-        (ELK_STDOUT_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid), search_params.stdout),
-        (ELK_STRUCTURED_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid), search_params.structured),
-        (ELK_INGRESS_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid), search_params.ingress),
+        (ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.stdout),
+        (ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.structured),
+        (ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.ingress),
     ]
 
     for config_id, params in collector_configs:
@@ -151,13 +151,13 @@ def setup_saas_elk_model(env: ModuleEnvironment):
     setup_platform_elk_config(cluster_uuid, env.tenant_id)
     try:
         stdout_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid)
+            collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
         )
         structured_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid)
+            collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
         )
         ingress_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid)
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
         )
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查

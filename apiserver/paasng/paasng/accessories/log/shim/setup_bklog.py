@@ -32,7 +32,7 @@ from paasng.accessories.log.models import (
     ProcessLogQueryConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
-from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_FORMAT, setup_platform_elk_config
+from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
@@ -220,7 +220,7 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     setup_platform_elk_config(cluster_uuid, env.tenant_id)
     try:
         ingress_config = ElasticSearchConfig.objects.get(
-            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_FORMAT.format(cluster_uuid=cluster_uuid)
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
         )
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查

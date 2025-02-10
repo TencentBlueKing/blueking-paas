@@ -81,7 +81,7 @@ ContainerLogCollectorConfigField = make_json_field("ContainerLogCollectorConfigF
 
 
 class ProcessStructureLogCollectorConfig(AuditedModel):
-    """【废弃】进程结构化日志采集配置
+    """[deprecated] 进程结构化日志采集配置
 
     该表并未实际使用，线上表中没有任何数据。
     """

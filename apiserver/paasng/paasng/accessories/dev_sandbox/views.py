@@ -71,8 +71,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         responses={status.HTTP_200_OK: DevSandboxListOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
-        application = self.get_application()
-        modules = application.modules.all()
+        modules = self.get_application().modules.all()
         dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
         return Response(data=DevSandboxListOutputSLZ(dev_sandboxes, many=True).data)
 

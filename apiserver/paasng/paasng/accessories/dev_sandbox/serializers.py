@@ -31,9 +31,11 @@ from paasng.platform.sourcectl.version_services import get_version_service
 
 
 class DevSandboxListOutputSLZ(serializers.Serializer):
+    code = serializers.CharField(help_text="沙箱唯一标识")
     module_name = serializers.CharField(help_text="模块名称", source="module.name")
     version_info = serializers.SerializerMethodField(help_text="版本信息")
     status = serializers.ChoiceField(choices=PodPhase.get_django_choices(), help_text="运行状态")
+    expired_at = serializers.DateTimeField(help_text="过期时间")
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
     def get_version_info(self, obj: DevSandbox) -> Dict:

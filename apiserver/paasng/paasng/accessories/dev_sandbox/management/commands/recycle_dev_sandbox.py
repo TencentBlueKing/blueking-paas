@@ -33,7 +33,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from paas_wl.bk_app.dev_sandbox.controller import DevSandboxWithCodeEditorController
+from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paasng.accessories.dev_sandbox.models import DevSandbox
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,6 @@ class Command(BaseCommand):
         for ds in dev_sandboxes:
             mod = ds.module
             logger.info("Recycle dev sandbox: %s (app: %s, module: %s)", ds.code, mod.application.code, mod.name)
-            controller = DevSandboxWithCodeEditorController(
-                app=mod.application, module_name=mod.name, dev_sandbox_code=ds.code, owner=ds.owner
-            )
+            controller = DevSandboxController(module=ds.module, dev_sandbox_code=ds.code)
             controller.delete()
             ds.delete()

@@ -18,14 +18,38 @@
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
+class PodPhase(StrStructuredEnum):
+    """Pod 健康状态"""
+
+    HEALTHY = EnumField("Healthy")
+    PROGRESSING = EnumField("Progressing")
+    UNHEALTHY = EnumField("Unhealthy")
+    UNKNOWN = EnumField("Unknown")
+
+
 class SourceCodeFetchMethod(StrStructuredEnum):
-    HTTP = EnumField("HTTP")
-    GIT = EnumField("GIT")
-    BK_REPO = EnumField("BK_REPO")
+    """源码获取方式"""
+
+    HTTP = EnumField("HTTP", label="HTTP File")
+    GIT = EnumField("GIT", label="Git Repository")
+    BK_REPO = EnumField("BK_REPO", label="BkRepo Tarball")
 
 
 class DevSandboxStatus(StrStructuredEnum):
     """沙箱状态"""
 
-    ACTIVE = EnumField("active", label="活跃")
-    ERROR = EnumField("error", label="错误")
+    ACTIVE = EnumField("active", label="就绪")
+    ERROR = EnumField("error", label="异常")
+
+
+class DevSandboxEnvKey(StrStructuredEnum):
+    """沙箱环境变量键名称"""
+
+    WORKSPACE = EnumField("DEV_SANDBOX_WORKSPACE")
+    SOURCE_FETCH_METHOD = EnumField("SOURCE_FETCH_METHOD")
+    SOURCE_FETCH_URL = EnumField("SOURCE_FETCH_URL")
+    # TODO 提供自定义代码编辑器镜像后，修改这以下两个环境变量
+    #  （START_DIR 应该可以废弃，统一用 WORKSPACE）
+    CODE_EDITOR_PASSWORD = EnumField("PASSWORD")
+    CODE_EDITOR_START_DIR = EnumField("START_DIR")
+    CODE_EDITOR_DISABLE_TELEMETRY = EnumField("DISABLE_TELEMETRY")

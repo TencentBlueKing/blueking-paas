@@ -20,65 +20,51 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.dev_sandbox.entities import ServicePortPair
+from paas_wl.bk_app.dev_sandbox.labels import get_dev_sandbox_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
-from .sandbox import get_code_editor_labels, get_dev_sandbox_labels
-
 if TYPE_CHECKING:
-    from paas_wl.bk_app.dev_sandbox.kres_entities import CodeEditorService, DevSandboxService
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxService
 
 
 class DevSandboxServiceSerializer(AppEntitySerializer["DevSandboxService"]):
     def serialize(self, obj: "DevSandboxService", original_obj: Optional[ResourceInstance] = None, **kwargs):
         body: Dict[str, Any] = {
-            "metadata": {"name": obj.name, "labels": {"env": "dev"}},
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": obj.name,
+                "labels": {"env": "dev"},
+            },
             "spec": {
                 "ports": [
-                    {"name": p.name, "port": p.port, "targetPort": p.target_port, "protocol": p.protocol}
+                    {
+                        "name": p.name,
+                        "port": p.port,
+                        "targetPort": p.target_port,
+                        "protocol": p.protocol,
+                    }
                     for p in obj.ports
                 ],
                 "selector": get_dev_sandbox_labels(obj.app),
             },
-            "apiVersion": "v1",
-            "kind": "Service",
         }
 
         if original_obj:
             body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
+
         return body
 
 
 class DevSandboxServiceDeserializer(AppEntityDeserializer["DevSandboxService"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxService":
-        return self.entity_type(
-            app=app,
-            name=kube_data.metadata.name,
-        )
-
-
-class CodeEditorServiceSerializer(AppEntitySerializer["CodeEditorService"]):
-    def serialize(self, obj: "CodeEditorService", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        body: Dict[str, Any] = {
-            "metadata": {"name": obj.name, "labels": {"env": "dev"}},
-            "spec": {
-                "ports": [
-                    {"name": p.name, "port": p.port, "targetPort": p.target_port, "protocol": p.protocol}
-                    for p in obj.ports
-                ],
-                "selector": get_code_editor_labels(obj.app),
-            },
-            "apiVersion": "v1",
-            "kind": "Service",
-        }
-
-        if original_obj:
-            body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
-        return body
-
-
-class CodeEditorServiceDeserializer(AppEntityDeserializer["CodeEditorService"]):
-    def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "CodeEditorService":
-        return self.entity_type(
-            app=app,
-            name=kube_data.metadata.name,
-        )
+        ports = [
+            ServicePortPair(
+                name=p.name,
+                port=p.port,
+                target_port=p.target_port,
+            )
+            for p in kube_data.spec.ports
+        ]
+        return self.entity_type(app=app, name=kube_data.metadata.name, ports=ports)

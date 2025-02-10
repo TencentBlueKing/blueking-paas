@@ -20,8 +20,7 @@ import requests
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 
-from paas_wl.bk_app.dev_sandbox.controller import DevSandboxWithCodeEditorController
-from paasng.accessories.dev_sandbox.config_var import CONTAINER_TOKEN_ENV
+from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.modules.models import Module
@@ -35,22 +34,15 @@ class DevSandboxApiClient:
         self.dev_sandbox = dev_sandbox
         self.operator = operator
 
-        self.controller = DevSandboxWithCodeEditorController(
-            app=module.application,
-            module_name=module.name,
-            dev_sandbox_code=self.dev_sandbox.code,
-            owner=operator,
-        )
-        self.dev_sandbox_detail = self.controller.get_detail()
+        self.controller = DevSandboxController(module=module, dev_sandbox_code=self.dev_sandbox.code)
 
     def fetch_diffs(self) -> List[Dict]:
         """从沙箱获取代码变更文件"""
-        # FIXME（沙箱重构）
-        #  1. 这里的 devserver_url 其实只是个 host + prefix，没带 scheme 还以 / 结尾
-        #  2. token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
+        detail = self.controller.get_detail()
+
         resp = requests.get(
-            f"http://{self.dev_sandbox_detail.urls.devserver_url}codes/diffs",
-            headers={"Authorization": f"Bearer {self.dev_sandbox_detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
+            f"http://{detail.urls.devserver}codes/diffs",
+            headers={"Authorization": f"Bearer {self.dev_sandbox.token}"},
             params={"content": "true"},
         )
         if resp.status_code != status.HTTP_200_OK:
@@ -64,10 +56,11 @@ class DevSandboxApiClient:
 
     def commit(self, commit_msg: str) -> None:
         """在沙箱本地执行一次 commit"""
-        # FIXME（沙箱重构）同上
+        detail = self.controller.get_detail()
+
         resp = requests.get(
-            f"http://{self.dev_sandbox_detail.urls.devserver_url}codes/commit",
-            headers={"Authorization": f"Bearer {self.dev_sandbox_detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV]}"},
+            f"http://{detail.urls.devserver}codes/commit",
+            headers={"Authorization": f"Bearer {self.dev_sandbox.token}"},
             params={"message": commit_msg},
         )
         if resp.status_code != status.HTTP_200_OK:

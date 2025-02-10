@@ -14,3 +14,12 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+from typing import Dict
+
+from paas_wl.bk_app.applications.models import WlApp
+
+
+def get_dev_sandbox_labels(wl_app: WlApp) -> Dict[str, str]:
+    """get deployment labels for dev_sandbox by WlApp"""
+    return {"env": "dev", "category": "bkapp", "app": wl_app.scheduler_safe_name}

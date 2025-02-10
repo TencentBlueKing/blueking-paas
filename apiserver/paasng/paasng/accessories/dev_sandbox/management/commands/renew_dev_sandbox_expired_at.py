@@ -20,7 +20,7 @@ import logging
 import requests
 from django.core.management.base import BaseCommand
 
-from paas_wl.bk_app.dev_sandbox.controller import DevSandboxWithCodeEditorController
+from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paasng.accessories.dev_sandbox.models import DevSandbox
 
 logger = logging.getLogger(__name__)
@@ -31,12 +31,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
-            controller = DevSandboxWithCodeEditorController(
-                app=dev_sandbox.module.application,
-                module_name=dev_sandbox.module.name,
-                dev_sandbox_code=dev_sandbox.code,
-                owner=dev_sandbox.owner,
-            )
+            controller = DevSandboxController(module=dev_sandbox.module, dev_sandbox_code=dev_sandbox.code)
             try:
                 detail = controller.get_detail()
             except Exception as e:
@@ -44,7 +39,7 @@ class Command(BaseCommand):
                 logger.warning("Failed to get detail of dev sandbox: %s. Error: %s", dev_sandbox.code, e)
                 continue
 
-            url = detail.urls.code_editor_health_url
+            url = f"{detail.urls.code_editor}/healthz"
             # 沙箱相关域名无法确定协议，因此全部遍历 http 和 https
             if check_alive(f"http://{url}") or check_alive(f"https://{url}"):
                 dev_sandbox.renew_expired_at()

@@ -16,273 +16,178 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from pathlib import Path
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
-from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController, DevSandboxWithCodeEditorController
+from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
-from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox, gen_dev_sandbox_code
-from paasng.accessories.services.utils import generate_password
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.utils.source import get_source_dir
-from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.sourcectl.models import VersionInfo
-from paasng.utils.error_codes import error_codes
-
-from .config_var import CONTAINER_TOKEN_ENV, generate_envs
-from .exceptions import CannotCommitToRepository, DevSandboxApiException
-from .serializers import (
-    CreateDevSandboxWithCodeEditorSLZ,
+from paasng.accessories.dev_sandbox.config_var import generate_envs
+from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
+from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
+from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
-    DevSandboxDetailSLZ,
-    DevSandboxSLZ,
-    DevSandboxWithCodeEditorDetailSLZ,
+    DevSandboxCreateInputSLZ,
+    DevSandboxCreateOutputSLZ,
+    DevSandboxListOutputSLZ,
+    DevSandboxPreDeployCheckOutputSLZ,
+    DevSandboxRetrieveOutputSLZ,
 )
+from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
+from paasng.platform.modules.constants import SourceOrigin
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
 
 class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """开发沙箱"""
+
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(tags=["开发沙箱"], responses={"201": "没有返回数据"})
-    def deploy(self, request, **kwargs):
-        """部署开发沙箱"""
-        app = self.get_application()
+    lookup_field = "code"
+    lookup_url_kwarg = "dev_sandbox_code"
+
+    def get_queryset(self):
         module = self.get_module_via_path()
+        return DevSandbox.objects.filter(module=module, owner=self.request.user.pk)
 
-        controller = DevSandboxController(app, module.name)
-        try:
-            controller.deploy(envs=generate_envs(app, module))
-        except DevSandboxAlreadyExists:
-            raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取应用所有模块的开发沙箱列表",
+        responses={status.HTTP_200_OK: DevSandboxListOutputSLZ(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        application = self.get_application()
+        modules = application.modules.all()
+        dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
+        return Response(data=DevSandboxListOutputSLZ(dev_sandboxes, many=True).data)
 
-        return Response(status=status.HTTP_201_CREATED)
-
-    @swagger_auto_schema(tags=["开发沙箱"], responses={"204": "没有返回数据"})
-    def delete(self, request, code, module_name):
-        """清理开发沙箱"""
-        controller = DevSandboxController(self.get_application(), module_name)
-        controller.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxDetailSLZ})
-    def get_detail(self, request, code, module_name):
-        """获取开发沙箱的运行详情"""
-        controller = DevSandboxController(self.get_application(), module_name)
-        try:
-            detail = controller.get_sandbox_detail()
-        except DevSandboxResourceNotFound:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        serializer = DevSandboxDetailSLZ(
-            {"url": detail.url, "token": detail.envs[CONTAINER_TOKEN_ENV], "status": detail.status}
-        )
-        return Response(data=serializer.data)
-
-
-class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-
-    @swagger_auto_schema(request_body=CreateDevSandboxWithCodeEditorSLZ, responses={"201": "没有返回数据"})
-    def deploy(self, request, code, module_name):
-        """部署开发沙箱
-
-        FIXME（沙箱重构）这个函数太长了，职责不清晰，重构时需要做拆分
-        """
-        # 同时支持的开发沙箱数量是有上限的
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="创建开发沙箱",
+        request_body=DevSandboxCreateInputSLZ(),
+        responses={status.HTTP_201_CREATED: DevSandboxCreateOutputSLZ()},
+    )
+    @transaction.atomic()
+    def create(self, request, *args, **kwargs):
+        # 限制开发沙箱的总数量
         if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
             raise error_codes.DEV_SANDBOX_COUNT_OVER_LIMIT
 
-        app = self.get_application()
         module = self.get_module_via_path()
 
-        # 同一用户同一环境只能有一个运行中的沙箱
-        if DevSandbox.objects.filter(owner=request.user.pk, module=module).exists():
+        slz = DevSandboxCreateInputSLZ(
+            data=request.data,
+            context={"module": module, "operator": request.user.pk},
+        )
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        # 同用户同模块只能有一个运行中的沙箱
+        owner = request.user.pk
+        if DevSandbox.objects.filter(owner=owner, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
         # 目前仅支持 vcs 类型的源码获取方式
         if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
-        serializer = CreateDevSandboxWithCodeEditorSLZ(
-            data=request.data, context={"module": module, "operator": request.user.pk}
-        )
-        serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        version_info = data.get("source_code_version_info")
+        # 默认为 HTTP 文件提供源代码
+        source_code_cfg = SourceCodeConfig(source_fetch_method=SourceCodeFetchMethod.HTTP)
+        # 如果已经指定代码配置，则需要修改配置
+        if version_info:
+            source_dir = get_source_dir(module, owner, version_info)
+            source_code_cfg.source_fetch_url = upload_source_code(module, version_info, source_dir, owner)
+            source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
-        # 代码版本信息
-        version_info = VersionInfo(
-            version_type=data["version_type"],
-            version_name=data["version_name"],
-            revision=data["revision"],
-        )
+        dev_sandbox = DevSandbox.objects.create(module=module, version_info=version_info, owner=owner)
+        # 代码编辑器
+        code_editor_cfg: CodeEditorConfig | None = None
+        if data["enable_code_editor"]:
+            code_editor = CodeEditor.objects.create(dev_sandbox=dev_sandbox)
+            code_editor_cfg = CodeEditorConfig(password=code_editor.password)
 
-        dev_sandbox_code = gen_dev_sandbox_code()
-        dev_sandbox = DevSandbox.objects.create(
-            region=app.region,
-            owner=request.user.pk,
-            module=module,
-            status=DevSandboxStatus.ACTIVE.value,
-            version_info=version_info,
-            code=dev_sandbox_code,
-            tenant_id=app.tenant_id,
-        )
-        # 更新过期时间
-        dev_sandbox.renew_expired_at()
-
-        # 生成代码编辑器密码
-        password = generate_password()
-        CodeEditor.objects.create(dev_sandbox=dev_sandbox, password=password, tenant_id=app.tenant_id)
-
-        controller = DevSandboxWithCodeEditorController(
-            app=app,
-            module_name=module.name,
-            dev_sandbox_code=dev_sandbox.code,
-            owner=request.user.pk,
-        )
+        # 下发沙箱 k8s 资源
         try:
-            # FIXME（沙箱重构）这里获取部署目录的逻辑过于冗余了，实际上无需考虑源码包的情况？
-            # 获取构建目录相对路径
-            source_dir = get_source_dir(module, request.user.pk, version_info)
-            relative_source_dir = Path(source_dir)
-            if relative_source_dir.is_absolute():
-                logger.warning(
-                    "Unsupported absolute path<%s>, force transform to relative_to path.", relative_source_dir
-                )
-                relative_source_dir = relative_source_dir.relative_to("/")
-
-            # 获取环境变量（复用 stag 环境）
-            envs = generate_envs(app, module)
-            stag_envs = get_env_variables(module.get_envs(AppEnvironment.STAGING))
-            envs.update(stag_envs)
-
-            controller.deploy(
-                dev_sandbox_env_vars=envs,
-                code_editor_env_vars={},
-                version_info=version_info,
-                relative_source_dir=relative_source_dir,
-                password=password,
+            DevSandboxController(module, dev_sandbox.code).deploy(
+                envs=generate_envs(module),
+                source_code_cfg=source_code_cfg,
+                code_editor_cfg=code_editor_cfg,
             )
         except DevSandboxAlreadyExists:
-            # FIXME（沙箱重构）为啥删除 model 不清理资源？
-            # 开发沙箱已存在，只删除 model 对象，不删除沙箱资源
-            dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except Exception:
-            # 除了沙箱已存在的情况，其它创建异常情况下，清理沙箱资源
-            controller.delete()
+            logger.exception("Failed to deploy dev sandbox")
             dev_sandbox.delete()
-            raise
+            raise error_codes.DEV_SANDBOX_CREATE_FAILED
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(data=DevSandboxCreateOutputSLZ(dev_sandbox), status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(responses={"204": "没有返回数据"})
-    def delete(self, request, code, module_name):
-        """清理开发沙箱"""
-        app = self.get_application()
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取开发沙箱详情",
+        responses={status.HTTP_200_OK: DevSandboxRetrieveOutputSLZ()},
+    )
+    def retrieve(self, request, *args, **kwargs):
         module = self.get_module_via_path()
+        dev_sandbox = self.get_object()
 
         try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
-        except DevSandbox.DoesNotExist:
+            detail = DevSandboxController(module, dev_sandbox.code).get_detail()
+        except DevSandboxResourceNotFound:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        controller = DevSandboxWithCodeEditorController(
-            app=app,
-            module_name=module.name,
-            dev_sandbox_code=dev_sandbox.code,
-            owner=request.user.pk,
-        )
+        try:
+            password = dev_sandbox.code_editor.password
+        except ObjectDoesNotExist:
+            password = None
+
+        resp_data = {
+            "urls": detail.urls,
+            "devserver_token": dev_sandbox.token,
+            "code_editor_password": password,
+        }
+        return Response(data=DevSandboxRetrieveOutputSLZ(resp_data).data)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="删除开发沙箱",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def destroy(self, request, *args, **kwargs):
+        module = self.get_module_via_path()
+        dev_sandbox = self.get_object()
+
+        # 清理集群中的沙箱资源
+        controller = DevSandboxController(module, dev_sandbox.code)
         controller.delete()
+        # 删除开发沙箱实例
         dev_sandbox.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxWithCodeEditorDetailSLZ})
-    def get_detail(self, request, code, module_name):
-        """获取开发沙箱的运行详情"""
-        app = self.get_application()
-        module = self.get_module_via_path()
-        try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
-        except DevSandbox.DoesNotExist:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        controller = DevSandboxWithCodeEditorController(
-            app=app,
-            module_name=module.name,
-            dev_sandbox_code=dev_sandbox.code,
-            owner=request.user.pk,
-        )
-        try:
-            detail = controller.get_detail()
-        except DevSandboxResourceNotFound:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        serializer = DevSandboxWithCodeEditorDetailSLZ(
-            {
-                "urls": detail.urls,
-                # FIXME（沙箱重构）token 不应该从环境变量获取，建议重构时候加密存入 DevSandbox 表
-                "token": detail.dev_sandbox_env_vars[CONTAINER_TOKEN_ENV],
-                "dev_sandbox_status": detail.dev_sandbox_status,
-                "code_editor_status": detail.code_editor_status,
-                "dev_sandbox_env_vars": detail.dev_sandbox_env_vars,
-            }
-        )
-        return Response(data=serializer.data)
-
-    @swagger_auto_schema(tags=["开发沙箱"])
-    def get_password(self, request, code, module_name):
-        """验证验证码查看代码编辑器密码"""
-        module = self.get_module_via_path()
-
-        try:
-            dev_sandbox = DevSandbox.objects.get(owner=request.user.pk, module=module)
-        except DevSandbox.DoesNotExist:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        return Response({"password": dev_sandbox.code_editor.password})
-
-    @swagger_auto_schema(tags=["开发沙箱"], Response={200: DevSandboxSLZ(many=True)})
-    def list_app_dev_sandbox(self, request, code):
-        """获取该应用下用户的开发沙箱"""
-        app = self.get_application()
-        modules = app.modules.all()
-        dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
-
-        return Response(data=DevSandboxSLZ(dev_sandboxes, many=True).data)
-
-    @swagger_auto_schema(tags=["开发沙箱"])
-    def pre_deploy_check(self, request, code):
-        """部署前确认是否可以部署"""
-        # 判断开发沙箱数量是否超过限制
-        if DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT:
-            return Response(data={"result": False})
-
-        return Response(data={"result": True})
-
     @swagger_auto_schema(
-        tags=["开发沙箱"],
+        tags=["accessories.dev_sandbox"],
         operation_description="提交变更的代码",
         request_body=DevSandboxCommitInputSLZ(),
         responses={status.HTTP_200_OK: DevSandboxCommitOutputSLZ()},
     )
-    def commit(self, request, code, module_name):
+    def commit(self, request, *args, **kwargs):
         slz = DevSandboxCommitInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -308,3 +213,13 @@ class DevSandboxWithCodeEditorViewSet(GenericViewSet, ApplicationCodeInPathMixin
             status=status.HTTP_200_OK,
             data=DevSandboxCommitOutputSLZ({"repo_url": repo_url}).data,
         )
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="部署前确认是否可以部署",
+        responses={status.HTTP_200_OK: DevSandboxPreDeployCheckOutputSLZ()},
+    )
+    def pre_deploy_check(self, request, *args, **kwargs):
+        # 判断开发沙箱数量是否超过限制
+        result = bool(DevSandbox.objects.count() >= settings.DEV_SANDBOX_COUNT_LIMIT)
+        return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)

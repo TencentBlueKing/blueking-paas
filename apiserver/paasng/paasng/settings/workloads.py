@@ -93,23 +93,20 @@ SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 # 沙箱相关配置
 # ---------------
 
-# dev sandbox 中 devserver 的监听端口
+# devserver 监听端口
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
-# 沙箱镜像
+# devserver 镜像
 DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
-# 沙箱工作目录
-DEV_SANDBOX_WORKSPACE = settings.get("DEV_SANDBOX_WORKSPACE", "/cnb/devsandbox/src")
-# 启动沙箱的数量上限,管理员通过集群的剩余资源计算得出
+
+# 启动沙箱的数量上限
 DEV_SANDBOX_COUNT_LIMIT = settings.get("DEV_SANDBOX_COUNT_LIMIT", 5)
 # 沙箱跨域访问源地址
 DEV_SANDBOX_CORS_ALLOW_ORIGINS = settings.get("DEV_SANDBOX_CORS_ALLOW_ORIGINS", "")
 
-# dev sandbox 中 code-editor 的监听地址
-CODE_EDITOR_PORT = settings.get("CODE_EDITOR_PORT", 8080)
-# code-editor 的镜像
-CODE_EDITOR_IMAGE = settings.get("CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
-# code-editor 的项目启动目录
-CODE_EDITOR_START_DIR = settings.get("CODE_EDITOR_START_DIR", "/home/coder/project")
+# code editor 监听端口
+DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080)
+# code editor 镜像
+DEV_SANDBOX_CODE_EDITOR_IMAGE = settings.get("DEV_SANDBOX_CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
 
 
 # ---------------

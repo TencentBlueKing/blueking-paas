@@ -8,6 +8,76 @@
       <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('查看配置和日志') }}</span>
       <i class="paasng-icon paasng-angle-line-up"></i>
     </div>
+    <!-- 加载完毕显示运行操作 -->
+    <div
+      class="action-buts"
+      v-if="isLoadComplete"
+    >
+      <template v-if="isRerun">
+        <bk-button
+          theme="primary"
+          :outline="true"
+          :loading="btnLoading"
+          @click="$emit('rerun')"
+        >
+          <i class="paasng-icon paasng-refresh-line"></i>
+          {{ $t('重新运行') }}
+        </bk-button>
+      </template>
+      <template v-else>
+        <bk-button
+          theme="primary"
+          :loading="btnLoading"
+          bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"
+          @click="$emit('run-now')"
+        >
+          <i class="paasng-icon paasng-right-shape"></i>
+          {{ $t('立即运行') }}
+        </bk-button>
+      </template>
+      <bk-button
+        theme="default"
+        @click="$emit('submit-code')"
+      >
+        {{ $t('提交代码') }}
+      </bk-button>
+    </div>
+    <!-- 运行状态 -->
+    <div
+      class="run-tip success"
+      v-if="isRerun && btnLoading"
+    >
+      <div class="status">
+        <round-loading class="mr5" />
+        {{ $t('运行中') }}
+      </div>
+    </div>
+    <div
+      v-else-if="isRerun || isShowStatus"
+      :class="['run-tip', isShowLink ? 'success' : 'error']"
+    >
+      <div class="status">
+        <i
+          class="paasng-icon paasng-check-circle-shape"
+          v-if="isShowLink"
+        ></i>
+        <i
+          class="paasng-icon paasng-close-circle-shape"
+          v-else
+        ></i>
+        {{ isShowLink ? $t('运行成功') : $t('运行失败') }}
+      </div>
+      <!-- 访问链接 -->
+      <bk-button
+        v-if="isShowLink"
+        :theme="'primary'"
+        text
+        @click="$emit('jump')"
+      >
+        {{ $t('立即访问') }}
+        <i class="paasng-icon paasng-jump-link"></i>
+      </bk-button>
+    </div>
     <div class="tab-header">
       <div
         v-for="item in panels"
@@ -18,7 +88,10 @@
         {{ item.label }}
       </div>
     </div>
-    <div class="tab-content">
+    <div
+      class="tab-content"
+      :style="{ height: `calc(100% - ${isShowStatus || isRerun ? '140px' : '110px'})` }"
+    >
       <config-info
         v-show="active === 'config'"
         :data="data"
@@ -43,6 +116,27 @@ export default {
       type: Object,
       default: () => {},
     },
+    // 加载完毕
+    isLoadComplete: {
+      type: Boolean,
+      default: false,
+    },
+    isRerun: {
+      type: Boolean,
+      default: false,
+    },
+    btnLoading: {
+      type: Boolean,
+      default: false,
+    },
+    isShowStatus: {
+      type: Boolean,
+      default: false,
+    },
+    isBuildSuccess: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -57,6 +151,9 @@ export default {
   computed: {
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    isShowLink() {
+      return this.isBuildSuccess || this.isRerun;
     },
   },
   methods: {
@@ -77,33 +174,32 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: #2e2e2e;
   .tab-header {
     z-index: 9;
     flex-shrink: 0;
     display: flex;
-    gap: 8px;
     .tab-item {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 42px;
-      background: #eaebf0;
-      border-radius: 4px 4px 0 0;
-      color: #63656e;
+      height: 44px;
+      font-size: 14px;
+      color: #c4c6cc;
+      background: #2e2e2e;
       cursor: pointer;
       &.active {
-        background: #fff;
-        color: #3a84ff;
+        background: #1a1a1a;
+        font-weight: 700;
+        border-top: 4px solid #3a84ff;
       }
     }
   }
   .tab-content {
     flex: 1;
-    height: calc(100% - 42px);
-    background: #fff;
+    background: #1a1a1a;
     box-shadow: 0 -2px 4px 0 #1919290d;
-    border-radius: 2px;
   }
   .floating-button {
     position: absolute;
@@ -139,6 +235,54 @@ export default {
     }
     .vertical-rl {
       writing-mode: vertical-rl;
+    }
+  }
+  .action-buts {
+    flex-shrink: 0;
+    height: 56px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    button {
+      width: 156px;
+      &.bk-default {
+        background: #2e2e2e;
+        color: #f0f1f5;
+      }
+      &.is-outline {
+        background: #2e2e2e;
+        color: #a3c5fd;
+        &:hover {
+          background-color: #3a84ff;
+          color: #fff;
+        }
+      }
+    }
+  }
+  .run-tip {
+    flex-shrink: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    color: #dcdee5;
+    background: rgba(101, 195, 137, 0.4);
+    .status {
+      i {
+        margin-right: 3px;
+        color: #2caf5e;
+      }
+    }
+    &.error {
+      background: rgba(255, 86, 86, 0.4);
+      .status i {
+        color: #d26b6b;
+      }
+    }
+    .bk-button-text {
+      color: #a3c5fd;
     }
   }
 }

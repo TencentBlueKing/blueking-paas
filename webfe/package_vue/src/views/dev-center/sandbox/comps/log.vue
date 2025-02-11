@@ -64,7 +64,7 @@ export default {
   flex-direction: column;
   height: 100%;
   padding: 16px;
-  background: #313238;
+  background: #1a1a1a;
   &.flex {
     display: flex;
     align-items: center;

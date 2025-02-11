@@ -52,14 +52,16 @@ class DevSandbox(AppEntity):
         cls,
         wl_app: WlApp,
         code: str,
+        token: str,
         runtime: Runtime,
         source_code_cfg: SourceCodeConfig,
         code_editor_cfg: CodeEditorConfig | None = None,
     ) -> "DevSandbox":
         # 注入特殊环境变量
 
-        # 沙箱服务工作空间
+        # 沙箱服务
         runtime.envs[DevSandboxEnvKey.WORKSPACE] = DEV_SANDBOX_WORKSPACE
+        runtime.envs[DevSandboxEnvKey.TOKEN] = token
         # 源代码信息
         runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_METHOD] = str(source_code_cfg.source_fetch_method)
         runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_URL] = source_code_cfg.source_fetch_url or ""

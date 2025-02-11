@@ -34,7 +34,7 @@ class DevSandboxApiClient:
         self.dev_sandbox = dev_sandbox
         self.operator = operator
 
-        self.controller = DevSandboxController(module=module, dev_sandbox_code=self.dev_sandbox.code)
+        self.controller = DevSandboxController(dev_sandbox)
 
     def fetch_diffs(self) -> List[Dict]:
         """从沙箱获取代码变更文件"""

@@ -55,9 +55,13 @@ class Command(BaseCommand):
             return
 
         logger.info("Recycling %d expired dev sandboxes", dev_sandboxes.count())
-        for ds in dev_sandboxes:
-            mod = ds.module
-            logger.info("Recycle dev sandbox: %s (app: %s, module: %s)", ds.code, mod.application.code, mod.name)
-            controller = DevSandboxController(module=ds.module, dev_sandbox_code=ds.code)
+        for dev_sandbox in dev_sandboxes:
+            logger.info(
+                "Recycle dev sandbox: %s (app: %s, module: %s)",
+                dev_sandbox.code,
+                dev_sandbox.module.application.code,
+                dev_sandbox.module.name,
+            )
+            controller = DevSandboxController(dev_sandbox)
             controller.delete()
-            ds.delete()
+            dev_sandbox.delete()

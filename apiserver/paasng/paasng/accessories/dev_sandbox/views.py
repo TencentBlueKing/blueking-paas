@@ -116,7 +116,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 下发沙箱 k8s 资源
         try:
-            DevSandboxController(module, dev_sandbox.code).deploy(
+            DevSandboxController(dev_sandbox).deploy(
                 envs=generate_envs(module),
                 source_code_cfg=source_code_cfg,
                 code_editor_cfg=code_editor_cfg,
@@ -147,7 +147,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         try:
-            detail = DevSandboxController(module, dev_sandbox.code).get_detail()
+            detail = DevSandboxController(dev_sandbox).get_detail()
         except DevSandboxResourceNotFound:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
@@ -181,7 +181,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         # 清理集群中的沙箱资源
-        controller = DevSandboxController(module, dev_sandbox.code)
+        controller = DevSandboxController(dev_sandbox)
         controller.delete()
         # 删除开发沙箱实例
         dev_sandbox.delete()

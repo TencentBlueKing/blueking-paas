@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from attr import define, field
 
@@ -34,7 +34,9 @@ from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_d
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
-from paasng.platform.modules.models import Module
+
+if TYPE_CHECKING:
+    from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +76,9 @@ class DevSandboxController:
     service_mgr = AppEntityManager(DevSandboxService)
     ingress_mgr = AppEntityManager(DevSandboxIngress)
 
-    def __init__(self, module: Module, dev_sandbox_code: str):
-        self.dev_sandbox_code = dev_sandbox_code
-        self.wl_app: WlApp = DevWlAppConstructor(module, dev_sandbox_code).construct()
+    def __init__(self, dev_sandbox: "DevSandboxModel"):
+        self.dev_sandbox = dev_sandbox
+        self.wl_app: WlApp = DevWlAppConstructor(dev_sandbox).construct()
 
     def deploy(
         self,
@@ -109,7 +111,7 @@ class DevSandboxController:
         except AppEntityNotFound:
             raise DevSandboxResourceNotFound("dev sandbox ingress not found")
 
-        base_url = ingress.domains[0].host
+        base_url = f"{ingress.domains[0].host}/dev_sandbox/{self.dev_sandbox.code}"
 
         try:
             dev_sandbox_name = get_dev_sandbox_name(self.wl_app)
@@ -137,7 +139,8 @@ class DevSandboxController:
         # step 2. create dev sandbox
         sandbox = DevSandbox.create(
             self.wl_app,
-            code=self.dev_sandbox_code,
+            code=self.dev_sandbox.code,
+            token=self.dev_sandbox.token,
             runtime=Runtime(envs=envs),
             source_code_cfg=source_code_cfg,
             code_editor_cfg=code_editor_cfg,
@@ -158,10 +161,10 @@ class DevWlAppConstructor:
     :param dev_sandbox_code: 沙箱标识，在模块下沙箱不唯一时传入
     """
 
-    def __init__(self, module: Module, dev_sandbox_code: str):
-        self.app = module.application
-        self.module = module
-        self.dev_sandbox_code = dev_sandbox_code
+    def __init__(self, dev_sandbox: "DevSandboxModel"):
+        self.dev_sandbox = dev_sandbox
+        self.module = dev_sandbox.module
+        self.app = self.module.application
 
     def construct(self) -> WlApp:
         """构造 WlApp 实例（非 DB 数据）"""
@@ -177,7 +180,7 @@ class DevWlAppConstructor:
 
     def _make_dev_wl_app_name(self) -> str:
         """参考 make_engine_app_name 规则, 生成 dev 环境的 WlApp name"""
-        suffix = f"{self.dev_sandbox_code}-dev" if self.dev_sandbox_code else "dev"
+        suffix = f"{self.dev_sandbox.code}-dev" if self.dev_sandbox.code else "dev"
 
         if self.module.name == ModuleName.DEFAULT.value:
             return f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-{suffix}"
@@ -187,7 +190,7 @@ class DevWlAppConstructor:
     def _make_namespace_name(self) -> str:
         """生成 namespace_name"""
         ns = f"{DEFAULT_ENGINE_APP_PREFIX}-{self.app.code}-dev"
-        if self.dev_sandbox_code:
-            ns = f"{ns}-{self.dev_sandbox_code}"
+        if self.dev_sandbox.code:
+            ns = f"{ns}-{self.dev_sandbox.code}"
 
         return ns.replace("_", "0us0")

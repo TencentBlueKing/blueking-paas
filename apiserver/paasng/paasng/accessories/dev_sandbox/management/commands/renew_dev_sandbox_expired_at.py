@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
-            controller = DevSandboxController(module=dev_sandbox.module, dev_sandbox_code=dev_sandbox.code)
+            controller = DevSandboxController(dev_sandbox)
             try:
                 detail = controller.get_detail()
             except Exception as e:

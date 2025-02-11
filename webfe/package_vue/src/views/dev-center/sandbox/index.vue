@@ -263,7 +263,7 @@ export default {
       return list;
     },
     iframeUrl() {
-      const url = this.sandboxData.code_editor_url || '';
+      const url = `${this.sandboxData.code_editor_url}?workspace=${this.sandboxData.workspace}`;
       return this.ensureHttpProtocol(url);
     },
     // 沙箱加载完成

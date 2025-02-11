@@ -28,6 +28,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.api import CreatedAppInfo
 from paas_wl.bk_app.applications.constants import WlAppType
+from paasng.accessories.log.shim.setup_elk import ClusterElasticSearchConfig
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
@@ -372,6 +373,10 @@ def _mock_wl_services_in_creation():
         else:
             _faked_env_metadata[env.id].update(metadata_part)
 
+    mock_cluster_setup_elk = mock.Mock()
+    mock_cluster_setup_elk.uuid = uuid.uuid4()
+    mock_cluster_es_confg_queryset = mock.Mock()
+    mock_cluster_es_confg_queryset.first.return_value = None
     with (
         mock.patch(
             "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
@@ -386,8 +391,12 @@ def _mock_wl_services_in_creation():
         mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"),
         mock.patch("paasng.platform.bkapp_model.services.EnvClusterService"),
         mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
+        mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
+        mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
     ):
         fake_log().get_cluster().has_feature_flag.return_value = False
+        fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
+        mock_filter.return_value = mock_cluster_es_confg_queryset
         yield
 
 

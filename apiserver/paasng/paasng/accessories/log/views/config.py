@@ -158,6 +158,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
                 "bk_data_id": cfg.bk_data_id,
                 "log_paths": validated_data["log_paths"],
                 "log_type": validated_data["log_type"],
+                "tenant_id": module.tenant_id,
             },
         )
         return Response(

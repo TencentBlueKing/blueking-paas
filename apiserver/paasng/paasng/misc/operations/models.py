@@ -23,7 +23,7 @@ from paasng.utils.models import BkUserField
 
 
 class Operation(models.Model):
-    """【已废弃】请不要再使用 misc.operations 目录下的任何内容，暂时保留仅用于社区版本将存量的操作记录同步到 misc.audit 中
+    """[deprecated] 请不要再使用 misc.operations 目录下的任何内容，暂时保留仅用于社区版本将存量的操作记录同步到 misc.audit 中
 
     release-1.6 版本已经将操作记录迁移到 misc.audit 中，并在 misc.audit.migrations.0002_transfer_op 将原有的操作记录迁移到 audit 表中。
 

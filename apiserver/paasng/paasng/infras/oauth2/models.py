@@ -34,7 +34,7 @@ from paasng.utils.models import TimestampedModel
 
 
 class OAuth2Client(TimestampedModel):
-    """【已废弃】OAuth2 体系中的基本单位：Client
+    """[deprecated] OAuth2 体系中的基本单位：Client
 
     应用的密钥信息已全面接入到 bkAuth，不再需要在开发者中心、桌面存储应用密钥信息，该表已完全废弃
     """

@@ -48,12 +48,12 @@
           ></bk-table-column>
           <bk-table-column :label="$t('代码分支')">
             <template slot-scope="{ row }">
-              {{ row.version_info_dict?.version_name }}
+              {{ row.version_info?.version_name }}
             </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('创建时间')"
-            prop="created"
+            prop="created_at"
           ></bk-table-column>
           <bk-table-column :label="$t('操作')">
             <template slot-scope="{ row }">

@@ -21,7 +21,7 @@
         </div>
       </div>
       <bk-button
-        v-if="isLoadingSandbox"
+        v-if="isSandboxReady"
         :theme="'primary'"
         @click="showRequestDialog"
       >
@@ -105,7 +105,7 @@
               :runLog="runLog"
               :loading="isLogsLoading"
               :env="env"
-              :is-load-complete="isLoadingSandbox"
+              :is-load-complete="isSandboxReady"
               :is-rerun="isProcessRunning || isBuildSuccess"
               :btn-loading="isRunNowLoading"
               :is-show-status="isShowRunningStatus"
@@ -367,10 +367,8 @@ export default {
         });
         return response.data;
       } catch (e) {
-        // 沙箱相关接口报错，通过获取密码接口判定沙箱是否已删除
         if (e.code === 'ERR_NETWORK') {
           this.isRunNowLoading = false;
-          this.getSandboxPassword();
         }
         this.catchErrorHandler(e);
         await Promise.reject(e);

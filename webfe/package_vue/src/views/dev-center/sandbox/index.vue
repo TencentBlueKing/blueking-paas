@@ -11,11 +11,11 @@
           class="back"
           @click="back"
         >
-          <i class="paasng-icon paasng-arrows-left icon-cls-back mr5"></i>
+          <i class="paasng-arrows-left paasng-icon icon-cls-back mr5"></i>
           <span class="title-text">{{ $t('沙箱开发') }}</span>
         </div>
         <span class="line"></span>
-        <div class="info flex-row">
+        <div class="flex-row info">
           <div>{{ $t('应用') }}：{{ this.code }}</div>
           <div>{{ $t('模块') }}：{{ this.module }}</div>
         </div>
@@ -208,7 +208,7 @@ export default {
       return this.$store.state.isShowNotice;
     },
     iframeUrl() {
-      const url = `${this.sandboxData.code_editor_url}?workspace=${this.sandboxData.workspace}`;
+      const url = `${this.sandboxData.code_editor_url}?folder=${this.sandboxData.workspace}`;
       return this.ensureHttpProtocol(url);
     },
     // 沙箱加载完成

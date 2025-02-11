@@ -20,7 +20,6 @@ import logging
 import cattr
 from attr import define
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
 
@@ -109,13 +108,12 @@ def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
     """
     初始化/更新平台 ELK 日志方案的数据库配置，初始化 SaaS 的 ELK 配置时执行。
     """
-    try:
-        cluster_es = ClusterElasticSearchConfig.objects.get(cluster__uuid=cluster_uuid)
+    cluster_es = ClusterElasticSearchConfig.objects.filter(cluster__uuid=cluster_uuid).first()
+    if cluster_es:
         es_host = ElasticSearchHost(
             host=cluster_es.host, port=cluster_es.port, http_auth=f"{cluster_es.username}:{cluster_es.password}"
         )
-    # 使用 ObjectDoesNotExist 而不是 ClusterElasticSearchConfig.DoesNotExist，是为了方便处理单测
-    except ObjectDoesNotExist:
+    else:
         # 集群中未配置则使用 settings 中的配置
         es_host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
 

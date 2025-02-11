@@ -2,7 +2,7 @@
   <div class="sandbox-config-info-box">
     <p class="alert mb10">
       <i class="paasng-icon paasng-info-line"></i>
-      <span>{{ $t('沙箱环境将复用 “预发布环境” 的增强服务和环境变量') }}</span>
+      <span>{{ $t('沙箱环境复用 “预发布环境” 的增强服务和环境变量') }}</span>
     </p>
     <div class="info">
       <div class="info-item">

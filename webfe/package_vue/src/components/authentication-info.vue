@@ -1,12 +1,18 @@
 <template>
-  <div v-if="canViewSecret" class="authentication-info-container">
+  <div
+    v-if="canViewSecret"
+    class="authentication-info-container"
+  >
     <section class="mt16 info-card-style">
       <div class="title">
         {{ $t('密钥信息') }}
       </div>
       <div class="tips-text">
         {{ $t('在调用蓝鲸云 API 时需要提供应用密钥信息。使用方法请参考：') }}
-        <a :href="GLOBAL.DOC.APIGW_USER_API" target="_blank">
+        <a
+          :href="GLOBAL.DOC.APIGW_USER_API"
+          target="_blank"
+        >
           {{ $t('API调用指引') }}
           <i class="paasng-icon paasng-jump-link"></i>
         </a>
@@ -25,12 +31,14 @@
           <a
             v-bk-tooltips.light="addTooltipsConfig"
             class="bk-text-default mr15"
-            :disabled="isAddNewSecret">
+            :disabled="isAddNewSecret"
+          >
             <bk-button
               theme="primary"
               icon="plus"
               class="mr10"
-              :disabled="!isAddNewSecret">
+              :disabled="!isAddNewSecret"
+            >
               {{ $t('新增密钥') }}
             </bk-button>
           </a>
@@ -47,13 +55,17 @@
         <bk-table
           :data="appSecretList"
           v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-          size="small">
+          size="small"
+        >
           <bk-table-column
             :label="$t('应用 ID (bk_app_code)')"
             prop="bk_app_code"
-            min-width="190">
-          </bk-table-column>
-          <bk-table-column :label="$t('应用密钥 (bk_app_secret)')" min-width="315">
+            min-width="190"
+          ></bk-table-column>
+          <bk-table-column
+            :label="$t('应用密钥 (bk_app_secret)')"
+            min-width="315"
+          >
             <template slot-scope="props">
               <div class="flex-row">
                 <span>
@@ -75,7 +87,10 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('创建时间')" prop="created_at"></bk-table-column>
+          <bk-table-column
+            :label="$t('创建时间')"
+            prop="created_at"
+          ></bk-table-column>
           <bk-table-column :label="$t('状态')">
             <template slot-scope="props">
               <span :style="{ color: props.row.enabled ? '#2DCB56' : '#FF5656' }">
@@ -83,7 +98,10 @@
               </span>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('操作')" :width="localLanguage === 'en' ? 150 : 120">
+          <bk-table-column
+            :label="$t('操作')"
+            :width="localLanguage === 'en' ? 150 : 120"
+          >
             <template slot-scope="props">
               <a
                 v-bk-tooltips.light="disabledTooltipsConfig"
@@ -94,7 +112,8 @@
                   class="mr10"
                   text
                   :disabled="isDefault(props.row.bk_app_secret)"
-                  @click="isEnabled(props.row)">
+                  @click="isEnabled(props.row)"
+                >
                   {{ props.row.enabled ? $t('禁用') : $t('启用') }}
                 </bk-button>
               </a>
@@ -102,28 +121,35 @@
                 v-if="!props.row.enabled"
                 theme="primary"
                 text
-                @click="deleteSecret(props.row)">
-                {{ $t('删除') }}</bk-button
+                @click="deleteSecret(props.row)"
               >
+                {{ $t('删除') }}
+              </bk-button>
             </template>
           </bk-table-column>
         </bk-table>
       </section>
     </section>
     <!-- 环境变量默认密钥 -->
-    <div class="mt16 info-card-style" v-if="defaultSecret !== undefined">
+    <div
+      class="mt16 info-card-style"
+      v-if="defaultSecret !== undefined"
+    >
       <div class="title no-margin">{{ $t('环境变量默认密钥') }}</div>
       <div class="default-secret-info">
         <div class="info">
           {{ $t('内置环境变量 BKPAAS_APP_SECRET 使用的密钥。') }}
-          <a :href="GLOBAL.DOC.ENV_VAR_INLINE" target="_blank">
+          <a
+            :href="GLOBAL.DOC.ENV_VAR_INLINE"
+            target="_blank"
+          >
             <i class="paasng-icon paasng-process-file"></i>
             {{ $t('文档：什么是内置环境变量') }}
           </a>
         </div>
         <p>
           BKPAAS_APP_SECRET：
-          <span class="code"> {{ appSecret ? appSecret : defaultSecret }}&nbsp; </span>
+          <span class="code">{{ appSecret ? appSecret : defaultSecret }}&nbsp;</span>
           <span
             v-if="!appSecret && !togeDefaultFlag"
             v-bk-tooltips="platformFeature.VERIFICATION_CODE ? $t('验证查看') : $t('点击查看')"
@@ -142,23 +168,34 @@
 
       <!-- 更换默认密钥按钮 -->
       <div class="change-default-secret">
-        <bk-button theme="default" @click="handleChangeDefaultSecret">
+        <bk-button
+          theme="default"
+          @click="handleChangeDefaultSecret"
+        >
           {{ $t('更换默认密钥') }}
         </bk-button>
         <p v-if="!isSameSecrect">{{ $t('密钥使用情况概览（仅包含已部署环境）') }}</p>
       </div>
 
       <!-- 已部署密钥概览 -->
-      <div class="deployed-secret" v-if="!isSameSecrect">
-        <bk-table :data="DeployedSecret" border>
+      <div
+        class="deployed-secret"
+        v-if="!isSameSecrect"
+      >
+        <bk-table
+          :data="DeployedSecret"
+          border
+        >
           <bk-table-column
             :label="$t('模块')"
             prop="module"
-            width="160"></bk-table-column>
+            width="160"
+          ></bk-table-column>
           <bk-table-column
             :label="$t('环境')"
             class-name="table-colum-cls"
-            width="200">
+            width="200"
+          >
             <template slot-scope="props">
               <div class="container">
                 <div
@@ -175,7 +212,8 @@
           <bk-table-column
             :label="$t('最近部署时间')"
             class-name="table-colum-cls"
-            width="200">
+            width="200"
+          >
             <template slot-scope="props">
               <div class="container">
                 <div
@@ -191,23 +229,40 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column label="BKPAAS_APP_SECRET" class-name="table-colum-cls">
+          <bk-table-column
+            label="BKPAAS_APP_SECRET"
+            class-name="table-colum-cls"
+          >
             <template slot-scope="props">
               <div class="container">
                 <div
                   v-for="item in props.row.data"
                   :key="item.latest_deployed_at"
-                  class="container-child">
-                  <div class="ml15 normal-secret" v-if="item.bk_app_secret === defaultSecret">
+                  class="container-child"
+                >
+                  <div
+                    class="ml15 normal-secret"
+                    v-if="item.bk_app_secret === defaultSecret"
+                  >
                     {{ item.bk_app_secret }}
                   </div>
-                  <div class="diff-secret" v-else>
+                  <div
+                    class="diff-secret"
+                    v-else
+                  >
                     <div class="ml15 mr15 flex-text">
                       <div class="appSecretText">{{ item.bk_app_secret }}</div>
                       <div class="errorText info-circle-color">
-                        <bk-icon type="info-circle" class="info-circle-color" />
+                        <bk-icon
+                          type="info-circle"
+                          class="info-circle-color"
+                        />
                         {{ $t('与默认密钥不一致，') }}
-                        <bk-button theme="primary" text @click="handleDeployToUpdateSecret(item)">
+                        <bk-button
+                          theme="primary"
+                          text
+                          @click="handleDeployToUpdateSecret(item)"
+                        >
                           {{ $t('部署以更新密钥') }}
                         </bk-button>
                       </div>
@@ -240,9 +295,17 @@
       v-model="deleteVisible"
       :mask-close="false"
       :title="$t('删除密钥')"
-      header-position="left">
-      <bk-alert type="error" :title="$t('删除此密钥后无法再恢复，蓝鲸云 API 将永久拒绝此密钥的所有请求。')"></bk-alert>
-      <bk-form :label-width="427" form-type="vertical" :model="deleteFormData">
+      header-position="left"
+    >
+      <bk-alert
+        type="error"
+        :title="$t('删除此密钥后无法再恢复，蓝鲸云 API 将永久拒绝此密钥的所有请求。')"
+      ></bk-alert>
+      <bk-form
+        :label-width="427"
+        form-type="vertical"
+        :model="deleteFormData"
+      >
         <bk-form-item>
           {{ $t('请完整输入') }} &nbsp;
           <code>
@@ -261,10 +324,15 @@
           theme="primary"
           :loading="deleteDialogConfig.isLoading"
           :disabled="!deletSecretValidated"
-          @click="confirmDeleteSecret">
+          @click="confirmDeleteSecret"
+        >
           {{ $t('确定') }}
         </bk-button>
-        <bk-button class="ml10" theme="default" @click="cancelDelete">
+        <bk-button
+          class="ml10"
+          theme="default"
+          @click="cancelDelete"
+        >
           {{ $t('取消') }}
         </bk-button>
       </template>
@@ -280,7 +348,10 @@
       @confirm="confirmchangeDefault"
     >
       {{ $t('请选择密钥（只能选择已启用的密钥）：') }}
-      <bk-select v-model="curSelectedDefaultSecret" class="secretSelect">
+      <bk-select
+        v-model="curSelectedDefaultSecret"
+        class="secretSelect"
+      >
         <bk-option
           v-for="option in optionSecretList"
           :key="option.id"
@@ -297,11 +368,15 @@
           style="cursor: pointer; text-align: center"
           v-if="isAddNewSecret"
         >
-          <i class="bk-icon icon-plus-circle"></i> {{ $t('新增密钥') }}
+          <i class="bk-icon icon-plus-circle"></i>
+          {{ $t('新增密钥') }}
         </div>
       </bk-select>
 
-      <bk-alert type="info" :title="$t('密钥更换后，需要重新部署才能生效！')"></bk-alert>
+      <bk-alert
+        type="info"
+        :title="$t('密钥更换后，需要重新部署才能生效！')"
+      ></bk-alert>
     </bk-dialog>
 
     <!-- 验证码对话框 -->
@@ -309,22 +384,43 @@
       v-model="verifyVisible"
       :mask-close="false"
       width="475"
-      :ok-text="$t('提交')"
-      @cancel="handleCancel"
-      @confirm="submitVerification">
+      @after-leave="handleCancel"
+    >
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          @click="submitVerification"
+        >
+          {{ $t('提交') }}
+        </bk-button>
+        <bk-button
+          theme="default"
+          @click="handleCancel"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
       <p>{{ $t('验证码已发送至您的企业微信，请注意查收！') }}</p>
-      <p style="display: flex; align-items: center" class="mt15">
-        <b> {{ $t('验证码：') }} </b>
+      <p class="mt15 flex-row align-items-center">
+        <b>{{ $t('验证码：') }}</b>
         <bk-input
           v-model="appSecretVerificationCode"
           type="text"
           :placeholder="$t('请输入验证码')"
           style="width: 200px; margin-right: 10px"
         />
-        <bk-button v-if="appSecretTimer !== 0" theme="default" :disabled="true">
+        <bk-button
+          v-if="appSecretTimer !== 0"
+          theme="default"
+          :disabled="true"
+        >
           {{ appSecretTimer }}s&nbsp;{{ $t('后重新获取') }}
         </bk-button>
-        <bk-button v-else theme="default" @click="sendMsg">
+        <bk-button
+          v-else
+          theme="default"
+          @click="sendMsg"
+        >
           {{ $t('重新获取') }}
         </bk-button>
       </p>
@@ -332,7 +428,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { cloneDeep } from 'lodash';
 export default {
@@ -393,11 +490,11 @@ export default {
     // 部署密钥和默认密钥是否一致
     isSameSecrect() {
       if (this.deployedSecretList.length !== 0) {
-        const isNull = this.deployedSecretList.some(item => item.bk_app_secret === null);
+        const isNull = this.deployedSecretList.some((item) => item.bk_app_secret === null);
         if (isNull) {
           return true;
         }
-        return this.deployedSecretList.every(item => item.bk_app_secret === this.defaultSecret);
+        return this.deployedSecretList.every((item) => item.bk_app_secret === this.defaultSecret);
       }
       return true;
     },
@@ -455,18 +552,15 @@ export default {
         });
         this.appSecret = res.app_secret;
         this.isViewMode = true;
+        this.handleCancel();
       } catch (error) {
         this.$paasMessage({
           theme: 'error',
           message: this.$t('验证码错误！'),
         });
-      } finally {
-        if (data.verification_code) {
-          this.appSecretVerificationCode = '';
-        }
       }
     },
-    // 环境变量-查看密钥发送验证码
+    // 查看环境变量默认密钥
     hanldleViewSecret() {
       if (!this.userFeature.VERIFICATION_CODE) {
         // 无需要验证码校验 - 默认变量密钥
@@ -507,7 +601,7 @@ export default {
           () => {
             this.appSecretVerificationCode = '';
             reject(new Error(this.$t('请求失败，请稍候重试！')));
-          },
+          }
         );
       });
     },
@@ -531,7 +625,7 @@ export default {
           });
         });
     },
-    // 密钥列表获取-单个密钥详情
+    // 密钥列表获取-单个应用密钥详情
     getSecretDetail(row) {
       // 是否需要验证码校验
       if (this.userFeature.VERIFICATION_CODE) {
@@ -543,7 +637,7 @@ export default {
       // 无需验证码直接请求对应密钥详情
       this.secretVerification(false, row);
     },
-    // 获取当前密钥详情
+    // 获取应用密钥
     async secretVerification(isVerificationCodeRequired = true, data, params) {
       try {
         const res = await this.$store.dispatch('authenticationInfo/secretVerification', {
@@ -566,14 +660,12 @@ export default {
             return;
           }
         });
+        this.handleCancel();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: this.$t('验证码错误！'),
         });
-      } finally {
-        this.curViewSecret = {};
-        this.appSecretVerificationCode = '';
       }
     },
     // 获取环境变量默认密钥
@@ -600,10 +692,11 @@ export default {
       const form = {
         verification_code: this.appSecretVerificationCode,
       };
-      // 需要通过id获取对应的密钥
+      // 密钥信息-应用密码
       this.secretVerification(true, this.curViewSecret, form);
     },
     handleCancel() {
+      this.verifyVisible = false;
       this.appSecretVerificationCode = '';
       this.curViewSecret = {};
     },
@@ -733,7 +826,7 @@ export default {
         const res = await this.$store.dispatch('authenticationInfo/getDeployedSecret', { appCode: this.appCode });
         this.deployedSecretList = res;
         const formatRes = res.reduce((arr, obj) => {
-          const foundIndex = arr.findIndex(item => item.module === obj.module);
+          const foundIndex = arr.findIndex((item) => item.module === obj.module);
           if (foundIndex !== -1) {
             arr[foundIndex].data.unshift(obj);
           } else {
@@ -778,7 +871,7 @@ export default {
     },
     // 确认更换密钥
     confirmchangeDefault() {
-      const data = this.optionSecretList.find(item => item.bk_app_secret === this.curSelectedDefaultSecret);
+      const data = this.optionSecretList.find((item) => item.bk_app_secret === this.curSelectedDefaultSecret);
       this.changeDefaultsSecret(data.id);
       this.appSecret = null;
       this.isViewMode = false;
@@ -1053,7 +1146,7 @@ export default {
   }
   .default-secret-info {
     display: inline-block;
-    background: #F5F7FA;
+    background: #f5f7fa;
     font-size: 12px;
     padding: 12px;
     line-height: 20px;

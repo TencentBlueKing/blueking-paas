@@ -15,9 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from dataclasses import asdict
 from typing import Dict
 
-from attrs import asdict
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
@@ -36,9 +36,10 @@ class DevSandboxListOutputSLZ(serializers.Serializer):
     version_info = serializers.SerializerMethodField(help_text="版本信息")
     status = serializers.ChoiceField(choices=PodPhase.get_django_choices(), help_text="运行状态")
     expired_at = serializers.DateTimeField(help_text="过期时间")
+    created_at = serializers.DateTimeField(help_text="创建时间", source="created")
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
-    def get_version_info(self, obj: DevSandbox) -> Dict:
+    def get_version_info(self, obj: DevSandbox) -> Dict[str, str]:
         return asdict(obj.version_info)
 
 

@@ -58,13 +58,6 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    lookup_field = "code"
-    lookup_url_kwarg = "dev_sandbox_code"
-
-    def get_queryset(self):
-        module = self.get_module_via_path()
-        return DevSandbox.objects.filter(module=module, owner=self.request.user.pk)
-
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
         operation_description="获取应用所有模块的开发沙箱列表",
@@ -144,7 +137,14 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def retrieve(self, request, *args, **kwargs):
         module = self.get_module_via_path()
-        dev_sandbox = self.get_object()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         try:
             detail = DevSandboxController(module, dev_sandbox.code).get_detail()
@@ -160,6 +160,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             "urls": detail.urls,
             "devserver_token": dev_sandbox.token,
             "code_editor_password": password,
+            "status": detail.status,
         }
         return Response(data=DevSandboxRetrieveOutputSLZ(resp_data).data)
 
@@ -170,7 +171,14 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def destroy(self, request, *args, **kwargs):
         module = self.get_module_via_path()
-        dev_sandbox = self.get_object()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         # 清理集群中的沙箱资源
         controller = DevSandboxController(module, dev_sandbox.code)

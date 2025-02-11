@@ -42,6 +42,8 @@ DEV_SERVER_CONTAINER_NAME = "dev-sandbox"
 
 CODE_EDITOR_CONTAINER_NAME = "code-editor"
 
+DEV_SANDBOX_CODE_ANNOTATION_KEY = "bkapp.paas.bk.tencent.com/dev-sandbox-code"
+
 
 class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
     def serialize(self, obj: "DevSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
@@ -51,6 +53,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "metadata": {
                 "name": obj.name,
                 "labels": get_dev_sandbox_labels(obj.app),
+                "annotations": {DEV_SANDBOX_CODE_ANNOTATION_KEY: obj.code},
             },
             "spec": self._construct_pod_spec(obj),
         }
@@ -142,9 +145,14 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
         dev_server_container = self._get_dev_server_container(kube_data)
         envs = {env.name: env.value for env in dev_server_container.env if getattr(env, "value")}
 
+        code = ""
+        if annos := kube_data.metadata.annotations:
+            code = annos.get(DEV_SANDBOX_CODE_ANNOTATION_KEY, "")
+
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,
+            code=code,
             runtime=cattr.structure(
                 {
                     "envs": envs,

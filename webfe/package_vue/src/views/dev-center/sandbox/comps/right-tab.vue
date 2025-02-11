@@ -44,7 +44,16 @@
     </div>
     <!-- 运行状态 -->
     <div
-      v-if="isRerun || isShowStatus"
+      class="run-tip success"
+      v-if="isRerun && btnLoading"
+    >
+      <div class="status">
+        <round-loading class="mr5" />
+        {{ $t('运行中') }}
+      </div>
+    </div>
+    <div
+      v-else-if="isRerun || isShowStatus"
       :class="['run-tip', isShowLink ? 'success' : 'error']"
     >
       <div class="status">

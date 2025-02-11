@@ -387,10 +387,11 @@ export default {
       } catch (e) {
         // 沙箱相关接口报错，通过获取密码接口判定沙箱是否已删除
         if (e.code === 'ERR_NETWORK') {
+          this.isRunNowLoading = false;
           this.getSandboxPassword();
         }
         this.catchErrorHandler(e);
-        return e;
+        await Promise.reject(e);
       }
     },
     // 获取当前沙箱进程状态
@@ -447,6 +448,8 @@ export default {
         this.clearIntervals();
         this.automaticRefresh();
         this.isLogsLoading = true;
+      } catch (e) {
+        this.isRunNowLoading = false;
       } finally {
         setTimeout(() => {
           this.isLogsLoading = false;

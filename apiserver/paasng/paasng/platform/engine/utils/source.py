@@ -287,7 +287,7 @@ def upload_source_code(
     operator: str,
 ) -> str:
     """上传应用模块源码到 blob 存储, 并且返回源码的下载链接, 参考方法 "BaseBuilder.compress_and_upload"
-    FIXME 评估这个函数是否放到沙箱模块中
+    FIXME (沙箱重构) 评估这个函数是否放到沙箱模块中
 
     return: source fetch url
     """

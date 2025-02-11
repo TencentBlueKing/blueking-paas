@@ -75,6 +75,7 @@ class SourceCodeVersionInfoSLZ(serializers.Serializer):
 
 class DevSandboxCreateInputSLZ(serializers.Serializer):
     enable_code_editor = serializers.BooleanField(help_text="是否启用代码编辑器", default=False)
+    inject_staging_env_vars = serializers.BooleanField(help_text="是否注入预发布环境变量", default=False)
     source_code_version_info = SourceCodeVersionInfoSLZ(help_text="源代码配置", required=False)
 
 
@@ -87,6 +88,7 @@ class DevSandboxRetrieveOutputSLZ(serializers.Serializer):
 
     devserver_token = serializers.CharField(help_text="devserver 服务 token")
     code_editor_password = serializers.CharField(help_text="代码编辑器访问密码", allow_null=True)
+    env_vars = serializers.JSONField(help_text="沙箱环境变量")
 
     app_url = serializers.CharField(help_text="SaaS 服务地址", source="urls.app")
     devserver_url = serializers.CharField(help_text="devserver 服务地址", source="urls.devserver")

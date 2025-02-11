@@ -28,22 +28,23 @@ Examples:
     python manage.py recycle_dev_sandbox --all
 """
 
-import logging
-
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paasng.accessories.dev_sandbox.models import DevSandbox
 
-logger = logging.getLogger(__name__)
-
 
 class Command(BaseCommand):
-    help = "回收沙箱"
+    help = "Recycle dev sandbox (default: only expired)"
 
     def add_arguments(self, parser):
-        parser.add_argument("--all", dest="all", action="store_true", help="recycle all dev sandboxes")
+        parser.add_argument(
+            "--all",
+            dest="all",
+            action="store_true",
+            help="recycle all dev sandboxes (no only expired)",
+        )
 
     def handle(self, all, *args, **options):
         dev_sandboxes = DevSandbox.objects.all()
@@ -51,17 +52,15 @@ class Command(BaseCommand):
             dev_sandboxes = dev_sandboxes.filter(expired_at__lte=timezone.now())
 
         if not dev_sandboxes.exists():
-            logger.info("No expired dev sandboxes to recycle")
+            self.stdout.write("No dev sandboxes to recycle")
             return
 
-        logger.info("Recycling %d expired dev sandboxes", dev_sandboxes.count())
-        for dev_sandbox in dev_sandboxes:
-            logger.info(
-                "Recycle dev sandbox: %s (app: %s, module: %s)",
-                dev_sandbox.code,
-                dev_sandbox.module.application.code,
-                dev_sandbox.module.name,
+        total_count = dev_sandboxes.count()
+        for idx, dev_sandbox in enumerate(dev_sandboxes, start=1):
+            module = dev_sandbox.module
+            app_code = module.application.code
+            self.stdout.write(
+                f"[{idx}/{total_count}] Recycle {dev_sandbox.code} (app: {app_code}, module: {module.name})",
             )
-            controller = DevSandboxController(dev_sandbox)
-            controller.delete()
+            DevSandboxController(dev_sandbox).delete()
             dev_sandbox.delete()

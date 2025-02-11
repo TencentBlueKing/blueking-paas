@@ -65,11 +65,6 @@ class DevSandbox(AppEntity):
         # 源代码信息
         runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_METHOD] = str(source_code_cfg.source_fetch_method)
         runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_URL] = source_code_cfg.source_fetch_url or ""
-        # 代码编辑器配置
-        if code_editor_cfg:
-            runtime.envs[DevSandboxEnvKey.CODE_EDITOR_PASSWORD] = code_editor_cfg.password
-            # 禁用遥测，不支持收集数据
-            runtime.envs[DevSandboxEnvKey.CODE_EDITOR_DISABLE_TELEMETRY] = "true"
 
         return cls(
             app=wl_app,

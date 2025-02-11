@@ -45,7 +45,9 @@ from paasng.accessories.dev_sandbox.serializers import (
 )
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.error_codes import error_codes
@@ -114,10 +116,15 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             code_editor = CodeEditor.objects.create(dev_sandbox=dev_sandbox)
             code_editor_cfg = CodeEditorConfig(password=code_editor.password)
 
+        envs = generate_envs(module)
+        if data["inject_staging_env_vars"]:
+            stag_env = module.get_envs(AppEnvironment.STAGING)
+            envs.update(get_env_variables(stag_env))
+
         # 下发沙箱 k8s 资源
         try:
             DevSandboxController(dev_sandbox).deploy(
-                envs=generate_envs(module),
+                envs=envs,
                 source_code_cfg=source_code_cfg,
                 code_editor_cfg=code_editor_cfg,
             )
@@ -161,6 +168,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             "urls": detail.urls,
             "devserver_token": dev_sandbox.token,
             "code_editor_password": password,
+            "env_vars": detail.envs,
             "status": detail.status,
         }
         return Response(data=DevSandboxRetrieveOutputSLZ(resp_data).data)

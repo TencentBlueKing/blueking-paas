@@ -17,7 +17,6 @@
 
 from typing import TYPE_CHECKING, Dict, Optional
 
-import cattr
 from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
@@ -100,14 +99,19 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         return {
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
+            # 代码编辑器仅需要少量的环境变量
             "env": [
                 {
-                    "name": str(key),
-                    "value": str(value),
-                }
-                for key, value in obj.runtime.envs.items()
+                    "name": DevSandboxEnvKey.CODE_EDITOR_PASSWORD.value,
+                    "value": obj.code_editor_cfg.password if obj.code_editor_cfg else "",
+                },
+                # 禁用遥测，不支持收集数据
+                {
+                    "name": DevSandboxEnvKey.CODE_EDITOR_DISABLE_TELEMETRY.value,
+                    "value": "true",
+                },
             ],
-            "imagePullPolicy": "Always",
+            "imagePullPolicy": "IfNotPresent",
             "ports": [
                 {
                     "containerPort": CODE_EDITOR_NETWORK_CONFIG.target_port,
@@ -153,13 +157,10 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
             app=app,
             name=kube_data.metadata.name,
             code=code,
-            runtime=cattr.structure(
-                {
-                    "envs": envs,
-                    "image": dev_server_container.image,
-                    "image_pull_policy": dev_server_container.imagePullPolicy,
-                },
-                Runtime,
+            runtime=Runtime(
+                envs=envs,
+                image=dev_server_container.image,
+                image_pull_policy=dev_server_container.imagePullPolicy,
             ),
             source_code_cfg=self._get_source_code_cfg_from_envs(envs),
             code_editor_cfg=self._get_code_editor_cfg_from_envs(envs),

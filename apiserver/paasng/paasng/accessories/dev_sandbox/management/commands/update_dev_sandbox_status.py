@@ -15,41 +15,38 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-
 import requests
 from django.core.management.base import BaseCommand
+from rest_framework import status
 
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paasng.accessories.dev_sandbox.models import DevSandbox
 
-logger = logging.getLogger(__name__)
-
 
 class Command(BaseCommand):
-    help = "更新沙箱状态"
+    help = "update status of all dev sandboxes"
 
     def handle(self, *args, **options):
         for dev_sandbox in DevSandbox.objects.all():
-            controller = DevSandboxController(dev_sandbox)
             try:
-                detail = controller.get_detail()
+                detail = DevSandboxController(dev_sandbox).get_detail()
             except Exception as e:
                 # 防止沙箱资源被管理员删除等导致的报错
-                logger.warning("Failed to get detail of dev sandbox: %s. Error: %s", dev_sandbox.code, e)
+                self.stdout.write(
+                    self.style.WARNING(f"Failed to get detail of dev sandbox: {dev_sandbox.code}. Error: {e}")
+                )
                 continue
 
             url = f"{detail.urls.code_editor}/healthz"
             # 沙箱相关域名无法确定协议，因此全部遍历 http 和 https
-            if check_alive(f"http://{url}") or check_alive(f"https://{url}"):
+            if self.is_alive(f"http://{url}") or self.is_alive(f"https://{url}"):
+                self.stdout.write(self.style.SUCCESS(f"Dev sandbox {dev_sandbox.code} is alive"))
                 dev_sandbox.renew_expired_at()
 
-
-# 通过 code_editor_health_url 检查沙箱是否存活
-def check_alive(url: str) -> bool:
-    try:
-        resp = requests.get(url)
-        return resp.status_code == 200 and resp.json().get("status") == "alive"
-    except Exception as e:
-        logger.warning("Dev sandbox status check failed for URL: %s. Error: %s", url, e)
-        return False
+    def is_alive(self, url: str) -> bool:
+        try:
+            resp = requests.get(url, timeout=30)
+            return resp.status_code == status.HTTP_200_OK and resp.json().get("status") == "alive"
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Dev sandbox status check failed for URL: {url}. Error: {e}"))
+            return False

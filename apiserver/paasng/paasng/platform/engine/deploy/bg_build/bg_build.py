@@ -25,6 +25,7 @@ from celery import shared_task
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.executors import (
     DefaultBuildProcessExecutor,
     PipelineBuildProcessExecutor,
@@ -83,6 +84,9 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
     :raises: DeployInterruptionFailed if the build process is not interruptable.
     """
     bp = BuildProcess.objects.get(pk=bp_id)
+
+    if bp.is_finished():
+        return bp.status == BuildStatus.INTERRUPTED
 
     # 蓝盾流水线即使被取消，也不会中断镜像构建流程，因此中断在这种场景下没有意义
     cfg = BuildConfig.objects.filter(module_id=bp.module_id).first()

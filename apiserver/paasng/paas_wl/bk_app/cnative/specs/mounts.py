@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import uuid
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -281,6 +281,7 @@ class MountManager:
         mount_path: str,
         source_type: str,
         source_name: Optional[str] = None,
+        sub_paths: Optional[List[str]] = None,
     ) -> Mount:
         source_config_name = source_name or generate_source_config_name(app_code=app_code)
         controller = init_volume_source_controller(source_type)
@@ -293,6 +294,7 @@ class MountManager:
             mount_path=mount_path,
             source_type=source_type,
             source_config=source_config,
+            sub_paths=sub_paths or [],
         )
 
 

@@ -584,7 +584,9 @@ def register_iam_after_create_application(application: Application):
 
     # 1. 创建分级管理员，并记录分级管理员 ID
     grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
-    ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
+    ApplicationGradeManager.objects.create(
+        app_code=application.code, grade_manager_id=grade_manager_id, tenant_id=tenant_id
+    )
 
     # 2. 将创建者，添加为分级管理员的成员
     cli.add_grade_manager_members(grade_manager_id, [creator])
@@ -593,7 +595,9 @@ def register_iam_after_create_application(application: Application):
     user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
     ApplicationUserGroup.objects.bulk_create(
         [
-            ApplicationUserGroup(app_code=application.code, role=group["role"], user_group_id=group["id"])
+            ApplicationUserGroup(
+                app_code=application.code, role=group["role"], user_group_id=group["id"], tenant_id=tenant_id
+            )
             for group in user_groups
         ]
     )

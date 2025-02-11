@@ -87,6 +87,7 @@ class UpsertMountSLZ(serializers.Serializer):
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
+    sub_paths = serializers.ListField(required=False, child=serializers.CharField(), help_text="子路径配置")
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -133,6 +134,7 @@ class MountSLZ(serializers.ModelSerializer):
             "source_config",
             "configmap_source",
             "persistent_storage_source",
+            "sub_paths",
         )
 
     def get_configmap_source(self, obj):

@@ -83,12 +83,15 @@ class DevSandboxCreateOutputSLZ(serializers.Serializer):
 
 
 class DevSandboxRetrieveOutputSLZ(serializers.Serializer):
+    workspace = serializers.CharField(help_text="沙箱工作目录")
+
+    devserver_token = serializers.CharField(help_text="devserver 服务 token")
+    code_editor_password = serializers.CharField(help_text="代码编辑器访问密码", allow_null=True)
+
     app_url = serializers.CharField(help_text="SaaS 服务地址", source="urls.app")
     devserver_url = serializers.CharField(help_text="devserver 服务地址", source="urls.devserver")
     code_editor_url = serializers.CharField(help_text="code editor 服务地址", source="urls.code_editor")
 
-    devserver_token = serializers.CharField(help_text="devserver 服务 token")
-    code_editor_password = serializers.CharField(help_text="代码编辑器访问密码", allow_null=True)
     status = serializers.ChoiceField(choices=PodPhase.get_django_choices(), help_text="运行状态")
 
 

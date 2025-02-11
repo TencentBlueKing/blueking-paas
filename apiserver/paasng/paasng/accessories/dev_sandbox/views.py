@@ -157,6 +157,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             password = None
 
         resp_data = {
+            "workspace": detail.workspace,
             "urls": detail.urls,
             "devserver_token": dev_sandbox.token,
             "code_editor_password": password,

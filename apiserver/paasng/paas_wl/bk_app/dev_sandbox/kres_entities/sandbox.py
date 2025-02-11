@@ -68,7 +68,6 @@ class DevSandbox(AppEntity):
         # 代码编辑器配置
         if code_editor_cfg:
             runtime.envs[DevSandboxEnvKey.CODE_EDITOR_PASSWORD] = code_editor_cfg.password
-            runtime.envs[DevSandboxEnvKey.CODE_EDITOR_START_DIR] = DEV_SANDBOX_WORKSPACE
             # 禁用遥测，不支持收集数据
             runtime.envs[DevSandboxEnvKey.CODE_EDITOR_DISABLE_TELEMETRY] = "true"
 

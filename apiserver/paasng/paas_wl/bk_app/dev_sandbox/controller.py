@@ -25,6 +25,7 @@ from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.dev_sandbox.conf import (
     APP_SERVER_NETWORK_CONFIG,
     CODE_EDITOR_NETWORK_CONFIG,
+    DEV_SANDBOX_WORKSPACE,
     DEV_SERVER_NETWORK_CONFIG,
 )
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
@@ -60,6 +61,7 @@ class DevSandboxUrls:
 class DevSandboxDetail:
     """沙箱服务详情"""
 
+    workspace: str
     urls: DevSandboxUrls
     envs: Dict[str, str]
     status: str
@@ -120,6 +122,7 @@ class DevSandboxController:
             raise DevSandboxResourceNotFound("dev sandbox not found")
 
         return DevSandboxDetail(
+            workspace=DEV_SANDBOX_WORKSPACE,
             urls=DevSandboxUrls(base=base_url),
             envs=dev_sandbox.runtime.envs,
             status=dev_sandbox.phase,

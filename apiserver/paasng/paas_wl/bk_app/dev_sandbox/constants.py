@@ -49,8 +49,5 @@ class DevSandboxEnvKey(StrStructuredEnum):
     SOURCE_FETCH_METHOD = EnumField("SOURCE_FETCH_METHOD")
     SOURCE_FETCH_URL = EnumField("SOURCE_FETCH_URL")
     TOKEN = EnumField("TOKEN")
-    # TODO 提供自定义代码编辑器镜像后，修改这以下两个环境变量
-    #  （START_DIR 应该可以废弃，统一用 WORKSPACE）
     CODE_EDITOR_PASSWORD = EnumField("PASSWORD")
-    CODE_EDITOR_START_DIR = EnumField("START_DIR")
     CODE_EDITOR_DISABLE_TELEMETRY = EnumField("DISABLE_TELEMETRY")

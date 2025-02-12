@@ -67,7 +67,8 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def list(self, request, *args, **kwargs):
         modules = self.get_application().modules.all()
-        dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules)
+        # 注：version_info 为 None 的特殊沙箱无需提供给前端
+        dev_sandboxes = DevSandbox.objects.filter(owner=request.user.pk, module__in=modules).exclude(version_info=None)
         return Response(data=DevSandboxListOutputSLZ(dev_sandboxes, many=True).data)
 
     @swagger_auto_schema(

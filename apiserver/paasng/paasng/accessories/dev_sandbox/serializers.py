@@ -39,7 +39,7 @@ class DevSandboxListOutputSLZ(serializers.Serializer):
 
     @swagger_serializer_method(serializer_or_field=serializers.DictField)
     def get_version_info(self, obj: DevSandbox) -> Dict[str, str]:
-        return asdict(obj.version_info)
+        return asdict(obj.version_info) if obj.version_info else {}
 
 
 class SourceCodeVersionInfoSLZ(serializers.Serializer):

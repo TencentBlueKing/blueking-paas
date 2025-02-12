@@ -213,7 +213,7 @@ export default {
     },
     // 沙箱加载完成
     isSandboxReady() {
-      return this.sandboxData.status === 'Running';
+      return this.sandboxData.status === 'ready';
     },
     // 构建成功
     isBuildSuccess() {

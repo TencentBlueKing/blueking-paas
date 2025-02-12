@@ -30,6 +30,7 @@ from paasng.accessories.servicehub.binding_policy.selector import (
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import AppEnvName
 from tests.api.test_cnative_migration import get_random_string
 from tests.paasng.accessories.servicehub import data_mocks
@@ -58,14 +59,19 @@ def plan2(service_obj):
     return list(mixed_plan_mgr.list(service_obj))[1]
 
 
+@pytest.fixture
+def tenant_id():
+    return "tenant_test"
+
+
 class TestPlanSelectorSelect:
-    def test_static(self, service_obj, bk_prod_env, plan1):
-        ServiceBindingPolicyManager(service_obj).set_static([plan1])
+    def test_static(self, service_obj, bk_prod_env, plan1, tenant_id):
+        ServiceBindingPolicyManager(service_obj, tenant_id).set_static([plan1])
 
         assert PlanSelector().select(service_obj, bk_prod_env) == plan1
 
     def test_env_specified(self, service_obj, bk_stag_env, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),
                 (AppEnvName.PROD, [plan2]),
@@ -80,7 +86,7 @@ class TestPlanSelectorSelect:
             PlanSelector().select(service_obj, bk_prod_env)
 
     def test_multiple_found(self, service_obj, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_static([plan1, plan2])
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_static([plan1, plan2])
 
         with pytest.raises(MultiplePlanFoundError):
             PlanSelector().select(service_obj, bk_prod_env)
@@ -120,8 +126,8 @@ class TestPlanSelectorSelectWithPrecedenceRegionIn:
         - region: r1 -> plan2
         - * -> plan1
         """
-        ServiceBindingPolicyManager(service_obj).set_static([plan1])
-        ServiceBindingPolicyManager(service_obj).add_precedence_static(
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).add_precedence_static(
             cond_type=PrecedencePolicyCondType.REGION_IN, cond_data={"regions": ["r1"]}, plans=[plan2]
         )
         return plan1, plan2
@@ -131,7 +137,7 @@ class TestPlanSelectorSelectWithPrecedenceRegionIn:
 
         - region: r1 -> {stag: plan2, prod: plan1}
         """
-        ServiceBindingPolicyManager(service_obj).add_precedence_env_specific(
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).add_precedence_env_specific(
             cond_type=PrecedencePolicyCondType.REGION_IN,
             cond_data={"regions": ["r1"]},
             env_plans=[(AppEnvName.STAG, [plan2]), (AppEnvName.PROD, [plan1])],
@@ -165,15 +171,15 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
         - region: r1 -> plan2
         - * -> plan1
         """
-        ServiceBindingPolicyManager(service_obj).set_static([plan1])
-        ServiceBindingPolicyManager(service_obj).add_precedence_static(
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).add_precedence_static(
             cond_type=PrecedencePolicyCondType.CLUSTER_IN, cond_data={"cluster_names": [cluster_name]}, plans=[plan2]
         )
 
 
 class TestPlanSelectorListPossiblePlans:
     def test_static_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_static([plan1])
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is False
@@ -182,7 +188,7 @@ class TestPlanSelectorListPossiblePlans:
         assert possible_plans.get_env_specific_plans() is None
 
     def test_static_multiple(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_static([plan1, plan2])
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_static([plan1, plan2])
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is True
@@ -191,7 +197,7 @@ class TestPlanSelectorListPossiblePlans:
         assert possible_plans.get_env_specific_plans() is None
 
     def test_env_specific_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),
                 (AppEnvName.PROD, [plan2]),
@@ -208,7 +214,7 @@ class TestPlanSelectorListPossiblePlans:
         }
 
     def test_env_specific_has_multi(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, bk_prod_env.tenant_id).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),
                 (AppEnvName.PROD, [plan1, plan2]),
@@ -224,11 +230,23 @@ class TestPlanSelectorListPossiblePlans:
             "prod": [plan1, plan2],
         }
 
+    def test_tenant_isolation(self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id):
+        ServiceBindingPolicyManager(service_obj, tenant_id).set_static([plan1.uuid, plan2.uuid])
+        ServiceBindingPolicyManager(service_obj, tenant_id).set_env_specific(
+            env_plans=[
+                (AppEnvName.STAG, [plan1]),
+                (AppEnvName.PROD, [plan1, plan2]),
+            ]
+        )
+        possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
+        assert possible_plans.get_static_plans() == []
+        assert possible_plans.get_env_specific_plans() is None
+
 
 class Test__get_plan_by_env:
     @pytest.fixture
     def with_plans_env(self, service_obj, bk_module, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),
                 (AppEnvName.PROD, [plan1, plan2]),
@@ -237,7 +255,7 @@ class Test__get_plan_by_env:
 
     @pytest.fixture
     def with_plans_static(self, service_obj, bk_module, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1])
 
     def test_select_success(self, service_obj, bk_stag_env, plan1, with_plans_static):
         selected_plan = get_plan_by_env(service_obj, bk_stag_env, None, None)

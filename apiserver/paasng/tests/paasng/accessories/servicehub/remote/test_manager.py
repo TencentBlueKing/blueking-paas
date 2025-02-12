@@ -118,7 +118,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = plans
 
         # Set the binding policy and bind
-        ServiceBindingPolicyManager(bk_service).set_static([plans[0]])
+        ServiceBindingPolicyManager(bk_service, bk_module.tenant_id).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         with mock.patch.object(mgr, "get") as get_service:
@@ -146,7 +146,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = [bk_plan_1]
 
         # Set the binding policy and bind
-        ServiceBindingPolicyManager(bk_service).set_static([bk_service.plans[0]])
+        ServiceBindingPolicyManager(bk_service, bk_module.tenant_id).set_static([bk_service.plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         env = bk_module.get_envs("stag")
@@ -192,7 +192,7 @@ class TestRemoteMgrWithRealStore:
         mgr = RemoteServiceMgr(store=store)
 
         plans = bk_service.plans
-        ServiceBindingPolicyManager(bk_service).set_static([plans[0]])
+        ServiceBindingPolicyManager(bk_service, bk_module.tenant_id).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
         env = bk_module.get_envs("stag")
 
@@ -201,7 +201,7 @@ class TestRemoteMgrWithRealStore:
             assert rel.is_provisioned() is True
 
         # Change the binding policy
-        ServiceBindingPolicyManager(bk_service).set_static([plans[1]])
+        ServiceBindingPolicyManager(bk_service, bk_module.tenant_id).set_static([plans[1]])
         with pytest.raises(CanNotModifyPlan):
             mgr.bind_service(bk_service, bk_module)
 
@@ -219,7 +219,7 @@ class TestRemoteMgr:
         # Initialize with a static binding policy
         mgr = RemoteServiceMgr(store=store)
         svc = mgr.get(id_of_first_service)
-        ServiceBindingPolicyManager(svc).set_static([svc.get_plans()[0]])
+        ServiceBindingPolicyManager(svc, bk_module.tenant_id).set_static([svc.get_plans()[0]])
 
     @pytest.fixture()
     def store(self):

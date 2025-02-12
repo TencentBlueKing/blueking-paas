@@ -113,7 +113,7 @@ class PlanSelector:
             policies are evaluated.
         """
         precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(
-            service_id=service.uuid, tenant_id=env.application.tenant_id
+            service_id=service.uuid, tenant_id=env.tenant_id
         ).order_by("-priority")
         for pre_policy in precedence_policies:
             policy_obj = precedence_policy_factory(

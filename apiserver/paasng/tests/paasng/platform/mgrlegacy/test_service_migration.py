@@ -23,6 +23,7 @@ import pytest
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
@@ -42,6 +43,7 @@ dummy_service = RemoteServiceObj(
     plans=[
         RemotePlanObj(
             uuid="11111111-1111-1111-1111-111111111111",
+            tenant_id=DEFAULT_TENANT_ID,
             name="dummy-plan",
             description="dummy plan",
             is_eager=True,
@@ -56,7 +58,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        ServiceBindingPolicyManager(dummy_service).set_static([dummy_service.get_plans()[0]])
+        ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])
         yield
 
 

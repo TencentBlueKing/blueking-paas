@@ -21,10 +21,12 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -201,9 +203,11 @@ class Plan(UuidAuditedModel):
 
     service = models.ForeignKey("Service", on_delete=models.CASCADE)
     name = models.CharField("方案名称", max_length=64)
+    display_name = models.CharField(_("方案展示名称"), max_length=64, default="")
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("service", "name")

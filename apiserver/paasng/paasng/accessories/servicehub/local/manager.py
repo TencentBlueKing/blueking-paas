@@ -129,9 +129,7 @@ class LocalServiceObj(ServiceObj):
 
     def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
         qs = self._get_plans(is_active)
-        # 若不为运营租户，则返回该租户下的方案
-        if tenant_id != OP_TYPE_TENANT_ID:
-            qs = qs.filter(tenant_id=tenant_id)
+        return qs.filter(tenant_id=tenant_id)
 
 
 class LocalEngineAppInstanceRel(EngineAppInstanceRel):

@@ -363,9 +363,11 @@ def bk_user(request):
 def _mock_bk_auth():
     from tests.utils.mocks.bkauth import StubBkOauthClient
 
-    with mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient), mock.patch(
-        "paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient
-    ), mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient):
+    with (
+        mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient),
+    ):
         yield
 
 
@@ -635,7 +637,7 @@ def _setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
         ),
         SourceTypeSpecConfig(
             name="bare_git",
-            label_zh_cn="bare_git",
+            label_zh_cn="xbare_git",
             label_en="bare_git",
             enabled=True,
             spec_cls=f"{spec_cls_module_path}.BareGitSourceTypeSpec",

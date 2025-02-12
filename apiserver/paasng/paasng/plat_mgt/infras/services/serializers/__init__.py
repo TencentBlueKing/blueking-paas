@@ -15,34 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Unit tests for ceph provider"""
-
-import uuid
-
-from paasng.accessories.servicehub.services import PlanObj, ServiceObj
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from tests.utils.helpers import generate_random_string
-
-SERVICE_COMMON_ARGS: dict = dict(
-    logo="http://logo.com/my.jpg",
-    available_languages="all",
-    is_visible=True,
+from .binding_policies import (
+    DeletePolicyCombinationSLZ,
+    PolicyCombinationConfigOutputSLZ,
+    PolicyCombinationConfigUpsertSLZ,
+)
+from .services import (
+    BasePlanObjSLZ,
+    PlanCreateInputSLZ,
+    PlanOutputSLZ,
+    PlanUpdateInputSLZ,
+    PreCreatedInstanceSLZ,
 )
 
-
-def gen_service():
-    name = generate_random_string()
-    return ServiceObj(uuid=str(uuid.uuid4()), name=name, display_name=name, **SERVICE_COMMON_ARGS)
-
-
-def gen_plan():
-    name = generate_random_string()
-    return PlanObj(
-        uuid=str(uuid.uuid4()),
-        tenant_id=DEFAULT_TENANT_ID,
-        name=name,
-        description=generate_random_string(),
-        is_active=True,
-        is_eager=False,
-        properties={},
-    )
+__all__ = [
+    # services
+    "PlanOutputSLZ",
+    "PlanUpdateInputSLZ",
+    "PlanCreateInputSLZ",
+    "BasePlanObjSLZ",
+    "PreCreatedInstanceSLZ",
+    # binding_policy
+    "DeletePolicyCombinationSLZ",
+    "PolicyCombinationConfigUpsertSLZ",
+    "PolicyCombinationConfigOutputSLZ",
+]

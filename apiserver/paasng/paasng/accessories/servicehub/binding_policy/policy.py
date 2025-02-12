@@ -136,13 +136,16 @@ def get_service_type(service: ServiceObj) -> str:
 
 @define
 class UnifiedAllocationConfig:
-    """The configuration for building static policy."""
+    """The configuration for unified allocation policy.
+
+    This class holds the necessary configuration data extracted from a ServiceBindingPolicy.
+    """
 
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_by_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
+    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
         return cls(
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
@@ -151,7 +154,10 @@ class UnifiedAllocationConfig:
 
 @define
 class RuleBasedAllocationConfig:
-    """The configuration for building precedence policy."""
+    """The configuration for building precedence policy.
+
+    This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
+    """
 
     cond_type: str
     cond_data: dict[str, list[str]]
@@ -160,7 +166,7 @@ class RuleBasedAllocationConfig:
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_by_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationConfig":
+    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationConfig":
         return cls(
             cond_type=policy.cond_type,
             cond_data=policy.cond_data,
@@ -172,9 +178,41 @@ class RuleBasedAllocationConfig:
 
 @define
 class PolicyCombinationConfig:
-    """The configuration for building policy combination."""
+    """The configuration for building policy combination.
+
+
+    This class integrates multiple rule-based policies to allocate service bindings
+    based on specific conditions like region or cluster, ensuring the selection of
+    appropriate plans and providing a fallback option if none of the conditions are met.
+
+    Example Usage:
+    - If the region is "region_default", assign plans ["plan_region"].
+    - Else if the cluster is "cluster_default", assign plans ["plan_cluster"].
+    - Fallback to plans ["plan_default"] if none of the above conditions are met.
+    This can be represented as:
+    tenant_policy_config = PolicyCombinationConfig(
+        tenant_id="tenant_x",
+        service_id="service_x"
+        rule_based_allocation_configs=[
+            RuleBasedAllocationConfig(
+                cond_type=PrecedencePolicyCondType.REGION_IN.value,
+                cond_data={"regions": ["region_default"]},
+                priority=2,
+                plans=["plan_region"]
+            ),
+            RuleBasedAllocationConfig(
+                cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
+                cond_data={"cluster_names": ["cluster_default"]},
+                priority=1,
+                plans=["plan_cluster"]
+            )
+        ],
+        unified_allocation_config=UnifiedAllocationConfig(plans=["plan_default"])
+    )
+    """
 
     tenant_id: str
+    service_id: str
     # 按规则分配
     rule_based_allocation_configs: list[RuleBasedAllocationConfig]
     # 统一分配，也是按规则分配最终的保底选项

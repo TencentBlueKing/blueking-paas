@@ -47,16 +47,6 @@ class TestDevSandboxSLZ:
         slz = DevSandboxSerializer(DevSandbox, gvk_config)
         manifest = slz.serialize(dev_sandbox)
 
-        envs = [
-            {"name": "FOO", "value": "BAR"},
-            {"name": "WORKSPACE", "value": "/data/workspace"},
-            {"name": "TOKEN", "value": dev_sandbox.runtime.envs[DevSandboxEnvKey.TOKEN]},
-            {"name": "SOURCE_FETCH_METHOD", "value": "BK_REPO"},
-            {"name": "SOURCE_FETCH_URL", "value": "http://bkrepo.example.com"},
-            {"name": "PASSWORD", "value": dev_sandbox.code_editor_cfg.password},
-            {"name": "DISABLE_TELEMETRY", "value": "true"},
-        ]
-
         labels = get_dev_sandbox_labels(dev_sandbox.app)
         assert manifest == {
             "apiVersion": "v1",
@@ -72,7 +62,13 @@ class TestDevSandboxSLZ:
                         "name": "dev-sandbox",
                         "image": dev_sandbox.runtime.image,
                         "imagePullPolicy": dev_sandbox.runtime.image_pull_policy,
-                        "env": envs,
+                        "env": [
+                            {"name": "FOO", "value": "BAR"},
+                            {"name": "WORKSPACE", "value": "/data/workspace"},
+                            {"name": "TOKEN", "value": dev_sandbox.runtime.envs[DevSandboxEnvKey.TOKEN]},
+                            {"name": "SOURCE_FETCH_METHOD", "value": "BK_REPO"},
+                            {"name": "SOURCE_FETCH_URL", "value": "http://bkrepo.example.com"},
+                        ],
                         "ports": [
                             {"containerPort": settings.DEV_SANDBOX_DEVSERVER_PORT},
                             {"containerPort": settings.CONTAINER_PORT},
@@ -90,7 +86,10 @@ class TestDevSandboxSLZ:
                         "name": "code-editor",
                         "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
                         "imagePullPolicy": "IfNotPresent",
-                        "env": envs,
+                        "env": [
+                            {"name": "PASSWORD", "value": dev_sandbox.code_editor_cfg.password},
+                            {"name": "DISABLE_TELEMETRY", "value": "true"},
+                        ],
                         "ports": [
                             {"containerPort": settings.DEV_SANDBOX_CODE_EDITOR_PORT},
                         ],

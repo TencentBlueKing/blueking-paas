@@ -63,7 +63,7 @@ class DevSandboxServiceDeserializer(AppEntityDeserializer["DevSandboxService"]):
             ServicePortPair(
                 name=p.name,
                 port=p.port,
-                target_port=p.target_port,
+                target_port=p.targetPort,
             )
             for p in kube_data.spec.ports
         ]

@@ -21,9 +21,8 @@ class Migration(migrations.Migration):
             name='password',
             field=blue_krill.models.fields.EncryptField(help_text='登录密码'),
         ),
-        migrations.AlterField(
+        migrations.RemoveField(
             model_name='devsandbox',
             name='status',
-            field=models.CharField(max_length=32, verbose_name='沙箱状态'),
         ),
     ]

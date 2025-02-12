@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
-from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, PodPhase
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxDeserializer, DevSandboxSerializer
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_name
@@ -40,7 +40,7 @@ class DevSandbox(AppEntity):
     # 代码编辑器配置
     code_editor_cfg: CodeEditorConfig | None = None
     # 部署后, 从集群中获取状态
-    phase: str = PodPhase.UNKNOWN
+    status: str = DevSandboxStatus.PENDING
 
     class Meta:
         kres_class = kres.KPod

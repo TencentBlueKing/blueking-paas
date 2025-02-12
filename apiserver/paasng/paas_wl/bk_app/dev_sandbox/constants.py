@@ -18,15 +18,6 @@
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class PodPhase(StrStructuredEnum):
-    """Pod 健康状态"""
-
-    HEALTHY = EnumField("Healthy")
-    PROGRESSING = EnumField("Progressing")
-    UNHEALTHY = EnumField("Unhealthy")
-    UNKNOWN = EnumField("Unknown")
-
-
 class SourceCodeFetchMethod(StrStructuredEnum):
     """源码获取方式"""
 
@@ -38,8 +29,8 @@ class SourceCodeFetchMethod(StrStructuredEnum):
 class DevSandboxStatus(StrStructuredEnum):
     """沙箱状态"""
 
-    ACTIVE = EnumField("active", label="就绪")
-    ERROR = EnumField("error", label="异常")
+    READY = EnumField("ready")
+    PENDING = EnumField("pending")
 
 
 class DevSandboxEnvKey(StrStructuredEnum):

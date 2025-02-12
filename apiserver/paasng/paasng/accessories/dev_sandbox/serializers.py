@@ -23,7 +23,7 @@ from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.dev_sandbox.constants import PodPhase
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
@@ -34,7 +34,6 @@ class DevSandboxListOutputSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="沙箱唯一标识")
     module_name = serializers.CharField(help_text="模块名称", source="module.name")
     version_info = serializers.SerializerMethodField(help_text="版本信息")
-    status = serializers.ChoiceField(choices=PodPhase.get_django_choices(), help_text="运行状态")
     expired_at = serializers.DateTimeField(help_text="过期时间")
     created_at = serializers.DateTimeField(help_text="创建时间", source="created")
 
@@ -94,7 +93,7 @@ class DevSandboxRetrieveOutputSLZ(serializers.Serializer):
     devserver_url = serializers.CharField(help_text="devserver 服务地址", source="urls.devserver")
     code_editor_url = serializers.CharField(help_text="code editor 服务地址", source="urls.code_editor")
 
-    status = serializers.ChoiceField(choices=PodPhase.get_django_choices(), help_text="运行状态")
+    status = serializers.ChoiceField(choices=DevSandboxStatus.get_django_choices(), help_text="运行状态")
 
 
 class DevSandboxCommitInputSLZ(serializers.Serializer):

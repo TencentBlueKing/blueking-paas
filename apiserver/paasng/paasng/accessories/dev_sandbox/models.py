@@ -23,7 +23,6 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.utils.models import make_json_field
 from paasng.accessories.dev_sandbox.utils import generate_password
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -53,7 +52,6 @@ class DevSandboxQuerySet(models.QuerySet):
             code=code,
             module=module,
             owner=owner,
-            status=DevSandboxStatus.ACTIVE,
             expired_at=timezone.now() + DEFAULT_EXPIRED_DURATION,
             version_info=version_info,
             token=generate_password(),
@@ -69,8 +67,6 @@ class DevSandbox(OwnerTimestampedModel):
 
     code = models.CharField(max_length=8, help_text="沙箱标识", unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, db_constraint=False)
-    # 枚举值参见：DevSandboxStatus
-    status = models.CharField(max_length=32, verbose_name="沙箱状态")
     expired_at = models.DateTimeField(null=True, help_text="到期时间")
     version_info = VersionInfoField(help_text="代码版本信息", default=None, null=True)
     token = EncryptField(help_text="访问令牌", null=True)

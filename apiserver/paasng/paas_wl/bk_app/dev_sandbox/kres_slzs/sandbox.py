@@ -29,7 +29,7 @@ from paas_wl.bk_app.dev_sandbox.conf import (
     DEV_SERVER_NETWORK_CONFIG,
     DEV_SERVER_RESOURCE_QUOTA,
 )
-from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, DevSandboxStatus, SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.labels import get_dev_sandbox_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
@@ -164,7 +164,7 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
             ),
             source_code_cfg=self._get_source_code_cfg_from_envs(envs),
             code_editor_cfg=self._get_code_editor_cfg_from_envs(envs),
-            phase=kube_data.status.phase,
+            status=self._get_dev_sandbox_status(kube_data),
         )
 
     @staticmethod
@@ -190,3 +190,22 @@ class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
             return CodeEditorConfig(password=code_editor_password)
 
         return None
+
+    @staticmethod
+    def _get_dev_sandbox_status(pod: ResourceInstance) -> DevSandboxStatus:
+        """沙箱 Ready 条件：所有容器都已经 Ready"""
+        if not getattr(pod, "status"):
+            return DevSandboxStatus.PENDING
+
+        container_statuses = getattr(pod.status, "containerStatuses")
+        if not container_statuses:
+            return DevSandboxStatus.PENDING
+
+        if len(container_statuses) != len(pod.spec.containers):
+            return DevSandboxStatus.PENDING
+
+        for cs in container_statuses:
+            if not cs.ready:
+                return DevSandboxStatus.PENDING
+
+        return DevSandboxStatus.READY

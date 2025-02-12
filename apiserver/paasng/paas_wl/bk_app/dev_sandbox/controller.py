@@ -125,7 +125,7 @@ class DevSandboxController:
             workspace=DEV_SANDBOX_WORKSPACE,
             urls=DevSandboxUrls(base=base_url),
             envs=dev_sandbox.runtime.envs,
-            status=dev_sandbox.phase,
+            status=dev_sandbox.status,
         )
 
     def _deploy(

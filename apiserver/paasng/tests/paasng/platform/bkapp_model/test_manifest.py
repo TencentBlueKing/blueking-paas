@@ -358,6 +358,7 @@ class TestMountsManifestConstructor:
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
+            sub_paths=["configmap_z"],
             source_config=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
         )
         # Create 2 mount objects
@@ -370,6 +371,7 @@ class TestMountsManifestConstructor:
                 mountPath="/etc/conf",
                 name="nginx",
                 source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
+                subPaths=["configmap_z"],
             )
         ]
         assert blank_resource.spec.envOverlay.mounts == [
@@ -378,6 +380,7 @@ class TestMountsManifestConstructor:
                 mountPath="/etc/conf_stag",
                 name="nginx",
                 source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
+                subPaths=["configmap_z"],
             )
         ]
 

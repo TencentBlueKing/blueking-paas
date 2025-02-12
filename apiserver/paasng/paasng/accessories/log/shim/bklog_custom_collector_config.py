@@ -60,6 +60,7 @@ def get_or_create_custom_collector_config(
             "bk_data_id": collector_config.bk_data_id,
             "log_paths": log_paths,
             "log_type": log_type,
+            "tenant_id": module.tenant_id,
         },
     )
     return collector_config
@@ -112,6 +113,7 @@ def update_or_create_custom_collector_config(
                 "log_type": log_type,
                 "is_builtin": True,
                 "is_enabled": True,
+                "tenant_id": module.tenant_id,
             },
         )
 

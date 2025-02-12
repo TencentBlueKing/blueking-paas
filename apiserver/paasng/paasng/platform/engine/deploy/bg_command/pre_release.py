@@ -43,6 +43,10 @@ class ApplicationPreReleaseExecutor(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "app pre-release interrupted")
+            return None
+
         pre_phase_start.send(self, phase=DeployPhaseTypes.RELEASE)
 
         hook = self.deployment.get_deploy_hooks().get_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
@@ -124,7 +128,7 @@ class CommandPoller(DeployPoller):
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
-        if coordinator.status_polling_timeout:
+        if coordinator.is_status_polling_timeout:
             command_status = CommandStatus.FAILED
         else:
             coordinator.update_polling_time()

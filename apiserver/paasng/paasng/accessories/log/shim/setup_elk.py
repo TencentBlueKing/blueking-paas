@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import Optional
 
 import cattr
 from attr import define
@@ -24,6 +23,8 @@ from django.conf import settings
 from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.models import ClusterElasticSearchConfig
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
@@ -35,9 +36,9 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
-ELK_STDOUT_COLLECTOR_CONFIG_ID = "elk-stdout"
-ELK_STRUCTURED_COLLECTOR_CONFIG_ID = "elk-structured"
-ELK_INGRESS_COLLECTOR_CONFIG_ID = "elk-ingress"
+ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL = "elk-stdout-{cluster_uuid}"
+ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL = "elk-structured-{cluster_uuid}"
+ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL = "elk-ingress-{cluster_uuid}"
 
 
 @define
@@ -103,12 +104,17 @@ def construct_platform_es_params() -> ESParamsConfig:
     )
 
 
-def setup_platform_elk_config(es_host: Optional[ElasticSearchHost] = None):
+def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
     """
-    按租户初始化/更新平台 ELK 日志方案的数据库配置，在新增租户时执行。
+    初始化/更新平台 ELK 日志方案的数据库配置，初始化 SaaS 的 ELK 配置时执行。
     """
-    # 未指定 Host 则使用 settings 中的配置
-    if es_host is None:
+    cluster_es = ClusterElasticSearchConfig.objects.filter(cluster__uuid=cluster_uuid).first()
+    if cluster_es:
+        es_host = ElasticSearchHost(
+            host=cluster_es.host, port=cluster_es.port, http_auth=f"{cluster_es.username}:{cluster_es.password}"
+        )
+    else:
+        # 集群中未配置则使用 settings 中的配置
         es_host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
 
     # 获取构造的 Elasticsearch 查询参数
@@ -116,9 +122,9 @@ def setup_platform_elk_config(es_host: Optional[ElasticSearchHost] = None):
 
     # 定义 index 和 ES 查询参数的对应关系
     collector_configs = [
-        (ELK_STDOUT_COLLECTOR_CONFIG_ID, search_params.stdout),
-        (ELK_STRUCTURED_COLLECTOR_CONFIG_ID, search_params.structured),
-        (ELK_INGRESS_COLLECTOR_CONFIG_ID, search_params.ingress),
+        (ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.stdout),
+        (ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.structured),
+        (ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid), search_params.ingress),
     ]
 
     for config_id, params in collector_configs:
@@ -128,6 +134,7 @@ def setup_platform_elk_config(es_host: Optional[ElasticSearchHost] = None):
             defaults={
                 "elastic_search_host": es_host,
                 "search_params": params,
+                "tenant_id": tenant_id,
             },
         )
         if created:
@@ -138,10 +145,18 @@ def setup_platform_elk_config(es_host: Optional[ElasticSearchHost] = None):
 
 def setup_saas_elk_model(env: ModuleEnvironment):
     """初始化 ELK 日志方案的数据库模型 - SaaS 维度"""
+    cluster_uuid = EnvClusterService(env).get_cluster().uuid
+    setup_platform_elk_config(cluster_uuid, env.tenant_id)
     try:
-        stdout_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID)
-        structured_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID)
-        ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+        stdout_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_STDOUT_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
+        structured_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_STRUCTURED_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
+        ingress_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查
         logger.exception("The elk logs are not configured with the corresponding Elasticsearch.")
@@ -154,7 +169,12 @@ def setup_saas_elk_model(env: ModuleEnvironment):
         ProcessLogQueryConfig.objects.update_or_create(
             env=env,
             process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER,
-            defaults={"stdout": stdout_config, "json": structured_config, "ingress": ingress_config},
+            defaults={
+                "stdout": stdout_config,
+                "json": structured_config,
+                "ingress": ingress_config,
+                "tenant_id": env.tenant_id,
+            },
         )
     except IntegrityError:
         logger.info("unique constraint conflict in the database when creating ProcessLogQueryConfig, can be ignored.")

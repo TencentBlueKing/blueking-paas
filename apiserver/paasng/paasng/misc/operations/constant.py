@@ -21,7 +21,7 @@ from paasng.utils.basic import ChoicesEnum
 
 
 class OperationType(ChoicesEnum):
-    """【已废弃】请不要再使用 misc.operations 目录下的任何内容，暂时保留仅用于社区版本将存量的操作记录同步到 misc.audit 中"""
+    """[deprecated] 请不要再使用 misc.operations 目录下的任何内容，暂时保留仅用于社区版本将存量的操作记录同步到 misc.audit 中"""
 
     CREATE_APPLICATION = 1
     REGISTER_PRODUCT = 4

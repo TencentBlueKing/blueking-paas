@@ -19,6 +19,7 @@ import logging
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.utils.models import AuditedModel
 
@@ -34,6 +35,7 @@ class ApplicationGradeManager(AuditedModel):
 
     app_code = models.CharField(max_length=20, help_text="应用代号")
     grade_manager_id = models.IntegerField(help_text="分级管理员 ID")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("app_code", "grade_manager_id")
@@ -52,6 +54,7 @@ class ApplicationUserGroup(AuditedModel):
     app_code = models.CharField(max_length=20, help_text="应用代号")
     role = models.IntegerField(default=ApplicationRole.DEVELOPER.value)
     user_group_id = models.IntegerField(help_text="权限中心用户组 ID")
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("app_code", "role")

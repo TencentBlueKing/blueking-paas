@@ -50,6 +50,7 @@ def create_bk_monitor_space(application: Application) -> BKMonitorSpace:
             "space_name": space.space_name,
             "space_uid": space.space_uid,
             "extra_info": space.extra_info,
+            "tenant_id": application.tenant_id,
         },
     )[0]
 

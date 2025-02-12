@@ -118,6 +118,8 @@ const (
 	DeploySkipUpdateAnnoKey = "bkapp.paas.bk.tencent.com/deployment-skip-update"
 	// LastSyncedSerializedBkAppAnnoKey 注解保存上一次用于同步 workloads 资源的序列化过的 BkApp 内容
 	LastSyncedSerializedBkAppAnnoKey = "bkapp.paas.bk.tencent.com/last-synced-serialized-bkapp"
+	// LastDeployStatusAnnoKey 注解保存上一次的部署状态
+	LastDeployStatusAnnoKey = "bkapp.paas.bk.tencent.com/last-deploy-status"
 )
 
 const (

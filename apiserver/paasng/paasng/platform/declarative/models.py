@@ -22,6 +22,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.entities import v1alpha2
 from paasng.platform.declarative.constants import AppDescPluginType
@@ -32,9 +33,6 @@ from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_js
 from paasng.utils.structure import NotSetType
 
 logger = logging.getLogger(__name__)
-
-
-BkAppSpecField = make_json_field("BkAppSpecField", v1alpha2.BkAppSpec)
 
 
 class ApplicationDescription(OwnerTimestampedModel):
@@ -50,6 +48,7 @@ class ApplicationDescription(OwnerTimestampedModel):
     modules = JSONField(verbose_name="modules specs", blank=True, default=[])
     plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
     is_creation = models.BooleanField(verbose_name="whether current description creates an application", default=False)
+    tenant_id = tenant_id_field_factory()
 
     def get_plugin(self, plugin_type: AppDescPluginType) -> Optional[Dict]:
         """Return the first plugin in given type"""
@@ -57,6 +56,9 @@ class ApplicationDescription(OwnerTimestampedModel):
             if plugin["type"] == plugin_type.value:
                 return plugin
         return None
+
+
+BkAppSpecField = make_json_field("BkAppSpecField", v1alpha2.BkAppSpec)
 
 
 class DeploymentDescription(TimestampedModel):
@@ -85,6 +87,7 @@ class DeploymentDescription(TimestampedModel):
     plugins = JSONField(verbose_name="extra plugins", blank=True, default=[])
 
     spec: v1alpha2.BkAppSpec = BkAppSpecField(verbose_name="bkapp.spec", null=True, default=None)
+    tenant_id = tenant_id_field_factory()
 
     def get_deploy_hooks(self) -> HookList:
         """从 spec 提取 hook 配置, 用于普通应用部署流程."""

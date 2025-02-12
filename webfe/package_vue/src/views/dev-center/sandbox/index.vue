@@ -468,7 +468,7 @@ export default {
       }
     },
     handleVisitNow() {
-      const url = this.ensureHttpProtocol(this.sandboxData?.urls?.app_url);
+      const url = this.ensureHttpProtocol(this.sandboxData.app_url);
       window.open(url, '_blank');
     },
     handleRightTabCollapseChange(data) {
@@ -525,6 +525,7 @@ export default {
         const res = await this.$store.dispatch('sandbox/sandboxSubmitCode', {
           appCode: this.code,
           moduleId: this.module,
+          devSandboxCode: this.devSandboxCode,
           data: {
             message,
           },

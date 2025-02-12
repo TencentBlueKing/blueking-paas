@@ -72,8 +72,8 @@ export default {
     /**
      * 沙箱提交代码
      */
-    sandboxSubmitCode({}, { appCode, moduleId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/commit/`;
+    sandboxSubmitCode({}, { appCode, moduleId, devSandboxCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/commit/`;
       return http.post(url, data, config);
     },
   },

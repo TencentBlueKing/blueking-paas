@@ -91,7 +91,7 @@
                 class="iframe-loading"
               >
                 <img src="/static/images/loading.gif" />
-                <p>{{ $t('沙箱环境正在启动，预计需要约 1 分钟，请稍候。') }}</p>
+                <p>{{ $t('沙箱环境正在启动，预计需要约 30 秒，请稍候。') }}</p>
               </div>
             </div>
             <!-- 登录展示沙盒后，展示右侧的tab信息 -->

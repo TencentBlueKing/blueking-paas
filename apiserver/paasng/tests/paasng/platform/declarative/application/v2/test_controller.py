@@ -84,7 +84,7 @@ class TestAppDeclarativeControllerCreation:
     )
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, ctx):
         # 保证应用 ID 是以字母开头
-        bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
+        bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len - 2))}"
         app_json = builder.make_app_desc(bk_app_code, decorator.with_module("default", True))
 
         controller = AppDeclarativeController(bk_user)

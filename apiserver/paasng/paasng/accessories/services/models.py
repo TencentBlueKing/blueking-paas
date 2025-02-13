@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
@@ -127,7 +126,7 @@ class Service(UuidAuditedModel):
         if config:
             service_instance_param["config"] = config
 
-        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)
+        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)  # noqa: F811
         return service_instance
 
     def delete_service_instance(self, service_instance: "ServiceInstance") -> None:
@@ -203,14 +202,13 @@ class Plan(UuidAuditedModel):
 
     service = models.ForeignKey("Service", on_delete=models.CASCADE)
     name = models.CharField("方案名称", max_length=64)
-    display_name = models.CharField(_("方案展示名称"), max_length=64, default="")
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("service", "name")
+        unique_together = ("service", "name", "tenant_id")
 
     @property
     def is_eager(self):

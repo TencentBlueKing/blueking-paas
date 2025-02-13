@@ -200,27 +200,27 @@ class TestMixedMgrBindService:
             mixed_service_mgr.bind_service(service_obj, bk_module)
 
     def test_static_single(self, bk_module, service_obj, plan1):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
         assert rel_pk is not None
 
     def test_static_multi(self, bk_module, service_obj, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1, plan2])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1, plan2])
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module)
 
     def test_valid_plan_id(self, service_obj, bk_module, plan1):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan1.uuid)
         assert rel_pk is not None
 
     def test_invalid_plan_id(self, service_obj, bk_module, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan2.uuid)
 
     def test_valid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
             env_plans=[("stag", [plan1]), ("prod", [plan2])]
         )
         rel_pk = mixed_service_mgr.bind_service(
@@ -229,7 +229,7 @@ class TestMixedMgrBindService:
         assert rel_pk is not None
 
     def test_invalid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_env_specific(
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
             env_plans=[("stag", [plan1]), ("prod", [plan1])]
         )
         with pytest.raises(BindServicePlanError):
@@ -243,7 +243,7 @@ class TestMixedMgrBindService:
             mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
 
     def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2):
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan2, plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan2, plan1])
         rel_pk = mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
         assert rel_pk is not None
 
@@ -258,7 +258,7 @@ class TestMixedMgrBindService:
         for env in bk_app.envs.all():
             assert list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app)) == []
 
-        ServiceBindingPolicyManager(service_obj, bk_module.tenant_id).set_static([plan1])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
 
         assert rel_pk is not None

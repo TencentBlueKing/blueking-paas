@@ -33,7 +33,6 @@ class BasePlanObjSLZ(serializers.Serializer):
     uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     name = serializers.CharField()
     tenant_id = serializers.CharField(help_text="所属租户")
-    display_name = serializers.CharField(help_text="展示名称")
     description = serializers.CharField()
     config = serializers.JSONField(required=False, default=dict)
     is_active = serializers.BooleanField()

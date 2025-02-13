@@ -24,7 +24,6 @@ from rest_framework.response import Response
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
 from paasng.accessories.servicehub.services import NOTSET, PlanObj
-from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -38,9 +37,8 @@ from paasng.utils.error_codes import error_codes
 
 
 class PlanViewSet(viewsets.GenericViewSet):
-    """（租户管理员）增强服务方案管理，接入相关 API"""
+    """（平台管理员）增强服务方案管理，接入相关 API"""
 
-    # TODO：校验租户管理员权限
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     def get_plan(self, service_id, plan_id) -> PlanObj:
@@ -58,8 +56,7 @@ class PlanViewSet(viewsets.GenericViewSet):
     )
     def list_all(self, request, *args, **kwargs):
         """获取所有服务的方案列表"""
-        tenant_id = get_tenant(request.user).id
-        plans = mixed_plan_mgr.list_by_tenant_id(tenant_id)
+        plans = mixed_plan_mgr.list()
         return Response(data=PlanOutputSLZ(plans, many=True).data)
 
     @swagger_auto_schema(

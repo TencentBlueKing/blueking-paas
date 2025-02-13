@@ -22,7 +22,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub.binding_policy.manager import (
     PolicyCombinationManager,
-    get_all_policy_combination_config,
+    get_all_policy_combination_configs,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -46,7 +46,7 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
     )
     def list(self, request, service_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
-        configs = get_all_policy_combination_config(service)
+        configs = get_all_policy_combination_configs(service)
         return Response(data=PolicyCombinationConfigOutputSLZ(configs, many=True).data)
 
     @swagger_auto_schema(

@@ -230,10 +230,9 @@ class PolicyCombinationManager:
         return env_plan_objs
 
 
-def get_all_policy_combination_config(service: ServiceObj) -> list[PolicyCombinationConfig]:
+def get_all_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinationConfig]:
     """
-    Retrieve all service binding precedence policies, group them by tenant_id,
-    and construct a list of policy combinations for each tenant.
+    Retrieve all service policy combination configs
     """
 
     # Retrieve all policies and order them by tenant_id and priority (descending)

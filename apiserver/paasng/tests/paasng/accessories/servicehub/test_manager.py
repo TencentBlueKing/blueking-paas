@@ -287,8 +287,8 @@ class TestMixedMgrBindService:
         mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)
         mgr.upsert_policy_combination(policy_config)
 
-        policy_combination_configs = mgr.get_tenant_policy_combination_config()
-        assert policy_combination_configs == [policy_config]
+        policy_combination_config = mgr.get_tenant_policy_combination_config()
+        assert policy_combination_config == policy_config
 
 
 class TestLocalMgrProvisionAndInstance:

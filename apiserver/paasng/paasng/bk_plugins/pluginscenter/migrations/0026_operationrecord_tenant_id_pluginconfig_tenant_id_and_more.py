@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="plugininstance",
-            name="app_tenant_id",
+            name="plugin_tenant_id",
             field=models.CharField(
                 default="",
                 help_text="插件对哪个租户的用户可用，当租户模式为全租户时，本字段值为空",
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="plugininstance",
-            name="app_tenant_mode",
+            name="plugin_tenant_mode",
             field=models.CharField(
                 default="global",
                 help_text="插件在租户层面的可用范围，可选值：全租户、指定租户",

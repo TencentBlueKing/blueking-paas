@@ -55,8 +55,8 @@ class PluginRequestSLZ(serializers.Serializer):
     logo_url = serializers.CharField(source="get_logo_url", required=False)
     publisher = serializers.CharField(required=False)
     # 租户相关信息
-    app_tenant_mode = serializers.CharField(help_text="租户模式")
-    app_tenant_id = serializers.CharField(help_text="租户 ID")
+    plugin_tenant_mode = serializers.CharField(help_text="租户模式")
+    plugin_tenant_id = serializers.CharField(help_text="租户 ID")
     tenant_id = serializers.CharField(help_text="所属租户")
 
     def get_operator(self, obj) -> str:

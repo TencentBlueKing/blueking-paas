@@ -446,7 +446,7 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
         fields["template"] = TemplateChoiceField(
             choices=[(template.id, template) for template in pd.basic_info_definition.init_templates]
         )
-        fields["app_tenant_mode"] = serializers.ChoiceField(
+        fields["plugin_tenant_mode"] = serializers.ChoiceField(
             help_text="租户模式", choices=AppTenantMode.get_choices(), default=None
         )
     return i18n(type("DynamicPluginSerializer", (serializers.Serializer,), fields))
@@ -469,7 +469,7 @@ class StubCreatePluginSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="插件名称")
     template = serializers.CharField(help_text="模板id")
     extra_fields = serializers.DictField(help_text="额外字段")
-    app_tenant_mode = serializers.ChoiceField(
+    plugin_tenant_mode = serializers.ChoiceField(
         help_text="租户模式，运营租户时需要传参", choices=AppTenantMode.get_choices(), default=None
     )
 

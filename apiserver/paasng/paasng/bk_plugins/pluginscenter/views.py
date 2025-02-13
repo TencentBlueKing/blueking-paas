@@ -233,8 +233,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
-            request.user, validated_data["app_tenant_mode"]
+        plugin_tenant_mode, plugin_tenant_id, tenant = validate_app_tenant_params(
+            request.user, validated_data["plugin_tenant_mode"]
         )
 
         plugin_status = (
@@ -252,8 +252,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             # 如果插件不需要审批，则状态设置为开发中
             status=plugin_status,
             # 写入租户相关信息
-            app_tenant_mode=app_tenant_mode,
-            app_tenant_id=app_tenant_id,
+            plugin_tenant_mode=plugin_tenant_mode,
+            plugin_tenant_id=plugin_tenant_id,
             tenant_id=tenant.id,
         )
         plugin.save()

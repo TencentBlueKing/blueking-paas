@@ -100,13 +100,13 @@ class PluginInstance(UuidAuditedModel):
         default=None,
     )
 
-    app_tenant_mode = models.CharField(
+    plugin_tenant_mode = models.CharField(
         verbose_name="插件租户模式",
         max_length=16,
         default=AppTenantMode.GLOBAL.value,
         help_text="插件在租户层面的可用范围，可选值：全租户、指定租户",
     )
-    app_tenant_id = models.CharField(
+    plugin_tenant_id = models.CharField(
         verbose_name="插件租户 ID",
         max_length=32,
         default="",

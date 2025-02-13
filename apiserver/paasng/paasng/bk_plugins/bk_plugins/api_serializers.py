@@ -46,8 +46,8 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.CharField()
     # 租户相关信息
-    app_tenant_mode = serializers.CharField(help_text="租户模式")
-    app_tenant_id = serializers.CharField(help_text="租户 ID")
+    plugin_tenant_mode = serializers.CharField(help_text="租户模式")
+    plugin_tenant_id = serializers.CharField(help_text="租户 ID")
     tenant_id = serializers.CharField(help_text="所属租户")
 
 

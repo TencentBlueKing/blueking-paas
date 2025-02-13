@@ -103,8 +103,8 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             type_=app_type,
             operator=encoded_operator,
             is_plugin_app=True,
-            app_tenant_mode=data["app_tenant_mode"],
-            app_tenant_id=data["app_tenant_id"],
+            app_tenant_mode=data["plugin_tenant_mode"],
+            app_tenant_id=data["plugin_tenant_id"],
             tenant_id=data["tenant_id"],
         )
 

@@ -224,6 +224,9 @@ type Mount struct {
 	Name string `json:"name"`
 	// Source of the mount
 	Source *VolumeSource `json:"source"`
+	// SubPaths is a list of file/directory name.
+	// These file names will be used as SubPath in VolumeMount to mount specific keys.
+	SubPaths []string `json:"subPaths,omitempty"`
 }
 
 // ResQuotaPlan is used to specify process resource quota

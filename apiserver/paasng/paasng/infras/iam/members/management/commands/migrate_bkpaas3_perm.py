@@ -181,7 +181,9 @@ class Command(BaseCommand):
 
             # 更新分级管理员映射表信息 & ApplicationGradeManager 表数据
             self.grade_manager_map[app_code] = grade_manager_id
-            ApplicationGradeManager.objects.create(app_code=app_code, grade_manager_id=grade_manager_id)
+            ApplicationGradeManager.objects.create(
+                app_code=app_code, grade_manager_id=grade_manager_id, tenant_id=tenant_id
+            )
 
         # 2. 获取具有管理员身份的用户名，如果没有，则默认将创建者添加为分级管理员（拥有审批加入用户组权限）
         migrate_logs.append(
@@ -217,7 +219,9 @@ class Command(BaseCommand):
 
                 # 更新用户组映射表信息 & ApplicationUserGroup 数据
                 self.user_group_map[(app_code, role)] = group_id
-                ApplicationUserGroup.objects.create(app_code=app_code, role=role, user_group_id=group_id)
+                ApplicationUserGroup.objects.create(
+                    app_code=app_code, role=role, user_group_id=group_id, tenant_id=tenant_id
+                )
 
             # 新创建用户组后，需要对用户组进行授权
             iam_client.grant_user_group_policies(app_code, app_name, groups)

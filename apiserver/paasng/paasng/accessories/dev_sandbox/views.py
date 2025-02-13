@@ -94,7 +94,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 同用户同模块只能有一个运行中的沙箱
         owner = request.user.pk
-        if DevSandbox.objects.filter(owner=owner, module=module).exists():
+        if DevSandbox.objects.filter(owner=owner, module=module).exclude(version_info=None).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
         # 目前仅支持 vcs 类型的源码获取方式

@@ -23,17 +23,21 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/dev_sandboxes/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "list", "post": "create"}),
+        name="accessories.dev_sandbox.bulk",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/pre_deploy_check/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "pre_deploy_check"}),
+        name="accessories.dev_sandbox.pre_deploy_check",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        name="accessories.dev_sandbox.detail",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/commit/$", include_envs=False),
         DevSandboxViewSet.as_view({"post": "commit"}),
+        name="accessories.dev_sandbox.commit",
     ),
 ]

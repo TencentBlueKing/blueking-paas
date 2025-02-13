@@ -35,7 +35,7 @@ VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 DEV_SANDBOX_CODE_CHARSETS = string.ascii_lowercase + string.digits
 
 # 默认 2h 无活动后会回收沙箱
-DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
+DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
 
 
 class DevSandboxQuerySet(models.QuerySet):
@@ -52,7 +52,7 @@ class DevSandboxQuerySet(models.QuerySet):
             code=code,
             module=module,
             owner=owner,
-            expired_at=timezone.now() + DEFAULT_EXPIRED_DURATION,
+            expired_at=timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION,
             version_info=version_info,
             token=generate_password(),
             tenant_id=module.tenant_id,
@@ -76,7 +76,7 @@ class DevSandbox(OwnerTimestampedModel):
 
     def renew_expired_at(self):
         """由周期任务定时调用，刷新过期时间"""
-        self.expired_at = timezone.now() + DEFAULT_EXPIRED_DURATION
+        self.expired_at = timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION
         self.save(update_fields=["expired_at", "updated"])
 
     class Meta:

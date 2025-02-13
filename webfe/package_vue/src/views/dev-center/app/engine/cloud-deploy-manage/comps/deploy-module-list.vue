@@ -670,6 +670,7 @@ export default {
 .deploy-module-item {
   margin-bottom: 16px;
   .top-info-wrapper {
+    position: relative;
     height: 40px;
     display: flex;
     align-items: center;
@@ -790,6 +791,10 @@ export default {
     }
   }
   .not-deployed {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     flex: 1;
     text-align: center;
     font-size: 12px;

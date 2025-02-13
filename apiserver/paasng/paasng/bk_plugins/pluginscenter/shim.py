@@ -112,7 +112,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
             raise error_codes.THIRD_PARTY_API_ERROR
 
     # 创建默认市场信息
-    PluginMarketInfo.objects.create(plugin=plugin, extra_fields={})
+    PluginMarketInfo.objects.create(plugin=plugin, extra_fields={}, tenant_id=plugin.tenant_id)
     # 创建 IAM 分级管理员
     setup_builtin_grade_manager(plugin)
     # 创建 IAM 用户组

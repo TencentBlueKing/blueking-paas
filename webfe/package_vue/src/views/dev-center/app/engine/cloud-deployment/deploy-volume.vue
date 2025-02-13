@@ -60,7 +60,10 @@
             prop="mount_path"
             :render-header="renderHeader"
           >
-            <template slot-scope="{ row }">{{ row.sub_paths.length ? $t('是') : '--' }}</template>
+            <template slot-scope="{ row }">
+              <span v-if="row.source_type === 'PersistentStorage'">--</span>
+              <span v-else>{{ row.sub_paths.length ? $t('是') : $t('否') }}</span>
+            </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('生效环境')"
@@ -720,7 +723,7 @@ export default {
       // 集群是否支持持久存储
       isClusterPersistentStorageSupported: false,
       // 启用子路径挂载
-      enableSubpathMount: false,
+      enableSubpathMount: true,
       subpathTip: this.$t('未启用时，挂载目录将被完全替换；启用后，挂载目录下同名文件将被覆盖，其他文件将保持不变。'),
     };
   },
@@ -1257,7 +1260,7 @@ export default {
     handleHidden() {
       this.isInEditMode = false;
       this.persistentStorageList = [];
-      this.enableSubpathMount = false;
+      this.enableSubpathMount = true;
     },
 
     // 切换生效环境

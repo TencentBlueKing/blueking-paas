@@ -47,7 +47,7 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     operator = serializers.CharField()
     # 租户相关信息
     plugin_tenant_mode = serializers.CharField(help_text="租户模式")
-    plugin_tenant_id = serializers.CharField(help_text="租户 ID")
+    plugin_tenant_id = serializers.CharField(allow_null=True, allow_blank=True, help_text="租户 ID")
     tenant_id = serializers.CharField(help_text="所属租户")
 
 

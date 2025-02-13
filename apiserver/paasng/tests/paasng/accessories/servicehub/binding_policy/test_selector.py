@@ -231,7 +231,7 @@ class TestPlanSelectorListPossiblePlans:
         }
 
     def test_tenant_isolation(self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id):
-        ServiceBindingPolicyManager(service_obj, tenant_id).set_static([plan1.uuid, plan2.uuid])
+        ServiceBindingPolicyManager(service_obj, tenant_id).set_static([plan1, plan2])
         ServiceBindingPolicyManager(service_obj, tenant_id).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),

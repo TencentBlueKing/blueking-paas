@@ -233,15 +233,15 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
-        plugin_tenant_mode, plugin_tenant_id, tenant = validate_app_tenant_params(
-            request.user, validated_data["plugin_tenant_mode"]
-        )
+        raw_tenant_mode = validated_data.pop("plugin_tenant_mode")
+        plugin_tenant_mode, plugin_tenant_id, tenant = validate_app_tenant_params(request.user, raw_tenant_mode)
 
         plugin_status = (
             constants.PluginStatus.WAITING_APPROVAL
             if pd.approval_config.enabled
             else constants.PluginStatus.DEVELOPING
         )
+
         plugin = PluginInstance(
             pd=pd,
             language=validated_data["template"].language,

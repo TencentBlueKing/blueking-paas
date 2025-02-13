@@ -56,6 +56,7 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
+            tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.STATIC.value, "data": data},
         )
 
@@ -72,6 +73,7 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
+            tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.ENV_SPECIFIC.value, "data": data},
         )
 

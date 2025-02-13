@@ -99,7 +99,7 @@ class PlanSelector:
 
         # Get plans based on the binding policy
         try:
-            policy = ServiceBindingPolicy.objects.get(service_id=service.uuid, tenant_id=env.application.tenant_id)
+            policy = ServiceBindingPolicy.objects.get(service_id=service.uuid, tenant_id=env.tenant_id)
         except ServiceBindingPolicy.DoesNotExist:
             return []
 

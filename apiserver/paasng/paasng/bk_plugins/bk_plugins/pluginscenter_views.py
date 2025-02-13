@@ -39,6 +39,7 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.helpers import (
@@ -103,7 +104,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             type_=app_type,
             operator=encoded_operator,
             is_plugin_app=True,
-            app_tenant_mode=data["plugin_tenant_mode"],
+            app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
             app_tenant_id=data["plugin_tenant_id"],
             tenant_id=data["tenant_id"],
         )

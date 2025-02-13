@@ -41,8 +41,8 @@ def test_instance_upsert_api(thirdparty_client, pd, plugin, handler):
         "logo_url",
         "publisher",
         "tenant_id",
-        "app_tenant_id",
-        "app_tenant_mode",
+        "plugin_tenant_id",
+        "plugin_tenant_mode",
     ]
     # 仅创建插件时有 visible_range 参数
     if handler == instance.create_instance:

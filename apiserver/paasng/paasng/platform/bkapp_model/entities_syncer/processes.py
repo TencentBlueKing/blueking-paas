@@ -116,7 +116,7 @@ class ManagedFieldValues:
         for process in self.processes:
             name = process.name
             replicas_mgr = fieldmgr.FieldManager(
-                self.module, fieldmgr.f_proc_replicas(name), default_if_no_manager=fieldmgr.FieldMgrName.WEB_FORM
+                self.module, fieldmgr.f_proc_replicas(name), default_if_unmanaged=fieldmgr.FieldMgrName.WEB_FORM
             )
             if (
                 not replicas_mgr.is_managed_by(self.manager)
@@ -153,7 +153,7 @@ class ManagedFieldValues:
         for process in self.processes:
             name = process.name
             autoscaling_mgr = fieldmgr.FieldManager(
-                self.module, fieldmgr.f_proc_autoscaling(name), default_if_no_manager=fieldmgr.FieldMgrName.WEB_FORM
+                self.module, fieldmgr.f_proc_autoscaling(name), default_if_unmanaged=fieldmgr.FieldMgrName.WEB_FORM
             )
             if isinstance(process.autoscaling, NotSetType) and not autoscaling_mgr.is_managed_by(self.manager):
                 continue

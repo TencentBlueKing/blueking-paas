@@ -26,21 +26,21 @@ from .fields import Field, ManagerFieldsRow, ManagerFieldsRowGroup
 
 class FieldManager:
     """This class helps manage the management status of an module's bkapp model field.
-    If the field is not managed and the default manager was given, it's manager will be set to the default.
+    If the field is unmanaged and the default manager was given, it's manager will be set to the default.
 
     :param module: The module object.
     :param field: The field to be managed.
-    :param default_if_no_manager: The default manager. It will be set if the field is not managed.
+    :param default_if_unmanaged: The default manager. It will be set if the field is unmanaged.
     """
 
-    def __init__(self, module: Module, field: Field, default_if_no_manager: Optional[FieldMgrName] = None):
+    def __init__(self, module: Module, field: Field, default_if_unmanaged: Optional[FieldMgrName] = None):
         self.module = module
         self.field = field
         self.store = RowGroupStore(module)
         self.row_group = self.store.get()
 
-        if default_if_no_manager and not self.get():
-            self.set(default_if_no_manager)
+        if default_if_unmanaged and not self.get():
+            self.set(default_if_unmanaged)
 
     def is_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field is managed by the given manager."""

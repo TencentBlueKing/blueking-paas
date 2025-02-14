@@ -39,6 +39,19 @@ class TestFieldManager:
         m2.reset()
         assert m2.get() is None
 
+    def test_filed_not_managed(self, bk_module):
+        m = FieldManager(bk_module, F_SVC_DISCOVERY)
+        assert m.get() is None
+
+        m1 = FieldManager(bk_module, F_SVC_DISCOVERY, default_if_no_manager=FieldMgrName.APP_DESC)
+        assert m1.is_managed_by(FieldMgrName.APP_DESC)
+
+        m1.reset()
+        assert m1.get() is None
+
+        m2 = FieldManager(bk_module, F_SVC_DISCOVERY, default_if_no_manager=FieldMgrName.WEB_FORM)
+        assert m2.is_managed_by(FieldMgrName.WEB_FORM)
+
 
 class TestMultiFieldsManager:
     def test_integrated(self, bk_module):

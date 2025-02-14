@@ -41,7 +41,9 @@ def sync_domain_resolution(
     # **Always switch to the default module for querying field manager, because the
     # domain_resolution field is on the application level.**
     default_module = module.application.get_default_module()
-    field_mgr = fieldmgr.FieldManager(default_module, fieldmgr.F_DOMAIN_RESOLUTION)
+    field_mgr = fieldmgr.FieldManager(
+        default_module, fieldmgr.F_DOMAIN_RESOLUTION, default_if_no_manager=fieldmgr.FieldMgrName.WEB_FORM
+    )
     if not field_mgr.is_managed_by(manager) and domain_res == NOTSET:
         return ret
 

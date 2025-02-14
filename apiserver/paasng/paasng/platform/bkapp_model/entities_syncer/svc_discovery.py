@@ -41,7 +41,9 @@ def sync_svc_discovery(
     # **Always switch to the default module for querying field manager, because the
     # svc_discovery field is on the application level.**
     default_module = module.application.get_default_module()
-    field_mgr = fieldmgr.FieldManager(default_module, fieldmgr.F_SVC_DISCOVERY)
+    field_mgr = fieldmgr.FieldManager(
+        default_module, fieldmgr.F_SVC_DISCOVERY, default_if_no_manager=fieldmgr.FieldMgrName.WEB_FORM
+    )
     if not field_mgr.is_managed_by(manager) and svc_disc == NOTSET:
         return ret
 

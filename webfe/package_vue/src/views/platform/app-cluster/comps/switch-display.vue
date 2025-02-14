@@ -100,9 +100,6 @@ export default {
       margin-right: 3px;
       transform: translateY(0px);
     }
-    .count {
-      margin-left: 3px;
-    }
   }
   .dot {
     display: inline-block;

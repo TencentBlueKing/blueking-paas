@@ -39,7 +39,7 @@ class TestFieldManager:
         m2.reset()
         assert m2.get() is None
 
-    def test_filed_not_managed(self, bk_module):
+    def test_init_manager_when_field_no_managed(self, bk_module):
         m = FieldManager(bk_module, F_SVC_DISCOVERY)
         assert m.get() is None
 

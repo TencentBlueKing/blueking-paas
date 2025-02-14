@@ -129,21 +129,6 @@ urlpatterns += [
     ),
 ]
 
-
-# 统计相关
-urlpatterns += [
-    re_path(
-        r"^api/bkapps/applications/statistics/group_by_state/$",
-        views.ApplicationGroupByStateStatisticsView.as_view(),
-        name="api.applications.statistics.group_by_state",
-    ),
-    re_path(
-        r"^api/bkapps/applications/summary/group_by_field/$",
-        views.ApplicationGroupByFieldStatisticsView.as_view(),
-        name="api.applications.statistics.group_by_field",
-    ),
-]
-
 # 功能开关 与 资源保护
 urlpatterns += [
     re_path(

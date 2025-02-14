@@ -26,7 +26,6 @@ from .application import (
 from .creation import ApplicationCreateViewSet
 from .marks import ApplicationDeploymentModuleOrderViewSet, ApplicationMarkedViewSet
 from .member import ApplicationMembersViewSet
-from .statistics import ApplicationGroupByFieldStatisticsView, ApplicationGroupByStateStatisticsView
 from .sys_api import LightAppViewSet, SysAppViewSet
 
 __all__ = [
@@ -44,9 +43,6 @@ __all__ = [
     "ApplicationMarkedViewSet",
     # members
     "ApplicationMembersViewSet",
-    # statistics
-    "ApplicationGroupByFieldStatisticsView",
-    "ApplicationGroupByStateStatisticsView",
     # sys_api
     "LightAppViewSet",
     "SysAppViewSet",

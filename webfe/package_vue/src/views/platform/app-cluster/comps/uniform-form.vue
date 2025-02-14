@@ -159,6 +159,12 @@ export default {
         );
       });
     },
+    getCurData() {
+      return {
+        clusters: this.clusters,
+        env_clusters: this.envClusters,
+      };
+    },
   },
 };
 </script>

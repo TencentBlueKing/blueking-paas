@@ -49,19 +49,11 @@
               >
                 <!-- 按环境分配 env_specific -->
                 <template v-if="row.policies.allocation_policy?.env_specific">
-                  <span
-                    v-for="item in row.policies.allocation_policy.env_clusters.stag"
-                    class="tag"
-                    :key="`stag-${item}`"
-                  >
-                    {{ $t('集群（预发布环境）') }}：{{ item }}
+                  <span class="tag">
+                    {{ $t('集群（预发布环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}
                   </span>
-                  <span
-                    v-for="item in row.policies.allocation_policy.env_clusters.prod"
-                    class="tag"
-                    :key="`prod-${item}`"
-                  >
-                    {{ $t('集群（生产环境）') }}：{{ item }}
+                  <span class="tag">
+                    {{ $t('集群（生产环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}
                   </span>
                 </template>
                 <!-- 不按环境分配 -->
@@ -94,24 +86,17 @@
                     v-for="(v, k) in item.matcher"
                     class="tag rule"
                     :key="`rule-${v}`"
+                    v-show="v"
                   >
                     {{ `${matchingRulesMap[k]} = ${v}` }}
                   </span>
                   <!-- 集群-不按环境 -->
                   <template v-if="item.policy?.env_specific">
-                    <span
-                      v-for="item in item.policy.env_clusters?.stag"
-                      class="tag"
-                      :key="`stag-${item}`"
-                    >
-                      {{ $t('集群（预发布环境）') }}：{{ item }}
+                    <span class="tag">
+                      {{ $t('集群（预发布环境）') }}：{{ item.policy.env_clusters?.stag?.join(', ') }}
                     </span>
-                    <span
-                      v-for="item in item.policy.env_clusters?.prod"
-                      class="tag"
-                      :key="`prod-${item}`"
-                    >
-                      {{ $t('集群（生产环境）') }}：{{ item }}
+                    <span class="tag">
+                      {{ $t('集群（生产环境）') }}：{{ item.policy.env_clusters?.prod?.join(', ') }}
                     </span>
                   </template>
                   <template v-else>

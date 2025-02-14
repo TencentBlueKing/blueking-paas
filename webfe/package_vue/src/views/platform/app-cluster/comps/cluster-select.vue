@@ -34,7 +34,7 @@
           class="placeholder"
           v-else
         >
-          {{ $t('使用默认集群') }}
+          {{ $t('请选择集群') }}
           <i class="bk-select-angle bk-icon icon-angle-down"></i>
         </div>
       </div>
@@ -172,6 +172,7 @@ export default {
 .placeholder {
   font-size: 12px;
   color: #c4c6cc;
+  user-select: none;
 }
 .tag {
   display: inline-flex;

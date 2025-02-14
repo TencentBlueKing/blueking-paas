@@ -117,14 +117,36 @@ export default {
     height: 100%;
   }
   .right-content {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 0;
     height: 100%;
     background: #f5f7fa;
-    // .content-area {
-    //   overflow: auto;
-    //   height: calc(100% - 52px);
-    // }
+    .content-area {
+      flex: 1;
+    }
+  }
+}
+</style>
+<style lang="scss">
+.platform-content {
+  .border-tag,
+  .tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    font-size: 12px;
+    color: #4d4f56;
+    padding: 0 8px;
+    border-radius: 2px;
+  }
+  .tag {
+    background: #f0f1f5;
+  }
+  .border-tag {
+    background: #fafbfd;
+    border: 1px solid #dcdee5;
   }
 }
 </style>

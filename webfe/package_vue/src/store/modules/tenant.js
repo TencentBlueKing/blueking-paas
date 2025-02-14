@@ -68,8 +68,36 @@ export default {
      * 更新集群策略
      */
     updateClusterAllocationPolicies({}, { id, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policies/${id}`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policies/${id}/`;
       return http.put(url, data);
+    },
+    /**
+     * 获取集群列表
+     */
+    getClusterList({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群使用情况
+     */
+    getClusterAllocationState({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/allocation_state/`;
+      return http.get(url);
+    },
+    /**
+     * 同步节点
+     */
+    syncNodes({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/operations/sync_nodes/`;
+      return http.post(url);
+    },
+    /**
+     * 删除集群
+     */
+    deleteCluster({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/`;
+      return http.delete(url);
     },
   },
 };

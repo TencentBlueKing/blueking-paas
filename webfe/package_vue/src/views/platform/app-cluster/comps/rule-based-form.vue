@@ -109,6 +109,9 @@ export default {
         data: this.cardsList,
       };
     },
+    getCurData() {
+      return this.cardsList;
+    },
   },
 };
 </script>

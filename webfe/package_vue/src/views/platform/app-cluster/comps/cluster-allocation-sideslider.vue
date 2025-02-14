@@ -4,6 +4,7 @@
     :quick-close="true"
     width="640"
     ext-cls="cluster-allocation-sideslider-cls"
+    :before-close="handleBeforeClose"
     @shown="handleShown"
     @hidden="handleHidden"
   >
@@ -86,6 +87,7 @@
 import RuleBasedForm from './rule-based-form.vue';
 import SwitchDisplay from './switch-display.vue';
 import UniformForm from './uniform-form.vue';
+import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {
   name: 'ClusterAllocationSideslider',
   components: {
@@ -93,6 +95,7 @@ export default {
     RuleBasedForm,
     UniformForm,
   },
+  mixins: [sidebarDiffMixin],
   props: {
     show: {
       type: Boolean,
@@ -158,6 +161,9 @@ export default {
       }
       this.$nextTick(() => {
         this.setupResizeObserver();
+        // 打开侧栏时，获取当前侧栏数据
+        const initSidebarData = this.getCurrentStatusSidebarData();
+        this.initSidebarFormData(initSidebarData);
       });
     },
     handleCancel() {
@@ -282,6 +288,20 @@ export default {
       } finally {
         this.submitLoading = false;
       }
+    },
+    // 侧栏关闭前置检查，变更需要离开提示
+    async handleBeforeClose() {
+      const initSidebarData = this.getCurrentStatusSidebarData();
+      return this.$isSidebarClosed(JSON.stringify(initSidebarData));
+    },
+    // 获取当前状态下的侧栏数据
+    getCurrentStatusSidebarData() {
+      const formRef = this.isUniform ? this.$refs.uniformForm : this.$refs.ruleBasedForm;
+      const data = formRef?.getCurData();
+      return {
+        method: this.methodValue,
+        ...data,
+      };
     },
   },
 };

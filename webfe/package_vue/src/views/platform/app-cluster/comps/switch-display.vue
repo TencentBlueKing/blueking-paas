@@ -6,23 +6,25 @@
       :key="item.name"
       @click="() => $emit('change', item)"
     >
-      <template v-if="hasIcon">
-        <i
-          v-if="item.name === 'all'"
-          class="paasng-icon paasng-app-store"
-        ></i>
+      <slot :item="item">
+        <template v-if="hasIcon">
+          <i
+            v-if="item.name === 'all'"
+            class="paasng-icon paasng-app-store"
+          ></i>
+          <span
+            v-else
+            :class="['dot', item.name]"
+          ></span>
+        </template>
+        <span>{{ item.label }}</span>
         <span
-          v-else
-          :class="['dot', item.name]"
-        ></span>
-      </template>
-      <span>{{ item.label }}</span>
-      <span
-        v-if="hasCount"
-        class="count"
-      >
-        ({{ item.count }})
-      </span>
+          v-if="hasCount"
+          class="count"
+        >
+          ({{ item.count }})
+        </span>
+      </slot>
     </li>
   </ul>
 </template>
@@ -71,14 +73,14 @@ export default {
     &.active {
       background: #fff;
       color: #3a84ff;
+      i {
+        color: #3a84ff !important;
+      }
     }
     i {
       font-size: 14px;
       margin-right: 3px;
       transform: translateY(0px);
-    }
-    .count {
-      margin-left: 3px;
     }
   }
   .dot {

@@ -38,6 +38,7 @@ export default {
 <style lang="scss" scoped>
 .platform-cluster {
   width: 100%;
+  height: 100%;
   padding: 24px;
   min-width: 0;
 }

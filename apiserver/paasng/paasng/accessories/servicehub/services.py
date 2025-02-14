@@ -80,7 +80,6 @@ class PlanObj:
     is_eager: bool
     properties: Dict
     config: Dict = field(default_factory=dict)
-    display_name: str = ""
 
     def with_service(self, service: ServiceObj):
         """Lazy connect to service, avoid circular dependency"""

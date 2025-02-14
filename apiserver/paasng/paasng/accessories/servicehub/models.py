@@ -281,7 +281,7 @@ class ServiceBindingPolicy(AuditedModel):
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("tenant_id", "service_id")
+        unique_together = ("service_id", "tenant_id")
 
 
 class ServiceBindingPrecedencePolicy(AuditedModel):
@@ -307,4 +307,4 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("tenant_id", "service_id", "priority")
+        unique_together = ("service_id", "priority", "tenant_id")

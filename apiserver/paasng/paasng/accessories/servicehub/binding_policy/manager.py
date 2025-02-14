@@ -145,12 +145,9 @@ class ServiceBindingPolicyManager:
             },
         )
 
-    def remove_all_precedence_policies(self, priority: int | None = None):
+    def clean_precedence_policies(self):
         """Remove all the precedence policies"""
-        qs = ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id)
-        if priority is not None:
-            qs = qs.filter(priority=priority)
-        qs.delete()
+        ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid).delete()
 
 
 class PolicyCombinationManager:
@@ -168,7 +165,7 @@ class PolicyCombinationManager:
     def remove_policy_combination(self):
         """Remove policy combination"""
         self.service_binding_policy_mgr.clean_static_policies()
-        self.service_binding_policy_mgr.remove_all_precedence_policies()
+        self.service_binding_policy_mgr.clean_precedence_policies()
 
     @transaction.atomic()
     def upsert_policy_combination(self, policy_combination_config: PolicyCombinationConfig):

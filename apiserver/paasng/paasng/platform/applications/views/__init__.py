@@ -25,7 +25,7 @@ from .application import (
 )
 from .creation import ApplicationCreateViewSet
 from .marks import ApplicationDeploymentModuleOrderViewSet, ApplicationMarkedViewSet
-from .members import ApplicationMembersViewSet
+from .member import ApplicationMembersViewSet
 from .statistics import ApplicationGroupByFieldStatisticsView, ApplicationGroupByStateStatisticsView
 from .sys_api import LightAppViewSet, SysAppViewSet
 

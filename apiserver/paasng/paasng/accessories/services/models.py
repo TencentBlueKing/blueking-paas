@@ -25,6 +25,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ class ServiceCategory(models.Model):
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
     sort_priority = models.IntegerField("排序权重", default=0)
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return self.name
@@ -71,6 +73,7 @@ class Service(UuidAuditedModel):
     # When a service's "is_visible" was set to false, it will be hidden in application's service
     # index page. But an already existed binding relationship won't be affected.
     is_visible = models.BooleanField(verbose_name="是否可见", default=True)
+    tenant_id = tenant_id_field_factory()
 
     objects = ServiceManager()
 
@@ -168,6 +171,7 @@ class ServiceInstance(UuidAuditedModel):
     config = JSONField(default={})
     credentials = EncryptField(default="")
     to_be_deleted = models.BooleanField(default=False)
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
@@ -180,6 +184,7 @@ class PreCreatedInstance(UuidAuditedModel):
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
+    tenant_id = tenant_id_field_factory()
 
     def acquire(self):
         self.is_allocated = True
@@ -227,6 +232,7 @@ class Plan(UuidAuditedModel):
 class ResourceId(models.Model):
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("namespace", "uid")

@@ -99,6 +99,8 @@ class LocalServiceObj(ServiceObj):
         field_names = list(cls.__dataclass_fields__.keys())  # type: ignore
         fields = {k: getattr(service, k) for k in field_names if hasattr(service, k)}
 
+        # pop tenant_id
+        fields.pop("tenant_id", None)
         if service.logo_b64:
             fields["logo"] = service.logo_b64
         else:

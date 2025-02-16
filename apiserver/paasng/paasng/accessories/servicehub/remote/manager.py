@@ -138,6 +138,8 @@ class RemoteServiceObj(ServiceObj):
         fields: Dict[str, Any] = {k: service.get(k) for k in field_names if k in service}
         fields["plans"] = [asdict(RemotePlanObj.from_data(i)) for i in fields.get("plans") or ()]
 
+        # pop tenant_id
+        fields.pop("tenant_id", None)
         # Set up meta info
         meta_info_data = service.get("_meta_info")
         if not meta_info_data:

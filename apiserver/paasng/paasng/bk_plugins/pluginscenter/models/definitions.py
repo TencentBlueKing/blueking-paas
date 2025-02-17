@@ -55,6 +55,11 @@ PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", L
 
 
 class PluginDefinition(UuidAuditedModel):
+    """[multi-tenancy] This model is not tenant-aware.
+
+    说明：插件类型的定义，如标准运维插件类型对所有租户可见，创建的标准运维插件实例才是租户级别的。
+    """
+
     identifier = models.CharField(unique=True, max_length=64)
     name = TranslatedFieldWithFallback(models.CharField(max_length=64))
     description = TranslatedFieldWithFallback(models.TextField())
@@ -86,6 +91,8 @@ class PluginDefinition(UuidAuditedModel):
 
 
 class PluginBasicInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="basic_info_definition"
     )
@@ -120,6 +127,8 @@ class PluginBasicInfoDefinition(AuditedModel):
 
 
 class PluginMarketInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="market_info_definition"
     )
@@ -132,6 +141,8 @@ class PluginMarketInfoDefinition(AuditedModel):
 
 
 class PluginConfigInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="config_definition"
     )
@@ -144,6 +155,8 @@ class PluginConfigInfoDefinition(AuditedModel):
 
 
 class PluginVisibleRangeDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range_definition"
     )

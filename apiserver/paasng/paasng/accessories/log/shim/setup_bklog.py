@@ -23,6 +23,7 @@ from django.conf import settings
 from django.utils.timezone import get_default_timezone
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
@@ -31,7 +32,7 @@ from paasng.accessories.log.models import (
     ProcessLogQueryConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
-from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID
+from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
@@ -114,7 +115,7 @@ def build_normal_json_collector_config():
 def update_or_create_es_search_config(
     env: ModuleEnvironment, collector_config: AppLogCollectorConfig, message_field: str = "log"
 ):
-    """初始化日志查询相关的数据库模型
+    """初始化日志平台采集链路日志查询相关的数据库模型
 
     :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
     """
@@ -148,6 +149,7 @@ def update_or_create_es_search_config(
             "scenarioID": "log",
         },
         "search_params": search_params,
+        "tenant_id": env.tenant_id,
     }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
@@ -156,6 +158,7 @@ def update_or_create_es_search_config(
     )
 
     config, _ = ProcessLogQueryConfig.objects.get_or_create(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
+    config.tenant_id = env.tenant_id
     if collector_config.log_type == "stdout":
         config.stdout = search_config
     elif collector_config.log_type == "json":
@@ -166,7 +169,7 @@ def update_or_create_es_search_config(
 
 
 def setup_bk_log_custom_collector(module: Module):
-    """初始化内置的日志采集项(JSON日志采集和标准输出日志采集)"""
+    """初始化日志平台内置的日志采集项(JSON日志采集和标准输出日志采集)"""
     language: Union[AppLanguage, str]
     try:
         language = AppLanguage(module.language)
@@ -213,8 +216,12 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案
+    cluster_uuid = EnvClusterService(env).get_cluster().uuid
+    setup_platform_elk_config(cluster_uuid, env.tenant_id)
     try:
-        ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+        ingress_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
     except ElasticSearchConfig.DoesNotExist:
         # 未配置时，需要记录异常日志方便排查
         logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")

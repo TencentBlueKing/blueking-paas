@@ -299,6 +299,9 @@ class BuildProcess(UuidAuditedModel):
     def __str__(self):
         return "%s-%s(%s)-%s" % (self.uuid, self.app.name, self.app.region, self.status)
 
+    def is_finished(self):
+        return self.status in BuildStatus.get_finished_states()
+
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
@@ -306,7 +309,7 @@ class BuildProcess(UuidAuditedModel):
 
     def check_interruption_allowed(self) -> bool:
         """Check if current build process allows interruptions"""
-        if self.status in BuildStatus.get_finished_states():
+        if self.is_finished():
             return False
 
         return self.logs_was_ready_at is not None

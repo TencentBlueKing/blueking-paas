@@ -31,7 +31,7 @@
       <bk-alert
         class="mb16"
         type="warning"
-        :title="$t('沙箱环境将复用 “预发布环境” 的增强服务和环境变量')"
+        :title="$t('沙箱环境复用 “预发布环境” 的增强服务和环境变量')"
         closable
       ></bk-alert>
       <bk-form

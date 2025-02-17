@@ -211,7 +211,10 @@ def setup_builtin_grade_manager(plugin: PluginInstance):
         manager_definition=definitions.gen_iam_grade_manager(plugin),
     )
     return PluginGradeManager.objects.create(
-        pd_id=plugin.pd.identifier, plugin_id=plugin.id, grade_manager_id=grade_manager_id
+        pd_id=plugin.pd.identifier,
+        plugin_id=plugin.id,
+        grade_manager_id=grade_manager_id,
+        tenant_id=plugin.tenant_id,
     )
 
 
@@ -238,6 +241,7 @@ def setup_builtin_user_groups(plugin: PluginInstance):
             plugin_id=plugin.id,
             role=group.role,
             user_group_id=group.id,
+            tenant_id=plugin.tenant_id,
         )
 
 

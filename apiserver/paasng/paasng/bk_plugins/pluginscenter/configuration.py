@@ -52,7 +52,9 @@ class PluginConfigManager:
 
         if PluginConfig.objects.filter(plugin=self.plugin, unique_key=unique_key).exists():
             raise error_codes.CONFIGURATION_CONFLICT.f(conflict_fields=self.build_conflict_message(config_dict))
-        return PluginConfig.objects.create(plugin=self.plugin, unique_key=unique_key, row=config_dict)
+        return PluginConfig.objects.create(
+            plugin=self.plugin, unique_key=unique_key, row=config_dict, tenant_id=self.plugin.tenant_id
+        )
 
     def delete(self, unique_key: str):
         """Delete a PluginConfig

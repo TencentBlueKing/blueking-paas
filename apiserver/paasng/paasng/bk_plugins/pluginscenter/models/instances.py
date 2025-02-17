@@ -35,6 +35,8 @@ from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
@@ -98,6 +100,20 @@ class PluginInstance(UuidAuditedModel):
         default=None,
     )
 
+    plugin_tenant_mode = models.CharField(
+        verbose_name="插件租户模式",
+        max_length=16,
+        default=AppTenantMode.GLOBAL.value,
+        help_text="插件在租户层面的可用范围，可选值：全租户、指定租户",
+    )
+    plugin_tenant_id = models.CharField(
+        verbose_name="插件租户 ID",
+        max_length=32,
+        default="",
+        help_text="插件对哪个租户的用户可用，当租户模式为全租户时，本字段值为空",
+    )
+    tenant_id = tenant_id_field_factory()
+
     def get_logo_url(self) -> str:
         # 插件应用的默认 Logo 用平台统一的 Logo
         default_url = settings.PLUGIN_APP_DEFAULT_LOGO
@@ -158,6 +174,8 @@ class PluginMarketInfo(AuditedModel):
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")
     extra_fields = models.JSONField(verbose_name="额外字段")
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
 
 class PluginReleaseVersionManager(models.Manager):
@@ -262,6 +280,8 @@ class PluginRelease(AuditedModel):
     )
 
     creator = BkUserField()
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     objects = PluginReleaseVersionManager()
 
@@ -295,6 +315,7 @@ class PluginRelease(AuditedModel):
                 defaults={
                     "next_stage": next_stage,
                     "status": constants.PluginReleaseStatus.INITIAL,
+                    "tenant_id": self.plugin.tenant_id,
                 },
             )
         self.current_stage = next_stage
@@ -348,6 +369,8 @@ class PluginReleaseStage(AuditedModel):
     operator = models.CharField(verbose_name="操作人", max_length=32, null=True)
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("release", "stage_id")
@@ -401,6 +424,8 @@ class PluginReleaseStrategy(AuditedModel):
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     def get_itsm_service_name(self, is_organization_changed: bool) -> str:
         """根据发布策略的设置获取对应的 ITSM 审批流程"""
@@ -428,7 +453,9 @@ class PluginReleaseStrategy(AuditedModel):
 
 
 class ApprovalService(UuidAuditedModel):
-    """审批服务信息"""
+    """审批服务信息。全局配置，不添加租户 ID
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     service_name = models.CharField(verbose_name="审批服务名称", max_length=64, unique=True)
     service_id = models.IntegerField(verbose_name="审批服务ID", help_text="用于在 ITSM 上提申请单据")
@@ -440,6 +467,8 @@ class PluginConfig(AuditedModel):
     plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="configs")
     unique_key = models.CharField(verbose_name="唯一标识", max_length=64)
     row = models.JSONField(verbose_name="配置内容(1行), 格式 {'column_key': 'value'}", default=dict)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("plugin", "unique_key")
@@ -455,6 +484,8 @@ class PluginVisibleRange(AuditedModel):
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
     is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     @cached_property
     def itsm_detail_fields(self) -> Optional[dict]:
@@ -487,10 +518,10 @@ class PluginVisibleRange(AuditedModel):
         try:
             return cls.objects.get(plugin=plugin)
         except PluginVisibleRange.DoesNotExist:
+            defaults = {"tenant_id": plugin.tenant_id}
             if hasattr(plugin.pd, "visible_range_definition"):
-                defaults = {"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)}
-            else:
-                defaults = {}
+                defaults.update({"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)})
+
         visible_range_obj, _created = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
         return visible_range_obj
 
@@ -510,6 +541,8 @@ class OperationRecord(AuditedModel):
     action = models.CharField(max_length=32, choices=constants.ActionTypes.get_choices())
     specific = models.CharField(max_length=255, null=True)
     subject = models.CharField(max_length=32, choices=constants.SubjectTypes.get_choices())
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     def get_display_text(self):
         action_text = constants.ActionTypes.get_choice_label(self.action)

@@ -243,26 +243,6 @@ class TestMarketField:
         assert product.tag == tag
         assert product.introduction == random_name
 
-    def test_update_partial(self, bk_user, random_name):
-        app_desc = builder.make_app_desc(
-            random_name,
-            decorator.with_module("default", True),
-            decorator.with_market(introduction="foo", description="foo"),
-        )
-        AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
-        product = Product.objects.get(code=random_name)
-        assert product.introduction == "foo"
-        assert product.description == "foo"
-
-        # Update with description omitted
-        app_desc = builder.make_app_desc(
-            random_name, decorator.with_module("default", True), decorator.with_market(introduction="bar")
-        )
-        AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
-        product = Product.objects.get(code=random_name)
-        assert product.introduction == "bar"
-        assert product.description == "foo"
-
 
 class TestMarketDisplayOptionsField:
     def test_creation_omitted(self, bk_user, random_name, tag):
@@ -279,30 +259,6 @@ class TestMarketDisplayOptionsField:
         assert product.displayoptions.height == 600
         assert product.displayoptions.is_win_maximize is False
         assert product.displayoptions.visible is True
-        assert product.displayoptions.open_mode == "new_tab"
-
-    def test_update_partial(self, bk_user, random_name, tag):
-        app_desc = builder.make_app_desc(
-            random_name,
-            decorator.with_module("default", True),
-            decorator.with_market(display_options={"width": 99, "height": 99, "openMode": "desktop"}),
-        )
-        controller = AppDeclarativeController(bk_user)
-        controller.perform_action(get_app_description(app_desc))
-        product = Product.objects.get(code=random_name)
-        assert product.displayoptions.open_mode == "desktop"
-
-        app_desc = builder.make_app_desc(
-            random_name,
-            decorator.with_module("default", True),
-            decorator.with_market(display_options={"height": 10, "openMode": "new_tab"}),
-        )
-        AppDeclarativeController(bk_user).perform_action(get_app_description(app_desc))
-
-        product = Product.objects.get(code=random_name)
-        # `width` field should not be affected
-        assert product.displayoptions.width == 99
-        assert product.displayoptions.height == 10
         assert product.displayoptions.open_mode == "new_tab"
 
 

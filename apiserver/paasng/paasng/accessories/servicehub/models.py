@@ -85,7 +85,11 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
     def bind_service_instance(self, credentials: Dict, config: Dict) -> ServiceInstance:
         """create service instance with the existing config and credentials, without calling provision"""
         service_instance = ServiceInstance.objects.create(
-            service=self.service, plan=self.plan, credentials=json.dumps(credentials), config=config
+            service=self.service,
+            plan=self.plan,
+            credentials=json.dumps(credentials),
+            config=config,
+            tenant_id=self.plan.tenant_id,
         )
         self.service_instance = service_instance
         self.save(update_fields=["service_instance"])

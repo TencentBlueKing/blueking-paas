@@ -29,6 +29,7 @@ from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachmen
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 
 pytestmark = pytest.mark.django_db
 
@@ -47,7 +48,11 @@ class TestServiceEngineAppAttachmentViewSet:
     def create_mock_rel(self, service, credentials_enabled, create_time: "datetime.datetime", **credentials):
         rel = mock.MagicMock()
         rel.get_instance.return_value = ServiceInstanceObj(
-            uuid=service.uuid, credentials=credentials, config={}, create_time=create_time
+            uuid=service.uuid,
+            credentials=credentials,
+            config={},
+            create_time=create_time,
+            tenant_id=DEFAULT_TENANT_ID,
         )
         rel.get_service.return_value = service
         rel.db_obj.credentials_enabled = credentials_enabled
@@ -108,6 +113,7 @@ class TestUnboundServiceEngineAppAttachmentViewSet:
             credentials=credentials,
             config={},
             create_time=create_time,
+            tenant_id=DEFAULT_TENANT_ID,
             should_hidden_fields=should_hidden_fields,
             should_remove_fields=should_remove_fields,
         )

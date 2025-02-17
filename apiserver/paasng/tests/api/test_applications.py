@@ -374,7 +374,7 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
 
-    def test_desc_app(self, api_client, bk_user, random_name):
+    def test_desc_app(self, api_client, bk_user, random_name, mock_wl_services_in_creation):
         get_desc_handler(
             dict(
                 spec_version=2,

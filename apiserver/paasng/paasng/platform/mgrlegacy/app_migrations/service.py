@@ -77,6 +77,7 @@ class LegacyBaseServiceMigration(BaseMigration):
             "plan": service_attachment.plan,
             "service": service_attachment.service,
             "credentials": json.dumps(credentials),
+            "tenant_id": service_attachment.plan.tenant_id,
         }
         if config is not None:
             kwargs["config"] = json.dumps(config)

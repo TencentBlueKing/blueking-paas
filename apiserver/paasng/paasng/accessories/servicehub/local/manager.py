@@ -82,6 +82,7 @@ class LocalPlanObj(PlanObj):
             is_eager=plan.is_eager,
             properties={},
             config=config,
+            tenant_id=plan.tenant_id,
         )
         instance.db_object = plan
         return instance

@@ -41,7 +41,6 @@ class ServiceCategory(models.Model):
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
     sort_priority = models.IntegerField("排序权重", default=0)
-    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return self.name
@@ -73,7 +72,6 @@ class Service(UuidAuditedModel):
     # When a service's "is_visible" was set to false, it will be hidden in application's service
     # index page. But an already existed binding relationship won't be affected.
     is_visible = models.BooleanField(verbose_name="是否可见", default=True)
-    tenant_id = tenant_id_field_factory()
 
     objects = ServiceManager()
 
@@ -124,7 +122,12 @@ class Service(UuidAuditedModel):
         credentials = self.format_credentials(
             raw_credentials, prefix=self.name, protected_keys=service_handler_instance.protected_keys
         )
-        service_instance_param = {"service": self, "credentials": json.dumps(credentials), "plan": plan}
+        service_instance_param = {
+            "service": self,
+            "credentials": json.dumps(credentials),
+            "plan": plan,
+            "tenant_id": plan.tenant_id,
+        }
         if config:
             service_instance_param["config"] = config
 
@@ -209,9 +212,10 @@ class Plan(UuidAuditedModel):
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("service", "name")
+        unique_together = ("service", "name", "tenant_id")
 
     @property
     def is_eager(self):
@@ -232,7 +236,6 @@ class Plan(UuidAuditedModel):
 class ResourceId(models.Model):
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
-    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("namespace", "uid")

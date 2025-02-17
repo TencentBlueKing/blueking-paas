@@ -72,6 +72,7 @@ class PlanObj:
     uuid: str
     name: str
     description: str
+    tenant_id: str
     is_active: bool
     is_eager: bool
     properties: Dict

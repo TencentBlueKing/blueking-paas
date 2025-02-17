@@ -91,4 +91,5 @@ class ResourcePoolProvider(BaseProvider):
                 plan=self.plan,
                 credentials=json.dumps(instance_data.credentials),
                 config=instance_data.config,
+                tenant_id=self.plan.tenant_id,
             )

@@ -81,30 +81,38 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
             for backend in domain.path_backends:
                 paths.append(
                     {
-                        "path": nginx_adaptor.make_location_path(backend.path_prefix or "/")
-                        if obj.rewrite_to_root
-                        else backend.path_prefix,
+                        "path": (
+                            nginx_adaptor.make_location_path(backend.path_prefix or "/")
+                            if obj.rewrite_to_root
+                            else backend.path_prefix
+                        ),
                         "pathType": "ImplementationSpecific",
                         "backend": {
-                            "service": {"name": backend.service_name, "port": {"name": backend.service_port_name}},
+                            "service": {
+                                "name": backend.service_name,
+                                "port": {
+                                    "name": backend.service_port_name,
+                                },
+                            },
                         },
                     }
                 )
             rules.append({"host": domain.host, "http": {"paths": paths}})
 
         body: Dict[str, Any] = {
+            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
+            "kind": "Ingress",
             "metadata": {
                 "name": obj.name,
                 "annotations": annotations,
                 "labels": {"env": "dev"},
             },
             "spec": {"rules": rules, "tls": tls},
-            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
-            "kind": "Ingress",
         }
 
         if original_obj:
             body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
+
         return body
 
 
@@ -132,6 +140,7 @@ class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
         for rule in rules:
             if not rule.get("http"):
                 continue
+
             domains.append(
                 IngressDomain(
                     host=rule.host,
@@ -140,6 +149,7 @@ class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
                     path_backends=self._parse_backends(rule.http.paths),
                 )
             )
+
         return domains
 
     def _parse_backends(self, paths: List[ResourceInstance]) -> List[IngressPathBackend]:

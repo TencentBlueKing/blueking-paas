@@ -16,65 +16,61 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass
-from typing import Optional
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, SourceCodeConfig, Status
+from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, DevSandboxStatus
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxDeserializer, DevSandboxSerializer
+from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_name
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 
 @dataclass
 class DevSandbox(AppEntity):
-    """DevSandbox entity"""
+    """开发沙箱"""
 
+    # 唯一标识
+    code: str
+    # 镜像，环境变量等信息
     runtime: Runtime
-    resources: Optional[Resources] = None
-    # 部署后, 从集群中获取状态
-    status: Optional[Status] = None
     # 源码相关配置
-    source_code_config: Optional[SourceCodeConfig] = None
+    source_code_cfg: SourceCodeConfig
+    # 代码编辑器配置
+    code_editor_cfg: CodeEditorConfig | None = None
+    # 部署后, 从集群中获取状态
+    status: str = DevSandboxStatus.PENDING
 
     class Meta:
-        kres_class = kres.KDeployment
+        kres_class = kres.KPod
         serializer = DevSandboxSerializer
         deserializer = DevSandboxDeserializer
 
     @classmethod
     def create(
         cls,
-        dev_wl_app: WlApp,
+        wl_app: WlApp,
+        code: str,
+        token: str,
         runtime: Runtime,
-        resources: Optional[Resources] = None,
-        source_code_config: Optional[SourceCodeConfig] = None,
+        source_code_cfg: SourceCodeConfig,
+        code_editor_cfg: CodeEditorConfig | None = None,
     ) -> "DevSandbox":
+        # 注入特殊环境变量
+
+        # 沙箱服务
+        runtime.envs[DevSandboxEnvKey.WORKSPACE] = DEV_SANDBOX_WORKSPACE
+        runtime.envs[DevSandboxEnvKey.TOKEN] = token
+        # 源代码信息
+        runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_METHOD] = str(source_code_cfg.source_fetch_method)
+        runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_URL] = source_code_cfg.source_fetch_url or ""
+
         return cls(
-            app=dev_wl_app,
-            name=get_dev_sandbox_name(dev_wl_app),
+            app=wl_app,
+            name=get_dev_sandbox_name(wl_app),
+            code=code,
             runtime=runtime,
-            resources=resources,
-            source_code_config=source_code_config,
+            source_code_cfg=source_code_cfg,
+            code_editor_cfg=code_editor_cfg,
         )
-
-    def construct_envs(self):
-        """该函数将 DevSandbox 对象的属性(需要通过环境变量生效的配置)注入环境变量"""
-        if not self.source_code_config:
-            return
-
-        envs = self.runtime.envs
-
-        def update_env_var(key, value):
-            if value:
-                envs.update({key: value})
-
-        # 注入源码获取方式环境变量
-        update_env_var("SOURCE_FETCH_METHOD", self.source_code_config.source_fetch_method.value)
-        # 注入源码获取地址
-        update_env_var("SOURCE_FETCH_URL", self.source_code_config.source_fetch_url)
-        # 注入工作空间环境变量
-        update_env_var("WORKSPACE", self.source_code_config.workspace)
-
-
-def get_dev_sandbox_name(dev_wl_app: WlApp) -> str:
-    return dev_wl_app.scheduler_safe_name

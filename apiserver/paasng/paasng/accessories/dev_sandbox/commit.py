@@ -14,6 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+import logging
 import os
 from typing import Dict, List
 
@@ -23,10 +25,12 @@ from paasng.accessories.dev_sandbox.client import DevSandboxApiClient
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.modules.models import Module
-from paasng.platform.sourcectl.constants import FileChangeType
+from paasng.platform.sourcectl.constants import FileChangeType, VersionType
 from paasng.platform.sourcectl.exceptions import CallGitApiFailed
 from paasng.platform.sourcectl.models import ChangedFile, CommitInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
+
+logger = logging.getLogger(__name__)
 
 
 class DevSandboxCodeCommit:
@@ -92,6 +96,14 @@ class DevSandboxCodeCommit:
         try:
             repo_ctrl.commit_files(commit_info)
         except CallGitApiFailed as e:
+            logger.exception("failed to commit code to repository")
             raise CannotCommitToRepository(_("提交代码到代码库失败")) from e
 
-        return repo_ctrl.build_url(self.dev_sandbox.version_info)
+        version_info = self.dev_sandbox.version_info
+        repo_url = repo_ctrl.build_url(version_info)
+
+        if version_info.version_type != VersionType.BRANCH:
+            return repo_url
+
+        # 如果版本类型是分支，访问地址可以更具体一些
+        return f"{repo_url.removesuffix('.git')}/tree/{version_info.version_name}"

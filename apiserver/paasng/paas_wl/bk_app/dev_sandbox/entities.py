@@ -15,96 +15,80 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from attrs import define, field
 from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
-class HealthPhase(StrStructuredEnum):
-    HEALTHY = EnumField("Healthy")
-    PROGRESSING = EnumField("Progressing")
-    UNHEALTHY = EnumField("Unhealthy")
-    UNKNOWN = EnumField("Unknown")
-
-
-@dataclass
+@define
 class Runtime:
-    """容器运行相关配置"""
+    """容器运行时"""
 
     envs: Dict[str, str]
-    image: str
+    image: str = settings.DEV_SANDBOX_IMAGE
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.ALWAYS)
 
 
-@dataclass
+@define
 class ResourceSpec:
     cpu: str
     memory: str
 
     def to_dict(self):
-        return {
-            "cpu": self.cpu,
-            "memory": self.memory,
-        }
+        return {"cpu": self.cpu, "memory": self.memory}
 
 
-@dataclass
+@define
 class Resources:
-    """计算资源定义"""
+    """运行资源"""
 
-    limits: Optional[ResourceSpec] = None
-    requests: Optional[ResourceSpec] = None
+    limits: ResourceSpec | None = None
+    requests: ResourceSpec | None = None
 
     def to_dict(self):
-        d = {}
+        quota = {}
         if self.limits:
-            d["limits"] = self.limits.to_dict()
+            quota["limits"] = self.limits.to_dict()
         if self.requests:
-            d["requests"] = self.requests.to_dict()
-        return d
+            quota["requests"] = self.requests.to_dict()
+
+        return quota
 
 
-@dataclass
-class Status:
-    replicas: int
-    ready_replicas: int
+@define
+class NetworkConfig:
+    """网络相关配置"""
 
-    def to_health_phase(self) -> str:
-        if self.replicas == self.ready_replicas:
-            return HealthPhase.HEALTHY
-
-        # TODO 如果需要细化出 Unhealthy, 可以结合 Conditions 处理
-        # 将 Unhealthy 也并入 Progressing, 简化需求
-        return HealthPhase.PROGRESSING
+    # Ingress 访问路径前缀
+    path_prefix: str
+    # Service 端口配置（名称，端口，容器端口）
+    svc_port_name: str
+    port: int
+    target_port: int
 
 
-@dataclass
+@define
 class ServicePortPair:
-    """Service port pair"""
-
     name: str
     port: int
     target_port: int
     protocol: str = "TCP"
 
 
-@dataclass
+@define
 class IngressPathBackend:
-    """Ingress Path Backend object"""
-
     path_prefix: str
     service_name: str
     service_port_name: str
 
 
-@dataclass
+@define
 class IngressDomain:
-    """Ingress Domain object"""
+    """域名配置信息"""
 
     host: str
     path_backends: List[IngressPathBackend]
@@ -112,57 +96,19 @@ class IngressDomain:
     tls_secret_name: str = ""
 
 
-@dataclass
-class DevSandboxDetail:
-    url: str
-    envs: Dict[str, str]
-    status: str
-
-
-class DevSandboxWithCodeEditorUrls:
-    app_url: str
-    devserver_url: str
-    code_editor_url: str
-    code_editor_health_url: str
-
-    def __init__(self, base_url: str, dev_sandbox_code: str):
-        url_prefix = f"{base_url}/dev_sandbox/{dev_sandbox_code}"
-        self.app_url = f"{url_prefix}/app/"
-        self.devserver_url = f"{url_prefix}/devserver/"
-        self.code_editor_url = f"{url_prefix}/code-editor/?folder={settings.CODE_EDITOR_START_DIR}"
-        self.code_editor_health_url = f"{url_prefix}/code-editor/healthz"
-
-
-@dataclass
-class DevSandboxWithCodeEditorDetail:
-    dev_sandbox_env_vars: Dict[str, str]
-    code_editor_env_vars: Dict[str, str]
-    dev_sandbox_status: str
-    code_editor_status: str
-    urls: DevSandboxWithCodeEditorUrls
-
-
-@dataclass
+@define
 class SourceCodeConfig:
-    """源码持久化相关配置"""
+    """源码配置"""
 
-    # 源码持久化用的 pvc 名称
-    pvc_claim_name: Optional[str] = None
-    # 工作空间，用于读取/存储源码
-    workspace: Optional[str] = None
     # 源码获取地址
-    source_fetch_url: Optional[str] = None
+    source_fetch_url: str | None = None
     # 源码获取方式
     source_fetch_method: SourceCodeFetchMethod = SourceCodeFetchMethod.HTTP
 
 
-@dataclass
+@define
 class CodeEditorConfig:
-    """代码编辑器相关配置"""
+    """代码编辑器配置"""
 
-    # 源码持久化用的 pvc 名称
-    pvc_claim_name: Optional[str] = None
-    # 项目目录, 读取项目源码的起始目录
-    start_dir: Optional[str] = None
-    # 登陆密码
-    password: Optional[str] = None
+    # 登录密码
+    password: str

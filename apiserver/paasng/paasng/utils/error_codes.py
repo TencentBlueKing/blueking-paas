@@ -190,10 +190,11 @@ class ErrorCodes:
     CANNOT_UPDATE_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
 
     # dev sandbox
-    DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)
-    DEV_SANDBOX_NOT_FOUND = ErrorCode("dev sandbox not found")
-    DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode("dev sandbox count over limit")
-    DEV_SANDBOX_API_ERROR = ErrorCode("dev sandbox's api return error", status_code=500)
+    DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))
+    DEV_SANDBOX_ALREADY_EXISTS = ErrorCode(_("开发沙箱已存在"), status_code=409)
+    DEV_SANDBOX_NOT_FOUND = ErrorCode(_("指定的开发沙箱不存在"), status_code=404)
+    DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode(_("开发沙箱总数量超过上限"))
+    DEV_SANDBOX_API_ERROR = ErrorCode(_("开发沙箱 API 请求异常"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

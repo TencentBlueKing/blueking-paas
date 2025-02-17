@@ -382,7 +382,32 @@ paths:
           userVerifiedRequired: true
         disabledStages: []
         descriptionEn:
-  /bkapps/applications/{app_code}/modules/{module}/dev_sandbox/:
+  /bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/:
+    post:
+      operationId: deploy_dev_sandbox
+      description: 部署开发容器
+      tags:
+      - 部署相关接口
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: []
+        descriptionEn:
+  /bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/{dev_sandbox_code}/:
     delete:
       operationId: delete_dev_sandbox
       description: ''
@@ -397,7 +422,7 @@ paths:
         backend:
           type: HTTP
           method: delete
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandbox/
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/{dev_sandbox_code}/
           matchSubpath: false
           timeout: 0
           upstreams: {}
@@ -421,31 +446,7 @@ paths:
         backend:
           type: HTTP
           method: get
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandbox/
-          matchSubpath: false
-          timeout: 0
-          upstreams: {}
-          transformHeaders: {}
-        authConfig:
-          userVerifiedRequired: false
-        disabledStages: []
-        descriptionEn:
-    post:
-      operationId: deploy_dev_sandbox
-      description: 部署开发容器
-      tags:
-      - 部署相关接口
-      responses:
-        default:
-          description: ''
-      x-bk-apigateway-resource:
-        isPublic: false
-        allowApplyPermission: false
-        matchSubpath: false
-        backend:
-          type: HTTP
-          method: post
-          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandbox/
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/{dev_sandbox_code}/
           matchSubpath: false
           timeout: 0
           upstreams: {}

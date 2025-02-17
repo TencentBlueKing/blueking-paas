@@ -374,7 +374,7 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
 
-    def test_desc_app(self, api_client, bk_user, random_name, mock_wl_services_in_creation):
+    def test_desc_app(self, api_client, bk_user, random_name):
         get_desc_handler(
             dict(
                 spec_version=2,
@@ -387,8 +387,9 @@ class TestApplicationUpdate:
             "/api/bkapps/applications/{}/".format(app.code),
             data={"name": random_name},
         )
-        assert response.status_code == 400
-        assert response.json()["code"] == "APP_RES_PROTECTED"
+        assert response.status_code == 200
+        # 描述文件定义的应用可以更新名称
+        assert Application.objects.get(pk=app.pk).name == random_name
 
 
 class TestApplicationDeletion:

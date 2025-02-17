@@ -149,7 +149,6 @@ class AppDeclarativeController:
             field_cls(application).handle_desc(desc)
 
         self.sync_modules(application, desc.modules)
-        self.sync_market_fields(application, desc.market)
         self.sync_services_fields(application, desc.modules)
         self.save_description(desc, application, is_creation=False)
         return application
@@ -258,8 +257,8 @@ class AppDeclarativeController:
 
         product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)
-        if logo and created:
-            # NOTE: 更新时，不覆盖原 logo
+
+        if logo:
             # Logo was now migrated to Application model
             # TODO: Refactor more to make this look more natural
             application.logo.save(logo.name, logo)

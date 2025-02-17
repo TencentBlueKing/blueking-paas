@@ -29,6 +29,10 @@ from rest_framework.test import APIClient
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.shim import RegionClusterService
+from paasng.accessories.publish.sync_market.handlers import (
+    on_change_application_name,
+    prepare_change_application_name,
+)
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.infras.accounts.models import UserProfile
@@ -355,6 +359,13 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
+    @pytest.fixture()
+    def _mock_change_app_name_action(self):
+        # skip change app name to console
+        prepare_change_application_name.disconnect(on_change_application_name)
+        yield
+        prepare_change_application_name.connect(on_change_application_name)
+
     @pytest.mark.usefixtures("_register_app_core_data")
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
@@ -374,7 +385,8 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
 
-    def test_desc_app(self, api_client, bk_user, random_name, mock_wl_services_in_creation):
+    @pytest.mark.usefixtures("_mock_change_app_name_action")
+    def test_desc_app(self, api_client, bk_user, random_name):
         get_desc_handler(
             dict(
                 spec_version=2,

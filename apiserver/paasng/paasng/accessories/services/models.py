@@ -35,8 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceCategory(models.Model):
-    """
-    Service Category
+    """Service Category
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
@@ -52,8 +53,9 @@ class ServiceManager(models.Manager):
 
 
 class Service(UuidAuditedModel):
-    """
-    Service model for PaaS
+    """Service model for PaaS
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     region = models.CharField(max_length=32)
@@ -234,6 +236,8 @@ class Plan(UuidAuditedModel):
 
 
 class ResourceId(models.Model):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 

@@ -19,6 +19,8 @@
 import logging
 
 from django.db import migrations
+from django.utils import translation
+from django.conf import settings
 
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
@@ -51,11 +53,14 @@ def init_service_binding_policy(apps, schema_editor):
         logger.info("Service binding policy already exists, skip init")
         return
 
-    for service in mixed_service_mgr.list():
-        logger.info("Init service(%s) binding policy for service", service.name)
-        plans = service.get_plans()
-        ServiceBindingPolicyManager(service,DEFAULT_TENANT_ID).set_static(plans)
-        logger.info("Service(%s) binding policy init done", service.name)
+    # mixed_service_mgr.list() 会调用 django.utils.translation.get_language()
+    # 虽然配置了 settings.LANGUAGE_CODE 但是必须在国际化中间件 LocaleMiddleware 调用后才会有值
+    with translation.override(settings.LANGUAGE_CODE):
+        for service in mixed_service_mgr.list():
+            logger.info("Init service(%s) binding policy for service", service.name)
+            plans = service.get_plans()
+            ServiceBindingPolicyManager(service,DEFAULT_TENANT_ID).set_static(plans)
+            logger.info("Service(%s) binding policy init done", service.name)
 
 
 class Migration(migrations.Migration):

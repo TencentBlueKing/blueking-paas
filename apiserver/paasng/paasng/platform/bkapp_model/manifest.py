@@ -366,7 +366,12 @@ class MountsManifestConstructor(ManifestConstructor):
         # The global mounts
         for config in Mount.objects.filter(module_id=module.pk, environment_name=MountEnvName.GLOBAL.value):
             model_res.spec.mounts.append(
-                crd.Mount(name=config.name, mountPath=config.mount_path, source=config.source_config)
+                crd.Mount(
+                    name=config.name,
+                    mountPath=config.mount_path,
+                    source=config.source_config,
+                    subPaths=config.sub_paths,
+                )
             )
 
         # The environment specific mounts
@@ -378,7 +383,11 @@ class MountsManifestConstructor(ManifestConstructor):
                 overlay.append_item(
                     "mounts",
                     crd.MountOverlay(
-                        envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config
+                        envName=env,
+                        name=config.name,
+                        mountPath=config.mount_path,
+                        source=config.source_config,
+                        subPaths=config.sub_paths,
                     ),
                 )
 

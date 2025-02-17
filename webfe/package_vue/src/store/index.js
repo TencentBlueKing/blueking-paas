@@ -353,22 +353,6 @@ const actions = {
   },
 
   /**
-   * 获取应用语言类型数量
-   */
-  getAppsByLang({}, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=false`;
-    return http.get(url, config);
-  },
-
-  /**
-   * 获取应用版本类型数量
-   */
-  getAppsByRegion({}, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=false`;
-    return http.get(url, config);
-  },
-
-  /**
    * 获取应用类型信息
    * @param {String} region 应用类型
    */

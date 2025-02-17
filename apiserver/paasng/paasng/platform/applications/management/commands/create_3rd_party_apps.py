@@ -70,8 +70,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--source", type=str, dest="source")
         parser.add_argument("--app_codes", type=str, dest="third_app_init_codes")
-        parser.add_argument("--tenant_mode", type=str, dest="app_tenant_mode", default=AppTenantMode.GLOBAL)
-        parser.add_argument("--tenant_id", type=str, dest="app_tenant_id", default="")
+        parser.add_argument("--tenant_mode", type=str, dest="tenant_mode", default=AppTenantMode.GLOBAL)
+        parser.add_argument("--tenant_id", type=str, dest="tenant_id", default="")
         parser.add_argument("--override", type=str2bool, dest="override", default=False)
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 

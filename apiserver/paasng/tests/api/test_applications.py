@@ -1060,7 +1060,7 @@ class TestApplicationList:
         return app
 
     def test_list_detailed(self, api_client, single_tenant_app, global_tenant_app):
-        with mock.patch("paasng.platform.applications.views.get_exposed_links", return_value={}):
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
             response = api_client.get(reverse("api.applications.lists.detailed"))
             assert response.data["count"] == 2
 

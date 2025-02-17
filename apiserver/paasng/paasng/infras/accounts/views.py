@@ -33,6 +33,8 @@ from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.infras.accounts.oauth.exceptions import BKAppOauthError
 from paasng.infras.accounts.oauth.utils import get_available_backends, get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -278,6 +280,11 @@ class AccountFeatureFlagViewSet(viewsets.ViewSet):
     @swagger_auto_schema(tags=["特性标记"])
     def list(self, request):
         flags = AccountFeatureFlag.objects.get_user_features(request.user)
+
+        # 平台管理（导航入口）
+        # TODO 目前只有平台管理员有权限，后续需要支持租户管理员
+        flags["PLATFORM_MANAGEMENT"] = user_has_site_action_perm(request.user, SiteAction.MANAGE_PLATFORM)
+
         return Response(flags)
 
 

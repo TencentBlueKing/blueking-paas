@@ -28,6 +28,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.api import CreatedAppInfo
 from paas_wl.bk_app.applications.constants import WlAppType
+from paasng.accessories.log.shim.setup_elk import ClusterElasticSearchConfig
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
@@ -372,6 +373,10 @@ def _mock_wl_services_in_creation():
         else:
             _faked_env_metadata[env.id].update(metadata_part)
 
+    mock_cluster_setup_elk = mock.Mock()
+    mock_cluster_setup_elk.uuid = uuid.uuid4()
+    mock_cluster_es_confg_queryset = mock.Mock()
+    mock_cluster_es_confg_queryset.first.return_value = None
     with (
         mock.patch(
             "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
@@ -386,8 +391,12 @@ def _mock_wl_services_in_creation():
         mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"),
         mock.patch("paasng.platform.bkapp_model.services.EnvClusterService"),
         mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
+        mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
+        mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
     ):
         fake_log().get_cluster().has_feature_flag.return_value = False
+        fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
+        mock_filter.return_value = mock_cluster_es_confg_queryset
         yield
 
 
@@ -575,7 +584,9 @@ def register_iam_after_create_application(application: Application):
 
     # 1. 创建分级管理员，并记录分级管理员 ID
     grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
-    ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
+    ApplicationGradeManager.objects.create(
+        app_code=application.code, grade_manager_id=grade_manager_id, tenant_id=tenant_id
+    )
 
     # 2. 将创建者，添加为分级管理员的成员
     cli.add_grade_manager_members(grade_manager_id, [creator])
@@ -584,7 +595,9 @@ def register_iam_after_create_application(application: Application):
     user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
     ApplicationUserGroup.objects.bulk_create(
         [
-            ApplicationUserGroup(app_code=application.code, role=group["role"], user_group_id=group["id"])
+            ApplicationUserGroup(
+                app_code=application.code, role=group["role"], user_group_id=group["id"], tenant_id=tenant_id
+            )
             for group in user_groups
         ]
     )

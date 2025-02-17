@@ -62,6 +62,7 @@ def mocked_plugin_repo_accessor():
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {},
+                "plugin_tenant_mode": None,
             },
         ),
         (
@@ -90,6 +91,7 @@ def mocked_plugin_repo_accessor():
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
+                "plugin_tenant_mode": None,
             },
         ),
         (

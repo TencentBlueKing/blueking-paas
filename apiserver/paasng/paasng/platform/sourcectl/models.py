@@ -186,6 +186,8 @@ class SvnAccount(TimestampedModel):
 
     [multi-tenancy] This model is not tenant-aware. Should add tenant_id field if
     it's more convenient to get tenant_id from user.
+
+    NOTE: 平台 bk_svn 仓库(非 bare_svn)的支持逐步废弃, 因此不需要再支持多租户功能
     """
 
     account = models.CharField(max_length=64, help_text="目前仅支持固定格式", unique=True)

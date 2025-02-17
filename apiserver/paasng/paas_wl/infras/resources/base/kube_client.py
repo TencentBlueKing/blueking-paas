@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from collections import defaultdict
 from typing import Any, Dict
 
 from kubernetes.dynamic import DynamicClient, Resource
@@ -76,6 +77,22 @@ class LazyDiscoverer(_LazyDiscoverer):
             for key in resources.keys():  # noqa: SIM118
                 matches.extend(self.__search([key] + parts[1:], resources, reqParams))
             return matches
+
+    def get_resources_for_api_version(self, prefix, group, version, preferred):
+        """returns a dictionary of resources associated with provided (prefix, group, version)
+
+        说明: 重写该方法的原因是, 集群中可能存在未正确定义 kind 的 CRD, 进而忽略这些 CRD.
+        """
+        try:
+            return super().get_resources_for_api_version(prefix, group, version, preferred)
+        except KeyError as e:
+            # 抛出异常的位置:
+            # https://github.com/kubernetes-client/python/blob/v24.2.0/kubernetes/base/dynamic/discovery.py#L162
+            # https://github.com/kubernetes-client/python/blob/v24.2.0/kubernetes/base/dynamic/resource.py#L287
+            if str(e) == "'kind'":
+                logger.warning("ServiceUnavailable: Resource %s/%s/%s missing kind field", prefix, group, version)
+                return defaultdict(list)
+            raise
 
 
 class CoreDynamicClient(DynamicClient):

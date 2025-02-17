@@ -19,6 +19,8 @@
 package volumes
 
 import (
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -151,6 +153,29 @@ var _ = Describe("test apply to deployment", func() {
 					Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "nginx", Image: "nginx:latest"}}},
 				},
 			},
+		}
+	})
+
+	It("subPaths", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+		subPaths := []string{"nginx.conf", "nginx2.conf"}
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			},
+			MountPath: mountPath,
+			SubPaths:  subPaths,
+		}
+		_ = vm.ApplyToDeployment(nil, deployment)
+		volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+		for idx, mount := range volumeMounts {
+			Expect(mount.Name).To(Equal(mountName))
+			Expect(mount.MountPath).To(Equal(filepath.Join(mountPath, subPaths[idx])))
+			Expect(mount.SubPath).To(Equal(subPaths[idx]))
 		}
 	})
 

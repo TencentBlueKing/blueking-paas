@@ -20,7 +20,7 @@
           :loading="btnLoading"
           @click="$emit('rerun')"
         >
-          <i class="paasng-icon paasng-refresh-line"></i>
+          <i class="paasng-refresh-line paasng-icon"></i>
           {{ $t('重新运行') }}
         </bk-button>
       </template>
@@ -31,7 +31,7 @@
           bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"
           @click="$emit('run-now')"
         >
-          <i class="paasng-icon paasng-right-shape"></i>
+          <i class="paasng-right-shape paasng-icon"></i>
           {{ $t('立即运行') }}
         </bk-button>
       </template>
@@ -75,7 +75,7 @@
         @click="$emit('jump')"
       >
         {{ $t('立即访问') }}
-        <i class="paasng-icon paasng-jump-link"></i>
+        <i class="paasng-jump-link paasng-icon"></i>
       </bk-button>
     </div>
     <div class="tab-header">

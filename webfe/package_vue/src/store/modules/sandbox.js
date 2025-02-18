@@ -31,35 +31,28 @@ export default {
      * 创建沙箱
      */
     createSandbox({}, { appCode, moduleId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_with_code_editor/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/`;
       return http.post(url, data, config);
     },
     /**
      * 获取沙箱列表
      */
     getSandboxList({}, { appCode }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/user/dev_sandbox_with_code_editors/lists/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/dev_sandboxes/`;
       return http.get(url, config);
     },
     /**
      * 销毁沙箱
      */
-    destroySandbox({}, { appCode, moduleId }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_with_code_editor/`;
+    destroySandbox({}, { appCode, moduleId, devSandboxCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/`;
       return http.delete(url, config);
     },
     /**
      * 获取沙箱界面数据
      */
-    getSandboxWithCodeEditor({}, { appCode, moduleId }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_with_code_editor/`;
-      return http.get(url, config);
-    },
-    /**
-     * 获取沙箱环境密码
-     */
-    getSandboxPassword({}, { appCode, moduleId }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_password/`;
+    getSandbox({}, { appCode, moduleId, devSandboxCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/`;
       return http.get(url, config);
     },
     /**
@@ -73,14 +66,14 @@ export default {
      * 新建沙箱前置检查
      */
     createSandboxPreDeployCheck({}, { appCode }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/user/dev_sandbox_with_code_editors/pre_deploy_check/`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/dev_sandboxes/pre_deploy_check/`;
       return http.get(url, config);
     },
     /**
      * 沙箱提交代码
      */
-    sandboxSubmitCode({}, { appCode, moduleId, data }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/user/dev_sandbox_with_code_editor/commit/`;
+    sandboxSubmitCode({}, { appCode, moduleId, devSandboxCode, data }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/commit/`;
       return http.post(url, data, config);
     },
   },

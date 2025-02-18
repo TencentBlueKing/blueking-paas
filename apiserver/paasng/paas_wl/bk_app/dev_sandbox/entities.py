@@ -66,7 +66,7 @@ class NetworkConfig:
     # Ingress 访问路径前缀
     path_prefix: str
     # Service 端口配置（名称，端口，容器端口）
-    svc_port_name: str
+    port_name: str
     port: int
     target_port: int
 

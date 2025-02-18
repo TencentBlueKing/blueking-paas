@@ -27,21 +27,21 @@ if TYPE_CHECKING:
 
 DEV_SERVER_NETWORK_CONFIG = NetworkConfig(
     path_prefix="/devserver/",
-    svc_port_name="devserver",
+    port_name="devserver",
     port=8000,
     target_port=settings.DEV_SANDBOX_DEVSERVER_PORT,
 )
 
 APP_SERVER_NETWORK_CONFIG = NetworkConfig(
     path_prefix="/app/",
-    svc_port_name="app",
+    port_name="app",
     port=80,
     target_port=settings.CONTAINER_PORT,
 )
 
 CODE_EDITOR_NETWORK_CONFIG = NetworkConfig(
     path_prefix="/code_editor/",
-    svc_port_name="code-editor",
+    port_name="code-editor",
     port=10251,
     target_port=settings.DEV_SANDBOX_CODE_EDITOR_PORT,
 )

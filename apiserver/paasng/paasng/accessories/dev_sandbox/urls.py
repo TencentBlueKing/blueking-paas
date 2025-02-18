@@ -23,7 +23,7 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/dev_sandboxes/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "list", "post": "create"}),
-        name="accessories.dev_sandbox.bulk",
+        name="accessories.dev_sandbox.list_create",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/pre_deploy_check/$", include_envs=False),
@@ -33,7 +33,7 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
-        name="accessories.dev_sandbox.detail",
+        name="accessories.dev_sandbox.retrieve_destroy",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/commit/$", include_envs=False),

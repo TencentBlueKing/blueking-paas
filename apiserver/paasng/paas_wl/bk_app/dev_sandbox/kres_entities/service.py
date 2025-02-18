@@ -42,7 +42,7 @@ class DevSandboxService(AppEntity):
 
         ports = [
             ServicePortPair(
-                name=cfg.svc_port_name,
+                name=cfg.port_name,
                 port=cfg.port,
                 target_port=cfg.target_port,
             )

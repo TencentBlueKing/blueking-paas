@@ -59,7 +59,7 @@ def _get_path_backends(dev_sandbox: "DevSandbox") -> List[IngressPathBackend]:
         IngressPathBackend(
             path_prefix=f"/dev_sandbox/{dev_sandbox.code}{cfg.path_prefix}",
             service_name=get_dev_sandbox_service_name(dev_sandbox.app),
-            service_port_name=cfg.svc_port_name,
+            service_port_name=cfg.port_name,
         )
         for cfg in get_network_configs(dev_sandbox)
     ]

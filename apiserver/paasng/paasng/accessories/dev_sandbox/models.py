@@ -32,21 +32,28 @@ from paasng.utils.models import OwnerTimestampedModel, UuidAuditedModel
 
 VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
-DEV_SANDBOX_CODE_CHARSETS = string.ascii_lowercase + string.digits
-
-# 默认 2h 无活动后会回收沙箱
-DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
+# 默认 6h 无活动后会回收沙箱
+DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=6)
 
 
 class DevSandboxQuerySet(models.QuerySet):
     """开发沙箱 QuerySet 类"""
 
     def create(self, module: Module, version_info: VersionInfo | None, owner: str) -> "DevSandbox":
+        charsets = string.ascii_lowercase + string.digits
+
+        # 最大重试次数
+        max_retries, retry_count = 10, 0
         # 生成唯一的沙箱标识
-        while True:
-            code = get_random_string(8, DEV_SANDBOX_CODE_CHARSETS)
+        while retry_count < max_retries:
+            # 生成唯一的沙箱标识
+            code = get_random_string(8, charsets)
             if not super().filter(code=code).exists():
                 break
+            retry_count += 1
+        else:
+            # 达到最大重试次数，抛出异常
+            raise ValueError("Failed to generate a unique dev sandbox code after maximum retries.")
 
         return super().create(
             code=code,

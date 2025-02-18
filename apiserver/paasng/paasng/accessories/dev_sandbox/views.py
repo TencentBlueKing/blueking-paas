@@ -94,16 +94,16 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         # 同用户同模块只能有一个运行中的沙箱
         owner = request.user.pk
-        if DevSandbox.objects.filter(owner=owner, module=module).exclude(version_info=None).exists():
+        if DevSandbox.objects.filter(owner=owner, module=module).exists():
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
 
         # 目前仅支持 vcs 类型的源码获取方式
         if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
             raise error_codes.UNSUPPORTED_SOURCE_ORIGIN
 
-        version_info = data.get("source_code_version_info")
         # 默认为 HTTP 文件提供源代码
         source_code_cfg = SourceCodeConfig(source_fetch_method=SourceCodeFetchMethod.HTTP)
+        version_info = data.get("source_code_version_info")
         # 如果已经指定代码配置，则需要修改配置
         if version_info:
             source_dir = get_source_dir(module, owner, version_info)

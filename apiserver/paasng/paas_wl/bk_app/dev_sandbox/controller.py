@@ -70,8 +70,7 @@ class DevSandboxDetail:
 class DevSandboxController:
     """开发沙箱控制器
 
-    :param module: 应用模块
-    :param dev_sandbox_code: 沙箱标识
+    :param dev_sandbox: 开发沙箱（DB 模型）
     """
 
     sandbox_mgr = AppEntityManager(DevSandbox)
@@ -171,7 +170,12 @@ class DevWlAppConstructor:
 
     def construct(self) -> WlApp:
         """构造 WlApp 实例（非 DB 数据）"""
-        dev_wl_app = WlApp(region=self.app.region, name=self._make_dev_wl_app_name(), type=self.app.type)
+        dev_wl_app = WlApp(
+            region=self.app.region,
+            tenant_id=self.app.tenant_id,
+            name=self._make_dev_wl_app_name(),
+            type=self.app.type,
+        )
 
         # 因为 dev_wl_app 不是查询集结果, 所以需要覆盖 namespace 和 module_name, 以保证 AppEntityManager 模式能够正常工作
         # TODO 考虑更规范的方式处理这两个 cached_property 属性. 如考虑使用 WlAppProtocol 满足 AppEntityManager 模式

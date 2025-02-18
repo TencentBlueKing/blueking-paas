@@ -34,7 +34,7 @@ class TestListDevSandbox:
     """获取开发沙箱列表"""
 
     def test_list(self, api_client, bk_cnative_app, bk_dev_sandbox):
-        resp = api_client.get(reverse("accessories.dev_sandbox.bulk", kwargs={"code": bk_cnative_app.code}))
+        resp = api_client.get(reverse("accessories.dev_sandbox.list_create", kwargs={"code": bk_cnative_app.code}))
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.json()) >= 1
 

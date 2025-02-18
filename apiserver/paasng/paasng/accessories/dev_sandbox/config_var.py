@@ -44,6 +44,7 @@ def generate_envs(module: Module) -> Dict[str, str]:
     if buildpacks := build_info.buildpacks_info:
         envs["REQUIRED_BUILDPACKS"] = _buildpacks_as_build_env(buildpacks)
 
+    # Inject dev server config
     envs["DEV_SERVER_ADDR"] = f":{settings.DEV_SANDBOX_DEVSERVER_PORT}"
     envs["CORS_ALLOW_ORIGINS"] = settings.DEV_SANDBOX_CORS_ALLOW_ORIGINS
 

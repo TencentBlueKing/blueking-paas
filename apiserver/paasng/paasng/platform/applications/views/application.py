@@ -452,12 +452,11 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - param: logo, file, 应用LOGO，不传则不更新
         """
         application = self.get_application()
-        # Check if app was protected
-        raise_if_protected(application, ProtectedRes.BASIC_INFO_MODIFICATIONS)
 
         serializer = slzs.UpdateApplicationSLZ(data=request.data, instance=application)
         serializer.is_valid(raise_exception=True)
         application = serializer.save()
+
         Product.objects.filter(code=code).update(name_zh_cn=application.name, name_en=application.name_en)
 
         # 应用 LOGO，不传则不更新

@@ -54,13 +54,11 @@ class TestAppResProtector:
 
     def test_list_status(self, bk_app):
         with AppResProtector.override_preconditions(
-            {ProtectedRes.BASIC_INFO_MODIFICATIONS: [ForbidUpdate], ProtectedRes.SERVICES_MODIFICATIONS: []}
+            {ProtectedRes.BASIC_INFO_MODIFICATIONS: [], ProtectedRes.SERVICES_MODIFICATIONS: [ForbidUpdate]}
         ):
             assert AppResProtector(bk_app).list_status() == {
-                ProtectedRes.BASIC_INFO_MODIFICATIONS: ProtectionStatus(
-                    [ConditionNotMatched("forbidden", "forbidden")]
-                ),
-                ProtectedRes.SERVICES_MODIFICATIONS: ProtectionStatus([]),
+                ProtectedRes.BASIC_INFO_MODIFICATIONS: ProtectionStatus([]),
+                ProtectedRes.SERVICES_MODIFICATIONS: ProtectionStatus([ConditionNotMatched("forbidden", "forbidden")]),
                 ProtectedRes.DISABLE_APP_DESC: ProtectionStatus([]),
             }
 

@@ -34,6 +34,7 @@ def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> T
     fields = {
         **base_fields,
         "creator": serializers.CharField(help_text="创建者", required=True),
+        "repository": serializers.CharField(help_text="仓库地址", required=True),
         "plugin_tenant_id": serializers.CharField(help_text="租户ID", default=""),
         "tenant_id": serializers.CharField(help_text="插件所属租户", default=DEFAULT_TENANT_ID),
     }

@@ -34,6 +34,7 @@ pytestmark = pytest.mark.django_db
                 "name": generate_random_string(length=20, chars=string.ascii_lowercase),
                 "template": "foo",
                 "creator": "user1",
+                "repository": "http://git.example.com/template.git",
             },
             201,
         ),
@@ -43,12 +44,19 @@ pytestmark = pytest.mark.django_db
                 "name": generate_random_string(length=20, chars=string.ascii_lowercase),
                 "template": "foo",
                 "creator": "user1",
+                "repository": "http://git.example.com/template.git",
                 "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
             },
             201,
         ),
         (
-            {"id": "invalid_id", "name": "2", "template": "foo", "creator": "user1"},
+            {
+                "id": "invalid_id",
+                "name": "2",
+                "template": "foo",
+                "creator": "user1",
+                "repository": "http://git.example.com/template.git",
+            },
             400,
         ),
     ],
@@ -59,5 +67,7 @@ def test_creat_api(sys_api_client, pd, data, status_code):
         "paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_user_groups"
     ), mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.add_role_members"):
         response = sys_api_client.post(url, data=data)
-        print("1" * 80, response.json())
         assert response.status_code == status_code
+        if status_code == 201:
+            assert response.data["publisher"] == data["creator"]
+            assert response.data["repository"] == data["repository"]

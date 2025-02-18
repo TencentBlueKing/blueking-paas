@@ -54,15 +54,15 @@ class SysPluginInstanceViewSet(viewsets.ViewSet):
         plugin_tenant_id = validated_data.pop("plugin_tenant_id")
         tenant_id = validated_data.pop("tenant_id")
         creator = validated_data.pop("creator")
+        creator_id = user_id_encoder.encode(settings.USER_TYPE, creator)
 
         plugin = PluginInstance(
             pd=pd,
             language=validated_data["template"].language,
             **validated_data,
-            creator=request.user.pk,
+            creator=creator_id,
             # 插件发布者默认是工具创建者
-            publisher=request.user.username,
-            # 如果插件不需要审批，则状态设置为开发中
+            publisher=creator,
             status=constants.PluginStatus.DEVELOPING,
             # 写入租户相关信息
             plugin_tenant_mode=plugin_tenant_mode.value,
@@ -88,7 +88,7 @@ class SysPluginInstanceViewSet(viewsets.ViewSet):
         # 操作记录: 创建插件
         OperationRecord.objects.create(
             plugin=plugin,
-            operator=user_id_encoder.encode(settings.USER_TYPE, creator),
+            operator=creator_id,
             action=constants.ActionTypes.CREATE,
             subject=constants.SubjectTypes.PLUGIN,
             tenant_id=tenant_id,

@@ -59,7 +59,7 @@ class TestClusterAllocationPolicyViewSet:
         return [manual_policy, rule_policy]
 
     def test_list(self, init_policies, plat_mgt_api_client):
-        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"))
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"))
         assert resp.status_code == status.HTTP_200_OK
 
     def test_create_allocation_policy(self, plat_mgt_api_client, init_default_cluster):
@@ -71,7 +71,7 @@ class TestClusterAllocationPolicyViewSet:
                 "clusters": [init_default_cluster.name],
             },
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
 
     def test_create_allocation_precedence_policies_policy(
@@ -99,7 +99,7 @@ class TestClusterAllocationPolicyViewSet:
                 },
             ],
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
 
     def test_create_policy_without_available_tenant_id(self, plat_mgt_api_client, init_default_cluster):
@@ -112,7 +112,7 @@ class TestClusterAllocationPolicyViewSet:
                 "clusters": [init_default_cluster.name],
             },
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert f"集群名 {init_default_cluster.name} 不存在或不可用" in resp.json()["detail"]
 
@@ -136,7 +136,7 @@ class TestClusterAllocationPolicyViewSet:
 
         policy = init_policies[1]
         url = reverse(
-            "plat_mgt.infras.cluster_allocation_policy.detail",
+            "plat_mgt.infras.cluster_allocation_policy.update",
             kwargs={"policy_id": policy.uuid},
         )
         resp = plat_mgt_api_client.put(url, data=data)
@@ -161,7 +161,7 @@ class TestClusterAllocationPolicyViewSet:
 
         policy = init_policies[0]
         url = reverse(
-            "plat_mgt.infras.cluster_allocation_policy.detail",
+            "plat_mgt.infras.cluster_allocation_policy.update",
             kwargs={"policy_id": policy.uuid},
         )
         resp = plat_mgt_api_client.put(url, data=data)

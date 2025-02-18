@@ -15,16 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .feature_flags import ClusterFeatureFlagViewSet
-from .policies import ClusterAllocationPolicyViewSet
+import pytest
+from django.urls import reverse
+from rest_framework import status
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterFeatureFlagViewSet",
-    "ClusterAllocationPolicyViewSet",
-]
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+class TestClusterFeatureFlagViewSet:
+    def test_list(self, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_feature_flag.list"))
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert len(resp.json()) == 6

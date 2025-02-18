@@ -226,6 +226,8 @@ class TestPlanSelectorListPossiblePlans:
         }
 
     def test_tenant_isolation(self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id):
+        # 验证租户隔离性
+        # 配置租户为 'system' 的 ServiceBindingPolicy
         ServiceBindingPolicyManager(service_obj, tenant_id).set_static([plan1, plan2])
         ServiceBindingPolicyManager(service_obj, tenant_id).set_env_specific(
             env_plans=[
@@ -233,6 +235,7 @@ class TestPlanSelectorListPossiblePlans:
                 (AppEnvName.PROD, [plan1, plan2]),
             ]
         )
+        # 获取租户为 'default' 的 ServiceBindingPolicy
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
         assert possible_plans.get_static_plans() == []
         assert possible_plans.get_env_specific_plans() is None

@@ -38,7 +38,8 @@ class HelmChartSLZ(serializers.Serializer):
 class HelmReleaseSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="Release 名称")
     namespace = serializers.CharField(help_text="部署的命名空间")
-    created_at = serializers.DateTimeField(help_text="部署时间")
+    version = serializers.CharField(help_text="Release 版本")
+    deployed_at = serializers.DateTimeField(help_text="部署时间")
     description = serializers.CharField(help_text="部署描述")
     status = serializers.ChoiceField(help_text="部署状态", choices=HelmChartDeployStatus.get_choices())
 

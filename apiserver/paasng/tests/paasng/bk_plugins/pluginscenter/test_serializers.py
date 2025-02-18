@@ -28,6 +28,7 @@ from rest_framework.exceptions import ErrorDetail
 from paasng.bk_plugins.pluginscenter import serializers
 from paasng.bk_plugins.pluginscenter.constants import PluginRevisionType
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.i18n import to_translated_field
 
 pytestmark = pytest.mark.django_db
@@ -62,7 +63,7 @@ def mocked_plugin_repo_accessor():
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {},
-                "plugin_tenant_mode": None,
+                "plugin_tenant_mode": AppTenantMode.GLOBAL,
             },
         ),
         (
@@ -91,7 +92,7 @@ def mocked_plugin_repo_accessor():
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
-                "plugin_tenant_mode": None,
+                "plugin_tenant_mode": AppTenantMode.GLOBAL,
             },
         ),
         (

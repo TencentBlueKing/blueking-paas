@@ -34,6 +34,7 @@ from paasng.plat_mgt.infras.clusters.constants import (
     TolerationOperator,
 )
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
+from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.validators import Base64Validator
 
 
@@ -96,6 +97,10 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     bcs_project_id = serializers.CharField(help_text="BCS 项目 ID")
     bcs_cluster_id = serializers.CharField(help_text="BCS 集群 ID")
     bk_biz_id = serializers.CharField(help_text="蓝鲸业务 ID")
+    bcs_project_name = serializers.SerializerMethodField(help_text="BCS 项目名称")
+    bcs_cluster_name = serializers.SerializerMethodField(help_text="BCS 集群名称")
+    bk_biz_name = serializers.SerializerMethodField(help_text="蓝鲸业务名称")
+
     api_servers = serializers.SerializerMethodField(help_text="API Server 列表")
 
     # 注意：敏感信息如 ca，cert，key，token 需要不会暴露给前端（字段都没有）
@@ -109,7 +114,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
 
     component_preferred_namespace = serializers.CharField(help_text="集群组件优先部署的命名空间")
     component_image_registry = serializers.CharField(help_text="集群组件镜像仓库地址")
-    exposed_url_type = serializers.IntegerField(help_text="应用访问类型（1: 子路径, 2: 子域名）")
+    exposed_url_type = serializers.SerializerMethodField(help_text="应用访问类型（子路径 / 子域名）")
     app_domains = serializers.SerializerMethodField(help_text="应用域名列表")
 
     node_selector = serializers.JSONField(help_text="节点选择器", source="default_node_selector")
@@ -122,6 +127,15 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
             return ClusterSource.BCS
 
         return ClusterSource.NATIVE_K8S
+
+    def get_bcs_project_name(self, _: Cluster) -> str:
+        return self.context.get("bcs_project_name", "")
+
+    def get_bcs_cluster_name(self, _: Cluster) -> str:
+        return self.context.get("bcs_cluster_name", "")
+
+    def get_bk_biz_name(self, _: Cluster) -> str:
+        return self.context.get("bk_biz_name", "")
 
     def get_api_servers(self, obj: Cluster) -> List[str]:
         return list(APIServer.objects.filter(cluster=obj).values_list("host", flat=True))
@@ -142,6 +156,10 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
             return {}
 
         return ElasticSearchConfigSLZ(cfg.as_dict()).data
+
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    def get_exposed_url_type(self, obj: Cluster) -> str:
+        return ExposedURLType(obj.exposed_url_type).to_string()
 
     @swagger_serializer_method(serializer_or_field=ClusterAppDomainSLZ(many=True))
     def get_app_domains(self, obj: Cluster) -> List[str]:

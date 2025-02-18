@@ -37,5 +37,5 @@ class ClusterFeatureFlagViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterFeatureFlagListOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
-        feature_flags = [{"key": key, "name": name} for key, name in ClusterFeatureFlag.get_django_choices()]
+        feature_flags = [{"key": k, "name": n} for k, n in ClusterFeatureFlag.get_django_choices()]
         return Response(data=ClusterFeatureFlagListOutputSLZ(feature_flags, many=True).data)

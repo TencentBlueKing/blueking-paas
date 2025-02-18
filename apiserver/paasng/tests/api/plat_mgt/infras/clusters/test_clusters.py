@@ -35,7 +35,6 @@ from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.utils.basic import generate_random_string
 
@@ -90,6 +89,9 @@ class TestRetrieveCluster:
             "bcs_project_id": None,
             "bcs_cluster_id": None,
             "bk_biz_id": None,
+            "bcs_project_name": "",
+            "bcs_cluster_name": "",
+            "bk_biz_name": "",
             "api_servers": [
                 "http://127.0.0.8:6553",
                 "http://127.0.0.9:6553",
@@ -104,7 +106,7 @@ class TestRetrieveCluster:
                 "username": "blueking",
             },
             "available_tenant_ids": ["system", "default"],
-            "exposed_url_type": ExposedURLType.SUBPATH,
+            "exposed_url_type": "subpath",
             "app_domains": [
                 {
                     "https_enabled": False,
@@ -329,7 +331,8 @@ class TestUpdateCluster:
             "feature_flags": init_default_cluster.feature_flags,
         }
         url = reverse(
-            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_default_cluster.name}
+            "plat_mgt.infras.cluster.retrieve_update_destroy",
+            kwargs={"cluster_name": init_default_cluster.name},
         )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -369,7 +372,8 @@ class TestUpdateCluster:
             "feature_flags": init_default_cluster.feature_flags,
         }
         url = reverse(
-            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_default_cluster.name}
+            "plat_mgt.infras.cluster.retrieve_update_destroy",
+            kwargs={"cluster_name": init_default_cluster.name},
         )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -425,7 +429,8 @@ class TestUpdateCluster:
             ],
         }
         url = reverse(
-            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+            "plat_mgt.infras.cluster.retrieve_update_destroy",
+            kwargs={"cluster_name": init_system_cluster.name},
         )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -451,7 +456,8 @@ class TestDeleteCluster:
     def test_delete_cluster(self, init_system_cluster, plat_mgt_api_client):
         resp = plat_mgt_api_client.delete(
             reverse(
-                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+                "plat_mgt.infras.cluster.retrieve_update_destroy",
+                kwargs={"cluster_name": init_system_cluster.name},
             )
         )
         assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -468,7 +474,8 @@ class TestDeleteCluster:
 
         resp = plat_mgt_api_client.delete(
             reverse(
-                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+                "plat_mgt.infras.cluster.retrieve_update_destroy",
+                kwargs={"cluster_name": init_system_cluster.name},
             )
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -482,7 +489,8 @@ class TestDeleteCluster:
         )
         resp = plat_mgt_api_client.delete(
             reverse(
-                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+                "plat_mgt.infras.cluster.retrieve_update_destroy",
+                kwargs={"cluster_name": init_system_cluster.name},
             )
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST

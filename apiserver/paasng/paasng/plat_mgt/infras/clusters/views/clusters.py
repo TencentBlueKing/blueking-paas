@@ -29,6 +29,7 @@ from paas_wl.workloads.networking.egress.cluster_state import generate_state, sy
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.infras.bcs.client import BCSClient
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -70,8 +71,20 @@ class ClusterViewSet(viewsets.GenericViewSet):
     )
     def retrieve(self, request, cluster_name, *args, **kwargs):
         """获取集群信息"""
-        cluster = self.get_object()
-        return Response(data=ClusterRetrieveOutputSLZ(cluster).data)
+        cluster: Cluster = self.get_object()
+
+        context = {}
+        if cluster.bcs_project_id and cluster.bcs_cluster_id:
+            # 对来源于 BCS 的集群，需要获取 BCS 项目和集群名称
+            client = BCSClient(get_tenant(request.user).id, request.user.username)
+            if bcs_project := client.get_auth_project(cluster.bcs_project_id):
+                context["bcs_project_name"] = bcs_project.name
+                context["bk_biz_name"] = bcs_project.businessName
+
+            if bcs_cluster := client.get_cluster(cluster.bcs_project_id, cluster.bcs_cluster_id):
+                context["bcs_cluster_name"] = bcs_cluster.clusterName
+
+        return Response(data=ClusterRetrieveOutputSLZ(cluster, context=context).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],

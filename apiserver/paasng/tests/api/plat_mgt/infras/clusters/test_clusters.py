@@ -35,6 +35,7 @@ from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.utils.basic import generate_random_string
 
@@ -47,7 +48,7 @@ class TestListClusters:
     """获取集群列表"""
 
     def test_list(self, init_default_cluster, init_system_cluster, plat_mgt_api_client):
-        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.bulk"))
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster.list_create"))
         assert resp.status_code == status.HTTP_200_OK
 
         assert len(resp.json()) >= 2
@@ -76,7 +77,7 @@ class TestRetrieveCluster:
     def test_retrieve(self, init_system_cluster, plat_mgt_api_client):
         resp = plat_mgt_api_client.get(
             reverse(
-                "plat_mgt.infras.cluster.detail",
+                "plat_mgt.infras.cluster.retrieve_update_destroy",
                 kwargs={"cluster_name": init_system_cluster.name},
             )
         )
@@ -103,6 +104,16 @@ class TestRetrieveCluster:
                 "username": "blueking",
             },
             "available_tenant_ids": ["system", "default"],
+            "exposed_url_type": ExposedURLType.SUBPATH,
+            "app_domains": [
+                {
+                    "https_enabled": False,
+                    "name": "bkapps.example.com",
+                    "reserved": False,
+                }
+            ],
+            "component_image_registry": "hub.bktencent.com",
+            "component_preferred_namespace": "blueking",
             "node_selector": {},
             "tolerations": [],
             "feature_flags": {
@@ -153,7 +164,7 @@ class TestCreateCluster:
             },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
 
         assert resp.status_code == status.HTTP_201_CREATED
 
@@ -201,7 +212,7 @@ class TestCreateCluster:
             },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "BCS 集群必须提供项目，集群，业务信息" in resp.json()["detail"]
@@ -235,7 +246,7 @@ class TestCreateCluster:
             },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
 
         assert resp.status_code == status.HTTP_201_CREATED
 
@@ -279,7 +290,7 @@ class TestCreateCluster:
             },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供" in resp.json()["detail"]
@@ -317,7 +328,9 @@ class TestUpdateCluster:
             "component_preferred_namespace": "blueking",
             "feature_flags": init_default_cluster.feature_flags,
         }
-        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_default_cluster.name})
+        url = reverse(
+            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_default_cluster.name}
+        )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -355,7 +368,9 @@ class TestUpdateCluster:
             "component_preferred_namespace": "blueking-system",
             "feature_flags": init_default_cluster.feature_flags,
         }
-        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_default_cluster.name})
+        url = reverse(
+            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_default_cluster.name}
+        )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -409,7 +424,9 @@ class TestUpdateCluster:
                 }
             ],
         }
-        url = reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
+        url = reverse(
+            "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+        )
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -433,7 +450,9 @@ class TestDeleteCluster:
 
     def test_delete_cluster(self, init_system_cluster, plat_mgt_api_client):
         resp = plat_mgt_api_client.delete(
-            reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
+            reverse(
+                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+            )
         )
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -444,11 +463,13 @@ class TestDeleteCluster:
             "allocation_policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
         }
         # 使用创建 API 初始化集群分配策略
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
 
         resp = plat_mgt_api_client.delete(
-            reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
+            reverse(
+                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+            )
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "集群已被租户 system 分配" in resp.json()["detail"]
@@ -460,7 +481,9 @@ class TestDeleteCluster:
             cluster_name=init_system_cluster.name,
         )
         resp = plat_mgt_api_client.delete(
-            reverse("plat_mgt.infras.cluster.detail", kwargs={"cluster_name": init_system_cluster.name})
+            reverse(
+                "plat_mgt.infras.cluster.retrieve_update_destroy", kwargs={"cluster_name": init_system_cluster.name}
+            )
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "集群已被 1 个应用部署环境绑定" in resp.json()["detail"]
@@ -515,7 +538,7 @@ class TestRetrieveClusterUsage:
             ],
         }
         # 使用创建 API 初始化集群分配策略
-        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.bulk"), data=data)
+        resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
         # 初始化 wl_app 并绑定集群
         app_code = generate_random_string(8)

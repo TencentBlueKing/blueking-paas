@@ -77,5 +77,6 @@ urlpatterns = [
     path("", include("paas_wl.bk_app.cnative.specs.urls")),
     path("", include("paasng.accessories.paas_analysis.urls")),
     path("", include("paasng.accessories.dev_sandbox.urls")),
+    path("", include("paasng.bk_plugins.pluginscenter.sys_apis.urls")),
     re_path(r"^notice/", include(("bk_notice_sdk.urls", "notice"), namespace="notice")),
 ]

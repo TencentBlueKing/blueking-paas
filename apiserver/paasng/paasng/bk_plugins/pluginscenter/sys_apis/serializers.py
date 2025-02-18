@@ -1,0 +1,40 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from typing import Type
+
+from rest_framework import serializers
+
+from paasng.bk_plugins.pluginscenter.models import PluginDefinition
+from paasng.bk_plugins.pluginscenter.serializers import make_plugin_slz_class
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.utils.i18n.serializers import i18n
+
+
+def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[serializers.Serializer]:
+    """创建插件的系统 API，需要添加创建者、租户等相关信息"""
+    base_slz_class = make_plugin_slz_class(pd, creation)
+    base_slz = base_slz_class()
+    base_fields = base_slz.get_fields()
+
+    fields = {
+        **base_fields,
+        "creator": serializers.CharField(help_text="创建者", required=True),
+        "plugin_tenant_id": serializers.CharField(help_text="租户ID", default=""),
+        "tenant_id": serializers.CharField(help_text="插件所属租户", default=DEFAULT_TENANT_ID),
+    }
+    return i18n(type("DynamicSysPluginSerializer", (serializers.Serializer,), fields))

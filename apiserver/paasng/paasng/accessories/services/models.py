@@ -214,10 +214,10 @@ class Plan(UuidAuditedModel):
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
-    tenant_id = tenant_id_field_factory()
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service", "name", "tenant_id")
+        unique_together = ("tenant_id", "service", "name")
 
     @property
     def is_eager(self):

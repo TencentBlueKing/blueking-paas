@@ -700,7 +700,6 @@ export default {
   },
   created() {
     this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' }, false);
-    this.getAppCategory(false);
     if (this.$route.query.include_inactive) {
       this.appFilter.includeInactive = true;
     }

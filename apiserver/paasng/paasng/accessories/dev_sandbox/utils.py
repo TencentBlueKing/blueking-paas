@@ -15,31 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pytest
-from django.conf import settings
-
-from paasng.accessories.dev_sandbox.config_var import generate_envs
-from paasng.platform.engine.configurations.building import SlugbuilderInfo
-from paasng.platform.engine.constants import AppInfoBuiltinEnv
-
-pytestmark = pytest.mark.django_db
+import secrets
+import string
 
 
-def test_generate_envs(bk_app, bk_module):
-    envs = generate_envs(bk_app, bk_module)
-
-    expected_env_keys = [
-        f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}",
-        f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_ID}",
-        "DEV_SERVER_ADDR",
-    ]
-
-    if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
-        expected_env_keys.extend(["PIP_INDEX_URL", "PIP_INDEX_HOST"])
-
-    build_info = SlugbuilderInfo.from_module(bk_module)
-    if build_info.buildpacks_info:
-        expected_env_keys.append("REQUIRED_BUILDPACKS")
-
-    for k in expected_env_keys:
-        assert k in envs
+def generate_password(length: int = 16):
+    """随机生成密码"""
+    charsets = string.ascii_letters + string.digits
+    return "".join([secrets.choice(charsets) for _ in range(length)])

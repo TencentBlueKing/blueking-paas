@@ -17,31 +17,27 @@
 
 from paasng.utils.basic import make_app_pattern, re_path
 
-from .views import DevSandboxViewSet, DevSandboxWithCodeEditorViewSet
+from .views import DevSandboxViewSet
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r"/dev_sandbox/$", include_envs=False),
-        DevSandboxViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_detail"}),
+        make_app_pattern(r"/dev_sandboxes/$", include_envs=False),
+        DevSandboxViewSet.as_view({"get": "list", "post": "create"}),
+        name="accessories.dev_sandbox.list_create",
     ),
     re_path(
-        make_app_pattern(r"/user/dev_sandbox_with_code_editor/$", include_envs=False),
-        DevSandboxWithCodeEditorViewSet.as_view({"post": "deploy", "delete": "delete", "get": "get_detail"}),
+        make_app_pattern(r"/dev_sandboxes/pre_deploy_check/$", include_envs=False),
+        DevSandboxViewSet.as_view({"get": "pre_deploy_check"}),
+        name="accessories.dev_sandbox.pre_deploy_check",
     ),
     re_path(
-        make_app_pattern(r"/user/dev_sandbox_with_code_editor/commit/$", include_envs=False),
-        DevSandboxWithCodeEditorViewSet.as_view({"post": "commit"}),
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/$", include_envs=False),
+        DevSandboxViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        name="accessories.dev_sandbox.retrieve_destroy",
     ),
     re_path(
-        r"api/bkapps/applications/(?P<code>[^/]+)/user/dev_sandbox_with_code_editors/pre_deploy_check/$",
-        DevSandboxWithCodeEditorViewSet.as_view({"get": "pre_deploy_check"}),
-    ),
-    re_path(
-        r"api/bkapps/applications/(?P<code>[^/]+)/user/dev_sandbox_with_code_editors/lists/$",
-        DevSandboxWithCodeEditorViewSet.as_view({"get": "list_app_dev_sandbox"}),
-    ),
-    re_path(
-        make_app_pattern(r"/user/dev_sandbox_password/$", include_envs=False),
-        DevSandboxWithCodeEditorViewSet.as_view({"get": "get_password"}),
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/commit/$", include_envs=False),
+        DevSandboxViewSet.as_view({"post": "commit"}),
+        name="accessories.dev_sandbox.commit",
     ),
 ]

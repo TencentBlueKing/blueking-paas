@@ -19,13 +19,26 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
 class SourceCodeFetchMethod(StrStructuredEnum):
-    HTTP = EnumField("HTTP")
-    GIT = EnumField("GIT")
-    BK_REPO = EnumField("BK_REPO")
+    """源码获取方式"""
+
+    HTTP = EnumField("HTTP", label="HTTP File")
+    GIT = EnumField("GIT", label="Git Repository")
+    BK_REPO = EnumField("BK_REPO", label="BkRepo Tarball")
 
 
 class DevSandboxStatus(StrStructuredEnum):
     """沙箱状态"""
 
-    ACTIVE = EnumField("active", label="活跃")
-    ERROR = EnumField("error", label="错误")
+    READY = EnumField("ready")
+    PENDING = EnumField("pending")
+
+
+class DevSandboxEnvKey(StrStructuredEnum):
+    """沙箱环境变量键名称"""
+
+    WORKSPACE = EnumField("WORKSPACE")
+    SOURCE_FETCH_METHOD = EnumField("SOURCE_FETCH_METHOD")
+    SOURCE_FETCH_URL = EnumField("SOURCE_FETCH_URL")
+    TOKEN = EnumField("TOKEN")
+    CODE_EDITOR_PASSWORD = EnumField("PASSWORD")
+    CODE_EDITOR_DISABLE_TELEMETRY = EnumField("DISABLE_TELEMETRY")

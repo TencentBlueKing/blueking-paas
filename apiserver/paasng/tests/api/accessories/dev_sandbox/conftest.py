@@ -15,8 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .ingress import DevSandboxIngress
-from .sandbox import DevSandbox
-from .service import DevSandboxService
+import pytest
 
-__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService"]
+from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
+from paasng.platform.sourcectl.models import VersionInfo
+
+
+@pytest.fixture()
+def bk_dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
+    version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
+    return DevSandbox.objects.create(module=bk_module, version_info=version_info, owner=bk_user)
+
+
+@pytest.fixture()
+def bk_code_editor(bk_dev_sandbox) -> CodeEditor:
+    return CodeEditor.objects.create(dev_sandbox=bk_dev_sandbox)

@@ -15,77 +15,59 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List
+from typing import TYPE_CHECKING, List
 
 from django.conf import settings
 
-from .entities import IngressPathBackend, ServicePortPair
+from paas_wl.bk_app.dev_sandbox.entities import NetworkConfig, Resources, ResourceSpec
 
-_dev_sandbox_ingress_service_conf = [
-    # dev sandbox 中 devserver 的路径与端口映射
-    {
-        "path_prefix": "/devserver/",
-        "service_port_name": "devserver",
-        "port": 8000,
-        "target_port": settings.DEV_SANDBOX_DEVSERVER_PORT,
-    },
-    # dev sandbox 中 saas 应用的路径与端口映射
-    {"path_prefix": "/app/", "service_port_name": "app", "port": 80, "target_port": settings.CONTAINER_PORT},
-]
-
-DEV_SANDBOX_SVC_PORT_PAIRS: List[ServicePortPair] = [
-    ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
-    for conf in _dev_sandbox_ingress_service_conf
-]
-
-_code_editor_ingress_service_conf = [
-    # code editor 的路径与端口映射
-    {
-        "path_prefix": "/code-editor/",
-        "service_port_name": "code-editor",
-        "port": 10251,
-        "target_port": settings.CODE_EDITOR_PORT,
-    },
-]
-
-CODE_EDITOR_SVC_PORT_PAIRS: List[ServicePortPair] = [
-    ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
-    for conf in _code_editor_ingress_service_conf
-]
+if TYPE_CHECKING:
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
-def get_ingress_path_backends(
-    service_name: str, service_confs: List[Dict], dev_sandbox_code: str = ""
-) -> List[IngressPathBackend]:
-    """get ingress path backends from service_confs with service_name and dev_sandbox_code
+DEV_SERVER_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/devserver/",
+    port_name="devserver",
+    port=8000,
+    target_port=settings.DEV_SANDBOX_DEVSERVER_PORT,
+)
 
-    :param service_name: Service name
-    :param dev_sandbox_code: dev sandbox code.
-    :param service_confs: service configs
-    """
-    if not dev_sandbox_code:
-        return [
-            IngressPathBackend(
-                path_prefix=conf["path_prefix"],
-                service_name=service_name,
-                service_port_name=conf["service_port_name"],
-            )
-            for conf in service_confs
-        ]
+APP_SERVER_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/app/",
+    port_name="app",
+    port=80,
+    target_port=settings.CONTAINER_PORT,
+)
 
-    return [
-        IngressPathBackend(
-            path_prefix=f"/dev_sandbox/{dev_sandbox_code}{conf['path_prefix']}",
-            service_name=service_name,
-            service_port_name=conf["service_port_name"],
-        )
-        for conf in service_confs
-    ]
+CODE_EDITOR_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/code_editor/",
+    port_name="code-editor",
+    port=10251,
+    target_port=settings.DEV_SANDBOX_CODE_EDITOR_PORT,
+)
 
 
-def get_dev_sandbox_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> List[IngressPathBackend]:
-    return get_ingress_path_backends(service_name, _dev_sandbox_ingress_service_conf, dev_sandbox_code)
+def get_network_configs(dev_sandbox: "DevSandbox") -> List[NetworkConfig]:
+    cfgs = [DEV_SERVER_NETWORK_CONFIG, APP_SERVER_NETWORK_CONFIG]
+
+    # 只有配置启用代码编辑器，才会提供相应的网络配置
+    if dev_sandbox.code_editor_cfg:
+        cfgs.append(CODE_EDITOR_NETWORK_CONFIG)
+
+    return cfgs
 
 
-def get_code_editor_ingress_path_backends(service_name: str, dev_sandbox_code: str = "") -> List[IngressPathBackend]:
-    return get_ingress_path_backends(service_name, _code_editor_ingress_service_conf, dev_sandbox_code)
+# 开发沙箱默认资源配额
+DEV_SERVER_RESOURCE_QUOTA = Resources(
+    limits=ResourceSpec(cpu="4", memory="2Gi"),
+    requests=ResourceSpec(cpu="200m", memory="512Mi"),
+)
+
+# 代码编辑器默认资源配额
+CODE_EDITOR_RESOURCE_QUOTA = Resources(
+    limits=ResourceSpec(cpu="4", memory="2Gi"),
+    requests=ResourceSpec(cpu="500m", memory="1Gi"),
+)
+
+# 默认工作空间
+DEV_SANDBOX_WORKSPACE = "/data/workspace"

@@ -16,27 +16,23 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import (
-    get_code_editor_ingress_path_backends,
-    get_dev_sandbox_ingress_path_backends,
-)
-from paas_wl.bk_app.dev_sandbox.entities import IngressDomain
+from paas_wl.bk_app.dev_sandbox.conf import get_network_configs
+from paas_wl.bk_app.dev_sandbox.entities import IngressDomain, IngressPathBackend
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxIngressDeserializer, DevSandboxIngressSerializer
+from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_service_name
 from paas_wl.infras.cluster.utils import get_dev_sandbox_cluster
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 from paas_wl.workloads.networking.entrance.utils import to_dns_safe
 
-from .service import get_code_editor_service_name, get_dev_sandbox_service_name
+if TYPE_CHECKING:
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
 @dataclass
 class DevSandboxIngress(AppEntity):
-    """Ingress entity to expose DevContainerService"""
-
     domains: List[IngressDomain]
 
     class Meta:
@@ -49,25 +45,29 @@ class DevSandboxIngress(AppEntity):
         self.set_header_x_script_name = True
 
     @classmethod
-    def create(cls, dev_wl_app: WlApp, app_code: str, dev_sandbox_code: str = "") -> "DevSandboxIngress":
-        dev_sandbox_svc_name = get_dev_sandbox_service_name(dev_wl_app)
-        code_editor_svc_name = get_code_editor_service_name(dev_wl_app)
-        path_backends = get_dev_sandbox_ingress_path_backends(
-            dev_sandbox_svc_name, dev_sandbox_code
-        ) + get_code_editor_ingress_path_backends(code_editor_svc_name, dev_sandbox_code)
+    def create(cls, dev_sandbox: "DevSandbox") -> "DevSandboxIngress":
+        path_backends = _get_path_backends(dev_sandbox)
         sub_domain = IngressDomain(
-            host=get_sub_domain_host(app_code, dev_wl_app, dev_wl_app.module_name),
+            host=_get_sub_domain_host(dev_sandbox),
             path_backends=path_backends,
         )
-        return cls(app=dev_wl_app, name=get_ingress_name(dev_wl_app), domains=[sub_domain])
+        return cls(app=dev_sandbox.app, name=get_dev_sandbox_ingress_name(dev_sandbox.app), domains=[sub_domain])
 
 
-def get_ingress_name(dev_wl_app: WlApp) -> str:
-    return dev_wl_app.scheduler_safe_name
+def _get_path_backends(dev_sandbox: "DevSandbox") -> List[IngressPathBackend]:
+    return [
+        IngressPathBackend(
+            path_prefix=f"/dev_sandbox/{dev_sandbox.code}{cfg.path_prefix}",
+            service_name=get_dev_sandbox_service_name(dev_sandbox.app),
+            service_port_name=cfg.port_name,
+        )
+        for cfg in get_network_configs(dev_sandbox)
+    ]
 
 
-def get_sub_domain_host(app_code: str, wl_app: WlApp, module_name: str) -> str:
+def _get_sub_domain_host(dev_sandbox: "DevSandbox") -> str:
+    wl_app = dev_sandbox.app
     cluster = get_dev_sandbox_cluster(wl_app)
     root_domain = cluster.ingress_config.default_root_domain.name
-    safe_parts = [to_dns_safe(s) for s in ["dev", module_name, app_code]]
+    safe_parts = [to_dns_safe(s) for s in ["dev", wl_app.module_name, wl_app.paas_app_code]]
     return ("-dot-".join(safe_parts) + "." + root_domain).lower()

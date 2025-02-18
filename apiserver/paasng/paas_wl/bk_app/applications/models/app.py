@@ -66,6 +66,12 @@ class App(UuidAuditedModel):
         return self.scheduler_safe_name
 
     @cached_property
+    def paas_app_code(self):
+        from paas_wl.bk_app.applications.managers import get_metadata
+
+        return get_metadata(self).paas_app_code
+
+    @cached_property
     def module_name(self):
         from paas_wl.bk_app.applications.managers import get_metadata
 

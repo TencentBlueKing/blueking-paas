@@ -34,7 +34,7 @@ from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.tenant import vailidate_tenant_id_header
+from paasng.platform.applications.tenant import validate_tenant_id_header
 from paasng.utils.error_codes import error_codes
 
 from . import serializers
@@ -66,7 +66,7 @@ class FilterPluginsMixin:
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        tenant_id = vailidate_tenant_id_header(request)
+        tenant_id = validate_tenant_id_header(request)
 
         # Query and paginate applications
         applications = BkPluginAppQuerySet().filter(

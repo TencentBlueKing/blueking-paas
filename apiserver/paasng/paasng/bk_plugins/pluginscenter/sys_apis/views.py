@@ -39,8 +39,8 @@ from paasng.infras.accounts.permissions.global_site import site_perm_class
 API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
 
-class SysPluginInstanceViewSet(viewsets.ViewSet):
-    """插件开发中心-插件实例相关接口"""
+class SysPluginApiViewSet(viewsets.ViewSet):
+    """插件开发中心提供的应用态 API"""
 
     permission_classes = API_PERMISSION_CLASSES
 

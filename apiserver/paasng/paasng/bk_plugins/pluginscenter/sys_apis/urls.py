@@ -22,7 +22,7 @@ from . import views
 urlpatterns = [
     re_path(
         r"^sys/api/plugins_center/bk_plugins/(?P<pd_id>[^/]+)/create/$",
-        views.SysPluginInstanceViewSet.as_view({"post": "create"}),
+        views.SysPluginApiViewSet.as_view({"post": "create"}),
         name="sys.api.plugins_center.bk_plugins.create",
     ),
 ]

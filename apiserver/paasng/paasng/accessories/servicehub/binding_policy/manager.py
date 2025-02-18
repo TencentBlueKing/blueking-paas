@@ -79,7 +79,7 @@ class ServiceBindingPolicyManager:
         )
 
     def clean_static_policies(self):
-        """Remove all the static policies"""
+        """clean static policies"""
         ServiceBindingPolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
 
     def add_precedence_static(
@@ -142,7 +142,7 @@ class ServiceBindingPolicyManager:
         )
 
     def clean_precedence_policies(self):
-        """Remove all the precedence policies"""
+        """clean the precedence policies"""
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid).delete()
 
     def get_service_binding_policy(self) -> Optional[ServiceBindingPolicy]:
@@ -207,7 +207,7 @@ class PolicyCombinationManager:
 
     def get(self) -> Optional[PolicyCombinationConfig]:
         service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
-        # service_binding_policy 是必有的，如果没有表示没有配置或者正确配置
+        # service_binding_policy 是必有的，如果没有表示没有正确配置或者没有配置过绑定策略
         if service_binding_policy is None:
             return None
         precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()

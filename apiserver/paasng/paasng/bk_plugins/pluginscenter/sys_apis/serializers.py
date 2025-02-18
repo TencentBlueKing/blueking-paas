@@ -35,7 +35,11 @@ def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> T
         **base_fields,
         "creator": serializers.CharField(help_text="创建者", required=True),
         "repository": serializers.CharField(help_text="仓库地址", required=True),
-        "plugin_tenant_id": serializers.CharField(help_text="租户ID", default=""),
-        "tenant_id": serializers.CharField(help_text="插件所属租户", default=DEFAULT_TENANT_ID),
+        "plugin_tenant_id": serializers.CharField(
+            help_text="租户ID，如租户类型为全租户，则 plugin_tenant_id 为空", default=""
+        ),
+        "tenant_id": serializers.CharField(
+            help_text="插件所属租户，如租户类型为全租户，则 plugin_tenant_id 为 system", default=DEFAULT_TENANT_ID
+        ),
     }
     return i18n(type("DynamicSysPluginSerializer", (serializers.Serializer,), fields))

@@ -25,6 +25,14 @@ from tests.utils.helpers import generate_random_string
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture
+def _mock_shim_apis():
+    with mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_grade_manager"), mock.patch(
+        "paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_user_groups"
+    ), mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.add_role_members"):
+        yield
+
+
 @pytest.mark.parametrize(
     ("data", "status_code"),
     [
@@ -61,6 +69,7 @@ pytestmark = pytest.mark.django_db
         ),
     ],
 )
+@pytest.mark.usefixtures("_mock_shim_apis")
 def test_creat_api(sys_api_client, pd, data, status_code):
     url = reverse("sys.api.plugins_center.bk_plugins.create", kwargs={"pd_id": pd.identifier})
     with mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_grade_manager"), mock.patch(

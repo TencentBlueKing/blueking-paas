@@ -51,11 +51,10 @@ class SysPluginApiViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
         plugin_tenant_mode = validated_data.pop("plugin_tenant_mode")
-        plugin_tenant_id = validated_data.pop("plugin_tenant_id")
-        tenant_id = validated_data.pop("tenant_id")
         creator = validated_data.pop("creator")
         creator_id = user_id_encoder.encode(settings.USER_TYPE, creator)
 
+        # 会从 slz 中解析出 name_zh_cn、name_cn 等国际化字段，并且对各个语言都要赋初始化值，所以不直接使用 PluginInstance.objects.create()
         plugin = PluginInstance(
             pd=pd,
             language=validated_data["template"].language,
@@ -66,8 +65,6 @@ class SysPluginApiViewSet(viewsets.ViewSet):
             status=constants.PluginStatus.DEVELOPING,
             # 写入租户相关信息
             plugin_tenant_mode=plugin_tenant_mode.value,
-            plugin_tenant_id=plugin_tenant_id,
-            tenant_id=tenant_id,
         )
         plugin.save()
         plugin.refresh_from_db()
@@ -91,7 +88,7 @@ class SysPluginApiViewSet(viewsets.ViewSet):
             operator=creator_id,
             action=constants.ActionTypes.CREATE,
             subject=constants.SubjectTypes.PLUGIN,
-            tenant_id=tenant_id,
+            tenant_id=plugin.tenant_id,
         )
         return Response(
             data=PluginInstanceSLZ(plugin).data,

@@ -52,7 +52,7 @@ class TestSceneApp:
     def _mock_create_scene_app(self):
         with (
             mock.patch(
-                "paasng.platform.applications.views.SourceOrigin.get_default_origins",
+                "paasng.platform.applications.views.creation.SourceOrigin.get_default_origins",
                 return_value=[SourceOrigin.AUTHORIZED_VCS, SourceOrigin.IMAGE_REGISTRY, SourceOrigin.SCENE],
             ),
             mock.patch("paasng.platform.declarative.application.controller.initialize_smart_module"),

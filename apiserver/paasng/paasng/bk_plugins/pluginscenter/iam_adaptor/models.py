@@ -21,6 +21,7 @@ from django.db import models
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import AuditedModel
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class PluginGradeManager(AuditedModel):
     pd_id = models.CharField(help_text="插件类型标识", max_length=64)
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
     grade_manager_id = models.IntegerField(help_text="分级管理员 ID")
+    tenant_id = tenant_id_field_factory()
 
     objects = PluginRelativeManager()
 
@@ -63,6 +65,7 @@ class PluginUserGroup(AuditedModel):
     plugin_id = models.CharField(help_text="插件标识", max_length=32)
     role = models.IntegerField(default=PluginRole.DEVELOPER.value)
     user_group_id = models.IntegerField(help_text="权限中心用户组 ID")
+    tenant_id = tenant_id_field_factory()
 
     objects = PluginRelativeManager()
 

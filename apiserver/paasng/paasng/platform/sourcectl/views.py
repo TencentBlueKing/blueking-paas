@@ -139,6 +139,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
     def create(self, request):
+        """deprecated: 平台 bk_svn 账号创建功能已逐步废弃"""
         serializer = self.get_create_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data

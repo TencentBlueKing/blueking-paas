@@ -82,6 +82,12 @@ class ClusterListOutputSLZ(serializers.Serializer):
         return state.nodes_name
 
 
+class ClusterAppDomainSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="域名")
+    https_enabled = serializers.BooleanField(help_text="是否启用 HTTPS")
+    reserved = serializers.BooleanField(help_text="是否保留")
+
+
 class ClusterRetrieveOutputSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="集群名称")
     description = serializers.CharField(help_text="集群描述")
@@ -100,6 +106,11 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
 
     elastic_search_config = serializers.SerializerMethodField(help_text="ES 集群配置")
     available_tenant_ids = serializers.ListField(help_text="可用租户 ID 列表", child=serializers.CharField())
+
+    component_preferred_namespace = serializers.CharField(help_text="集群组件优先部署的命名空间")
+    component_image_registry = serializers.CharField(help_text="集群组件镜像仓库地址")
+    exposed_url_type = serializers.IntegerField(help_text="应用访问类型（1: 子路径, 2: 子域名）")
+    app_domains = serializers.SerializerMethodField(help_text="应用域名列表")
 
     node_selector = serializers.JSONField(help_text="节点选择器", source="default_node_selector")
     tolerations = serializers.JSONField(help_text="污点容忍度", source="default_tolerations")
@@ -131,6 +142,16 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
             return {}
 
         return ElasticSearchConfigSLZ(cfg.as_dict()).data
+
+    @swagger_serializer_method(serializer_or_field=ClusterAppDomainSLZ(many=True))
+    def get_app_domains(self, obj: Cluster) -> List[str]:
+        app_domains = (
+            obj.ingress_config.sub_path_domains
+            if obj.exposed_url_type == AddressType.SUBPATH
+            else obj.ingress_config.app_root_domains
+        )
+
+        return ClusterAppDomainSLZ(app_domains, many=True).data
 
 
 class ClusterCreateInputSLZ(serializers.Serializer):

@@ -278,10 +278,10 @@ class ServiceBindingPolicy(AuditedModel):
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
     data = models.JSONField(help_text="策略数据", default={})
-    tenant_id = tenant_id_field_factory()
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service_id", "tenant_id")
+        unique_together = ("tenant_id", "service_id")
 
 
 class ServiceBindingPrecedencePolicy(AuditedModel):
@@ -304,7 +304,7 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     data = models.JSONField(help_text="策略值", default={})
 
     priority = models.SmallIntegerField(verbose_name="优先级", default=0, help_text="值越大，优先级越高")
-    tenant_id = tenant_id_field_factory()
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service_id", "priority", "tenant_id")
+        unique_together = ("tenant_id", "service_id", "priority")

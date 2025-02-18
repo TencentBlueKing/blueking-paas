@@ -297,9 +297,6 @@ class MixedPlanMgr:
         self.mgr_instances = [LocalPlanMgr(), RemotePlanMgr(store)]
 
     list = cast(Callable[..., Generator[PlanObj, None, None]], _proxied_chained_generator("list_plans"))
-    list_by_tenant_id = cast(
-        Callable[..., Generator[PlanObj, None, None]], _proxied_chained_generator("list_plans_by_tenant_id")
-    )
     create = _proxied_svc_dispatcher("create_plan")
     update = _proxied_svc_dispatcher("update_plan")
     delete = _proxied_svc_dispatcher("delete_plan")

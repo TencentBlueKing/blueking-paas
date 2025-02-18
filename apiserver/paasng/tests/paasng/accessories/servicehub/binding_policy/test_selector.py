@@ -59,11 +59,6 @@ def plan2(service_obj):
     return list(mixed_plan_mgr.list(service_obj))[1]
 
 
-@pytest.fixture
-def tenant_id():
-    return "tenant_test"
-
-
 class TestPlanSelectorSelect:
     def test_static(self, service_obj, bk_prod_env, plan1):
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])

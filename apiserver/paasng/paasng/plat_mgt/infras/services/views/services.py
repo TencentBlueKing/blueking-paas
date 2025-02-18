@@ -29,9 +29,8 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.infras.services.serializers import (
-    PlanCreateInputSLZ,
-    PlanOutputSLZ,
-    PlanUpdateInputSLZ,
+    PlanUpsertInputSLZ,
+    PlanWithSvcSLZ,
 )
 from paasng.utils.error_codes import error_codes
 
@@ -39,6 +38,7 @@ from paasng.utils.error_codes import error_codes
 class PlanViewSet(viewsets.GenericViewSet):
     """（平台管理员）增强服务方案管理，接入相关 API"""
 
+    # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     def get_plan(self, service_id, plan_id) -> PlanObj:
@@ -46,46 +46,46 @@ class PlanViewSet(viewsets.GenericViewSet):
         plans = service.get_plans(is_active=NOTSET)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         if not plan:
-            raise Http404("ServiceObjNotFound")
+            raise Http404("PlanObjNotFound")
         return plan
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="全量增强服务方案列表",
-        responses={status.HTTP_200_OK: PlanOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
     )
     def list_all(self, request, *args, **kwargs):
         """获取所有服务的方案列表"""
         plans = mixed_plan_mgr.list()
-        return Response(data=PlanOutputSLZ(plans, many=True).data)
+        return Response(data=PlanWithSvcSLZ(plans, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="增强服务方案列表",
-        responses={status.HTTP_200_OK: PlanOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
     )
     def list(self, request, service_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
         plans = service.get_plans(is_active=NOTSET)
-        return Response(data=PlanOutputSLZ(plans, many=True).data)
+        return Response(data=PlanWithSvcSLZ(plans, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="增强服务方案",
-        responses={status.HTTP_200_OK: PlanOutputSLZ()},
+        responses={status.HTTP_200_OK: PlanWithSvcSLZ()},
     )
     def retrieve(self, request, service_id, plan_id, *args, **kwargs):
         plan = self.get_plan(service_id, plan_id)
-        return Response(data=PlanOutputSLZ(plan).data)
+        return Response(data=PlanWithSvcSLZ(plan).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="创建增强服务方案",
-        request_body=PlanCreateInputSLZ(),
+        request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, service_id, *args, **kwargs):
-        slz = PlanCreateInputSLZ(data=request.data)
+        slz = PlanUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -112,7 +112,7 @@ class PlanViewSet(viewsets.GenericViewSet):
     def destroy(self, request, service_id, plan_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
         plan = self.get_plan(service_id, plan_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanOutputSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data)
 
         try:
             mixed_plan_mgr.delete(service, plan_id)
@@ -131,18 +131,18 @@ class PlanViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="更新增强服务方案",
-        request_body=PlanUpdateInputSLZ(),
+        request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, service_id, plan_id, *args, **kwargs):
-        slz = PlanUpdateInputSLZ(data=request.data)
+        slz = PlanUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
 
         plan = self.get_plan(service_id, plan_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanOutputSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data)
 
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
@@ -156,7 +156,7 @@ class PlanViewSet(viewsets.GenericViewSet):
             target=OperationTarget.ADDON_PLAN,
             attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=PlanOutputSLZ(plan).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

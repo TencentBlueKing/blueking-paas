@@ -122,7 +122,7 @@ class RemotePlanObj(PlanObj):
         # Handle malformed config data used by some legacy services
         if config == "不支持":
             config = {}
-            # Configure a default tenant_id for the planObj when the remote service is not upgraded.
+        # Configure a default tenant_id for the planObj when the remote service is not upgraded.
         tenant_id = data.pop("tenant_id", DEFAULT_TENANT_ID)
         return cattrs.structure(
             {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data,
@@ -164,10 +164,6 @@ class RemoteServiceObj(ServiceObj):
 
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         return [plan.with_service(self) for plan in self.plans if (plan.is_active == is_active or is_active is NOTSET)]
-
-    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
-        plans = self.get_plans(is_active=is_active)
-        return [plan for plan in plans if plan.tenant_id == tenant_id]
 
     def supports_inst_config(self) -> bool:
         """Check if current service supports Feature: InstanceConfig"""
@@ -782,21 +778,16 @@ class RemotePlanMgr(BasePlanMgr):
         self.store = store
         self.service_mgr = RemoteServiceMgr(self.store)
 
-    def _get_services(self, service: Optional[ServiceObj] = None) -> Generator[ServiceObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-            yield svc
-
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
-        for svc in self._get_services(service):
-            yield from svc.get_plans(is_active=NOTSET)
-
-    def list_plans_by_tenant_id(
-        self, tenant_id: str, service: Optional[ServiceObj] = None
-    ) -> Generator[PlanObj, None, None]:
-        for svc in self._get_services(service):
-            yield from svc.get_plans_by_tenant_id(is_active=NOTSET, tenant_id=tenant_id)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():

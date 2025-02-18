@@ -298,11 +298,8 @@ class BasePlanMgr:
 
     service_obj_cls: Type[ServiceObj]
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
-        raise NotImplementedError
-
-    def list_plans_by_tenant_id(
-        self, tenant_id: str, service: Optional[ServiceObj] = None
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
     ) -> Generator[PlanObj, None, None]:
         raise NotImplementedError
 

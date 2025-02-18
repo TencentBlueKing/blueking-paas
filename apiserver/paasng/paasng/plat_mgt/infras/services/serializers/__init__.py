@@ -22,17 +22,15 @@ from .binding_policies import (
 )
 from .services import (
     BasePlanObjSLZ,
-    PlanCreateInputSLZ,
-    PlanOutputSLZ,
-    PlanUpdateInputSLZ,
+    PlanUpsertInputSLZ,
+    PlanWithSvcSLZ,
     PreCreatedInstanceSLZ,
 )
 
 __all__ = [
     # services
-    "PlanOutputSLZ",
-    "PlanUpdateInputSLZ",
-    "PlanCreateInputSLZ",
+    "PlanWithSvcSLZ",
+    "PlanUpsertInputSLZ",
     "BasePlanObjSLZ",
     "PreCreatedInstanceSLZ",
     # binding_policy

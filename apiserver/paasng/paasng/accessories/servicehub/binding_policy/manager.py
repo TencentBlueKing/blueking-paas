@@ -13,9 +13,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Any
+from typing import Any, Optional
 
 from django.db import transaction
+from django.db.models import QuerySet
 
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
@@ -99,17 +100,15 @@ class ServiceBindingPolicyManager:
             raise ValueError("plans cannot be empty")
 
         data = {"plan_ids": [p.uuid for p in plans]}
-        ServiceBindingPrecedencePolicy.objects.update_or_create(
+        ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
             tenant_id=self.tenant_id,
             priority=priority,
-            defaults={
-                "cond_type": cond_type.value,
-                "cond_data": cond_data,
-                "type": ServiceBindingPolicyType.STATIC.value,
-                "data": data,
-            },
+            cond_type=cond_type.value,
+            cond_data=cond_data,
+            type=ServiceBindingPolicyType.STATIC.value,
+            data=data,
         )
 
     def add_precedence_env_specific(
@@ -131,23 +130,29 @@ class ServiceBindingPolicyManager:
             raise ValueError("plans cannot be empty")
 
         data = {"env_plan_ids": {env: [p.uuid for p in plans] for env, plans in env_plans}}
-        ServiceBindingPrecedencePolicy.objects.update_or_create(
+        ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
             tenant_id=self.tenant_id,
             priority=priority,
-            defaults={
-                "cond_type": cond_type.value,
-                "cond_data": cond_data,
-                "type": ServiceBindingPolicyType.ENV_SPECIFIC.value,
-                "data": data,
-                "priority": priority,
-            },
+            cond_type=cond_type.value,
+            cond_data=cond_data,
+            type=ServiceBindingPolicyType.ENV_SPECIFIC.value,
+            data=data,
         )
 
     def clean_precedence_policies(self):
         """Remove all the precedence policies"""
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid).delete()
+
+    def get_service_binding_policy(self) -> Optional[ServiceBindingPolicy]:
+        try:
+            return ServiceBindingPolicy.objects.get(service_id=self.service.uuid, tenant_id=self.tenant_id)
+        except ServiceBindingPolicy.DoesNotExist:
+            return None
+
+    def get_precedence_policies(self) -> QuerySet[ServiceBindingPrecedencePolicy]:
+        return ServiceBindingPrecedencePolicy.objects.filter(tenant_id=self.tenant_id).order_by("-priority")
 
 
 class PolicyCombinationManager:
@@ -162,15 +167,15 @@ class PolicyCombinationManager:
         self.tenant_id = tenant_id
         self.service_binding_policy_mgr = ServiceBindingPolicyManager(service, tenant_id)
 
-    def remove_policy_combination(self):
+    def clean(self):
         """Remove policy combination"""
         self.service_binding_policy_mgr.clean_static_policies()
         self.service_binding_policy_mgr.clean_precedence_policies()
 
     @transaction.atomic()
-    def upsert_policy_combination(self, policy_combination_config: PolicyCombinationConfig):
+    def upsert(self, policy_combination_config: PolicyCombinationConfig):
         """Update or insert a combination of service binding policies."""
-        self.remove_policy_combination()
+        self.clean()
 
         rule_based_allocation_configs = policy_combination_config.rule_based_allocation_configs
         unified_allocation_config = policy_combination_config.unified_allocation_config
@@ -200,13 +205,12 @@ class PolicyCombinationManager:
                     priority=config.priority,
                 )
 
-    def get_tenant_policy_combination_config(self) -> PolicyCombinationConfig:
-        precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(tenant_id=self.tenant_id).order_by(
-            "-priority"
-        )
-        service_binding_policy = ServiceBindingPolicy.objects.get(
-            service_id=self.service.uuid, tenant_id=self.tenant_id
-        )
+    def get(self) -> Optional[PolicyCombinationConfig]:
+        service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
+        # service_binding_policy 是必有的，如果没有表示没有配置或者正确配置
+        if service_binding_policy is None:
+            return None
+        precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
         rule_based_configs = [RuleBasedAllocationConfig.create_from_policy(policy) for policy in precedence_policies]
         unified_config = UnifiedAllocationConfig.create_from_policy(service_binding_policy)
         return PolicyCombinationConfig(
@@ -229,7 +233,7 @@ class PolicyCombinationManager:
         return env_plan_objs
 
 
-def get_all_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinationConfig]:
+def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinationConfig]:
     """
     Retrieve all service policy combination configs
     """
@@ -242,5 +246,7 @@ def get_all_policy_combination_configs(service: ServiceObj) -> list[PolicyCombin
     result = []
     for tenant_id in tenant_ids:
         mgr = PolicyCombinationManager(service, tenant_id)
-        result.append(mgr.get_tenant_policy_combination_config())
+        policy_combination = mgr.get()
+        if policy_combination is not None:
+            result.append(policy_combination)
     return result

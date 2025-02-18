@@ -22,7 +22,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub.binding_policy.manager import (
     PolicyCombinationManager,
-    get_all_policy_combination_configs,
+    list_policy_combination_configs,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -35,8 +35,9 @@ from paasng.plat_mgt.infras.services.serializers import (
 
 
 class BindingPolicyViewSet(viewsets.GenericViewSet):
-    """增强服务绑定策略管理"""
+    """（平台管理员）增强服务绑定策略管理"""
 
+    # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
@@ -46,7 +47,7 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
     )
     def list(self, request, service_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
-        configs = get_all_policy_combination_configs(service)
+        configs = list_policy_combination_configs(service)
         return Response(data=PolicyCombinationConfigOutputSLZ(configs, many=True).data)
 
     @swagger_auto_schema(
@@ -61,8 +62,8 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = PolicyCombinationManager(service, data.tenant_id)
-        mgr.upsert_policy_combination(data)
+        mgr = PolicyCombinationManager(service, data["tenant_id"])
+        mgr.upsert(data)
         return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -78,5 +79,5 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
 
         service = mixed_service_mgr.get(uuid=service_id)
         mgr = PolicyCombinationManager(service, data.get("tenant_id"))
-        mgr.remove_policy_combination()
+        mgr.clean()
         return Response(status=status.HTTP_204_NO_CONTENT)

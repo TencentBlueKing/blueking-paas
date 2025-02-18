@@ -17,16 +17,8 @@
 
 from rest_framework import serializers
 
-from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.services import PlanObj
 from paasng.accessories.services.models import PreCreatedInstance
-from paasng.utils.structure import NOTSET
-
-
-class BaseServiceObjSLZ(serializers.Serializer):
-    service_name = serializers.CharField(source="service.name", read_only=True)
-    service_id = serializers.CharField(source="service.uuid", read_only=True)
-    service_config = serializers.JSONField(source="service.config", default={}, read_only=True)
 
 
 class BasePlanObjSLZ(serializers.Serializer):
@@ -39,7 +31,7 @@ class BasePlanObjSLZ(serializers.Serializer):
     properties = serializers.JSONField(required=False, default=dict)
 
 
-class PlanCreateInputSLZ(BasePlanObjSLZ):
+class PlanUpsertInputSLZ(BasePlanObjSLZ):
     pass
 
 
@@ -51,7 +43,11 @@ class PreCreatedInstanceSLZ(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class PlanOutputSLZ(BaseServiceObjSLZ, BasePlanObjSLZ):
+class PlanWithSvcSLZ(BasePlanObjSLZ):
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_id = serializers.CharField(source="service.uuid", read_only=True)
+    service_config = serializers.JSONField(source="service.config", default={}, read_only=True)
+
     pre_created_instances = serializers.SerializerMethodField()
 
     def get_pre_created_instances(self, plan: PlanObj) -> list:
@@ -60,20 +56,3 @@ class PlanOutputSLZ(BaseServiceObjSLZ, BasePlanObjSLZ):
             return []
         pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
         return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
-
-
-class PlanUpdateInputSLZ(BaseServiceObjSLZ, BasePlanObjSLZ):
-    def validate(self, attrs):
-        tenant_id = attrs["tenant_id"]
-        service_id = attrs["service_id"]
-        plan_id = attrs["uuid"]
-        service = mixed_service_mgr.get(uuid=service_id)
-        plans = service.get_plans(is_active=NOTSET)
-        plan = next((plan for plan in plans if plan.uuid == plan_id), None)
-        if not plan:
-            raise serializers.ValidationError("方案不存在")
-
-        if tenant_id != plan.tenant_id:
-            raise serializers.ValidationError("不允许修改方案的租户 ID")
-
-        return attrs

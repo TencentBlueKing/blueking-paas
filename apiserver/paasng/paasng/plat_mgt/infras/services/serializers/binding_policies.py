@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import cattr
 from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import (
@@ -41,7 +42,7 @@ class BaseAllocationConfigSLZ(serializers.Serializer):
 
 class UnifiedAllocationConfigSLZ(BaseAllocationConfigSLZ):
     def to_internal_value(self, data) -> UnifiedAllocationConfig:
-        return UnifiedAllocationConfig(**super().to_internal_value(data))
+        return cattr.structure(super().to_internal_value(data), UnifiedAllocationConfig)
 
 
 class RuleBasedAllocationConfigSLZ(BaseAllocationConfigSLZ):
@@ -50,10 +51,17 @@ class RuleBasedAllocationConfigSLZ(BaseAllocationConfigSLZ):
     priority = serializers.IntegerField()
 
     def to_internal_value(self, data) -> RuleBasedAllocationConfig:
-        return RuleBasedAllocationConfig(**super().to_internal_value(data))
+        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationConfig)
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
+    """
+    Serializer for creating or updating a combination of policy configuration
+
+    Special Context:
+    - `service_id`: Provides the service_id for PolicyCombinationConfig
+    """
+
     tenant_id = serializers.CharField(help_text="所属租户")
     rule_based_allocation_configs = RuleBasedAllocationConfigSLZ(many=True, help_text="规则分配配置")
     unified_allocation_config = UnifiedAllocationConfigSLZ(help_text="统一分配配置")
@@ -61,7 +69,7 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     def to_internal_value(self, data) -> PolicyCombinationConfig:
         service_id = self.context.get("service_id")
         data["service_id"] = service_id
-        return PolicyCombinationConfig(**super().to_internal_value(data))
+        return cattr.structure(super().to_internal_value(data), PolicyCombinationConfig)
 
 
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):

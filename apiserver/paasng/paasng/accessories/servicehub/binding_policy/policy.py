@@ -146,6 +146,8 @@ class UnifiedAllocationConfig:
 
     @classmethod
     def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
+        if policy is None:
+            return None
         return cls(
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),

@@ -38,6 +38,7 @@ from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 from paasng.accessories.servicehub.remote import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.modules.manager import ModuleCleaner
 from tests.paasng.accessories.servicehub import data_mocks
 from tests.utils.helpers import generate_random_string
@@ -109,7 +110,11 @@ class TestMixedMgrGetAndList:
         def create_mock_rel(create_time: "datetime.datetime", **credentials):
             rel = mock.MagicMock()
             rel.get_instance.return_value = ServiceInstanceObj(
-                uuid="", credentials=credentials, config={}, create_time=create_time
+                uuid="",
+                credentials=credentials,
+                config={},
+                create_time=create_time,
+                tenant_id=DEFAULT_TENANT_ID,
             )
             return rel
 

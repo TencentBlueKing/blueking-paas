@@ -21,17 +21,6 @@
             <bk-button :theme="'primary'">
               <i class="paasng-icon paasng-plus"></i>
             </bk-button>
-            <SwitchDisplay
-              class="ml8 switch-cls"
-              :list="buttonList"
-              :has-icon="true"
-              :active="buttonActive"
-              @change="handlerChange"
-            >
-              <div slot-scope="{ item }">
-                <i :class="`btn-icon paasng-icon paasng-${item.icon}`"></i>
-              </div>
-            </SwitchDisplay>
           </div>
           <bk-input
             class="search-input"
@@ -40,15 +29,18 @@
             :right-icon="'bk-icon icon-search'"
           ></bk-input>
         </div>
-        <ul class="mt15 cluster-list">
+        <ul
+          class="mt15 cluster-list"
+          v-bkloading="{ isLoading: leftLoading, zIndex: 10 }"
+        >
           <li class="header-item item">{{ $t('集群名称') }}</li>
           <li
-            v-for="item in ['cluster01', 'cluster02', 'cluster03']"
-            :key="item"
-            :class="['item', { active: curClusterdetail === item }]"
-            @click="handleChange(item)"
+            v-for="item in tenantList"
+            :key="item.name"
+            :class="['item', { active: activeName === item.name }]"
+            @click="switchDetails(item.name)"
           >
-            {{ item }}
+            {{ item.name }}
           </li>
         </ul>
       </div>
@@ -65,15 +57,22 @@
         <bk-tab
           :active.sync="tabActive"
           type="card"
+          ext-cls="cluster-details-tab"
         >
           <bk-tab-panel
             v-for="(panel, index) in panels"
             v-bind="panel"
             :key="index"
           ></bk-tab-panel>
-          <p>1111</p>
-          <p>1111</p>
-          <p>1111</p>
+          <div v-bkloading="{ isLoading: contentLoading, zIndex: 10 }">
+            <!-- 详情 -->
+            <keep-alive>
+              <component
+                :is="tabActive"
+                :data="curDetailData"
+              />
+            </keep-alive>
+          </div>
         </bk-tab>
       </div>
     </bk-resize-layout>
@@ -81,35 +80,83 @@
 </template>
 
 <script>
-import SwitchDisplay from './switch-display.vue';
+import DetailInfo from './detail-info.vue';
+import DetailComponents from './detail-components.vue';
+import DetailFeature from './detail-feature.vue';
 export default {
   name: 'ClusterDetails',
   components: {
-    SwitchDisplay,
+    DetailInfo,
+    DetailComponents,
+    DetailFeature,
+  },
+  props: {
+    active: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
-      tabActive: 'info',
-      buttonActive: 'cluster',
-      curClusterdetail: 'cluster01',
+      tabActive: 'DetailInfo',
+      activeName: '',
       buttonList: [
         { name: 'cluster', icon: 'organization' },
         { name: 'tenant', icon: 'user2' },
       ],
       panels: [
-        { name: 'info', label: this.$t('集群信息') },
-        { name: 'components', label: this.$t('集群组件') },
-        { name: 'feature', label: this.$t('集群特性') },
+        { name: 'DetailInfo', label: this.$t('集群信息') },
+        { name: 'DetailComponents', label: this.$t('集群组件') },
+        { name: 'DetailFeature', label: this.$t('集群特性') },
       ],
       searchValue: '',
+      leftLoading: false,
+      contentLoading: false,
+      tenantList: [],
+      curDetailData: {},
+      componentKey: 0,
     };
   },
+  created() {
+    this.init();
+  },
   methods: {
-    handlerChange(data) {
-      this.buttonActive = data.name;
+    init() {
+      this.getClusterList();
     },
-    handleChange(row) {
-      this.curClusterdetail = row;
+    switchDetails(name) {
+      this.activeName = name || '';
+      this.componentKey += 1;
+      this.getClusterDetails();
+    },
+    // 获取集群列表
+    async getClusterList() {
+      this.leftLoading = true;
+      this.contentLoading = true;
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterList');
+        this.tenantList = res;
+        this.switchDetails(this.active || res[0]?.name);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.leftLoading = false;
+      }
+    },
+    // 获取集群详情
+    async getClusterDetails() {
+      this.contentLoading = true;
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDetails', {
+          clusterName: this.activeName,
+        });
+        this.curDetailData = ret;
+        console.log('details', ret);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.contentLoading = false;
+      }
     },
   },
 };
@@ -217,11 +264,12 @@ export default {
   }
   .details-wrapper {
     position: relative;
-    flex: 1;
+    // height: 100%;
+    // overflow: auto;
     .close {
       position: absolute;
       right: 7px;
-      top: 6px;
+      top: 4px;
       font-size: 28px;
       color: #979ba5;
       z-index: 9;

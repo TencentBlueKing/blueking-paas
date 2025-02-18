@@ -59,6 +59,7 @@ export default {
 
 <style lang="scss" scoped>
 .platform-top-bar {
+  flex-shrink: 0;
   position: relative;
   font-size: 14px;
   color: #333;

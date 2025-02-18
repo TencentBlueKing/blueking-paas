@@ -99,5 +99,26 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/`;
       return http.delete(url);
     },
+    /**
+     * 获取集群详情
+     */
+    getClusterDetails({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群组件列表
+     */
+    getClusterComponents({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/`;
+      return http.get(url);
+    },
+     /**
+     * 获取集群组件详情
+     */
+     getComponentDetail({}, { clusterName, componentName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
+      return http.get(url);
+    },
   },
 };

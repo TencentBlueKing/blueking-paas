@@ -92,9 +92,11 @@ export default {
       this.handleTabChange(this.active);
     },
     handleTabChange(active) {
+      const { path, query } = this.$route;
       this.$router.push({
-        path: this.$route.path,
+        path,
         query: {
+          ...(active === 'list' && query),
           active,
         },
       });
@@ -117,6 +119,7 @@ export default {
     height: 100%;
   }
   .right-content {
+    overflow: auto;
     display: flex;
     flex-direction: column;
     flex: 1;

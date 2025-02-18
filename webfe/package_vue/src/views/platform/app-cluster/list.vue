@@ -31,6 +31,7 @@
     </div>
     <ClusterDetails
       v-else
+      :active="curClusterDetailName"
       @toggle="handleToggleDetails"
     />
   </div>
@@ -53,8 +54,13 @@ export default {
       ],
       buttonActive: 'cluster',
       searchValue: '',
-      isExpandDetails: false,
+      curClusterDetailName: '',
     };
+  },
+  computed: {
+    isExpandDetails() {
+      return this.$route.query?.type === 'detail';
+    },
   },
   methods: {
     handlerChange(data) {
@@ -62,7 +68,15 @@ export default {
     },
     // 打开集群详情
     handleToggleDetails(data) {
-      this.isExpandDetails = data;
+      const { path, query } = this.$route;
+      let newQuery = { ...query };
+      if (typeof data === 'boolean') {
+        newQuery = { active: query.active };
+      } else {
+        this.curClusterDetailName = data.name;
+        newQuery.type = 'detail';
+      }
+      this.$router.push({ path, query: newQuery });
     },
     // 前端搜索
     handleSearch() {

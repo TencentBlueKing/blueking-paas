@@ -397,3 +397,13 @@ export const APP_TENANT_MODE = {
   single: '单租户',
   global: '全租户',
 };
+
+/**
+* 平台管理-组件状态
+*/
+export const COMPONENT_STATUS = {
+  not_installed: '未安装',
+  installing: '安装中',
+  installed: '已安装',
+  installation_failed: '安装失败',
+ };

@@ -5,13 +5,6 @@ const platformManagement = () =>
       window.showDeployTip(error);
     });
 
-const platformOverview = () =>
-  import(/* webpackChunkName: 'app-migration-info' */ '@/views/platform/overview')
-    .then((module) => module)
-    .catch((error) => {
-      window.showDeployTip(error);
-    });
-
 const platformAppCluster = () =>
   import(/* webpackChunkName: 'app-migration-info' */ '@/views/platform/app-cluster')
     .then((module) => module)
@@ -25,17 +18,9 @@ export const platformRouters = [
     name: 'platformManagement',
     component: platformManagement,
     redirect: {
-      name: 'platformOverview',
+      name: 'platformAppCluster',
     },
     children: [
-      {
-        path: 'overview',
-        component: platformOverview,
-        name: 'platformOverview',
-        meta: {
-          title: '概览',
-        },
-      },
       {
         path: 'app-cluster',
         component: platformAppCluster,
@@ -46,14 +31,6 @@ export const platformRouters = [
             { name: 'config', label: '集群配置' },
             { name: 'list', label: '集群列表' },
           ],
-        },
-      },
-      {
-        path: 'add-ons',
-        component: platformOverview,
-        name: 'platformAddOns',
-        meta: {
-          title: '增强服务',
         },
       },
     ],

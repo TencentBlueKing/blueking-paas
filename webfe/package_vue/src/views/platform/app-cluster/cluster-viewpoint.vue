@@ -11,7 +11,10 @@
         prop="name"
       >
         <template slot-scope="{ row }">
-          <a href="javascript:;">
+          <a
+            href="javascript:;"
+            @click="$emit('toggle', { flag: true, name: row.name })"
+          >
             {{ row.name }}
           </a>
         </template>

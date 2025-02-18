@@ -30,6 +30,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import CNATIVE_APP_CODE_FIELD
@@ -83,7 +84,7 @@ class TestAppDeclarativeControllerCreation:
     )
     def test_app_code_length(self, bk_user, random_name, bk_app_code_len, ctx):
         # 保证应用 ID 是以字母开头
-        bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len-2))}"
+        bk_app_code = f"ut{generate_random_string(length=(bk_app_code_len - 2))}"
         app_json = builder.make_app_desc(bk_app_code, decorator.with_module("default", True))
 
         controller = AppDeclarativeController(bk_user)
@@ -321,7 +322,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service).set_static([service.get_plans()[0]])
+            ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

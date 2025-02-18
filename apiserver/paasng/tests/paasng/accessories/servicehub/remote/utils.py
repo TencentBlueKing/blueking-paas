@@ -18,6 +18,7 @@
 import uuid
 
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.basic import generate_random_string
 
 from ..utils import SERVICE_COMMON_ARGS
@@ -41,6 +42,7 @@ def gen_plan():
     name = generate_random_string()
     return RemotePlanObj(
         uuid=str(uuid.uuid4()),
+        tenant_id=DEFAULT_TENANT_ID,
         name=name,
         description=generate_random_string(),
         is_active=True,

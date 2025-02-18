@@ -23,6 +23,7 @@ from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
     ServiceBindingPolicyType,
 )
+from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -131,3 +132,90 @@ def get_service_type(service: ServiceObj) -> str:
     from paasng.accessories.servicehub.manager import get_db_properties
 
     return get_db_properties(service).col_service_type
+
+
+@define
+class UnifiedAllocationConfig:
+    """The configuration for unified allocation policy.
+
+    This class holds the necessary configuration data extracted from a ServiceBindingPolicy.
+    """
+
+    plans: list[str] | None = None
+    env_plans: dict[str, list[str]] | None = None
+
+    @classmethod
+    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
+        if policy is None:
+            return None
+        return cls(
+            plans=policy.data.get("plan_ids", None),
+            env_plans=policy.data.get("env_plan_ids", None),
+        )
+
+
+@define
+class RuleBasedAllocationConfig:
+    """The configuration for building precedence policy.
+
+    This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
+    """
+
+    cond_type: str
+    cond_data: dict[str, list[str]]
+    priority: int
+    plans: list[str] | None = None
+    env_plans: dict[str, list[str]] | None = None
+
+    @classmethod
+    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationConfig":
+        return cls(
+            cond_type=policy.cond_type,
+            cond_data=policy.cond_data,
+            priority=policy.priority,
+            plans=policy.data.get("plan_ids", None),
+            env_plans=policy.data.get("env_plan_ids", None),
+        )
+
+
+@define
+class PolicyCombinationConfig:
+    """The configuration for building policy combination.
+
+
+    This class integrates multiple rule-based policies to allocate service bindings
+    based on specific conditions like region or cluster, ensuring the selection of
+    appropriate plans and providing a fallback option if none of the conditions are met.
+
+    Example Usage:
+    - If the region is "region_default", assign plans ["plan_region"].
+    - Else if the cluster is "cluster_default", assign plans ["plan_cluster"].
+    - Fallback to plans ["plan_default"] if none of the above conditions are met.
+    This can be represented as:
+    tenant_policy_config = PolicyCombinationConfig(
+        tenant_id="tenant_x",
+        service_id="service_x"
+        rule_based_allocation_configs=[
+            RuleBasedAllocationConfig(
+                cond_type=PrecedencePolicyCondType.REGION_IN.value,
+                cond_data={"regions": ["region_default"]},
+                priority=2,
+                plans=["plan_region"]
+            ),
+            RuleBasedAllocationConfig(
+                cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
+                cond_data={"cluster_names": ["cluster_default"]},
+                priority=1,
+                plans=["plan_cluster"]
+            )
+        ],
+        unified_allocation_config=UnifiedAllocationConfig(plans=["plan_default"])
+    )
+    """
+
+    tenant_id: str
+    service_id: str
+    # 按规则分配
+    rule_based_allocation_configs: list[RuleBasedAllocationConfig]
+    # 统一分配，也是按规则分配最终的保底选项
+    unified_allocation_config: UnifiedAllocationConfig

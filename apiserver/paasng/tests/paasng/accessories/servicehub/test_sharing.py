@@ -30,6 +30,7 @@ from paasng.accessories.servicehub.models import ServiceInstance
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.modules.models import Module
 from tests.utils.basic import generate_random_string
 from tests.utils.helpers import create_app, initialize_module
@@ -93,7 +94,7 @@ def ref_module(bk_app, bk_module, service_obj):
 class TestServiceSharingManager:
     @pytest.fixture(autouse=True)
     def _with_static_binding_policy(self, service_obj):
-        ServiceBindingPolicyManager(service_obj).set_static([service_obj.get_plans()[0]])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([service_obj.get_plans()[0]])
 
     def test_list_shareable(self, bk_app, bk_module, service_obj):
         # Bind source module with a remote service
@@ -164,7 +165,7 @@ class TestSharingReferencesManager:
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_module, ref_module, service_obj):
         # Initialize the binding policy
-        ServiceBindingPolicyManager(service_obj).set_static([service_obj.get_plans()[0]])
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([service_obj.get_plans()[0]])
 
         # Create sharing relationship
         mixed_service_mgr.bind_service(service_obj, ref_module)
@@ -188,7 +189,7 @@ class TestGetEnvVariables:
     def _with_static_binding_policy(self, local_service):
         """Initialize the service binding policy for local service."""
         service = mixed_service_mgr.get(local_service.uuid)
-        ServiceBindingPolicyManager(service).set_static([service.get_plans()[0]])
+        ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([service.get_plans()[0]])
 
     def test_local_integrated(self, bk_app, bk_module, local_service):
         def _create_instance():

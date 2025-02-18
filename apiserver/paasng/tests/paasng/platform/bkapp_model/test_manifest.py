@@ -35,6 +35,7 @@ from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingP
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.manifest import (
@@ -101,7 +102,7 @@ def local_service(bk_app):
     service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    ServiceBindingPolicyManager(svc_obj).set_static([svc_obj.get_plans()[0]])
+    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static([svc_obj.get_plans()[0]])
     return svc_obj
 
 

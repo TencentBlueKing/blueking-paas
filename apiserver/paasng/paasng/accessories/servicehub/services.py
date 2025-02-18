@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
 NOTSET = object()
 
 
@@ -64,6 +63,10 @@ class ServiceObj:
         """Return all related plans"""
         raise NotImplementedError()
 
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        """Return all related plans"""
+        raise NotImplementedError()
+
 
 @dataclass
 class PlanObj:
@@ -71,6 +74,7 @@ class PlanObj:
 
     uuid: str
     name: str
+    tenant_id: str
     description: str
     is_active: bool
     is_eager: bool
@@ -294,7 +298,9 @@ class BasePlanMgr:
 
     service_obj_cls: Type[ServiceObj]
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         raise NotImplementedError
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):

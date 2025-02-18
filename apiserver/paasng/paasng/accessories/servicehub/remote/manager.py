@@ -64,6 +64,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -121,7 +122,12 @@ class RemotePlanObj(PlanObj):
         # Handle malformed config data used by some legacy services
         if config == "不支持":
             config = {}
-        return cattrs.structure({"is_eager": properties.get("is_eager", is_eager), "config": config} | data, cls)
+        # Configure a default tenant_id for the planObj when the remote service is not upgraded.
+        tenant_id = data.pop("tenant_id", DEFAULT_TENANT_ID)
+        return cattrs.structure(
+            {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data,
+            cls,
+        )
 
 
 @dataclass
@@ -772,12 +778,16 @@ class RemotePlanMgr(BasePlanMgr):
         self.store = store
         self.service_mgr = RemoteServiceMgr(self.store)
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-
-            yield from svc.get_plans(is_active=NOTSET)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():

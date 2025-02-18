@@ -25,6 +25,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -125,7 +126,7 @@ class Service(UuidAuditedModel):
         if config:
             service_instance_param["config"] = config
 
-        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)
+        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)  # noqa: F811
         return service_instance
 
     def delete_service_instance(self, service_instance: "ServiceInstance") -> None:
@@ -204,9 +205,10 @@ class Plan(UuidAuditedModel):
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service", "name")
+        unique_together = ("tenant_id", "service", "name")
 
     @property
     def is_eager(self):

@@ -73,6 +73,14 @@ class BCSClient:
         # 只保留还没下线，且有绑定业务信息的项目
         return [p for p in projects if not p.isOffline and p.businessID and p.businessName]
 
+    def get_auth_project(self, project_id: str) -> entities.Project | None:
+        """获取指定项目信息"""
+        for proj in self.list_auth_projects():
+            if proj.projectID == project_id:
+                return proj
+
+        return None
+
     def list_project_clusters(self, project_id: str) -> List[entities.Cluster]:
         """获取项目下的集群列表"""
         path_params = {"projectID": project_id}
@@ -84,6 +92,14 @@ class BCSClient:
         clusters = cattrs.structure(resp["data"], List[entities.Cluster])
         # 只保留非共享集群
         return [c for c in clusters if not c.is_shared]
+
+    def get_cluster(self, project_id: str, cluster_id: str) -> entities.Cluster | None:
+        """获取指定集群信息"""
+        for cluster in self.list_project_clusters(project_id):
+            if cluster.clusterID == cluster_id:
+                return cluster
+
+        return None
 
     @staticmethod
     def _validate_resp(resp: Dict[str, Any]):

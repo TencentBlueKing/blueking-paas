@@ -447,7 +447,7 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
             choices=[(template.id, template) for template in pd.basic_info_definition.init_templates]
         )
         fields["plugin_tenant_mode"] = serializers.ChoiceField(
-            help_text="租户模式", choices=AppTenantMode.get_choices(), default=None
+            help_text="租户模式", choices=AppTenantMode.get_choices(), default=AppTenantMode.GLOBAL
         )
     return i18n(type("DynamicPluginSerializer", (serializers.Serializer,), fields))
 

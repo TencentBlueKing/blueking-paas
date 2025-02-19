@@ -50,7 +50,7 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
     return app_tenant_mode, app_tenant_id, tenant
 
 
-def vailidate_tenant_id_header(request: HttpRequest) -> str:
+def validate_tenant_id_header(request: HttpRequest) -> str:
     """多租户环境下开发者中心注册的网关都是全租户网关，可以被所有应用调用，在获取列表类的应用态 API 中需要处理请求头中的租户 ID
 
     :param request: HTTP 请求，多租户模式下请求头中必须有租户 ID 信息

@@ -11,7 +11,7 @@
   >
     <div slot="footer">
       <span
-        v-copy="passwrod"
+        v-copy="password"
         ref="copyRef"
       ></span>
       <bk-button
@@ -33,10 +33,10 @@
       <div class="password-box">
         <p class="mb6">{{ $t('沙箱环境密码') }}</p>
         <div class="password">
-          <span>{{ passwrod || '--' }}</span>
+          <span>{{ password || '--' }}</span>
           <i
             class="paasng-icon paasng-general-copy"
-            v-copy="passwrod"
+            v-copy="password"
           ></i>
         </div>
         <p class="tips">{{ $t('获取密码后，请在 “Welcome to code-server” 界面的 PASSWORD 处输入') }}</p>
@@ -53,7 +53,7 @@ export default {
       type: Boolean,
       default: false,
     },
-    passwrod: {
+    password: {
       type: String,
       default: '',
     },
@@ -70,7 +70,7 @@ export default {
   },
   methods: {
     handleConfirm() {
-      if (!this.passwrod) {
+      if (!this.password) {
         return;
       }
       this.$refs.copyRef.click();

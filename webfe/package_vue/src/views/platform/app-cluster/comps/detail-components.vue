@@ -125,6 +125,10 @@ export default {
       firstLoad: false,
     };
   },
+  // 组件激活
+  activated() {
+    this.curClusterName = this.data.name;
+  },
   created() {
     this.init();
   },

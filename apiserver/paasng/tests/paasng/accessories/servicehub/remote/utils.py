@@ -42,10 +42,10 @@ def gen_plan():
     name = generate_random_string()
     return RemotePlanObj(
         uuid=str(uuid.uuid4()),
+        tenant_id=DEFAULT_TENANT_ID,
         name=name,
         description=generate_random_string(),
         is_active=True,
         is_eager=False,
         properties={},
-        tenant_id=DEFAULT_TENANT_ID,
     )

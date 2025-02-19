@@ -781,12 +781,16 @@ class RemotePlanMgr(BasePlanMgr):
         self.store = store
         self.service_mgr = RemoteServiceMgr(self.store)
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-
-            yield from svc.get_plans(is_active=NOTSET)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():

@@ -24,6 +24,7 @@ from django.conf import settings
 
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def init_service_binding_policy(apps, schema_editor):
         for service in mixed_service_mgr.list():
             logger.info("Init service(%s) binding policy for service", service.name)
             plans = service.get_plans()
-            ServiceBindingPolicyManager(service).set_static(plans)
+            ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static(plans)
             logger.info("Service(%s) binding policy init done", service.name)
 
 

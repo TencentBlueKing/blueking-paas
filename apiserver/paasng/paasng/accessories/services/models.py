@@ -133,7 +133,7 @@ class Service(UuidAuditedModel):
         if config:
             service_instance_param["config"] = config
 
-        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)
+        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)  # noqa: F811
         return service_instance
 
     def delete_service_instance(self, service_instance: "ServiceInstance") -> None:

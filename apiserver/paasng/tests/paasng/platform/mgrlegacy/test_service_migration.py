@@ -43,12 +43,12 @@ dummy_service = RemoteServiceObj(
     plans=[
         RemotePlanObj(
             uuid="11111111-1111-1111-1111-111111111111",
+            tenant_id=DEFAULT_TENANT_ID,
             name="dummy-plan",
             description="dummy plan",
             is_eager=True,
             is_active=True,
             properties={},
-            tenant_id=DEFAULT_TENANT_ID,
         )
     ],
 )
@@ -58,7 +58,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        ServiceBindingPolicyManager(dummy_service).set_static([dummy_service.get_plans()[0]])
+        ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])
         yield
 
 

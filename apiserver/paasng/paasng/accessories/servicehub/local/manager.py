@@ -76,13 +76,13 @@ class LocalPlanObj(PlanObj):
         config = json.loads(plan.config or "{}")
         instance = cls(
             uuid=str(plan.uuid),
+            tenant_id=plan.tenant_id,
             name=plan.name,
             description=plan.description,
             is_active=plan.is_active,
             is_eager=plan.is_eager,
             properties={},
             config=config,
-            tenant_id=plan.tenant_id,
         )
         instance.db_object = plan
         return instance
@@ -455,12 +455,16 @@ class LocalPlanMgr(BasePlanMgr):
     def __init__(self):
         self.service_mgr = LocalServiceMgr()
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-
-            yield from svc.get_plans(is_active=NOTSET)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         svc = self._get_service_in_db(service)

@@ -15,16 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .feature_flags import ClusterFeatureFlagViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from paasng.utils.basic import re_path
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterFeatureFlagViewSet",
-    "ClusterAllocationPolicyViewSet",
+from . import views
+
+urlpatterns = [
+    re_path(
+        r"^sys/api/plugins_center/bk_plugins/(?P<pd_id>[^/]+)/create/$",
+        views.SysPluginApiViewSet.as_view({"post": "create"}),
+        name="sys.api.plugins_center.bk_plugins.create",
+    ),
 ]

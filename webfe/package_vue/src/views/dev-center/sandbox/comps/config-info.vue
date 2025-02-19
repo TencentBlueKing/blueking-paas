@@ -61,10 +61,10 @@ export default {
   },
   computed: {
     envVarLength() {
-      return Object.keys(this.data?.dev_sandbox_env_vars || {})?.length;
+      return Object.keys(this.data?.env_vars || {})?.length;
     },
     envVars() {
-      const vars = this.data?.dev_sandbox_env_vars || {};
+      const vars = this.data?.env_vars || {};
       return Object.entries(vars);
     },
     displayEnvVars() {

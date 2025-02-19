@@ -23,12 +23,12 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/clusters/",
         views.ClusterViewSet.as_view({"post": "create", "get": "list"}),
-        name="plat_mgt.infras.cluster.bulk",
+        name="plat_mgt.infras.cluster.list_create",
     ),
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/",
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
-        name="plat_mgt.infras.cluster.detail",
+        name="plat_mgt.infras.cluster.retrieve_update_destroy",
     ),
     # 集群默认特性标记
     path(
@@ -64,7 +64,7 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/",
         views.ClusterComponentViewSet.as_view({"post": "upsert", "get": "retrieve"}),
-        name="plat_mgt.infras.cluster.component.detail",
+        name="plat_mgt.infras.cluster.component.upsert_retrieve",
     ),
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/<str:component_name>/operations/diff_version/",
@@ -74,12 +74,18 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/cluster_allocation_policies/",
         views.ClusterAllocationPolicyViewSet.as_view({"post": "create", "get": "list"}),
-        name="plat_mgt.infras.cluster_allocation_policy.bulk",
+        name="plat_mgt.infras.cluster_allocation_policy.list_create",
     ),
     path(
         "api/plat_mgt/infras/cluster_allocation_policies/<str:policy_id>/",
         views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
-        name="plat_mgt.infras.cluster_allocation_policy.detail",
+        name="plat_mgt.infras.cluster_allocation_policy.update",
+    ),
+    # 可选集群特性
+    path(
+        "api/plat_mgt/infras/cluster_feature_flags/",
+        views.ClusterFeatureFlagViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.cluster_feature_flag.list",
     ),
     # BCS 项目列表
     path(

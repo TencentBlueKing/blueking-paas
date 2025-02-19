@@ -15,16 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .feature_flags import ClusterFeatureFlagViewSet
-from .policies import ClusterAllocationPolicyViewSet
+import secrets
+import string
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterFeatureFlagViewSet",
-    "ClusterAllocationPolicyViewSet",
-]
+
+def generate_password(length: int = 16):
+    """随机生成密码"""
+    charsets = string.ascii_letters + string.digits
+    return "".join([secrets.choice(charsets) for _ in range(length)])

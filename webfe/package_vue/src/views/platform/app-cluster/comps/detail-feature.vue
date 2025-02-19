@@ -20,7 +20,7 @@
         <div class="value">
           <i
             class="paasng-icon paasng-correct"
-            v-if="data.feature_flags[key]"
+            v-if="data.feature_flags?.[key]"
           ></i>
           <i
             class="paasng-icon paasng-icon-close"
@@ -40,7 +40,7 @@
         slot="value"
         class="node-selector"
       >
-        <template v-if="!Object.keys(data.node_selector).length">--</template>
+        <template v-if="!data.node_selector || Object.keys(data.node_selector).length === 0">--</template>
         <span
           v-else
           v-for="(val, key) in data.node_selector"
@@ -61,7 +61,7 @@
         slot="value"
         class="toleration"
       >
-        <template v-if="!Object.keys(data.tolerations).length">--</template>
+        <template v-if="!data.tolerations || Object.keys(data.tolerations).length === 0">--</template>
         <div
           v-else
           v-for="(item, index) in data.tolerations"

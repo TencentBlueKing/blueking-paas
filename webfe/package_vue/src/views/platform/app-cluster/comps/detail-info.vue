@@ -38,9 +38,11 @@
           class="dot-wrapper"
           v-if="key === 'password'"
         >
+          <template v-if="!data.elastic_search_config?.password">--</template>
           <span
-            class="dot"
+            v-else
             v-for="i in 7"
+            class="dot"
             :key="i"
           ></span>
         </div>

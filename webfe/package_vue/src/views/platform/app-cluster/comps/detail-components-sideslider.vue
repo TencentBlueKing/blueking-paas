@@ -44,7 +44,7 @@
       </DetailsRow>
       <div class="view-title">{{ $t('工作负载状态') }}</div>
       <bk-table
-        :data="tableData"
+        :data="detailData.workloads"
         :shift-multi-checked="true"
         dark-header
       >
@@ -57,22 +57,23 @@
           prop="name"
         ></bk-table-column>
         <bk-table-column
-          label="Ready"
-          prop="Ready"
-        ></bk-table-column>
-        <bk-table-column
-          label="Up-to-date"
-          prop="Up-to-date"
-        ></bk-table-column>
-        <bk-table-column
-          label="Available"
-          prop="Available"
+          label="Summary"
+          prop="summary"
+          show-overflow-tooltip
         ></bk-table-column>
         <bk-table-column
           label="Conditions"
           prop="conditions"
         >
-          <div slot-scope="{ row }">{{ row.conditions }}</div>
+          <div slot-scope="{ row }">
+            <!-- JSON格式预览 -->
+            <vue-json-pretty
+              :data="row.conditions"
+              :deep="1"
+              :show-length="true"
+              :highlight-mouseover-node="true"
+            />
+          </div>
         </bk-table-column>
       </bk-table>
     </div>
@@ -81,6 +82,8 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
 export default {
   name: 'DetailComponentsSideslider',
   props: {
@@ -99,6 +102,7 @@ export default {
   },
   components: {
     DetailsRow,
+    VueJsonPretty,
   },
   data() {
     return {
@@ -127,33 +131,12 @@ export default {
       },
     },
     displayData() {
-      const { chart, release } = this.detailData;
+      const { chart = {}, release = {} } = this.detailData;
       return {
         ...chart,
         ...release,
-        chartText: chart.name + chart.version,
+        chartText: chart?.name + chart?.version,
       };
-    },
-    tableData() {
-      return this.detailData.workloads.map((v) => {
-        const ret = this.parseStringToObject(v.summary);
-        return {
-          ...v,
-          ...ret,
-        };
-      });
-    },
-  },
-  methods: {
-    parseStringToObject(str) {
-      const result = {};
-      const parts = str.split(', ');
-
-      parts.forEach((part) => {
-        const [key, value] = part.split(': ').map((item) => item.trim());
-        result[key] = value;
-      });
-      return result;
     },
   },
 };

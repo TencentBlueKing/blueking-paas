@@ -7,10 +7,11 @@
     <DetailsRow
       v-for="(val, key) in installInfoKeys"
       :label-width="126"
+      :align="'flex-start'"
       :key="key"
     >
       <template slot="label">
-        <div v-if="key === 'name'">
+        <div v-if="key === 'component_preferred_namespace'">
           {{ val }}
           <i
             class="paasng-icon paasng-info-line"
@@ -23,7 +24,21 @@
         </div>
         <template v-else>{{ `${val}：` }}</template>
       </template>
-      <template slot="value">--</template>
+      <template slot="value">
+        <div v-if="key === 'app_domains'">
+          <template v-if="!data[key]">--</template>
+          <div
+            v-else
+            v-for="(item, i) in data[key]"
+            :key="i"
+          >
+            {{ `${item.name}（${item.https_enabled ? $t('启用') : $t('不启用')} HTTPS）` }}
+          </div>
+        </div>
+        <span v-else>
+          {{ (key === 'exposed_url_type' ? pathMap[data[key]] : data[key]) || '--' }}
+        </span>
+      </template>
     </DetailsRow>
     <div class="view-title">{{ $t('组件详情') }}</div>
     <bk-tab
@@ -36,7 +51,23 @@
         v-for="(panel, index) in componentList"
         v-bind="panel"
         :key="index"
-      ></bk-tab-panel>
+      >
+        <div
+          slot="label"
+          class="tab-panel-wrapper"
+        >
+          <!-- icon -->
+          <i
+            class="paasng-icon paasng-check-circle-shape"
+            v-if="panel.status === 'installed'"
+          ></i>
+          <i
+            class="paasng-icon paasng-unfinished"
+            v-else
+          ></i>
+          <span class="panel-name">{{ panel.name }}</span>
+        </div>
+      </bk-tab-panel>
       <!-- 四个默认组件定制 -->
       <section v-bkloading="{ isLoading: cardLoading, zIndex: 10 }">
         <DefaultComponentDetails
@@ -72,13 +103,22 @@ export default {
       isLoading: false,
       cardLoading: false,
       installInfoKeys: {
-        name: this.$t('命名空间'),
-        description: this.$t('镜像仓库'),
-        cluster_source: this.$t('应用访问类型'),
-        bcs_project_id: this.$t('应用域名'),
+        component_preferred_namespace: this.$t('命名空间'),
+        component_image_registry: this.$t('镜像仓库'),
+        exposed_url_type: this.$t('应用访问类型'),
+        app_domains: this.$t('应用域名'),
       },
       componentDetail: {},
+      pathMap: {
+        subpath: this.$t('子路径'),
+        subdomain: this.$t('子域名'),
+      },
+      curClusterName: '',
     };
+  },
+  // 组件激活
+  activated() {
+    this.curClusterName = this.data.name;
   },
   created() {
     this.init();
@@ -86,6 +126,16 @@ export default {
   computed: {
     curActiveTabData() {
       return this.componentList.find((v) => v.name === this.tabActive) ?? {};
+    },
+  },
+  watch: {
+    data: {
+      handler(newVal) {
+        if (newVal.name !== this.curClusterName) {
+          this.init();
+        }
+      },
+      deep: true,
     },
   },
   methods: {
@@ -108,6 +158,7 @@ export default {
         });
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
         this.isLoading = false;
       }
     },
@@ -121,6 +172,11 @@ export default {
         });
         this.componentDetail = ret;
       } catch (e) {
+        this.componentDetail = {};
+        // 404 未安装
+        if (e.status === 404) {
+          return;
+        }
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
@@ -133,6 +189,18 @@ export default {
 
 <style lang="scss" scoped>
 .detail-components-container {
+  .tab-panel-wrapper {
+    i {
+      font-size: 14px;
+      margin-right: 5px;
+    }
+    .paasng-check-circle-shape {
+      color: #18c0a1;
+    }
+    .paasng-unfinished {
+      color: #f59500;
+    }
+  }
   .view-title {
     font-weight: 700;
     font-size: 14px;

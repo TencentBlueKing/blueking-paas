@@ -9,6 +9,8 @@
       <bk-table-column
         :label="$t('集群名称')"
         prop="name"
+        width="100"
+        show-overflow-tooltip
       >
         <template slot-scope="{ row }">
           <a
@@ -24,7 +26,9 @@
         prop="bcs_cluster_id"
         width="130"
         show-overflow-tooltip
-      ></bk-table-column>
+      >
+        <template slot-scope="{ row }">{{ row.bcs_cluster_id || '--' }}</template>
+      </bk-table-column>
       <bk-table-column
         :label="$t('描述')"
         prop="description"
@@ -35,6 +39,7 @@
         prop="availableTenants"
         class-name="tags-wrapper-cls tenant-column"
         column-key="available-tenant"
+        width="140"
       >
         <template slot-scope="{ row }">
           <div
@@ -63,6 +68,7 @@
               }}
             </span>
           </div>
+          <span v-else>--</span>
         </template>
       </bk-table-column>
       <!-- 新增特性列 -->

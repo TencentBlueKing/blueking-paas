@@ -13,7 +13,7 @@
       :class="['value', { full: isFull }]"
       v-bk-overflow-tips
     >
-      <slot name="value">{{ value }}</slot>
+      <slot name="value">{{ value ?? '--' }}</slot>
     </div>
   </div>
 </template>
@@ -26,7 +26,7 @@ export default {
       default: '',
     },
     value: {
-      type: String,
+      type: [String, Number],
       default: '',
     },
     labelWidth: {

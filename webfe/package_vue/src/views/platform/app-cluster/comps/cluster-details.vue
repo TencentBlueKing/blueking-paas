@@ -151,8 +151,10 @@ export default {
           clusterName: this.activeName,
         });
         this.curDetailData = ret;
-        console.log('details', ret);
       } catch (e) {
+        this.$nextTick(() => {
+          this.curDetailData = {};
+        });
         this.catchErrorHandler(e);
       } finally {
         this.contentLoading = false;

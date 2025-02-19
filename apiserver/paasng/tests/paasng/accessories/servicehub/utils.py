@@ -20,6 +20,7 @@
 import uuid
 
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.helpers import generate_random_string
 
 SERVICE_COMMON_ARGS: dict = dict(
@@ -43,4 +44,5 @@ def gen_plan():
         is_active=True,
         is_eager=False,
         properties={},
+        tenant_id=DEFAULT_TENANT_ID,
     )

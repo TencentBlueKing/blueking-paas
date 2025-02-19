@@ -16,30 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 
-from paasng.accessories.dev_sandbox.config_var import generate_envs
-from paasng.platform.engine.configurations.building import SlugbuilderInfo
-from paasng.platform.engine.constants import AppInfoBuiltinEnv
-
-pytestmark = pytest.mark.django_db
+from paasng.accessories.dev_sandbox.models import DevSandbox
+from paasng.platform.sourcectl.models import VersionInfo
 
 
-def test_generate_envs(bk_app, bk_module):
-    envs = generate_envs(bk_app, bk_module)
-
-    expected_env_keys = [
-        f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}",
-        f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_ID}",
-        "DEV_SERVER_ADDR",
-    ]
-
-    if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
-        expected_env_keys.extend(["PIP_INDEX_URL", "PIP_INDEX_HOST"])
-
-    build_info = SlugbuilderInfo.from_module(bk_module)
-    if build_info.buildpacks_info:
-        expected_env_keys.append("REQUIRED_BUILDPACKS")
-
-    for k in expected_env_keys:
-        assert k in envs
+@pytest.fixture()
+def bk_dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
+    version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
+    return DevSandbox.objects.create(
+        module=bk_module, owner=bk_user, version_info=version_info, enable_code_editor=True
+    )

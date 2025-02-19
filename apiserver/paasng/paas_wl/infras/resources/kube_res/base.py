@@ -68,7 +68,7 @@ class AppEntity:
     _kube_data = None  # type: Optional[ResourceInstance]
 
     class Meta:
-        """Metainfo of current AppEntity type"""
+        """Meta info of current AppEntity type"""
 
         # Kubernetes resource type bound with current entity
         kres_class: Type[kres.BaseKresource] = kres.BaseKresource

@@ -15,8 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .ingress import DevSandboxIngress
-from .sandbox import DevSandbox
-from .service import DevSandboxService
+from paas_wl.bk_app.applications.models import WlApp
 
-__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService"]
+
+def get_dev_sandbox_name(wl_app: WlApp) -> str:
+    return wl_app.scheduler_safe_name
+
+
+def get_dev_sandbox_ingress_name(wl_app: WlApp) -> str:
+    return wl_app.scheduler_safe_name
+
+
+def get_dev_sandbox_service_name(wl_app: WlApp) -> str:
+    return f"{wl_app.scheduler_safe_name}-dev-sandbox"

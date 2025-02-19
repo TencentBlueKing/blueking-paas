@@ -15,8 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .ingress import DevSandboxIngress
-from .sandbox import DevSandbox
-from .service import DevSandboxService
+import secrets
+import string
 
-__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService"]
+
+def generate_password(length: int = 16):
+    """随机生成密码"""
+    charsets = string.ascii_letters + string.digits
+    return "".join([secrets.choice(charsets) for _ in range(length)])

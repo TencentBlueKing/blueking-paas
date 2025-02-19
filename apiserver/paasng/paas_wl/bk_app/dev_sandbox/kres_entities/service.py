@@ -18,56 +18,34 @@
 from dataclasses import dataclass
 from typing import List
 
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.conf import CODE_EDITOR_SVC_PORT_PAIRS, DEV_SANDBOX_SVC_PORT_PAIRS
+from paas_wl.bk_app.dev_sandbox.conf import get_network_configs
 from paas_wl.bk_app.dev_sandbox.entities import ServicePortPair
-from paas_wl.bk_app.dev_sandbox.kres_slzs import (
-    CodeEditorServiceDeserializer,
-    CodeEditorServiceSerializer,
-    DevSandboxServiceDeserializer,
-    DevSandboxServiceSerializer,
-)
+from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
+from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxServiceDeserializer, DevSandboxServiceSerializer
+from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_service_name
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 
 @dataclass
 class DevSandboxService(AppEntity):
-    """service entity to expose dev sandbox network"""
+    ports: List[ServicePortPair]
 
     class Meta:
         kres_class = kres.KService
         serializer = DevSandboxServiceSerializer
         deserializer = DevSandboxServiceDeserializer
 
-    def __post_init__(self):
-        self.ports: List[ServicePortPair] = DEV_SANDBOX_SVC_PORT_PAIRS
-
     @classmethod
-    def create(cls, dev_wl_app: WlApp) -> "DevSandboxService":
-        return cls(app=dev_wl_app, name=get_dev_sandbox_service_name(dev_wl_app))
+    def create(cls, dev_sandbox: DevSandbox) -> "DevSandboxService":
+        svc_name = get_dev_sandbox_service_name(dev_sandbox.app)
 
-
-@dataclass
-class CodeEditorService(AppEntity):
-    """service entity to expose code editor network"""
-
-    class Meta:
-        kres_class = kres.KService
-        serializer = CodeEditorServiceSerializer
-        deserializer = CodeEditorServiceDeserializer
-
-    def __post_init__(self):
-        self.ports: List[ServicePortPair] = CODE_EDITOR_SVC_PORT_PAIRS
-
-    @classmethod
-    def create(cls, dev_wl_app: WlApp) -> "CodeEditorService":
-        return cls(app=dev_wl_app, name=get_code_editor_service_name(dev_wl_app))
-
-
-def get_dev_sandbox_service_name(dev_wl_app: WlApp) -> str:
-    return f"{dev_wl_app.scheduler_safe_name}-dev-sandbox"
-
-
-def get_code_editor_service_name(dev_wl_app: WlApp) -> str:
-    return f"{dev_wl_app.scheduler_safe_name}-code-editor"
+        ports = [
+            ServicePortPair(
+                name=cfg.port_name,
+                port=cfg.port,
+                target_port=cfg.target_port,
+            )
+            for cfg in get_network_configs(dev_sandbox)
+        ]
+        return cls(app=dev_sandbox.app, name=svc_name, ports=ports)

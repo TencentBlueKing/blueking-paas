@@ -106,7 +106,8 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             "release": {
                 "name": release.name,
                 "namespace": release.namespace,
-                "created_at": release.deploy_result.created_at,
+                "version": release.version,
+                "deployed_at": release.deploy_result.created_at,
                 "description": release.deploy_result.description,
                 "status": release.deploy_result.status,
             },

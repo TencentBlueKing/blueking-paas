@@ -118,7 +118,11 @@ class TestMixedMgrGetAndList:
         def create_mock_rel(create_time: "datetime.datetime", **credentials):
             rel = mock.MagicMock()
             rel.get_instance.return_value = ServiceInstanceObj(
-                uuid="", credentials=credentials, config={}, create_time=create_time
+                uuid="",
+                credentials=credentials,
+                config={},
+                create_time=create_time,
+                tenant_id=DEFAULT_TENANT_ID,
             )
             return rel
 

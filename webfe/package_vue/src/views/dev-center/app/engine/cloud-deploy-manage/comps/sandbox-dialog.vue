@@ -231,12 +231,13 @@ export default {
         }
       );
     },
-    toSandboxPage() {
+    toSandboxPage(devSandboxCode) {
       this.$router.push({
         name: 'sandbox',
         query: {
           code: this.appCode,
           module: this.formData.module,
+          devSandboxCode: devSandboxCode,
         },
       });
     },
@@ -245,11 +246,15 @@ export default {
       try {
         const curBranchData = this.branchList.find((v) => v.name === this.formData.branch);
         const data = {
-          revision: curBranchData.revision,
-          version_type: curBranchData.type,
-          version_name: curBranchData.name,
+          enable_code_editor: true,
+          inject_staging_env_vars: true,
+          source_code_version_info: {
+            revision: curBranchData.revision,
+            version_type: curBranchData.type,
+            version_name: curBranchData.name,
+          }
         };
-        await this.$store.dispatch('sandbox/createSandbox', {
+        const ret = await this.$store.dispatch('sandbox/createSandbox', {
           appCode: this.appCode,
           moduleId: this.formData.module,
           data,
@@ -261,7 +266,7 @@ export default {
         // 关闭dialog
         this.dialogVisible = false;
         // 跳转沙箱入口
-        this.toSandboxPage();
+        this.toSandboxPage(ret.code);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

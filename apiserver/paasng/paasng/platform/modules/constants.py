@@ -32,6 +32,9 @@ class ExposedURLType(IntStructuredEnum):
     # eg: http://code.foo-apps.com/
     SUBDOMAIN = 2
 
+    def to_string(self) -> str:
+        return self.name.lower()
+
 
 class SourceOrigin(IntStructuredEnum):
     """Source origin defines the origin of module's source code"""

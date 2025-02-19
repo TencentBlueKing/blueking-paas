@@ -35,8 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceCategory(models.Model):
-    """
-    Service Category
+    """Service Category
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
@@ -52,8 +53,9 @@ class ServiceManager(models.Manager):
 
 
 class Service(UuidAuditedModel):
-    """
-    Service model for PaaS
+    """Service model for PaaS
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     region = models.CharField(max_length=32)
@@ -122,7 +124,12 @@ class Service(UuidAuditedModel):
         credentials = self.format_credentials(
             raw_credentials, prefix=self.name, protected_keys=service_handler_instance.protected_keys
         )
-        service_instance_param = {"service": self, "credentials": json.dumps(credentials), "plan": plan}
+        service_instance_param = {
+            "service": self,
+            "credentials": json.dumps(credentials),
+            "plan": plan,
+            "tenant_id": plan.tenant_id,
+        }
         if config:
             service_instance_param["config"] = config
 
@@ -169,6 +176,7 @@ class ServiceInstance(UuidAuditedModel):
     config = JSONField(default={})
     credentials = EncryptField(default="")
     to_be_deleted = models.BooleanField(default=False)
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
@@ -181,6 +189,7 @@ class PreCreatedInstance(UuidAuditedModel):
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
+    tenant_id = tenant_id_field_factory()
 
     def acquire(self):
         self.is_allocated = True
@@ -227,6 +236,8 @@ class Plan(UuidAuditedModel):
 
 
 class ResourceId(models.Model):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 

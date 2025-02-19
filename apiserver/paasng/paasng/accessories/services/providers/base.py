@@ -88,5 +88,8 @@ class ResourcePoolProvider(BaseProvider):
             # no test cover
             logger.warning("`__pk__` is missing, recreate a new PreCreatedInstance by given credentials and config.")
             PreCreatedInstance.objects.create(
-                plan=self.plan, credentials=json.dumps(instance_data.credentials), config=instance_data.config
+                plan=self.plan,
+                credentials=json.dumps(instance_data.credentials),
+                config=instance_data.config,
+                tenant_id=self.plan.tenant_id,
             )

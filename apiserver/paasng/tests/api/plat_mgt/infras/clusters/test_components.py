@@ -68,7 +68,7 @@ class TestRetrieveClusterComponent:
     def test_retrieve_deployed_component(self, plat_mgt_api_client, init_system_cluster):
         resp = plat_mgt_api_client.get(
             reverse(
-                "plat_mgt.infras.cluster.component.detail",
+                "plat_mgt.infras.cluster.component.upsert_retrieve",
                 kwargs={"cluster_name": init_system_cluster.name, "component_name": "bk-ingress-nginx"},
             )
         )
@@ -90,7 +90,7 @@ class TestRetrieveClusterComponent:
     def test_retrieve_install_failed_component(self, plat_mgt_api_client, init_system_cluster):
         resp = plat_mgt_api_client.get(
             reverse(
-                "plat_mgt.infras.cluster.component.detail",
+                "plat_mgt.infras.cluster.component.upsert_retrieve",
                 kwargs={"cluster_name": init_system_cluster.name, "component_name": "bkapp-log-collection"},
             )
         )
@@ -121,7 +121,7 @@ class TestRetrieveClusterComponent:
     def test_retrieve_not_installed(self, plat_mgt_api_client, init_system_cluster):
         resp = plat_mgt_api_client.get(
             reverse(
-                "plat_mgt.infras.cluster.component.detail",
+                "plat_mgt.infras.cluster.component.upsert_retrieve",
                 kwargs={"cluster_name": init_system_cluster.name, "component_name": "bcs-general-pod-autoscaler"},
             )
         )
@@ -139,7 +139,7 @@ class TestUpsertClusterComponent:
     def test_upsert_bk_ingress_nginx(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.post(
             reverse(
-                "plat_mgt.infras.cluster.component.detail",
+                "plat_mgt.infras.cluster.component.upsert_retrieve",
                 kwargs={"cluster_name": init_default_cluster.name, "component_name": "bk-ingress-nginx"},
             ),
             data={
@@ -157,7 +157,7 @@ class TestUpsertClusterComponent:
     def test_upsert_bkapp_log_collection(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.post(
             reverse(
-                "plat_mgt.infras.cluster.component.detail",
+                "plat_mgt.infras.cluster.component.upsert_retrieve",
                 kwargs={"cluster_name": init_default_cluster.name, "component_name": "bkapp-log-collection"},
             ),
             data={"values": {}},

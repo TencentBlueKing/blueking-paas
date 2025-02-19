@@ -18,11 +18,13 @@
 from .bcs_resources import BCSResourceViewSet
 from .clusters import ClusterViewSet
 from .components import ClusterComponentViewSet
+from .feature_flags import ClusterFeatureFlagViewSet
 from .policies import ClusterAllocationPolicyViewSet
 
 __all__ = [
     "BCSResourceViewSet",
     "ClusterViewSet",
     "ClusterComponentViewSet",
+    "ClusterFeatureFlagViewSet",
     "ClusterAllocationPolicyViewSet",
 ]

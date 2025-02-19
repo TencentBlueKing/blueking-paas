@@ -125,8 +125,7 @@ class RemotePlanObj(PlanObj):
         # Configure a default tenant_id for the planObj when the remote service is not upgraded.
         tenant_id = data.pop("tenant_id", DEFAULT_TENANT_ID)
         return cattrs.structure(
-            {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data,
-            cls,
+            {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
         )
 
 
@@ -319,6 +318,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -412,6 +412,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -519,7 +520,7 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
 
 
 def create_svc_instance_obj_from_remote(
-    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime"
+    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime", tenant_id: str
 ) -> ServiceInstanceObj:
     """Create a Service Instance object for remote service
 
@@ -539,7 +540,9 @@ def create_svc_instance_obj_from_remote(
     meta_config = config.pop("__meta__", {})
     should_hidden_fields = list(map(_format_key, meta_config.get("should_hidden_fields", [])))
     should_remove_fields = list(map(_format_key, meta_config.get("should_remove_fields", [])))
-    return ServiceInstanceObj(uuid, _credentials, config, should_hidden_fields, should_remove_fields, create_time)
+    return ServiceInstanceObj(
+        uuid, _credentials, config, tenant_id, should_hidden_fields, should_remove_fields, create_time
+    )
 
 
 class RemoteServiceMgr(BaseServiceMgr):

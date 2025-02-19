@@ -101,6 +101,7 @@ class ServiceInstanceObj:
         uuid: str,
         credentials: Dict,
         config: Dict,
+        tenant_id: str,
         should_hidden_fields: Optional[List] = None,
         should_remove_fields: Optional[List] = None,
         create_time: Optional["datetime.datetime"] = None,
@@ -108,6 +109,7 @@ class ServiceInstanceObj:
         self.uuid = uuid
         self._credentials = credentials
         self._config = config
+        self.tenant_id = tenant_id
         self.should_hidden_fields = should_hidden_fields or []
         self.should_remove_fields = should_remove_fields or []
         self.create_time = create_time

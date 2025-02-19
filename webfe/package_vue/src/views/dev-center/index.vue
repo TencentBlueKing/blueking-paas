@@ -13,7 +13,7 @@
       class="wrap"
       :height="700"
     >
-      <div class="paas-application-tit clearfix">
+      <div class="clearfix paas-application-tit">
         <div class="fright clearfix">
           <div class="app-title-left">
             <div class="create-app">
@@ -409,7 +409,7 @@
                   disabled: row.market_config.source_tp_url,
                   allowHTML: true,
                 }"
-                class="link-btn-cls right-text"
+                class="right-text link-btn-cls"
               >
                 <bk-button
                   theme="primary"
@@ -614,18 +614,6 @@ export default {
         limit: 0,
         order_by: 'code',
       },
-      // app数量, 不考虑筛选情况
-      appNumInfo: {
-        All: 0,
-        PHP: 0,
-        Go: 0,
-        NodeJS: 0,
-        Python: 0,
-        ieod: 0,
-        tencent: 0,
-        clouds: 0,
-        default: 0,
-      },
       availableLanguages: ['Python', 'PHP', 'Go', 'NodeJS'],
       availableRegions: ['ieod', 'tencent', 'clouds'],
       RegionTranslate: {
@@ -712,7 +700,6 @@ export default {
   },
   created() {
     this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' }, false);
-    this.getAppCategory(false);
     if (this.$route.query.include_inactive) {
       this.appFilter.includeInactive = true;
     }
@@ -933,26 +920,6 @@ export default {
       };
       this.filterKey = '';
       this.fetchAppList();
-    },
-
-    // 获取App类型列表及数量
-    getAppCategory(includeInactive) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=language&include_inactive=${includeInactive}`;
-      const regionUrl = `${BACKEND_URL}/api/bkapps/applications/summary/group_by_field/?field=region&include_inactive=${includeInactive}`;
-      this.$http.get(url).then((res) => {
-        const langGroup = res.groups;
-        // 这里的总数是拥有的App总数，而不是筛选后得到的总数
-        this.appNumInfo.All = res.total;
-        langGroup.forEach((item) => {
-          this.appNumInfo[item.language] = item.count;
-        });
-      });
-      this.$http.get(regionUrl).then((res) => {
-        const regionGroup = res.groups;
-        regionGroup.forEach((item) => {
-          this.appNumInfo[item.region] = item.count;
-        });
-      });
     },
 
     toAccessApps(appItem) {

@@ -39,7 +39,14 @@ DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=6)
 
 
 class DevSandboxQuerySet(models.QuerySet):
-    """开发沙箱 QuerySet 类"""
+    """
+    开发沙箱 QuerySet 类
+
+    Q：为什么是在 QuerySet 中定义 create 方法，而不是在 Manager 中定义？
+    A：查阅 Django 源码可发现，Manager 中的 filter，create 等方法其实是继承自 QuerySet 类的，
+      如果只覆写 Manager 中的 create 方法，则在 DevSandbox.objects.get_or_create() 时，
+      实际会被调用到的是没有被覆写的 QuerySet.create() 方法，并非预期的 create() 方法。
+    """
 
     def create(
         self,

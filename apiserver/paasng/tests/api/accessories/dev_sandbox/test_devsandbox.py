@@ -123,7 +123,7 @@ class TestRetrieveDevSandbox:
         ):
             yield
 
-    def test_retrieve(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_code_editor):
+    def test_retrieve(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         resp = api_client.get(
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             + f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/"
@@ -132,7 +132,7 @@ class TestRetrieveDevSandbox:
         assert resp.json() == {
             "workspace": "/data/workspace",
             "devserver_token": bk_dev_sandbox.token,
-            "code_editor_password": bk_code_editor.password,
+            "code_editor_password": bk_dev_sandbox.code_editor_config.password,
             "env_vars": {"FOO": "BAR"},
             "app_url": "example.com/app/",
             "devserver_url": "example.com/devserver/",

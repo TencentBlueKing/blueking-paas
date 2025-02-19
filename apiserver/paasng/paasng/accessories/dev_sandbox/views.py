@@ -28,12 +28,12 @@ from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
-from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, SourceCodeConfig
+from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.accessories.dev_sandbox.config_var import generate_envs
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
-from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
+from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
@@ -110,12 +110,12 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_code_cfg.source_fetch_url = upload_source_code(module, version_info, source_dir, owner)
             source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
-        dev_sandbox = DevSandbox.objects.create(module=module, version_info=version_info, owner=owner)
-        # 代码编辑器
-        code_editor_cfg: CodeEditorConfig | None = None
-        if data["enable_code_editor"]:
-            code_editor = CodeEditor.objects.create(dev_sandbox=dev_sandbox)
-            code_editor_cfg = CodeEditorConfig(password=code_editor.password)
+        dev_sandbox = DevSandbox.objects.create(
+            module=module,
+            owner=owner,
+            version_info=version_info,
+            enable_code_editor=data["enable_code_editor"],
+        )
 
         envs = generate_envs(module)
         if data["inject_staging_env_vars"]:
@@ -127,7 +127,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             DevSandboxController(dev_sandbox).deploy(
                 envs=envs,
                 source_code_cfg=source_code_cfg,
-                code_editor_cfg=code_editor_cfg,
+                code_editor_cfg=dev_sandbox.code_editor_config,
             )
         except DevSandboxAlreadyExists:
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
@@ -159,10 +159,9 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except DevSandboxResourceNotFound:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        try:
-            password = dev_sandbox.code_editor.password
-        except ObjectDoesNotExist:
-            password = None
+        password = None
+        if cfg := dev_sandbox.code_editor_config:
+            password = cfg.password
 
         resp_data = {
             "workspace": detail.workspace,

@@ -17,16 +17,13 @@
 
 import pytest
 
-from paasng.accessories.dev_sandbox.models import CodeEditor, DevSandbox
+from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.models import VersionInfo
 
 
 @pytest.fixture()
 def bk_dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
     version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
-    return DevSandbox.objects.create(module=bk_module, version_info=version_info, owner=bk_user)
-
-
-@pytest.fixture()
-def bk_code_editor(bk_dev_sandbox) -> CodeEditor:
-    return CodeEditor.objects.create(dev_sandbox=bk_dev_sandbox)
+    return DevSandbox.objects.create(
+        module=bk_module, owner=bk_user, version_info=version_info, enable_code_editor=True
+    )

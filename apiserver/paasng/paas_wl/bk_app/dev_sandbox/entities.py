@@ -17,7 +17,7 @@
 
 from typing import Dict, List
 
-from attrs import define, field
+from attrs import asdict, define, field
 from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
@@ -38,9 +38,6 @@ class ResourceSpec:
     cpu: str
     memory: str
 
-    def to_dict(self):
-        return {"cpu": self.cpu, "memory": self.memory}
-
 
 @define
 class Resources:
@@ -52,16 +49,16 @@ class Resources:
     def to_dict(self):
         quota = {}
         if self.limits:
-            quota["limits"] = self.limits.to_dict()
+            quota["limits"] = asdict(self.limits)
         if self.requests:
-            quota["requests"] = self.requests.to_dict()
+            quota["requests"] = asdict(self.requests)
 
         return quota
 
 
 @define
 class NetworkConfig:
-    """网络相关配置"""
+    """网络相关配置（Ingress、Service 等使用）"""
 
     # Ingress 访问路径前缀
     path_prefix: str

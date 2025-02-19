@@ -25,6 +25,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -34,8 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceCategory(models.Model):
-    """
-    Service Category
+    """Service Category
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
@@ -51,8 +53,9 @@ class ServiceManager(models.Manager):
 
 
 class Service(UuidAuditedModel):
-    """
-    Service model for PaaS
+    """Service model for PaaS
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     region = models.CharField(max_length=32)
@@ -121,7 +124,12 @@ class Service(UuidAuditedModel):
         credentials = self.format_credentials(
             raw_credentials, prefix=self.name, protected_keys=service_handler_instance.protected_keys
         )
-        service_instance_param = {"service": self, "credentials": json.dumps(credentials), "plan": plan}
+        service_instance_param = {
+            "service": self,
+            "credentials": json.dumps(credentials),
+            "plan": plan,
+            "tenant_id": plan.tenant_id,
+        }
         if config:
             service_instance_param["config"] = config
 
@@ -168,6 +176,7 @@ class ServiceInstance(UuidAuditedModel):
     config = JSONField(default={})
     credentials = EncryptField(default="")
     to_be_deleted = models.BooleanField(default=False)
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
@@ -180,6 +189,7 @@ class PreCreatedInstance(UuidAuditedModel):
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
+    tenant_id = tenant_id_field_factory()
 
     def acquire(self):
         self.is_allocated = True
@@ -204,9 +214,10 @@ class Plan(UuidAuditedModel):
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service", "name")
+        unique_together = ("tenant_id", "service", "name")
 
     @property
     def is_eager(self):
@@ -225,6 +236,8 @@ class Plan(UuidAuditedModel):
 
 
 class ResourceId(models.Model):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 

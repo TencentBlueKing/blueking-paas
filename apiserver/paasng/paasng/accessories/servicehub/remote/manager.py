@@ -64,6 +64,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -121,7 +122,11 @@ class RemotePlanObj(PlanObj):
         # Handle malformed config data used by some legacy services
         if config == "不支持":
             config = {}
-        return cattrs.structure({"is_eager": properties.get("is_eager", is_eager), "config": config} | data, cls)
+        # Configure a default tenant_id for the planObj when the remote service is not upgraded.
+        tenant_id = data.pop("tenant_id", DEFAULT_TENANT_ID)
+        return cattrs.structure(
+            {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
+        )
 
 
 @dataclass
@@ -313,6 +318,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -406,6 +412,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -513,7 +520,7 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
 
 
 def create_svc_instance_obj_from_remote(
-    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime"
+    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime", tenant_id: str
 ) -> ServiceInstanceObj:
     """Create a Service Instance object for remote service
 
@@ -533,7 +540,9 @@ def create_svc_instance_obj_from_remote(
     meta_config = config.pop("__meta__", {})
     should_hidden_fields = list(map(_format_key, meta_config.get("should_hidden_fields", [])))
     should_remove_fields = list(map(_format_key, meta_config.get("should_remove_fields", [])))
-    return ServiceInstanceObj(uuid, _credentials, config, should_hidden_fields, should_remove_fields, create_time)
+    return ServiceInstanceObj(
+        uuid, _credentials, config, tenant_id, should_hidden_fields, should_remove_fields, create_time
+    )
 
 
 class RemoteServiceMgr(BaseServiceMgr):

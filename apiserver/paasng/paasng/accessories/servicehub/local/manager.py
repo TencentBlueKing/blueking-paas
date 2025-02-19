@@ -82,6 +82,7 @@ class LocalPlanObj(PlanObj):
             is_eager=plan.is_eager,
             properties={},
             config=config,
+            tenant_id=plan.tenant_id,
         )
         instance.db_object = plan
         return instance
@@ -185,6 +186,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=json.loads(self.db_obj.service_instance.credentials),
             config=self.db_obj.service_instance.config,
+            tenant_id=self.db_obj.plan.tenant_id,
             should_hidden_fields=should_hidden_fields,
             should_remove_fields=should_remove_fields,
             create_time=self.db_obj.created,
@@ -214,6 +216,7 @@ class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance),
             credentials=json.loads(self.db_obj.service_instance.credentials),
             config=self.db_obj.service_instance.config,
+            tenant_id=self.db_obj.plan.tenant_id,
             should_hidden_fields=should_hidden_fields,
             should_remove_fields=should_remove_fields,
             create_time=self.db_obj.created,

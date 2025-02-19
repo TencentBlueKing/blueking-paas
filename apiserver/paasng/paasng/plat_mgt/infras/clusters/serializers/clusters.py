@@ -61,17 +61,20 @@ class ClusterListOutputSLZ(serializers.Serializer):
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_tenant(self, obj: Cluster) -> str:
-        # FIXME: (多租户)这里应该把 ID 转换成名称
-        return obj.tenant_id
+        return self.context["tenant_name_map"].get(obj.tenant_id, obj.tenant_id)
 
-    @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_available_tenants(self, obj: Cluster) -> str:
-        # FIXME: (多租户)这里应该把 ID 转换成名称
-        return obj.available_tenant_ids
+    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
+    def get_available_tenants(self, obj: Cluster) -> List[str]:
+        tenant_name_map = self.context["tenant_name_map"]
+        return [tenant_name_map.get(t_id, t_id) for t_id in obj.available_tenant_ids]
 
     @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_feature_flags(self, obj: Cluster) -> List[str]:
-        return [ClusterFeatureFlag.get_feature_label(ff) for ff, enabled in obj.feature_flags.items() if enabled]
+        return [
+            ClusterFeatureFlag.get_feature_label(ff)
+            for ff, enabled in obj.feature_flags.items()
+            if enabled and ff in ClusterFeatureFlag
+        ]
 
     @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_nodes(self, obj: Cluster) -> List[str]:

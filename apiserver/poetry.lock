@@ -38,27 +38,27 @@ reference = "tencent-mirror"
 
 [[package]]
 name = "apigw-manager"
-version = "4.0.1"
+version = "3.0.2"
 description = "The SDK for managing blueking gateway resource."
 optional = false
-python-versions = ">=3.8,<3.13"
+python-versions = ">=3.6.1,<4.0.0"
 files = [
-    {file = "apigw_manager-4.0.1-py3-none-any.whl", hash = "sha256:b6881fbf1f174d187b34f2b3983d0ade8ba6b457b3068f7a95b68bc7cc58ac86"},
+    {file = "apigw_manager-3.0.2-py3-none-any.whl", hash = "sha256:c495d8da42362c30e262bc524923807659b045654c82686c3f377afdd282b4d9"},
 ]
 
 [package.dependencies]
 bkapi-bk-apigateway = ">=1.0.11,<2.0.0"
 bkapi-client-core = ">=1.2.0"
-packaging = ">=20.4"
-pyyaml = ">=5.4.2"
+future = ">=0.18.2"
+packaging = ">=21.0"
+pyyaml = ">=5.4.1"
 setuptools = ">=21.0.0"
 urllib3 = ">=1.25.3"
 
 [package.extras]
-cryptography = ["cryptography (>=3.1.1)", "pyjwt (>=2.0.0)"]
-demo = ["Django (>=3.0.14)", "PyMySQL (>=1.0.2,<2.0.0)", "django-environ (>=0.8.1)", "pyjwt (>=2.0.0)"]
-django = ["Django (>=3.0.14)", "pyjwt (>=2.0.0)"]
-drf = ["Django (>=3.0.14)", "cryptography (>=3.1.1)", "djangorestframework (>=3.10.3)", "drf-spectacular (<=0.27.2)", "pyjwt (>=2.0.0)"]
+cryptography = ["cryptography (>=3.1.1)", "pyjwt (>=1.6.4)"]
+demo = ["Django (>=1.11.1)", "PyMySQL (>=1.0.2,<2.0.0)", "django-environ (>=0.8.1)", "pyjwt (>=1.6.4)"]
+django = ["Django (>=1.11.1)", "pyjwt (>=1.6.4)"]
 kubernetes = ["kubernetes"]
 
 [package.source]
@@ -5152,4 +5152,4 @@ reference = "tencent-mirror"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "0084bad0734b34c40bd0f93e3d8b7057db13476064fdad061fd5488749fff2eb"
+content-hash = "1db526745f63eb1c81c46894edda043afb95972815fbfcbe65eb1eff849647b6"

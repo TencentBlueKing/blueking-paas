@@ -619,7 +619,7 @@
           >
             <bk-button
               theme="primary"
-              :disabled="!curExtendConfig?.isAuth"
+              :disabled="formData.buildMethod === 'buildpack' && !curExtendConfig?.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}

@@ -39,11 +39,11 @@ class FieldManager:
         self.store = RowGroupStore(module)
         self.row_group = self.store.get()
 
-        self.default_manager = default_manager
+        self._default_manager = default_manager
 
     def can_be_managed_by(self, manager: FieldMgrName) -> bool:
         """Check if current field can be managed by the given manager."""
-        return manager == (self.get() or self.default_manager)
+        return manager == (self.get() or self._default_manager)
 
     def get(self) -> Optional[FieldMgrName]:
         """Get the manager for the field from row group store.

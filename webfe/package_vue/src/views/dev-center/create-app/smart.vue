@@ -96,7 +96,8 @@
           </template>
         </bk-form>
       </div>
-      <div v-if="packageData">
+      <!-- code 存在冲突时，不展示包的解析出的信息 -->
+      <div v-if="packageData && !isCodeConflicted">
         <div
           class="bk-alert bk-alert-success mb20"
           data-test-id="createSmart_header_appUpload"
@@ -264,6 +265,17 @@ export default {
         return false;
       }
       return !this.modifiedAppData;
+    },
+    // original_app_description 与 app_description 如果不一致说明(code|name)冲突了 (如果code一致，后台回在code加上两位随机数)
+    isCodeConflicted() {
+      const { original_app_description, app_description } = this.packageData;
+      const originalCode = original_app_description?.code;
+      const appCode = app_description?.code;
+      // 修改后
+      if (this.modifiedAppData) {
+        return originalCode !== appCode && originalCode === this.modifiedAppData?.code;
+      }
+      return originalCode !== appCode;
     },
   },
   methods: {

@@ -45,17 +45,6 @@ def svn_account(bk_user):
 
 
 class TestSvnAPI:
-    @mock.patch("paasng.platform.sourcectl.svn.admin.IeodSvnAuthClient.add_user")
-    def test_create_account(self, add_user, mocked_call_api, api_client, bk_user):
-        def mock_add_user(account, password):
-            return {"account": account.strip(), "password": password.strip()}
-
-        add_user.side_effect = mock_add_user
-        data = {"region": settings.DEFAULT_REGION_NAME}
-        response = api_client.post(reverse("api.sourcectl.bksvn.accounts"), data)
-
-        assert response.status_code == 201
-
     def test_reset_account_error(self, mocked_call_api, api_client, bk_user, svn_account):
         data = {"verification_code": "000000", "region": settings.DEFAULT_REGION_NAME}
         with override_settings(ENABLE_VERIFICATION_CODE=True):

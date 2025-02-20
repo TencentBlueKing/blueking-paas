@@ -25,25 +25,12 @@ from paasng.platform.sourcectl.svn.server_config import BkSvnServerConfig, get_b
 def server_config_factory():
     def _factory():
         return {
-            "_lookup_field": "region",
-            "data": {
-                "r1": {
-                    "base_url": "svn://127.0.0.1:3690/r1_base",
-                    "legacy_base_url": "svn://127.0.0.1:3690/r1_legacy_base",
-                    "su_name": "r1_user",
-                    "su_pass": "r1_pass",
-                    "need_security": False,
-                    "admin_url": "127.0.0.1:3690/r1_admin",
-                },
-                "r2": {
-                    "base_url": "svn://127.0.0.1:3690/r2_base",
-                    "legacy_base_url": "svn://127.0.0.1:3690/r2_legacy_base",
-                    "su_name": "r2_user",
-                    "su_pass": "r2_pass",
-                    "need_security": True,
-                    "admin_url": "127.0.0.1:3690/r2_admin",
-                },
-            },
+            "base_url": "svn://127.0.0.1:3690/r1_base",
+            "legacy_base_url": "svn://127.0.0.1:3690/r1_legacy_base",
+            "su_name": "r1_user",
+            "su_pass": "r1_pass",
+            "need_security": False,
+            "admin_url": "127.0.0.1:3690/r1_admin",
         }
 
     return _factory
@@ -51,19 +38,12 @@ def server_config_factory():
 
 class TestBkSvnConfig:
     def test_get_base_path(self, server_config_factory):
-        config = BkSvnServerConfig(**server_config_factory()["data"]["r1"])
+        config = BkSvnServerConfig(**server_config_factory())
         assert config.get_base_path() == "/r1_base"
 
 
 class TestGetBkSvnConfig:
-    @pytest.mark.parametrize(
-        ("region", "base_url"),
-        [
-            ("r1", "svn://127.0.0.1:3690/r1_base"),
-            ("r2", "svn://127.0.0.1:3690/r2_base"),
-        ],
-    )
-    def test_single_svn(self, region, base_url, server_config_factory):
+    def test_single_svn(self, server_config_factory):
         source_type_spec_configs = [
             {
                 "spec_cls": "paasng.platform.sourcectl.type_specs.BkSvnSourceTypeSpec",
@@ -71,11 +51,11 @@ class TestGetBkSvnConfig:
             },
         ]
         refresh_sourcectl_types(source_type_spec_configs)
-        assert get_bksvn_config(region).base_url == base_url
+        assert get_bksvn_config().base_url == "svn://127.0.0.1:3690/r1_base"
 
     def test_multi_svn(self, settings, server_config_factory):
         server_config_copy = server_config_factory()
-        server_config_copy["data"]["r1"]["base_url"] = "http://modified-base/"
+        server_config_copy["base_url"] = "http://modified-base/"
         source_type_spec_configs = [
             {
                 "spec_cls": "paasng.platform.sourcectl.type_specs.BkSvnSourceTypeSpec",
@@ -87,5 +67,5 @@ class TestGetBkSvnConfig:
             },
         ]
         refresh_sourcectl_types(source_type_spec_configs)
-        assert get_bksvn_config("r1").base_url == "svn://127.0.0.1:3690/r1_base"
-        assert get_bksvn_config("r1", name="bk_svn_2").base_url == "http://modified-base/"
+        assert get_bksvn_config().base_url == "svn://127.0.0.1:3690/r1_base"
+        assert get_bksvn_config(name="bk_svn_2").base_url == "http://modified-base/"

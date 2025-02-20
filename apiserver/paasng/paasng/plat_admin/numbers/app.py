@@ -684,7 +684,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
     if not app.source_repo_type:
         raise RuntimeError("No repo provided")
 
-    repo_admin_credentials = get_bksvn_config(app.region, name=app.source_repo_type).get_admin_credentials()
+    repo_admin_credentials = get_bksvn_config(name=app.source_repo_type).get_admin_credentials()
     user_credentials = {}
 
     if app.source_repo_type in get_sourcectl_names().filter_by_basic_type("git"):
@@ -697,7 +697,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         user_credentials["__token_holder"] = token_holder
 
     type_spec = get_sourcectl_type(app.source_repo_type)
-    repo_info = type_spec.config_as_arguments(app.region)
+    repo_info = type_spec.config_as_arguments()
 
     if app.source_repo_type == get_sourcectl_names().bk_svn:
         svn_cls = cast(Type[SvnRepoController], type_spec.repo_controller_class)

@@ -934,7 +934,6 @@ DEFAULT_REGION_TEMPLATE = {
         "description": "默认版",
         "link_production_app": BK_CONSOLE_URL + "?app={code}",
         "extra_logo_bucket_info": {},
-        "deploy_ver_for_update_svn_account": "default",
         "legacy_deploy_version": "default",
         "built_in_config_var": {
             "LOGIN_URL": {

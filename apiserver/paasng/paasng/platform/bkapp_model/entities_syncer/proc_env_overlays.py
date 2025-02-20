@@ -226,7 +226,7 @@ class OverlayDataSyncer:
         not_managed_envs = set()
         for process, env_name in proc_envs:
             mgr = fieldmgr.FieldManager(module, self.algo.get_field_mgr_key(process, env_name))
-            if not mgr.is_managed_by(manager):
+            if not mgr.can_be_managed_by(manager):
                 not_managed_envs.add((process, env_name))
         return not_managed_envs
 

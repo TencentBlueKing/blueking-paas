@@ -29,12 +29,12 @@ class TestFieldManager:
 
         m.set(FieldMgrName.WEB_FORM)
         assert m.get() == FieldMgrName.WEB_FORM
-        assert m.is_managed_by(FieldMgrName.WEB_FORM)
+        assert m.can_be_managed_by(FieldMgrName.WEB_FORM)
 
         # Initialize the manager again to check the management status written before
         # is persistent.
         m2 = FieldManager(bk_module, F_SVC_DISCOVERY)
-        assert m2.is_managed_by(FieldMgrName.WEB_FORM)
+        assert m2.can_be_managed_by(FieldMgrName.WEB_FORM)
 
         m2.reset()
         assert m2.get() is None
@@ -43,14 +43,14 @@ class TestFieldManager:
         m = FieldManager(bk_module, F_SVC_DISCOVERY)
         assert m.get() is None
 
-        m1 = FieldManager(bk_module, F_SVC_DISCOVERY, default_if_unmanaged=FieldMgrName.APP_DESC)
-        assert m1.is_managed_by(FieldMgrName.APP_DESC)
+        m1 = FieldManager(bk_module, F_SVC_DISCOVERY, default_manager=FieldMgrName.APP_DESC)
+        assert m1.can_be_managed_by(FieldMgrName.APP_DESC)
 
         m1.reset()
         assert m1.get() is None
 
-        m2 = FieldManager(bk_module, F_SVC_DISCOVERY, default_if_unmanaged=FieldMgrName.WEB_FORM)
-        assert m2.is_managed_by(FieldMgrName.WEB_FORM)
+        m2 = FieldManager(bk_module, F_SVC_DISCOVERY, default_manager=FieldMgrName.WEB_FORM)
+        assert m2.can_be_managed_by(FieldMgrName.WEB_FORM)
 
 
 class TestMultiFieldsManager:
@@ -58,5 +58,5 @@ class TestMultiFieldsManager:
         m = MultiFieldsManager(bk_module)
         m.set_many([F_SVC_DISCOVERY, F_DOMAIN_RESOLUTION], FieldMgrName.WEB_FORM)
 
-        assert FieldManager(bk_module, F_SVC_DISCOVERY).is_managed_by(FieldMgrName.WEB_FORM)
-        assert FieldManager(bk_module, F_DOMAIN_RESOLUTION).is_managed_by(FieldMgrName.WEB_FORM)
+        assert FieldManager(bk_module, F_SVC_DISCOVERY).can_be_managed_by(FieldMgrName.WEB_FORM)
+        assert FieldManager(bk_module, F_DOMAIN_RESOLUTION).can_be_managed_by(FieldMgrName.WEB_FORM)

@@ -504,7 +504,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             build_method,
             build_config.build_method,
         ]:
-            raise error_codes.MODIFY_UNSUPPORTED.f(_("当前模块不支持修改构建方式"))
+            raise error_codes.MODIFY_UNSUPPORTED.f(_("当前模块不支持修改构建方式为 {}").format(build_method))
 
         try:
             update_build_config_with_method(build_config, build_method, data)

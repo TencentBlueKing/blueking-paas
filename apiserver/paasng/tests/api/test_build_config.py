@@ -222,11 +222,8 @@ class TestModuleBuildConfigViewSet:
         }
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.post(url, data=data)
-        assert resp.status_code == 204
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        assert cfg.build_method == RuntimeType.CUSTOM_IMAGE
-        assert cfg.image_repository == "example.com/bar"
-        assert cfg.image_credential_name == "bar"
+        assert resp.status_code == 400
+        assert "当前模块不支持修改构建方式为 custom_image" in resp.json()["detail"]
 
     @pytest.mark.parametrize(
         "data",

@@ -137,9 +137,18 @@
     <bk-dialog
       v-model="sandboxDialog.visible"
       theme="primary"
+      header-position="left"
       :mask-close="false"
       :title="$t('创建沙箱')"
+      ext-cls="create-sandbox-dialog-cls"
     >
+      <div
+        slot="header"
+        class="dialog-title"
+      >
+        <div class="title">{{ $t('创建沙箱') }}</div>
+        <div class="sub-title">{{ `${$t('模块')}：${sandboxDialog.name}` }}</div>
+      </div>
       <div slot="footer">
         <bk-button
           theme="primary"
@@ -450,11 +459,39 @@ export default {
   display: flex;
   justify-content: space-between;
 }
-.dialog-tip {
-  margin-top: 3px;
-  font-size: 12px;
-  line-height: 20px;
-  color: #979ba5;
+.create-sandbox-dialog-cls {
+  .dialog-title {
+    display: flex;
+    align-items: center;
+    .title {
+      font-size: 20px;
+      color: #313238;
+      line-height: 28px;
+    }
+    .sub-title {
+      position: relative;
+      margin-left: 20px;
+      font-size: 14px;
+      color: #979ba5;
+      line-height: 22px;
+      &::before {
+        content: '';
+        position: absolute;
+        left: -10px;
+        top: 50%;
+        width: 1px;
+        height: 14px;
+        transform: translateY(-50%);
+        background-color: #dcdee5;
+      }
+    }
+  }
+  .dialog-tip {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 20px;
+    color: #979ba5;
+  }
 }
 .sideslider-content {
   padding: 24px;

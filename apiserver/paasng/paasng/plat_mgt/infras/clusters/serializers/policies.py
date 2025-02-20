@@ -169,3 +169,8 @@ class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
             attrs["allocation_precedence_policies"],
         )
         return attrs
+
+
+class ClusterAllocationPolicyCondTypeOutputSLZ(serializers.Serializer):
+    key = serializers.CharField(help_text="条件标识")
+    name = serializers.CharField(help_text="条件名称")

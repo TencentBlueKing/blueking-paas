@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Protect resources created by declarative configs from external modifications"""
+
 from django.utils.translation import gettext_lazy as _
 
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -48,5 +49,4 @@ class ApplicationServiceModificationCondition(BaseAppResProtectCondition):
         modifications_not_allowed(self.application, self.action_name)
 
 
-AppResProtector.register_precondition(ProtectedRes.BASIC_INFO_MODIFICATIONS, ApplicationBasicInfoModificationCondition)
 AppResProtector.register_precondition(ProtectedRes.SERVICES_MODIFICATIONS, ApplicationServiceModificationCondition)

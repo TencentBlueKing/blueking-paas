@@ -22,89 +22,181 @@
       <div
         class="sideslider-content"
         slot="content"
+        v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       >
         <bk-alert
           type="info"
-          :title="$t('沙箱提供云端开发环境，可在线修改运行代码。每个模块仅允许新建一个沙箱环境。')"
+          :title="$t('沙箱会复用“预发布环境”的增强服务和环境变量。')"
         ></bk-alert>
-        <bk-button
-          :theme="'primary'"
-          class="mt15"
-          :loading="isCreateSandboxLoading"
-          @click="createSandbox"
-        >
-          {{ $t('新建沙箱') }}
-        </bk-button>
-        <bk-table
-          style="margin-top: 15px"
-          :data="sandboxEnvList"
-          :outer-border="false"
-          size="small"
-          v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-        >
-          <bk-table-column
-            :label="$t('模块')"
-            prop="module_name"
-          ></bk-table-column>
-          <bk-table-column :label="$t('代码分支')">
-            <template slot-scope="{ row }">
-              {{ row.version_info?.version_name }}
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('创建时间')"
-            prop="created_at"
-          ></bk-table-column>
-          <bk-table-column :label="$t('操作')">
-            <template slot-scope="{ row }">
-              <bk-button
-                :theme="'primary'"
-                text
-                @click="toSandboxPage(row)"
-              >
-                {{ $t('进入') }}
-              </bk-button>
-              <bk-popconfirm
-                trigger="click"
-                ext-cls="sandbox-destroy-cls"
-                width="288"
-                @confirm="handleDestroy(row)"
-              >
-                <div slot="content">
-                  <div class="custom">
-                    <i class="content-icon bk-icon icon-info-circle-shape pr5"></i>
-                    <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
-                  </div>
-                </div>
+        <template v-if="sandboxEnvList.length">
+          <div class="table-title">{{ $t('已创建的沙箱的模块') }}</div>
+          <bk-table
+            :data="sandboxEnvList"
+            :outer-border="false"
+            size="small"
+          >
+            <bk-table-column
+              :label="$t('模块')"
+              prop="module_name"
+            ></bk-table-column>
+            <bk-table-column :label="$t('沙箱分支')">
+              <template slot-scope="{ row }">
+                {{ row.version_info?.version_name || '--' }}
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('创建时间')"
+              prop="created_at"
+            ></bk-table-column>
+            <bk-table-column
+              :label="$t('操作')"
+              width="180"
+            >
+              <template slot-scope="{ row }">
                 <bk-button
                   :theme="'primary'"
                   text
-                  class="ml10"
+                  @click="toSandboxPage(row.module_name, row.code)"
                 >
-                  {{ $t('销毁') }}
+                  {{ $t('进入') }}
                 </bk-button>
-              </bk-popconfirm>
-            </template>
-          </bk-table-column>
-        </bk-table>
+                <bk-popconfirm
+                  trigger="click"
+                  ext-cls="sandbox-destroy-cls"
+                  width="288"
+                  @confirm="handleDestroy(row)"
+                >
+                  <div slot="content">
+                    <div class="custom">
+                      <i class="content-icon bk-icon icon-info-circle-shape pr5"></i>
+                      <div class="content-text">{{ $t('确认销毁沙箱开发环境吗？') }}</div>
+                    </div>
+                  </div>
+                  <bk-button
+                    :theme="'primary'"
+                    text
+                    class="ml10"
+                  >
+                    {{ $t('销毁') }}
+                  </bk-button>
+                </bk-popconfirm>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </template>
+        <template v-if="nonCreatedSandboxModuleList.length">
+          <div class="table-title">{{ $t('未创建的沙箱的模块') }}</div>
+          <bk-table
+            :data="nonCreatedSandboxModuleList"
+            :outer-border="false"
+            size="small"
+          >
+            <bk-table-column
+              :label="$t('模块')"
+              prop="name"
+            ></bk-table-column>
+            <bk-table-column :label="$t('构建目录')">
+              <template slot-scope="{ row }">
+                {{ row.repo?.source_dir || '--' }}
+              </template>
+            </bk-table-column>
+            <bk-table-column :label="$t('部署分支/TAG')">
+              <template slot-scope="{ row }">
+                {{ row.versionInfo?.version_name || '--' }}
+              </template>
+            </bk-table-column>
+            <bk-table-column
+              :label="$t('操作')"
+              width="180"
+            >
+              <template slot-scope="{ row }">
+                <span
+                  v-bk-tooltips="{
+                    content: disabledContent,
+                    disabled: row.isCreationAllowed,
+                    width: 300,
+                    allowHTML: true,
+                  }"
+                >
+                  <bk-button
+                    :theme="'primary'"
+                    text
+                    :disabled="!row.isCreationAllowed"
+                    @click="showCreateSandboxDialog(row)"
+                  >
+                    {{ $t('创建沙箱') }}
+                  </bk-button>
+                </span>
+              </template>
+            </bk-table-column>
+          </bk-table>
+        </template>
       </div>
     </bk-sideslider>
-    <sandbox-dialog
-      :show.sync="isShowSandboxDialog"
-      :env="env"
-      :sandbox-list="sandboxEnvList"
-      v-bind="$attrs"
-    />
+    <!-- 创建沙箱 -->
+    <bk-dialog
+      v-model="sandboxDialog.visible"
+      theme="primary"
+      :mask-close="false"
+      :title="$t('创建沙箱')"
+    >
+      <div slot="footer">
+        <bk-button
+          theme="primary"
+          :loading="sandboxDialog.btnLoading"
+          bk-trace="{id: 'sandbox', action: 'new', category: '云原生应用'}"
+          @click="handleConfirm"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+        <bk-button
+          :theme="'default'"
+          type="submit"
+          class="ml8"
+          @click="sandboxDialog.visible = false"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+      </div>
+      <bk-form
+        form-type="vertical"
+        :model="sandboxDialog"
+        ref="sandboxForm"
+        :rules="rules"
+      >
+        <bk-form-item
+          :label="$t('代码分支')"
+          :required="true"
+          :property="'branch'"
+        >
+          <bk-select
+            :disabled="false"
+            v-model="sandboxDialog.branch"
+            searchable
+            :loading="sandboxDialog.loading"
+          >
+            <bk-option
+              v-for="option in branchList"
+              :key="option.name"
+              :id="option.name"
+              :name="option.name"
+            ></bk-option>
+          </bk-select>
+          <p
+            class="dialog-tip"
+            slot="tip"
+          >
+            {{ $t('仅支持通过代码分支创建沙箱，不支持选择 Tag') }}
+          </p>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
   </div>
 </template>
 
 <script>
-import SandboxDialog from './sandbox-dialog.vue';
 export default {
   name: 'SandboxSideslider',
-  components: {
-    SandboxDialog,
-  },
   props: {
     show: {
       type: Boolean,
@@ -113,13 +205,38 @@ export default {
     env: {
       type: String,
     },
+    moduleDeployList: {
+      type: Array,
+      default: [],
+    },
   },
   data() {
     return {
       sandboxEnvList: [],
       isTableLoading: false,
-      isShowSandboxDialog: false,
-      isCreateSandboxLoading: false,
+      // 代码分支
+      branchList: [],
+      // 创建沙箱
+      sandboxDialog: {
+        visible: false,
+        loading: false,
+        btnLoading: false,
+        name: '',
+        branch: '',
+        versionInfo: {},
+      },
+      disabledContent: this.$t(
+        '<p>同时满足下列条件的模块才能新建沙箱环境：</p><p>1. 使用“蓝鲸 Buildpack”构建且开发语言为 Python</p>2. 已经部署到预发布环境'
+      ),
+      rules: {
+        branch: [
+          {
+            required: true,
+            message: '必填项',
+            trigger: 'blur',
+          },
+        ],
+      },
     };
   },
   computed: {
@@ -134,11 +251,39 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
+    curAppModuleList() {
+      return this.$store.state.curAppModuleList || [];
+    },
+    // 未创建的沙箱的模块
+    nonCreatedSandboxModuleList() {
+      // 过滤和合并模块信息
+      const result = this.curAppModuleList.reduce((acc, module) => {
+        const currentModuleDeploy = this.moduleDeployList.find((deploy) => deploy.name === module.name) || {};
+        // 检查该模块是否不在沙箱环境列表中
+        const isNotInSandbox = !this.sandboxEnvList.some((sandbox) => sandbox.module_name === module.name);
+        if (isNotInSandbox) {
+          const itemData = {
+            ...module,
+            ...currentModuleDeploy,
+            isCreationAllowed:
+              module.web_config?.build_method === 'buildpack' &&
+              module.language?.toLowerCase() === 'python' &&
+              currentModuleDeploy?.isDeployed,
+          };
+          acc.push(itemData);
+        }
+        return acc;
+      }, []);
+      // 不能启用的模块放在末尾
+      return result.sort((a, b) => {
+        if (a.isCreationAllowed === b.isCreationAllowed) return 0;
+        return a.isCreationAllowed ? -1 : 1;
+      });
+    },
   },
   methods: {
     // 新建沙箱前置检查
     async createSandboxPreDeployCheck() {
-      this.isCreateSandboxLoading = true;
       try {
         const res = await this.$store.dispatch('sandbox/createSandboxPreDeployCheck', {
           appCode: this.appCode,
@@ -146,8 +291,6 @@ export default {
         return res.result ?? false;
       } catch (e) {
         this.catchErrorHandler(e);
-      } finally {
-        this.isCreateSandboxLoading = false;
       }
     },
     insufficientResourcesNotify() {
@@ -175,24 +318,16 @@ export default {
         showFooter: false,
       });
     },
-    async createSandbox() {
-      const result = await this.createSandboxPreDeployCheck();
-      if (result) {
-        this.isShowSandboxDialog = true;
-      } else {
-        this.insufficientResourcesNotify();
-      }
-    },
     handleShown() {
       this.getSandboxList();
     },
-    toSandboxPage(row) {
+    toSandboxPage(module, devSandboxCode) {
       this.$router.push({
         name: 'sandbox',
         query: {
           code: this.appCode,
-          module: row.module_name,
-          devSandboxCode: row.code,
+          module,
+          devSandboxCode,
         },
       });
     },
@@ -231,6 +366,81 @@ export default {
     toSandboxGuide() {
       window.open(this.GLOBAL.DOC.SANDBOX_DEVELOPMENT_GUIDE, '_blank');
     },
+    // 获取对应模块代码分支
+    async getModuleBranches(moduleId, versionName) {
+      this.sandboxDialog.loading = true;
+      try {
+        const res = await this.$store.dispatch('deploy/getModuleBranches', {
+          appCode: this.appCode,
+          moduleId,
+        });
+        this.branchList = res.results.filter((item) => item.type === 'branch');
+        // 代码分支默认值
+        const branch = this.branchList.find((v) => v.name === versionName) || this.branchList[0];
+        this.sandboxDialog.branch = branch.name;
+      } catch (e) {
+        this.branchList = [];
+        this.catchErrorHandler(e);
+      } finally {
+        this.sandboxDialog.loading = false;
+      }
+    },
+    // 创建沙箱弹窗
+    async showCreateSandboxDialog(row) {
+      // 沙箱前置检查判断资源是否充足
+      const result = await this.createSandboxPreDeployCheck();
+      if (!result) {
+        // 提示资源不足
+        this.insufficientResourcesNotify();
+        return;
+      }
+      this.sandboxDialog.visible = true;
+      this.sandboxDialog.name = row.name;
+      this.getModuleBranches(row.name, row.versionInfo.version_name);
+    },
+    handleConfirm() {
+      this.$refs.sandboxForm.validate().then(
+        () => {
+          this.confirmSandboxCreation();
+        },
+        (validator) => {
+          console.error(validator);
+        }
+      );
+    },
+    // 确认创建沙箱
+    async confirmSandboxCreation() {
+      this.sandboxDialog.btnLoading = true;
+      try {
+        const curBranchData = this.branchList.find((v) => v.name === this.sandboxDialog.branch);
+        const data = {
+          enable_code_editor: true,
+          inject_staging_env_vars: true,
+          source_code_version_info: {
+            revision: curBranchData.revision,
+            version_type: curBranchData.type,
+            version_name: curBranchData.name,
+          },
+        };
+        const ret = await this.$store.dispatch('sandbox/createSandbox', {
+          appCode: this.appCode,
+          moduleId: this.sandboxDialog.name,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('创建成功！'),
+        });
+        // 关闭弹窗
+        this.sandboxDialog.visible = false;
+        // 跳转沙箱入口
+        this.toSandboxPage(this.sandboxDialog.name, ret.code);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.sandboxDialog.btnLoading = false;
+      }
+    },
   },
 };
 </script>
@@ -240,8 +450,21 @@ export default {
   display: flex;
   justify-content: space-between;
 }
+.dialog-tip {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #979ba5;
+}
 .sideslider-content {
   padding: 24px;
+  .table-title {
+    margin: 20px 0 8px 0;
+    font-weight: 700;
+    line-height: 22px;
+    font-size: 14px;
+    color: #313238;
+  }
 }
 .sandbox-destroy-cls {
   .custom {

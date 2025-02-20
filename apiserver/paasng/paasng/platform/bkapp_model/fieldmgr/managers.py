@@ -30,7 +30,7 @@ class FieldManager:
 
     :param module: The module object.
     :param field: The field to be managed.
-    :param default_manager: The default manager. The unmanaged field can be managed by the default manager.
+    :param default_manager: The default manager. The field can be managed by the default manager if it is unmanaged.
     """
 
     def __init__(self, module: Module, field: Field, default_manager: Optional[FieldMgrName] = None):

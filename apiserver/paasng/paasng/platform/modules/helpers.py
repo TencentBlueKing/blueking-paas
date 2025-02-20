@@ -54,11 +54,7 @@ class BuildConfigData(TypedDict):
     image_credential_name: Optional[str]
 
 
-def update_build_config_with_method(
-    build_config: BuildConfig,
-    build_method: RuntimeType,
-    data: Dict,
-):
+def update_build_config_with_method(build_config: BuildConfig, build_method: RuntimeType, data: Dict):
     """根据指定的 build_method 更新部分字段
 
     :param build_config: BuildConfig db 模型

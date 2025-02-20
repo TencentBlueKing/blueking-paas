@@ -20,10 +20,12 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.infras.clusters.serializers import (
+    ClusterAllocationPolicyCondTypeOutputSLZ,
     ClusterAllocationPolicyCreateInputSLZ,
     ClusterAllocationPolicyCreateOutputSLZ,
     ClusterAllocationPolicyListOutputSLZ,
@@ -50,7 +52,6 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterAllocationPolicyListOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
-        """获取集群分配策略"""
         policies = self.get_queryset()
         return Response(data=ClusterAllocationPolicyListOutputSLZ(policies, many=True).data)
 
@@ -61,7 +62,6 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ClusterAllocationPolicyCreateOutputSLZ()},
     )
     def create(self, request, *args, **kwargs):
-        """新建集群分配策略"""
         slz = ClusterAllocationPolicyCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -79,7 +79,6 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, *args, **kwargs):
-        """更新集群分配策略"""
         policy = self.get_object()
 
         slz = ClusterAllocationPolicyUpdateInputSLZ(
@@ -95,3 +94,12 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
         policy.save(update_fields=["type", "allocation_policy", "allocation_precedence_policies", "updated"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster_allocation_policy"],
+        operation_description="获取集群分配策略条件",
+        responses={status.HTTP_200_OK: ClusterAllocationPolicyCondTypeOutputSLZ()},
+    )
+    def list_condition_types(self, request, *args, **kwargs):
+        cond_types = [{"key": k, "name": n} for k, n in ClusterAllocationPolicyCondType.get_django_choices()]
+        return Response(data=ClusterAllocationPolicyCondTypeOutputSLZ(cond_types, many=True).data)

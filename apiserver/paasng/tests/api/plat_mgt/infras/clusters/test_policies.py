@@ -167,3 +167,11 @@ class TestClusterAllocationPolicyViewSet:
         resp = plat_mgt_api_client.put(url, data=data)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert f"集群名 {init_default_cluster.name} 不存在或不可用" in resp.json()["detail"]
+
+    def test_list_condition_types(self, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_allocation_policy.list_condition_types"))
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == [
+            {"key": "region_is", "name": "Region"},
+            {"key": "username_in", "name": "Username.In"},
+        ]

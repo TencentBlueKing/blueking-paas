@@ -90,7 +90,8 @@ class ClusterAllocationPolicyType(StrStructuredEnum):
 class ClusterAllocationPolicyCondType(StrStructuredEnum):
     """集群分配策略匹配条件"""
 
-    REGION_IS = EnumField("region_is", label=_("可用区域为"))
+    REGION_IS = EnumField("region_is", label="Region")
+    USERNAME_IN = EnumField("username_in", label="Username.In")
 
 
 class ClusterComponentName(StrStructuredEnum):

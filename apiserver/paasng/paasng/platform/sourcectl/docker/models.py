@@ -29,7 +29,6 @@ def get_or_create_repo_obj(
 ) -> DockerRepository:
     """Get or create a repository object by given url and source_dir."""
     repo_kwargs = {
-        "region": application.region,
         "server_name": repo_type,
         "repo_url": repo_url,
         "source_dir": source_dir,

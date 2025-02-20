@@ -17,7 +17,7 @@
 
 from django.dispatch import Signal
 
-# providing_args: [username: str, account: str, password: str, created: bool, region: str]
+# providing_args: [username: str, account: str, password: str, created: bool]
 svn_account_updated = Signal()
 
 # providing_args: [username: str]

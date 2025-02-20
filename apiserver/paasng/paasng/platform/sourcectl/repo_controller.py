@@ -125,7 +125,7 @@ class BaseGitRepoController:
 
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
-        repo_info = get_sourcectl_type(module.source_type).config_as_arguments(module.region)
+        repo_info = get_sourcectl_type(module.source_type).config_as_arguments()
         repo_url = module.get_source_obj().get_repo_url()
         if not repo_url:
             raise ValueError("Require repo_url to init GitRepoController")
@@ -192,5 +192,5 @@ def list_git_repositories(source_control_type: str, operator: str) -> List[Repos
     }
 
     type_spec = get_sourcectl_type(source_control_type)
-    repo_info = type_spec.config_as_arguments(None)
+    repo_info = type_spec.config_as_arguments()
     return cls.list_all_repositories(**user_credentials, **repo_info)

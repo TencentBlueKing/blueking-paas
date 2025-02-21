@@ -8,6 +8,7 @@
       :data="item"
       :order="i"
       :allLength="cardsList.length"
+      v-bind="$attrs"
       @add="handleAdd"
       @delete="handleDelete"
       @move="moveArrayItem"

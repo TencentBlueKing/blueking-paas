@@ -44,6 +44,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 获取分配条件类型
+     */
+    getClusterAllocationPolicyConditionTypes({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policy_condition_types/`;
+      return http.get(url);
+    },
+    /**
      * 获取全量集群策略
      */
     getClusterAllocationPolicies({}) {
@@ -113,7 +120,7 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/`;
       return http.get(url);
     },
-     /**
+    /**
      * 获取集群组件详情
      */
      getComponentDetail({}, { clusterName, componentName }) {

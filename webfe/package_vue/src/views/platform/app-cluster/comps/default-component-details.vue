@@ -42,7 +42,9 @@
               :align="'flex-start'"
             >
               <div slot="value">
+                <span v-if="!values.nodeSelector?.length">--</span>
                 <span
+                  v-else
                   v-for="(val, key) in values.nodeSelector"
                   class="tag"
                   :key="key"

@@ -26,7 +26,6 @@ export default {
       default: '',
     },
     value: {
-      type: [String, Number],
       default: '',
     },
     labelWidth: {

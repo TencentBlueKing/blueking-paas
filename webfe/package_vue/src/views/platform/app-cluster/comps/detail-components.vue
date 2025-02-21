@@ -41,7 +41,16 @@
       </template>
     </DetailsRow>
     <div class="view-title">{{ $t('组件详情') }}</div>
+    <bk-exception
+      v-if="!componentList.length"
+      class="exception-wrap-item exception-part"
+      type="empty"
+      scene="part"
+    >
+      {{ $t('暂无数据') }}
+    </bk-exception>
     <bk-tab
+      v-else
       :active.sync="tabActive"
       type="card"
       ext-cls="components-tab-cls"
@@ -113,12 +122,8 @@ export default {
         subpath: this.$t('子路径'),
         subdomain: this.$t('子域名'),
       },
-      curClusterName: '',
+      firstLoad: false,
     };
-  },
-  // 组件激活
-  activated() {
-    this.curClusterName = this.data.name;
   },
   created() {
     this.init();
@@ -130,10 +135,8 @@ export default {
   },
   watch: {
     data: {
-      handler(newVal) {
-        if (newVal.name !== this.curClusterName) {
-          this.init();
-        }
+      handler() {
+        this.init();
       },
       deep: true,
     },
@@ -144,10 +147,21 @@ export default {
       this.getClusterComponents();
     },
     handleTabChange(name) {
+      this.firstLoad = true;
       this.getComponentDetail(name);
+    },
+    reset() {
+      this.componentList = [];
+      this.componentDetail = {};
+      this.isLoading = false;
+      this.cardLoading = false;
     },
     // 获取集群组件列表
     async getClusterComponents() {
+      if (!this.data?.name) {
+        this.reset();
+        return;
+      }
       try {
         const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: this.data?.name });
         this.componentList = res.map((item) => {
@@ -156,7 +170,11 @@ export default {
             label: item.name,
           };
         });
+        if (this.firstLoad) {
+          this.handleTabChange(this.componentList[0]?.name);
+        }
       } catch (e) {
+        this.reset();
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
@@ -164,6 +182,10 @@ export default {
     },
     // 获取集群组件详情
     async getComponentDetail(componentName) {
+      if (!componentName) {
+        this.reset();
+        return;
+      }
       this.cardLoading = true;
       try {
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {

@@ -51,16 +51,35 @@
         <bk-table-column
           label="Kind"
           prop="kind"
+          :width="100"
+          show-overflow-tooltip
         ></bk-table-column>
         <bk-table-column
           label="Name"
           prop="name"
+          :width="100"
+          show-overflow-tooltip
         ></bk-table-column>
         <bk-table-column
           label="Summary"
           prop="summary"
-          show-overflow-tooltip
-        ></bk-table-column>
+          :width="130"
+        >
+          <div
+            slot-scope="{ row }"
+            class="summary-wrapper"
+          >
+            <template v-if="!row.summary">--</template>
+            <div
+              v-else
+              v-for="item in row.summary?.split(',')"
+              :key="item"
+              class="item"
+            >
+              {{ item }}
+            </div>
+          </div>
+        </bk-table-column>
         <bk-table-column
           label="Conditions"
           prop="conditions"
@@ -107,12 +126,12 @@ export default {
   data() {
     return {
       baseInfoMap: {
-        name: this.$t('Release 名称'),
+        releaseName: this.$t('Release 名称'),
         namespace: this.$t('命名空间'),
-        version: this.$t('版本号'),
-        // chartText = name + version
-        chartText: 'Chart',
-        app_version: this.$t('APP 版本'),
+        releaseVersion: this.$t('版本号'),
+        chartName: 'Chart',
+        chartVersion: `Chart ${this.$t('版本')}`,
+        app_version: `APP ${this.$t('版本')}`,
       },
       deployedMap: {
         status: this.$t('状态'),
@@ -135,7 +154,10 @@ export default {
       return {
         ...chart,
         ...release,
-        chartText: chart?.name + chart?.version,
+        chartName: chart.name,
+        chartVersion: chart.version,
+        releaseName: release.name,
+        releaseVersion: release.version,
       };
     },
   },
@@ -158,6 +180,18 @@ export default {
 }
 .sideslider-content {
   padding: 24px;
+  .summary-wrapper {
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    .item {
+      line-height: 1.3;
+      margin-bottom: 8px;
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
   .view-title {
     font-weight: 700;
     font-size: 14px;

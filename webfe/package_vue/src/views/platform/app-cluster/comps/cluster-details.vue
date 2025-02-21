@@ -18,15 +18,16 @@
         </div>
         <div class="top-tool">
           <div class="left flex-row">
-            <bk-button :theme="'primary'">
+            <!-- <bk-button :theme="'primary'">
               <i class="paasng-icon paasng-plus"></i>
-            </bk-button>
+            </bk-button> -->
           </div>
           <bk-input
             class="search-input"
             v-model="searchValue"
-            :placeholder="$t('搜索集群名称、集群ID、所属租户、特性')"
+            :placeholder="$t('搜索集群名称')"
             :right-icon="'bk-icon icon-search'"
+            clearable
           ></bk-input>
         </div>
         <ul
@@ -35,7 +36,7 @@
         >
           <li class="header-item item">{{ $t('集群名称') }}</li>
           <li
-            v-for="item in tenantList"
+            v-for="item in displayTenantList"
             :key="item.name"
             :class="['item', { active: activeName === item.name }]"
             @click="switchDetails(item.name)"
@@ -117,6 +118,19 @@ export default {
       componentKey: 0,
     };
   },
+  computed: {
+    // 字段模糊搜索
+    displayTenantList() {
+      const lowerCaseSearchTerm = this.searchValue.toLocaleLowerCase();
+      if (!lowerCaseSearchTerm) {
+        return this.tenantList;
+      }
+      // 过滤数据，检查 name 是否包含搜索词
+      return this.tenantList.filter((item) => {
+        return item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+      });
+    },
+  },
   created() {
     this.init();
   },
@@ -197,6 +211,9 @@ export default {
         background: #ffffff;
         border: 1px solid transparent;
         border-top-color: #dcdee5;
+        &:hover {
+          background-color: #f5f7fa;
+        }
         &:last-child {
           border-bottom-color: #dcdee5;
         }
@@ -247,7 +264,7 @@ export default {
     .top-tool {
       display: flex;
       align-items: center;
-      gap: 8px;
+      // gap: 8px;
       .switch-cls /deep/ .group-item {
         padding: 0 4px;
       }

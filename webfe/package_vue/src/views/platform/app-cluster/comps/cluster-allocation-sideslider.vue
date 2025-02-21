@@ -58,6 +58,7 @@
         <RuleBasedForm
           v-else
           ref="ruleBasedForm"
+          :types="conditionTypes"
         />
       </div>
       <div
@@ -124,6 +125,8 @@ export default {
       isAllocatedByEnv: false,
       submitLoading: false,
       resizeObserver: null,
+      // 条件类型
+      conditionTypes: [],
     };
   },
   computed: {
@@ -159,6 +162,7 @@ export default {
         this.methodValue = type;
         this.isAllocatedByEnv = allocation_policy?.env_specific || false;
       }
+      this.getClusterAllocationPolicyConditionTypes();
       this.$nextTick(() => {
         this.setupResizeObserver();
         // 打开侧栏时，获取当前侧栏数据
@@ -302,6 +306,15 @@ export default {
         method: this.methodValue,
         ...data,
       };
+    },
+    // 获取分配条件类型
+    async getClusterAllocationPolicyConditionTypes() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterAllocationPolicyConditionTypes');
+        this.conditionTypes = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
   },
 };

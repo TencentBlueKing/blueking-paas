@@ -2,7 +2,7 @@
   <div class="cluster-list-container">
     <bk-alert
       type="warning"
-      :title="$t('若执行集群扩缩容操作，请及时执行“同步节点”操作来更新集群节点状态。')"
+      :title="$t('若执行集群扩缩容操作，请及时执行 “同步节点” 操作来更新集群节点状态。')"
     ></bk-alert>
     <div
       class="cluster-list card-style"
@@ -11,14 +11,15 @@
       <!-- 集群列表 -->
       <div class="top-tool">
         <div class="left flex-row">
-          <bk-button :theme="'primary'">{{ $t('添加集群') }}</bk-button>
+          <!-- <bk-button :theme="'primary'">{{ $t('添加集群') }}</bk-button> -->
           <!-- 二期视角切换 -->
         </div>
         <bk-input
           v-model="searchValue"
-          :placeholder="$t('搜索集群名称、集群ID、所属租户、特性')"
+          :placeholder="$t('搜索集群名称、集群ID')"
           :right-icon="'bk-icon icon-search'"
           style="width: 480px"
+          clearable
           @input="handleSearch"
         ></bk-input>
       </div>

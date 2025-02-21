@@ -24,9 +24,9 @@
                 ext-cls="rules-select-custom"
               >
                 <bk-option
-                  v-for="option in rulesList"
-                  :key="option.id"
-                  :id="option.id"
+                  v-for="option in types"
+                  :key="option.key"
+                  :id="option.key"
                   :name="option.name"
                 ></bk-option>
               </bk-select>
@@ -162,6 +162,10 @@ export default {
       type: Number,
       default: 0,
     },
+    types: {
+      type: Array,
+      default: () => [],
+    },
   },
   components: {
     ClusterSelect,
@@ -174,8 +178,6 @@ export default {
         value: '',
       },
       envClusters: {},
-      // 规则展示为固定选项值
-      rulesList: [{ id: 'region_is', name: 'app.region' }],
       rules: {
         matcherKey: [
           {

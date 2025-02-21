@@ -20,7 +20,14 @@
           ></span>
         </div>
         <template v-else-if="key === 'api_servers'">
-          <div v-for="item in data[key]">{{ item }}</div>
+          <template v-if="!data[key]">--</template>
+          <div
+            v-else
+            v-for="item in data[key]"
+            key="item"
+          >
+            {{ item }}
+          </div>
         </template>
         <template v-else>{{ data[key] || '--' }}</template>
       </template>
@@ -46,10 +53,6 @@
             :key="i"
           ></span>
         </div>
-        <!-- 协议 -->
-        <template v-else-if="key === 'scheme'">
-          {{ data.elastic_search_config?.[key]?.join() || '--' }}
-        </template>
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
     </DetailsRow>
@@ -59,10 +62,12 @@
       :key="key"
       :label-width="100"
       :align="'flex-start'"
+      :label="`${val}：`"
     >
-      <template slot="label">{{ `${val}：` }}</template>
       <template slot="value">
+        <span v-if="!data[key]?.length">--</span>
         <span
+          v-else
           class="border-tag"
           v-for="id in data[key]"
           :key="id"

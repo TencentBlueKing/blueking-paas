@@ -15,6 +15,7 @@
         <template slot-scope="{ row }">
           <a
             href="javascript:;"
+            class="name-link"
             @click="$emit('toggle', { flag: true, name: row.name })"
           >
             {{ row.name }}
@@ -39,7 +40,6 @@
         prop="availableTenants"
         class-name="tags-wrapper-cls tenant-column"
         column-key="available-tenant"
-        width="140"
       >
         <template slot-scope="{ row }">
           <div
@@ -146,7 +146,10 @@
             >
               <div class="title">{{ $t('确认同步节点？') }}</div>
               <div class="content-custom">
-                <p class="name">{{ $t('集群名称') }}：{{ syncNodeName }}</p>
+                <p class="name">
+                  {{ $t('集群名称') }}：
+                  <span class="n">{{ syncNodeName }}</span>
+                </p>
                 <div>{{ $t('同步集群节点到开发中心，以便应用开启出口 IP 时能绑定到集群所有节点上。') }}</div>
               </div>
             </div>
@@ -219,8 +222,9 @@ export default {
       const lowerCaseSearchTerm = searchTerm.toLocaleLowerCase();
       // 过滤数据，检查 name 和 bcs_cluster_id 是否包含搜索词
       this.displayClusterList = this.tenantList.filter((item) => {
-        const nameMatches = item.name.toLocaleLowerCase().includes(lowerCaseSearchTerm);
-        const clusterIdMatches = item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+        const nameMatches = item.name && item.name.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+        const clusterIdMatches =
+          item.bcs_cluster_id && item.bcs_cluster_id.toLocaleLowerCase().includes(lowerCaseSearchTerm);
         return nameMatches || clusterIdMatches;
       });
     },
@@ -393,6 +397,13 @@ export default {
 <style lang="scss" scoped>
 .tenant-viewpoint-container {
   margin-top: 16px;
+  .name-link {
+    display: inline-block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .nodes {
     padding: 0 5px;
   }
@@ -454,11 +465,16 @@ export default {
   line-height: 20px;
   .title {
     line-height: 24px;
-    font-size: 16px;
-    color: #313238;
+    font-size: 16px !important;
+  }
+  .content-custom {
+    line-height: 20px;
   }
   .name {
     margin-bottom: 4px;
+    .n {
+      color: #313238;
+    }
   }
 }
 .del-alert-info-content {

@@ -228,7 +228,7 @@
                     <bk-col :span="16">
                         <bk-form-item label="构建步骤集">
                             <bk-input v-model="stepMetaSet" :readonly="true" v-if="dialog.type === 'detail'" placeholder="--"></bk-input>
-                            <bk-select  placeholder="--" v-model="dialog.form.step_meta_set" v-else>
+                            <bk-select placeholder="--" v-model="dialog.form.step_meta_set" v-else>
                                 <bk-option v-for="(name, key) in step_meta_sets" :key="key" :id="key" :name="name"></bk-option>
                             </bk-select>
                         </bk-form-item>
@@ -238,7 +238,7 @@
                 <bk-row>
                     <bk-col :span="16">
                         <bk-form-item label="镜像" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.image" :readonly="dialog.type === 'detail'"></bk-input>
+                            <bk-input v-model="dialog.form.image" v-bk-tooltips="dialog.form.image" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="16">
@@ -298,21 +298,21 @@
                             </div>
                         </template>
 
-                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '383px' : '333px'">
                             <template slot-scope="props">
                                 <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
                                 <span v-else>$[ props.row.key ]</span>
                             </template>
                         </bk-table-column>
 
-                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '583px' : '533px'">
                             <template slot-scope="props">
                                 <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
-                                <span v-else>$[ props.row.value ]</span>
+                                <span v-else v-bk-tooltips="props.row.value">$[ props.row.value ]</span>
                             </template>
                         </bk-table-column>
 
-                        <bk-table-column label="操作" v-if="dialog.type!=='detail'" width="100px">
+                        <bk-table-column label="操作" v-if="dialog.type!=='detail'">
                             <template slot-scope="props">
                                 <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, envList, oldEnvList)"
                                            v-if="props.row.isEdit">保存
@@ -352,21 +352,21 @@
                             </div>
                         </template>
 
-                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '383px' : '333px'">
                             <template slot-scope="props">
                                 <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
                                 <span v-else>$[ props.row.key ]</span>
                             </template>
                         </bk-table-column>
 
-                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '483px' : '433px'">
+                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '583px' : '533px'">
                             <template slot-scope="props">
                                 <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
-                                <span v-else>$[ props.row.value ]</span>
+                                <span v-else v-bk-tooltips="props.row.value">$[ props.row.value ]</span>
                             </template>
                         </bk-table-column>
 
-                        <bk-table-column label="操作" v-if="dialog.type!=='detail'" width="100px">
+                        <bk-table-column label="操作" v-if="dialog.type!=='detail'">
                             <template slot-scope="props">
                                 <bk-button class="mr5" theme="primary" text @click="handleEditVar(props.row, labelList, oldLabelList)"
                                            v-if="props.row.isEdit">保存
@@ -939,7 +939,7 @@
     .beauty-scrollbar::-webkit-scrollbar {
         overflow: scroll;
         width: 4px;
-        background-color: hsla(0,0%,80%,0);
+        background-color: hsla(0, 0%, 80%, 0);
     }
 
     .beauty-scrollbar::-webkit-scrollbar-thumb {

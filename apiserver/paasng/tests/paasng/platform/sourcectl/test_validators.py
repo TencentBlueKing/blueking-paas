@@ -34,4 +34,4 @@ from paasng.platform.sourcectl.validators import validate_image_url
 )
 def test_validate_image_url(url, repo_info):
     with override_settings(DOCKER_REGISTRY_CONFIG=repo_info):
-        assert validate_image_url(url, "dummy") == url
+        assert validate_image_url(url) == url

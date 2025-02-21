@@ -102,7 +102,6 @@ class DBBasedMixin:
     def _get_or_create_repo_obj(self, repo_url: str, source_dir: str) -> Any:
         """Get or create a repository object by given url and source_dir."""
         repo_kwargs = {
-            "region": self.application.region,
             "server_name": self.repo_type,
             "repo_url": repo_url,
             "source_dir": source_dir,
@@ -155,7 +154,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         self.auth_manager.initialize(desired_root)
 
         # 创建目录
-        base_info = get_sourcectl_type(self.repo_type).config_as_arguments(self.application.region)
+        base_info = get_sourcectl_type(self.repo_type).config_as_arguments()
         try:
             self.auth_manager.set_paas_user_root_privilege(path=desired_root, write=True, read=True)
             return self._acquire_repo(
@@ -171,7 +170,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         # 创建目录
         try:
             self.auth_manager.set_paas_user_root_privilege(path=desired_root, write=True, read=True)
-            server_config = get_bksvn_config(self.application.region, name=self.repo_type)
+            server_config = get_bksvn_config(name=self.repo_type)
             return self._acquire_repo(
                 desired_name=unique_id_generator(self.module.name),
                 base_info=server_config.as_module_arguments(root_path=desired_root),
@@ -201,7 +200,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         repo_url = self.get_repo().get_repo_url()
         with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
             self.write_templates_to_dir(source_path, self.module.source_init_template, context)
-            svn_credentials = get_bksvn_config(context["region"], name=self.repo_type).get_admin_credentials()
+            svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
 
             sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
             return sync_procedure.run(source_path=str(source_path))

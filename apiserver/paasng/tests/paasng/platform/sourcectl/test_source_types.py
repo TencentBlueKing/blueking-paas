@@ -21,18 +21,15 @@ import pytest
 
 from paasng.infras.accounts.oauth.backends import OAuth2Backend
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.sourcectl.source_types import ServerConfig, SourcectlTypeNames, SourceTypes, SourceTypeSpec
+from paasng.platform.sourcectl.source_types import SourcectlTypeNames, SourceTypes, SourceTypeSpec
 
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.connector import ModuleRepoConnector  # noqa: F401
 
 
 @pytest.fixture()
-def server_config_with_region():
-    return {
-        "_lookup_field": "region",
-        "data": {"r1": {"url": "r1.com"}, "r2": {"url": "r2.com"}},
-    }
+def server_config():
+    return {"url": "r1.com"}
 
 
 @pytest.fixture()
@@ -59,26 +56,6 @@ def oauth_display_info():
 @pytest.fixture()
 def partial_oauth_display_info():
     return {"display_name": "dummy-override"}
-
-
-class TestServerConfig:
-    def test_region(self, server_config_with_region):
-        config = ServerConfig(server_config_with_region)
-        assert config.get("r1") == {"url": "r1.com"}
-        assert config.get("r2") == {"url": "r2.com"}
-
-    def test_region_not_found_default(self, server_config_with_region):
-        config = ServerConfig(server_config_with_region)
-        assert config.get("r100", use_default_value=True) is not None
-
-    def test_region_agonostic_error(self, server_config_with_region):
-        config = ServerConfig(server_config_with_region)
-        with pytest.raises(TypeError):
-            config.get_region_agnostic()
-
-    def test_region_agonostic_normal(self, server_config_with_region):
-        config = ServerConfig({"foo": "bar"})
-        assert config.get_region_agnostic() == {"foo": "bar"}
 
 
 class DummyClass:
@@ -118,21 +95,19 @@ class GitDummySourceTypeSpec(SourceTypeSpec):
 
 
 class TestSourceTypeSpec:
-    def test_normal(self, server_config_with_region):
-        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region)
+    def test_normal(self, server_config):
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config)
         assert spec.make_feature_flag_field().name == "ENABLE_MY_DUMMY"
         assert spec.support_oauth() is True
-        assert spec.get_server_config("r1") == {"url": "r1.com"}
+        assert spec.get_server_config() == {"url": "r1.com"}
 
     def test_non_region_server_config(self):
         spec = DummySourceTypeSpec("my_dummy", server_config={"foo": "bar"})
-        assert spec.get_server_config("r1") == {"foo": "bar"}
+        assert spec.get_server_config() == {"foo": "bar"}
 
-    def test_oauth_credentials(self, server_config_with_region, oauth_credentials):
+    def test_oauth_credentials(self, server_config, oauth_credentials):
         """测试只使用 oauth_credentials 配置 credentials, display_info 使用类中的默认值"""
-        spec = DummySourceTypeSpec(
-            "my_dummy", server_config=server_config_with_region, oauth_credentials=oauth_credentials
-        )
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config, oauth_credentials=oauth_credentials)
         backend = spec.make_oauth_backend()
         assert backend
         assert backend.authorization_base_url == oauth_credentials["authorization_base_url"]
@@ -142,10 +117,10 @@ class TestSourceTypeSpec:
         assert backend.display_info.display_name == "dummy-name"
         assert backend.display_info.description == "dummy-description"
 
-    def test_oauth_backend_config(self, server_config_with_region, oauth_credentials, oauth_display_info):
+    def test_oauth_backend_config(self, server_config, oauth_credentials, oauth_display_info):
         """测试只使用 oauth_backend_config 完成 credentials 和 display_info"""
         merged = {"display_info": oauth_display_info, **oauth_credentials}
-        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region, oauth_backend_config=merged)
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config, oauth_backend_config=merged)
         backend = spec.make_oauth_backend()
         assert backend
         assert backend.authorization_base_url == merged["authorization_base_url"]
@@ -154,11 +129,11 @@ class TestSourceTypeSpec:
         assert backend.token_base_url == merged["token_base_url"]
         assert backend.display_info.to_dict() == merged["display_info"]
 
-    def test_oauth_mixin(self, server_config_with_region, oauth_credentials, oauth_display_info):
+    def test_oauth_mixin(self, server_config, oauth_credentials, oauth_display_info):
         """测试使用 oauth_credentials 配置 credentials, oauth_backend_config 配置 display_info"""
         spec = DummySourceTypeSpec(
             "my_dummy",
-            server_config=server_config_with_region,
+            server_config=server_config,
             oauth_backend_config={"display_info": oauth_display_info},
             oauth_credentials=oauth_credentials,
         )
@@ -170,12 +145,10 @@ class TestSourceTypeSpec:
         assert backend.token_base_url == oauth_credentials["token_base_url"]
         assert backend.display_info.to_dict() == oauth_display_info
 
-    def test_partial_overwrite_display_info(
-        self, server_config_with_region, oauth_credentials, partial_oauth_display_info
-    ):
+    def test_partial_overwrite_display_info(self, server_config, oauth_credentials, partial_oauth_display_info):
         """测试只覆盖 display_info 部分值"""
         merged = {"display_info": partial_oauth_display_info, **oauth_credentials}
-        spec = DummySourceTypeSpec("my_dummy", server_config=server_config_with_region, oauth_backend_config=merged)
+        spec = DummySourceTypeSpec("my_dummy", server_config=server_config, oauth_backend_config=merged)
         backend = spec.make_oauth_backend()
         assert backend
         assert backend.display_info.display_name == partial_oauth_display_info["display_name"]

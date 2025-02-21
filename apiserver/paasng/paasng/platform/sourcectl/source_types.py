@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field
 from paasng.infras.accounts.oauth.backends import OAuth2Backend
 from paasng.infras.accounts.oauth.utils import set_get_backends_callback_func
 from paasng.platform.sourcectl.constants import DiffFeatureType
-from paasng.utils.configs import RegionAwareConfig, get_settings
+from paasng.utils.configs import get_settings
 from paasng.utils.text import camel_to_snake, remove_suffix
 
 if TYPE_CHECKING:
@@ -97,7 +97,7 @@ class SourceTypeSpec:
         :param label: Optional, enum label name
         :param display_info: Optional, info used for displaying current system on UI
         :param enabled: Whether this system was enabled, will affect the related FeatureFlag value
-        :param server_config: The server config information, which can be region related or region agnostic
+        :param server_config: The server config information
         :param oauth_backend_config: The credential settings(optionally, and display_info) for OAuth authentication
         :param oauth_credentials: [Deprecated] The credential settings for OAuth authentication,
                                   please use oauth_backend_config instead.
@@ -108,7 +108,7 @@ class SourceTypeSpec:
         self.label = label or self._default_label
         self.display_info = DisplayInfo(value=self.name, **(display_info or self._default_display_info))
         self.enabled = enabled
-        self.server_config = ServerConfig(server_config or {})
+        self.server_config = server_config or {}
         self.oauth_backend_config = oauth_backend_config or {}
         if oauth_credentials:
             logger.warning("The 'oauth_credentials' will be removed in the next version.")
@@ -123,49 +123,20 @@ class SourceTypeSpec:
             return cattr.structure(self.oauth_backend_config, self.oauth_backend_class)
         raise NotImplementedError
 
-    def get_server_config(self, region: Optional[str], use_default_value: bool = False) -> Dict:
-        """Get configured server config data
+    def get_server_config(self) -> Dict:
+        """Get configured server config data"""
+        return self.server_config
 
-        :param region: Optional, region name
-        :param use_default_value: See `ServerConfig.get`
-        """
-        if not region:
-            return self.server_config.get_region_agnostic()
-        return self.server_config.get(region, use_default_value=use_default_value)
-
-    def config_as_arguments(self, region: Optional[str]) -> Dict:
+    def config_as_arguments(self) -> Dict:
         """
         Make source type related class and function arguments from server config,
         the result might be used for Connector and Controller class's initialization
         """
-        return self.get_server_config(region)
+        return self.get_server_config()
 
     def make_feature_flag_field(self) -> FeatureFlagField:
         feature = f"ENABLE_{self.upper_name}"
         return FeatureFlagField(name=feature, label=f"使用 {self.label} 源码服务", default=self.enabled)
-
-
-class ServerConfig:
-    """A region related server config wrapper tool class
-
-    :param lookup_with_region: Whether returns different result for different region, default to False
-    """
-
-    def __init__(self, user_settings: Dict):
-        self._config = RegionAwareConfig(user_settings)
-
-    def get(self, region: str, use_default_value: bool = False) -> Dict:
-        """Return the server config by region"""
-        return self._config.get(region, use_default_value=use_default_value)
-
-    def get_region_agnostic(self):
-        """Return the server config without region
-
-        :raises TypeError: when current config must be looked up by region
-        """
-        if self._config.lookup_with_region:
-            raise TypeError("Can not get region agnostic config, must lookup by region")
-        return self._config.data
 
 
 class SourceTypes:

@@ -34,7 +34,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from svn.common import SvnException
 
-from paasng.core.region.states import RegionType
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
@@ -107,11 +106,11 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         list_serializer = slzs.SvnAccountSLZ(accounts, many=True, context=self.get_serializer_context())
         return Response(list_serializer.data)
 
-    def process_password(self, region, account, password):
+    def process_password(self, account, password):
         """对返回的密码信息进行加工处理"""
         user = self.request.user
-        message = _("您的蓝鲸{region}开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。").format(
-            region=RegionType.get_choice_label(region), account=account, password=password
+        message = _("您的蓝鲸开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。").format(
+            account=account, password=password
         )
         noti_backend = get_notification_backend()
 
@@ -123,47 +122,15 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         return {
             "user": user.username,
             "account": account,
-            "region": region,
             "password": password,
         }
 
-    def notify_svn_account_changed(self, username, account, password, created, region):
-        svn_account_updated.send(
-            sender=self, username=username, account=account, password=password, created=created, region=region
-        )
-
-    def get_create_serializer(self, *args, **kwargs):
-        serializer_class = slzs.SvnAccountCreateSLZ
-        kwargs["context"] = self.get_serializer_context()
-        return serializer_class(*args, **kwargs)
-
-    @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
-    def create(self, request):
-        """deprecated: 平台 bk_svn 账号创建功能已逐步废弃"""
-        serializer = self.get_create_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-
-        account_info = SvnAccount.objects.create_account(user=request.user, region=validated_data["region"])
-
-        self.notify_svn_account_changed(
-            username=request.user.username,
-            account=account_info["account"],
-            password=account_info["password"],
-            created=True,
-            region=validated_data["region"],
-        )
-
-        result = self.process_password(
-            region=account_info["region"], account=account_info["account"], password=account_info["password"]
-        )
-        result["id"] = account_info["id"]
-        response_serializer = slzs.SVNAccountResponseSLZ(result)
-        headers = self.get_success_headers(response_serializer.data)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    def notify_svn_account_changed(self, username, account, password, created):
+        svn_account_updated.send(sender=self, username=username, account=account, password=password, created=created)
 
     @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
     def update(self, request, *args, **kwargs):
+        """输入验证码后重置 SVN 密码。"""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = slzs.SvnAccountSLZ(
@@ -178,19 +145,16 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
             if not verifier.validate_and_clean(code):
                 raise ValidationError({"verification_code": [_("验证码错误")]})
 
-        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user, region=data["region"])
+        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user)
 
         self.notify_svn_account_changed(
             username=request.user.username,
             account=account_info["account"],
             password=account_info["password"],
             created=False,
-            region=data["region"],
         )
 
-        result = self.process_password(
-            region=account_info["region"], account=account_info["account"], password=account_info["password"]
-        )
+        result = self.process_password(account=account_info["account"], password=account_info["password"])
         result["id"] = account_info["id"]
         response_serializer = slzs.SVNAccountResponseSLZ(result)
         return Response(response_serializer.data)
@@ -538,7 +502,7 @@ class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
         with promote_repo_privilege_temporary(application):
             time_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             data = {"tag_name": time_str, "comment": time_str}
-            provider = RepoProvider(**svn_type_spec.config_as_arguments(application.region))
+            provider = RepoProvider(**svn_type_spec.config_as_arguments())
 
             try:
                 result = provider.make_tag_from_trunk(

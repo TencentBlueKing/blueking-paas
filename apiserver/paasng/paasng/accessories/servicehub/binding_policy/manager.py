@@ -177,19 +177,19 @@ class PolicyCombinationManager:
         """Update or insert a combination of service binding policies."""
         self.clean()
 
-        rule_based_allocation_configs = policy_combination_config.rule_based_allocation_configs
-        unified_allocation_config = policy_combination_config.unified_allocation_config
+        allocation_precedence_policies = policy_combination_config.allocation_precedence_policies
+        allocation_policy = policy_combination_config.allocation_policy
 
         # Set the base policy
-        if unified_allocation_config.plans:
-            self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(unified_allocation_config.plans))
-        elif unified_allocation_config.env_plans:
+        if allocation_policy.plans:
+            self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
+        elif allocation_policy.env_plans:
             self.service_binding_policy_mgr.set_env_specific(
-                env_plans=self._plan_ids_to_env_plan_objs(unified_allocation_config.env_plans)
+                env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
             )
 
         # Add precedence policies with decreasing priority
-        for config in rule_based_allocation_configs:
+        for config in allocation_precedence_policies:
             if config.plans:
                 self.service_binding_policy_mgr.add_precedence_static(
                     cond_type=PrecedencePolicyCondType(config.cond_type),
@@ -211,13 +211,15 @@ class PolicyCombinationManager:
         if service_binding_policy is None:
             return None
         precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
-        rule_based_configs = [RuleBasedAllocationConfig.create_from_policy(policy) for policy in precedence_policies]
-        unified_config = UnifiedAllocationConfig.create_from_policy(service_binding_policy)
+        allocation_precedence_policies = [
+            RuleBasedAllocationConfig.create_from_policy(policy) for policy in precedence_policies
+        ]
+        allocation_policy = UnifiedAllocationConfig.create_from_policy(service_binding_policy)
         return PolicyCombinationConfig(
             tenant_id=self.tenant_id,
             service_id=self.service.uuid,
-            rule_based_allocation_configs=rule_based_configs,
-            unified_allocation_config=unified_config,
+            allocation_precedence_policies=allocation_precedence_policies,
+            allocation_policy=allocation_policy,
         )
 
     def _plan_ids_to_objs(self, plan_ids: list[str]) -> list[PlanObj]:

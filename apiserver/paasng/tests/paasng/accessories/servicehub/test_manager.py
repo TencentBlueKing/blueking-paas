@@ -215,8 +215,8 @@ class TestMixedMgrBindService:
 class TestPolicyCombinationManager:
     @pytest.fixture()
     def policy_config(self, bk_app, service_obj, plan1, plan2):
-        unified_config = UnifiedAllocationConfig(plans=[plan1.uuid, plan2.uuid])
-        rule_based_allocation_configs = [
+        allocation_policy = UnifiedAllocationConfig(plans=[plan1.uuid, plan2.uuid])
+        allocation_precedence_policies = [
             RuleBasedAllocationConfig(
                 cond_type=PrecedencePolicyCondType.REGION_IN,
                 cond_data={"regions": [bk_app.region]},
@@ -234,8 +234,8 @@ class TestPolicyCombinationManager:
         return PolicyCombinationConfig(
             tenant_id=DEFAULT_TENANT_ID,
             service_id=service_obj.uuid,
-            rule_based_allocation_configs=rule_based_allocation_configs,
-            unified_allocation_config=unified_config,
+            allocation_precedence_policies=allocation_precedence_policies,
+            allocation_policy=allocation_policy,
         )
 
     def test_upsert(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):

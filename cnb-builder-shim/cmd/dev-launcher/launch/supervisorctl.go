@@ -54,6 +54,9 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 command = {{ .CommandPath }}
 stdout_logfile = {{ .ProcLogFile }}
 redirect_stderr = true
+
+[inet_http_server]
+port=127.0.0.1:9001
 {{ end -}}
 `
 
@@ -173,30 +176,6 @@ func (ctl *SupervisorCtl) reload() error {
 
 	cmd.Env = os.Environ()
 	cmd.Stdin = bytes.NewBufferString(reloadScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
-}
-
-// Status get the status of all processes by running 'supervisorctl status'.
-func (ctl *SupervisorCtl) Status() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(statusScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
-}
-
-// stop all processes by running 'supervisorctl stop all'.
-func (ctl *SupervisorCtl) Stop() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(stopScript)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 

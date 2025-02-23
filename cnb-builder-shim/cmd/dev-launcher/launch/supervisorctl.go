@@ -19,18 +19,18 @@
 package launch
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord"
 )
 
 var supervisorDir = "/cnb/devsandbox/supervisor"
+var RPCPort = "9001"
 
 var confFilePath = filepath.Join(supervisorDir, "dev.conf")
 
@@ -54,43 +54,10 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 command = {{ .CommandPath }}
 stdout_logfile = {{ .ProcLogFile }}
 redirect_stderr = true
-
+{{ end }}
 [inet_http_server]
-port=127.0.0.1:9001
-{{ end -}}
+port=127.0.0.1:{{ .Port }}
 `
-
-var reloadScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  echo "supervisord is already running. update and restart processes..."
-  supervisorctl -c %[2]s reload
-else
-  echo "supervisord is not running. start supervisord..."
-  supervisord -c %[2]s
-fi
-`, supervisorDir, confFilePath)
-
-var statusScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  supervisorctl -c %[2]s status
-fi
-`, supervisorDir, confFilePath)
-
-var stopScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  echo "stop all processes..."
-  supervisorctl -c %[2]s stop all
-fi
-`, supervisorDir, confFilePath)
 
 // ProcessConf is a process config
 type ProcessConf struct {
@@ -101,6 +68,7 @@ type ProcessConf struct {
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {
 	RootDir     string
+	Port        string
 	Processes   []ProcessConf
 	Environment string
 }
@@ -109,6 +77,7 @@ type SupervisorConf struct {
 func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
+		Port:    RPCPort,
 	}
 
 	if procEnvs != nil {
@@ -132,15 +101,24 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*Supervis
 }
 
 // NewSupervisorCtl returns a new SupervisorCtl
-func NewSupervisorCtl() *SupervisorCtl {
+func NewSupervisorCtl() (*SupervisorCtl, error) {
+	client, err := supervisord.NewClient(supervisord.ClientConfig{
+		RPCAddress: "http://127.0.0.1:" + RPCPort + "/RPC2",
+		ConfigPath: confFilePath,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &SupervisorCtl{
 		RootDir: supervisorDir,
-	}
+		Client:  client,
+	}, nil
 }
 
 // SupervisorCtl is a supervisorctl wrapper with supervisor binary
 type SupervisorCtl struct {
 	RootDir string
+	Client  *supervisord.Client
 }
 
 // Reload start or update/restart the processes
@@ -148,13 +126,17 @@ func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
 	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
-	if err := ctl.refreshConf(conf); err != nil {
+	if err := refreshConf(conf); err != nil {
 		return err
 	}
 	return ctl.reload()
 }
 
-func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
+func (ctl *SupervisorCtl) reload() error {
+	return ctl.Client.Update()
+}
+
+func refreshConf(conf *SupervisorConf) error {
 	tmplFile := "supervisord.conf.tmpl"
 
 	tmpl, err := template.New(tmplFile).Parse(confTmpl)
@@ -169,17 +151,6 @@ func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 	defer file.Close()
 
 	return tmpl.Execute(file, *conf)
-}
-
-func (ctl *SupervisorCtl) reload() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(reloadScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
 }
 
 // validateEnvironment validates the environment variables for supervisor conf.

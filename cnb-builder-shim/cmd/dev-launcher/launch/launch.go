@@ -122,7 +122,11 @@ func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
 	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
 		return err
 	} else {
-		return NewSupervisorCtl().Reload(conf)
+		ctl, err := NewSupervisorCtl()
+		if err != nil {
+			return err
+		}
+		return ctl.Reload(conf)
 	}
 }
 

@@ -16,23 +16,4 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package subcmd
-
-import (
-	"github.com/spf13/cobra"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
-)
-
-var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "stop process.",
-	Long:  "stop process.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return launch.NewSupervisorCtl().Stop()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(stopCmd)
-}
+package supervisord

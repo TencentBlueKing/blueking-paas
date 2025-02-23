@@ -30,7 +30,6 @@ import (
 )
 
 var _ = Describe("Test supervisorctl", func() {
-	var ctl *SupervisorCtl
 	var supervisorTmpDir string
 
 	oldConfFilePath := confFilePath
@@ -38,7 +37,6 @@ var _ = Describe("Test supervisorctl", func() {
 	BeforeEach(func() {
 		supervisorTmpDir, _ = os.MkdirTemp("", "supervisor")
 		confFilePath = filepath.Join(supervisorTmpDir, "dev.conf")
-		ctl = NewSupervisorCtl()
 	})
 	AfterEach(func() {
 		Expect(os.RemoveAll(supervisorTmpDir)).To(BeNil())
@@ -82,9 +80,10 @@ var _ = Describe("Test supervisorctl", func() {
 
 	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
 		conf, _ := MakeSupervisorConf(processes, procEnv...)
-		Expect(ctl.refreshConf(conf)).To(BeNil())
+		Expect(refreshConf(conf)).To(BeNil())
 
 		content, _ := os.ReadFile(confFilePath)
+		fmt.Println(string(content))
 		Expect(string(content)).To(Equal(expectedConfContent))
 	}, Entry("without env_variables",
 		[]Process{
@@ -113,7 +112,10 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)),
+
+[inet_http_server]
+port=127.0.0.1:%[2]s
+`, supervisorDir, RPCPort)),
 		Entry("with env_variables",
 			[]Process{
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
@@ -145,5 +147,8 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)))
+
+[inet_http_server]
+port=127.0.0.1:%[2]s
+`, supervisorDir, RPCPort)))
 })

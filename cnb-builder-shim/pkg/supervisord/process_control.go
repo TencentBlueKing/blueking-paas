@@ -120,6 +120,16 @@ func (c *Client) ReloadConfig() ([]string, []string, []string, error) {
 	return result[0][0], result[0][1], result[0][2], err
 }
 
+// AddProcessGroup ...
+func (c *Client) AddProcessGroup(name string) error {
+	return c.CallMethodAndVerifyBool("supervisor.addProcessGroup", name)
+}
+
+// RemoveProcessGroup ...
+func (c *Client) RemoveProcessGroup(name string) error {
+	return c.CallMethodAndVerifyBool("supervisor.removeProcessGroup", name)
+}
+
 // Update ...
 func (c *Client) Update() error {
 	added, changed, removed, err := c.ReloadConfig()
@@ -150,14 +160,4 @@ func (c *Client) Update() error {
 	}
 
 	return nil
-}
-
-// AddProcessGroup ...
-func (c *Client) AddProcessGroup(name string) error {
-	return c.CallMethodAndVerifyBool("supervisor.addProcessGroup", name)
-}
-
-// RemoveProcessGroup ...
-func (c *Client) RemoveProcessGroup(name string) error {
-	return c.CallMethodAndVerifyBool("supervisor.removeProcessGroup", name)
 }

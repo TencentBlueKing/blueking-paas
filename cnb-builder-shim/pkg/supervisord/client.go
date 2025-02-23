@@ -60,12 +60,14 @@ func (c *Client) ensureConnected() error {
 			}
 			// 如果状态不是运行中则尝试重启
 			fmt.Printf("Supervisord is not running (state: %s)", state.Name)
-			if err = c.Restart(); err == nil {
-				continue
+			if state.Name != "RUNNING" {
+				if err = c.Restart(); err == nil {
+					continue
+				}
 			}
 		}
 
-		// 如果连接失败则尝试启动
+		// 如果连接失败表示进程没有启动则尝试启动
 		fmt.Printf("Attempting to start supervisord")
 		if err = c.startSupervisord(); err != nil {
 			fmt.Printf("Start supervisord failed: %v", err)

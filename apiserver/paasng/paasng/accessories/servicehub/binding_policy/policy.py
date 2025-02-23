@@ -195,7 +195,7 @@ class PolicyCombinationConfig:
     tenant_policy_config = PolicyCombinationConfig(
         tenant_id="tenant_x",
         service_id="service_x"
-        rule_based_allocation_configs=[
+        allocation_precedence_policies=[
             RuleBasedAllocationConfig(
                 cond_type=PrecedencePolicyCondType.REGION_IN.value,
                 cond_data={"regions": ["region_default"]},
@@ -209,13 +209,13 @@ class PolicyCombinationConfig:
                 plans=["plan_cluster"]
             )
         ],
-        unified_allocation_config=UnifiedAllocationConfig(plans=["plan_default"])
+        allocation_policy=UnifiedAllocationConfig(plans=["plan_default"])
     )
     """
 
     tenant_id: str
     service_id: str
     # 按规则分配
-    rule_based_allocation_configs: list[RuleBasedAllocationConfig]
+    allocation_precedence_policies: list[RuleBasedAllocationConfig]
     # 统一分配，也是按规则分配最终的保底选项
-    unified_allocation_config: UnifiedAllocationConfig
+    allocation_policy: UnifiedAllocationConfig

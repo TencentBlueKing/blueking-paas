@@ -120,6 +120,27 @@ class BKIAMClient:
 
         return resp["data"]["id"]
 
+    def delete_grade_manager(self, grade_manager_id: str):
+        """
+        删除注册到权限中心的分级管理员
+
+        :param grade_manager_id: 分级管理员 ID
+        """
+        path_params = {"system_id": settings.IAM_PLUGINS_CENTER_SYSTEM_ID, "id": grade_manager_id}
+
+        try:
+            resp = self.client.v2_management_delete_grade_manager(
+                path_params=path_params,
+            )
+        except APIGatewayResponseError as e:
+            raise BKIAMGatewayServiceError(f"delete grade manager error, detail: {e}")
+
+        if resp.get("code") != 0:
+            logger.exception(
+                "delete grade manager error, message:{} grade_manager_id: {}".format(resp["message"], grade_manager_id)
+            )
+            raise BKIAMApiError(resp["message"], resp["code"])
+
     def fetch_grade_manager_members(self, grade_manager_id: int) -> List[str]:
         """
         获取某个分级管理员的成员列表

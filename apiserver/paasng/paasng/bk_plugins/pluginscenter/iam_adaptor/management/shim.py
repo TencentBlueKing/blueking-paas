@@ -255,6 +255,16 @@ def delete_builtin_user_groups(plugin: PluginInstance):
     user_groups.delete()
 
 
+def delete_grade_manager(plugin: PluginInstance):
+    """删除应用的分级管理员"""
+    grade_manager = PluginGradeManager.objects.filter(plugin_id=plugin.id).first()
+    if not grade_manager:
+        return
+
+    lazy_iam_client.delete_grade_manager(grade_manager.grade_manager_id)
+    grade_manager.delete()
+
+
 def user_group_apply_url(plugin_id: str) -> dict:
     """应用用户组权限申请链接"""
     dev_user_group_id = PluginUserGroup.objects.get(plugin_id=plugin_id, role=PluginRole.DEVELOPER).user_group_id

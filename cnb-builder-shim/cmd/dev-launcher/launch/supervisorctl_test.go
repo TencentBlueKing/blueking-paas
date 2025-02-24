@@ -83,7 +83,6 @@ var _ = Describe("Test supervisorctl", func() {
 		Expect(refreshConf(conf)).To(BeNil())
 
 		content, _ := os.ReadFile(confFilePath)
-		fmt.Println(string(content))
 		Expect(string(content)).To(Equal(expectedConfContent))
 	}, Entry("without env_variables",
 		[]Process{

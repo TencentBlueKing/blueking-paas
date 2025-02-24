@@ -691,7 +691,7 @@ export default {
   基本信息: 'Basic Information',
   '基本信息-title': 'Basic information',
   '应用名称等基本信息请在应用描述文件 app_desc.yaml 中配置': 'Please configure basic information such as the APP name in the APP descriptor file app_desc.yaml',
-  '管理员、开发者和运营者可以修改应用名称等基本信息': 'Administrators, developers and operators can modify basic information such as the APP name',
+  '管理员、运营者可以修改应用名称等基本信息。': 'Administrators and operators can modify basic information such as the application name.',
   应用logo: 'APP logo',
   更换图片: 'Change',
   '支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。': 'Support jpg, png and other image formats, the image size is 72*72px, no more than 2MB.',

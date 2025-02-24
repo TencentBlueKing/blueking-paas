@@ -18,10 +18,15 @@
         slot="left-header"
         class="left-header"
       >
-        <label class="title">{{ '可选集群(' + this.sourceLength + ')' }}</label>
+        <label
+          class="title"
+          v-bk-overflow-tips
+        >
+          {{ $t('可选集群({n})', { n: sourceLength }) }}
+        </label>
         <div class="add-all">
           <span
-            :class="{ disabled: !this.sourceLength }"
+            :class="{ disabled: !sourceLength }"
             @click="addAll"
           >
             {{ $t('选择全部') }}
@@ -32,10 +37,15 @@
         slot="right-header"
         class="right-header"
       >
-        <label class="title">{{ '已选集群(' + this.targetLength + ')' }}</label>
+        <label
+          class="title"
+          v-bk-overflow-tips
+        >
+          {{ $t('已选集群({n})', { n: targetLength }) }}
+        </label>
         <div class="remove-all">
           <span
-            :class="{ disabled: !this.targetLength }"
+            :class="{ disabled: !targetLength }"
             @click="removeAll"
           >
             {{ $t('清空') }}
@@ -181,13 +191,22 @@ export default {
     }
   }
 }
+.right-header,
+.left-header {
+  display: flex;
+}
 .title {
+  flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
   font-weight: 700;
   font-size: 14px;
   color: #4d4f56;
 }
 .add-all,
 .remove-all {
+  flex-shrink: 0;
   display: inline-block;
   float: right;
   cursor: pointer;

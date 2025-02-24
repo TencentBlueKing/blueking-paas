@@ -25,12 +25,12 @@
           <template v-if="accessMethod === 'nodePort'">
             <DetailsRow
               :label-width="80"
-              :label="`${$t('HTTP 端口')}：`"
+              :label="`HTTP ${$t('端口')}：`"
               :value="values?.service?.nodePorts?.http"
             />
             <DetailsRow
               :label-width="80"
-              :label="`${$t('HTTPS 端口')}：`"
+              :label="`HTTPS ${$t('端口')}：`"
               :value="values?.service?.nodePorts?.https"
             />
           </template>
@@ -87,7 +87,7 @@
           class="paasng-icon paasng-unfinished"
           v-else
         ></i>
-        <span>{{ COMPONENT_STATUS[data?.status] || '--' }}</span>
+        <span>{{ localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--' }}</span>
         <bk-button
           v-if="data?.status === 'installed'"
           :text="true"
@@ -162,6 +162,9 @@ export default {
     },
     valuesData() {
       return JSON.stringify(this.values, null, 2);
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
     },
   },
   methods: {

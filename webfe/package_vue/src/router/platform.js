@@ -1,3 +1,5 @@
+import i18n from '@/language/i18n.js';
+
 const platformManagement = () =>
   import(/* webpackChunkName: 'app-migration-info' */ '@/views/platform')
     .then((module) => module)
@@ -26,10 +28,10 @@ export const platformRouters = [
         component: platformAppCluster,
         name: 'platformAppCluster',
         meta: {
-          title: '应用集群',
+          title: i18n.t('应用集群'),
           panels: [
-            { name: 'config', label: '集群配置' },
-            { name: 'list', label: '集群列表' },
+            { name: 'config', label: i18n.t('集群配置') },
+            { name: 'list', label: i18n.t('集群列表') },
           ],
         },
       },

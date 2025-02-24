@@ -16,7 +16,10 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+import platformManagementEn from './platform-management/en';
+
 export default {
+  ...platformManagementEn,
   '工蜂 Git': '工蜂 Git',
   '工蜂 Git 授权': '工蜂 Git Authorization',
   'GitHub 授权': 'GitHub Authorization',

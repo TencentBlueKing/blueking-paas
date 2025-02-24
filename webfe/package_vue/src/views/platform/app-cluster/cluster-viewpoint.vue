@@ -11,6 +11,7 @@
         prop="name"
         width="100"
         show-overflow-tooltip
+        :render-header="$renderHeader"
       >
         <template slot-scope="{ row }">
           <a
@@ -23,7 +24,7 @@
         </template>
       </bk-table-column>
       <bk-table-column
-        :label="$t('集群 ID')"
+        :label="`${$t('集群')} ID`"
         prop="bcs_cluster_id"
         width="130"
         show-overflow-tooltip
@@ -40,6 +41,7 @@
         prop="availableTenants"
         class-name="tags-wrapper-cls tenant-column"
         column-key="available-tenant"
+        :render-header="$renderHeader"
       >
         <template slot-scope="{ row }">
           <div
@@ -124,17 +126,17 @@
         </template>
       </bk-table-column>
       <bk-table-column
-        label="操作"
-        width="160"
+        :label="$t('操作')"
+        :width="localLanguage === 'en' ? 200 : 160"
       >
         <template slot-scope="{ row }">
-          <bk-button
+          <!-- <bk-button
             theme="primary"
             text
             class="mr10"
           >
             {{ $t('编辑') }}
-          </bk-button>
+          </bk-button> -->
           <bk-popconfirm
             width="276"
             trigger="click"
@@ -203,6 +205,11 @@ export default {
         row: {},
       },
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
   },
   created() {
     this.init();
@@ -299,16 +306,16 @@ export default {
         extCls: 'cluster-alert-info-cls',
         title: this.$t('无法删除集群'),
         subHeader: h('div', { class: 'del-alert-info-content' }, [
-          h('div', { class: 'sub-info' }, `集群（${name}）正在被以下租户、应用使用，无法删除：`),
+          h('div', { class: 'sub-info' }, `${i18n.t('集群（{n}）正在被以下租户、应用使用，无法删除', { n: name })}：`),
           h('div', [
-            '1. 被',
+            `1. ${i18n.t('被')}`,
             ...data.available_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
-            '等',
+            i18n.t('等'),
             h('span', { class: 'count' }, data.available_tenant_ids.length),
-            '个租户使用，请先在集群配置页面，解除租户与集群的分配关系。',
+            i18n.t('个租户使用，请先在集群配置页面，解除租户与集群的分配关系。'),
           ]),
           h('div', [
-            `2. ${i18n.t('被')}`,
+            `2. ${i18n.t('Bound-by')}`,
             h('span', { class: 'count' }, data.bound_app_module_envs.length),
             h('i', {
               class: `paasng-icon paasng-general-copy ${!data.bound_app_module_envs.length ? 'hide' : ''}`,

@@ -15,8 +15,10 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+import platformManagementZh from './platform-management/zh';
 
 export default {
+  ...platformManagementZh,
   切换语言: 'English',
   系统提示: '系统提示',
   '静态文件加载失败，请刷新页面重试': '静态文件加载失败，请刷新页面重试',

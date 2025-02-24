@@ -118,8 +118,8 @@ export default {
         cluster: '',
       },
       methodList: [
-        { name: 'uniform', label: '统一分配' },
-        { name: 'rule_based', label: '按规则分配' },
+        { name: 'uniform', label: this.$t('统一分配') },
+        { name: 'rule_based', label: this.$t('按规则分配') },
       ],
       methodValue: 'uniform',
       isAllocatedByEnv: false,

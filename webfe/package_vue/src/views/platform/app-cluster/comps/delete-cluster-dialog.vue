@@ -40,13 +40,13 @@
       ></bk-alert>
       <div>
         <p class="label">
-          该操作不可撤销，请输入集群名称：
+          {{ `${$t('该操作不可撤销，请输入集群名称')}：` }}
           <span>{{ config.row.name }}</span>
-          进行确认
+          {{ $t('进行确认') }}
         </p>
         <bk-input
           v-model="clusterName"
-          :placeholder="`请输入集群名称：${config.row.name}`"
+          :placeholder="$t('请输入集群名称：{n}', { n: config.row.name })"
         ></bk-input>
       </div>
     </div>

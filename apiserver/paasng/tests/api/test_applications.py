@@ -28,7 +28,7 @@ from django_dynamic_fixture import G
 from rest_framework.test import APIClient
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
     prepare_change_application_name,
@@ -52,6 +52,7 @@ from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, S
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -614,7 +615,7 @@ class TestCreateCloudNativeApp:
     @pytest.mark.usefixtures("_init_tmpls")
     def test_create_with_bk_log_feature(self, api_client, settings):
         """测试创建应用时开启日志平台功能特性"""
-        cluster = RegionClusterService(settings.DEFAULT_REGION_NAME).get_default_cluster()
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
         cluster.feature_flags[ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR] = True
         cluster.save()
 

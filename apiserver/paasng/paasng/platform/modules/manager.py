@@ -39,7 +39,7 @@ from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.entities import Monitoring, Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
@@ -136,14 +136,13 @@ class ModuleInitializer:
         }
 
     @transaction.atomic
-    def create_engine_apps(self, environments: Optional[List[str]] = None, cluster_name: Optional[str] = None):
+    def create_engine_apps(self, cluster_names: Dict[str, str]):
         """Create engine app instances for application"""
-        environments = environments or self.default_environments
         wl_app_type = (
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
         )
 
-        for environment in environments:
+        for environment in self.default_environments:
             name = self.make_engine_app_name(environment)
             engine_app = self._get_or_create_engine_app(name, wl_app_type)
             env = ModuleEnvironment.objects.create(
@@ -154,7 +153,7 @@ class ModuleInitializer:
                 tenant_id=self.application.tenant_id,
             )
             # bind env to cluster
-            EnvClusterService(env).bind_cluster(cluster_name)
+            EnvClusterService(env).bind_cluster(cluster_names.get(environment))
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
@@ -162,7 +161,7 @@ class ModuleInitializer:
 
         # Also set the module's exposed_url_type by the cluster
         self.module.exposed_url_type = get_exposed_url_type(
-            region=self.application.region, cluster_name=cluster_name
+            application=self.application, cluster_name=cluster_names.get(AppEnvironment.PRODUCTION)
         ).value
         self.module.save(update_fields=["exposed_url_type"])
 
@@ -364,14 +363,14 @@ def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
         raise error_codes.CANNOT_CREATE_APP.f(str(e))
 
 
-def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
+def initialize_smart_module(module: Module, cluster_names: Dict[str, str]):
     """Initialize a module for s-mart app"""
     module_initializer = ModuleInitializer(module)
     module_spec = ModuleSpecs(module)
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_name=cluster_name)
+        module_initializer.create_engine_apps(cluster_names=cluster_names)
 
     with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
@@ -390,8 +389,8 @@ def initialize_module(
     repo_type: str,
     repo_url: Optional[str],
     repo_auth_info: Optional[dict],
+    cluster_names: Dict[str, str],
     source_dir: str = "",
-    cluster_name: Optional[str] = None,
     bkapp_spec: Optional[Dict] = None,
 ) -> ModuleInitResult:
     """Initialize a module
@@ -409,7 +408,7 @@ def initialize_module(
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_name=cluster_name)
+        module_initializer.create_engine_apps(cluster_names=cluster_names)
 
     source_init_result = {}
     if module_spec.has_vcs:

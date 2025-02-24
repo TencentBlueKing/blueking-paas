@@ -236,7 +236,7 @@ class TestCustomCollectorConfigViewSet:
                 },
             ],
         }
-        with mock.patch("paasng.accessories.log.views.config.get_application_cluster") as fake_cluster:
+        with mock.patch("paasng.accessories.log.views.config.get_app_default_module_prod_env_cluster") as fake_cluster:
             fake_cluster.has_feature_flag.return_value = True
             resp = api_client.get(url, data={"all": True})
             assert "url" in resp.data

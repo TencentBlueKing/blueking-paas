@@ -15,11 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING, List, Optional
+from functools import partial
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.models import Cluster
+from django.db.models import QuerySet
+
+from paas_wl.infras.cluster.constants import (
+    ClusterAllocationPolicyCondType,
+    ClusterAllocationPolicyType,
+    ClusterFeatureFlag,
+)
+from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
@@ -27,7 +35,7 @@ if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
 
 
-def get_exposed_url_type(region: str | None = None, cluster_name: str | None = None) -> ExposedURLType:
+def get_exposed_url_type(application: "Application", cluster_name: str | None = None) -> ExposedURLType:
     """Get the exposed url type.
 
     :param region: The region. If given, use the region's default cluster.
@@ -35,34 +43,15 @@ def get_exposed_url_type(region: str | None = None, cluster_name: str | None = N
     """
     if cluster_name:
         cluster = Cluster.objects.get(name=cluster_name)
-    elif region:
-        cluster = RegionClusterService(region).get_default_cluster()
     else:
-        raise TypeError("Invalid arguments")
+        ctx = AllocationContext(
+            tenant_id=application.tenant_id,
+            region=application.region,
+            environment=AppEnvironment.PRODUCTION,
+        )
+        cluster = ClusterAllocator(ctx).get_default()
+
     return ExposedURLType(cluster.exposed_url_type)
-
-
-class RegionClusterService:
-    """RegionClusterService provide interface for querying cluster[s] in given region"""
-
-    def __init__(self, region: str):
-        self.region = region
-
-    def list_clusters(self) -> List[Cluster]:
-        return Cluster.objects.filter(region=self.region)
-
-    def get_default_cluster(self) -> Cluster:
-        """获取默认集群"""
-        qs = Cluster.objects.filter(region=self.region, is_default=True)
-        if qs.exists():
-            return qs[0]
-        raise Cluster.DoesNotExist(f"Default cluster not found for {self.region}")
-
-    def get_cluster_by_name(self, cluster_name: str) -> Cluster:
-        return Cluster.objects.get(region=self.region, name=cluster_name)
-
-    def has_cluster(self, cluster_name: str) -> bool:
-        return Cluster.objects.filter(region=self.region, name=cluster_name).exists()
 
 
 class EnvClusterService:
@@ -80,11 +69,12 @@ class EnvClusterService:
         this function will not check if the cluster actually exists.
         """
         wl_app = self.env.wl_app
-        region = self.env.application.region
 
         if wl_app.latest_config.cluster:
             return wl_app.latest_config.cluster
-        return RegionClusterService(region).get_default_cluster().name
+
+        ctx = AllocationContext.from_module_env(self.env)
+        return ClusterAllocator(ctx).get_default().name
 
     def bind_cluster(self, cluster_name: Optional[str]):
         """bind `env` to cluster named `cluster_name`, if cluster_name is not given, use default cluster
@@ -92,26 +82,124 @@ class EnvClusterService:
         :raises: Cluster.DoesNotExist if cluster not found
         """
         wl_app = self.env.wl_app
-        region = self.env.application.region
 
         if cluster_name:
             cluster = Cluster.objects.get(name=cluster_name)
         else:
-            cluster = RegionClusterService(region).get_default_cluster()
+            ctx = AllocationContext.from_module_env(self.env)
+            cluster = ClusterAllocator(ctx).get_default()
 
-        _bind_cluster_to_wl_app(wl_app, cluster)
+        # bind cluster to wl_app
+        latest_config = wl_app.latest_config
+        latest_config.cluster = cluster.name
+        latest_config.mount_log_to_host = cluster.has_feature_flag(
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST,
+        )
+        latest_config.save()
 
 
-def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):
-    """bind cluster to wl_app by modifying config.cluster"""
-    latest_config = wl_app.latest_config
-    latest_config.cluster = cluster.name
-    latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-    latest_config.save()
-
-
-def get_application_cluster(application: "Application") -> Cluster:
-    """Return the cluster name of app's default module"""
-    default_module = application.get_default_module()
-    env = default_module.envs.get(environment="prod")
+def get_app_default_module_prod_env_cluster(app: "Application") -> Cluster:
+    """获取默认模块生产环境应用使用的集群名称"""
+    env = app.get_default_module().envs.get(environment=AppEnvironment.PRODUCTION)
     return EnvClusterService(env).get_cluster()
+
+
+def get_app_default_module_clusters(app: "Application") -> Dict[str, Cluster]:
+    """获取默认模块各个环境应用使用的集群"""
+    return {env.environment: EnvClusterService(env).get_cluster() for env in app.get_default_module().envs.all()}
+
+
+def get_app_default_module_cluster_names(app: "Application") -> Dict[str, str]:
+    """获取默认模块各个环境应用使用的集群名称"""
+    return {env: cluster.name for env, cluster in get_app_default_module_clusters(app).items()}
+
+
+class ClusterAllocator:
+    """集群分配"""
+
+    def __init__(self, ctx: AllocationContext):
+        self.ctx = ctx
+
+    def list(self) -> QuerySet[Cluster]:
+        """获取所有可用的集群"""
+        return self._list()
+
+    def get(self, cluster_name: str | None) -> Cluster:
+        """根据名称获取集群，若不指定，则返回默认集群
+
+        注意：如果只需获取默认集群，请使用 get_default 方法
+        """
+        clusters = self._list()
+        if cluster_name:
+            clusters = clusters.filter(name=cluster_name)
+
+        if not clusters.exists():
+            raise ValueError(f"cluster allocator with ctx {self.ctx} and name {cluster_name} got no cluster")
+
+        return clusters.first()
+
+    # 快捷方法
+    get_default = partial(get, cluster_name=None)
+
+    def _list(self) -> QuerySet[Cluster]:
+        """获取集群列表"""
+        if policy := ClusterAllocationPolicy.objects.filter(tenant_id=self.ctx.tenant_id).first():
+            return self._policy_base_list(policy)
+
+        return self._legacy_region_base_list()
+
+    def _policy_base_list(self, policy: ClusterAllocationPolicy) -> QuerySet[Cluster]:
+        """根据策略获取集群列表"""
+        cluster_names: List[str] | None = None
+
+        if policy.type == ClusterAllocationPolicyType.UNIFORM and policy.allocation_policy:
+            # 统一分配
+            cluster_names = self._get_cluster_names_from_policy(policy.allocation_policy)
+        elif policy.type == ClusterAllocationPolicyType.RULE_BASED:
+            # 按规则分配
+            for p in policy.allocation_precedence_policies:
+                if self._match_precedence_policy(p):
+                    cluster_names = self._get_cluster_names_from_policy(p.policy)
+        else:
+            raise ValueError(f"unknown cluster allocation policy type: {policy.type}")
+
+        if not cluster_names:
+            raise ValueError(f"no cluster found for policy: {policy}")
+
+        return Cluster.objects.filter(name__in=cluster_names)
+
+    def _get_cluster_names_from_policy(self, policy: AllocationPolicy) -> List[str] | None:
+        """根据策略获取集群名称列表"""
+        if policy.env_specific:
+            if not policy.env_clusters:
+                raise ValueError("env_clusters is required for env_specific policy")
+
+            return policy.env_clusters.get(self.ctx.environment)
+
+        return policy.clusters
+
+    def _match_precedence_policy(self, policy: AllocationPrecedencePolicy) -> bool:
+        # 优先级策略最后一条一定是没有匹配规则的（else）
+        if not policy.matcher:
+            return True
+
+        # 按匹配规则检查，任意不匹配的，都直接返回 False
+        for key, value in policy.matcher.items():
+            if key == ClusterAllocationPolicyCondType.REGION_IS:
+                if self.ctx.region != value:
+                    return False
+            elif key == ClusterAllocationPolicyCondType.USERNAME_IN:
+                usernames = [u.strip() for u in value.split(",")]
+                if self.ctx.username not in usernames:
+                    return False
+            else:
+                raise ValueError(f"unknown cluster allocation policy condition type: {key}")
+
+        return True
+
+    def _legacy_region_base_list(self) -> QuerySet[Cluster]:
+        """按 Region 获取集群列表"""
+        if not self.ctx.region:
+            raise ValueError("region is required for legacy list cluster")
+
+        return Cluster.objects.filter(region=self.ctx.region).order_by("-is_default")

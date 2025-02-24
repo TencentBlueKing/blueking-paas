@@ -18,7 +18,7 @@
 """应用创建（普通/云原生/外链等）API"""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
@@ -30,7 +30,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.core.region.models import get_all_regions
@@ -40,7 +41,7 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
 from paasng.platform.applications import serializers as slzs
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.tenant import validate_app_tenant_params
@@ -107,8 +108,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @swagger_auto_schema(request_body=slzs.CreateApplicationV2SLZ, tags=["创建应用"])
     def create_v2(self, request):
         """[API] 创建新的蓝鲸应用（v2 版），支持更多自定义参数
-        创建 lesscode 应用时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
-        serializer = slzs.CreateApplicationV2SLZ(data=request.data, context={"region": request.data["region"]})
+        创建 lesscode 应用时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供
+
+        TODO (su) 这个函数有点过于复杂了，考虑：1. 把该放到 slz 中的校验放进去，2. 移除场景应用初始化
+        """
+        serializer = slzs.CreateApplicationV2SLZ(
+            data=request.data,
+            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
+        )
         serializer.is_valid(raise_exception=True)
         params = serializer.data
         if not params["engine_enabled"]:
@@ -117,13 +124,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self.validate_region_perm(params["region"])
         # Handle advanced options
         advanced_options = params.get("advanced_options", {})
-        cluster_name = None
+        cluster_names = {}
         if advanced_options:
             # Permission check
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
                 raise ValidationError(_("你无法使用高级创建选项"))
 
-            cluster_name = advanced_options.get("cluster_name")
+            cluster_names = advanced_options.get("cluster_names")
 
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
@@ -150,7 +157,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             params,
             engine_params,
             source_origin,
-            cluster_name,
+            cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -181,7 +188,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         else:
             serializer_class = slzs.CreateApplicationV2SLZ
 
-        serializer = serializer_class(data=request.data, context={"region": request.data["region"]})
+        serializer = serializer_class(
+            data=request.data,
+            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
+        )
         serializer.is_valid(raise_exception=True)
         params = serializer.data
         self.validate_region_perm(params["region"])
@@ -189,14 +199,15 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         engine_params = params.get("engine_params", {})
 
         source_origin = SourceOrigin(engine_params["source_origin"])
-        cluster_name = None
+        # lesscode 应用不支持指定集群，只能使用默认集群
+        cluster_names: Dict[str, str] = {}
 
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
         return self._init_normal_app(
             params,
             engine_params,
             source_origin,
-            cluster_name,
+            cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -216,30 +227,34 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
     def create_cloud_native(self, request):
-        """[API] 创建云原生架构应用"""
-        serializer = slzs.CreateCloudNativeAppSLZ(data=request.data)
+        """[API] 创建云原生架构应用
+
+        TODO (su)：目前创建云原生应用流程复杂，需要梳理简化下
+        """
+        serializer = slzs.CreateCloudNativeAppSLZ(
+            data=request.data,
+            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
+        )
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-
-        advanced_options = params.get("advanced_options", {})
-        cluster_name = None
-        if advanced_options:
+        cluster_names: Dict[str, str] = {}
+        if advanced_options := params.get("advanced_options", {}):
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
                 raise ValidationError(_("你无法使用高级创建选项"))
-            cluster_name = advanced_options.get("cluster_name")
-
-        module_src_cfg: Dict[str, Any] = {"source_origin": SourceOrigin.CNATIVE_IMAGE}
-        source_config = params["source_config"]
-        source_origin = SourceOrigin(source_config["source_origin"])
+            cluster_names = advanced_options.get("cluster_names", {})
 
         # Guide: check if a bk_plugin can be created
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
-        module_src_cfg["source_origin"] = source_origin
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
+
+        source_config = params["source_config"]
+        source_origin = SourceOrigin(source_config["source_origin"])
+        module_src_cfg: Dict[str, Any] = {"source_origin": source_origin}
+
         # 如果指定模板信息，则需要提取并保存
         if tmpl_name := source_config["source_init_template"]:
             tmpl = Template.objects.get(name=tmpl_name)
@@ -273,21 +288,21 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             repo_url=source_config.get("source_repo_url"),
             repo_auth_info=source_config.get("source_repo_auth_info"),
             source_dir=source_config.get("source_dir", ""),
-            cluster_name=cluster_name,
+            cluster_names=cluster_names,
             bkapp_spec=params["bkapp_spec"],
         ).source_init_result
-
-        https_enabled = self._get_cluster_entrance_https_enabled(
-            module.region, cluster_name, ExposedURLType(module.exposed_url_type)
-        )
 
         post_create_application.send(sender=self.__class__, application=application)
         create_market_config(
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
-            # 对于新创建的应用, 如果集群支持 HTTPS, 则默认开启 HTTPS
-            prefer_https=https_enabled,
+            # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
+            prefer_https=self._get_cluster_entrance_https_enabled(
+                application,
+                cluster_names.get(AppEnvironment.PRODUCTION),
+                ExposedURLType(module.exposed_url_type),
+            ),
         )
         return Response(
             data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
@@ -309,13 +324,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
             "source_init_template": "bk-saas-plugin-python",
         }
-        cluster_name = None
+        # ai-agent-app 不支持指定集群（使用默认集群）
+        cluster_names: Dict[str, str] = {}
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
         return self._init_normal_app(
             params,
             engine_params,
             source_origin,
-            cluster_name,
+            cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -323,19 +339,24 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
     def get_creation_options(self, request):
-        """[API] 获取创建应用模块时的选项信息
-
-        [deprecated] 该 API 将被废弃，通过其他 API 向前端提供用户可选的集群
-        """
+        """[API] 获取创建应用模块时的选项信息"""
         # 是否允许用户使用高级选项
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
+
         adv_region_clusters = []
         if allow_advanced:
             for region_name in get_all_regions():
-                clusters = RegionClusterService(region_name).list_clusters()
-                adv_region_clusters.append(
-                    {"region": region_name, "cluster_names": [cluster.name for cluster in clusters]}
-                )
+                cluster_names = {}
+                for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+                    ctx = AllocationContext(
+                        tenant_id=get_tenant(request.user).id,
+                        region=region_name,
+                        environment=env,
+                        username=request.user.username,
+                    )
+                    cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
+
+                adv_region_clusters.append({"region": region_name, "cluster_names": cluster_names})
 
         options = {
             # ADVANCED options:
@@ -350,12 +371,15 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             raise error_codes.CANNOT_CREATE_APP.f(_("你无法在所指定的 region 中创建应用"))
 
     def _get_cluster_entrance_https_enabled(
-        self, region: str, cluster_name: Optional[str], exposed_url_type: ExposedURLType
+        self, app: Application, cluster_name: str | None, exposed_url_type: ExposedURLType
     ) -> bool:
-        if not cluster_name:
-            cluster = RegionClusterService(region).get_default_cluster()
-        else:
-            cluster = RegionClusterService(region).get_cluster_by_name(cluster_name)
+        ctx = AllocationContext(
+            tenant_id=app.tenant_id,
+            region=app.region,
+            # 注：这里用途是创建市场配置，因此固定为生产环境
+            environment=AppEnvironment.PRODUCTION,
+        )
+        cluster = ClusterAllocator(ctx).get(cluster_name)
 
         try:
             if exposed_url_type == ExposedURLType.SUBDOMAIN:
@@ -365,7 +389,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         except IndexError:
             # exposed_url_type == SUBDOMAIN 的集群, 应当配置 default_root_domain
             # exposed_url_type == SUBPATH 的集群, 应当配置 default_sub_path_domain
-            logger.warning(_("集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."), region)
+            logger.warning(_("集群未配置默认的根域名, 请检查集群配置是否合理."))
             return False
 
     def _init_normal_app(
@@ -373,7 +397,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params: Dict,
         engine_params: Dict,
         source_origin: SourceOrigin,
-        cluster_name: Optional[str],
+        cluster_names: Dict[str, str],
         operator: str,
         app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
         app_tenant_id: str = "",
@@ -414,12 +438,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             repo_url=engine_params.get("source_repo_url"),
             repo_auth_info=engine_params.get("source_repo_auth_info"),
             source_dir=engine_params.get("source_dir"),
-            cluster_name=cluster_name,
+            cluster_names=cluster_names,
         ).source_init_result
-
-        https_enabled = self._get_cluster_entrance_https_enabled(
-            module.region, cluster_name, ExposedURLType(module.exposed_url_type)
-        )
 
         if language:
             application.language = language
@@ -430,8 +450,12 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
-            # 对于新创建的应用, 如果集群支持 HTTPS, 则默认开启 HTTPS
-            prefer_https=https_enabled,
+            # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
+            prefer_https=self._get_cluster_entrance_https_enabled(
+                application,
+                cluster_names.get(AppEnvironment.PRODUCTION),
+                ExposedURLType(module.exposed_url_type),
+            ),
         )
 
         return Response(

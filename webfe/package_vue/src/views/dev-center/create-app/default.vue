@@ -1131,7 +1131,11 @@ export default {
           enabled: this.isOpenMarket,
         },
         advanced_options: {
-          cluster_name: this.clusterName,
+          // 暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
+          cluster_names: {
+            stag: this.clusterName,
+            prod: this.clusterName,
+          }
         },
       };
 

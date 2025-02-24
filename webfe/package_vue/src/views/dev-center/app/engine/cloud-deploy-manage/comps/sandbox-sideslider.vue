@@ -6,18 +6,27 @@
       width="960"
       @shown="handleShown"
     >
-      <div slot="header">
-        <div class="header-box">
-          <span>{{ $t('沙箱开发') }}</span>
-          <bk-button
-            :theme="'primary'"
-            text
-            @click="toSandboxGuide"
+      <div
+        slot="header"
+        class="header-box"
+      >
+        <div class="title-wrapper">
+          <div class="title">{{ $t('沙箱开发') }}</div>
+          <span
+            class="sub-tit"
+            v-bk-overflow-tips
           >
-            {{ $t('沙箱开发指引') }}
-            <i class="paasng-jump-link paasng-icon"></i>
-          </bk-button>
+            {{ $t('沙箱提供云端开发环境，可以在线修改运行代码。') }}
+          </span>
         </div>
+        <bk-button
+          :theme="'primary'"
+          text
+          @click="toSandboxGuide"
+        >
+          {{ $t('沙箱开发指引') }}
+          <i class="paasng-jump-link paasng-icon"></i>
+        </bk-button>
       </div>
       <div
         class="sideslider-content"
@@ -26,7 +35,7 @@
       >
         <bk-alert
           type="info"
-          :title="$t('沙箱会复用“预发布环境”的增强服务和环境变量。')"
+          :title="$t('沙箱会复用 “预发布环境” 的增强服务和环境变量。')"
         ></bk-alert>
         <template v-if="sandboxEnvList.length">
           <div class="table-title">{{ $t('已创建的沙箱的模块') }}</div>
@@ -100,7 +109,7 @@
                 {{ row.repo?.source_dir || '--' }}
               </template>
             </bk-table-column>
-            <bk-table-column :label="$t('部署分支/TAG')">
+            <bk-table-column :label="$t('部署分支 / TAG')">
               <template slot-scope="{ row }">
                 {{ row.versionInfo?.version_name || '--' }}
               </template>
@@ -114,7 +123,7 @@
                   v-bk-tooltips="{
                     content: disabledContent,
                     disabled: row.isCreationAllowed,
-                    width: 300,
+                    width: 310,
                     allowHTML: true,
                   }"
                 >
@@ -199,6 +208,45 @@
           </p>
         </bk-form-item>
       </bk-form>
+      <!-- 错误提示 -->
+      <div
+        class="customize-alert-wrapper"
+        v-if="isShowErrorAlert"
+      >
+        <p class="text">
+          <i class="paasng-icon paasng-remind exclamation-cls"></i>
+          <span>{{ errorInfo?.message || errorInfo?.detail }}</span>
+        </p>
+        <div class="right-link">
+          <template v-if="errorInfo.code === 'NEED_TO_BIND_OAUTH_INFO'">
+            <bk-button
+              class="link-text"
+              :text="true"
+              @click="hanndleToAuthorize"
+            >
+              {{ $t('去授权') }}
+              <i class="paasng-icon paasng-jump-link" />
+            </bk-button>
+            <div class="line"></div>
+          </template>
+          <!-- 刷新代码分支 -->
+          <bk-button
+            class="link-text"
+            :text="true"
+            @click="getModuleBranches(sandboxDialog.name)"
+          >
+            {{ $t('刷新') }}
+            <i
+              class="paasng-icon paasng-refresh-line"
+              v-if="!sandboxDialog.loading"
+            />
+            <round-loading
+              class="round-loading-cls"
+              v-else
+            />
+          </bk-button>
+        </div>
+      </div>
     </bk-dialog>
   </div>
 </template>
@@ -237,6 +285,8 @@ export default {
       disabledContent: this.$t(
         '<p>同时满足下列条件的模块才能新建沙箱环境：</p><p>1. 使用“蓝鲸 Buildpack”构建且开发语言为 Python</p>2. 已经部署到预发布环境'
       ),
+      errorInfo: {},
+      isShowErrorAlert: false,
       rules: {
         branch: [
           {
@@ -378,18 +428,21 @@ export default {
     // 获取对应模块代码分支
     async getModuleBranches(moduleId, versionName) {
       this.sandboxDialog.loading = true;
+      this.branchList = [];
       try {
         const res = await this.$store.dispatch('deploy/getModuleBranches', {
           appCode: this.appCode,
           moduleId,
         });
+        this.isShowErrorAlert = false;
         this.branchList = res.results.filter((item) => item.type === 'branch');
         // 代码分支默认值
         const branch = this.branchList.find((v) => v.name === versionName) || this.branchList[0];
         this.sandboxDialog.branch = branch.name;
       } catch (e) {
         this.branchList = [];
-        this.catchErrorHandler(e);
+        this.isShowErrorAlert = true;
+        this.errorInfo = e;
       } finally {
         this.sandboxDialog.loading = false;
       }
@@ -405,7 +458,8 @@ export default {
       }
       this.sandboxDialog.visible = true;
       this.sandboxDialog.name = row.name;
-      this.getModuleBranches(row.name, row.versionInfo.version_name);
+      this.sandboxDialog.branch = '';
+      this.getModuleBranches(row.name, row.versionInfo?.version_name);
     },
     handleConfirm() {
       this.$refs.sandboxForm.validate().then(
@@ -450,14 +504,96 @@ export default {
         this.sandboxDialog.btnLoading = false;
       }
     },
+    // 去授权
+    hanndleToAuthorize() {
+      const route = this.$router.resolve({ name: 'serviceCode' });
+      window.open(route.href, '_blank');
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+.customize-alert-wrapper {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #63656e;
+  min-height: 32px;
+  background: #ffeded;
+  border: 1px solid #ffd2d2;
+  border-radius: 2px;
+  .text {
+    word-break: break-all;
+    display: flex;
+    margin-right: 10px;
+    .exclamation-cls {
+      color: #ea3636;
+      font-size: 14px;
+      transform: translateY(2px);
+      margin-right: 6px;
+    }
+  }
+  .line {
+    width: 1px;
+    margin: 0 10px;
+    height: 14px;
+    background: #dcdee5;
+  }
+  .right-link {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    .link-text {
+      font-size: 12px;
+      color: #3a84ff;
+      cursor: pointer;
+    }
+    i {
+      font-size: 14px;
+      transform: translateY(0px);
+    }
+  }
+}
 .header-box {
   display: flex;
   justify-content: space-between;
+  .bk-button-text {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .title-wrapper {
+    width: 700px;
+    display: flex;
+    align-items: center;
+    .title {
+      flex-shrink: 0;
+    }
+    .sub-tit {
+      position: relative;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      font-size: 14px;
+      color: #979ba5;
+      line-height: 22px;
+      padding-left: 9px;
+      margin-left: 9px;
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 1px;
+        height: 14px;
+        background-color: #dcdee5;
+        transform: translateY(-50%);
+      }
+    }
+  }
 }
 .create-sandbox-dialog-cls {
   .dialog-title {

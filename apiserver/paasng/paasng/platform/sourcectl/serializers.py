@@ -18,7 +18,6 @@
 import logging
 
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
@@ -81,7 +80,6 @@ class RepositorySLZ(serializers.Serializer):
 class SVNAccountResponseSLZ(serializers.Serializer):
     account = serializers.CharField()
     user = serializers.CharField()
-    region = serializers.CharField()
     id = serializers.IntegerField()
     password = serializers.CharField()
 
@@ -94,23 +92,7 @@ class SvnAccountSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = SvnAccount
-        fields = ("region", "account", "user", "id", "verification_code", "synced_from_paas20")
-        lookup_field = "id"
-
-
-class SvnAccountCreateSLZ(serializers.ModelSerializer):
-    account = serializers.ReadOnlyField()
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
-    validators = [
-        UniqueTogetherValidator(
-            queryset=SvnAccount.objects.all(), fields=("user", "region"), message="用户在当前Region的SVN账号已经存在"
-        )
-    ]
-
-    class Meta:
-        model = SvnAccount
-        fields = ("region", "account", "user", "id")
+        fields = ("account", "user", "id", "verification_code", "synced_from_paas20")
         lookup_field = "id"
 
 

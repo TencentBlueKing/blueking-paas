@@ -14,8 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
 from bkpaas_auth.models import user_id_encoder
+from blue_krill.web.std_error import APIError as StdAPIError
 from django.conf import settings
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
@@ -24,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.bk_plugins.pluginscenter import constants, shim
+from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginDefinition,
@@ -33,8 +36,11 @@ from paasng.bk_plugins.pluginscenter.models import (
 )
 from paasng.bk_plugins.pluginscenter.serializers import PluginInstanceSLZ
 from paasng.bk_plugins.pluginscenter.sys_apis.serializers import make_sys_plugin_slz_class
+from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+
+logger = logging.getLogger(__name__)
 
 API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
@@ -72,6 +78,20 @@ class SysPluginApiViewSet(viewsets.ViewSet):
         # 初始化可见范围
         if hasattr(plugin.pd, "visible_range_definition"):
             PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+
+        # 调用第三方系统API
+        if plugin.pd.basic_info_definition.api.create:
+            try:
+                api_call_success = create_instance(plugin.pd, plugin, creator)
+            except StdAPIError:
+                logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
+                raise
+            except Exception:
+                logger.exception("同步插件信息至第三方系统失败, 请联系相应的平台管理员排查")
+                raise error_codes.THIRD_PARTY_API_ERROR
+
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
 
         # 创建默认市场信息
         PluginMarketInfo.objects.create(plugin=plugin, extra_fields={})

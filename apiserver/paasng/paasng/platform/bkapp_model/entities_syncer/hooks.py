@@ -34,8 +34,8 @@ def sync_hooks(module: Module, hooks: Hooks | NotSetType | None, manager: fieldm
     """
     ret = CommonSyncResult()
 
-    field_mgr = fieldmgr.FieldManager(module, fieldmgr.F_HOOKS)
-    if not field_mgr.is_managed_by(manager) and hooks == NOTSET:
+    field_mgr = fieldmgr.FieldManager(module, fieldmgr.F_HOOKS, default_manager=fieldmgr.FieldMgrName.APP_DESC)
+    if not field_mgr.can_be_managed_by(manager) and hooks == NOTSET:
         return ret
 
     if not hooks or isinstance(hooks, NotSetType):

@@ -26,7 +26,6 @@ from urllib.parse import urlparse
 from bkpaas_auth.models import User
 from blue_krill.models.fields import EncryptField
 from django.db import models
-from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
@@ -122,7 +121,7 @@ class SvnRepository(OwnerTimestampedModel, RepositoryMixin):
 
         if isinstance(get_sourcectl_type(self.server_name), BkSvnSourceTypeSpec):
             parse_result = urlparse(self.repo_url)
-            if parse_result.scheme == "http" and get_bksvn_config(self.region, name=self.server_name).need_security:
+            if parse_result.scheme == "http" and get_bksvn_config(name=self.server_name).need_security:
                 return "https://" + parse_result.netloc + parse_result.path
             return self.repo_url
         else:
@@ -144,29 +143,11 @@ class SvnAccountManager(models.Manager):
     def generate_account_by_user(username):
         return username
 
-    @atomic
-    def create_account(self, user, region):
-        account = self.generate_account_by_user(user.username)
-
-        svn_auth_manager_cls = get_svn_authorization_manager_cls(region)
-        data = svn_auth_manager_cls.create_svn_client().add_user(
-            account=account,
-        )
-
-        instance = self.create(user=user.pk, account=account, region=region)
-        return {
-            "password": data["password"],
-            "user": user.username,
-            "account": instance.account,
-            "region": instance.region,
-            "id": instance.id,
-        }
-
-    def reset_account(self, instance, user, region):
+    def reset_account(self, instance, user):
         if instance.user != user.pk:
             raise ValueError(user.pk)
 
-        svn_auth_manager_cls = get_svn_authorization_manager_cls(region)
+        svn_auth_manager_cls = get_svn_authorization_manager_cls()
         data = svn_auth_manager_cls.create_svn_client().reset_user(
             account=user.username,
         )
@@ -176,7 +157,6 @@ class SvnAccountManager(models.Manager):
             "password": data["password"],
             "user": user.username,
             "account": instance.account,
-            "region": instance.region,
             "id": instance.id,
         }
 

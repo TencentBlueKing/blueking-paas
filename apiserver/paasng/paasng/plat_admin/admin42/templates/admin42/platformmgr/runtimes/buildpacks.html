@@ -174,7 +174,7 @@
     <bk-dialog
         header-position="left"
         v-model="dialog.visible"
-        theme="primary" width="1000"
+        theme="primary" width="1200"
         :confirm-fn="submitDialog"
         @cancel="cancelDialog"
         :mask-close="dialog.type === 'detail'"
@@ -184,7 +184,6 @@
         <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] BuildPack</div>
         <bk-form ref="form">
             <bk-container flex :col="32">
-
                 <bk-row>
                     <bk-col :span="16">
                         <bk-form-item label="名称" :required="dialog.type !== 'detail'">
@@ -199,7 +198,7 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="8">
                         <bk-form-item label="引用类型" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
                             <bk-select v-model="dialog.form.type" v-else>
@@ -207,7 +206,12 @@
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="9">
+                    <bk-col :span="8">
+                        <bk-form-item label="版本" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
                         <bk-form-item label="可用区域" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.region" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
                             <bk-select v-model="dialog.form.region" v-else>
@@ -215,7 +219,7 @@
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="7">
+                    <bk-col :span="8">
                         <bk-form-item label="是否隐藏">
                             <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
                         </bk-form-item>
@@ -223,18 +227,12 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="32">
                         <bk-form-item label="地址" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.address" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="16">
-                        <bk-form-item label="版本" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
-                        </bk-form-item>
-                    </bk-col>
                 </bk-row>
-
                 <bk-row>
                     <bk-col :span="16">
                         <bk-form-item label="展示名称 / 中文">
@@ -270,50 +268,54 @@
                         <bk-form-item label="环境变量"></bk-form-item>
                     </bk-col>
                 </bk-row>
+
                 <bk-row>
                     <bk-col :span="2"></bk-col>
-                    <bk-table :data="envList" style="width: 872px">
-                        <!-- 新建环境变量 -->
-                        <template slot="append" v-if="dialog.type!=='detail'">
-                            <div class="add-wrapper">
-                                <span class="add-single-variable">
-                                    <bk-link theme="primary" icon="bk-icon icon-plus" @click="handleAddSingleVariable">添加环境变量</bk-link>
-                                </span>
-                            </div>
-                        </template>
-
-                        <bk-table-column label="Key" :width="dialog.type === 'detail' ? '436px' : '386px'">
-                            <template slot-scope="props">
-                                <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
-                                <span v-else>$[ props.row.key ]</span>
+                    <bk-col :span="30">
+                        <bk-table :data="envList">
+                            <!-- 新建环境变量 -->
+                            <template slot="append" v-if="dialog.type !== 'detail'">
+                                <div class="add-wrapper">
+                                    <span class="add-single-variable">
+                                        <bk-link theme="primary" @click="handleAddSingleVariable">添加环境变量</bk-link>
+                                    </span>
+                                </div>
                             </template>
-                        </bk-table-column>
 
-                        <bk-table-column label="Value" :width="dialog.type === 'detail' ? '436px' : '386px'">
-                            <template slot-scope="props">
-                                <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
-                                <span v-else>$[ props.row.value ]</span>
-                            </template>
-                        </bk-table-column>
+                            <bk-table-column label="Key" :width="dialog.type === 'detail' ? '300px' : '250px'">
+                                <template slot-scope="props">
+                                    <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
+                                    <span v-else>$[ props.row.key ]</span>
+                                </template>
+                            </bk-table-column>
 
-                        <bk-table-column label="操作" v-if="dialog.type!=='detail'" width="100px">
-                            <template slot-scope="props">
-                                <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
-                                           v-if="props.row.isEdit">保存
-                                </bk-button>
-                                <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)" v-else>
-                                    编辑
-                                </bk-button>
-                                <bk-button class="mr5" theme="primary" text @click="handleCancelEnv(props.row)"
-                                           v-if="props.row.isEdit">取消
-                                </bk-button>
-                                <bk-button class="mr5" theme="danger" text @click="handleDeleteEnv(props.row)" v-else>
-                                    删除
-                                </bk-button>
-                            </template>
-                        </bk-table-column>
+                            <bk-table-column label="Value" :width="dialog.type === 'detail' ? '700px' : '650px'">
+                                <template slot-scope="props">
+                                    <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
+                                    <span v-else v-bk-tooltips="props.row.value">$[ props.row.value ]</span>
+                                </template>
+                            </bk-table-column>
 
-                    </bk-table>
+                            <bk-table-column label="操作" v-if="dialog.type !== 'detail'">
+                                <template slot-scope="props">
+                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
+                                               v-if="props.row.isEdit">保存
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
+                                               v-else>
+                                        编辑
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="primary" text @click="handleCancelEnv(props.row)"
+                                               v-if="props.row.isEdit">取消
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="danger" text @click="handleDeleteEnv(props.row)"
+                                               v-else>
+                                        删除
+                                    </bk-button>
+                                </template>
+                            </bk-table-column>
+                        </bk-table>
+                    </bk-col>
                 </bk-row>
             </bk-container>
         </bk-form>
@@ -866,7 +868,7 @@
     .beauty-scrollbar::-webkit-scrollbar {
         overflow: scroll;
         width: 4px;
-        background-color: hsla(0,0%,80%,0);
+        background-color: hsla(0, 0%, 80%, 0);
     }
 
     .beauty-scrollbar::-webkit-scrollbar-thumb {

@@ -115,9 +115,11 @@ class ManagedFieldValues:
         reset_procs = set()
         for process in self.processes:
             name = process.name
-            replicas_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_replicas(name))
+            replicas_mgr = fieldmgr.FieldManager(
+                self.module, fieldmgr.f_proc_replicas(name), default_manager=fieldmgr.FieldMgrName.WEB_FORM
+            )
             if (
-                not replicas_mgr.is_managed_by(self.manager)
+                not replicas_mgr.can_be_managed_by(self.manager)
                 and process.replicas == NOTSET
                 and name in self.existing_procs
             ):
@@ -150,8 +152,10 @@ class ManagedFieldValues:
         reset_procs = set()
         for process in self.processes:
             name = process.name
-            autoscaling_mgr = fieldmgr.FieldManager(self.module, fieldmgr.f_proc_autoscaling(name))
-            if isinstance(process.autoscaling, NotSetType) and not autoscaling_mgr.is_managed_by(self.manager):
+            autoscaling_mgr = fieldmgr.FieldManager(
+                self.module, fieldmgr.f_proc_autoscaling(name), default_manager=fieldmgr.FieldMgrName.WEB_FORM
+            )
+            if isinstance(process.autoscaling, NotSetType) and not autoscaling_mgr.can_be_managed_by(self.manager):
                 continue
 
             if isinstance(process.autoscaling, NotSetType):

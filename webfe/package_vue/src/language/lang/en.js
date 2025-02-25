@@ -691,7 +691,7 @@ export default {
   基本信息: 'Basic Information',
   '基本信息-title': 'Basic information',
   '应用名称等基本信息请在应用描述文件 app_desc.yaml 中配置': 'Please configure basic information such as the APP name in the APP descriptor file app_desc.yaml',
-  '管理员、开发者和运营者可以修改应用名称等基本信息': 'Administrators, developers and operators can modify basic information such as the APP name',
+  '管理员、运营者可以修改应用名称等基本信息。': 'Administrators and operators can modify basic information such as the application name.',
   应用logo: 'APP logo',
   更换图片: 'Change',
   '支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。': 'Support jpg, png and other image formats, the image size is 72*72px, no more than 2MB.',
@@ -2969,4 +2969,5 @@ export default {
   点击上传: 'Click to upload',
   '未启用时，挂载目录将被完全替换；启用后，挂载目录下同名文件将被覆盖，其他文件将保持不变。': 'When not enabled, the mount directory is fully replaced; when enabled, same-name files in the directory are overwritten, while other files remain unchanged.',
   启用子路径挂载: 'Enable Subpath Mounting',
+  '请先授权代码源，然后选代码仓库': 'Please authorize the code source first, then choose the code repository.',
 };

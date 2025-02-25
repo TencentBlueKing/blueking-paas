@@ -7,86 +7,76 @@
       <div class="market-info mb25 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
           <div class="market-info-title-wrapper">
-            <strong class="market-info-title"> {{ $t('市场信息') }} </strong>
-            <span v-if="isSmartApp">{{ $t('应用市场信息请在“app_desc.yaml”文件中配置') }}</span>
+            <strong class="market-info-title">{{ $t('市场信息') }}</strong>
           </div>
           <bk-button
-            v-if="isSaveMarketInfo && !isSmartApp"
+            v-if="isSaveMarketInfo"
             theme="primary"
             outline
-            class="mr10  market-info-btn"
+            class="mr10 market-info-btn"
             :title="$t('编辑')"
-            @click="isSaveMarketInfo=false"
+            @click="isSaveMarketInfo = false"
           >
             {{ $t('编辑') }}
           </bk-button>
         </div>
-        <div v-if="!isSaveMarketInfo && !isSmartApp">
+        <div v-if="!isSaveMarketInfo">
           <bk-form
             class="market-info-container"
             ref="baseInfoForm"
-            style="width: 890px;"
+            style="width: 890px"
             :label-width="120"
             :model="baseInfo"
           >
             <bk-form-item
               :label="$t('应用分类：')"
-              :required="!isSmartApp"
+              :required="true"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
               :property="'parentTag'"
             >
-              <template v-if="isSmartApp">
-                <p>{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
-              </template>
-              <template v-else>
-                <bk-select
-                  v-model="baseInfo.parentTag"
-                  class="mr20"
-                  style="width: 365px; display: inline-block;"
-                  :placeholder="$t('请选择')"
-                  :clearable="false"
-                  :popover-min-width="200"
-                  :searchable="true"
-                  @selected="handleTagSelect"
-                >
-                  <bk-option
-                    v-for="(option, index) in parentTagList"
-                    :id="option.id"
-                    :key="`${option.text}-${index}`"
-                    :name="option.text"
-                  />
-                </bk-select>
-                <bk-select
-                  v-if="childTagList.length"
-                  v-model="baseInfo.childTag"
-                  style="width: 365px; display: inline-block;"
-                  :placeholder="$t('请选择')"
-                  :clearable="false"
-                  :popover-min-width="200"
-                  :searchable="true"
-                >
-                  <bk-option
-                    v-for="(option, index) in childTagList"
-                    :id="option.id"
-                    :key="`${option.text}-${index}`"
-                    :name="option.text"
-                  />
-                </bk-select>
-              </template>
+              <bk-select
+                v-model="baseInfo.parentTag"
+                class="mr20"
+                style="width: 365px; display: inline-block"
+                :placeholder="$t('请选择')"
+                :clearable="false"
+                :popover-min-width="200"
+                :searchable="true"
+                @selected="handleTagSelect"
+              >
+                <bk-option
+                  v-for="(option, index) in parentTagList"
+                  :id="option.id"
+                  :key="`${option.text}-${index}`"
+                  :name="option.text"
+                />
+              </bk-select>
+              <bk-select
+                v-if="childTagList.length"
+                v-model="baseInfo.childTag"
+                style="width: 365px; display: inline-block"
+                :placeholder="$t('请选择')"
+                :clearable="false"
+                :popover-min-width="200"
+                :searchable="true"
+              >
+                <bk-option
+                  v-for="(option, index) in childTagList"
+                  :id="option.id"
+                  :key="`${option.text}-${index}`"
+                  :name="option.text"
+                />
+              </bk-select>
             </bk-form-item>
 
             <bk-form-item
               :label="$t('应用简介：')"
-              :required="!isSmartApp"
+              :required="true"
               :property="'introduction'"
               :rules="baseInfoRules.introduction"
             >
-              <p v-if="isSmartApp">
-                {{ baseInfo.introduction || '--' }}
-              </p>
               <bk-input
-                v-else
                 v-model="baseInfo.introduction"
                 type="text"
                 :show-word-limit="true"
@@ -94,20 +84,17 @@
               />
             </bk-form-item>
             <bk-form-item
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              v-if="GLOBAL.CONFIG.MARKET_INFO"
               :label="$t('应用联系人：')"
-              :required="!isSmartApp"
+              :required="true"
               :property="'contactArr'"
               :rules="baseInfoRules.contact"
             >
-              <p v-if="isSmartApp">
-                {{ baseInfo.contactArr.join('; ') || '--' }}
-              </p>
               <user v-model="baseInfo.contactArr" />
             </bk-form-item>
 
             <bk-form-item
-              v-if="!isSmartApp && GLOBAL.CONFIG.MARKET_INFO"
+              v-if="GLOBAL.CONFIG.MARKET_INFO"
               :label="$t('所属业务：')"
             >
               <bk-tag-input
@@ -122,7 +109,6 @@
             </bk-form-item>
 
             <bk-form-item
-              v-if="!isSmartApp"
               :label="$t('详细描述：')"
               :property="'name'"
             >
@@ -144,7 +130,7 @@
                 </bk-button>
                 <span
                   v-if="!users.length && !departments.length"
-                  style="font-size: 12px; color: #c4c6cc; margin-left: 5px;"
+                  style="font-size: 12px; color: #c4c6cc; margin-left: 5px"
                 >
                   <i class="paasng-icon paasng-info-circle" />
                   {{ $t('默认为全局可见') }}
@@ -154,10 +140,14 @@
                 v-if="GLOBAL.CONFIG.MARKET_TIPS"
                 class="tip"
               >
-                {{ $t('仅影响') }} <a
+                {{ $t('仅影响') }}
+                <a
                   :href="platFormConfig.LINK.APP_MARKET"
                   target="_blank"
-                > {{ GLOBAL.CONFIG.MARKET_TIPS }} </a> {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
+                >
+                  {{ GLOBAL.CONFIG.MARKET_TIPS }}
+                </a>
+                {{ $t('上应用的可见范围，可见范围外的用户仍可以通过应用访问地址打开应用。') }}
               </p>
               <render-member-item
                 v-if="users.length > 0"
@@ -177,7 +167,7 @@
             ref="baseWinForm"
             class="market-info-container"
             :label-width="120"
-            style="width: 890px;"
+            style="width: 890px"
             :model="baseInfo"
           >
             <bk-form-item
@@ -208,7 +198,7 @@
               <bk-input
                 v-model="baseInfo.width"
                 type="number"
-                style="width: 200px;line-height: 1;"
+                style="width: 200px; line-height: 1"
                 class="fl mr10"
                 :placeholder="$t('输入')"
                 :min="0"
@@ -220,16 +210,14 @@
                   </div>
                 </template>
                 <template slot="append">
-                  <div class="group-text">
-                    px
-                  </div>
+                  <div class="group-text">px</div>
                 </template>
               </bk-input>
 
               <bk-input
                 v-model="baseInfo.height"
                 type="number"
-                style="width: 200px;line-height: 1;"
+                style="width: 200px; line-height: 1"
                 :placeholder="$t('输入')"
                 :min="0"
                 :show-controls="false"
@@ -240,9 +228,7 @@
                   </div>
                 </template>
                 <template slot="append">
-                  <div class="group-text">
-                    px
-                  </div>
+                  <div class="group-text">px</div>
                 </template>
               </bk-input>
               <p class="tip mt5">
@@ -257,7 +243,7 @@
             >
               <bk-select
                 v-model="baseInfo.resizableKey"
-                style="width: 411px;"
+                style="width: 411px"
                 :clearable="false"
               >
                 <bk-option
@@ -272,7 +258,7 @@
 
           <bk-form
             :label-width="130"
-            style="width: 860px;"
+            style="width: 860px"
             class="mt20"
           >
             <bk-form-item class="mb20">
@@ -298,11 +284,14 @@
             </bk-form-item>
           </bk-form>
         </div>
-        <div v-else class="flex-row justify-content-between">
+        <div
+          v-else
+          class="flex-row justify-content-between"
+        >
           <bk-form
             class="market-detail-container"
             ref="baseInfoForm"
-            style="width: 890px;"
+            style="width: 890px"
             :label-width="120"
             :model="baseInfo"
             form-type="inline"
@@ -319,7 +308,12 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p class="form-text text-ellipsis" v-bk-overflow-tips>{{ baseInfo.introduction || '--' }}</p>
+              <p
+                class="form-text text-ellipsis"
+                v-bk-overflow-tips
+              >
+                {{ baseInfo.introduction || '--' }}
+              </p>
             </bk-form-item>
             <bk-form-item
               :label="$t('应用联系人：')"
@@ -336,7 +330,12 @@
               <p class="form-text">{{ businessDetailName || '--' }}</p>
             </bk-form-item>
             <bk-form-item :label="$t('详细描述：')">
-              <p class="form-text text-ellipsis" v-bk-overflow-tips>{{ baseInfo.description || '--' }}</p>
+              <p
+                class="form-text text-ellipsis"
+                v-bk-overflow-tips
+              >
+                {{ baseInfo.description || '--' }}
+              </p>
             </bk-form-item>
             <bk-form-item :label="$t('打开方式：')">
               <p class="form-text">{{ baseInfo.open_mode === 'desktop' ? $t('桌面') : $t('新标签页') }}</p>
@@ -499,16 +498,13 @@ export default {
       return [];
     },
     users() {
-      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'user');
+      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
     },
     departments() {
-      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'department');
+      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'department');
     },
     businessDetailName() {
-      return this.businessList.find(e => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
-    },
-    isSmartApp() {
-      return this.curAppInfo.application?.is_smart_app;
+      return this.businessList.find((e) => this.baseInfo.related_corp_products.includes(e.id))?.display_name;
     },
     marketVisibility() {
       return this.curAppInfo.feature.MARKET_VISIBILITY;
@@ -518,7 +514,7 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     'baseInfo.contactArr'() {
@@ -557,12 +553,12 @@ export default {
     },
 
     handleDeleteUser(payload) {
-      const index = this.baseInfo.visiable_labels.findIndex(item => item.id === payload);
+      const index = this.baseInfo.visiable_labels.findIndex((item) => item.id === payload);
       this.baseInfo.visiable_labels.splice(index, 1);
     },
 
     handleDeleteDepartment(payload) {
-      const index = this.baseInfo.visiable_labels.findIndex(item => item.id === payload);
+      const index = this.baseInfo.visiable_labels.findIndex((item) => item.id === payload);
       this.baseInfo.visiable_labels.splice(index, 1);
     },
 
@@ -753,13 +749,9 @@ export default {
      * 提交基础信息数据
      */
     submitMarketInfo() {
-      if (this.isSmartApp) {
+      this.$refs.baseInfoForm.validate().then(() => {
         this.saveMarketInfo();
-      } else {
-        this.$refs.baseInfoForm.validate().then(() => {
-          this.saveMarketInfo();
-        });
-      }
+      });
     },
 
     /**
@@ -779,14 +771,6 @@ export default {
       }
 
       let params = JSON.parse(JSON.stringify(this.baseInfo));
-      if (this.isSmartApp) {
-        params = {
-          resizable: this.baseInfo.resizable,
-          width: this.baseInfo.width,
-          height: this.baseInfo.height,
-          open_mode: this.baseInfo.open_mode,
-        };
-      }
       delete params.logo;
 
       // 暂未注册 --开始注册信息
@@ -864,5 +848,5 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    @import 'index.scss';
+@import 'index.scss';
 </style>

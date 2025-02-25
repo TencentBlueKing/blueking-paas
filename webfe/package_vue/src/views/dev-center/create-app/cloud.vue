@@ -617,21 +617,25 @@
             class="mr10"
             v-if="curStep === 1"
           >
+            <!-- 代码仓库-未授权不能创建应用 -->
             <bk-button
               theme="primary"
-              :disabled="formData.buildMethod === 'buildpack' && !curExtendConfig?.isAuth"
+              :disabled="codeSourceId === 'default' && !curExtendConfig?.isAuth"
               @click="handleNext"
             >
               {{ $t('下一步') }}
             </bk-button>
           </div>
           <div v-if="curStep === 2">
-            <bk-button @click="handlePrev">
+            <bk-button
+              @click="handlePrev"
+              class="mr10"
+            >
               {{ $t('上一步') }}
             </bk-button>
             <bk-button
               theme="primary"
-              class="m10 mr10"
+              class="mr10"
               :loading="formLoading"
               @click="handleCreateApp"
             >
@@ -934,6 +938,7 @@ export default {
       isShowAdvancedOptions: false,
       pluginTmpls: [],
       curPluginTemplate: '',
+      codeSourceId: 'default',
     };
   },
   computed: {
@@ -1576,6 +1581,7 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.codeSourceId = codeSource;
       this.activeIndex = 1;
       this.curStep = 1;
       this.$refs.formBaseRef?.clearError();

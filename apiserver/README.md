@@ -195,6 +195,8 @@ curl -X GET \
 -H "x-bkapi-jwt: 上一个步骤获取到的 x-bkapi-jwt"
 ```
 
+发布到测试环境和正式环境后，可以直接使用 access_token 调用 API 网关上的用户态 API，验证其是否能够正常响应。
+
 
 ## 数据库迁移
 

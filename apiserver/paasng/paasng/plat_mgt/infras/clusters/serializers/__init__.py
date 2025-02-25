@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .bcs_resources import (
+    BCSApiUrlTmplRetrieveOutputSLZ,
     BCSClusterListOutputSLZ,
     BCSProjectListOutputSLZ,
 )
@@ -64,4 +65,5 @@ __all__ = [
     # bcs_resources
     "BCSClusterListOutputSLZ",
     "BCSProjectListOutputSLZ",
+    "BCSApiUrlTmplRetrieveOutputSLZ",
 ]

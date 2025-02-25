@@ -57,7 +57,7 @@ class ClusterNamesSLZ(serializers.Serializer):
     def _validate(self, name: str, environment: AppEnvironment) -> str:
         ctx = AllocationContext(
             tenant_id=self.context["tenant_id"],
-            region=self.initial_data["region"],
+            region=self.parent.parent.initial_data["region"],
             environment=environment,
             username=self.context.get("username"),
         )

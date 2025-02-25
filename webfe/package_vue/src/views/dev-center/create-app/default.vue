@@ -683,7 +683,8 @@ export default {
       return Object.keys(this.regionsServices).length > 0 && this.isOpenEngine;
     },
     clusterList() {
-      return this.advancedOptionsObj[this.regionChoose] || [];
+      // 目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
+      return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
     },
     errorSelectStyle() {
       if (this.isShowError) {

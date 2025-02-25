@@ -19,17 +19,8 @@
               {{ $t('编辑') }}
             </div>
           </div>
-          <div
-            v-if="isSmartApp"
-            class="info"
-          >
-            {{ $t('应用名称等基本信息请在应用描述文件 app_desc.yaml 中配置') }}
-          </div>
-          <div
-            v-else
-            class="info"
-          >
-            {{ $t('管理员、开发者和运营者可以修改应用名称等基本信息') }}
+          <div class="info">
+            {{ $t('管理员、运营者可以修改应用名称等基本信息。') }}
           </div>
           <section class="main">
             <!-- 查看态 -->
@@ -348,8 +339,8 @@ export default {
     canViewSecret() {
       return this.curAppInfo.role.name !== 'operator';
     },
+    // 管理员 & 运营者允许编辑
     isBasicInfoEditable() {
-      if (this.isSmartApp) return false;
       return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
     },
     formRemoveValidated() {

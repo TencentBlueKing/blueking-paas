@@ -71,12 +71,10 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployModuleList from './deploy-module-list.vue';
-import SandboxDialog from './sandbox-dialog.vue';
 import SandboxSideslider from './sandbox-sideslider.vue';
 export default {
   components: {
     deployModuleList,
-    SandboxDialog,
     SandboxSideslider,
   },
   mixins: [appBaseMixin],

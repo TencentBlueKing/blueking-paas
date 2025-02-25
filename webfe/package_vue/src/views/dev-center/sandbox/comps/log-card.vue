@@ -128,7 +128,11 @@ export default {
       return this.type === 'build';
     },
     displayLogs() {
-      const curLogs = this.isBuildLog ? this.logs ?? '' : this.logs[this.curRunLogType] ?? '';
+      let curLogs = this.isBuildLog ? this.logs ?? '' : this.logs[this.curRunLogType] ?? '';
+      // 如果 curLogs 是一个数组，每项之间添加换行符
+      if (Array.isArray(curLogs)) {
+        curLogs = curLogs.join('\n');
+      }
       return this.ansiUp ? this.ansiUp.ansi_to_html(curLogs) : curLogs;
     },
     logTypeList() {

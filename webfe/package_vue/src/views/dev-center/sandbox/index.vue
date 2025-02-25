@@ -369,6 +369,9 @@ export default {
       } catch (e) {
         if (e.code === 'ERR_NETWORK') {
           this.isRunNowLoading = false;
+        } else if (e.status === 500 && e.response?.data) {
+          this.catchErrorHandler(e.response.data);
+          return;
         }
         this.catchErrorHandler(e);
         await Promise.reject(e);
@@ -395,9 +398,13 @@ export default {
     },
     // 获取沙箱进程列表
     async getSandboxProcesses() {
-      const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/list`);
-      const res = await this.executeRequest(url, 'get');
-      this.processData = res.processes;
+      try {
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/list`);
+        const res = await this.executeRequest(url, 'get');
+        this.processData = res.processes;
+      } catch (error) {
+        this.processData = [];
+      }
     },
     // 切换至日志tab
     switchLogTab() {

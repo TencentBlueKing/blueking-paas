@@ -173,7 +173,7 @@ $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 
 在 `apigw-manager` 和 `bkpaas-auth` 这两个 SDK 的升级后，需要验证 JWT 认证的有效性，以确保 API 网关能够正确地处理认证请求。
 
-##### 步骤 1: 使用 access_token 访问 API 网关
+** 步骤 1: 使用 access_token 访问 API 网关 **
 
 参考如下命令访问 API 网关上的 API，并添加调试参数：`-H 'X-BKAPI-Debug: True' -H 'X-BKAPI-Dynamic-Debug: True'`，在响应头中查找`x-bkapi-jwt`，记录该值用于下一步测试。
 
@@ -187,7 +187,7 @@ curl -X GET \
 -vv
 ```
 
-#### 步骤 2: 使用 JWT 访问本地或测试环境的用户态 API
+** 步骤 2: 使用 JWT 访问本地或测试环境的用户态 API **
 
 ```bash
 curl -X GET \

@@ -136,8 +136,10 @@ class ModuleInitializer:
         }
 
     @transaction.atomic
-    def create_engine_apps(self, cluster_names: Dict[str, str]):
+    def create_engine_apps(self, cluster_names: Dict[str, str] | None = None):
         """Create engine app instances for application"""
+        cluster_names = cluster_names if cluster_names else {}
+
         wl_app_type = (
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
         )

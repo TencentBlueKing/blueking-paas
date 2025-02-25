@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partial
+from functools import partialmethod
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.db.models import QuerySet
@@ -138,8 +138,8 @@ class ClusterAllocator:
 
         return clusters.first()
 
-    # 快捷方法
-    get_default = partial(get, cluster_name=None)
+    # 快捷方法 -> 根据指定的参数，获取默认集群
+    get_default = partialmethod(get, cluster_name=None)
 
     def _list(self) -> QuerySet[Cluster]:
         """获取集群列表"""

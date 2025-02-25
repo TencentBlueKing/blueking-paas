@@ -47,6 +47,7 @@ def initialize_simple(
     target_port: int | None = None,
 ) -> Dict:
     """Initialize a cloud-native application, return the initialized object
+    注意：该方法仅提供给单元测试使用 TODO (su) 从该模块中移出
 
     :param module: Module object, a module can only be initialized once
     :param image: The container image of main process

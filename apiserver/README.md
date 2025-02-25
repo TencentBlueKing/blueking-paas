@@ -163,6 +163,43 @@ $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 
 更多详细信息，可参考文档 [./paasng/tests/paas_wl/e2e/ingress/README.md](./paasng/tests/paas_wl/e2e/ingress/README.md)。
 
+
+#### 网关 API 测试
+
+为了让用户能够使用 access_token 访问注册在 API 网关上的用户态 API，开发者中心增加了以下配置：
+
+- `apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware` 中间件
+- `bkpaas_auth.backends.APIGatewayAuthBackend` 身份认证
+
+在 `apigw-manager` 和 `bkpaas-auth` 这两个 SDK 的升级后，需要验证 JWT 认证的有效性，以确保 API 网关能够正确地处理认证请求。
+
+** 步骤 1: 使用 access_token 访问 API 网关获取合法的 JWT **
+
+参考如下命令访问 API 网关上的 API，并添加调试参数：`-H 'X-BKAPI-Debug: True' -H 'X-BKAPI-Dynamic-Debug: True'`，在响应头中查找`x-bkapi-jwt`，记录该值用于下一步测试。
+
+```bash
+curl -X GET \
+-H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***", "access_token": "您的 access_token"}' \
+-d '{}' \
+--insecure https://paasv3.apigw.example.com/prod/bkapps/applications/lists/minimal \
+-H 'X-BKAPI-Debug: True' \
+-H 'X-BKAPI-Dynamic-Debug: True' \
+-vv
+```
+
+** 步骤 2: 使用 JWT 访问本地或测试环境的用户态 API **
+
+使用上一步获取到 JWT 访问本地或者测试环境任意用户态 API。
+
+```bash
+curl -X GET \
+"http://dev.example.com:8001/api/accounts/feature_flags/" \
+-H "x-bkapi-jwt: 上一个步骤获取到的 x-bkapi-jwt"
+```
+
+发布到测试环境和正式环境后，可以直接使用 access_token 调用 API 网关上的用户态 API，验证其是否能够正常响应。
+
+
 ## 数据库迁移
 
 ```shell

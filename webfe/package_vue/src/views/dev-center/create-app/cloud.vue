@@ -614,13 +614,14 @@
           v-if="isBkDefaultCode"
         >
           <div
-            class="mr10"
             v-if="curStep === 1"
+            class="mr10"
+            v-bk-tooltips="{ content: '请先授权代码源，然后选代码仓库', disabled: !isNextStepAllowed }"
           >
             <!-- 代码仓库-未授权不能创建应用 -->
             <bk-button
               theme="primary"
-              :disabled="codeSourceId === 'default' && !curExtendConfig?.isAuth"
+              :disabled="isNextStepAllowed"
               @click="handleNext"
             >
               {{ $t('下一步') }}
@@ -1012,6 +1013,9 @@ export default {
     ...mapGetters(['isShowTenant']),
     curUserInfo() {
       return this.$store.state.curUserInfo;
+    },
+    isNextStepAllowed() {
+      return this.codeSourceId === 'default' && !this.curExtendConfig?.isAuth;
     },
   },
   watch: {

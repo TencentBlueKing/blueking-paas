@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from functools import partialmethod
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List
 
 from django.db.models import QuerySet
 
@@ -70,13 +70,13 @@ class EnvClusterService:
         """
         wl_app = self.env.wl_app
 
-        if wl_app.latest_config.cluster:
-            return wl_app.latest_config.cluster
+        if cluster_name := wl_app.latest_config.cluster:
+            return cluster_name
 
         ctx = AllocationContext.from_module_env(self.env)
         return ClusterAllocator(ctx).get_default().name
 
-    def bind_cluster(self, cluster_name: Optional[str]):
+    def bind_cluster(self, cluster_name: str | None):
         """bind `env` to cluster named `cluster_name`, if cluster_name is not given, use default cluster
 
         :raises: Cluster.DoesNotExist if cluster not found
@@ -90,12 +90,12 @@ class EnvClusterService:
             cluster = ClusterAllocator(ctx).get_default()
 
         # bind cluster to wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = cluster.name
-        latest_config.mount_log_to_host = cluster.has_feature_flag(
+        cfg = wl_app.latest_config
+        cfg.cluster = cluster.name
+        cfg.mount_log_to_host = cluster.has_feature_flag(
             ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST,
         )
-        latest_config.save()
+        cfg.save()
 
 
 def get_app_default_module_prod_env_cluster(app: "Application") -> Cluster:
@@ -104,14 +104,9 @@ def get_app_default_module_prod_env_cluster(app: "Application") -> Cluster:
     return EnvClusterService(env).get_cluster()
 
 
-def get_app_default_module_clusters(app: "Application") -> Dict[str, Cluster]:
-    """获取默认模块各个环境应用使用的集群"""
-    return {env.environment: EnvClusterService(env).get_cluster() for env in app.get_default_module().envs.all()}
-
-
 def get_app_default_module_cluster_names(app: "Application") -> Dict[str, str]:
     """获取默认模块各个环境应用使用的集群名称"""
-    return {env: cluster.name for env, cluster in get_app_default_module_clusters(app).items()}
+    return {env.environment: EnvClusterService(env).get_cluster_name() for env in app.get_default_module().envs.all()}
 
 
 class ClusterAllocator:

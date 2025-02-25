@@ -22,7 +22,6 @@ from typing import Dict, List, Optional
 from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 
-from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType
 from paasng.platform.applications.models import ModuleEnvironment
@@ -179,7 +178,7 @@ class AllocationContext:
         return cls(
             tenant_id=wl_app.tenant_id,
             region=wl_app.region,
-            environment=get_metadata(wl_app).environment,
+            environment=wl_app.environment,
         )
 
     def __str__(self):

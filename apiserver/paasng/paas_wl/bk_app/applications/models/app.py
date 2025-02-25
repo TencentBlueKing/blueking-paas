@@ -77,6 +77,12 @@ class App(UuidAuditedModel):
 
         return get_metadata(self).module_name
 
+    @cached_property
+    def environment(self):
+        from paas_wl.bk_app.applications.managers import get_metadata
+
+        return get_metadata(self).environment
+
     @property
     def latest_config(self):
         return self.config_set.latest()

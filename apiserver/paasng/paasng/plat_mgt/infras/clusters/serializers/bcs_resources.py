@@ -35,3 +35,9 @@ class BCSClusterListOutputSLZ(serializers.Serializer):
     id = serializers.CharField(help_text="集群 ID", source="clusterID")
     name = serializers.CharField(help_text="集群名称", source="clusterName")
     environment = serializers.CharField(help_text="集群环境")
+
+
+class BCSApiUrlTmplRetrieveOutputSLZ(serializers.Serializer):
+    """BCS API 访问地址模板"""
+
+    api_url_tmpl = serializers.CharField(help_text="API 访问地址模板")

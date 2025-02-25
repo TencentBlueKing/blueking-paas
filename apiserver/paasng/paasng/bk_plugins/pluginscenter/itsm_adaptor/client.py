@@ -263,6 +263,6 @@ class ItsmClient:
             raise ItsmApiError(resp["message"])
 
         if not (is_passed := resp.get("data", {}).get("is_passed")):
-            logging.exception(f"itsm token checksum fails, resp:{resp} \ntoken: {token}")
+            logger.exception(f"itsm token checksum fails, resp:{resp} \ntoken: {token}")
 
         return is_passed

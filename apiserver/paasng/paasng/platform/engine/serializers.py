@@ -276,7 +276,7 @@ class ConfigVarFormatSLZ(serializers.Serializer):
         else:
             data["is_global"] = False
             data["environment_id"] = module.envs.get(environment=env_name).pk
-        return ConfigVar(**data, module=module)
+        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
 
 
 class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):

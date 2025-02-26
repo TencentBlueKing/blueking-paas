@@ -163,6 +163,7 @@ export default {
     return {
       isDialogVisible: false,
       sandboxData: {},
+      sandboxAccessible: false,
       isLoading: true,
       deployId: '',
       buildLog: '',
@@ -211,9 +212,9 @@ export default {
       const url = `${this.sandboxData.code_editor_url}?folder=${this.sandboxData.workspace}`;
       return this.ensureHttpProtocol(url);
     },
-    // 沙箱加载完成
+    // 沙箱加载完成（除状态 Ready 外，还需要检查是否可访问，即网络已通）
     isSandboxReady() {
-      return this.sandboxData.status === 'ready';
+      return this.sandboxData.status === 'ready' && this.sandboxAccessible;
     },
     // 构建成功
     isBuildSuccess() {
@@ -328,12 +329,20 @@ export default {
           moduleId: this.module,
           devSandboxCode: this.devSandboxCode,
         });
-        setTimeout(() => {
-          this.sandboxData = res;
-          if (this.isSandboxReady) {
-            this.getSandboxStatus();
-          }
-        }, 1000);
+
+        // 后台报告沙箱未就绪，提前返回，等下一次状态轮询
+        if (res.status !== 'ready') {
+          return;
+        }
+        
+        // 后台报告沙箱就绪后，检查网络是否可达（后台 / Web端链路不同，不一定即时可达，以检测结果为准）
+        this.sandboxData = res;
+        this.sandboxAccessible = await this.getSandboxAccessible();
+
+        // 检查到沙箱网络可达后，再获取沙箱中服务进程状态
+        if (this.sandboxAccessible) {
+          this.getDevServerProcessesStatus();
+        }
       } catch (e) {
         if (e.code === 'DEV_SANDBOX_NOT_FOUND') {
           this.sandboxDeletionHandled();
@@ -364,6 +373,7 @@ export default {
           headers: {
             Authorization: `Bearer ${this.sandboxData.devserver_token}`,
           },
+          timeout: 5000,
         });
         return response.data;
       } catch (e) {
@@ -377,8 +387,20 @@ export default {
         await Promise.reject(e);
       }
     },
+    // 检查沙箱是否已网络可达
+    async getSandboxAccessible() {
+      try {
+        const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}healthz`);
+        const res = await this.executeRequest(url, 'get');
+        return res.status === 'active'
+      } catch (e) {
+        console.log("dev sandbox status ready but inaccessible!", e)
+      }
+
+      return false;
+    },
     // 获取当前沙箱进程状态
-    async getSandboxStatus() {
+    async getDevServerProcessesStatus() {
       try {
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/status`);
         const res = await this.executeRequest(url, 'get');
@@ -397,7 +419,7 @@ export default {
       }
     },
     // 获取沙箱进程列表
-    async getSandboxProcesses() {
+    async getDevServerProcesses() {
       try {
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}processes/list`);
         const res = await this.executeRequest(url, 'get');
@@ -413,7 +435,7 @@ export default {
     // 运行沙箱环境二次确认弹窗
     showRunSandboxDialog() {
       this.isRunSandboxVisible = true;
-      this.getSandboxProcesses();
+      this.getDevServerProcesses();
     },
     // 立即运行
     async handleRunNow() {

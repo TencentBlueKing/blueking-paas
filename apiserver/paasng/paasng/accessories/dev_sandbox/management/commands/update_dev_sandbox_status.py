@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
     def is_alive(self, url: str) -> bool:
         try:
-            resp = requests.get(url, timeout=30)
+            resp = requests.get(url, timeout=5)
             return resp.status_code == status.HTTP_200_OK and resp.json().get("status") == "alive"
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"Dev sandbox status check failed for URL: {url}. Error: {e}"))

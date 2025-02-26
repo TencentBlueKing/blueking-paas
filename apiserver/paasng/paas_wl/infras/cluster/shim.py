@@ -128,10 +128,10 @@ class ClusterAllocator:
         if cluster_name:
             clusters = clusters.filter(name=cluster_name)
 
-        if not clusters.exists():
-            raise ValueError(f"cluster allocator with ctx {self.ctx} and name {cluster_name} got no cluster")
+        if c := clusters.first():
+            return c
 
-        return clusters.first()
+        raise ValueError(f"cluster allocator with ctx {self.ctx} and name {cluster_name} got no cluster")
 
     # 快捷方法 -> 根据指定的参数，获取默认集群
     get_default = partialmethod(get, cluster_name=None)

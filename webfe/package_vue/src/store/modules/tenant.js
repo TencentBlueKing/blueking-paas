@@ -134,5 +134,33 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
       return http.get(url);
     },
+    /**
+     * 获取 BCS API 访问地址模板
+     */
+    getClusterServerUrlTmpl({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/cluster_server_url_tmpl/`;
+      return http.get(url);
+    },
+    /**
+     * 获取BCS项目数据
+     */
+    getBcsProjects({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/projects/`;
+      return http.get(url);
+    },
+    /**
+     * 获取BCS集群数据
+     */
+    getBcsClusters({}, { projectId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/projects/${projectId}/clusters/`;
+      return http.get(url);
+    },
+    /**
+     * 新建集群
+     */
+    createCluster({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/`;
+      return http.post(url, data);
+    },
   },
 };

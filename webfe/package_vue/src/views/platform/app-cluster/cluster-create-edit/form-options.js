@@ -17,13 +17,20 @@ const infoOptions = [
         property: 'name',
         maxlength: 32,
         required: true,
-        rules: [...requiredRule],
+        rules: [
+            ...requiredRule,
+            {
+                regex: /^[A-Za-z0-9-]{3,32}$/,
+                message: i18n.t('集群名称，为 3 到 32 个字符，只能包含大小写字母、数字和连接符（-）'),
+                trigger: 'blur',
+            },
+        ],
     },
     {
         label: '集群描述',
         type: 'textarea',
         property: 'description',
-        maxlength: 100,
+        maxlength: 128,
         required: true,
         rules: [...requiredRule],
     },
@@ -62,7 +69,7 @@ const clusterSource = [
 const clusterToken = [
     {
         label: '集群 Token',
-        type: 'input',
+        type: 'password',
         property: 'token',
         required: true,
         tips: '如 Master 节点/root/.kube/config 文件中 admin 用户 user.token 的值',

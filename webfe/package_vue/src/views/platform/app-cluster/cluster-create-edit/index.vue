@@ -11,6 +11,7 @@
       <bk-button
         :theme="'default'"
         class="ml8"
+        @click="back"
       >
         {{ $t('取消') }}
       </bk-button>
@@ -31,6 +32,15 @@ export default {
     };
   },
   methods: {
+    // 返回集群列表
+    back() {
+      this.$router.push({
+        name: 'platformAppCluster',
+        query: {
+          active: 'list',
+        },
+      });
+    },
     async handleSubmit() {
       // 获取表单数据
       try {
@@ -54,13 +64,7 @@ export default {
           theme: 'success',
           message: this.$t('新建成功'),
         });
-        // 返回集群列表
-        this.$router.push({
-          name: 'platformAppCluster',
-          query: {
-            active: 'list',
-          },
-        });
+        this.back();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

@@ -5,6 +5,7 @@
       @input="$emit('input', $event)"
       :type="type === 'input' ? undefined : type"
       v-bind="$attrs"
+      :password-icon="[]"
       show-word-limit
     ></bk-input>
   </div>

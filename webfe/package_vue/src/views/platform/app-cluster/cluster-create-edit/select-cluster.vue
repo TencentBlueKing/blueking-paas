@@ -5,7 +5,7 @@
       <div class="card-title">{{ $t('基础信息') }}</div>
       <!-- BCS集群 -->
       <bk-form
-        v-if="isBcsCluster"
+        v-show="isBcsCluster"
         :label-width="155"
         :model="infoFormData"
         ref="bcsForm"
@@ -21,7 +21,7 @@
           :error-display-type="'normal'"
         >
           <ConfigInput
-            v-if="['textarea', 'input'].includes(item.type)"
+            v-if="['textarea', 'input', 'password'].includes(item.type)"
             :type="item.type"
             :maxlength="item.maxlength"
             :disabled="item.disabled"
@@ -66,7 +66,7 @@
       </bk-form>
       <!-- K8S集群 -->
       <bk-form
-        v-else
+        v-show="!isBcsCluster"
         :label-width="155"
         :model="infoFormData"
         ref="k8sForm"
@@ -82,7 +82,7 @@
           :error-display-type="'normal'"
         >
           <ConfigInput
-            v-if="['textarea', 'input'].includes(item.type)"
+            v-if="['textarea', 'input', 'password'].includes(item.type)"
             :type="item.type"
             :maxlength="item.maxlength"
             :disabled="item.disabled"
@@ -326,6 +326,7 @@ export default {
         'name',
         'description',
         'cluster_source',
+        'auth_type',
         'bcs_project_id',
         'bcs_cluster_id',
         'token',

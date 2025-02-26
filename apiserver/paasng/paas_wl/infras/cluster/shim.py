@@ -18,7 +18,7 @@
 from functools import partialmethod
 from typing import TYPE_CHECKING, Dict, List
 
-from django.db.models import QuerySet
+from django.db.models import Case, QuerySet, When
 
 from paas_wl.infras.cluster.constants import (
     ClusterAllocationPolicyCondType,
@@ -155,13 +155,18 @@ class ClusterAllocator:
             for p in policy.allocation_precedence_policies:
                 if self._match_precedence_policy(p):
                     cluster_names = self._get_cluster_names_from_policy(p.policy)
+                    break
         else:
             raise ValueError(f"unknown cluster allocation policy type: {policy.type}")
 
         if not cluster_names:
             raise ValueError(f"no cluster found for policy: {policy}")
 
-        return Cluster.objects.filter(name__in=cluster_names)
+        # 由于分配策略认定 cluster_names 中的第一个是默认集群，因此需要特殊排序
+        # ref: https://rednafi.com/python/sort_by_a_custom_sequence_in_django/
+        order = Case(*(When(name=name, then=pos) for pos, name in enumerate(cluster_names)))
+        # 查询并按自定义规则排序
+        return Cluster.objects.filter(name__in=cluster_names).order_by(order)
 
     def _get_cluster_names_from_policy(self, policy: AllocationPolicy) -> List[str] | None:
         """根据策略获取集群名称列表"""
@@ -197,4 +202,5 @@ class ClusterAllocator:
         if not self.ctx.region:
             raise ValueError("region is required for legacy list cluster")
 
+        # 把默认集群排到前面去
         return Cluster.objects.filter(region=self.ctx.region).order_by("-is_default")

@@ -103,6 +103,7 @@ export default {
   组件详情: 'Component Details',
   '为应用提供负载均等功能。': 'Provides load balancing for applications.',
   '云原生应用的控制引擎，必须安装后才能部署应用。': 'Control engine for cloud-native applications, must be installed before deploying applications.',
+  'Saas 服务水平扩缩容组件，支持基于资源使用情况调整服务副本数量。': 'SaaS service-level autoscaling component that supports adjusting the services replicas based on resource usage.',
   'Release 名称': 'Release Name',
   部署信息: 'Deploy Info',
   部署时间: 'Deploy Time',

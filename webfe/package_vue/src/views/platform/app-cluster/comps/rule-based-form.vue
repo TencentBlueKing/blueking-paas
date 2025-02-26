@@ -59,12 +59,12 @@ export default {
     this.allocationPrecedencePolicies.forEach((item) => {
       const { matcher = {}, policy = {} } = item;
       const defaultKey = 'region_is';
-      const [matcherKey = defaultKey] = Object.entries(matcher)[0] || [defaultKey, ''];
+      const [matcherKey, matcherValue] = Object.entries(matcher)[0] || [defaultKey, ''];
 
       const card = {
         matcher: {
           key: matcherKey,
-          value: matcher[defaultKey] ?? '',
+          value: matcherValue ?? '',
         },
         hasEnv: policy.env_specific || false,
         clusters: policy.clusters ?? [],
@@ -103,6 +103,7 @@ export default {
           await this.$refs[`card-${i}`][0]?.validate();
         } catch (e) {
           flag = false;
+          console.error(e);
         }
       }
       return {

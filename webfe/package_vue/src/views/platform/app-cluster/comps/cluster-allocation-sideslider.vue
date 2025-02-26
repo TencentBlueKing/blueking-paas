@@ -232,12 +232,13 @@ export default {
         } else {
           const { flag, data } = await this.$refs.ruleBasedForm?.validate();
           if (!flag) {
+            this.submitLoading = false;
             return;
           }
           // 分配规则
           parmas.allocation_precedence_policies = data.map((item) => {
             return {
-              matcher: item.matcher.key ? { [item.matcher.key]: item.matcher.value } : {},
+              matcher: item.matcher.key && item.matcher.value ? { [item.matcher.key]: item.matcher.value } : {},
               policy: {
                 env_specific: item.hasEnv,
                 ...(item.hasEnv ? {} : { clusters: item.clusters }),

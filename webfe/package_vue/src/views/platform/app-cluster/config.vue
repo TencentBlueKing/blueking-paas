@@ -186,9 +186,7 @@ export default {
       tenants: [],
       // 可用集群
       availableClusters: [],
-      matchingRulesMap: {
-        region_is: 'app.region',
-      },
+      matchingRulesMap: {},
     };
   },
   created() {
@@ -238,6 +236,7 @@ export default {
         this.isTableLoading = false;
         this.isContentLoading = false;
       });
+      this.getClusterAllocationPolicyConditionTypes();
     },
     // 关键字搜索
     filterByKeyword(list) {
@@ -323,6 +322,17 @@ export default {
           bus.$emit('tool-table-change', 'list');
         },
       });
+    },
+    // 获取分配条件类型
+    async getClusterAllocationPolicyConditionTypes() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterAllocationPolicyConditionTypes');
+        res.forEach((v) => {
+          this.matchingRulesMap[v.key] = v.name;
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
   },
 };

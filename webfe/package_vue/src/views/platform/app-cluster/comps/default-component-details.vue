@@ -147,6 +147,7 @@ export default {
       introduceMap: {
         'bk-ingress-nginx': this.$t('为应用提供负载均等功能。'),
         'bkpaas-app-operator': this.$t('云原生应用的控制引擎，必须安装后才能部署应用。'),
+        'bcs-general-pod-autoscaler': this.$t('Saas 服务水平扩缩容组件，支持基于资源使用情况调整服务副本数量。'),
       },
     };
   },

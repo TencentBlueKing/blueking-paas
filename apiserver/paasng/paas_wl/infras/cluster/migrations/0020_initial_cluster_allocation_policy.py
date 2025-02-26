@@ -89,7 +89,13 @@ def forwards_func(apps, schema_editor):
         logger.warning("Multi-tenant mode is enabled, skip initializing cluster allocation policy")
         return
 
+    Cluster = apps.get_model("cluster", "Cluster")
     ClusterAllocationPolicy = apps.get_model("cluster", "ClusterAllocationPolicy")
+
+    # 如果目前没有配置集群，则跳过
+    if not Cluster.objects.using(schema_editor.connection.alias).exists():
+        logger.warning("No cluster found, skip initializing cluster allocation policy")
+        return
 
     # 如果已经存在分配策略，则跳过
     if (

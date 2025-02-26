@@ -51,7 +51,8 @@ def gen_allocation_precedence_policies(apps, schema_editor) -> List[AllocationPr
 
         cluster = Cluster.objects.using(schema_editor.connection.alias).filter(region=region, is_default=True).first()
         if not cluster:
-            raise RuntimeError(f"No default cluster found in region {region}...")
+            logger.warning(f"No default cluster found in region {region}...")
+            continue
 
         allocation_precedence_polices.append(
             AllocationPrecedencePolicy(

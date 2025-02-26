@@ -83,10 +83,7 @@ class TestClusterAllocationPolicyViewSet:
             "allocation_precedence_policies": [
                 {
                     "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "ieod"},
-                    "policy": {
-                        "env_specific": False,
-                        "clusters": [init_system_cluster.name],
-                    },
+                    "policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
                 },
                 {
                     "policy": {
@@ -123,14 +120,18 @@ class TestClusterAllocationPolicyViewSet:
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
+                    "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "ieod"},
+                    "policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
+                },
+                {
                     "policy": {
                         "env_specific": True,
                         "env_clusters": {
-                            AppEnvironment.STAGING: [init_system_cluster.name],
-                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                            AppEnvironment.STAGING: [init_default_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_default_cluster.name, init_system_cluster.name],
                         },
                     },
-                }
+                },
             ],
         }
 
@@ -146,16 +147,19 @@ class TestClusterAllocationPolicyViewSet:
         assert policy.tenant_id != OP_TYPE_TENANT_ID
         assert policy.type == ClusterAllocationPolicyType.RULE_BASED
 
-    def test_update_policy_without_available_tenant_id(self, init_policies, init_default_cluster, plat_mgt_api_client):
+    def test_update_policy_without_available_tenant_id(
+        self, init_policies, init_system_cluster, init_default_cluster, plat_mgt_api_client
+    ):
         data = {
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
-                    "policy": {
-                        "env_specific": False,
-                        "clusters": [init_default_cluster.name],
-                    },
-                }
+                    "matcher": {ClusterAllocationPolicyCondType.REGION_IS: "ieod"},
+                    "policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
+                },
+                {
+                    "policy": {"env_specific": False, "clusters": [init_default_cluster.name]},
+                },
             ],
         }
 

@@ -29,8 +29,8 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
 from paasng.infras.bcs.exceptions import BCSGatewayServiceError
 from paasng.plat_mgt.infras.clusters.serializers import (
-    BCSApiUrlTmplRetrieveOutputSLZ,
     BCSClusterListOutputSLZ,
+    BCSClusterServerUrlTmplRetrieveOutputSLZ,
     BCSProjectListOutputSLZ,
 )
 
@@ -74,9 +74,9 @@ class BCSResourceViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.bcs-resource"],
-        operation_description="获取 BCS API 访问地址模板",
-        responses={status.HTTP_200_OK: BCSApiUrlTmplRetrieveOutputSLZ()},
+        operation_description="获取 BCS 集群 Server URL 模板",
+        responses={status.HTTP_200_OK: BCSClusterServerUrlTmplRetrieveOutputSLZ()},
     )
-    def retrieve_api_url_tmpl(self, request, *args, **kwargs):
-        resp_data = {"api_url_tmpl": settings.BCS_API_URL_TMPL}
-        return Response(data=BCSApiUrlTmplRetrieveOutputSLZ(resp_data).data)
+    def retrieve_cluster_server_url_tmpl(self, request, *args, **kwargs):
+        resp_data = {"url_tmpl": settings.BCS_CLUSTER_SERVER_URL_TMPL}
+        return Response(data=BCSClusterServerUrlTmplRetrieveOutputSLZ(resp_data).data)

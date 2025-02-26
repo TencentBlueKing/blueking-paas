@@ -1413,8 +1413,10 @@ BK_AUDIT_SETTINGS = {
 # 是否部署了 BCS，影响访问控制台等功能
 ENABLE_BCS = settings.get("ENABLE_BCS", True)
 
-# BCS API 网关链接模板（用于 API 访问/ kubectl 配置）
-BCS_API_URL_TMPL = settings.get("BCS_API_URL_TMPL", f"http://bcs-api.{BK_DOMAIN}/clusters/{{cluster_id}}/")
+# BCS 集群 Server URL 模板（用于 API 访问/ kubectl 配置）
+BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
+    "BCS_CLUSTER_SERVER_URL_TMPL", f"http://bcs-api.{BK_DOMAIN}/clusters/{{cluster_id}}/"
+)
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用

@@ -107,8 +107,8 @@ urlpatterns = [
     ),
     # BCS API 地址模板
     path(
-        "api/plat_mgt/infras/bcs/api_url_tmpl/",
-        views.BCSResourceViewSet.as_view({"get": "retrieve_api_url_tmpl"}),
-        name="plat_mgt.infras.bcs.api_url_tmpl.retrieve",
+        "api/plat_mgt/infras/bcs/cluster_server_url_tmpl/",
+        views.BCSResourceViewSet.as_view({"get": "retrieve_cluster_server_url_tmpl"}),
+        name="plat_mgt.infras.bcs.cluster_server_url_tmpl.retrieve",
     ),
 ]

@@ -310,6 +310,7 @@ export const APP_OPERATION_TARGET = {
   deploy_restriction: '部署限制',
   exit_ip: '出口 IP',
   access_control: '用户限制',
+  access_token: '访问令牌',
 };
 
 /**
@@ -319,6 +320,7 @@ export const APP_OPERATION = {
   create: '新建',
   delete: '删除',
   modify: '修改',
+  refresh: '刷新',
   create_app: '创建应用',
   online_to_market: '发布到应用市场',
   offline_from_market: '从应用市场下架',

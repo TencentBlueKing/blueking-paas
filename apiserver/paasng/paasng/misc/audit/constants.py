@@ -73,6 +73,8 @@ class OperationTarget(StrStructuredEnum):
     DEPLOY_RESTRICTION = EnumField("deploy_restriction", label=_("部署限制"))
     EXIT_IP = EnumField("exit_ip", label=_("出口 IP"))
     ACCESS_CONTROL = EnumField("access_control", label=_("用户限制"))
+    ACCESS_TOKEN = EnumField("access_token", label=_("访问令牌"))
+
     # 以下是仅用于 Admin42 的操作对象
     CLUSTER = EnumField("cluster", label=_("集群"))
     PROCESS_SPEC_PLAN = EnumField("process_spec_plan", label=_("应用资源方案"))
@@ -100,6 +102,7 @@ class OperationEnum(StrStructuredEnum):
     CREATE = EnumField("create", label=_("新建"))
     DELETE = EnumField("delete", label=_("删除"))
     MODIFY = EnumField("modify", label=_("修改"))
+    REFRESH = EnumField("refresh", label=_("刷新"))
     # 直接操作应用相关的类型，展示的文案包括完整的动宾短语
     CREATE_APP = EnumField("create_app", label=_("创建应用"))
     RELEASE_TO_MARKET = EnumField("online_to_market", label=_("发布到应用市场"))

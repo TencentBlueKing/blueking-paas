@@ -42,7 +42,7 @@
             class="sandbox-alert-cls"
           >
             <div slot="title">
-              <span>{{ $t('沙箱环境仅用于临时在线调试，如果沙箱环境在 6 小时内没有任何操作，将自动被销毁。') }}</span>
+              <span>{{ $t('沙箱环境仅用于临时在线调试，如果沙箱环境在 2 小时内没有任何操作，将自动被销毁。') }}</span>
               <bk-popconfirm
                 trigger="click"
                 ext-cls="sandbox-destroy-cls"

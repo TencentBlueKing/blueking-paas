@@ -2887,7 +2887,7 @@ export default {
   '沙箱会复用 “预发布环境” 的增强服务和环境变量。': 'The sandbox will reuse the Add-ons and environment variables of the "Staging Env".',
   '沙箱提供云端开发环境，可以在线修改运行代码。': 'Sandbox provides a cloud-based development environment, allowing code to be modified and executed online.',
   '<p>同时满足下列条件的模块才能新建沙箱环境：</p><p>1. 使用“蓝鲸 Buildpack”构建且开发语言为 Python</p>2. 已经部署到预发布环境': '<p>Modules that meet the following conditions can create a new sandbox environment:</p><p>1. Built using "Blue Whale Buildpack" and developed in Python</p>2. Already deployed to the Staging Env',
-  '沙箱环境仅用于临时在线调试，如果沙箱环境在 6 小时内没有任何操作，将自动被销毁。': 'The sandbox environment is intended for temporary online debugging only. If there is no activity within 6 hours, the sandbox environment will be automatically destroyed.',
+  '沙箱环境仅用于临时在线调试，如果沙箱环境在 2 小时内没有任何操作，将自动被销毁。': 'The sandbox environment is intended for temporary online debugging only. If there is no activity within 6 hours, the sandbox environment will be automatically destroyed.',
   '沙箱环境正在启动，预计需要约 30 秒，请稍候。': 'The sandbox environment is starting up and is expected to take about 30 seconds. Please wait.',
   沙箱环境密码: 'Sandbox Environment Password',
   复制密码并关闭: 'Copy Password and Close',

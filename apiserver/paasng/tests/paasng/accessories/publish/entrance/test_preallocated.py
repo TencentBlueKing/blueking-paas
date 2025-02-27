@@ -20,6 +20,8 @@
 import json
 
 import pytest
+from django.conf import settings
+from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
@@ -30,6 +32,7 @@ from paasng.accessories.publish.entrance.preallocated import (
     get_preallocated_url,
     get_preallocated_urls,
 )
+from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.cluster import cluster_ingress_config
@@ -73,6 +76,10 @@ def test_default_preallocated_urls_normal(bk_stag_env):
 
 
 class TestGetPreallocatedAddress:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        G(Application, code="test-code", region=settings.DEFAULT_REGION_NAME)
+
     def test_not_configured(self):
         with cluster_ingress_config(replaced_config={}), pytest.raises(ValueError, match=r"^failed to get.*"):
             get_preallocated_address("test-code")

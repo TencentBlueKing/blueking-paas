@@ -542,7 +542,10 @@ class TestRetrieveClusterUsage:
                             AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
                         },
                     },
-                }
+                },
+                {
+                    "policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
+                },
             ],
         }
         # 使用创建 API 初始化集群分配策略

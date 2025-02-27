@@ -101,7 +101,7 @@
                                     v-model="env.cluster_name"
                                     style="width: 250px;"
                                     @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
-                                   <bk-option v-for="choice in clusterChoices"
+                                   <bk-option v-for="choice in getClusterChoices(module.name, env.environment)"
                                         :key="choice.id"
                                         :id="choice.id"
                                         :name="choice.name">
@@ -251,6 +251,9 @@
                     ).then(resp => {
                         this.USER_IS_ADMIN_IN_PLUGIN = false
                     })
+                },
+                getClusterChoices: function (module, env) {
+                    return this.clusterChoices[`${module}-${env}`]
                 },
                 bindAppEnvCluster: function (module, env, clusterName) {
                     let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)

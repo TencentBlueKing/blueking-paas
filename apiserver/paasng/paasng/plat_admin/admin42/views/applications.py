@@ -26,7 +26,8 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
@@ -58,7 +59,6 @@ from paasng.platform.applications.models import Application, ApplicationFeatureF
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
-from paasng.platform.engine.constants import ClusterType
 from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.error_codes import error_codes
@@ -293,10 +293,16 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         )
         if kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"]:
             kwargs["USER_IS_ADMIN_IN_PLUGIN"] = is_user_plugin_admin(self.kwargs["code"], self.request.user.username)
-        kwargs["cluster_choices"] = [
-            {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
-            for cluster in RegionClusterService(application.region).list_clusters()
-        ]
+
+        # 注：不同模块 / 环境可选的集群可能是不同的 -> {module_name-environment [available_clusters]}
+        cluster_choices: Dict[str, List[Dict[str, str]]] = {}
+        for env in application.envs.all():
+            cluster_choices[f"{env.module.name}-{env.environment}"] = [
+                {"id": cluster.name, "name": cluster.name}
+                for cluster in ClusterAllocator(AllocationContext.from_module_env(env)).list()
+            ]
+
+        kwargs["cluster_choices"] = cluster_choices
 
         # Get the exposed URL for all environments
         env_urls: Dict[int, str] = {}

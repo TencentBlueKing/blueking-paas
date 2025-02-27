@@ -2,11 +2,6 @@
 {% load admin_utils %}
 {% block main_content %}
 <div id="platform-operator-list" class="p20">
-    <b>云原生应用默认部署集群</b>:
-    <span v-for="(cluster_name, region) in cnativeDefaultCluster">
-        <bk-tag theme="success" v-if="cluster_name"><b> $[ region ]: $[ cluster_name ] </b></bk-tag>
-        <bk-tag v-else><b> $[ region ]: -- </b></bk-tag>
-    </span>
     <bk-table :data="data" class="mt20">
         <bk-table-column label="集群名称" prop="cluster_name" align="center"></bk-table-column>
         <bk-table-column label="集群 ID" min-width="100" align="center">
@@ -72,8 +67,6 @@
 
 {% block main_script %}
 <script>
-    const cnativeDefaultCluster = {{ cnative_default_cluster | to_json }}
-
     const URLRouter = {
         listClusters: decodeURI("{% url 'wl_api.clusters' %}"),
         getOperatorInfo: decodeURI("{% url 'wl_api.cluster.operator_info' '${cluster_name}' %}"),
@@ -86,7 +79,6 @@
             mixins: [SubmitMixin],
             data: function() {
                 return {
-                    cnativeDefaultCluster: cnativeDefaultCluster,
                     data: [],
                 }
             },

@@ -17,6 +17,7 @@
 
 import cattr
 import pytest
+from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
@@ -117,8 +118,8 @@ class TestEnvVariablesField:
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
-        G(Application, code="foo-app")
-        app = G(Application, code="bar-app")
+        G(Application, code="foo-app", region=settings.DEFAULT_REGION_NAME)
+        app = G(Application, code="bar-app", region=settings.DEFAULT_REGION_NAME)
         G(Module, name="api", application=app)
 
         json_data = {

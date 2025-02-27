@@ -17,8 +17,11 @@
 
 import cattr
 import pytest
+from django.conf import settings
+from django_dynamic_fixture import G
 
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
 from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
@@ -42,6 +45,7 @@ from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
+from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import Hook, HookList
 from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder  # noqa: N813
 from tests.utils.mocks.cluster import cluster_ingress_config
@@ -144,6 +148,10 @@ class TestEnvVariablesField:
 class TestSvcDiscoveryField:
     @staticmethod
     def apply_config(bk_deployment):
+        G(Application, code="foo-app", region=settings.DEFAULT_REGION_NAME)
+        app = G(Application, code="bar-app", region=settings.DEFAULT_REGION_NAME)
+        G(Module, name="api", application=app)
+
         json_data = builder.make_module(
             module_name="test",
             module_spec={

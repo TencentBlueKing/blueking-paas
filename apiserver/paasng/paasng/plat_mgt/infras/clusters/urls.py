@@ -105,4 +105,10 @@ urlpatterns = [
         views.BCSResourceViewSet.as_view({"get": "list_clusters"}),
         name="plat_mgt.infras.bcs.cluster.list",
     ),
+    # BCS API 地址模板
+    path(
+        "api/plat_mgt/infras/bcs/cluster_server_url_tmpl/",
+        views.BCSResourceViewSet.as_view({"get": "retrieve_cluster_server_url_tmpl"}),
+        name="plat_mgt.infras.bcs.cluster_server_url_tmpl.retrieve",
+    ),
 ]

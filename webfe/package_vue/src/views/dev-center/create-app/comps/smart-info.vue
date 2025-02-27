@@ -31,7 +31,7 @@
           <div class="label">{{ $t('应用 ID') }}：</div>
           <div :class="['value', { 'has-change': isAppCodeChanged }]">
             <!-- 如果修改了应用信息采用修改后的应用信息 -->
-            <span v-if="isModifiedDataDisplayed">{{ modifiedAppData.code }}</span>
+            <span v-if="isModifiedDataDisplayed">{{ modifiedAppData?.code }}</span>
             <span v-else>{{ packageAppCode }}</span>
             <i
               v-if="isAppCodeChanged"
@@ -43,7 +43,7 @@
         <div class="row-item">
           <div class="label">{{ $t('应用名称') }}：</div>
           <div :class="['value', { 'has-change': isAppNameChanged }]">
-            <span v-if="isModifiedDataDisplayed">{{ modifiedAppData.name }}</span>
+            <span v-if="isModifiedDataDisplayed">{{ modifiedAppData?.name }}</span>
             <span v-else>{{ packageAppName }}</span>
             <i
               v-if="isAppNameChanged"
@@ -115,14 +115,14 @@ export default {
     // code 是否与包一致
     isAppCodeChanged() {
       if (this.isModifiedDataDisplayed) {
-        return this.modifiedAppData.code !== this.originalCode;
+        return this.modifiedAppData?.code !== this.originalCode;
       }
       return this.isCodeConflicted;
     },
     // name 是否与包一致
     isAppNameChanged() {
       if (this.isModifiedDataDisplayed) {
-        return this.modifiedAppData.name !== this.originalName;
+        return this.modifiedAppData?.name !== this.originalName;
       }
       return this.isNameConflicted;
     },
@@ -141,7 +141,7 @@ export default {
       } else {
         this.dialogData = { ...this.modifiedAppData };
       }
-      this.verifyCode = isConflict ? this.originalCode : '';
+      this.verifyCode = this.isCodeConflicted ? this.originalCode : '';
       this.isEditDialog = true;
     },
     handleConfirm(data) {

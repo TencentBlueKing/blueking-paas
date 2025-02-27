@@ -20,7 +20,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.platform.sourcectl.source_types import docker_registry_config
 
 
-def validate_image_url(url: str, region: str) -> str:
+def validate_image_url(url: str) -> str:
     """检查镜像地址(判断是否支持第三方镜像)"""
     default_registry = docker_registry_config.default_registry
     allow_third_party_registry = docker_registry_config.allow_third_party_registry

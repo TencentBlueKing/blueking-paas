@@ -29,7 +29,9 @@ pytestmark = pytest.mark.django_db
 def _mock_shim_apis():
     with mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_grade_manager"), mock.patch(
         "paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_user_groups"
-    ), mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.add_role_members"):
+    ), mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.add_role_members"), mock.patch(
+        "paasng.bk_plugins.pluginscenter.sys_apis.views.create_instance"
+    ):
         yield
 
 

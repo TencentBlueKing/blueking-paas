@@ -19,7 +19,8 @@
 
 包含可供用户使用的“源码控制系统配置”
 """
-from typing import Dict, Optional
+
+from typing import Dict
 
 from django.utils.translation import gettext_lazy as _
 
@@ -52,8 +53,8 @@ class BkSvnSourceTypeSpec(SourceTypeSpec):
         "description": _("（蓝鲸平台提供的源码托管服务）"),
     }
 
-    def config_as_arguments(self, region: Optional[str]) -> Dict:
-        server_config = self.get_server_config(region)
+    def config_as_arguments(self) -> Dict:
+        server_config = self.get_server_config()
         return {
             "base_url": server_config["base_url"],
             "username": server_config["su_name"],

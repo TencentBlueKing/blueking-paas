@@ -17,6 +17,7 @@
 
 from .bcs_resources import (
     BCSClusterListOutputSLZ,
+    BCSClusterServerUrlTmplRetrieveOutputSLZ,
     BCSProjectListOutputSLZ,
 )
 from .clusters import (
@@ -64,4 +65,5 @@ __all__ = [
     # bcs_resources
     "BCSClusterListOutputSLZ",
     "BCSProjectListOutputSLZ",
+    "BCSClusterServerUrlTmplRetrieveOutputSLZ",
 ]

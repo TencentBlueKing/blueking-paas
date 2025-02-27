@@ -472,7 +472,11 @@ export default {
               e.isExpand = false;
             }
           }
-          isModuleDeployedList.push({ name: e.module_name, isDeployed: !!e.state.deployment?.latest });
+          isModuleDeployedList.push({
+            name: e.module_name,
+            isDeployed: !!e.state.deployment?.latest,
+            versionInfo: e.version_info,
+          });
           return e;
         });
         this.$emit('module-deployment-info', isModuleDeployedList);

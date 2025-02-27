@@ -15,6 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.models import Cluster
 
@@ -49,7 +52,14 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
 
 
 def get_dev_sandbox_cluster(app: WlApp) -> Cluster:
-    # 当前直接使用 region 下的默认集群，注意：
+    # 优先使用开发沙箱集群
+    if cluster_name := settings.DEV_SANDBOX_CLUSTER:
+        try:
+            return Cluster.objects.get(name=cluster_name)
+        except ObjectDoesNotExist:
+            raise RuntimeError(f"dev sandbox cluster called {cluster_name} no found")
+
+    # 否则使用 region 下的默认集群，注意：
     #   - 功能要求 k8s 版本 >= 1.20.x, 版本过低可能会导致 ingress 等资源出现版本兼容问题
     #
     # TODO：Cluster 增加新字段（配置项）来标记功能所使用的集群（以及配置整个功能开关等）

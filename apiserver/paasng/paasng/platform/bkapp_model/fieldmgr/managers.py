@@ -17,11 +17,12 @@
 
 from typing import Optional
 
-from paasng.platform.bkapp_model.models import BkAppManagedFields
+from paasng.platform.bkapp_model.models import BkAppManagedFields, ModuleProcessSpec
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
 
 from .constants import FieldMgrName
-from .fields import Field, ManagerFieldsRow, ManagerFieldsRowGroup
+from .fields import Field, ManagerFieldsRow, ManagerFieldsRowGroup, f_overlay_replicas
 
 
 class FieldManager:
@@ -122,3 +123,21 @@ class RowGroupStore:
                 defaults={"fields": record.fields, "tenant_id": self.module.tenant_id},
             )
         row_group.clean_updated()
+
+
+def check_replicas_manually_scaled(m: Module) -> bool:
+    """check if replicas is manually scaled by web form"""
+    process_names = ModuleProcessSpec.objects.filter(module=m).values_list("name", flat=True)
+
+    if not process_names:
+        return False
+
+    # NOTE: 页面手动扩缩容会修改 spec.envOverlay.replicas 的管理者为 web_form, 因此只需要检查 f_overlay_replicas 字段
+    replicas_fields = []
+    for proc_name in process_names:
+        for env_name in AppEnvName:
+            replicas_fields.append(f_overlay_replicas(proc_name, env_name))
+
+    row_group = RowGroupStore(m).get()
+
+    return any(row_group.get_manager(field) == FieldMgrName.WEB_FORM for field in replicas_fields)

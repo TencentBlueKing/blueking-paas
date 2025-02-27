@@ -68,8 +68,8 @@ class AdvancedOptions:
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT
     # 只构建, 不发布
     build_only: bool = False
-    # 是否使用线上副本数
-    use_online_replicas: bool = False
+    # 是否锁定副本数. 锁定后, 部署时, 不会更改线上副本数
+    lock_replicas: bool = False
     # 构建的镜像 tag, 将覆盖默认规则
     special_tag: Optional[str] = None
     # 直接发布历史 build

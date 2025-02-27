@@ -340,9 +340,9 @@ class DefaultDeployDescHandler:
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
 
-        # 使用线上副本配置部署
-        if deployment.advanced_options.use_online_replicas:
-            _adjust_desc_replicas(desc, deployment.app_environment)
+        # 锁定副本数部署
+        if deployment.advanced_options.lock_replicas:
+            adjust_desc_to_lock_replicas(desc, deployment.app_environment)
 
         procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None
         return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
@@ -426,8 +426,8 @@ def _find_module_desc_data(
     return desc_data
 
 
-def _adjust_desc_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """调整部署描述对象中与 replicas 相关的所有字段. 调整后的描述对象在实际部署时, 会使用线上副本配置部署.
+def adjust_desc_to_lock_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
+    """调整部署描述对象中与 replicas 相关的所有字段. 调整后的描述对象在实际部署时, 不会更新线上副本数, 达到锁定目的
 
     调整的策略依据是 field manager 的副本数更新规则, 以及线上实际的副本数据
 
@@ -439,9 +439,9 @@ def _adjust_desc_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
 
 
 def _adjust_proc_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """基于 field manager 的副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 proc.replicas 字段.
+    """基于 field manager 的副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 proc.replicas 字段, 达到锁定部署副本数的目的.
 
-    NOTE: 通过 _adjust_desc_replicas 函数使用
+    NOTE: 特定场景函数, 通过 _adjust_desc_to_lock_replicas 函数间接使用
 
     :param desc: the deployment desc object which will be adjusted
     :param env: The environment object
@@ -463,9 +463,9 @@ def _adjust_proc_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
 
 
 def _adjust_env_overlay_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """基于 field manager 的分环境副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 spec.envOverlay.replicas 字段
+    """基于 field manager 的分环境副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 spec.env_overlay.replicas 字段, 达到锁定部署副本数的目的
 
-    NOTE: 通过 _adjust_desc_replicas 函数使用
+    NOTE: 特定场景函数, 通过 _adjust_desc_to_lock_replicas 函数间接使用
 
     :param desc: the deployment desc object which will be adjusted
     :param env: The environment object

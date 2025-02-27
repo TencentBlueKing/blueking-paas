@@ -25,11 +25,15 @@ from django_dynamic_fixture import G
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities.proc_env_overlays import ReplicasOverlay
-from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppSpec
+from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppEnvOverlay, BkAppSpec
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import _adjust_desc_replicas, get_deploy_desc_handler, get_desc_handler
+from paasng.platform.declarative.handlers import (
+    adjust_desc_to_lock_replicas,
+    get_deploy_desc_handler,
+    get_desc_handler,
+)
 from paasng.utils.structure import NotSetType
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -107,40 +111,27 @@ class TestGetDeployDescHandlerIncorrectVersions:
             get_deploy_desc_handler(yaml.safe_load(yaml_content))
 
 
-class Test__adjust_desc_replicas:
+class Test__adjust_desc_to_lock_replicas:
     def test(self, bk_stag_env):
         """测试场景: 首次部署"""
+        new_replicas = 5
 
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 5}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert desc.spec.processes[0].replicas == 5
-        assert isinstance(desc.spec.env_overlay, NotSetType)
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        assert desc.spec.processes[0].replicas == new_replicas
+        self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 2}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 10, "env_name": "stag", "process": "web"},
-                        {"count": 20, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
-        )
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert desc.spec.processes[0].replicas == 2
-        assert desc.spec.env_overlay.replicas == [  # type: ignore[union-attr]
-            ReplicasOverlay(count=10, env_name="stag", process="web"),
-            ReplicasOverlay(count=20, env_name="prod", process="web"),
-        ]
+        env_overlay_replicas = self._make_env_overlay_replicas(new_replicas, new_replicas * 2)
+        desc = self._make_desc(new_replicas, env_overlay_replicas=env_overlay_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        assert desc.spec.processes[0].replicas == new_replicas
+        assert desc.spec.env_overlay.replicas == env_overlay_replicas
 
-    def test_after_scale_stag(self, bk_stag_env):
-        """测试场景: 通过页面对 stag 环境做了扩缩容后再次部署"""
-        stag_online_replicas = 3
-        online_replicas = 5
+    @pytest.mark.parametrize(("env_name", "online_replicas"), [("stag", 3), ("prod", 5)])
+    def test_after_scale_single_env(self, bk_stag_env, bk_prod_env, env_name, online_replicas):
+        """测试场景: 通过页面对 stag 或 prod 环境做了扩缩容后再次部署"""
         proc_spec = G(
             ModuleProcessSpec,
             module=bk_stag_env.module,
@@ -148,54 +139,38 @@ class Test__adjust_desc_replicas:
             command=["python"],
             target_replicas=online_replicas,
         )
-        G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=stag_online_replicas, environment_name="stag")
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "stag")).set(
-            fieldmgr.FieldMgrName.WEB_FORM
+        G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=online_replicas, environment_name=env_name)
+        fieldmgr.MultiFieldsManager(bk_stag_env.module).set_many(
+            [fieldmgr.f_overlay_replicas("web", env_name), fieldmgr.f_proc_replicas("web")],
+            fieldmgr.FieldMgrName.WEB_FORM,
         )
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_proc_replicas("web")).set(fieldmgr.FieldMgrName.APP_DESC)
+
+        new_replicas = 10
 
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 10}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert desc.spec.processes[0].replicas == online_replicas
-        assert isinstance(desc.spec.env_overlay, NotSetType)
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        self._assert_is_notset(desc.spec.processes[0].replicas)
+        self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 15, "env_name": "stag", "process": "web"},
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas, env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2)
         )
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        self._assert_is_notset(desc.spec.processes[0].replicas)
+        self._assert_is_notset(desc.spec.env_overlay.replicas)
 
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert desc.spec.processes[0].replicas == online_replicas
-        assert isinstance(desc.spec.env_overlay.replicas, NotSetType)  # type: ignore[union-attr]
-
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas_by_env("prod", new_replicas * 2),
         )
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        self._assert_is_notset(desc.spec.processes[0].replicas)
+        self._assert_is_notset(desc.spec.env_overlay.replicas)
 
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert desc.spec.processes[0].replicas == online_replicas
-        assert isinstance(desc.spec.env_overlay.replicas, NotSetType)  # type: ignore[union-attr]
-
-    def test_after_scale_all(self, bk_stag_env):
-        """测试场景: 通过页面对 stag/prod 两个环境做了扩缩容后再次部署"""
+    def test_after_scale_all_env(self, bk_stag_env):
+        """测试场景: 通过页面同时对 stag 和 prod 两个环境做了扩缩容后再次部署"""
         stag_online_replicas = 3
         prod_online_replicas = 5
         proc_spec = G(
@@ -206,37 +181,35 @@ class Test__adjust_desc_replicas:
             target_replicas=1,
         )
         G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=stag_online_replicas, environment_name="stag")
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "stag")).set(
-            fieldmgr.FieldMgrName.WEB_FORM
-        )
         G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=prod_online_replicas, environment_name="prod")
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "prod")).set(
-            fieldmgr.FieldMgrName.WEB_FORM
+        fieldmgr.MultiFieldsManager(bk_stag_env.module).set_many(
+            [
+                fieldmgr.f_overlay_replicas("web", "stag"),
+                fieldmgr.f_overlay_replicas("web", "prod"),
+                fieldmgr.f_proc_replicas("web"),
+            ],
+            fieldmgr.FieldMgrName.WEB_FORM,
         )
+
+        new_replicas = 10
 
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 10}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert isinstance(desc.spec.env_overlay, NotSetType)
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        self._assert_is_notset(desc.spec.processes[0].replicas)
+        self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 15, "env_name": "stag", "process": "web"},
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert isinstance(desc.spec.env_overlay.replicas, NotSetType)  # type: ignore[union-attr]
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        self._assert_is_notset(desc.spec.processes[0].replicas)
+        self._assert_is_notset(desc.spec.env_overlay.replicas)
 
     def test_after_set_with_proc_replicas(self, bk_stag_env):
-        """测试场景: 仅通过 app_desc 更新副本数(不区分环境)"""
+        """测试场景: 仅通过 app_desc 更新副本数(不区分环境)后再次部署"""
         online_replicas = 5
         G(
             ModuleProcessSpec,
@@ -247,28 +220,22 @@ class Test__adjust_desc_replicas:
         )
         fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_proc_replicas("web")).set(fieldmgr.FieldMgrName.APP_DESC)
 
+        new_replicas = 10
+
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 10}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert isinstance(desc.spec.env_overlay, NotSetType)
+        self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 15, "env_name": "stag", "process": "web"},
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        _adjust_desc_replicas(desc, bk_stag_env)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert isinstance(desc.spec.env_overlay.replicas, NotSetType)  # type: ignore[union-attr]
+        self._assert_is_notset(desc.spec.env_overlay.replicas)
 
     def test_after_set_with_env_overlay_stag(self, bk_stag_env):
         """测试场景: 通过 spec.env_overlay.replicas['stag'] 更新过副本数后再次部署"""
@@ -282,37 +249,27 @@ class Test__adjust_desc_replicas:
             target_replicas=2,
         )
         G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=stag_online_replicas, environment_name="stag")
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_proc_replicas("web")).set(fieldmgr.FieldMgrName.APP_DESC)
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "stag")).set(
-            fieldmgr.FieldMgrName.APP_DESC
+        fieldmgr.MultiFieldsManager(bk_stag_env.module).set_many(
+            [fieldmgr.f_proc_replicas("web"), fieldmgr.f_overlay_replicas("web", "stag")],
+            fieldmgr.FieldMgrName.APP_DESC,
         )
+
+        new_replicas = 10
 
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 10}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert desc.spec.env_overlay.replicas == [  # type: ignore[union-attr]
-            ReplicasOverlay(env_name="stag", process="web", count=stag_online_replicas)
-        ]
+        assert desc.spec.env_overlay.replicas == self._make_env_overlay_replicas_by_env("stag", stag_online_replicas)
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 15, "env_name": "stag", "process": "web"},
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        _adjust_desc_replicas(desc, bk_stag_env)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert desc.spec.env_overlay.replicas == [  # type: ignore[union-attr]
-            ReplicasOverlay(env_name="stag", process="web", count=stag_online_replicas)
-        ]
+        assert desc.spec.env_overlay.replicas == self._make_env_overlay_replicas_by_env("stag", stag_online_replicas)
 
     def test_after_set_with_env_overlay(self, bk_stag_env):
         """测试场景: 通过 spec.env_overlay.replicas 更新过副本数后再次部署"""
@@ -327,53 +284,66 @@ class Test__adjust_desc_replicas:
         )
         G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=stag_online_replicas, environment_name="stag")
         G(ProcessSpecEnvOverlay, proc_spec=proc_spec, target_replicas=prod_online_replicas, environment_name="prod")
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "stag")).set(
-            fieldmgr.FieldMgrName.APP_DESC
+        fieldmgr.MultiFieldsManager(bk_stag_env.module).set_many(
+            [fieldmgr.f_overlay_replicas("web", "stag"), fieldmgr.f_overlay_replicas("web", "prod")],
+            fieldmgr.FieldMgrName.APP_DESC,
         )
-        fieldmgr.FieldManager(bk_stag_env.module, fieldmgr.f_overlay_replicas("web", "prod")).set(
-            fieldmgr.FieldMgrName.APP_DESC
-        )
+
+        online_env_overlay_replicas = self._make_env_overlay_replicas(stag_online_replicas, prod_online_replicas)
+
+        new_replicas = 10
 
         # without spec.env_overlay.replicas
-        desc = DeploymentDesc(language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": 10}]))
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True) == [  # type: ignore[union-attr, arg-type]
-            ReplicasOverlay(env_name="stag", process="web", count=stag_online_replicas),
-            ReplicasOverlay(env_name="prod", process="web", count=prod_online_replicas),
-        ]
+        desc = self._make_desc(new_replicas)
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        assert (
+            sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
+            == online_env_overlay_replicas
+        )
 
         # with spec.env_overlay.replicas
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 15, "env_name": "stag", "process": "web"},
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True) == [  # type: ignore[union-attr, arg-type]
-            ReplicasOverlay(env_name="stag", process="web", count=stag_online_replicas),
-            ReplicasOverlay(env_name="prod", process="web", count=prod_online_replicas),
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        assert (
+            sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
+            == online_env_overlay_replicas
+        )
+
+        desc = self._make_desc(
+            new_replicas,
+            env_overlay_replicas=self._make_env_overlay_replicas_by_env("prod", new_replicas * 2),
+        )
+        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        assert (
+            sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
+            == online_env_overlay_replicas
+        )
+
+    @staticmethod
+    def _make_desc(new_replicas, env_overlay_replicas=None):
+        desc = DeploymentDesc(
+            language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": new_replicas}])
+        )
+        if env_overlay_replicas:
+            desc.spec.env_overlay = BkAppEnvOverlay(replicas=env_overlay_replicas)
+        return desc
+
+    @staticmethod
+    def _make_env_overlay_replicas(stag_replicas, prod_replicas):
+        return [
+            ReplicasOverlay(env_name="stag", process="web", count=stag_replicas),
+            ReplicasOverlay(env_name="prod", process="web", count=prod_replicas),
         ]
 
-        desc = DeploymentDesc(
-            language=AppLanguage.PYTHON,
-            spec=BkAppSpec(
-                processes=[{"name": "web", "replicas": 10}],
-                env_overlay={
-                    "replicas": [
-                        {"count": 25, "env_name": "prod", "process": "web"},
-                    ]
-                },
-            ),
-        )
-        _adjust_desc_replicas(desc, bk_stag_env)
-        assert sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True) == [  # type: ignore[union-attr, arg-type]
-            ReplicasOverlay(env_name="stag", process="web", count=stag_online_replicas),
-            ReplicasOverlay(env_name="prod", process="web", count=prod_online_replicas),
+    @staticmethod
+    def _make_env_overlay_replicas_by_env(env_name, replicas):
+        return [
+            ReplicasOverlay(env_name=env_name, process="web", count=replicas),
         ]
+
+    @staticmethod
+    def _assert_is_notset(test_data):
+        assert isinstance(test_data, NotSetType)

@@ -14,10 +14,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import pytest
+from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
-from paasng.platform.bkapp_model.fieldmgr.fields import F_DOMAIN_RESOLUTION, F_SVC_DISCOVERY
-from paasng.platform.bkapp_model.fieldmgr.managers import FieldManager, MultiFieldsManager
+from paasng.platform.bkapp_model.fieldmgr.fields import (
+    F_DOMAIN_RESOLUTION,
+    F_SVC_DISCOVERY,
+    f_overlay_replicas,
+)
+from paasng.platform.bkapp_model.fieldmgr.managers import (
+    FieldManager,
+    MultiFieldsManager,
+    check_replicas_manually_scaled,
+)
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 
@@ -60,3 +70,20 @@ class TestMultiFieldsManager:
 
         assert FieldManager(bk_module, F_SVC_DISCOVERY).can_be_managed_by(FieldMgrName.WEB_FORM)
         assert FieldManager(bk_module, F_DOMAIN_RESOLUTION).can_be_managed_by(FieldMgrName.WEB_FORM)
+
+
+class Test__check_replicas_manually_scaled:
+    @pytest.fixture()
+    def module_process_spec(self, bk_module):
+        return G(ModuleProcessSpec, module=bk_module, name="web")
+
+    def test_scaled(self, bk_module, module_process_spec):
+        FieldManager(bk_module, f_overlay_replicas(module_process_spec.name, "stag")).set(FieldMgrName.WEB_FORM)
+        assert check_replicas_manually_scaled(bk_module) is True
+
+    def test_not_scaled(self, bk_module, module_process_spec):
+        assert check_replicas_manually_scaled(bk_module) is False
+
+    def test_not_scaled_with_no_process(self, bk_module):
+        """测试场景: 首次部署应用时, 还没有生成 ModuleProcessSpec 数据"""
+        assert check_replicas_manually_scaled(bk_module) is False

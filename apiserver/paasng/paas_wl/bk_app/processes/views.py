@@ -184,6 +184,7 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             # Set both the replicas and autoscaling fields at the same time
             fieldmgr.MultiFieldsManager(module_env.module).set_many(
                 [
+                    fieldmgr.f_proc_replicas(process_type),
                     fieldmgr.f_overlay_replicas(process_type, module_env.environment),
                     fieldmgr.f_overlay_autoscaling(process_type, module_env.environment),
                 ],

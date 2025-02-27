@@ -105,7 +105,6 @@ class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
                     "logs": [
                         # 与重构前的 LogLine 字段一致
                         {
-                            "region": log["region"],
                             "app_code": log["app_code"],
                             "environment": log["environment"],
                             "process_id": log["process_id"],

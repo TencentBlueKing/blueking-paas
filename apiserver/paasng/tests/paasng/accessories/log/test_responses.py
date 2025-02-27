@@ -116,7 +116,6 @@ class TestStructureLogLine:
     @pytest.mark.parametrize(
         "deleting_field",
         [
-            ["region"],
             ["app_code"],
             ["environment"],
             ["@timestamp"],

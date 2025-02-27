@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 @define
 class StandardOutputLogLine(LogLine):
     """标准输出日志结构
-    :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
     :param environment: [deprecated] runtime environment(stag/prod)
@@ -37,7 +36,6 @@ class StandardOutputLogLine(LogLine):
     :param pod_name: [required] pod_name, The name of the pod that logs are generated from.
     """
 
-    region: Optional[str] = extra_field(converter=converters.optional(str))
     app_code: Optional[str] = extra_field(converter=converters.optional(str))
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))
@@ -51,7 +49,6 @@ class StandardOutputLogLine(LogLine):
 @define
 class StructureLogLine(LogLine):
     """结构化日志结构
-    :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
     :param environment: [deprecated] runtime environment(stag/prod)
@@ -59,7 +56,6 @@ class StructureLogLine(LogLine):
     :param stream: stream, such as "django", "celery", "stdout"
     """
 
-    region: Optional[str] = extra_field(converter=converters.optional(str))
     app_code: Optional[str] = extra_field(converter=converters.optional(str))
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))

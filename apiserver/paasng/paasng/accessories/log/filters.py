@@ -197,7 +197,6 @@ class EnvFilter(ESFilter):
         context = {
             "app_code": self.application.code,
             "module_name": self.module.name,
-            "region": self.application.region,
             "engine_app_name": self.env.get_engine_app().name.replace("_", "0us0"),
             "engine_app_names": [self.env.get_engine_app().name.replace("_", "0us0")],
         }
@@ -238,7 +237,6 @@ class ModuleFilter(ESFilter):
         context = {
             "app_code": self.application.code,
             "module_name": self.module.name,
-            "region": self.application.region,
             "engine_app_names": [env.get_engine_app().name.replace("_", "0us0") for env in self.module.get_envs()],
         }
         term_fields = self.search_params.termTemplate.copy()

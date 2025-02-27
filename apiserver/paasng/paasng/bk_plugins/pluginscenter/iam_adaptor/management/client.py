@@ -120,7 +120,7 @@ class BKIAMClient:
 
         return resp["data"]["id"]
 
-    def delete_grade_manager(self, grade_manager_id: str):
+    def delete_grade_manager(self, grade_manager_id: int):
         """
         删除注册到权限中心的分级管理员
 

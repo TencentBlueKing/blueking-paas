@@ -123,11 +123,11 @@ class Test__adjust_desc_to_lock_replicas:
         self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
-        env_overlay_replicas = self._make_env_overlay_replicas(new_replicas, new_replicas * 2)
-        desc = self._make_desc(new_replicas, env_overlay_replicas=env_overlay_replicas)
+        overlay_replicas = self.make_overlay_replicas(new_replicas, new_replicas * 2)
+        desc = self._make_desc(new_replicas, overlay_replicas=overlay_replicas)
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == new_replicas
-        assert desc.spec.env_overlay.replicas == env_overlay_replicas
+        assert desc.spec.env_overlay.replicas == overlay_replicas
 
     @pytest.mark.parametrize(("env_name", "online_replicas"), [("stag", 3), ("prod", 5)])
     def test_after_scale_single_env(self, bk_stag_env, bk_prod_env, env_name, online_replicas):
@@ -155,7 +155,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # with spec.env_overlay.replicas
         desc = self._make_desc(
-            new_replicas, env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2)
+            new_replicas, overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2)
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
@@ -163,7 +163,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas_by_env("prod", new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas_by_env("prod", new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
@@ -202,7 +202,7 @@ class Test__adjust_desc_to_lock_replicas:
         # with spec.env_overlay.replicas
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
@@ -231,7 +231,7 @@ class Test__adjust_desc_to_lock_replicas:
         # with spec.env_overlay.replicas
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
@@ -260,16 +260,16 @@ class Test__adjust_desc_to_lock_replicas:
         desc = self._make_desc(new_replicas)
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert desc.spec.env_overlay.replicas == self._make_env_overlay_replicas_by_env("stag", stag_online_replicas)
+        assert desc.spec.env_overlay.replicas == self.make_overlay_replicas_by_env("stag", stag_online_replicas)
 
         # with spec.env_overlay.replicas
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
-        assert desc.spec.env_overlay.replicas == self._make_env_overlay_replicas_by_env("stag", stag_online_replicas)
+        assert desc.spec.env_overlay.replicas == self.make_overlay_replicas_by_env("stag", stag_online_replicas)
 
     def test_after_set_with_env_overlay(self, bk_stag_env):
         """测试场景: 通过 spec.env_overlay.replicas 更新过副本数后再次部署"""
@@ -289,7 +289,7 @@ class Test__adjust_desc_to_lock_replicas:
             fieldmgr.FieldMgrName.APP_DESC,
         )
 
-        online_env_overlay_replicas = self._make_env_overlay_replicas(stag_online_replicas, prod_online_replicas)
+        online_env_overlay_replicas = self.make_overlay_replicas(stag_online_replicas, prod_online_replicas)
 
         new_replicas = 10
 
@@ -304,7 +304,7 @@ class Test__adjust_desc_to_lock_replicas:
         # with spec.env_overlay.replicas
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas(new_replicas, new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert (
@@ -314,7 +314,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         desc = self._make_desc(
             new_replicas,
-            env_overlay_replicas=self._make_env_overlay_replicas_by_env("prod", new_replicas * 2),
+            overlay_replicas=self.make_overlay_replicas_by_env("prod", new_replicas * 2),
         )
         adjust_desc_to_lock_replicas(desc, bk_stag_env)
         assert (
@@ -323,23 +323,23 @@ class Test__adjust_desc_to_lock_replicas:
         )
 
     @staticmethod
-    def _make_desc(new_replicas, env_overlay_replicas=None):
+    def _make_desc(new_replicas, overlay_replicas=None):
         desc = DeploymentDesc(
             language=AppLanguage.PYTHON, spec=BkAppSpec(processes=[{"name": "web", "replicas": new_replicas}])
         )
-        if env_overlay_replicas:
-            desc.spec.env_overlay = BkAppEnvOverlay(replicas=env_overlay_replicas)
+        if overlay_replicas:
+            desc.spec.env_overlay = BkAppEnvOverlay(replicas=overlay_replicas)
         return desc
 
     @staticmethod
-    def _make_env_overlay_replicas(stag_replicas, prod_replicas):
+    def make_overlay_replicas(stag_replicas, prod_replicas):
         return [
             ReplicasOverlay(env_name="stag", process="web", count=stag_replicas),
             ReplicasOverlay(env_name="prod", process="web", count=prod_replicas),
         ]
 
     @staticmethod
-    def _make_env_overlay_replicas_by_env(env_name, replicas):
+    def make_overlay_replicas_by_env(env_name, replicas):
         return [
             ReplicasOverlay(env_name=env_name, process="web", count=replicas),
         ]

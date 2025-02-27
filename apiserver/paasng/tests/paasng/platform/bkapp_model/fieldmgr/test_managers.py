@@ -81,9 +81,10 @@ class Test__check_replicas_manually_scaled:
         FieldManager(bk_module, f_overlay_replicas(module_process_spec.name, "stag")).set(FieldMgrName.WEB_FORM)
         assert check_replicas_manually_scaled(bk_module) is True
 
-    def test_not_scaled(self, bk_module, module_process_spec):
+    @pytest.mark.usefixtures("module_process_spec")
+    def test_not_scaled(self, bk_module):
         assert check_replicas_manually_scaled(bk_module) is False
 
-    def test_not_scaled_with_no_process(self, bk_module):
+    def test_not_scaled_when_no_process(self, bk_module):
         """测试场景: 首次部署应用时, 还没有生成 ModuleProcessSpec 数据"""
         assert check_replicas_manually_scaled(bk_module) is False

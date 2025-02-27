@@ -391,8 +391,10 @@ export default {
     async getSandboxAccessible() {
       try {
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}healthz`);
-        const res = await this.executeRequest(url, 'get');
-        return res.status === 'active'
+        const headers = {Authorization: `Bearer ${this.sandboxData.devserver_token}`}
+
+        const response = await axios({method: 'get', url, headers, timeout: 5000});
+        return response.data.status === 'active'
       } catch (e) {
         console.log("dev sandbox status ready but inaccessible!", e)
       }

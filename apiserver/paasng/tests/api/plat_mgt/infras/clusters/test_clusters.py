@@ -106,7 +106,7 @@ class TestRetrieveCluster:
                 "username": "blueking",
             },
             "available_tenant_ids": ["system", "default"],
-            "exposed_url_type": "subpath",
+            "app_address_type": "subdomain",
             "app_domains": [
                 {
                     "https_enabled": False,

@@ -803,6 +803,8 @@ DEV_SANDBOX_CODE_EDITOR_PORT: 8080
 # code editor 镜像
 DEV_SANDBOX_CODE_EDITOR_IMAGE: "codercom/code-server:4.9.0"
 
+# 沙箱部署集群，若不配置则使用默认集群
+DEV_SANDBOX_CLUSTER: ""
 
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 

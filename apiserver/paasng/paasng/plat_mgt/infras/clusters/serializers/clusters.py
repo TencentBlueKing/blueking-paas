@@ -117,7 +117,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
 
     component_preferred_namespace = serializers.CharField(help_text="集群组件优先部署的命名空间")
     component_image_registry = serializers.CharField(help_text="集群组件镜像仓库地址")
-    exposed_url_type = serializers.SerializerMethodField(help_text="应用访问类型（子路径 / 子域名）")
+    app_address_type = serializers.SerializerMethodField(help_text="应用访问类型（子路径 / 子域名）")
     app_domains = serializers.SerializerMethodField(help_text="应用域名列表")
 
     node_selector = serializers.JSONField(help_text="节点选择器", source="default_node_selector")
@@ -161,14 +161,14 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
         return ElasticSearchConfigSLZ(cfg.as_dict()).data
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
-    def get_exposed_url_type(self, obj: Cluster) -> str:
+    def get_app_address_type(self, obj: Cluster) -> str:
         return ExposedURLType(obj.exposed_url_type).to_string()
 
     @swagger_serializer_method(serializer_or_field=ClusterAppDomainSLZ(many=True))
     def get_app_domains(self, obj: Cluster) -> List[str]:
         app_domains = (
             obj.ingress_config.sub_path_domains
-            if obj.exposed_url_type == AddressType.SUBPATH
+            if obj.exposed_url_type == ExposedURLType.SUBPATH
             else obj.ingress_config.app_root_domains
         )
 
@@ -355,7 +355,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
 
     app_address_type = serializers.ChoiceField(
         help_text="应用访问地址类型",
-        choices=(AddressType.SUBPATH, AddressType.SUBPATH),
+        choices=(AddressType.SUBPATH, AddressType.SUBDOMAIN),
         default=AddressType.SUBPATH,
     )
     app_domains = serializers.ListField(help_text="应用域名配置", child=AppDomainConfigSLZ(), default=list)

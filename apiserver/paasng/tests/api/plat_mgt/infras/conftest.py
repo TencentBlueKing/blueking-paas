@@ -25,6 +25,7 @@ from paas_wl.infras.resources.base.base import invalidate_global_configuration_p
 from paas_wl.workloads.networking.egress.cluster_state import get_digest_of_nodes_name
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.basic import generate_random_string
 
 
@@ -112,6 +113,7 @@ def init_system_cluster() -> Cluster:
         tenant_id=OP_TYPE_TENANT_ID,
         name=f"cluster-system-{generate_random_string(8)}",
         description="op tenant cluster",
+        exposed_url_type=ExposedURLType.SUBDOMAIN.value,
         ingress_config=IngressConfig(
             app_root_domains=[
                 Domain(

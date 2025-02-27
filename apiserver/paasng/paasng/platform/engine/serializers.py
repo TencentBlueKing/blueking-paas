@@ -578,6 +578,7 @@ class ConditionNotMatchedSLZ(serializers.Serializer):
 class CheckPreparationsSLZ(serializers.Serializer):
     all_conditions_matched = serializers.BooleanField()
     failed_conditions = serializers.ListField(child=ConditionNotMatchedSLZ())
+    replicas_manually_scaled = serializers.BooleanField(help_text="是否通过页面手动扩缩容过")
 
 
 #########################

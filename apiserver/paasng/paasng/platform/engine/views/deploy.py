@@ -39,6 +39,7 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.fieldmgr.managers import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
@@ -101,7 +102,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(
             data=dict(
                 CheckPreparationsSLZ(
-                    dict(all_conditions_matched=not status.activated, failed_conditions=status.failed_conditions)
+                    dict(
+                        all_conditions_matched=not status.activated,
+                        failed_conditions=status.failed_conditions,
+                        replicas_manually_scaled=check_replicas_manually_scaled(env.module),
+                    )
                 ).data
             )
         )

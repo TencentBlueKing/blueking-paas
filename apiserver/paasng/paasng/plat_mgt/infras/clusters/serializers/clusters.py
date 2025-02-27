@@ -168,7 +168,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     def get_app_domains(self, obj: Cluster) -> List[str]:
         app_domains = (
             obj.ingress_config.sub_path_domains
-            if obj.exposed_url_type == AddressType.SUBPATH
+            if obj.exposed_url_type == ExposedURLType.SUBPATH
             else obj.ingress_config.app_root_domains
         )
 

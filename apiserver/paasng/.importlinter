@@ -77,8 +77,6 @@ ignore_imports =
     # Depend on the "constants" submodule is excluded because "constants" is treated like
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
-    # view_enduser -> engine.deploy module, to be removed in the future if we find a better way
-    paas_wl.infras.resource_templates.managers -> paas_wl.bk_app.processes.models
 
 
 [importlinter:contract:layers-paas-wl-resources]

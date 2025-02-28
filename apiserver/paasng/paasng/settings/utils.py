@@ -21,6 +21,7 @@ import socket
 import sys
 from typing import Dict, List, Optional, Tuple, Union
 
+from blue_krill.redis_tools.sentinel import SentinelBackend
 from blue_krill.secure.dj_environ import SecureEnv
 from dynaconf.base import LazySettings
 from dynaconf.utils import object_merge
@@ -215,3 +216,22 @@ def is_in_celery_worker(argv: Optional[List] = None) -> bool:
             found_worker = True
             break
     return found_celery and found_worker
+
+
+def cache_redis_sentinel_url(url: str, sentinel_manager: str, sentinel_password: str):
+    """Parse a redis sentinel url to django CACHES setting"""
+    backend = SentinelBackend(url, sentinel_manager, {"password": sentinel_password})
+    return {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{sentinel_manager}/{backend.db}",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.SentinelClient",
+            "SENTINELS": [[host["host"], host["port"]] for host in backend.hosts],
+            # redis sentinel 密码
+            "SENTINEL_KWARGS": {"password": sentinel_password},
+            "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+            "CONNECTION_FACTORY": "django_redis.pool.SentinelConnectionFactory",
+            # redis 实例密码
+            "PASSWORD": backend.password,
+        },
+    }

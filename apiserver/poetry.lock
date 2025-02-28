@@ -1183,19 +1183,22 @@ prometheus-client = ">=0.7"
 
 [[package]]
 name = "django-redis"
-version = "4.12.1"
+version = "5.4.0"
 description = "Full featured redis cache backend for Django."
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "django-redis-4.12.1.tar.gz", hash = "sha256:306589c7021e6468b2656edc89f62b8ba67e8d5a1c8877e2688042263daa7a63"},
-    {file = "django_redis-4.12.1-py3-none-any.whl", hash = "sha256:1133b26b75baa3664164c3f44b9d5d133d1b8de45d94d79f38d1adc5b1d502e5"},
+    {file = "django-redis-5.4.0.tar.gz", hash = "sha256:6a02abaa34b0fea8bf9b707d2c363ab6adc7409950b2db93602e6cb292818c42"},
+    {file = "django_redis-5.4.0-py3-none-any.whl", hash = "sha256:ebc88df7da810732e2af9987f7f426c96204bf89319df4c6da6ca9a2942edd5b"},
 ]
 
 [package.dependencies]
-Django = ">=2.2"
-redis = ">=3.0.0"
+Django = ">=3.2"
+redis = ">=3,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1"
+
+[package.extras]
+hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
 
 [[package]]
 name = "django-revproxy"
@@ -4362,4 +4365,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "e101943f654221dca23fb80a58cdec05aa88f9683b05cf5a8d5de90b3ec37759"
+content-hash = "1fb8377f0598be0defe6a36093891b65ea29073d6063e1a0725c150c59456cb3"

@@ -77,6 +77,9 @@ ignore_imports =
     # Depend on the "constants" submodule is excluded because "constants" is treated like
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
+    # shared utils
+    # Depend on the "ModuleProcessSpec"
+    paas_wl.bk_app.processes.kres_entities -> paasng.platform.bkapp_model.models
 
 
 [importlinter:contract:layers-paas-wl-resources]

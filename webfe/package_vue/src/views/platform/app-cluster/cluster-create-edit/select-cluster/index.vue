@@ -204,10 +204,10 @@ import {
   certOptions,
   elasticSearchOptions,
   availableTenantsOptions,
-} from './form-options';
-import ConfigInput from './comps/config-input.vue';
-import ConfigSelect from './comps/config-select.vue';
-import InputList from './comps/input-list.vue';
+} from '../form-options';
+import ConfigInput from '../comps/config-input.vue';
+import ConfigSelect from '../comps/config-select.vue';
+import InputList from '../comps/input-list.vue';
 import { pick } from 'lodash';
 
 export default {
@@ -415,19 +415,6 @@ export default {
     line-height: 20px;
     .tip-btn {
       padding: 0;
-    }
-  }
-  .card-title {
-    font-weight: 700;
-    font-size: 14px;
-    color: #313238;
-    line-height: 22px;
-    margin-bottom: 18px;
-    .sub-tip {
-      font-weight: 400;
-      font-size: 12px;
-      color: #979ba5;
-      line-height: 20px;
     }
   }
   .cluster-form-cls {

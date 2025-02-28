@@ -2,6 +2,7 @@
   <bk-sideslider
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
+    show-mask
     width="960"
   >
     <div slot="header">

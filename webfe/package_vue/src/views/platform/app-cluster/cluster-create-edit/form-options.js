@@ -36,6 +36,7 @@ const infoOptions = [
     },
 ];
 
+// 容器日志目录、集群访问入口 IP
 const commonOptions = [
     {
         label: '容器日志目录',
@@ -180,7 +181,6 @@ export const k8sOptions = [
         label: 'APIServers',
         type: 'arr-input',
         property: 'api_servers_list',
-        maxlength: 100,
         required: true,
     },
     ...commonOptions,
@@ -246,5 +246,42 @@ export const availableTenantsOptions = [
                 return store.dispatch('tenant/getTenants');
             }
         },
+    },
+];
+
+// 组件配置信息
+export const componentConfigOptions = [
+    {
+        label: '命名空间',
+        type: 'input',
+        property: 'component_preferred_namespace',
+        required: true,
+        tips: '为方便管理，后续组件都建议安装在这个命名空间下',
+        rules: [...requiredRule],
+    },
+    {
+        label: '镜像仓库',
+        type: 'input',
+        property: 'component_image_registry',
+        required: true,
+        tips: '如使用自定义的镜像仓库，请确认相关镜像已经推送到该仓库',
+        rules: [...requiredRule],
+    },
+    {
+        label: '应用访问类型',
+        type: 'radio',
+        property: 'app_address_type',
+        required: true,
+        radios: [
+            { value: 'subpath', label: '子路径', tip: '集群上所有应用共用一个域名，应用的访问地址形如：apps.example.com/appid' },
+            { value: 'subdomain', label: '子域名', tip: '需要给应用申请一个泛域名（如：*.apps.example.com），应用的访问地址形式如：appid.apps.example.com' },
+        ],
+    },
+    {
+        label: '应用域名',
+        type: 'arr-input',
+        property: 'app_domains',
+        required: true,
+        tips: '应用域名需要配置解析到集群的出口 IP',
     },
 ];

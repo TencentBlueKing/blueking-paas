@@ -162,5 +162,19 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/`;
       return http.post(url, data);
     },
+    /**
+     * 更新集群
+     */
+    updateCluster({}, { clusterName, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 更新或安装集群组件
+     */
+    updateComponent({}, { clusterName, componentName, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
+      return http.post(url, data);
+    },
   },
 };

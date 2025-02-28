@@ -26,12 +26,12 @@
             <DetailsRow
               :label-width="80"
               :label="`HTTP ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.http"
+              :value="values?.service?.nodePorts?.http || '--'"
             />
             <DetailsRow
               :label-width="80"
               :label="`HTTPS ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.https"
+              :value="values?.service?.nodePorts?.https || '--'"
             />
           </template>
           <template v-else>
@@ -79,15 +79,19 @@
         slot="value"
         class="status-wrapper"
       >
-        <i
-          class="paasng-icon paasng-check-circle-shape"
-          v-if="data?.status === 'installed'"
-        ></i>
-        <i
-          class="paasng-icon paasng-unfinished"
-          v-else
-        ></i>
-        <span>{{ localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--' }}</span>
+        <IconStatus
+          v-if="data?.status !== 'installing'"
+          :icon-class="statusMap[data?.status]?.iconClass"
+          :icon-color="statusMap[data?.status]?.color"
+          :label="localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--'"
+        />
+        <template v-else>
+          <round-loading
+            size="mini"
+            class="mr5"
+          />
+          <span>{{ localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--' }}</span>
+        </template>
         <bk-button
           v-if="data?.status === 'installed'"
           :text="true"
@@ -117,6 +121,7 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
+import IconStatus from '@/components/icon-status';
 import EditorSideslider from '@/components/editor-sideslider';
 import DetailComponentsSideslider from './detail-components-sideslider.vue';
 import { COMPONENT_STATUS } from '@/common/constants';
@@ -136,10 +141,25 @@ export default {
     DetailsRow,
     EditorSideslider,
     DetailComponentsSideslider,
+    IconStatus,
   },
   data() {
     return {
       COMPONENT_STATUS,
+      statusMap: {
+        not_installed: {
+          color: '#f59500',
+          iconClass: 'paasng-unfinished',
+        },
+        installed: {
+          color: '#18c0a1',
+          iconClass: 'paasng-check-circle-shape',
+        },
+        installation_failed: {
+          color: '#ea3636',
+          iconClass: 'paasng-close-circle-shape',
+        },
+      },
       isEditorSideslider: false,
       isShowDetail: false,
       // 与其他组件展示不同

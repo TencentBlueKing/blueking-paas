@@ -3,6 +3,7 @@
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
     width="640"
+    show-mask
     ext-cls="cluster-allocation-sideslider-cls"
     :before-close="handleBeforeClose"
     @shown="handleShown"

@@ -121,7 +121,7 @@ export default {
     background: #fff;
     border-right: 1px solid rgb(220, 222, 229);
     height: 100%;
-    z-index: 9;
+    z-index: 999;
   }
   .right-content {
     overflow: auto;

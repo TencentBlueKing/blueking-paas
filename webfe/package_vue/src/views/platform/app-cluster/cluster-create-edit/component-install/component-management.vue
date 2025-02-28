@@ -49,7 +49,25 @@
               :label-width="90"
               :label="`${$t('访问方式')}：`"
               :value="accessMethod"
-            />
+            >
+              <template slot="value">
+                <span>{{ accessMethod }}</span>
+                <span class="tip">
+                  <i class="paasng-icon paasng-info-line ml8"></i>
+                  <span v-if="accessMethod === 'nodePort'">
+                    {{
+                      $t(
+                        '使用 CLB 作为接入层，监听器根据域名转发至不同集群的 NodePort。Nginx 同样根据域名配置 upstream，指向相应的集群 NodePort。'
+                      )
+                    }}
+                  </span>
+                  <span v-else>
+                    {{ $t('主机网络模式下，bk-ingress-nginx 会直接监听在对应节点的 80 和 443 端口。') }}
+                  </span>
+                </span>
+              </template>
+            </DetailsRow>
+            <!-- nodePort -->
             <template v-if="accessMethod === 'nodePort'">
               <DetailsRow
                 :label-width="90"
@@ -61,6 +79,26 @@
                 :label="`HTTPS ${$t('端口')}：`"
                 :value="values?.service?.nodePorts?.https"
               />
+            </template>
+            <template v-else>
+              <!-- hostNerwork -->
+              <DetailsRow
+                :label-width="80"
+                :label="`${$t('节点标签')}：`"
+                :align="'flex-start'"
+              >
+                <div slot="value">
+                  <span v-if="!values.nodeSelector?.length">--</span>
+                  <span
+                    v-else
+                    v-for="(val, key) in values.nodeSelector"
+                    class="tag"
+                    :key="key"
+                  >
+                    {{ key }} = {{ val }}
+                  </span>
+                </div>
+              </DetailsRow>
             </template>
           </div>
         </div>
@@ -344,6 +382,10 @@ export default {
       color: #ea3636;
     }
   }
+  .tip {
+    font-size: 12px;
+    color: #979ba5;
+  }
   .config {
     padding: 12px 24px;
     background: #ffffff;
@@ -356,6 +398,9 @@ export default {
       .value {
         font-size: 12px;
       }
+    }
+    .ml8 {
+      margin-left: 8px;
     }
   }
   .install-btns {

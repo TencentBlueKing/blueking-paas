@@ -16,15 +16,10 @@ export default {
     curStep: {
       type: Number,
     },
-  },
-  data() {
-    return {
-      steps: [
-        { title: this.$t('选择集群'), icon: 1 },
-        { title: this.$t('组件配置'), icon: 2 },
-        { title: this.$t('组件安装'), icon: 3 },
-      ],
-    };
+    steps: {
+      type: Array,
+      default: () => [],
+    },
   },
 };
 </script>

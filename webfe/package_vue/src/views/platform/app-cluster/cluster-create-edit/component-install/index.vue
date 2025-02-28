@@ -135,7 +135,7 @@ export default {
         const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: 'paas-test' });
         this.componentList = res;
         this.isLoading = false;
-        // 使用 Promise.all 并行获取组件详情
+        // 使用 Promise.all 并行获取组件详情，required 为必填项 必须安装成功才允许下一步
         await Promise.all(res.map((component) => this.getComponentDetail(component.name)));
       } catch (e) {
         this.catchErrorHandler(e);

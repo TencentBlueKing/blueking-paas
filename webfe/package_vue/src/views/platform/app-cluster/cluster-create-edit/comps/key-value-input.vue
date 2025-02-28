@@ -1,12 +1,15 @@
 <template>
-  <div class="input-list-container">
+  <div class="key-value-input-container">
     <bk-form
       :label-width="0"
       :model="formData"
       ref="formRef"
       ext-cls="input-list-form-cls"
     >
-      <div class="item-title">
+      <div
+        class="item-title"
+        v-if="isTitle"
+      >
         <div>{{ $t('键') }}</div>
         <div>{{ $t('值') }}</div>
       </div>
@@ -24,7 +27,9 @@
         >
           <bk-input v-model="item.key"></bk-input>
         </bk-form-item>
-        <span class="sign">=</span>
+        <div :class="['sign', { 'sign-hide': !isSign }]">
+          <span v-if="isSign">=</span>
+        </div>
         <bk-form-item
           label=""
           :required="true"
@@ -53,7 +58,17 @@
 
 <script>
 export default {
-  name: 'InputList',
+  name: 'KeyValueInput',
+  props: {
+    isTitle: {
+      type: Boolean,
+      default: false,
+    },
+    isSign: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       formData: {
@@ -95,7 +110,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.input-list-container {
+.key-value-input-container {
   .item-title {
     display: flex;
     align-items: center;
@@ -112,9 +127,14 @@ export default {
     align-items: center;
     margin-bottom: 8px;
     .sign {
+      flex-shrink: 0;
       font-size: 14px;
       color: #4d4f56;
       margin: 0 8px;
+      &.sign-hide {
+        margin: 0;
+        width: 8px;
+      }
     }
     .tools {
       min-width: 52px;

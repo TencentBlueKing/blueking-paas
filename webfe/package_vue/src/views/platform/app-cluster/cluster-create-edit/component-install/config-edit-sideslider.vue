@@ -64,8 +64,10 @@
             :type="item.type"
           />
           <KeyValueInput
-            ref="keyValueInput"
             v-else
+            :is-title="true"
+            :is-sign="true"
+            ref="keyValueInput"
           />
         </bk-form-item>
         <bk-form-item class="mt20">
@@ -93,7 +95,7 @@
 
 <script>
 import ConfigInput from '../comps/config-input.vue';
-import KeyValueInput from './key-value-input.vue';
+import KeyValueInput from '../comps/key-value-input.vue';
 import i18n from '@/language/i18n.js';
 import { cloneDeep } from 'lodash';
 
@@ -296,6 +298,9 @@ export default {
       cursor: pointer;
       &:first-child {
         margin-bottom: 8px;
+        i {
+          transform: rotate(90deg);
+        }
       }
       &.active {
         border-color: #3a84ff;
@@ -314,11 +319,9 @@ export default {
         height: 100%;
         border-right: 1px solid #c4c6cc;
         background: #f5f7fa;
+        color: #979ba5;
         i {
           font-size: 24px;
-        }
-        &:first-child i {
-          transform: rotate(90deg);
         }
       }
       .info {

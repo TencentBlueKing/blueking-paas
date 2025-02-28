@@ -1,7 +1,10 @@
 <template>
   <div class="cluster-create-edit">
     <!-- 步骤条 -->
-    <ProgressBar :cur-step="curStep" />
+    <ProgressBar
+      :cur-step="curStep"
+      :steps="steps"
+    />
     <SelectCluster
       v-if="curStep === 1"
       ref="selectCluster"
@@ -12,6 +15,11 @@
       ref="componentConfig"
     />
     <ComponentInstall v-else-if="curStep === 3" />
+    <ClusterFeature
+      v-else-if="curStep === 4"
+      :cluster-id="clusterId"
+      ref="clusterFeature"
+    />
     <section class="submit-btn">
       <bk-button
         v-if="curStep > 1"
@@ -20,14 +28,18 @@
       >
         {{ $t('上一步') }}
       </bk-button>
-      <bk-button
-        class="ml8"
-        :theme="'primary'"
-        :loading="nextBtnLodaing"
-        @click="handleSubmit"
-      >
-        {{ curStep === 1 ? $t('保存并下一步') : $t('下一步') }}
-      </bk-button>
+      <!-- 组件安装阶段，需要将必要组件安装成功才允许下一步 -->
+      <span v-bk-tooltips="{ content: disabledTips, disabled: !nextBtnDisabled }">
+        <bk-button
+          class="ml8"
+          :theme="'primary'"
+          :disabled="nextBtnDisabled"
+          :loading="nextBtnLodaing"
+          @click="handleSubmit"
+        >
+          {{ curStep === 1 ? $t('保存并下一步') : curStep === steps.length ? $t('保存') : $t('下一步') }}
+        </bk-button>
+      </span>
       <bk-button
         :theme="'default'"
         class="ml8"
@@ -44,6 +56,7 @@ import SelectCluster from './select-cluster/index.vue';
 import ProgressBar from './comps/progress-bar.vue';
 import ComponentConfig from './component-config.vue';
 import ComponentInstall from './component-install/index.vue';
+import ClusterFeature from './cluster-feature';
 export default {
   name: 'ClusterCreateEdit',
   components: {
@@ -51,14 +64,35 @@ export default {
     ProgressBar,
     ComponentConfig,
     ComponentInstall,
+    ClusterFeature,
   },
   data() {
     return {
       nextBtnLodaing: false,
       curStep: 3,
+      steps: [
+        { title: this.$t('选择集群'), icon: 1 },
+        { title: this.$t('组件配置'), icon: 2 },
+        { title: this.$t('组件安装'), icon: 3 },
+        { title: this.$t('集群特性'), icon: 4 },
+      ],
       // 暂时未固定值 paas-test 测试集群id，后续替换新建、编辑集群id
       clusterId: 'paas-test',
     };
+  },
+  computed: {
+    nextBtnDisabled() {
+      if (this.curStep === 3) {
+        return true;
+      }
+      return false;
+    },
+    disabledTips() {
+      if (this.curStep === 3) {
+        return this.$t('请先将必要组件安装成功');
+      }
+      return '';
+    },
   },
   methods: {
     // 返回集群列表
@@ -76,10 +110,16 @@ export default {
     async handleSubmit() {
       switch (this.curStep) {
         case 1:
+          // 选择集群
           this.validate('selectCluster', this.createCluster);
           break;
         case 2:
+          // 组件配置
           this.validate('componentConfig', this.updataComponentConfig);
+          break;
+        case 4:
+          // 集群特性
+          this.validate('clusterFeature', this.updataClusterFeature);
           break;
         default:
           break;
@@ -131,6 +171,22 @@ export default {
           message: this.$t('更新组件配置成功'),
         });
         this.setStep(3);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.nextBtnLodaing = false;
+      }
+    },
+    // 更新集群特性
+    updataClusterFeature(data) {
+      this.nextBtnLodaing = true;
+      try {
+        console.log('更新集群特性', data);
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('集群添加成功'),
+        });
+        this.back();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

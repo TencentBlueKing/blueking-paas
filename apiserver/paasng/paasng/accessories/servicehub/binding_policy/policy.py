@@ -135,7 +135,7 @@ def get_service_type(service: ServiceObj) -> str:
 
 
 @define
-class UnifiedAllocationConfig:
+class UnifiedAllocationPolicy:
     """The configuration for unified allocation policy.
 
     This class holds the necessary configuration data extracted from a ServiceBindingPolicy.
@@ -145,7 +145,7 @@ class UnifiedAllocationConfig:
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationConfig":
+    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationPolicy":
         if policy is None:
             return None
         return cls(
@@ -155,7 +155,7 @@ class UnifiedAllocationConfig:
 
 
 @define
-class RuleBasedAllocationConfig:
+class RuleBasedAllocationPolicy:
     """The configuration for building precedence policy.
 
     This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
@@ -168,7 +168,7 @@ class RuleBasedAllocationConfig:
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationConfig":
+    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationPolicy":
         return cls(
             cond_type=policy.cond_type,
             cond_data=policy.cond_data,
@@ -196,26 +196,26 @@ class PolicyCombinationConfig:
         tenant_id="tenant_x",
         service_id="service_x"
         allocation_precedence_policies=[
-            RuleBasedAllocationConfig(
+            RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN.value,
                 cond_data={"regions": ["region_default"]},
                 priority=2,
                 plans=["plan_region"]
             ),
-            RuleBasedAllocationConfig(
+            RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
                 cond_data={"cluster_names": ["cluster_default"]},
                 priority=1,
                 plans=["plan_cluster"]
             )
         ],
-        allocation_policy=UnifiedAllocationConfig(plans=["plan_default"])
+        allocation_policy=UnifiedAllocationPolicy(plans=["plan_default"])
     )
     """
 
     tenant_id: str
     service_id: str
     # 按规则分配
-    allocation_precedence_policies: list[RuleBasedAllocationConfig]
+    allocation_precedence_policies: list[RuleBasedAllocationPolicy]
     # 统一分配，也是按规则分配最终的保底选项
-    allocation_policy: UnifiedAllocationConfig
+    allocation_policy: UnifiedAllocationPolicy

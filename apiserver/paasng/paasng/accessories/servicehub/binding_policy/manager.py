@@ -20,8 +20,8 @@ from django.db.models import QuerySet
 
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
-    RuleBasedAllocationConfig,
-    UnifiedAllocationConfig,
+    RuleBasedAllocationPolicy,
+    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
 from paasng.accessories.servicehub.constants import (
@@ -212,9 +212,9 @@ class PolicyCombinationManager:
             return None
         precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
         allocation_precedence_policies = [
-            RuleBasedAllocationConfig.create_from_policy(policy) for policy in precedence_policies
+            RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
         ]
-        allocation_policy = UnifiedAllocationConfig.create_from_policy(service_binding_policy)
+        allocation_policy = UnifiedAllocationPolicy.create_from_policy(service_binding_policy)
         return PolicyCombinationConfig(
             tenant_id=self.tenant_id,
             service_id=self.service.uuid,

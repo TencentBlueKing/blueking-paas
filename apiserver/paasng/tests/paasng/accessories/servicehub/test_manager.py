@@ -28,8 +28,8 @@ from django_dynamic_fixture import G
 from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinationManager, ServiceBindingPolicyManager
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
-    RuleBasedAllocationConfig,
-    UnifiedAllocationConfig,
+    RuleBasedAllocationPolicy,
+    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType
 from paasng.accessories.servicehub.exceptions import (
@@ -215,15 +215,15 @@ class TestMixedMgrBindService:
 class TestPolicyCombinationManager:
     @pytest.fixture()
     def policy_config(self, bk_app, service_obj, plan1, plan2):
-        allocation_policy = UnifiedAllocationConfig(plans=[plan1.uuid, plan2.uuid])
+        allocation_policy = UnifiedAllocationPolicy(plans=[plan1.uuid, plan2.uuid])
         allocation_precedence_policies = [
-            RuleBasedAllocationConfig(
+            RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN,
                 cond_data={"regions": [bk_app.region]},
                 priority=2,
                 plans=[plan1.uuid],
             ),
-            RuleBasedAllocationConfig(
+            RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.CLUSTER_IN,
                 cond_data={"cluster_name": ["cluster1", "cluster2"]},
                 priority=1,

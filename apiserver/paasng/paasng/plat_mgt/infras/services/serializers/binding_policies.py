@@ -20,8 +20,8 @@ from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
-    RuleBasedAllocationConfig,
-    UnifiedAllocationConfig,
+    RuleBasedAllocationPolicy,
+    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 
@@ -41,8 +41,8 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
 
 
 class AllocationPolicySLZ(BaseAllocationPolicySLZ):
-    def to_internal_value(self, data) -> UnifiedAllocationConfig:
-        return cattr.structure(super().to_internal_value(data), UnifiedAllocationConfig)
+    def to_internal_value(self, data) -> UnifiedAllocationPolicy:
+        return cattr.structure(super().to_internal_value(data), UnifiedAllocationPolicy)
 
 
 class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
@@ -50,8 +50,8 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
 
-    def to_internal_value(self, data) -> RuleBasedAllocationConfig:
-        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationConfig)
+    def to_internal_value(self, data) -> RuleBasedAllocationPolicy:
+        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationPolicy)
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):

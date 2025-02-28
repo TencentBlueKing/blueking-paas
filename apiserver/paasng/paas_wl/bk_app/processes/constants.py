@@ -40,11 +40,3 @@ class ProcessTargetStatus(StrStructuredEnum):
 
     START = EnumField("start")
     STOP = EnumField("stop")
-
-
-class ProbeType(StrStructuredEnum):
-    """Choices of probe type"""
-
-    READINESS = EnumField("readiness", label="readinessProbe")
-    LIVENESS = EnumField("liveness", label="livenessProbe")
-    STARTUP = EnumField("startup", label="startupProbe")

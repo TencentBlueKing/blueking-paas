@@ -14,15 +14,15 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
+import cattr
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release
-from paas_wl.bk_app.processes.entities import Probe, Resources, Runtime, Status
+from paas_wl.bk_app.processes.entities import ProbeSet, Resources, Runtime, Status
 from paas_wl.bk_app.processes.kres_slzs import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 from paas_wl.core.app_structure import get_structure
 from paas_wl.infras.cluster.utils import get_cluster_by_app
@@ -32,6 +32,8 @@ from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.modules.models.module import Module
 
 
 @dataclass
@@ -98,7 +100,7 @@ class Process(AppEntity):
     schedule: Schedule
     runtime: Runtime
     resources: Optional[Resources] = None
-    readiness_probe: Optional[Probe] = None
+    probes: Optional[ProbeSet] = None
 
     # 实际资源的动态状态
     metadata: Optional["ResourceField"] = None
@@ -145,6 +147,15 @@ class Process(AppEntity):
             resources=Resources(**config.resource_requirements.get(type_, {})),
         )
         process.name = mapper_version.proc_resources(process=process).deployment_name
+
+        # 添加探针信息
+        module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
+        try:
+            process_spec = ModuleProcessSpec.objects.get(module=module, name=type_)
+            probes = process_spec.probes.render_port() if process_spec.probes else None
+            process.probes = cattr.structure(cattr.unstructure(probes), ProbeSet)
+        except ModuleProcessSpec.DoesNotExist:
+            pass
         return process
 
     @property

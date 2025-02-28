@@ -27,6 +27,7 @@ ignore_imports =
     ** -> paasng.platform.templates.**
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.bkapp_model.entities
+    paas_wl.bk_app.processes.kres_entities -> paasng.platform.bkapp_model.models
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
     paasng.core.tenant.views -> paasng.infras.bk_user.client
     # legacydb
@@ -77,9 +78,6 @@ ignore_imports =
     # Depend on the "constants" submodule is excluded because "constants" is treated like
     # a shared settings globally.
     paas_wl.** -> paas_wl.**.constants
-    # shared utils
-    # Depend on the "ModuleProcessSpec"
-    paas_wl.bk_app.processes.kres_entities -> paasng.platform.bkapp_model.models
 
 
 [importlinter:contract:layers-paas-wl-resources]

@@ -62,7 +62,10 @@ def get_tenant(user: User) -> Tenant:
     try:
         _id = getattr(user, "tenant_id")
     except AttributeError:
-        raise ValueError("No tenant can be found")
+        raise ValueError("The user object doesn't have the tenant_id attribute")
+    if not _id:
+        raise ValueError("The tenant_id exists but its value is empty")
+
     return Tenant(_id)
 
 

@@ -67,5 +67,7 @@ class FrontendFeatureViewSet(ViewSet):
             "WEB_CONSOLE": settings.ENABLE_BCS,
             # 是否能创建 LessCode 应用
             "BK_LESSCODE_APP": settings.ENABLE_BK_LESSCODE,
+            # 是否能创建沙箱
+            "DEV_SANDBOX": settings.ENABLE_BK_SANDBOX,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

@@ -256,6 +256,7 @@ class MarketConfigManager(models.Manager):
                 auto_enable_when_deploy=not confirm_required_when_publish,
                 source_module=application.get_default_module(),
                 source_url_type=url_type,
+                tenant_id=application.tenant_id,
             )
             return obj, True
 

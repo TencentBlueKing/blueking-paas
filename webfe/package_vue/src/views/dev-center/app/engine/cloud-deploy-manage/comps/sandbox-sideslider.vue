@@ -287,6 +287,7 @@ export default {
       ),
       errorInfo: {},
       isShowErrorAlert: false,
+      dataReady: false,
       rules: {
         branch: [
           {
@@ -315,6 +316,7 @@ export default {
     },
     // 未创建的沙箱的模块
     nonCreatedSandboxModuleList() {
+      if (!this.dataReady) return []; // 数据未就绪返回空
       // 过滤和合并模块信息
       const result = this.curAppModuleList.reduce((acc, module) => {
         const currentModuleDeploy = this.moduleDeployList.find((deploy) => deploy.name === module.name) || {};
@@ -392,6 +394,7 @@ export default {
     },
     // 获取沙箱列表
     async getSandboxList() {
+      this.dataReady = false;
       this.isTableLoading = true;
       try {
         const res = await this.$store.dispatch('sandbox/getSandboxList', {
@@ -402,6 +405,7 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.isTableLoading = false;
+        this.dataReady = true;
       }
     },
     // 销毁沙箱

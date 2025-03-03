@@ -171,6 +171,7 @@ class Command(BaseCommand):
                 "source_module": module,
                 "source_url_type": ProductSourceUrlType.THIRD_PARTY.value,
                 "source_tp_url": os.path.expandvars(app_desc.source_tp_url),
+                "tenant_id": application.tenant_id,
             },
         )
         product, p_created = Product.objects.update_or_create(

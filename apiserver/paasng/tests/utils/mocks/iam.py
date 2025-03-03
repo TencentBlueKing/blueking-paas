@@ -64,7 +64,7 @@ class StubBKIAMClient:
 
             ApplicationMembership.objects.create(application=app, role=ApplicationRole.ADMINISTRATOR, user=new_user)
 
-    def delete_grade_manager(self, grade_manager_id: str):
+    def delete_grade_manager(self, grade_manager_id: int):
         """删除注册到权限中心的分级管理员"""
 
     def delete_grade_manager_members(self, grade_manager_id: int, usernames: List[str]):

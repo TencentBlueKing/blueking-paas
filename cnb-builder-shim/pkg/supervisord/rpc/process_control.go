@@ -52,7 +52,7 @@ const (
 	Unknown  ProcessState = 1000 // The process is in an unknown state (supervisord programming error)
 )
 
-// 请求 rpc 接口方法，并且返回进程信息列表
+// 请求 rpc 方法接口，并且返回进程信息列表
 func (c *Client) callMethodForProcessInfos(method string, args ...interface{}) ([]ProcessInfo, error) {
 	var processInfo []ProcessInfo
 	err := c.rpcClient.Call(method, args, &processInfo)

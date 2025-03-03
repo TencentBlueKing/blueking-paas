@@ -79,6 +79,7 @@ func AutoConnectClient(rpcAddress string, configPath string) (*Client, error) {
 	return nil, err
 }
 
+// 请求 rpc 方法接口并验证 bool 类型返回
 func (c *Client) callMethodAndVerifyBool(method string, args ...interface{}) error {
 	var result bool
 	err := c.rpcClient.Call(method, args, &result)

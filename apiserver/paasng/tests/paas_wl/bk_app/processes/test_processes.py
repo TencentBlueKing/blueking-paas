@@ -33,9 +33,7 @@ from paas_wl.bk_app.processes.entities import (
 from paas_wl.bk_app.processes.entities import (
     ProbeSet as WLProbeSet,
 )
-from paas_wl.bk_app.processes.entities import (
-    TCPSocketAction as WLTCPSocketAction,
-)
+from paas_wl.bk_app.processes.entities import TCPSocketAction as WLTCPSocketAction
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import ProcessDeserializer, ProcessSerializer
 from paas_wl.bk_app.processes.processes import (
@@ -211,8 +209,8 @@ class TestProcessAppEntity:
         return GVKConfig(
             server_version="v1.8.15",
             kind="Deployment",
-            preferred_apiversion="extensions/v1beta1",
-            available_apiversions=["extensions/v1beta1", "apps/v1beta2", "apps/v1"],
+            preferred_apiversion="apps/v1",
+            available_apiversions=["apps/v1"],
         )
 
     @pytest.fixture()
@@ -344,7 +342,7 @@ class TestProcessAppEntity:
                 "replicas": 0,
             },
             "status": {},
-            "apiVersion": "extensions/v1beta1",
+            "apiVersion": "apps/v1",
             "kind": "Deployment",
         }
 

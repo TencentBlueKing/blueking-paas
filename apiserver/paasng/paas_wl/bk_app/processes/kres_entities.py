@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
 import cattr
+from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
@@ -148,14 +149,15 @@ class Process(AppEntity):
         )
         process.name = mapper_version.proc_resources(process=process).deployment_name
 
-        # 添加探针信息
-        module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
+        # 添加探针
         try:
+            module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
             process_spec = ModuleProcessSpec.objects.get(module=module, name=type_)
             probes = process_spec.probes.render_port() if process_spec.probes else None
             process.probes = cattr.structure(cattr.unstructure(probes), ProbeSet)
-        except ModuleProcessSpec.DoesNotExist:
+        except ObjectDoesNotExist:
             pass
+
         return process
 
     @property

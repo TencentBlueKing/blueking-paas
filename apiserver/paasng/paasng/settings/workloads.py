@@ -94,7 +94,7 @@ SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 # ---------------
 
 # 是否允许沙箱
-ENABLE_DEV_SANDBOX = settings.get("ENABLE_DEV_SANDBOX", False)
+FE_ENABLE_DEV_SANDBOX = settings.get("ENABLE_DEV_SANDBOX", False)
 # devserver 监听端口
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
 # devserver 镜像

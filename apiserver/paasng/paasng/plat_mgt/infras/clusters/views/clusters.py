@@ -27,6 +27,7 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenTyp
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
+from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
@@ -41,6 +42,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUsageRetrieveOutputSLZ,
 )
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
+from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -162,6 +164,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
         # 基础配置
         cluster.available_tenant_ids = data["available_tenant_ids"]
         cluster.description = data["description"]
+        cluster.exposed_url_type = (
+            ExposedURLType.SUBPATH if data["app_address_type"] == AddressType.SUBPATH else ExposedURLType.SUBDOMAIN
+        )
         cluster.ingress_config = data["ingress_config"]
         cluster.annotations = data["annotations"]
 

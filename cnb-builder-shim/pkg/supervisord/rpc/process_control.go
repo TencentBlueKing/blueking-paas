@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package supervisord
+package rpc
 
 // ProcessInfo stores information about a process
 // https://supervisord.org/api.html#process-control
@@ -52,7 +52,8 @@ const (
 	Unknown  ProcessState = 1000 // The process is in an unknown state (supervisord programming error)
 )
 
-func (c *Client) callForProcessInfos(method string, args ...interface{}) ([]ProcessInfo, error) {
+// 请求 rpc 接口方法，并且返回进程信息列表
+func (c *Client) callMethodForProcessInfos(method string, args ...interface{}) ([]ProcessInfo, error) {
 	var processInfo []ProcessInfo
 	err := c.rpcClient.Call(method, args, &processInfo)
 	if err != nil {
@@ -62,53 +63,53 @@ func (c *Client) callForProcessInfos(method string, args ...interface{}) ([]Proc
 	return processInfo, nil
 }
 
-// GetProcessInfo ...
+// GetProcessInfo 获取所有进程详情
 func (c *Client) GetProcessInfo(name string) (*ProcessInfo, error) {
-	var processinfo ProcessInfo
-	err := c.rpcClient.Call("supervisor.getProcessInfo", name, &processinfo)
+	var processInfo ProcessInfo
+	err := c.rpcClient.Call("supervisor.getProcessInfo", name, &processInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return &processinfo, nil
+	return &processInfo, nil
 }
 
-// GetAllProcessInfo ...
+// GetAllProcessInfo 获取所有进程详情
 func (c *Client) GetAllProcessInfo() ([]ProcessInfo, error) {
-	return c.callForProcessInfos("supervisor.getAllProcessInfo")
+	return c.callMethodForProcessInfos("supervisor.getAllProcessInfo")
 }
 
-// StartProcess ...
+// StartProcess 启动进程
 func (c *Client) StartProcess(name string, wait bool) error {
-	return c.CallMethodAndVerifyBool("supervisor.startProcess", name, wait)
+	return c.callMethodAndVerifyBool("supervisor.startProcess", name, wait)
 }
 
-// StartAllProcesses ...
+// StartAllProcesses 启动所有进程
 func (c *Client) StartAllProcesses(wait bool) ([]ProcessInfo, error) {
-	return c.callForProcessInfos("supervisor.startAllProcesses", wait)
+	return c.callMethodForProcessInfos("supervisor.startAllProcesses", wait)
 }
 
-// StartProcessGroup ...
+// StartProcessGroup 启动进程组下的所有进程
 func (c *Client) StartProcessGroup(name string, wait bool) ([]ProcessInfo, error) {
-	return c.callForProcessInfos("supervisor.startProcessGroup", name, wait)
+	return c.callMethodForProcessInfos("supervisor.startProcessGroup", name, wait)
 }
 
-// StopProcess ...
+// StopProcess 停止进程
 func (c *Client) StopProcess(name string, wait bool) error {
-	return c.CallMethodAndVerifyBool("supervisor.stopProcess", name, wait)
+	return c.callMethodAndVerifyBool("supervisor.stopProcess", name, wait)
 }
 
-// StopProcessGroup ...
+// StopProcessGroup 停止进程组内的所有进程
 func (c *Client) StopProcessGroup(name string, wait bool) ([]ProcessInfo, error) {
-	return c.callForProcessInfos("supervisor.stopProcessGroup", name, wait)
+	return c.callMethodForProcessInfos("supervisor.stopProcessGroup", name, wait)
 }
 
-// StopAllProcesses ...
+// StopAllProcesses 停止所有进程
 func (c *Client) StopAllProcesses(wait bool) ([]ProcessInfo, error) {
-	return c.callForProcessInfos("supervisor.stopAllProcesses", wait)
+	return c.callMethodForProcessInfos("supervisor.stopAllProcesses", wait)
 }
 
-// ReloadConfig ...
+// ReloadConfig 重新加载配置，但已加载的进程组不会被更新
 func (c *Client) ReloadConfig() ([]string, []string, []string, error) {
 	result := make([][][]string, 0)
 
@@ -120,17 +121,17 @@ func (c *Client) ReloadConfig() ([]string, []string, []string, error) {
 	return result[0][0], result[0][1], result[0][2], err
 }
 
-// AddProcessGroup ...
+// AddProcessGroup 新增进程组
 func (c *Client) AddProcessGroup(name string) error {
-	return c.CallMethodAndVerifyBool("supervisor.addProcessGroup", name)
+	return c.callMethodAndVerifyBool("supervisor.addProcessGroup", name)
 }
 
-// RemoveProcessGroup ...
+// RemoveProcessGroup 删除进程组
 func (c *Client) RemoveProcessGroup(name string) error {
-	return c.CallMethodAndVerifyBool("supervisor.removeProcessGroup", name)
+	return c.callMethodAndVerifyBool("supervisor.removeProcessGroup", name)
 }
 
-// Update ...
+// Update 更新所有进程，为了让配置生效，需要删除和重建进程组
 func (c *Client) Update() error {
 	added, changed, removed, err := c.ReloadConfig()
 	if err != nil {

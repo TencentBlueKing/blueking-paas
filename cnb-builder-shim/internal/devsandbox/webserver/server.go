@@ -20,6 +20,7 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord"
 	"net/http"
 	"os"
 	"path"
@@ -35,7 +36,6 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processctl"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -264,7 +264,7 @@ func AppLogHandler() gin.HandlerFunc {
 // ProcessStatusHandler ...
 func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		processCtl, err := processctl.New()
+		processCtl, err := supervisord.NewRPCProcessController()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
 			return
@@ -297,7 +297,7 @@ func ProcessStopHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processctl.New()
+		processCtl, err := supervisord.NewRPCProcessController()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
 			return
@@ -318,7 +318,7 @@ func ProcessStartHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processctl.New()
+		processCtl, err := supervisord.NewRPCProcessController()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
 			return

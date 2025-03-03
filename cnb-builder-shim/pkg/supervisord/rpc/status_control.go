@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package supervisord
+package rpc
 
 type (
 	// StateCode is a numeric representation of Supervisord's internal state.
@@ -54,5 +54,5 @@ func (c *Client) GetState() (State, error) {
 
 // Restart ...
 func (c *Client) Restart() error {
-	return c.CallMethodAndVerifyBool("supervisor.restart", nil)
+	return c.callMethodAndVerifyBool("supervisor.restart", nil)
 }

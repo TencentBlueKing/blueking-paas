@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -119,15 +120,16 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
-	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
-		return err
-	} else {
-		ctl, err := NewSupervisorCtl()
-		if err != nil {
-			return err
-		}
-		return ctl.Reload(conf)
+	ctl, err := supervisord.NewRPCProcessController()
+	if err != nil {
+		return errors.Wrap(err, "reload processes")
 	}
+	supervisord_processes := []supervisord.Process{}
+	for _, proc := range processes {
+		supervisord_processes = append(supervisord_processes,
+			supervisord.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
+	}
+	return ctl.Reload(supervisord_processes, procEnvs...)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

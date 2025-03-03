@@ -15,16 +15,13 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-package supervisord
+package rpc
 
 import (
-	"context"
 	"fmt"
-	"os/exec"
-	"time"
-
 	"github.com/kolo/xmlrpc"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type Client struct {
@@ -34,61 +31,55 @@ type Client struct {
 
 type ClientConfig struct {
 	RPCAddress string // XML-RPC 地址
-	ConfigPath string // Supervisord 启动配置路径
 }
 
-func NewClient(cfg ClientConfig) (*Client, error) {
-	client := &Client{config: cfg}
+// NewClient 新建 RPC 客户端
+func NewClient(rpcAddress string) (*Client, error) {
+	client := &Client{config: ClientConfig{RPCAddress: rpcAddress}}
 
-	// 尝试连接, 如果无法链接则尝试启动 Supervisord 进程
-	if err := client.ensureConnected(); err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
-func (c *Client) ensureConnected() error {
 	var err error
-	for i := 0; i < 3; i++ {
-		c.rpcClient, err = xmlrpc.NewClient(c.config.RPCAddress, nil)
+	for attempt := 0; attempt < 3; attempt++ {
 		var state State
+		client.rpcClient, err = xmlrpc.NewClient(rpcAddress, nil)
 		if err == nil {
 			// 验证连接是否正常
-			if state, err = c.GetState(); err == nil {
+			if state, err = client.GetState(); err == nil {
 				fmt.Printf("Connected to Supervisord (state: %s)", state.Name)
-				return nil
 			}
-			// 如果状态不是运行中则尝试重启
-			fmt.Printf("Supervisord is not running (state: %s)", state.Name)
-			if state.Name != "RUNNING" {
-				if err = c.Restart(); err == nil {
+			// 如果获取状态失败或者状态不是运行中则尝试重启
+			if err == nil || state.Name != StateNameRunning {
+				if err = client.Restart(); err == nil {
+					fmt.Println("Supervisord restarted")
+					time.Sleep(1 * time.Second)
 					continue
 				}
+			} else {
+				return client, nil
 			}
 		}
+	}
+	return client, errors.Wrap(err, "new supervisord client")
+}
 
-		// 如果连接失败表示进程没有启动则尝试启动
-		fmt.Printf("Attempting to start supervisord")
-		if err = c.startSupervisord(); err != nil {
-			fmt.Printf("Start supervisord failed: %v", err)
+// AutoConnectClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
+func AutoConnectClient(rpcAddress string, configPath string) (*Client, error) {
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		client, err := NewClient(rpcAddress)
+		if err == nil {
+			return client, nil
 		}
-		time.Sleep(1 * time.Second)
+		server := NewServer(configPath)
+		if err = server.Start(); err != nil {
+			fmt.Println("Failed to start supervisord server", err)
+		}
+		// 等待服务就绪
+		time.Sleep(2 * time.Second)
 	}
-	return errors.New("connect to supervisord")
+	return nil, err
 }
 
-func (c *Client) startSupervisord() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "supervisord", "-c", c.config.ConfigPath)
-	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "start supervisord")
-	}
-	return nil
-}
-
-func (c *Client) CallMethodAndVerifyBool(method string, args ...interface{}) error {
+func (c *Client) callMethodAndVerifyBool(method string, args ...interface{}) error {
 	var result bool
 	err := c.rpcClient.Call(method, args, &result)
 	if err != nil {

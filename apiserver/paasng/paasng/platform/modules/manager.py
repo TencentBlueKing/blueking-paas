@@ -136,9 +136,9 @@ class ModuleInitializer:
         }
 
     @transaction.atomic
-    def create_engine_apps(self, cluster_names: Dict[str, str] | None = None):
+    def create_engine_apps(self, env_cluster_names: Dict[str, str] | None = None):
         """Create engine app instances for application"""
-        cluster_names = cluster_names if cluster_names else {}
+        env_cluster_names = env_cluster_names if env_cluster_names else {}
 
         wl_app_type = (
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
@@ -155,7 +155,7 @@ class ModuleInitializer:
                 tenant_id=self.application.tenant_id,
             )
             # bind env to cluster
-            EnvClusterService(env).bind_cluster(cluster_names.get(environment))
+            EnvClusterService(env).bind_cluster(env_cluster_names.get(environment))
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
@@ -163,7 +163,7 @@ class ModuleInitializer:
 
         # Also set the module's exposed_url_type by the cluster
         self.module.exposed_url_type = get_exposed_url_type(
-            application=self.application, cluster_name=cluster_names.get(AppEnvironment.PRODUCTION)
+            application=self.application, cluster_name=env_cluster_names.get(AppEnvironment.PRODUCTION)
         ).value
         self.module.save(update_fields=["exposed_url_type"])
 
@@ -365,14 +365,14 @@ def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
         raise error_codes.CANNOT_CREATE_APP.f(str(e))
 
 
-def initialize_smart_module(module: Module, cluster_names: Dict[str, str]):
+def initialize_smart_module(module: Module, env_cluster_names: Dict[str, str]):
     """Initialize a module for s-mart app"""
     module_initializer = ModuleInitializer(module)
     module_spec = ModuleSpecs(module)
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_names=cluster_names)
+        module_initializer.create_engine_apps(env_cluster_names=env_cluster_names)
 
     with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
@@ -391,7 +391,7 @@ def initialize_module(
     repo_type: str,
     repo_url: Optional[str],
     repo_auth_info: Optional[dict],
-    cluster_names: Dict[str, str],
+    env_cluster_names: Dict[str, str],
     source_dir: str = "",
     bkapp_spec: Optional[Dict] = None,
 ) -> ModuleInitResult:
@@ -410,7 +410,7 @@ def initialize_module(
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_names=cluster_names)
+        module_initializer.create_engine_apps(env_cluster_names=env_cluster_names)
 
     source_init_result = {}
     if module_spec.has_vcs:

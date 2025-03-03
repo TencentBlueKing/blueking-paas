@@ -156,7 +156,7 @@ def get_preallocated_address(
     # 生产环境
     prod_cluster = clusters.get(AppEnvName.PROD) or _get_default_cluster(app_code, AppEnvName.PROD)
     prod_address = _get_cluster_addr(prod_cluster, "prod")
-    # 测试环境
+    # 预发布环境
     stag_cluster = clusters.get(AppEnvName.STAG) or _get_default_cluster(app_code, AppEnvName.STAG)
     stag_address = _get_cluster_addr(stag_cluster, "stag")
 

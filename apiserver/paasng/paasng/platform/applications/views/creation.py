@@ -124,13 +124,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         self.validate_region_perm(params["region"])
         # Handle advanced options
         advanced_options = params.get("advanced_options", {})
-        cluster_names = {}
+        env_cluster_names = {}
         if advanced_options:
             # Permission check
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
                 raise ValidationError(_("你无法使用高级创建选项"))
 
-            cluster_names = advanced_options.get("cluster_names")
+            env_cluster_names = advanced_options.get("env_cluster_names")
 
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
@@ -157,7 +157,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             params,
             engine_params,
             source_origin,
-            cluster_names,
+            env_cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -200,14 +200,14 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         source_origin = SourceOrigin(engine_params["source_origin"])
         # lesscode 应用不支持指定集群，只能使用默认集群
-        cluster_names: Dict[str, str] = {}
+        env_cluster_names: Dict[str, str] = {}
 
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
         return self._init_normal_app(
             params,
             engine_params,
             source_origin,
-            cluster_names,
+            env_cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -239,11 +239,11 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params = serializer.validated_data
         self.validate_region_perm(params["region"])
 
-        cluster_names: Dict[str, str] = {}
+        env_cluster_names: Dict[str, str] = {}
         if advanced_options := params.get("advanced_options", {}):
             if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
                 raise ValidationError(_("你无法使用高级创建选项"))
-            cluster_names = advanced_options.get("cluster_names", {})
+            env_cluster_names = advanced_options.get("env_cluster_names", {})
 
         # Guide: check if a bk_plugin can be created
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
@@ -288,7 +288,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             repo_url=source_config.get("source_repo_url"),
             repo_auth_info=source_config.get("source_repo_auth_info"),
             source_dir=source_config.get("source_dir", ""),
-            cluster_names=cluster_names,
+            env_cluster_names=env_cluster_names,
             bkapp_spec=params["bkapp_spec"],
         ).source_init_result
 
@@ -300,7 +300,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
             prefer_https=self._get_cluster_entrance_https_enabled(
                 application,
-                cluster_names.get(AppEnvironment.PRODUCTION),
+                env_cluster_names.get(AppEnvironment.PRODUCTION),
                 ExposedURLType(module.exposed_url_type),
             ),
         )
@@ -325,13 +325,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             "source_init_template": "bk-saas-plugin-python",
         }
         # ai-agent-app 不支持指定集群（使用默认集群）
-        cluster_names: Dict[str, str] = {}
+        env_cluster_names: Dict[str, str] = {}
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
         return self._init_normal_app(
             params,
             engine_params,
             source_origin,
-            cluster_names,
+            env_cluster_names,
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
@@ -346,7 +346,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         adv_region_clusters = []
         if allow_advanced:
             for region_name in get_all_regions():
-                cluster_names = {}
+                env_cluster_names = {}
                 for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
                     ctx = AllocationContext(
                         tenant_id=get_tenant(request.user).id,
@@ -354,9 +354,9 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                         environment=env,
                         username=request.user.username,
                     )
-                    cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
+                    env_cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
 
-                adv_region_clusters.append({"region": region_name, "cluster_names": cluster_names})
+                adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
 
         options = {
             # ADVANCED options:
@@ -397,7 +397,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params: Dict,
         engine_params: Dict,
         source_origin: SourceOrigin,
-        cluster_names: Dict[str, str],
+        env_cluster_names: Dict[str, str],
         operator: str,
         app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
         app_tenant_id: str = "",
@@ -438,7 +438,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             repo_url=engine_params.get("source_repo_url"),
             repo_auth_info=engine_params.get("source_repo_auth_info"),
             source_dir=engine_params.get("source_dir"),
-            cluster_names=cluster_names,
+            env_cluster_names=env_cluster_names,
         ).source_init_result
 
         if language:
@@ -453,7 +453,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
             prefer_https=self._get_cluster_entrance_https_enabled(
                 application,
-                cluster_names.get(AppEnvironment.PRODUCTION),
+                env_cluster_names.get(AppEnvironment.PRODUCTION),
                 ExposedURLType(module.exposed_url_type),
             ),
         )

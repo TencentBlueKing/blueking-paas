@@ -65,6 +65,8 @@ class App(UuidAuditedModel):
 
         return self.scheduler_safe_name
 
+    # TODO 这里使用很多的局部 import，建议抽成具体的方法，放到 metadata 定义附近？
+
     @cached_property
     def paas_app_code(self):
         from paas_wl.bk_app.applications.managers import get_metadata

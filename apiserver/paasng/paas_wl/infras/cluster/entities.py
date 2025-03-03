@@ -152,10 +152,33 @@ class AllocationPrecedencePolicy:
     # 具体的分配策略
     policy: AllocationPolicy
 
+    def match(self, ctx: "AllocationContext") -> bool:
+        # 匹配规则为空，则可以匹配所有
+        if not self.matcher:
+            return True
+
+        # 按匹配规则检查，任意不匹配的，都直接返回 False
+        for key, value in self.matcher.items():
+            if key == ClusterAllocationPolicyCondType.REGION_IS:
+                if ctx.region != value:
+                    return False
+            elif key == ClusterAllocationPolicyCondType.USERNAME_IN:
+                usernames = [u.strip() for u in value.split(",")]
+                if ctx.username not in usernames:
+                    return False
+            else:
+                raise ValueError(f"unknown cluster allocation policy condition type: {key}")
+
+        return True
+
 
 @define
 class AllocationContext:
-    """集群分配上下文"""
+    """集群分配上下文
+
+    用于描述集群分配的上下文信息，包括租户 ID、可用区域、部署环境等。
+    供集群分配器 ClusterAllocator 使用，建议优先使用 from_xxx 方法创建。
+    """
 
     tenant_id: str
     # 可用区域

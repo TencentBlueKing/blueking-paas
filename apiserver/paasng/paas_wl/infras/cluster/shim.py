@@ -15,24 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from functools import partialmethod
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict
 
-from django.db.models import Case, QuerySet, When
-
-from paas_wl.infras.cluster.constants import (
-    ClusterAllocationPolicyCondType,
-    ClusterAllocationPolicyType,
-    ClusterFeatureFlag,
-)
-from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
-from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
+from paas_wl.infras.cluster.allocator import ClusterAllocator
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 
 if TYPE_CHECKING:
-    from paasng.platform.applications.models import Application
+    from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
 def get_exposed_url_type(application: "Application", cluster_name: str | None = None) -> ExposedURLType:
@@ -57,7 +50,7 @@ def get_exposed_url_type(application: "Application", cluster_name: str | None = 
 class EnvClusterService:
     """EnvClusterService provide interface for managing the cluster info of given env"""
 
-    def __init__(self, env: ModuleEnvironment):
+    def __init__(self, env: "ModuleEnvironment"):
         self.env = env
 
     def get_cluster(self) -> Cluster:
@@ -98,109 +91,20 @@ class EnvClusterService:
         cfg.save()
 
 
-def get_app_default_module_prod_env_cluster(app: "Application") -> Cluster:
-    """获取默认模块生产环境应用使用的集群名称"""
+def get_app_prod_env_cluster(app: "Application") -> Cluster:
+    """获取默认模块生产环境应用使用的集群名称
+
+    FIXME：理论上这个方法不该存在，应用的每个模块-环境都可能部署到不同的集群中，只检查默认模块的 prod 环境是不够的
+    相关讨论：https://github.com/TencentBlueKing/blueking-paas/pull/1932#discussion_r1974682390
+    """
     env = app.get_default_module().envs.get(environment=AppEnvironment.PRODUCTION)
     return EnvClusterService(env).get_cluster()
 
 
-def get_app_default_module_cluster_names(app: "Application") -> Dict[str, str]:
-    """获取默认模块各个环境应用使用的集群名称"""
+def get_app_cluster_names(app: "Application") -> Dict[str, str]:
+    """获取默认模块各环境应用使用的集群名称
+
+    :param app: 应用对象
+    :return: {环境: 集群名称}
+    """
     return {env.environment: EnvClusterService(env).get_cluster_name() for env in app.get_default_module().envs.all()}
-
-
-class ClusterAllocator:
-    """集群分配"""
-
-    def __init__(self, ctx: AllocationContext):
-        self.ctx = ctx
-
-    def list(self) -> QuerySet[Cluster]:
-        """获取所有可用的集群"""
-        return self._list()
-
-    def get(self, cluster_name: str | None) -> Cluster:
-        """根据名称获取集群，若不指定，则返回默认集群
-
-        注意：如果只需获取默认集群，请使用 get_default 方法
-        """
-        clusters = self._list()
-        if cluster_name:
-            clusters = clusters.filter(name=cluster_name)
-
-        if c := clusters.first():
-            return c
-
-        raise ValueError(f"cluster allocator with ctx {self.ctx} and name {cluster_name} got no cluster")
-
-    # 快捷方法 -> 根据指定的参数，获取默认集群
-    get_default = partialmethod(get, cluster_name=None)
-
-    def _list(self) -> QuerySet[Cluster]:
-        """获取集群列表"""
-        if policy := ClusterAllocationPolicy.objects.filter(tenant_id=self.ctx.tenant_id).first():
-            return self._policy_base_list(policy)
-
-        return self._legacy_region_base_list()
-
-    def _policy_base_list(self, policy: ClusterAllocationPolicy) -> QuerySet[Cluster]:
-        """根据策略获取集群列表"""
-        cluster_names: List[str] | None = None
-
-        if policy.type == ClusterAllocationPolicyType.UNIFORM and policy.allocation_policy:
-            # 统一分配
-            cluster_names = self._get_cluster_names_from_policy(policy.allocation_policy)
-        elif policy.type == ClusterAllocationPolicyType.RULE_BASED:
-            # 按规则分配
-            for p in policy.allocation_precedence_policies:
-                if self._match_precedence_policy(p):
-                    cluster_names = self._get_cluster_names_from_policy(p.policy)
-                    break
-        else:
-            raise ValueError(f"unknown cluster allocation policy type: {policy.type}")
-
-        if not cluster_names:
-            raise ValueError(f"no cluster found for policy: {policy}")
-
-        # 由于分配策略认定 cluster_names 中的第一个是默认集群，因此需要特殊排序
-        # ref: https://rednafi.com/python/sort_by_a_custom_sequence_in_django/
-        order = Case(*(When(name=name, then=pos) for pos, name in enumerate(cluster_names)))
-        # 查询并按自定义规则排序
-        return Cluster.objects.filter(name__in=cluster_names).order_by(order)
-
-    def _get_cluster_names_from_policy(self, policy: AllocationPolicy) -> List[str] | None:
-        """根据策略获取集群名称列表"""
-        if policy.env_specific:
-            if not policy.env_clusters:
-                raise ValueError("env_clusters is required for env_specific policy")
-
-            return policy.env_clusters.get(self.ctx.environment)
-
-        return policy.clusters
-
-    def _match_precedence_policy(self, policy: AllocationPrecedencePolicy) -> bool:
-        # 优先级策略最后一条一定是没有匹配规则的（else）
-        if not policy.matcher:
-            return True
-
-        # 按匹配规则检查，任意不匹配的，都直接返回 False
-        for key, value in policy.matcher.items():
-            if key == ClusterAllocationPolicyCondType.REGION_IS:
-                if self.ctx.region != value:
-                    return False
-            elif key == ClusterAllocationPolicyCondType.USERNAME_IN:
-                usernames = [u.strip() for u in value.split(",")]
-                if self.ctx.username not in usernames:
-                    return False
-            else:
-                raise ValueError(f"unknown cluster allocation policy condition type: {key}")
-
-        return True
-
-    def _legacy_region_base_list(self) -> QuerySet[Cluster]:
-        """按 Region 获取集群列表"""
-        if not self.ctx.region:
-            raise ValueError("region is required for legacy list cluster")
-
-        # 把默认集群排到前面去
-        return Cluster.objects.filter(region=self.ctx.region).order_by("-is_default")

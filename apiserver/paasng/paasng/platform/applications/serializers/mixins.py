@@ -44,7 +44,7 @@ class MarketParamsMixin(serializers.Serializer):
     source_tp_url = serializers.URLField(required=False, allow_blank=True, help_text="第三方访问地址")
 
 
-class ClusterNamesSLZ(serializers.Serializer):
+class EnvClusterNamesSLZ(serializers.Serializer):
     stag = serializers.CharField(help_text="预发布环境集群名称")
     prod = serializers.CharField(help_text="生产环境集群名称")
 
@@ -61,7 +61,7 @@ class ClusterNamesSLZ(serializers.Serializer):
             environment=environment,
             username=self.context.get("username"),
         )
-        if not ClusterAllocator(ctx).list().filter(name=name).exists():
+        if not ClusterAllocator(ctx).check_available(name):
             raise ValidationError(_("集群名称错误，无法找到名为 {name} 的集群").format(name=name))
 
         return name
@@ -70,4 +70,4 @@ class ClusterNamesSLZ(serializers.Serializer):
 class AdvancedCreationParamsMixin(serializers.Serializer):
     """高级应用创建选项"""
 
-    cluster_names = ClusterNamesSLZ(help_text="各环境集群名称", required=False)
+    env_cluster_names = EnvClusterNamesSLZ(help_text="各环境集群名称", required=False)

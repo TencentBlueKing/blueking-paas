@@ -30,7 +30,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.shim import get_app_default_module_cluster_names
+from paas_wl.infras.cluster.shim import get_app_cluster_names
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
@@ -135,7 +135,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data["source_repo_url"],
             data["source_repo_auth_info"],
             # 新模块集群配置复用默认模块的
-            cluster_names=get_app_default_module_cluster_names(application),
+            env_cluster_names=get_app_cluster_names(application),
             source_dir=data["source_dir"],
         )
 
@@ -305,7 +305,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             repo_auth_info=source_config.get("source_repo_auth_info"),
             source_dir=source_config.get("source_dir", ""),
             # 新模块集群配置复用默认模块的
-            cluster_names=get_app_default_module_cluster_names(application),
+            env_cluster_names=get_app_cluster_names(application),
             bkapp_spec=data["bkapp_spec"],
         )
 

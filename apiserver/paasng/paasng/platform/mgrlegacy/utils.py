@@ -19,6 +19,7 @@ import logging
 import typing
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.functional import cached_property
 from rest_framework.exceptions import PermissionDenied
 
@@ -191,11 +192,12 @@ def get_cnative_target_cluster() -> Cluster:
     """
     Get the target cluster when migrating an application to the cloud-native type.
 
-    :return: only settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER provided can return cluster.
+    :raises: ImproperlyConfigured if MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.
+    :return: migrate to cnative application's target cluster.
     """
     target_cluster_name = settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER
 
     if not target_cluster_name:
-        raise ValueError("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.")
+        raise ImproperlyConfigured("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.")
 
     return Cluster.objects.get(name=target_cluster_name)

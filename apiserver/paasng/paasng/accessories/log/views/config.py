@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.shim import get_app_default_module_prod_env_cluster
+from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.serializers import (
     BkLogCustomCollectMetadataOutputSLZ,
@@ -78,14 +78,14 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         }
 
     @swagger_auto_schema(
-        query_serializer=BkLogCustomCollectMetadataQuerySLZ,
+        query_serializer=BkLogCustomCollectMetadataQuerySLZ(),
         response_serializer=BkLogCustomCollectMetadataOutputSLZ,
         tags=["日志采集"],
     )
     def get_metadata(self, request, code, module_name):
         """查询在日志平台已创建的自定义上报配置以及日志平台的访问地址"""
         application = self.get_application()
-        cluster = get_app_default_module_prod_env_cluster(application)
+        cluster = get_app_prod_env_cluster(application)
         if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
             # 集群未开启日志平台特性, 则直接返回，不再调用监控日志平台相关 API
             raise error_codes.CUSTOM_COLLECTOR_UNSUPPORTED

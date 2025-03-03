@@ -122,7 +122,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             repo_url=data["repository"],
             repo_auth_info=None,
             source_dir="",
-            cluster_names={},
+            env_cluster_names={},
         )
 
         application.language = module.language

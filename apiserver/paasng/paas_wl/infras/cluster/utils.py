@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.entities import AllocationContext
@@ -39,7 +38,7 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
 
     try:
         return Cluster.objects.get(name=cluster_name)
-    except ObjectDoesNotExist:
+    except Cluster.DoesNotExist:
         raise RuntimeError(f"Can not find a cluster called {cluster_name}")
 
 
@@ -48,7 +47,7 @@ def get_dev_sandbox_cluster(app: WlApp) -> Cluster:
     if cluster_name := settings.DEV_SANDBOX_CLUSTER:
         try:
             return Cluster.objects.get(name=cluster_name)
-        except ObjectDoesNotExist:
+        except Cluster.DoesNotExist:
             raise RuntimeError(f"dev sandbox cluster called {cluster_name} no found")
 
     # 否则使用使用匹配到的的默认集群，注意：

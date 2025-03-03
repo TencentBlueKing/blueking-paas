@@ -960,7 +960,7 @@ export default {
       const advancedRegionClusters = res.adv_region_clusters || [];
       advancedRegionClusters.forEach((item) => {
         if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
-          this.$set(this.advancedOptionsObj, item.region, item.cluster_names);
+          this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
         }
       });
     },
@@ -1133,7 +1133,7 @@ export default {
         },
         advanced_options: {
           // 暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
-          cluster_names: {
+          env_cluster_names: {
             stag: this.clusterName,
             prod: this.clusterName,
           }

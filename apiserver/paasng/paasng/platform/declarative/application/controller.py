@@ -24,7 +24,7 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.infras.cluster.shim import get_app_default_module_cluster_names
+from paas_wl.infras.cluster.shim import get_app_cluster_names
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
@@ -157,7 +157,7 @@ class AppDeclarativeController:
     def sync_modules(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Sync modules to database"""
         # Get the cluster name used by the existing default module, if the module exists
-        cluster_names = get_app_default_module_cluster_names(application) if application.modules.exists() else {}
+        env_cluster_names = get_app_cluster_names(application) if application.modules.exists() else {}
 
         for module_name, module_desc in modules_desc.items():
             if application.modules.filter(name=module_name).exists():
@@ -182,7 +182,7 @@ class AppDeclarativeController:
             )
             # Initialize module
             try:
-                initialize_smart_module(module, cluster_names=cluster_names)
+                initialize_smart_module(module, env_cluster_names=env_cluster_names)
             except ModuleInitializationError as e:
                 raise ControllerError(str(e))
 

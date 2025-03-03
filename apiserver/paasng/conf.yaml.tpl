@@ -790,8 +790,6 @@ BK_AUDIT_ENDPOINT = ""
 
 ## ---------------------------------------- 沙箱相关配置 ----------------------------------------
 
-# 是否允许沙箱
-FE_ENABLE_DEV_SANDBOX = false
 # devserver 监听端口
 DEV_SANDBOX_DEVSERVER_PORT: 8000
 # devserver 镜像

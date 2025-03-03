@@ -17,6 +17,7 @@
         :details="componentDetails[component.name]"
         :loading="componentLoadingStates[component.name]"
         :cluster-source="clusterDetails?.cluster_source"
+        :cluster-id="clusterId"
         @show-detail="handleShowDetail"
         @show-values="handleShowValues"
         @show-edit="handleShowEdit"
@@ -44,6 +45,7 @@
       :show.sync="isShowComponentEdit"
       :name="curComponentName"
       :data="detailSidesliderData"
+      :cluster-id="clusterId"
       @show-values="handleShowValues"
     />
   </div>
@@ -62,6 +64,12 @@ export default {
     EditorSideslider,
     DetailComponentsSideslider,
     ConfigEditSideslider,
+  },
+  props: {
+    clusterId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -115,11 +123,11 @@ export default {
       this.curComponentName = name;
     },
     // 获取集群详情
-    async getClusterDetails(clusterName) {
+    async getClusterDetails() {
       this.contentLoading = true;
       try {
         const ret = await this.$store.dispatch('tenant/getClusterDetails', {
-          clusterName: 'paas-test',
+          clusterName: this.clusterId,
         });
         this.clusterDetails = ret;
       } catch (e) {
@@ -132,10 +140,12 @@ export default {
     async getClusterComponents() {
       this.isLoading = true;
       try {
-        const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: 'paas-test' });
+        const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: this.clusterId });
         this.componentList = res;
         this.isLoading = false;
         // 使用 Promise.all 并行获取组件详情，required 为必填项 必须安装成功才允许下一步
+        const nextDisabled = this.componentList.some((v) => v.required && v.status !== 'installed');
+        this.$emit('change-next-btn', nextDisabled);
         await Promise.all(res.map((component) => this.getComponentDetail(component.name)));
       } catch (e) {
         this.catchErrorHandler(e);
@@ -149,11 +159,10 @@ export default {
         // 更加精准的加载状态，跟踪每个组件详情的加载，而不是全局状态
         this.setComponentLoadingState(componentName, true);
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {
-          clusterName: 'paas-test',
+          clusterName: this.clusterId,
           componentName,
         });
         this.$set(this.componentDetails, componentName, ret);
-        console.log('组件详情', ret);
         // 这里可以处理获取到的组件详情数据，比如更新到某个状态管理中
       } catch (e) {
         if (e.status === 404) {
@@ -176,6 +185,7 @@ export default {
 <style lang="scss" scoped>
 .component-install-container {
   .card-style {
+    min-height: 500px;
     padding: 16px 24px;
   }
 }

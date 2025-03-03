@@ -27,9 +27,11 @@
         <template slot="label">{{ `${$t('组件配置')}：` }}</template>
         <div slot="value">
           <div class="tools-btns">
+            <!-- bk-ingress-nginx 允许编辑 -->
             <bk-button
               :text="true"
               title="primary"
+              :disabled="!isInstalled"
               @click="handleComponentEdit"
             >
               <i class="paasng-icon paasng-edit-2"></i>
@@ -146,7 +148,7 @@
           <bk-button
             v-if="component?.status === 'installed'"
             :text="true"
-            size="small"
+            class="ml10"
             @click="handleViewDetail"
           >
             <i class="paasng-icon paasng-file-5"></i>
@@ -165,6 +167,8 @@
           <bk-button
             :theme="'primary'"
             :disabled="!isInstalled"
+            :loading="componentBtnLoading"
+            @click="getDiffVersion(component?.status)"
           >
             {{ component?.status === 'not_installed' ? $t('安装') : $t('重新安装') }}
           </bk-button>
@@ -179,6 +183,8 @@
             :theme="'primary'"
             :outline="true"
             :disabled="!isInstalled"
+            :loading="componentBtnLoading"
+            @click="getDiffVersion(component?.status)"
           >
             {{ $t('更新') }}
           </bk-button>
@@ -215,6 +221,10 @@ export default {
       type: String,
       default: '',
     },
+    clusterId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -243,6 +253,8 @@ export default {
         content: this.$t('非 BCS 集群需要手动安装集群组件'),
         disabled: this.isInstalled,
       },
+      componentBtnLoading: false,
+      diffVersion: {},
     };
   },
   computed: {
@@ -292,6 +304,34 @@ export default {
     // 组件编辑
     handleComponentEdit() {
       this.$emit('show-edit', this.component.name);
+    },
+    // 安装/更新/重新安装
+    async getDiffVersion() {
+      const h = this.$createElement;
+      this.componentBtnLoading = true;
+      try {
+        const ret = await this.$store.dispatch('tenant/getDiffVersion', {
+          clusterName: this.clusterId, // 暂时为固定值
+          componentName: this.component.name,
+        });
+        // current_version 当前版本（安装原始版本应该是 --）、latest_version 最新版本
+        this.$bkInfo({
+          title: this.$t('组件版本更新确认'),
+          extCls: 'diff-version-info-cls',
+          subHeader: h('div', [
+            h('div', { class: ['tips'] }, `${this.$t('当前版本')}：${this.diffVersion.current_version || '--'}`),
+            h('div', { class: ['tips'] }, `${this.$t('最新版本')}：${this.diffVersion.latest_version || '--'}`),
+          ]),
+          confirmFn: () => {
+            this.handleComponentEdit();
+          },
+        });
+        this.diffVersion = ret;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.componentBtnLoading = false;
+      }
     },
   },
 };
@@ -408,6 +448,14 @@ export default {
     .btn-wrapper {
       display: inline-block;
     }
+  }
+}
+</style>
+<style lang="scss">
+.diff-version-info-cls .bk-info-box .bk-dialog-sub-header {
+  .tips {
+    color: #63656e;
+    line-height: 32px;
   }
 }
 </style>

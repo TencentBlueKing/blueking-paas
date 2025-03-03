@@ -98,6 +98,12 @@ export default {
     validate() {
       return this.$refs.formRef.validate();
     },
+    setData(data) {
+      this.$set(this.formData, 'nodes', data);
+      if (!this.formData.nodes?.length) {
+        this.addServer();
+      }
+    },
     getData() {
       const data = {};
       this.formData.nodes.forEach((v) => {

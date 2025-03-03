@@ -14,7 +14,11 @@
       :cluster-id="clusterId"
       ref="componentConfig"
     />
-    <ComponentInstall v-else-if="curStep === 3" />
+    <ComponentInstall
+      @change-next-btn="changeNextStepDisabled"
+      :cluster-id="clusterId"
+      v-else-if="curStep === 3"
+    />
     <ClusterFeature
       v-else-if="curStep === 4"
       :cluster-id="clusterId"
@@ -69,7 +73,7 @@ export default {
   data() {
     return {
       nextBtnLodaing: false,
-      curStep: 3,
+      curStep: 1,
       steps: [
         { title: this.$t('选择集群'), icon: 1 },
         { title: this.$t('组件配置'), icon: 2 },
@@ -77,13 +81,15 @@ export default {
         { title: this.$t('集群特性'), icon: 4 },
       ],
       // 暂时未固定值 paas-test 测试集群id，后续替换新建、编辑集群id
-      clusterId: 'paas-test',
+      clusterId: '',
+      nextStepDisabled: true,
     };
   },
   computed: {
     nextBtnDisabled() {
       if (this.curStep === 3) {
-        return true;
+        // require为true的组件，必须是已安装状态
+        return this.nextStepDisabled;
       }
       return false;
     },
@@ -95,6 +101,9 @@ export default {
     },
   },
   methods: {
+    changeNextStepDisabled(data) {
+      this.nextStepDisabled = data;
+    },
     // 返回集群列表
     back() {
       this.$router.push({
@@ -115,11 +124,14 @@ export default {
           break;
         case 2:
           // 组件配置
-          this.validate('componentConfig', this.updataComponentConfig);
+          this.validate('componentConfig', this.updateClusterDetails);
+          break;
+        case 3:
+          this.setStep(4);
           break;
         case 4:
           // 集群特性
-          this.validate('clusterFeature', this.updataClusterFeature);
+          this.validate('clusterFeature', this.updateClusterDetails);
           break;
         default:
           break;
@@ -131,7 +143,28 @@ export default {
         // 表单校验
         await this.$refs[refName]?.formValidate();
         const ret = this.$refs[refName].getFormData();
-        cb && cb(ret);
+        if (refName === 'componentConfig') {
+          // 更新集群组件配置信息
+          cb(ret, () => {
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('更新组件配置成功'),
+            });
+            this.setStep(3);
+          });
+        } else if (refName === 'clusterFeature') {
+          // 更新集群特性
+          cb(ret, () => {
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('集群添加成功'),
+            });
+            // 返回集群列表
+            this.back();
+          });
+        } else {
+          cb && cb(ret);
+        }
       } catch (e) {
         console.warn(e);
       }
@@ -140,12 +173,11 @@ export default {
     async createCluster(data) {
       this.nextBtnLodaing = true;
       try {
-        const ret = await this.$store.dispatch('tenant/createCluster', {
+        await this.$store.dispatch('tenant/createCluster', {
           data,
         });
         // 返回新建集群ID
-        // this.clusterId = ret;
-        console.log(ret);
+        this.clusterId = data.name;
         this.$paasMessage({
           theme: 'success',
           message: this.$t('新建成功'),
@@ -157,36 +189,15 @@ export default {
         this.nextBtnLodaing = false;
       }
     },
-    // 更新集群组件配置信息
-    async updataComponentConfig(data) {
+    // 更新集群详情
+    async updateClusterDetails(data, successCallback) {
       this.nextBtnLodaing = true;
       try {
         const ret = await this.$store.dispatch('tenant/updateCluster', {
           clusterName: this.clusterId,
           data,
         });
-        console.log(ret);
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('更新组件配置成功'),
-        });
-        this.setStep(3);
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.nextBtnLodaing = false;
-      }
-    },
-    // 更新集群特性
-    updataClusterFeature(data) {
-      this.nextBtnLodaing = true;
-      try {
-        console.log('更新集群特性', data);
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('集群添加成功'),
-        });
-        this.back();
+        successCallback(ret);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

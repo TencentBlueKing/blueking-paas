@@ -176,5 +176,12 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
       return http.post(url, data);
     },
+    /**
+     * 对比待更新组件版本
+     */
+    getDiffVersion({}, { clusterName, componentName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/operations/diff_version/`;
+      return http.get(url);
+    },
   },
 };

@@ -68,8 +68,8 @@
           >
             <bk-option
               v-for="option in effectList"
-              :key="option.name"
-              :id="option.name"
+              :key="option.id"
+              :id="option.id"
               :name="option.name"
             ></bk-option>
           </bk-select>
@@ -125,8 +125,12 @@ export default {
         nodes: [{ key: '', operator: '', value: '', effect: '', tolerationSeconds: 0 }],
       },
       // 运算符列表
-      operatorList: [{ name: '>' }, { name: '<' }, { name: '=' }],
-      effectList: [{ name: '不调度（NotSchedule）' }],
+      operatorList: [{ name: 'Equal' }, { name: 'Exists' }],
+      effectList: [
+        { id: 'NoSchedule', name: this.$t('不调度（NoSchedule）') },
+        { id: 'PreferNoSchedule', name: this.$t('倾向不调度（PreferNoSchedule）') },
+        { id: 'NoExecute', name: this.$t('不执行（NoExecute）') },
+      ],
       ruleInput: [
         {
           required: true,
@@ -146,6 +150,18 @@ export default {
   computed: {
     nodesLength() {
       return this.formData.nodes.length;
+    },
+  },
+  watch: {
+    data: {
+      handler(newValue) {
+        this.$set(this.formData, 'nodes', newValue.tolerations ?? []);
+        if (!this.formData.nodes?.length) {
+          this.addServer();
+        }
+      },
+      deep: true,
+      immediate: true,
     },
   },
   methods: {

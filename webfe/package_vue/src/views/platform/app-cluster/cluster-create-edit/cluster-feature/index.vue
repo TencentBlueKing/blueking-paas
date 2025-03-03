@@ -53,6 +53,7 @@
 import Feature from './feature.vue';
 import KeyValueInput from '../comps/key-value-input.vue';
 import TolerationsForm from './tolerations-form.vue';
+import { cloneDeep } from 'lodash';
 export default {
   name: 'ClusterFeature',
   props: {
@@ -87,6 +88,15 @@ export default {
           clusterName: this.clusterId,
         });
         this.details = ret;
+        this.$nextTick(() => {
+          const transformedArray = Object.entries(ret.node_selector).map(([key, value]) => {
+            return {
+              key: key,
+              value: value,
+            };
+          });
+          this.$refs.keyValueInput?.setData(transformedArray);
+        });
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -102,11 +112,14 @@ export default {
     },
     // 表单数据
     getFormData() {
-      const f = this.$refs.featureRef?.getData();
-      const s = this.getSettingsgData();
-      console.log('feature', f);
-      console.log('高级设置', s);
-      return [];
+      const feature = this.$refs.featureRef?.getData();
+      const settingsData = this.getSettingsgData();
+      const data = {
+        ...this.details,
+        feature_flags: cloneDeep(feature),
+        ...settingsData,
+      };
+      return data;
     },
   },
 };
@@ -118,6 +131,7 @@ export default {
     padding: 16px 24px;
   }
   .setting {
+    margin-top: 16px;
     .card-content {
       padding-left: 68px;
       padding-right: 120px;

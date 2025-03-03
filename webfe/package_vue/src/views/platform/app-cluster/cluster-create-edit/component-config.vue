@@ -90,7 +90,7 @@ export default {
         component_image_registry: 'hub.bktencent.com',
         // 应用访问类型 subpath、subdomain
         app_address_type: 'subpath',
-        // 应用域名
+        // 应用域名(子域名、子路径)
         app_domains: [],
       },
     };
@@ -117,7 +117,6 @@ export default {
           app_address_type = 'subpath',
           app_domains,
         } = ret;
-        console.log('app_domains', app_domains);
         this.formData = {
           component_preferred_namespace,
           component_image_registry,

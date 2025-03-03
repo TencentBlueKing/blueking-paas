@@ -31,7 +31,7 @@
           :key="index"
           class="item"
           :class="{ active: item.value === formData.hostNetwork }"
-          @click="formData.hostNetwork = item.value"
+          @click="handleSwitch(item)"
         >
           <div class="left-icon">
             <i :class="['paasng-icon', item.icon]"></i>
@@ -126,6 +126,10 @@ export default {
       type: Object,
       default: () => {},
     },
+    clusterId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -189,7 +193,7 @@ export default {
       },
     },
     values() {
-      return this.data?.values;
+      return this.data?.values ?? {};
     },
     isHostNetwork() {
       return this.formData.hostNetwork;
@@ -203,7 +207,7 @@ export default {
   },
   methods: {
     init() {
-      const { hostNetwork, service } = this.values;
+      const { hostNetwork = false, service } = this.values;
       this.formData = {
         http: service?.nodePorts?.http || '',
         https: service?.nodePorts?.https || '',
@@ -220,6 +224,22 @@ export default {
     closeSideslider() {
       this.sidesliderVisible = false;
       this.reset();
+    },
+    handleSwitch(item) {
+      this.formData.hostNetwork = item.value;
+      if (this.isHostNetwork) {
+        this.$nextTick(() => {
+          const { nodeSelector = {} } = this.values;
+          // 节点标签
+          const nodes = Object.entries(nodeSelector).map(([key, value]) => {
+            return {
+              key: key,
+              value: value,
+            };
+          });
+          this.$refs.keyValueInput[0]?.setData(nodes);
+        });
+      }
     },
     submitData() {
       let validateArr = [this.$refs.formRef.validate()];
@@ -248,7 +268,7 @@ export default {
       this.saveLoading = true;
       try {
         await this.$store.dispatch('tenant/updateComponent', {
-          clusterName: 'paas-test', // 暂时为固定值
+          clusterName: this.clusterId,
           componentName: this.name,
           data,
         });

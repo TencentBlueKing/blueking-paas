@@ -140,7 +140,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.APP_DOMAIN,
             module_name=domain.module.name,
-            environment=domain.environment,
+            environment=domain.environment.environment,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
         )
@@ -167,7 +167,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             operation=OperationEnum.DELETE,
             target=OperationTarget.APP_DOMAIN,
             module_name=domain.module.name,
-            environment=domain.environment,
+            environment=domain.environment.environment,
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

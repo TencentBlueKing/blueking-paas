@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-04 09:26+0800\n"
+"POT-Creation-Date: 2025-03-04 19:57+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -461,7 +461,7 @@ msgid "内存使用量"
 msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
-#: paasng/platform/applications/views/creation.py:486
+#: paasng/platform/applications/views/creation.py:441
 #: paasng/platform/modules/views.py:337
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
@@ -598,12 +598,12 @@ msgstr "Is Built-in Collection Item"
 msgid "是否启用"
 msgstr "Is Enabled"
 
-#: paasng/accessories/log/serializers.py:157
+#: paasng/accessories/log/serializers.py:156
 #, python-brace-format
 msgid "最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"
 msgstr "You can only view up to the first {MAX_RESULT_WINDOW} logs"
 
-#: paasng/accessories/log/serializers.py:192
+#: paasng/accessories/log/serializers.py:191
 msgid "日志采集路径必须是绝对路径"
 msgstr "Log collection path must be an absolute path"
 
@@ -742,7 +742,7 @@ msgid "{url} 并非 {module_name} 模块的访问入口"
 msgstr "{url} is not an access entry for the {module_name} module"
 
 #: paasng/accessories/publish/market/serializers.py:447
-#: paasng/platform/modules/serializers.py:312
+#: paasng/platform/modules/serializers.py:310
 msgid "This field is required."
 msgstr "This field is required."
 
@@ -1091,7 +1091,7 @@ msgid "上一次灰度发布还未审批完成"
 msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
-#: paasng/utils/error_codes.py:211
+#: paasng/utils/error_codes.py:208
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -1522,7 +1522,9 @@ msgstr "active"
 msgid ""
 "Designates whether this user should be treated as active. Unselect this "
 "instead of deleting accounts."
-msgstr "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
+msgstr ""
+"Designates whether this user should be treated as active. Unselect this "
+"instead of deleting accounts."
 
 #: paasng/infras/accounts/models.py:71
 msgid "date joined"
@@ -1784,7 +1786,7 @@ msgstr "Access URL"
 msgid "应用成员"
 msgstr "APP Member"
 
-#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:368
+#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:366
 msgid "构建配置"
 msgstr "Build Configuration"
 
@@ -2385,8 +2387,8 @@ msgstr "At least configure two allocation rules"
 msgid "最后一条分配规则必须是 else 条件"
 msgstr "The last assignment rule must be an else condition"
 
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:121
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:185
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:126
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:208
 msgid "集群无法访问，请检查配置"
 msgstr "Cluster cannot be accessed, please check the configuration"
 
@@ -2505,25 +2507,25 @@ msgstr "request header does not contain the X-Bk-Tenant-Id field"
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views/creation.py:97
+#: paasng/platform/applications/views/creation.py:94
 msgid "code 为 {} 或 name 为 {} 的应用已存在"
 msgstr "The APP which code is {} or name is {} already exists"
 
-#: paasng/platform/applications/views/creation.py:124
-#: paasng/platform/applications/views/creation.py:231
+#: paasng/platform/applications/views/creation.py:121
+#: paasng/platform/applications/views/creation.py:225
 msgid "你无法使用高级创建选项"
 msgstr "You cannot use the advanced creation option"
 
-#: paasng/platform/applications/views/creation.py:133
-#: paasng/platform/applications/views/creation.py:240
+#: paasng/platform/applications/views/creation.py:130
+#: paasng/platform/applications/views/creation.py:234
 msgid "当前版本下无法创建蓝鲸插件应用"
 msgstr "The bk-plugin APP cannot be created under the current version"
 
-#: paasng/platform/applications/views/creation.py:350
+#: paasng/platform/applications/views/creation.py:344
 msgid "你无法在所指定的 region 中创建应用"
 msgstr "You cannot create an application in the specified region"
 
-#: paasng/platform/applications/views/creation.py:368
+#: paasng/platform/applications/views/creation.py:362
 #, python-format
 msgid "集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."
 msgstr ""
@@ -2551,19 +2553,19 @@ msgstr ""
 msgid "BkApp 配置信息"
 msgstr "BkApp config info"
 
-#: paasng/platform/declarative/application/controller.py:86
+#: paasng/platform/declarative/application/controller.py:85
 msgid "用户没有权限在 {} 下创建应用"
 msgstr "User does not have permission to create APP under {}"
 
-#: paasng/platform/declarative/application/controller.py:145
+#: paasng/platform/declarative/application/controller.py:142
 msgid "你没有权限操作当前应用"
 msgstr "You do not have permission to operate the current APP"
 
-#: paasng/platform/declarative/application/controller.py:202
+#: paasng/platform/declarative/application/controller.py:199
 msgid "未定义主模块, 请检查 app_desc.yaml."
 msgstr "default module not defined, please check app_desc.yaml."
 
-#: paasng/platform/declarative/application/controller.py:219
+#: paasng/platform/declarative/application/controller.py:216
 #, python-brace-format
 msgid ""
 "目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导"
@@ -2863,10 +2865,13 @@ msgid "The Pre-release command is not configured, skip the Pre-release phase."
 msgstr "The Pre-release command is not configured, skip the Pre-release phase."
 
 #: paasng/platform/engine/deploy/building.py:136
+#, python-brace-format
 msgid ""
 "The source directory '{source_dir}' is not a legal directory,please check "
 "repository to confirm."
-msgstr "The source directory '{source_dir}' is not a legal directory,please check repository to confirm."
+msgstr ""
+"The source directory '{source_dir}' is not a legal directory,please check "
+"repository to confirm."
 
 #: paasng/platform/engine/deploy/building.py:175
 #: paasng/platform/engine/deploy/image_release.py:143
@@ -2889,7 +2894,9 @@ msgstr ""
 msgid ""
 "The predefined Add-ons {unbound_service_names} in the initial template are "
 "not enabled, please check if they need to be enabled"
-msgstr "The predefined Add-ons {unbound_service_names} in the initial template are not enabled, please check if they need to be enabled"
+msgstr ""
+"The predefined Add-ons {unbound_service_names} in the initial template are "
+"not enabled, please check if they need to be enabled"
 
 #: paasng/platform/engine/deploy/building.py:311
 #: paasng/platform/engine/deploy/building.py:409
@@ -2982,7 +2989,8 @@ msgstr ""
 
 #: paasng/platform/engine/serializers.py:95
 msgid "version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"
-msgstr "version_type is image, revision must be the image digest starting with sha256"
+msgstr ""
+"version_type is image, revision must be the image digest starting with sha256"
 
 #: paasng/platform/engine/serializers.py:311
 #, python-brace-format
@@ -3417,31 +3425,31 @@ msgstr ""
 "Wrong format, can only contain lowercase letters (a-z), numbers (0-9) and "
 "half-corner ligatures (-), length no more than 16"
 
-#: paasng/platform/modules/serializers.py:159
+#: paasng/platform/modules/serializers.py:157
 #: paasng/platform/templates/models.py:44
 msgid "模板名称"
 msgstr "Template name"
 
-#: paasng/platform/modules/serializers.py:168
-#: paasng/platform/modules/serializers.py:407
+#: paasng/platform/modules/serializers.py:166
+#: paasng/platform/modules/serializers.py:405
 msgid "名称为 {} 的模块已存在"
 msgstr " APP name %s already exists "
 
-#: paasng/platform/modules/serializers.py:174
-#: paasng/platform/modules/serializers.py:271
+#: paasng/platform/modules/serializers.py:172
+#: paasng/platform/modules/serializers.py:269
 msgid "模板 {} 不可用"
 msgstr "Template {} is unavailable"
 
-#: paasng/platform/modules/serializers.py:346
+#: paasng/platform/modules/serializers.py:344
 msgid "镜像凭证信息"
 msgstr "Image credential information"
 
-#: paasng/platform/modules/serializers.py:386
+#: paasng/platform/modules/serializers.py:384
 msgid "源码配置"
 msgstr "Source code configuration"
 
-#: paasng/platform/modules/serializers.py:449
-#: paasng/platform/modules/serializers.py:459
+#: paasng/platform/modules/serializers.py:447
+#: paasng/platform/modules/serializers.py:457
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 
@@ -3494,16 +3502,6 @@ msgstr "The current module does not support modifying the build mode as {}"
 msgid "当前应用不支持配置「启动命令」"
 msgstr ""
 "The current APP does not support the configuration of 「start commands」"
-
-#: paasng/platform/scene_app/initializer.py:90
-msgid "加载应用描述文件失败"
-msgstr "Failed to load application descriptor file"
-
-#: paasng/platform/scene_app/initializer.py:91
-msgid "应用描述文件不存在或内容不是有效 YAML 格式"
-msgstr ""
-"The application descriptor file does not exist or its content is not in "
-"valid YAML format"
 
 #: paasng/platform/smart_app/management/commands/smart_tool.py:57
 #: paasng/platform/smart_app/views.py:218
@@ -3687,10 +3685,11 @@ msgid "（腾讯内部 Git 源码托管系统）"
 msgstr "(Tencent's Git source code hosting system)"
 
 #: paasng/platform/sourcectl/views.py:112
+#, python-brace-format
 msgid "您的蓝鲸开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。"
 msgstr ""
-"Your BlueKing development account, SVN account is {account}, "
-"password is: {password}, please keep it safe"
+"Your BlueKing development account, SVN account is {account}, password is: "
+"{password}, please keep it safe"
 
 #: paasng/platform/sourcectl/views.py:171
 msgid "用户未关联 oauth 授权"
@@ -3757,10 +3756,6 @@ msgid "普通应用"
 msgstr "Normal Application"
 
 #: paasng/platform/templates/constants.py:26
-msgid "场景模板"
-msgstr "Scene Template"
-
-#: paasng/platform/templates/constants.py:27
 msgid "插件模板"
 msgstr "Plugin Template"
 
@@ -3843,28 +3838,28 @@ msgstr "Already under review, please do not repeat your APP"
 msgid "提交申请成功"
 msgstr "Submitted successfully"
 
-#: paasng/settings/__init__.py:885
+#: paasng/settings/__init__.py:891
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing old permission center URL, recommended to switch to BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:889
+#: paasng/settings/__init__.py:895
 msgid "蓝鲸权限中心的应用ID"
 msgstr "BlueKing permission center APP ID"
 
-#: paasng/settings/__init__.py:893
+#: paasng/settings/__init__.py:899
 msgid "蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing permission center intranet access URL, recommended to switch to "
 "BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:895
+#: paasng/settings/__init__.py:901
 msgid "蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL"
 msgstr ""
 "BlueKing configuration platform access URL, recommended to switch to "
 "BKPAAS_CC_URL"
 
-#: paasng/settings/__init__.py:896
+#: paasng/settings/__init__.py:902
 msgid "蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL"
 msgstr ""
 "BlueKing job platform access URL, recommended to switch to BKPAAS_JOB_URL"
@@ -4236,88 +4231,80 @@ msgstr "The specified application template does not exist or is unavailable"
 msgid "无效的应用模板"
 msgstr "Invalid application template"
 
-#: paasng/utils/error_codes.py:150
-msgid "指定的场景模板不存在"
-msgstr "The specified scenario template does not exist"
-
 #: paasng/utils/error_codes.py:151
-msgid "场景模板应用描述文件异常"
-msgstr "Scenario template application descriptor file exception"
-
-#: paasng/utils/error_codes.py:154
 msgid "创建蓝鲸运维开发平台应用错误"
 msgstr "Error creating BlueKing Operations Development Platform application"
 
-#: paasng/utils/error_codes.py:157
+#: paasng/utils/error_codes.py:154
 msgid "engine 服务错误"
 msgstr "Engine service error"
 
-#: paasng/utils/error_codes.py:160
+#: paasng/utils/error_codes.py:157
 msgid "初始化应用成员信息失败"
 msgstr "Failed to initialize application member information"
 
-#: paasng/utils/error_codes.py:161
+#: paasng/utils/error_codes.py:158
 msgid "添加应用成员失败"
 msgstr "Failed to add application member"
 
-#: paasng/utils/error_codes.py:162
+#: paasng/utils/error_codes.py:159
 msgid "修改应用成员失败"
 msgstr "Failed to modify application member"
 
-#: paasng/utils/error_codes.py:163
+#: paasng/utils/error_codes.py:160
 msgid "删除应用成员失败"
 msgstr "Failed to delete application member"
 
-#: paasng/utils/error_codes.py:166
+#: paasng/utils/error_codes.py:163
 msgid "指定环境的 Egress 配置不存在"
 msgstr "The Egress configuration for the specified environment does not exist"
 
-#: paasng/utils/error_codes.py:169
+#: paasng/utils/error_codes.py:166
 msgid "因该功能正在升级改造，操作暂不可用。"
 msgstr ""
 "Operation is temporarily unavailable as this function is being upgraded."
 
-#: paasng/utils/error_codes.py:170
+#: paasng/utils/error_codes.py:167
 msgid "暂不支持修改该配置"
 msgstr "Modifying this configuration is not supported at the moment"
 
-#: paasng/utils/error_codes.py:185
+#: paasng/utils/error_codes.py:182
 msgid "导入应用模型失败"
 msgstr "Failed to import application model"
 
-#: paasng/utils/error_codes.py:188
+#: paasng/utils/error_codes.py:185
 msgid "无法创建应用集群"
 msgstr "cannot create cluster"
 
-#: paasng/utils/error_codes.py:189
+#: paasng/utils/error_codes.py:186
 msgid "无法更新应用集群"
 msgstr "cannot update cluster"
 
-#: paasng/utils/error_codes.py:190
+#: paasng/utils/error_codes.py:187
 msgid "无法删除应用集群"
 msgstr "cannot delete cluster"
 
-#: paasng/utils/error_codes.py:192
+#: paasng/utils/error_codes.py:189
 msgid "无法更新集群组件"
 msgstr "cannot update cluster components"
 
-#: paasng/utils/error_codes.py:195
+#: paasng/utils/error_codes.py:192
 msgid "创建开发沙箱失败"
 msgstr "failed to create dev sandbox"
 
-#: paasng/utils/error_codes.py:196
+#: paasng/utils/error_codes.py:193
 msgid "开发沙箱已存在"
 msgstr "dev sandbox already exists"
 
-#: paasng/utils/error_codes.py:197
+#: paasng/utils/error_codes.py:194
 msgid "指定的开发沙箱不存在"
 msgstr "dev sandbox not found"
 
-#: paasng/utils/error_codes.py:198
+#: paasng/utils/error_codes.py:195
 msgid "开发沙箱总数量超过上限"
 msgstr "number of dev sandboxes exceeds the limit"
 
-#: paasng/utils/error_codes.py:199
+#: paasng/utils/error_codes.py:196
 msgid "开发沙箱 API 请求异常"
 msgstr "dev sandbox API request exception"
 
@@ -4327,14 +4314,17 @@ msgid "错误码: {code_num}, {msg}"
 msgstr "Error code: {code_num}, {msg}"
 
 #: paasng/utils/serializers.py:173
+#, python-brace-format
 msgid "\"{input}\" is not a valid bytes."
 msgstr "\"{input}\" is not a valid bytes."
 
 #: paasng/utils/serializers.py:174
+#, python-brace-format
 msgid "\"{input}\" is not a valid format, please startswith \"base64,\""
 msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 
 #: paasng/utils/serializers.py:175
+#, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
 msgstr "\"{input}\" is not a valid base64, please check it."
 

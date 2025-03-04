@@ -42,7 +42,7 @@ class SiteAction(StrStructuredEnum):
 
     # 平台管理（增强服务，运行时，应用集群，应用资源方案，应用管理，用户管理，代码库配置管理等）
     MANAGE_PLATFORM = EnumField("manage_platform", label=_("平台管理"))
-    # 应用模板管理（场景/应用模板管理, 监控仪表盘模版管理）
+    # 应用模板管理（应用模板管理, 监控仪表盘模版管理）
     MANAGE_APP_TEMPLATES = EnumField("manage_app_templates", label=_("应用模板管理"))
     # 平台运营（查看平台运营数据）
     OPERATE_PLATFORM = EnumField("operate_platform", label=_("平台运营"))

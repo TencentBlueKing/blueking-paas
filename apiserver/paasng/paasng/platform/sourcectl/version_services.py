@@ -98,7 +98,7 @@ class RepoVersionService:
 def get_version_service(module: "Module", operator: Optional[str] = None) -> DeployableVersionService:
     source_origin = module.get_source_origin()
 
-    if source_origin in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
+    if source_origin == SourceOrigin.AUTHORIZED_VCS:
         return RepoVersionService(get_repo_controller(module, operator))
     elif source_origin == SourceOrigin.IMAGE_REGISTRY:
         return DockerRegistryController.init_by_module(module, operator)

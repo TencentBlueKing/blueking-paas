@@ -238,7 +238,7 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
     :param operator: current operator's user_id
     """
     spec = ModuleSpecs(module)
-    if spec.source_origin_specs.source_origin in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
+    if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
         get_repo_controller(module, operator=operator).export(working_path, deployment.version_info)
     elif spec.deploy_via_package:
         PackageController.init_by_module(module, operator).export(working_path, deployment.version_info)

@@ -325,7 +325,6 @@ class Application(OwnerTimestampedModel):
         help_text="与应用部署方式相关的类型信息",
     )
     is_smart_app = models.BooleanField(verbose_name="是否为 S-Mart 应用", default=False)
-    is_scene_app = models.BooleanField(verbose_name="是否为场景 SaaS 应用", default=False)
     is_plugin_app = models.BooleanField(
         verbose_name="是否为插件应用",
         default=False,

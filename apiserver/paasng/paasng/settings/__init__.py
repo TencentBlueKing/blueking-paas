@@ -59,6 +59,7 @@ from environ import Env
 from moby_distribution.registry.utils import parse_image
 
 from .utils import (
+    cache_redis_sentinel_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
@@ -562,7 +563,13 @@ DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
 elif REDIS_URL:
-    CACHES = {"default": Env.cache_url_config(REDIS_URL)}
+    CACHES = {
+        "default": (
+            cache_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
+            if is_redis_sentinel_backend(REDIS_URL)
+            else Env.cache_url_config(REDIS_URL)
+        )
+    }
 else:
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.filebased.FileBasedCache", "LOCATION": "/tmp/django_cache"}

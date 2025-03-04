@@ -19,9 +19,10 @@ package rpc
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/kolo/xmlrpc"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type Client struct {

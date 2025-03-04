@@ -251,6 +251,7 @@ class AppDeclarativeController:
                 introduction_en=market_desc.introduction_en,
                 introduction_zh_cn=market_desc.introduction_zh_cn,
                 logo=market_desc.logo,
+                tenant_id=application.tenant_id,
             )
         )
         logo = product_defaults.pop("logo", None)

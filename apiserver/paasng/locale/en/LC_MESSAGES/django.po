@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-27 12:06+0800\n"
+"POT-Creation-Date: 2025-03-04 09:26+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1094,7 +1094,7 @@ msgid "上一次灰度发布还未审批完成"
 msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
-#: paasng/utils/error_codes.py:209
+#: paasng/utils/error_codes.py:211
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -2300,7 +2300,7 @@ msgid "BCS 集群必须提供且仅提供一个 API Server"
 msgstr "BCS clusters must provide and only provide one API Server."
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:290
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:422
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:419
 msgid "集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"
 msgstr ""
 "When the cluster authentication method is set to certificate, CA "
@@ -2313,7 +2313,7 @@ msgstr ""
 "provided."
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:297
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:428
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:425
 msgid "集群所属租户 ID {} 不在可用租户 ID 列表中"
 msgstr ""
 "The tenant ID {} of the cluster is not in the list of available tenant IDs."
@@ -2344,27 +2344,23 @@ msgstr ""
 msgid "特性标志必须为字典"
 msgstr "Feature flags must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:391
-msgid "特性标志不能为空"
-msgstr "Feature flags cannot be empty."
-
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:397
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:394
 msgid "特性标志 {} 不合法"
 msgstr "The feature flag {} is invalid."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:400
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:397
 msgid "特性标志的值必须为布尔值"
 msgstr "The value of the feature flag must be a boolean."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:406
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:403
 msgid "节点选择器必须为字典"
 msgstr "Node selectors must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:410
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:407
 msgid "节点选择器 key 必须为字符串"
 msgstr "The key of the node selector must be a string."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:412
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:409
 msgid "节点选择器 value 必须为字符串"
 msgstr "The value of the node selector must be a string."
 
@@ -2373,14 +2369,31 @@ msgid "集群名 {} 不存在或不可用"
 msgstr "The cluster name {} does not exist or is unavailable."
 
 #: paasng/plat_mgt/infras/clusters/serializers/policies.py:119
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:156
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:164
 msgid "需要配置统一分配策略"
 msgstr "A unified allocation policy needs to be configured."
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:125
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:162
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:127
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:172
 msgid "需要配置分配规则"
 msgstr "Allocation rules need to be configured."
+
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:130
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:175
+#, fuzzy
+#| msgid "需要配置分配规则"
+msgid "至少配置两条分配规则"
+msgstr "Allocation rules need to be configured."
+
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:133
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:178
+msgid "最后一条分配规则必须是 else 条件"
+msgstr ""
+
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:121
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:185
+msgid "集群无法访问，请检查配置"
+msgstr ""
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:131
 msgid "非 BCS 集群不支持对比组件版本"
@@ -2549,15 +2562,15 @@ msgstr "BkApp config info"
 msgid "用户没有权限在 {} 下创建应用"
 msgstr "User does not have permission to create APP under {}"
 
-#: paasng/platform/declarative/application/controller.py:144
+#: paasng/platform/declarative/application/controller.py:145
 msgid "你没有权限操作当前应用"
 msgstr "You do not have permission to operate the current APP"
 
-#: paasng/platform/declarative/application/controller.py:201
+#: paasng/platform/declarative/application/controller.py:202
 msgid "未定义主模块, 请检查 app_desc.yaml."
 msgstr "default module not defined, please check app_desc.yaml."
 
-#: paasng/platform/declarative/application/controller.py:218
+#: paasng/platform/declarative/application/controller.py:219
 #, python-brace-format
 msgid ""
 "目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导"
@@ -4289,34 +4302,44 @@ msgstr "Failed to import application model"
 #: paasng/utils/error_codes.py:188
 #, fuzzy
 #| msgid "删除应用"
-msgid "无法删除应用集群"
-msgstr "delete APP"
+msgid "无法创建应用集群"
+msgstr "cannot create cluster"
+
+#: paasng/utils/error_codes.py:189
+#, fuzzy
+#| msgid "删除应用"
+msgid "无法更新应用集群"
+msgstr "cannot update cluster"
 
 #: paasng/utils/error_codes.py:190
 #, fuzzy
-#| msgid "无法更新主入口"
+#| msgid "删除应用"
+msgid "无法删除应用集群"
+msgstr "cannot delete cluster"
+
+#: paasng/utils/error_codes.py:192
 msgid "无法更新集群组件"
-msgstr "Unable to update main entrance"
-
-#: paasng/utils/error_codes.py:193
-msgid "创建开发沙箱失败"
-msgstr ""
-
-#: paasng/utils/error_codes.py:194
-msgid "开发沙箱已存在"
-msgstr ""
+msgstr "cannot update cluster components"
 
 #: paasng/utils/error_codes.py:195
-msgid "指定的开发沙箱不存在"
-msgstr ""
+msgid "创建开发沙箱失败"
+msgstr "failed to create dev sandbox"
 
 #: paasng/utils/error_codes.py:196
-msgid "开发沙箱总数量超过上限"
-msgstr ""
+msgid "开发沙箱已存在"
+msgstr "dev sandbox already exists"
 
 #: paasng/utils/error_codes.py:197
+msgid "指定的开发沙箱不存在"
+msgstr "dev sandbox not found"
+
+#: paasng/utils/error_codes.py:198
+msgid "开发沙箱总数量超过上限"
+msgstr "number of dev sandboxes exceeds the limit"
+
+#: paasng/utils/error_codes.py:199
 msgid "开发沙箱 API 请求异常"
-msgstr ""
+msgstr "dev sandbox API request exception"
 
 #: paasng/utils/error_message.py:91
 #, python-brace-format
@@ -4350,362 +4373,3 @@ msgstr ""
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr ""
-
-#~ msgid "可用区域为"
-#~ msgstr "RegionIs"
-
-#~ msgid "未知操作类型"
-#~ msgstr "Unknown operation type"
-
-#~ msgid "启动 {module_name} 模块的 {process_type} 进程"
-#~ msgstr "start {module_name} module's {process_type} process"
-
-#~ msgid "停止 {module_name} 模块的 {process_type} 进程"
-#~ msgstr "stop {module_name} module's {process_type} process"
-
-#~ msgid "成功部署 {module_name} 模块的{env_name}"
-#~ msgstr "successfully deployed {module_name} module's {env_name}"
-
-#~ msgid "中断了 {module_name} 模块的{env_name}的部署过程"
-#~ msgstr "Interrupted deploy of {module_name} module's {env_name}"
-
-#~ msgid "尝试部署 {module_name} 模块的{env_name}失败"
-#~ msgstr "Failed to deploy {module_name} module's {env_name}"
-
-#~ msgid "成功下架 {module_name} 模块的{env_name}"
-#~ msgstr "Successfully archived {env_name} from {module_name} module"
-
-#~ msgid "尝试下架 {module_name} 模块的{env_name}"
-#~ msgstr "Try to archive {env_name} from {module_name} module"
-
-#~ msgid "创建 {module_name} 模块"
-#~ msgstr "Create {module_name} module"
-
-#~ msgid "申请 {gateway_name} 网关的 API 权限"
-#~ msgstr "Request API permissions for the {gateway_name} gateway"
-
-#~ msgid "续期 {gateway_name} 网关的 API 权限"
-#~ msgstr "Renew API permissions for the {gateway_name} gateway"
-
-#~ msgid "开发中"
-#~ msgstr "Developing"
-
-#~ msgid "应用市场"
-#~ msgstr "Market"
-
-#~ msgid ""
-#~ "应用ID 为 {original_app_code} 的 Smart 包已用于创建应用 {smart_app_code} !"
-#~ msgstr ""
-#~ "The Smart package with ID {original_app_code} has been used to create the "
-#~ "application {smart_app_code}!"
-
-#~ msgid "静态分配"
-#~ msgstr "Allocate statically"
-
-#~ msgid "应用的访问地址类型"
-#~ msgstr "Application access address type"
-
-#~ msgid "应用ID: {appid} 的应用已存在!"
-#~ msgstr "APP ID: {appid} of the APP already exists!"
-
-#~ msgid "应用ID: {appid} 的应用不存在!"
-#~ msgstr "APP ID: {appid} of the APP does not exist!"
-
-#~ msgid "支持提供出口 IP"
-#~ msgstr "Supports providing egress IP"
-
-#~ msgid "支持蓝鲸监控"
-#~ msgstr "Supports BlueKing monitoring"
-
-#~ msgid "工蜂接口返回异常，结果解析失败"
-#~ msgstr ""
-#~ "The Tc_git interface returns an exception and the result parsing fails"
-
-#~ msgid "工蜂请求失败"
-#~ msgstr "Tc_git request failed"
-
-#~ msgid "应用{}不存在"
-#~ msgstr "The application {} cannot be found."
-
-#~ msgid "模块{}不存在"
-#~ msgstr "The module {} cannot be found."
-
-#~ msgid "创建失败: %s"
-#~ msgstr "Failed to create: %s"
-
-#~ msgid "更新失败: %s"
-#~ msgstr "Update failed: %s"
-
-#~ msgid "删除失败: %s"
-#~ msgstr "Failed to delete: %s"
-
-#~ msgid "服务方案"
-#~ msgstr "Add-ons Plan"
-
-#~ msgid "修改 Egress 配置"
-#~ msgstr "modify Egress setting"
-
-#~ msgid "删除 Egress 配置"
-#~ msgstr "delete Egress setting"
-
-#~ msgid "允许选择源码来源"
-#~ msgstr "Allow selection of source code sources"
-
-#~ msgid "允许使用「提供镜像」的部署方式"
-#~ msgstr "Allows 'From image' deployment methods"
-
-#~ msgid "你无法使用非默认的源码来源"
-#~ msgstr "You cannot use non-default source code sources"
-
-#~ msgid "image is missing"
-#~ msgstr "image is missing"
-
-#~ msgid "集群 {default_cluster_name} 未就绪, 请联系管理员"
-#~ msgstr ""
-#~ "Cluster {default_cluster_name} is not ready, please contact administrator"
-
-#~ msgid "进程类型"
-#~ msgstr "Process Type"
-
-#~ msgid "旧副本数"
-#~ msgstr "Old replicas"
-
-#~ msgid "新副本数"
-#~ msgstr "New replicas"
-
-#~ msgid "进程副本数变化"
-#~ msgstr "Replica Change"
-
-#~ msgid "挂载卷内容"
-#~ msgstr "Mount volume content"
-
-#~ msgid "Failed to deploy bkapp"
-#~ msgstr "Failed to deploy bkapp"
-
-#~ msgid "Failed to find bkapp in Kubernetes"
-#~ msgstr "Failed to find bkapp in Kubernetes"
-
-#~ msgid "engine_params.source_init_template: 必须选择一个应用模板"
-#~ msgstr ""
-#~ "engine_params.source_init_template: An app template must be selected"
-
-#~ msgid "由 BuildPack 提供"
-#~ msgstr "Provided by BuildPack"
-
-#~ msgid "由 SlugBuild 提供"
-#~ msgstr "Provided by SlugBuild"
-
-#~ msgid "更新应用配置"
-#~ msgstr "Update APP configuration"
-
-#~ msgid "初始化指令执行环境"
-#~ msgstr "Initialize the command execution environment"
-
-#~ msgid "执行部署前置命令"
-#~ msgstr "Execute the   Pre-release command "
-
-#~ msgid "启动应用构建任务"
-#~ msgstr "Start the APP build task"
-
-#~ msgid "解析应用进程信息"
-#~ msgstr "Parse APP process information"
-
-#~ msgid "上传仓库代码"
-#~ msgstr "Upload repository code"
-
-#~ msgid "配置资源实例"
-#~ msgstr "Configure resource instance"
-
-#~ msgid "配置镜像访问凭证"
-#~ msgstr "Configure Image Access Credentials"
-
-#~ msgid "更新进程配置"
-#~ msgstr "Update process configuration"
-
-#~ msgid "部署应用"
-#~ msgstr "Deploy APP"
-
-#~ msgid "检测部署结果"
-#~ msgstr "detect deployment results"
-
-#~ msgid "当前模块的生产环境未绑定该访问地址"
-#~ msgstr "The current module's prod env is not bound to this access address"
-
-#~ msgid "成功下架{env_name}环境"
-#~ msgstr "Successfully archive {env_name}"
-
-#~ msgid "尝试下架{env_name}环境"
-#~ msgstr "Archive {env_name}"
-
-#~ msgid "自定义 time_range 时需要传入 start_time & end_time"
-#~ msgstr "Pass start_time & end_time to customize time_range"
-
-#~ msgid "生产"
-#~ msgstr "prod env"
-
-#~ msgid "应用已在生产环境下架"
-#~ msgstr "The app has been archive in the prod env"
-
-#~ msgid "模块已在生产环境下架"
-#~ msgstr "The module has been archived in the prod env"
-
-#~ msgid "你没有相应资源的访问权限，请申请权限或联系管理员授权"
-#~ msgstr ""
-#~ "You do not have access permission to the corresponding resource, please "
-#~ "apply for permission or contact the administrator for authorization"
-
-#~ msgid "{username}用户信息为空"
-#~ msgstr "{username} user information is empty"
-
-#~ msgid "蓝鲸内部 GitLab"
-#~ msgstr "BlueKing Inside GitLab"
-
-#~ msgid "仅限蓝鲸员工内部使用"
-#~ msgstr "Internal use by BlueKing employees only"
-
-#~ msgid "Github 请求失败"
-#~ msgstr "Tc_git request failed"
-
-#~ msgid "Github 接口请求超时"
-#~ msgstr "Tc_git interface request timeout"
-
-#~ msgid "Github 接口请求异常"
-#~ msgstr "Tc_git interface request error"
-
-#~ msgid "蓝鲸 GitLab 服务"
-#~ msgstr "Blueking GitLab"
-
-#~ msgid "源码目录 '{relative_source_dir}' 不存在, 请检查源码仓库进行确认。"
-#~ msgstr ""
-#~ "The source directory '{relative_source_dir}' does not exist, please "
-#~ "confirm."
-
-#~ msgid ""
-#~ "源码目录 '{relative_source_dir}' 并非合法目录, 请检查源码仓库进行确认。"
-#~ msgstr ""
-#~ "The source directory '{relative_source_dir}' is not a valid directory, "
-#~ "please confirm."
-
-#~ msgid ""
-#~ "检测到应用模板中预定义的增强服务 {unbound_service_names} 未开启，请检查是"
-#~ "否需要开启对应服务。"
-#~ msgstr ""
-#~ "It is detected that the predefined Add-ons {unbound_service_names} in the "
-#~ "app template is not enabled, please check whether the service needs to be "
-#~ "enabled."
-
-#~ msgid "未配置部署前置命令, 跳过部署前置阶段"
-#~ msgstr ""
-#~ "The Pre-release command is not configured, skip the Pre-release phase"
-
-#~ msgid "{module_name} 模块正在进行 部署或下架 操作，请操作结束后再尝试删除"
-#~ msgstr ""
-#~ "{module_name} module is being deployed or archive, please try to delete "
-#~ "it again after the operation is finished"
-
-#~ msgid "删除应用前，请先将所有部署环境下架"
-#~ msgstr "Before deleting the app, please archive all deployment environments"
-
-#~ msgid "删除应用前，请先确认所有独立域名已经下线"
-#~ msgstr "Please make sure all domains are offline before deleting the app"
-
-#~ msgid "{} 已经被占用"
-#~ msgstr "{} already occupied"
-
-#~ msgid "蓝鲸应用开发框架（Django3.x）"
-#~ msgstr "BlueKing App framework(Django3.x)"
-
-#~ msgid "Python + Django3.x，集成用户鉴权、日志处理等基础功能模块"
-#~ msgstr ""
-#~ "Python + Django3.x, integrated user authentication,log processing, etc."
-
-#~ msgid "蓝鲸应用开发样例（Django3.x）"
-#~ msgstr "BlueKing Template(Django3.x)"
-
-#~ msgid "拥有开发框架所有代码，并新增云 API 调用、后台任务等功能样例"
-#~ msgstr ""
-#~ "Have all the code of the development framework, and new cloud API calls, "
-#~ "background tasks, etc."
-
-#~ msgid "Django3.x 框架"
-#~ msgstr "Django3.x framework"
-
-#~ msgid "蓝鲸 Golang 开发框架"
-#~ msgstr "BlueKing Golang App framework"
-
-#~ msgid "采用beego开发框架，支持蓝鲸统一登录，新增云API调用样例"
-#~ msgstr ""
-#~ "Adopt beego framework, support BlueKing login service, cloud API call "
-#~ "sample, etc."
-
-#~ msgid "Gin 1.2 框架"
-#~ msgstr "Gin 1.2 framework"
-
-#~ msgid ""
-#~ "Node10.x + Express4.x + Vue2.6.x，集成蓝鲸前端开发工具链、公司开源代码规范"
-#~ msgstr ""
-#~ "Node10.x + Express4.x + Vue2.6.x, integrated with BlueKing front-end "
-#~ "development tool chain, company open source code specification"
-
-#~ msgid ""
-#~ "Node10.x + Express4.x + Vue2.0，集成蓝鲸Vue组件库、Mock服务、统一登录"
-#~ msgstr ""
-#~ "Node10.x + Express4.x + Vue2.0, integrated BlueKing Vue component "
-#~ "library, Mock service, login service, etc."
-
-#~ msgid "蓝鲸 Node 全栈开发框架"
-#~ msgstr "BlueKing Node full stack framework"
-
-#~ msgid ""
-#~ "Node12.x + Koa2.x + Vue2.6.x + Webpack5，集成蓝鲸前端开发工具链、公司开源"
-#~ "代码规范"
-#~ msgstr ""
-#~ "Node12.x + Koa2.x + Vue2.6.x + Webpack5, integrated with BlueKing front-"
-#~ "end development tool chain, company open source code specification"
-
-#~ msgid "Express 4.15.2 框架"
-#~ msgstr "Express 4.15.2 framework"
-
-#~ msgid "Koa 2.11.0 框架"
-#~ msgstr "Koa 2.11.0 framework"
-
-#~ msgid "其他"
-#~ msgstr "Others"
-
-#~ msgid "环境"
-#~ msgstr "Envs"
-
-#~ msgid "数据库版本"
-#~ msgstr "Version"
-
-#~ msgid "实例类型"
-#~ msgstr "Spec"
-
-#~ msgid "类型"
-#~ msgstr "Spec"
-
-#~ msgid "无法解析 commit 信息：{output}"
-#~ msgstr "Unable to parse commit message: {output}"
-
-#~ msgid "下载文件:{ref}:{filepath} 失败"
-#~ msgstr "Failed to download file:{ref}:{filepath}"
-
-#~ msgid "工蜂下载文件的编码方式改成了 {resp['encoding']}"
-#~ msgstr ""
-#~ "（The encoding method of Tc_git downloaded files is changed to "
-#~ "{resp['encoding']}"
-
-#~ msgid "GitLab 源码托管服务"
-#~ msgstr "GitLab source code hosting service"
-
-#~ msgid "关联步骤元信息"
-#~ msgstr "step metas"
-
-#~ msgid "应用名称已经被占用"
-#~ msgstr "The App name is already occupied"
-
-#~ msgid "申请 RabbitMQ 服务实例"
-#~ msgstr "Apply for a RabbitMQ service instance"
-
-#~ msgid "同步源码仓库"
-#~ msgstr "Sync source code repository"

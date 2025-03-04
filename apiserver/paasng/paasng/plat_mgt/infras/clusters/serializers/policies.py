@@ -121,8 +121,16 @@ class ClusterAllocationPolicyCreateInputSLZ(serializers.Serializer):
             attrs["allocation_precedence_policies"] = []
 
         elif policy_type == ClusterAllocationPolicyType.RULE_BASED:
-            if not attrs.get("allocation_precedence_policies"):
+            policies = attrs.get("allocation_precedence_policies")
+
+            if not policies:
                 raise ValidationError(_("需要配置分配规则"))
+
+            if len(policies) < 2:
+                raise ValidationError(_("至少配置两条分配规则"))
+
+            if policies[-1].matcher != {}:
+                raise ValidationError(_("最后一条分配规则必须是 else 条件"))
 
             attrs["allocation_policy"] = None
 
@@ -158,8 +166,16 @@ class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
             attrs["allocation_precedence_policies"] = []
 
         elif policy_type == ClusterAllocationPolicyType.RULE_BASED:
-            if not attrs.get("allocation_precedence_policies"):
+            policies = attrs.get("allocation_precedence_policies")
+
+            if not policies:
                 raise ValidationError(_("需要配置分配规则"))
+
+            if len(policies) < 2:
+                raise ValidationError(_("至少配置两条分配规则"))
+
+            if policies[-1].matcher != {}:
+                raise ValidationError(_("最后一条分配规则必须是 else 条件"))
 
             attrs["allocation_policy"] = None
 

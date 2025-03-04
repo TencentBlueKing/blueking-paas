@@ -15,14 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 from typing import Any, Dict, List
 
+from kubernetes.client import ApiClient, Configuration, CoreV1Api
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KDaemonSet, KDeployment, KNamespace, KStatefulSet
 from paasng.plat_mgt.infras.clusters.entities import HelmRelease
+
+logger = logging.getLogger(__name__)
 
 
 class K8SWorkloadStateGetter:
@@ -90,6 +94,38 @@ class K8SWorkloadStateGetter:
         updated = res.status.get("updatedNumberScheduled", 0)
         available = res.status.get("numberAvailable", 0)
         return f"Desired: {desired}, Current: {current}, Ready: {ready}, Up-to-date: {updated}, Available: {available}"
+
+
+def check_k8s_accessible(
+    server_url: str,
+    ca: str | None = None,
+    cert: str | None = None,
+    key: str | None = None,
+    token: str | None = None,
+) -> bool:
+    """通过直接访问 k8s api 的方式，检查 k8s 集群是否可访问"""
+    cfg = Configuration()
+    cfg.host = server_url
+    cfg.verify_ssl = False
+
+    # Token / 证书认证二选一
+    if token:
+        cfg.api_key = {"authorization": "Bearer " + token}
+    elif ca and cert and key:
+        cfg.ssl_ca_cert = ca
+        cfg.cert_file = cert
+        cfg.key_file = key
+    else:
+        logger.error("check k8s accessible failed, missing token or cert/key/ca")
+        return False
+
+    try:
+        CoreV1Api(ApiClient(configuration=cfg)).list_namespace()
+    except Exception:
+        logger.exception("check k8s accessible failed, server_url: %s", server_url)
+        return False
+
+    return True
 
 
 def ensure_k8s_namespace(cluster_name: str, namespace: str, max_wait_seconds: int = 15) -> bool:

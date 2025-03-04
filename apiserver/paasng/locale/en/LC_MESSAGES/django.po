@@ -3,7 +3,6 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
@@ -66,27 +65,27 @@ msgstr "Model version"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:126
 msgid "应用模型（YAML 格式）"
-msgstr ""
+msgstr "application model (YAML format)"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:128
 msgid "应用模型（JSON 格式）"
-msgstr ""
+msgstr "application model (JSON format)"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:131
 msgid "已部署的应用模型（JSON 格式）"
-msgstr ""
+msgstr "deployed application model (JSON format)"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:132
 msgid "是否已部署"
-msgstr ""
+msgstr "is deployed"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:133
 msgid "是否草稿"
-msgstr ""
+msgstr "is draft"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:134
 msgid "是否已删除"
-msgstr ""
+msgstr "is deleted"
 
 #: paas_wl/bk_app/cnative/specs/models/app_resource.py:177
 #: paas_wl/bk_app/cnative/specs/models/mount.py:39
@@ -131,7 +130,7 @@ msgstr "Mounted resource name"
 #: paas_wl/bk_app/cnative/specs/models/mount.py:43
 #: paas_wl/bk_app/cnative/specs/models/mount.py:63
 msgid "挂载资源展示名称"
-msgstr ""
+msgstr "mounted resource display name"
 
 #: paas_wl/bk_app/cnative/specs/models/mount.py:81
 msgid "挂载点的名称"
@@ -554,10 +553,8 @@ msgstr ""
 "Version information is incorrect, please select the correct repository branch"
 
 #: paasng/accessories/dev_sandbox/serializers.py:72
-#, fuzzy
-#| msgid "文件格式错误"
 msgid "版本信息格式错误"
-msgstr "Document format error"
+msgstr "version information format error"
 
 #: paasng/accessories/log/client.py:174 paasng/accessories/log/client.py:284
 #: paasng/bk_plugins/pluginscenter/log/client.py:188
@@ -656,7 +653,7 @@ msgstr "Currently only custom sites named default are supported"
 
 #: paasng/accessories/paas_analysis/views.py:61
 msgid "paas-analysis service is not configured"
-msgstr ""
+msgstr "paas-analysis service is not configured"
 
 #: paasng/accessories/paas_analysis/views.py:425
 msgid "暂不允许关闭日志统计功能"
@@ -747,7 +744,7 @@ msgstr "{url} is not an access entry for the {module_name} module"
 #: paasng/accessories/publish/market/serializers.py:447
 #: paasng/platform/modules/serializers.py:312
 msgid "This field is required."
-msgstr ""
+msgstr "This field is required."
 
 #: paasng/accessories/publish/market/serializers.py:453
 #, python-brace-format
@@ -773,7 +770,7 @@ msgstr ""
 
 #: paasng/accessories/servicehub/views.py:144
 msgid "获取可用服务方案失败"
-msgstr ""
+msgstr "get available service plan failed"
 
 #: paasng/accessories/servicehub/views.py:585
 #, python-brace-format
@@ -1318,7 +1315,7 @@ msgstr "The plugin has been published successfully"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:84
 msgid "context `pd` is required"
-msgstr ""
+msgstr "context `pd` is required"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:111
 msgid "{} 为 {} 的插件已存在"
@@ -1326,7 +1323,7 @@ msgstr "The plugin which {} is {} already exists"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:114
 msgid "attrs `{}` is required"
-msgstr ""
+msgstr "attrs `{}` is required"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:511
 #, python-brace-format
@@ -1335,7 +1332,7 @@ msgstr "Revision numbers do not match, next {label} revision is {revision}"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:535
 msgid "使用测试版本发布时必须传参数: release_id"
-msgstr ""
+msgstr "arguments must be passed when using test version release: release_id"
 
 #: paasng/bk_plugins/pluginscenter/serializers.py:547
 msgid "版本号必须与代码分支一致"
@@ -1491,53 +1488,53 @@ msgstr "The product is in grayscale testing, not yet open, so stay tuned"
 
 #: paasng/infras/accounts/models.py:54
 msgid "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
-msgstr ""
+msgstr "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
 
 #: paasng/infras/accounts/models.py:56
 msgid "A user with that username already exists."
-msgstr ""
+msgstr "A user with that username already exists."
 
 #: paasng/infras/accounts/models.py:58
 msgid "first name"
-msgstr ""
+msgstr "first name"
 
 #: paasng/infras/accounts/models.py:59
 msgid "last name"
-msgstr ""
+msgstr "last name"
 
 #: paasng/infras/accounts/models.py:60
 msgid "email address"
-msgstr ""
+msgstr "email address"
 
 #: paasng/infras/accounts/models.py:62
 msgid "staff status"
-msgstr ""
+msgstr "staff status"
 
 #: paasng/infras/accounts/models.py:62
 msgid "Designates whether the user can log into this admin site."
-msgstr ""
+msgstr "Designates whether the user can log into this admin site."
 
 #: paasng/infras/accounts/models.py:65
 msgid "active"
-msgstr ""
+msgstr "active"
 
 #: paasng/infras/accounts/models.py:68
 msgid ""
 "Designates whether this user should be treated as active. Unselect this "
 "instead of deleting accounts."
-msgstr ""
+msgstr "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
 
 #: paasng/infras/accounts/models.py:71
 msgid "date joined"
-msgstr ""
+msgstr "date joined"
 
 #: paasng/infras/accounts/models.py:80
 msgid "user"
-msgstr ""
+msgstr "user"
 
 #: paasng/infras/accounts/models.py:81
 msgid "users"
-msgstr ""
+msgstr "users"
 
 #: paasng/infras/accounts/oauth/backends_ext.py:15
 #: paasng/platform/sourcectl/type_specs.py:142
@@ -2380,34 +2377,30 @@ msgstr "Allocation rules need to be configured."
 
 #: paasng/plat_mgt/infras/clusters/serializers/policies.py:130
 #: paasng/plat_mgt/infras/clusters/serializers/policies.py:175
-#, fuzzy
-#| msgid "需要配置分配规则"
 msgid "至少配置两条分配规则"
-msgstr "Allocation rules need to be configured."
+msgstr "At least configure two allocation rules"
 
 #: paasng/plat_mgt/infras/clusters/serializers/policies.py:133
 #: paasng/plat_mgt/infras/clusters/serializers/policies.py:178
 msgid "最后一条分配规则必须是 else 条件"
-msgstr ""
+msgstr "The last assignment rule must be an else condition"
 
 #: paasng/plat_mgt/infras/clusters/views/clusters.py:121
 #: paasng/plat_mgt/infras/clusters/views/clusters.py:185
 msgid "集群无法访问，请检查配置"
-msgstr ""
+msgstr "Cluster cannot be accessed, please check the configuration"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:131
 msgid "非 BCS 集群不支持对比组件版本"
-msgstr ""
+msgstr "Non-BCS clusters do not support comparing component versions"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:166
 msgid "非 BCS 集群需要手动更新组件"
-msgstr ""
+msgstr "Non-BCS clusters require manual component updates"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:198
-#, fuzzy
-#| msgid "未知原因, 请联系管理员处理"
 msgid "配置异常，请联系管理员处理"
-msgstr "No known reason, please contact the administrator"
+msgstr "Configuration exception, please contact the administrator"
 
 #: paasng/platform/applications/constants.py:98
 msgid "开启出口 IP 管理"
@@ -2506,7 +2499,7 @@ msgstr ""
 
 #: paasng/platform/applications/tenant.py:66
 msgid "请求头中未包含 X-Bk-Tenant-Id 字段"
-msgstr ""
+msgstr "request header does not contain the X-Bk-Tenant-Id field"
 
 #: paasng/platform/applications/views/application.py:384
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
@@ -2867,14 +2860,13 @@ msgstr "Ongoing archive tasks exist"
 
 #: paasng/platform/engine/deploy/bg_command/pre_release.py:55
 msgid "The Pre-release command is not configured, skip the Pre-release phase."
-msgstr ""
+msgstr "The Pre-release command is not configured, skip the Pre-release phase."
 
 #: paasng/platform/engine/deploy/building.py:136
-#, python-brace-format
 msgid ""
 "The source directory '{source_dir}' is not a legal directory,please check "
 "repository to confirm."
-msgstr ""
+msgstr "The source directory '{source_dir}' is not a legal directory,please check repository to confirm."
 
 #: paasng/platform/engine/deploy/building.py:175
 #: paasng/platform/engine/deploy/image_release.py:143
@@ -2897,7 +2889,7 @@ msgstr ""
 msgid ""
 "The predefined Add-ons {unbound_service_names} in the initial template are "
 "not enabled, please check if they need to be enabled"
-msgstr ""
+msgstr "The predefined Add-ons {unbound_service_names} in the initial template are not enabled, please check if they need to be enabled"
 
 #: paasng/platform/engine/deploy/building.py:311
 #: paasng/platform/engine/deploy/building.py:409
@@ -2990,16 +2982,16 @@ msgstr ""
 
 #: paasng/platform/engine/serializers.py:95
 msgid "version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"
-msgstr ""
+msgstr "version_type is image, revision must be the image digest starting with sha256"
 
 #: paasng/platform/engine/serializers.py:311
 #, python-brace-format
 msgid "Object with {slug_name}={value} does not exist."
-msgstr ""
+msgstr "object with {slug_name}={value} does not exist."
 
 #: paasng/platform/engine/serializers.py:312
 msgid "Invalid value."
-msgstr ""
+msgstr "Invalid value."
 
 #: paasng/platform/engine/serializers.py:352
 #, python-brace-format
@@ -3495,10 +3487,8 @@ msgid "不支持的构建方式"
 msgstr "Unsupported build method"
 
 #: paasng/platform/modules/views.py:507
-#, fuzzy
-#| msgid "不支持的构建方式"
 msgid "当前模块不支持修改构建方式为 {}"
-msgstr "Unsupported build method"
+msgstr "The current module does not support modifying the build mode as {}"
 
 #: paasng/platform/modules/views.py:616
 msgid "当前应用不支持配置「启动命令」"
@@ -3544,7 +3534,7 @@ msgstr "The content of the app description file is not in valid YAML format"
 
 #: paasng/platform/smart_app/services/detector.py:176
 msgid "源码包文件格式错误，文件可能已经损坏"
-msgstr ""
+msgstr "source package file format error, file may be damaged"
 
 #: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:270
 #: paasng/platform/sourcectl/views.py:256
@@ -3697,13 +3687,9 @@ msgid "（腾讯内部 Git 源码托管系统）"
 msgstr "(Tencent's Git source code hosting system)"
 
 #: paasng/platform/sourcectl/views.py:112
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "您的蓝鲸{region}开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保"
-#| "管。"
 msgid "您的蓝鲸开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。"
 msgstr ""
-"Your BlueKing {region} development account, SVN account is {account}, "
+"Your BlueKing development account, SVN account is {account}, "
 "password is: {password}, please keep it safe"
 
 #: paasng/platform/sourcectl/views.py:171
@@ -4300,20 +4286,14 @@ msgid "导入应用模型失败"
 msgstr "Failed to import application model"
 
 #: paasng/utils/error_codes.py:188
-#, fuzzy
-#| msgid "删除应用"
 msgid "无法创建应用集群"
 msgstr "cannot create cluster"
 
 #: paasng/utils/error_codes.py:189
-#, fuzzy
-#| msgid "删除应用"
 msgid "无法更新应用集群"
 msgstr "cannot update cluster"
 
 #: paasng/utils/error_codes.py:190
-#, fuzzy
-#| msgid "删除应用"
 msgid "无法删除应用集群"
 msgstr "cannot delete cluster"
 
@@ -4347,19 +4327,16 @@ msgid "错误码: {code_num}, {msg}"
 msgstr "Error code: {code_num}, {msg}"
 
 #: paasng/utils/serializers.py:173
-#, python-brace-format
 msgid "\"{input}\" is not a valid bytes."
-msgstr ""
+msgstr "\"{input}\" is not a valid bytes."
 
 #: paasng/utils/serializers.py:174
-#, python-brace-format
 msgid "\"{input}\" is not a valid format, please startswith \"base64,\""
-msgstr ""
+msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 
 #: paasng/utils/serializers.py:175
-#, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
-msgstr ""
+msgstr "\"{input}\" is not a valid base64, please check it."
 
 #: paasng/utils/views.py:44
 msgid "参数格式错误"
@@ -4368,8 +4345,8 @@ msgstr "Parameter format error"
 #: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:101
 #: tests/paasng/bk_plugins/pluginscenter/test_serializers.py:113
 msgid "This value does not match the required pattern."
-msgstr ""
+msgstr "This value does not match the required pattern."
 
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
-msgstr ""
+msgstr "zh-cn"

@@ -115,7 +115,7 @@ def check_k8s_accessible(
         cfg.cert_file = cert
         cfg.key_file = key
     else:
-        logger.error("check k8s accessible failed, missing token or cert/key/ca")
+        logger.error("check k8s accessible failed, missing token or ca/cert/key")
         return False
 
     # 每一个 api server 都要检查

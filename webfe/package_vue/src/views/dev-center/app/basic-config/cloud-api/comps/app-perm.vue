@@ -5,8 +5,9 @@
       <span
         v-bk-tooltips="{
           content: $t('仅支持对同一{t}下的 API 进行批量申请', { t: isComponentApi ? $t('组件') : $t('网关') }),
-          disabled: !isTooltipsDisabled
-        }">
+          disabled: !isTooltipsDisabled,
+        }"
+      >
         <bk-button
           theme="primary"
           :disabled="isApplyDisabled"
@@ -17,7 +18,7 @@
       </span>
       <!-- 续期：支持跨网关/组件续期 -->
       <bk-button
-        style="margin-left: 6px;"
+        style="margin-left: 6px"
         theme="primary"
         :disabled="isRenewalDisabled"
         @click="handleBatchRenewal"
@@ -81,7 +82,7 @@
       <div>
         <paasng-alert
           :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
-          style="margin-bottom: 16px;width: 100%"
+          style="margin-bottom: 16px; width: 100%"
         />
         <bk-table
           ref="permRef"
@@ -110,8 +111,7 @@
             type="selection"
             :selectable="selectable"
             width="60"
-          >
-          </bk-table-column>
+          ></bk-table-column>
           <bk-table-column
             :label="$t('API类型')"
             :render-header="$renderHeader"
@@ -148,7 +148,12 @@
                 <template v-if="isComponentApi">
                   {{ props.row.system_name }}
                   <template v-if="!!props.row.tag">
-                    <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
+                    <span
+                      :class="[
+                        { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
+                        { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) },
+                      ]"
+                    >
                       {{ props.row.tag }}
                     </span>
                   </template>
@@ -197,7 +202,9 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
-              <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
+              <span :class="['special', 'sensitive'].includes(props.row.permission_level)">
+                {{ levelMap[props.row.permission_level] }}
+              </span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -219,22 +226,28 @@
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('已拥有') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('未申请') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已过期') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已拒绝') }}
                 </template>
                 <template v-else>
-                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                  <round-loading ext-cls="applying" />
+                  {{ $t('申请中') }}
                 </template>
               </template>
             </bk-table-column>
@@ -246,22 +259,28 @@
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('已拥有') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('未申请') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已过期') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已拒绝') }}
                 </template>
                 <template v-else>
-                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                  <round-loading ext-cls="applying" />
+                  {{ $t('申请中') }}
                 </template>
               </template>
             </bk-table-column>
@@ -273,7 +292,7 @@
             <template slot-scope="{ row }">
               <div class="table-operate-buttons">
                 <bk-button
-                  style="padding: 0 0 0 10px;"
+                  style="padding: 0 0 0 10px"
                   theme="primary"
                   :disabled="row.applyDisabled"
                   size="small"
@@ -283,11 +302,14 @@
                   <span
                     v-bk-tooltips="{
                       content: $t(row.applyTips),
-                      disabled: !row.applyDisabled
-                    }"> {{ $t('申请') }} </span>
+                      disabled: !row.applyDisabled,
+                    }"
+                  >
+                    {{ $t('申请') }}
+                  </span>
                 </bk-button>
                 <bk-button
-                  style="padding: 0 0 0 10px;"
+                  style="padding: 0 0 0 10px"
                   theme="primary"
                   :disabled="row.renewDisabled"
                   size="small"
@@ -297,8 +319,11 @@
                   <span
                     v-bk-tooltips="{
                       content: $t(row.renewTips),
-                      disabled: !row.renewDisabled
-                    }"> {{ $t('续期') }} </span>
+                      disabled: !row.renewDisabled,
+                    }"
+                  >
+                    {{ $t('续期') }}
+                  </span>
                 </bk-button>
               </div>
             </template>
@@ -346,6 +371,12 @@ export default {
     PaasngAlert,
     BatchDialog,
   },
+  props: {
+    typeList: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       loading: false,
@@ -367,16 +398,6 @@ export default {
         rows: [],
         name: '',
       },
-      typeList: [
-        {
-          id: 'gateway',
-          name: this.$t('网关API'),
-        },
-        {
-          id: 'component',
-          name: this.$t('组件API'),
-        },
-      ],
       typeMap: {
         component: this.$t('组件API'),
         gateway: this.$t('网关API'),
@@ -427,7 +448,7 @@ export default {
       return this.$route.params.id;
     },
     isPageDisabled() {
-      return this.tableList.every(item => !item.permission_action) || !this.tableList.length;
+      return this.tableList.every((item) => !item.permission_action) || !this.tableList.length;
     },
     curDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
@@ -438,24 +459,26 @@ export default {
     // 是否允许批量申请、不支持跨网关/组件申请
     isApplyDisabled() {
       const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return !this.selectedList.some(item => item.applyDisabled === false)
-      || new Set(this.selectedList.map(item => item[idField])).size > 1;
+      return (
+        !this.selectedList.some((item) => item.applyDisabled === false) ||
+        new Set(this.selectedList.map((item) => item[idField])).size > 1
+      );
     },
     // 跨网关批量申请禁用，只支持单个网关下接口的批量申请
     isTooltipsDisabled() {
       const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return new Set(this.selectedList.map(item => item[idField])).size > 1;
+      return new Set(this.selectedList.map((item) => item[idField])).size > 1;
     },
     // 是否允许批量续期
     isRenewalDisabled() {
-      return !this.selectedList.some(item => item.renewDisabled === false);
+      return !this.selectedList.some((item) => item.renewDisabled === false);
     },
     isSesetTableList() {
       return !this.nameFilterValues.length && !this.statusFilterValues.length;
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     searchValue(newVal, oldVal) {
@@ -484,12 +507,12 @@ export default {
   },
   created() {
     this.init();
-    this.compare = p => (m, n) => {
+    this.compare = (p) => (m, n) => {
       const a = m[p] ? m[p] : 0;
       const b = n[p] ? n[p] : 0;
       return this.is_up ? a - b : b - a;
     };
-    this.compareName = p => (m, n) => {
+    this.compareName = (p) => (m, n) => {
       const a = m[p].slice(0, 1).charCodeAt();
       const b = n[p].slice(0, 1).charCodeAt();
       return a - b;
@@ -579,15 +602,17 @@ export default {
     },
 
     handleSelect(value, option) {
-      this.pagination = Object.assign({}, {
-        current: 1,
-        limit: 10,
-        count: 0,
-      });
+      this.pagination = Object.assign(
+        {},
+        {
+          current: 1,
+          limit: 10,
+          count: 0,
+        }
+      );
       this.nameFilters = [];
       this.selectedList = [];
       this.fetchList();
-      this.fetchFilterList();
     },
 
     sortTable() {
@@ -625,7 +650,7 @@ export default {
               src: '/static/images/sort-icon.png',
             },
           }),
-        ],
+        ]
       );
     },
 
@@ -638,17 +663,20 @@ export default {
     },
 
     handleRenewalAfterLeave() {
-      this.renewalDialog = Object.assign({}, {
-        visiable: false,
-        title: '',
-        rows: [],
-        name: '',
-      });
+      this.renewalDialog = Object.assign(
+        {},
+        {
+          visiable: false,
+          title: '',
+          rows: [],
+          name: '',
+        }
+      );
     },
 
     handleChange(newVal, oldVal, val) {
       if (newVal) {
-        this.allData = this.apiList.filter(item => item.permission_action === 'renew');
+        this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
       } else {
         this.allData = this.apiList;
       }
@@ -658,8 +686,8 @@ export default {
     },
 
     /**
-             * 初始化弹层翻页条
-             */
+     * 初始化弹层翻页条
+     */
     initPageConf() {
       this.pagination.current = 1;
       const total = this.allData.length;
@@ -667,10 +695,10 @@ export default {
     },
 
     /**
-             * 翻页回调
-             *
-             * @param {number} page 当前页
-             */
+     * 翻页回调
+     *
+     * @param {number} page 当前页
+     */
     pageChange(page = 1) {
       this.allChecked = false;
       this.indeterminate = false;
@@ -685,12 +713,12 @@ export default {
     },
 
     /**
-             * 获取当前这一页的数据
-             *
-             * @param {number} page 当前页
-             *
-             * @return {Array} 当前页数据
-             */
+     * 获取当前这一页的数据
+     *
+     * @param {number} page 当前页
+     *
+     * @return {Array} 当前页数据
+     */
     getDataByPage(page) {
       let dataSource = this.allData;
       // 存在筛选条件更改数据源为已筛选后的列表
@@ -740,7 +768,7 @@ export default {
         await this.fetchList();
         this.handleSearch();
         if (this.isRenewalPerm) {
-          this.allData = this.apiList.filter(item => item.permission_action === 'renew');
+          this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
         } else {
           this.allData = this.apiList;
         }
@@ -757,7 +785,11 @@ export default {
         return;
       }
       this.isFilter = true;
-      this.allData = [...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1)];
+      this.allData = [
+        ...this.apiList.filter(
+          (api) => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1
+        ),
+      ];
       this.pagination.count = this.allData.length;
 
       this.pagination.current = 1;
@@ -775,8 +807,8 @@ export default {
     async fetchList() {
       this.loading = true;
       try {
-        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode })
-                    ;(res.data || []).forEach((item) => {
+        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
+        (res.data || []).forEach((item) => {
           item.type = this.typeValue;
         });
         // 权限续期处理
@@ -799,14 +831,14 @@ export default {
         this.apiList = Object.freeze(res.data);
         this.apiList.forEach((item) => {
           if (this.isComponentApi) {
-            if (!this.nameFilters.map(_ => _.value).includes(item.system_name)) {
+            if (!this.nameFilters.map((_) => _.value).includes(item.system_name)) {
               this.nameFilters.push({
                 text: item.system_name,
                 value: item.system_name,
               });
             }
           } else {
-            if (!this.nameFilters.map(_ => _.value).includes(item.api_name)) {
+            if (!this.nameFilters.map((_) => _.value).includes(item.api_name)) {
               this.nameFilters.push({
                 text: item.api_name,
                 value: item.api_name,
@@ -815,7 +847,7 @@ export default {
           }
         });
         if (this.isRenewalPerm) {
-          this.allData = res.data.filter(item => item.permission_action === 'renew');
+          this.allData = res.data.filter((item) => item.permission_action === 'renew');
         } else {
           this.allData = res.data;
         }
@@ -893,7 +925,7 @@ export default {
         if (this.allFilterData[key].length) {
           isFilter = true;
         }
-      };
+      }
       return isFilter;
     },
 
@@ -930,18 +962,21 @@ export default {
 
     // 取消
     handleAfterLeave() {
-      this.applyDialog = Object.assign({}, {
-        visiable: false,
-        title: '',
-        rows: [],
-        superiorId: '',
-        superiorName: '',
-      });
+      this.applyDialog = Object.assign(
+        {},
+        {
+          visiable: false,
+          title: '',
+          rows: [],
+          superiorId: '',
+          superiorName: '',
+        }
+      );
     },
 
     // 通用筛选逻辑
     getFilterAllList(data, fields, key) {
-      return data.filter(v => fields.includes(v[key]));
+      return data.filter((v) => fields.includes(v[key]));
     },
 
     // 重置TableList
@@ -961,7 +996,11 @@ export default {
       const filterFields = key === 'permission_status' ? this.statusFilterValues : this.nameFilterValues;
       // 多筛选条件处理
       if (this.statusFilterValues.length && this.nameFilterValues.length) {
-        const curFilterList = this.getFilterAllList(this.allData, this.nameFilterValues, this.isComponentApi ? 'system_name' : 'api_name');
+        const curFilterList = this.getFilterAllList(
+          this.allData,
+          this.nameFilterValues,
+          this.isComponentApi ? 'system_name' : 'api_name'
+        );
         this.filterAllList = this.getFilterAllList(curFilterList, this.statusFilterValues, 'permission_status');
       } else {
         // 当前筛选条件重置，但存在另外一组筛选条件
@@ -983,75 +1022,75 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .search-wrapper {
-        margin-bottom: 16px;
-        .label,
-        .select-wrapper,
-        .checkbox-wrapper,
-        .search-button,
-        .input-wrapper {
-            display: inline-block;
-            vertical-align: top;
-        }
-        .label {
-            line-height: 32px;
-        }
-        .select-wrapper {
-            width: 200px;
-        }
-        .checkbox-wrapper {
-            margin: 0 15px;
-            line-height: 32px;
-        }
-        .input-wrapper {
-            width: 300px;
-        }
-        .search-button {
-            margin-left: 10px;
-        }
-    }
+.search-wrapper {
+  margin-bottom: 16px;
+  .label,
+  .select-wrapper,
+  .checkbox-wrapper,
+  .search-button,
+  .input-wrapper {
+    display: inline-block;
+    vertical-align: top;
+  }
+  .label {
+    line-height: 32px;
+  }
+  .select-wrapper {
+    width: 200px;
+  }
+  .checkbox-wrapper {
+    margin: 0 15px;
+    line-height: 32px;
+  }
+  .input-wrapper {
+    width: 300px;
+  }
+  .search-button {
+    margin-left: 10px;
+  }
+}
 
-    .table-operate-buttons {
-        position: relative;
-        left: -12px;
-    }
+.table-operate-buttons {
+  position: relative;
+  left: -12px;
+}
 
-    span.sensitive {
-        color: #ff0000;
-    }
+span.sensitive {
+  color: #ff0000;
+}
 
-    span.inner {
-        color: rgb(58, 171, 255);
-        opacity: .7;
-    }
+span.inner {
+  color: rgb(58, 171, 255);
+  opacity: 0.7;
+}
 
-    span.clound {
-        color: #45e35f;
-    }
+span.clound {
+  color: #45e35f;
+}
 
-    span.paasng-pass {
-        position: relative;
-        top: 1px;
-        color: #2dcb56;
-        font-size: 14px;
-    }
+span.paasng-pass {
+  position: relative;
+  top: 1px;
+  color: #2dcb56;
+  font-size: 14px;
+}
 
-    span.paasng-reject {
-        position: relative;
-        top: 1px;
-        color: #ea3636;
-        font-size: 14px;
-    }
+span.paasng-reject {
+  position: relative;
+  top: 1px;
+  color: #ea3636;
+  font-size: 14px;
+}
 
-    .applying {
-        position: relative;
-        top: -1px;
-    }
+.applying {
+  position: relative;
+  top: -1px;
+}
 </style>
 
 <style>
-    marked {
-        background: yellow;
-        color: black;
-    }
+marked {
+  background: yellow;
+  color: black;
+}
 </style>

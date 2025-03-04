@@ -1,10 +1,13 @@
 <template lang="html">
   <div class="cloud-wrapper">
     <!-- 云原生应用没有头部导航 -->
-    <div :class="['ps-top-bar','cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
+    <div :class="['ps-top-bar', 'cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
       <div class="header-title">
         {{ $t('云 API 权限') }}
-        <div class="guide-wrapper" v-if="frontendFeature.APP_ACCESS_TOKEN">
+        <div
+          class="guide-wrapper"
+          v-if="frontendFeature.APP_ACCESS_TOKEN"
+        >
           <bk-button
             class="f12"
             theme="primary"
@@ -47,7 +50,7 @@
             @tab-change="handleTabChange"
           >
             <bk-tab-panel
-              v-for="(panel, index) in panels"
+              v-for="(panel, index) in displayPanels"
               :key="index"
               v-bind="panel"
             />
@@ -68,10 +71,12 @@
             />
             <app-perm
               v-if="active === 'appPerm'"
+              :type-list="typeList"
               @data-ready="handlerDataReady"
             />
             <apply-record
               v-if="active === 'applyRecord'"
+              :type-list="typeList"
               @data-ready="handlerDataReady"
             />
           </div>
@@ -87,7 +92,10 @@
       width="680"
       @after-leave="handleCancel"
     >
-      <div class="header-wrapper" slot="header">
+      <div
+        class="header-wrapper"
+        slot="header"
+      >
         {{ $t('创建新令牌') }}
       </div>
       <div class="steps-wrapper">
@@ -106,7 +114,10 @@
           type="error"
           :show-icon="false"
         >
-          <div slot="title" class="alert-wrapper">
+          <div
+            slot="title"
+            class="alert-wrapper"
+          >
             <i class="paasng-icon paasng-remind error" />
             {{ $t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。') }}
             <a
@@ -133,14 +144,20 @@
           type="success"
           :show-icon="false"
         >
-          <div slot="title" class="alert-wrapper">
+          <div
+            slot="title"
+            class="alert-wrapper"
+          >
             <i class="paasng-icon paasng-pass success" />
             {{ $t('令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。') }}
           </div>
         </bk-alert>
         <div class="content">
-          <p class="title" v-if="tokenUrl">
-            {{ localLanguage === 'en' ? 'Access_token': '令牌（access_token）' }}
+          <p
+            class="title"
+            v-if="tokenUrl"
+          >
+            {{ localLanguage === 'en' ? 'Access_token' : '令牌（access_token）' }}
           </p>
           <div
             :class="['access-token-url', { error: !tokenUrl }]"
@@ -148,7 +165,10 @@
           >
             <span v-if="tokenUrl">{{ tokenUrl }}</span>
             <span v-else>{{ errorObject?.message }}</span>
-            <div class="copy" v-if="tokenUrl">
+            <div
+              class="copy"
+              v-if="tokenUrl"
+            >
               <i class="paasng-icon paasng-general-copy" />
               {{ $t('复制') }}
             </div>
@@ -189,7 +209,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
@@ -208,12 +229,6 @@ export default {
         gateway: this.GLOBAL.DOC.APIGW_QUICK_START,
         API: this.GLOBAL.DOC.APIGW_USER_API,
       },
-      panels: [
-        { name: 'gatewayApi', label: this.$t('网关API') },
-        { name: 'componentApi', label: this.$t('组件API') },
-        { name: 'appPerm', label: this.$t('已申请的权限') },
-        { name: 'applyRecord', label: this.$t('申请记录') },
-      ],
       active: 'gatewayApi',
       comKey: -1,
       pageKey: -1,
@@ -242,6 +257,23 @@ export default {
     },
     frontendFeature() {
       return this.$store.state.userFeature;
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+    displayPanels() {
+      return [
+        { name: 'gatewayApi', label: this.$t('网关API') },
+        { name: 'componentApi', label: this.$t('组件API') },
+        { name: 'appPerm', label: this.$t('已申请的权限') },
+        { name: 'applyRecord', label: this.$t('申请记录') },
+      ].filter((item) => item.name !== 'componentApi' || this.platformFeature?.ESB_API);
+    },
+    typeList() {
+      return [
+        { id: 'gateway', name: this.$t('网关API') },
+        { id: 'component', name: this.$t('组件API') },
+      ].filter((item) => item.id !== 'component' || this.platformFeature?.ESB_API);
     },
   },
   watch: {
@@ -307,7 +339,9 @@ export default {
     // 错误信息转换处理
     formatErrorString(message) {
       // 将错误字符串转换为一个格式正确的JSON字符串
-      const jsonString = message.replace(/detail: /, '').replace(/'/g, '"')
+      const jsonString = message
+        .replace(/detail: /, '')
+        .replace(/'/g, '"')
         .replace(/None/g, 'null')
         .replace(/False/g, 'false')
         .replace(/True/g, 'true');
@@ -457,8 +491,8 @@ export default {
     line-height: 22px;
 
     &.error {
-      background: #FFEDED;
-      color: #63656E;
+      background: #ffeded;
+      color: #63656e;
       margin-top: 24px;
     }
 
@@ -495,23 +529,23 @@ export default {
 
 .guide-wrapper {
   .bk-button:hover {
-    background: #E1ECFF;
-    color: #1768EF;
-    border-color: #1768EF;
+    background: #e1ecff;
+    color: #1768ef;
+    border-color: #1768ef;
   }
 }
 
 .alert-wrapper {
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
   i {
     transform: translateY(0px);
     font-size: 14px;
     &.error {
-      color: #EA3636;
+      color: #ea3636;
     }
     &.success {
-      color: #2DCB56;
+      color: #2dcb56;
     }
   }
 }
@@ -520,6 +554,6 @@ export default {
 .create-token-tips-cls .tippy-content {
   font-family: MicrosoftYaHei;
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
 }
 </style>

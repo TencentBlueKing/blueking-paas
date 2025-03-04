@@ -5,11 +5,11 @@
         <div class="label">
           {{ $t('类型') }}
         </div>
-        <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
+        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
           <bk-select
             v-bk-tooltips.top="{
               content: curSelectedType,
-              disabled: localLanguage !== 'en'
+              disabled: localLanguage !== 'en',
             }"
             v-model="typeValue"
             :clearable="false"
@@ -32,7 +32,7 @@
           <user
             v-model="applicants"
             :placeholder="$t('请输入用户')"
-            style="width: 142px;"
+            style="width: 142px"
             :multiple="false"
             :empty-text="$t('无匹配人员')"
             @change="handleMemberSelect"
@@ -43,11 +43,11 @@
         <div class="label">
           {{ $t('状态') }}
         </div>
-        <div :class="['select-wrapper', { 'en': localLanguage === 'en' }]">
+        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
           <bk-select
             v-bk-tooltips.top="{
               content: curSelectedStatus,
-              disabled: localLanguage !== 'en'
+              disabled: localLanguage !== 'en',
             }"
             v-model="statusValue"
             clearable
@@ -71,7 +71,7 @@
           <bk-date-picker
             v-model="initDateTimeRange"
             ext-cls="application-time"
-            style="width: 195px;"
+            style="width: 195px"
             :placeholder="$t('选择日期范围')"
             :type="'daterange'"
             placement="bottom-end"
@@ -155,8 +155,9 @@
                   <span
                     :class="[
                       { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
-                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }
-                    ]">
+                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) },
+                    ]"
+                  >
                     {{ props.row.tag }}
                   </span>
                 </template>
@@ -171,13 +172,13 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
-              <template v-if="getHandleBy(props.row.handled_by) === '--'">
-                --
-              </template>
+              <template v-if="getHandleBy(props.row.handled_by) === '--'">--</template>
               <span
                 v-else
                 v-bk-tooltips="getHandleBy(props.row.handled_by)"
-              >{{ getHandleBy(props.row.handled_by) }}</span>
+              >
+                {{ getHandleBy(props.row.handled_by) }}
+              </span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -186,16 +187,19 @@
           >
             <template slot-scope="props">
               <template v-if="props.row.apply_status === 'approved'">
-                <span class="paasng-icon paasng-pass" /> {{ getStatusDisplay(props.row.apply_status) }}
+                <span class="paasng-icon paasng-pass" />
+                {{ getStatusDisplay(props.row.apply_status) }}
               </template>
               <template v-else-if="props.row.apply_status === 'partial_approved'">
                 {{ getStatusDisplay(props.row.apply_status) }}
               </template>
               <template v-else-if="props.row.apply_status === 'rejected'">
-                <span class="paasng-icon paasng-reject" /> {{ getStatusDisplay(props.row.apply_status) }}
+                <span class="paasng-icon paasng-reject" />
+                {{ getStatusDisplay(props.row.apply_status) }}
               </template>
               <template v-else>
-                <round-loading ext-cls="applying" /> {{ getStatusDisplay(props.row.apply_status) }}
+                <round-loading ext-cls="applying" />
+                {{ getStatusDisplay(props.row.apply_status) }}
               </template>
             </template>
           </bk-table-column>
@@ -244,9 +248,7 @@
           class="paasng-kv-list"
         >
           <div class="item">
-            <div class="key">
-              {{ $t('申请人') }}：
-            </div>
+            <div class="key">{{ $t('申请人') }}：</div>
             <div class="value">
               {{ curRecord.applied_by }}
             </div>
@@ -359,13 +361,16 @@
                 >
                   <template slot-scope="prop">
                     <template v-if="prop.row['apply_status'] === 'rejected'">
-                      <span class="paasng-icon paasng-reject" /> {{ $t('驳回') }}
+                      <span class="paasng-icon paasng-reject" />
+                      {{ $t('驳回') }}
                     </template>
                     <template v-else-if="prop.row['apply_status'] === 'pending'">
-                      <round-loading ext-cls="applying" /> {{ $t('待审批') }}
+                      <round-loading ext-cls="applying" />
+                      {{ $t('待审批') }}
                     </template>
                     <template v-else>
-                      <span class="paasng-icon paasng-pass" /> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
+                      <span class="paasng-icon paasng-pass" />
+                      {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
                     </template>
                   </template>
                 </bk-table-column>
@@ -403,13 +408,16 @@
                 >
                   <template slot-scope="prop">
                     <template v-if="prop.row['apply_status'] === 'rejected'">
-                      <span class="paasng-icon paasng-reject" /> {{ $t('驳回') }}
+                      <span class="paasng-icon paasng-reject" />
+                      {{ $t('驳回') }}
                     </template>
                     <template v-else-if="prop.row['apply_status'] === 'pending'">
-                      <round-loading ext-cls="applying" /> {{ $t('待审批') }}
+                      <round-loading ext-cls="applying" />
+                      {{ $t('待审批') }}
                     </template>
                     <template v-else>
-                      <span class="paasng-icon paasng-pass" /> {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
+                      <span class="paasng-icon paasng-pass" />
+                      {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
                     </template>
                   </template>
                 </bk-table-column>
@@ -428,13 +436,20 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import User from '@/components/user';
 
 export default {
   name: '',
   components: {
     User,
+  },
+  props: {
+    typeList: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -446,16 +461,6 @@ export default {
         count: 0,
       },
       currentBackup: 1,
-      typeList: [
-        {
-          id: 'gateway',
-          name: this.$t('网关API'),
-        },
-        {
-          id: 'component',
-          name: this.$t('组件API'),
-        },
-      ],
       typeMap: {
         component: this.$t('组件API'),
         gateway: this.$t('网关API'),
@@ -560,14 +565,14 @@ export default {
       return this.$store.state.localLanguage;
     },
     curSelectedType() {
-      return this.typeList.find(v => v.id === this.typeValue)?.name;
+      return this.typeList.find((v) => v.id === this.typeValue)?.name;
     },
     curSelectedStatus() {
-      return this.statusList.find(v => v.id === this.statusValue)?.name;
+      return this.statusList.find((v) => v.id === this.statusValue)?.name;
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       const end = new Date();
       const start = new Date();
       start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
@@ -606,15 +611,18 @@ export default {
   },
   methods: {
     resetPagination() {
-      this.pagination = Object.assign({}, {
-        current: 1,
-        limit: 10,
-        count: 0,
-      });
+      this.pagination = Object.assign(
+        {},
+        {
+          current: 1,
+          limit: 10,
+          count: 0,
+        }
+      );
     },
 
     getStatusDisplay(payload) {
-      const data = this.statusList.find(item => item.id === payload);
+      const data = this.statusList.find((item) => item.id === payload);
       if (data) {
         return data.name;
       }
@@ -667,7 +675,7 @@ export default {
     },
 
     getHandleBy(payload) {
-      const list = payload.filter(item => !!item);
+      const list = payload.filter((item) => !!item);
       if (list.length < 1) {
         return '--';
       }
@@ -707,8 +715,8 @@ export default {
         appCode: this.appCode,
         applied_by: this.applicants.length > 0 ? this.applicants[0] : '',
         apply_status: this.statusValue,
-        applied_time_start: (new Date(this.dateRange.startTime).getTime()) / 1000,
-        applied_time_end: (new Date(this.dateRange.endTime).getTime()) / 1000,
+        applied_time_start: new Date(this.dateRange.startTime).getTime() / 1000,
+        applied_time_end: new Date(this.dateRange.endTime).getTime() / 1000,
         query: this.searchValue,
       };
       try {
@@ -763,136 +771,137 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .search-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        margin-bottom: 16px;
-        .search-item {
-            display: inline-block;
-            vertical-align: middle;
-            .label {
-                margin-right: 6px;
-            }
-        }
-        .search-item.auto {
-            flex: 1;
-            .bk-form-control {
-                width: 100%;
-                max-width: 360px;
-                min-width: 120px;
-                margin-left: auto;
-            }
-        }
-        .search-btn {
-            margin-left: 5px;
-        }
-        .label,
-        .member-wrapper,
-        .date-wrapper,
-        .select-wrapper {
-            display: inline-block;
-            vertical-align: top;
-        }
-        .label {
-            line-height: 32px;
-        }
-        .select-wrapper {
-            width: 98px;
-            &.en {
-              width: 130px;
-            }
-        }
-        .set-ml {
-            margin-left: 18px;
-        }
+.search-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  .search-item {
+    display: inline-block;
+    vertical-align: middle;
+    .label {
+      margin-right: 6px;
+    }
+  }
+  .search-item.auto {
+    flex: 1;
+    .bk-form-control {
+      width: 100%;
+      max-width: 360px;
+      min-width: 120px;
+      margin-left: auto;
+    }
+  }
+  .search-btn {
+    margin-left: 5px;
+  }
+  .label,
+  .member-wrapper,
+  .date-wrapper,
+  .select-wrapper {
+    display: inline-block;
+    vertical-align: top;
+  }
+  .label {
+    line-height: 32px;
+  }
+  .select-wrapper {
+    width: 98px;
+    &.en {
+      width: 130px;
+    }
+  }
+  .set-ml {
+    margin-left: 18px;
+  }
+}
+
+.table-operate-buttons {
+  position: relative;
+  left: -12px;
+}
+
+span.sensitive {
+  color: #ff0000;
+}
+
+span.inner {
+  color: rgb(58, 171, 255);
+  opacity: 0.7;
+}
+
+span.clound {
+  color: #45e35f;
+}
+
+span.paasng-pass {
+  position: relative;
+  top: 1px;
+  color: #2dcb56;
+  font-size: 14px;
+}
+
+span.paasng-reject {
+  position: relative;
+  top: 1px;
+  color: #ea3636;
+  font-size: 14px;
+}
+
+.applying {
+  position: relative;
+  top: -1px;
+}
+
+.slider-detail-content {
+  padding: 30px;
+  min-height: calc(100vh - 50px);
+}
+
+.paasng-kv-list {
+  border: 1px solid #f0f1f5;
+  border-radius: 2px;
+  background: #fafbfd;
+  padding: 10px 20px;
+
+  .item {
+    display: flex;
+    font-size: 14px;
+    border-bottom: 1px dashed #dcdee5;
+    min-height: 40px;
+    line-height: 40px;
+
+    &:last-child {
+      border-bottom: none;
     }
 
-    .table-operate-buttons {
-        position: relative;
-        left: -12px;
+    .key {
+      min-width: 105px;
+      padding-right: 24px;
+      color: #63656e;
+      text-align: right;
     }
 
-    span.sensitive {
-        color: #ff0000;
+    .value {
+      color: #313238;
+      flex: 1;
     }
+  }
+}
 
-    span.inner {
-        color: rgb(58, 171, 255);
-        opacity: .7;
-    }
+.bk-table .paasng-expand-table {
+  tr {
+    background-color: #fafbfd;
+  }
 
-    span.clound {
-        color: #45e35f;
-    }
+  td,
+  th {
+    padding: 0 !important;
+    height: 42px !important;
+    cursor: default !important;
+  }
+}
 
-    span.paasng-pass {
-        position: relative;
-        top: 1px;
-        color: #2dcb56;
-        font-size: 14px;
-    }
-
-    span.paasng-reject {
-        position: relative;
-        top: 1px;
-        color: #ea3636;
-        font-size: 14px;
-    }
-
-    .applying {
-        position: relative;
-        top: -1px;
-    }
-
-    .slider-detail-content {
-        padding: 30px;
-        min-height: calc(100vh - 50px);
-    }
-
-    .paasng-kv-list {
-        border: 1px solid #f0f1f5;
-        border-radius: 2px;
-        background: #fafbfd;
-        padding: 10px 20px;
-
-        .item {
-            display: flex;
-            font-size: 14px;
-            border-bottom: 1px dashed #dcdee5;
-            min-height: 40px;
-            line-height: 40px;
-
-            &:last-child {
-                border-bottom: none;
-            }
-
-            .key {
-                min-width: 105px;
-                padding-right: 24px;
-                color: #63656e;
-                text-align: right;
-            }
-
-            .value {
-                color: #313238;
-                flex: 1;
-            }
-        }
-    }
-
-    .bk-table .paasng-expand-table {
-        tr {
-            background-color: #fafbfd;
-        }
-
-        td, th {
-            padding: 0 !important;
-            height: 42px !important;
-            cursor: default !important;
-        }
-    }
-
-    /deep/ .application-time .bk-date-picker-rel .bk-date-picker-editor {
-        padding: 0 40px 0 10px;
-    }
+/deep/ .application-time .bk-date-picker-rel .bk-date-picker-editor {
+  padding: 0 40px 0 10px;
+}
 </style>

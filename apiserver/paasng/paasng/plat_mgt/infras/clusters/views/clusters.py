@@ -181,9 +181,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cert, ca, key, token = data["cert"], data["ca"], data["key"], data["token"]
         api_servers = data["api_servers"]
 
-        if not check_k8s_accessible(api_servers, ca=ca, cert=cert, key=key, token=token):
-            raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群无法访问，请检查配置"))
-
         # 检查集群认证信息 & APIServers 是否被修改
         # 集群认证信息有效情况（二种，SLZ 会拦截其他无效的情况）
         #   1. ca、cert、key 都有值
@@ -191,6 +188,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
         auth_cfg_modified = bool((ca and cert and key) or token)
         exists_api_servers = cluster.api_servers.values_list("host", flat=True)
         api_servers_modified = set(exists_api_servers) != set(api_servers)
+
+        # 只有在集群认证信息或 APIServers 有变更时，才需要检查集群是否可访问
+        if (auth_cfg_modified or api_servers_modified) and not check_k8s_accessible(
+            api_servers, ca=ca, cert=cert, key=key, token=token
+        ):
+            raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群无法访问，请检查配置"))
 
         # 集群认证信息
         if auth_cfg_modified:

@@ -172,7 +172,6 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 stat.meta_info,
                 app_code=slz.validated_data["code"],
                 app_name=slz.validated_data["name_zh_cn"],
-                # 注入租户信息到应用描述中
                 app_tenant_mode=app_tenant_mode,
                 app_tenant_id=app_tenant_id,
                 tenant_id=tenant.id,
@@ -378,7 +377,6 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 stat.meta_info,
                 app_code=application.code,
                 app_name=application.name,
-                # 注入租户信息到应用描述中
                 app_tenant_mode=application.app_tenant_mode,
                 app_tenant_id=application.app_tenant_id,
                 tenant_id=application.tenant_id,

@@ -73,7 +73,7 @@ def update_meta_info(
     except ValueError:
         return meta_info
 
-    # 添加租户信息
+    # 租户信息放到单独的字段中，不会干扰应用描述文件字段
     meta_info["tenant"] = {"app_tenant_mode": app_tenant_mode, "app_tenant_id": app_tenant_id, "tenant_id": tenant_id}
 
     match spec_version:

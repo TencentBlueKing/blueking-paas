@@ -141,6 +141,7 @@ class CNativeAppDescriptionHandler:
 
     @property
     def app_tenant(self) -> ApplicationTenant:
+        """Turn json data into application tenant object"""
         return ApplicationTenant(**self.json_data["tenant"])
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:

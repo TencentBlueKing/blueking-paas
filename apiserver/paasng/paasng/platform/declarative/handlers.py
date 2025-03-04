@@ -25,10 +25,9 @@ from typing_extensions import Protocol, TypeAlias
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities.proc_env_overlays import ReplicasOverlay
 from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppEnvOverlay
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.fieldlock.replicas import generate_locked_replicas_values
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD, CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
@@ -49,7 +48,6 @@ from paasng.platform.declarative.serializers import (
     validate_desc,
     validate_procfile_procs,
 )
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.structure import NOTSET
@@ -375,6 +373,48 @@ def deploy_desc_getter_v3(json_data: Dict, module_name: str) -> DeploymentDesc:
     return validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
 
 
+def adjust_desc_to_lock_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
+    """调整部署描述对象中与 replicas 相关的所有字段. 调整后的描述对象在实际部署时, 不会更新线上副本数
+
+    :param desc: the deployment desc object which will be adjusted
+    :param env: The environment object
+    """
+    locked_values = generate_locked_replicas_values(
+        env.module, process_names=[proc.name for proc in desc.spec.processes]
+    )
+
+    if not locked_values:
+        return
+
+    # 1. 设置 spec.processes[].replicas
+    for proc in desc.spec.processes:
+        if proc.name in locked_values:
+            proc.replicas = locked_values[proc.name]
+            locked_values.pop(proc.name)
+
+    # 2. 设置 spec.env_overlay.replicas
+    env_overlay_replicas_maps = {}
+    if desc.spec.env_overlay and desc.spec.env_overlay.replicas:  # type: ignore[union-attr]
+        env_overlay_replicas_maps = {(r.process, r.env_name): r.count for r in desc.spec.env_overlay.replicas}  # type: ignore[union-attr]
+
+    env_overlay_replicas_maps.update(locked_values)  # type: ignore[arg-type]
+
+    env_overlay_replicas_maps = {
+        (process, env_name): count
+        for (process, env_name), count in env_overlay_replicas_maps.items()
+        if isinstance(count, int)
+    }
+
+    if env_overlay_replicas_maps:
+        desc.spec.env_overlay = desc.spec.env_overlay or BkAppEnvOverlay()
+        desc.spec.env_overlay.replicas = [  # type: ignore[union-attr]
+            ReplicasOverlay(env_name=env_name, process=process, count=count)
+            for (process, env_name), count in env_overlay_replicas_maps.items()
+        ]
+    elif desc.spec.env_overlay:
+        desc.spec.env_overlay.replicas = NOTSET  # type: ignore[union-attr]
+
+
 def _find_module_desc_data(
     json_data: Dict,
     module_name: Optional[str],
@@ -424,84 +464,3 @@ def _find_module_desc_data(
     if not desc_data:
         raise DescriptionValidationError({"module": _("模块配置内容不能为空")})
     return desc_data
-
-
-def adjust_desc_to_lock_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """调整部署描述对象中与 replicas 相关的所有字段. 调整后的描述对象在实际部署时, 不会更新线上副本数, 达到锁定目的
-
-    调整的策略依据是 field manager 的副本数更新规则, 以及线上实际的副本数据
-
-    :param desc: the deployment desc object which will be adjusted
-    :param env: The environment object
-    """
-    _adjust_proc_replicas(desc, env)
-    _adjust_env_overlay_replicas(desc, env)
-
-
-def _adjust_proc_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """基于 field manager 的副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 proc.replicas 字段, 达到锁定部署副本数的目的.
-
-    NOTE: 特定场景函数, 通过 _adjust_desc_to_lock_replicas 函数间接使用
-
-    :param desc: the deployment desc object which will be adjusted
-    :param env: The environment object
-    """
-    for proc in desc.spec.processes:
-        try:
-            proc_spec = ModuleProcessSpec.objects.get(module=env.module, name=proc.name)
-        except ModuleProcessSpec.DoesNotExist:
-            continue
-
-        manager_name = fieldmgr.FieldManager(env.module, fieldmgr.f_proc_replicas(proc.name)).get()
-        if not manager_name:
-            continue
-
-        if manager_name == fieldmgr.FieldMgrName.APP_DESC:
-            proc.replicas = proc_spec.target_replicas
-        else:
-            proc.replicas = NOTSET
-
-
-def _adjust_env_overlay_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """基于 field manager 的分环境副本数更新策略, 结合线上副本数据, 调整部署描述对象中的 spec.env_overlay.replicas 字段, 达到锁定部署副本数的目的
-
-    NOTE: 特定场景函数, 通过 _adjust_desc_to_lock_replicas 函数间接使用
-
-    :param desc: the deployment desc object which will be adjusted
-    :param env: The environment object
-    """
-    env_overlay_replicas_maps = {}
-    if desc.spec.env_overlay and desc.spec.env_overlay.replicas:  # type: ignore[union-attr]
-        env_overlay_replicas_maps = {
-            (replicas.env_name, replicas.process): replicas.count
-            for replicas in desc.spec.env_overlay.replicas  # type: ignore[union-attr]
-        }
-
-    proc_names = [proc.name for proc in desc.spec.processes]
-    for proc_spec in ModuleProcessSpec.objects.filter(module=env.module, name__in=proc_names):
-        for environment in AppEnvName:
-            try:
-                env_overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=environment)
-            except ProcessSpecEnvOverlay.DoesNotExist:
-                env_overlay_replicas_maps.pop((environment, proc_spec.name), None)
-                continue
-
-            manager_name = fieldmgr.FieldManager(
-                env.module, fieldmgr.f_overlay_replicas(proc_spec.name, environment)
-            ).get()
-            if not manager_name:
-                continue
-
-            if manager_name == fieldmgr.FieldMgrName.APP_DESC:
-                env_overlay_replicas_maps[(environment, proc_spec.name)] = env_overlay.target_replicas
-            else:
-                env_overlay_replicas_maps.pop((environment, proc_spec.name), None)
-
-    if env_overlay_replicas_maps:
-        desc.spec.env_overlay = desc.spec.env_overlay or BkAppEnvOverlay()
-        desc.spec.env_overlay.replicas = [  # type: ignore[union-attr]
-            ReplicasOverlay(env_name=r_key[0], process=r_key[1], count=count)
-            for r_key, count in env_overlay_replicas_maps.items()
-        ]
-    elif desc.spec.env_overlay:
-        desc.spec.env_overlay.replicas = NOTSET  # type: ignore[union-attr]

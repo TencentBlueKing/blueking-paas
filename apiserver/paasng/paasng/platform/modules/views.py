@@ -495,15 +495,19 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data_before = DataDetail(type=DataType.RAW_DATA, data=self._gen_build_config_data(module, build_config))
 
         build_method = data["build_method"]
+
         if build_method not in [RuntimeType.BUILDPACK, RuntimeType.DOCKERFILE, RuntimeType.CUSTOM_IMAGE]:
             raise error_codes.MODIFY_UNSUPPORTED.f(_("不支持的构建方式"))
 
+        # 不允许修改构建方式（从仅镜像应用改成其他方式 / 其他方式改成仅镜像应用）
+        if build_method != build_config.build_method and RuntimeType.CUSTOM_IMAGE in [
+            build_method,
+            build_config.build_method,
+        ]:
+            raise error_codes.MODIFY_UNSUPPORTED.f(_("当前模块不支持修改构建方式为 {}").format(build_method))
+
         try:
-            update_build_config_with_method(
-                build_config,
-                build_method,
-                data=data,
-            )
+            update_build_config_with_method(build_config, build_method, data)
         except BPNotFound:
             raise error_codes.BIND_RUNTIME_FAILED.f(_("构建工具不存在"))
 

@@ -41,7 +41,7 @@ class SvnRepoController:
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_url = module.get_source_obj().get_repo_url()
-        repo_admin_credentials = get_bksvn_config(module.region, name=module.source_type).get_admin_credentials()
+        repo_admin_credentials = get_bksvn_config(name=module.source_type).get_admin_credentials()
         return cls(repo_url=repo_url, repo_admin_credentials=repo_admin_credentials)
 
     @classmethod

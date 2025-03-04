@@ -455,7 +455,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=400)
         except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(status=status.HTTP_200_OK, data=logs.splitlines())
 
@@ -467,7 +467,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             logs = manager.get_previous_logs(process_type, process_instance_name)
         except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         response = HttpResponse(logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'

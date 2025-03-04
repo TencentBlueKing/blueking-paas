@@ -174,6 +174,7 @@ class CNativeCustomDomainManager:
             environment_id=env.id,
             name=host,
             path_prefix=path_prefix,
+            tenant_id=self.application.tenant_id,
             defaults={"https_enabled": https_enabled},
         )
         try:

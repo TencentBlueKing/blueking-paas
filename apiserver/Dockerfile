@@ -34,7 +34,7 @@ ENV LC_ALL=C.UTF-8 \
 
 RUN pip install --upgrade 'pip<24.1'
 
-RUN pip install poetry==1.8.3
+RUN pip install poetry==2.1.1
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error
 # See https://stackoverflow.com/questions/52218876/how-to-fix-ssl-issue-ssl-ctx-use-certificate-ca-md-too-weak-on-python-zeep?rq=1
@@ -45,8 +45,8 @@ WORKDIR /app
 ADD ./pyproject.toml .
 ADD ./poetry.lock .
 
-# Install dependecies in system
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+# Install dependencies in system
+RUN poetry config virtualenvs.create false && poetry install --without=dev
 
 ARG BKPAAS_BUILD_VERSION="tag: null, commitID: ^HEAD, buildID: null, buildTime: null"
 ENV BKPAAS_BUILD_VERSION=${BKPAAS_BUILD_VERSION}

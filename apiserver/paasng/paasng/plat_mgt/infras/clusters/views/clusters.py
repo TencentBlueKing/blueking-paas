@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 
 from django.conf import settings
 from django.db import transaction
@@ -30,6 +31,7 @@ from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
+from paasng.infras.bk_user.client import BkUserClient
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -40,6 +42,8 @@ from paasng.plat_mgt.infras.clusters.serializers import (
 )
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
 from paasng.utils.error_codes import error_codes
+
+logger = logging.getLogger(__name__)
 
 
 class ClusterViewSet(viewsets.GenericViewSet):
@@ -62,7 +66,10 @@ class ClusterViewSet(viewsets.GenericViewSet):
     def list(self, request, *args, **kwargs):
         """获取集群列表"""
         clusters = self.get_queryset()
-        return Response(data=ClusterListOutputSLZ(clusters, many=True).data)
+        user_tenant_id = get_tenant(request.user).id
+        tenants = BkUserClient(user_tenant_id).list_tenants()
+        context = {"tenant_name_map": {t.id: t.name for t in tenants}}
+        return Response(data=ClusterListOutputSLZ(clusters, context=context, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],
@@ -216,7 +223,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, cluster_name, *args, **kwargs):
-        # TODO（多租户）删除集群是个危险操作，需要补充审计
         cluster = self.get_object()
 
         # 删除集群前需要检查使用情况（分配策略，应用模块绑定等）
@@ -230,8 +236,11 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 f"集群已被 {len(state.bound_app_module_envs)} 个应用部署环境绑定",
             )
 
-        cluster.elastic_search_config.delete()
-        cluster.api_servers.all().delete()
+        # TODO（多租户）删除集群是个危险操作，需要补充审计
+        logger.warning(f"user {request.user.username} delete cluster {cluster_name}")
+
+        ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
+        APIServer.objects.filter(cluster=cluster).delete()
         cluster.delete()
 
         # 删除集群后，需要刷新配置池

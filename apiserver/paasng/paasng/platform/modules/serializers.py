@@ -179,9 +179,7 @@ class CreateModuleSLZ(serializers.Serializer):
         source_origin = SourceOrigin(data["source_origin"])
 
         if source_origin == SourceOrigin.IMAGE_REGISTRY:
-            data["source_repo_url"] = validate_image_url(
-                data["source_repo_url"], region=self.context["application"].region
-            )
+            data["source_repo_url"] = validate_image_url(data["source_repo_url"])
 
         return data
 

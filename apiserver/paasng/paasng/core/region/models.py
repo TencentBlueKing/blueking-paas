@@ -82,7 +82,6 @@ class RegionBasicInfo:
 
     description: str
     link_production_app: str
-    deploy_ver_for_update_svn_account: str
     legacy_deploy_version: str
     extra_logo_bucket_info: dict = field(default_factory=dict)
     built_in_config_var: dict = field(default_factory=dict)

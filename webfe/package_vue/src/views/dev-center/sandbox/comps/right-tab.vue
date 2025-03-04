@@ -5,7 +5,6 @@
       slot="collapse-trigger"
       @click="handleSwitchSide"
     >
-      <span :class="{ 'vertical-rl': localLanguage === 'en' }">{{ $t('查看配置和日志') }}</span>
       <i class="paasng-icon paasng-angle-line-up"></i>
     </div>
     <!-- 加载完毕显示运行操作 -->
@@ -203,20 +202,19 @@ export default {
   }
   .floating-button {
     position: absolute;
-    left: -24px;
+    left: -20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px;
-    padding: 11px 0;
+    height: 64px;
+    width: 20px;
     text-align: center;
     font-size: 12px;
-    color: #63656e;
-    line-height: 13px;
+    line-height: 64px;
     background: #fafbfd;
-    border: 1px solid #dcdee5;
     border-right: none;
-    border-radius: 8px 0 0 8px;
+    border-radius: 4px 0 0 4px;
     cursor: pointer;
+    background-color: #dcdee5;
     &.expand {
       i {
         transform: rotateZ(90deg);
@@ -224,22 +222,17 @@ export default {
     }
     i {
       margin-top: 5px;
-      color: #979ba5;
+      color: #fff;
       transform: rotateZ(-90deg);
     }
     &:hover {
-      color: #3a84ff;
-      i {
-        color: #3a84ff;
-      }
-    }
-    .vertical-rl {
-      writing-mode: vertical-rl;
+      background-color: #3a84ff;
     }
   }
   .action-buts {
     flex-shrink: 0;
     height: 56px;
+    margin-left: auto;
     padding: 0 16px;
     display: flex;
     align-items: center;

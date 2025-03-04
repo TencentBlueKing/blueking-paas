@@ -71,6 +71,12 @@ urlpatterns = [
         views.ClusterComponentViewSet.as_view({"get": "diff_version"}),
         name="plat_mgt.infras.cluster.component.diff_version",
     ),
+    # 集群分配策略相关
+    path(
+        "api/plat_mgt/infras/cluster_allocation_policy_condition_types/",
+        views.ClusterAllocationPolicyViewSet.as_view({"get": "list_condition_types"}),
+        name="plat_mgt.infras.cluster_allocation_policy.list_condition_types",
+    ),
     path(
         "api/plat_mgt/infras/cluster_allocation_policies/",
         views.ClusterAllocationPolicyViewSet.as_view({"post": "create", "get": "list"}),
@@ -98,5 +104,11 @@ urlpatterns = [
         "api/plat_mgt/infras/bcs/projects/<str:project_id>/clusters/",
         views.BCSResourceViewSet.as_view({"get": "list_clusters"}),
         name="plat_mgt.infras.bcs.cluster.list",
+    ),
+    # BCS API 地址模板
+    path(
+        "api/plat_mgt/infras/bcs/cluster_server_url_tmpl/",
+        views.BCSResourceViewSet.as_view({"get": "retrieve_cluster_server_url_tmpl"}),
+        name="plat_mgt.infras.bcs.cluster_server_url_tmpl.retrieve",
     ),
 ]

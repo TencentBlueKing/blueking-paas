@@ -87,7 +87,7 @@ export default {
 
     goBack() {
       this.$router.push({
-        name: 'cloudAppDeployManageProd',
+        name: 'cloudAppDeployManageStag',
         params: {
           id: this.appCode,
         },

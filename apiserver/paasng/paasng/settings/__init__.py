@@ -934,7 +934,6 @@ DEFAULT_REGION_TEMPLATE = {
         "description": "默认版",
         "link_production_app": BK_CONSOLE_URL + "?app={code}",
         "extra_logo_bucket_info": {},
-        "deploy_ver_for_update_svn_account": "default",
         "legacy_deploy_version": "default",
         "built_in_config_var": {
             "LOGIN_URL": {
@@ -1417,6 +1416,11 @@ BK_AUDIT_SETTINGS = {
 # 是否部署了 BCS，影响访问控制台等功能
 ENABLE_BCS = settings.get("ENABLE_BCS", True)
 
+# BCS 集群 Server URL 模板（用于 API 访问/ kubectl 配置）
+BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
+    "BCS_CLUSTER_SERVER_URL_TMPL", f"http://bcs-api.{BK_DOMAIN}/clusters/{{cluster_id}}/"
+)
+
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
 # ---------------------------------------------
@@ -1521,3 +1525,5 @@ FE_FEATURE_SETTINGS_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_MGRLEGACY", Fa
 FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY", False)
 # 应用令牌，用于 APP 调用用户态的云 API
 FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)
+# 是否显示沙箱
+FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)

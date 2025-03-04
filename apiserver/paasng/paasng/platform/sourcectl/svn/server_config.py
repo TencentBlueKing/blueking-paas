@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Bk Svn server config helper utilities"""
+
 from dataclasses import dataclass
 from typing import Dict, Optional
 from urllib.parse import urlparse
@@ -54,8 +55,8 @@ class BkSvnServerConfig:
         }
 
 
-def get_bksvn_config(region: str, name: Optional[str] = None) -> BkSvnServerConfig:
-    """Get the config object of bk svn source controll type
+def get_bksvn_config(name: Optional[str] = None) -> BkSvnServerConfig:
+    """Get the config object of bk svn source control type
 
     :param name: if given, will get spec type object by name, otherwise try to find the spec type object which was
         registered with type `BkSvnSourceTypeSpec` instead.
@@ -73,8 +74,6 @@ def get_bksvn_config(region: str, name: Optional[str] = None) -> BkSvnServerConf
         try:
             sourcectl_type = sourcectl_types.find_by_type(BkSvnSourceTypeSpec)
         except ValueError:
-            raise RuntimeError(f"No sourcectl type spec can be found, region: {region}, name: {name}")
+            raise RuntimeError(f"No sourcectl type spec can be found, name: {name}")
 
-    # Return a default server config value when requested region was not configured,
-    # which might happens when running mgrlegacy's unit tests
-    return BkSvnServerConfig(**sourcectl_type.get_server_config(region, use_default_value=True))
+    return BkSvnServerConfig(**sourcectl_type.get_server_config())

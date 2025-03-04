@@ -119,6 +119,7 @@ class AppDeclarativeController:
             source_module=default_module,
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
             source_tp_url="",
+            tenant_id=application.tenant_id,
         )
 
         self.sync_market_fields(application, desc.market)

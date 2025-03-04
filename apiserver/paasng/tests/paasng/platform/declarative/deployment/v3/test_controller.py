@@ -249,6 +249,10 @@ class TestHookField:
     @pytest.mark.parametrize("hook_disabled", [True, False])
     def test_not_set_should_not_touch_deployment(self, hook_disabled, bk_module, bk_deployment):
         bk_module.deploy_hooks.enable_hook(DeployHookType.PRE_RELEASE_HOOK, command=[], args=["echo", "1"])
+
+        # 设置 hook 被 web_form 管理
+        fieldmgr.FieldManager(bk_module, fieldmgr.F_HOOKS).set(fieldmgr.FieldMgrName.WEB_FORM)
+
         if hook_disabled:
             bk_module.deploy_hooks.disable_hook(DeployHookType.PRE_RELEASE_HOOK)
 

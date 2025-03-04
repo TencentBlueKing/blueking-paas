@@ -34,8 +34,8 @@ VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 CodeEditorConfigField = make_json_field("CodeEditorConfigField", CodeEditorConfig)
 
-# 默认 6h 无活动后会回收沙箱
-DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=6)
+# 默认 2h 无活动后会回收沙箱
+DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
 
 
 class DevSandboxQuerySet(models.QuerySet):

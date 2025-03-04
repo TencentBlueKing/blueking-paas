@@ -73,9 +73,8 @@ class DeploymentDescription(TimestampedModel):
     - spec.svcDiscovery -> 由 EnvVariablesProviders 负责读取, 直接以环境变量形式注入到 spec.configuration.env.
         TODO: 目前的实现兼容普通应用, 对于云原生应用应该合并到 BkAppSpec 中的 spec.svcDiscovery 字段, 然后在创建的 configmap 中体现到这些配置？
 
-    对于可在页面编辑的数据, 会在处理到相应资源时, 尝试从 DeploymentDescription 查询是否有在描述文件声明, 再根据业务逻辑做合并, 例如:
-    - spec.configuration.env/spec.envOverlay.envVariables -> 由 EnvVarsReader 负责读取, 再与产品上配置的环境变量做合并.
-        TODO: 由于 EnvVarsReader 丢失了环境属性, 导致云原生应用的拼接 BkAppSpec 时只能将环境变量放在 spec.configuration.env.
+    对于可在页面编辑的数据, 会在处理到相应资源时, 尝试从 DeploymentDescription 查询是否有在描述文件声明, 再根据业务逻辑做合并。
+        TODO: 待确认本逻辑是否仍然存在。
     """
 
     deployment = models.OneToOneField(

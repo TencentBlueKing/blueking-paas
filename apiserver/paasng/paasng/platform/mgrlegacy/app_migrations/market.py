@@ -45,6 +45,7 @@ class MarketMigration(BaseMigration):
                 source_module=app.get_default_module(),
                 source_url_type=ProductSourceUrlType.THIRD_PARTY.value,
                 source_tp_url=self.context.legacy_app.external_url,
+                tenant_id=app.tenant_id,
             ),
         )
 

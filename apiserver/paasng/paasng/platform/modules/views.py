@@ -128,6 +128,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             source_init_template=source_init_template,
             owner=application.owner,
             creator=request.user.pk,
+            tenant_id=application.tenant_id,
         )
         # Use the same cluster with previous modules
         cluster = get_application_cluster(application)
@@ -298,6 +299,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             owner=application.owner,
             creator=request.user.pk,
             **module_src_cfg,
+            tenant_id=application.tenant_id,
         )
 
         # 使用默认模块的 PROD 环境部署集群作为新模块集群

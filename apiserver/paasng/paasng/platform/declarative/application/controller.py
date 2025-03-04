@@ -183,6 +183,7 @@ class AppDeclarativeController:
                 source_type=None,
                 language=module_desc.language.value,
                 source_init_template="",
+                tenant_id=application.tenant_id,
             )
             # Initialize module
             try:

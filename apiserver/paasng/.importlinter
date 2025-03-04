@@ -25,9 +25,9 @@ ignore_imports =
     ** -> paasng.platform.engine.**
     ** -> paasng.platform.sourcectl.**
     ** -> paasng.platform.templates.**
+    ** -> paasng.platform.bkapp_model.**
     # Other ignores
     paas_wl.bk_app.processes.models -> paasng.platform.bkapp_model.entities
-    paas_wl.bk_app.processes.kres_entities -> paasng.platform.bkapp_model.models
     paasng.platform.engine.utils.query -> paasng.platform.engine.workflow
     paasng.core.tenant.views -> paasng.infras.bk_user.client
     # legacydb

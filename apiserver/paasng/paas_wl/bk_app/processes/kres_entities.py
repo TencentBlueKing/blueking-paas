@@ -33,8 +33,6 @@ from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.modules.models.module import Module
 
 
 @dataclass
@@ -151,6 +149,9 @@ class Process(AppEntity):
 
         # 添加探针
         try:
+            from paasng.platform.bkapp_model.models import ModuleProcessSpec
+            from paasng.platform.modules.models.module import Module
+
             module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
             process_spec = ModuleProcessSpec.objects.get(module=module, name=type_)
             probes = process_spec.probes.render_port() if process_spec.probes else None

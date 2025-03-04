@@ -97,7 +97,7 @@ class K8SWorkloadStateGetter:
 
 
 def check_k8s_accessible(
-    server_url: str,
+    api_servers: List[str],
     ca: str | None = None,
     cert: str | None = None,
     key: str | None = None,
@@ -105,7 +105,6 @@ def check_k8s_accessible(
 ) -> bool:
     """通过直接访问 k8s api 的方式，检查 k8s 集群是否可访问"""
     cfg = Configuration()
-    cfg.host = server_url
     cfg.verify_ssl = False
 
     # Token / 证书认证二选一
@@ -119,11 +118,14 @@ def check_k8s_accessible(
         logger.error("check k8s accessible failed, missing token or cert/key/ca")
         return False
 
-    try:
-        CoreV1Api(ApiClient(configuration=cfg)).list_namespace()
-    except Exception:
-        logger.exception("check k8s accessible failed, server_url: %s", server_url)
-        return False
+    # 每一个 api server 都要检查
+    for server_url in api_servers:
+        cfg.host = server_url
+        try:
+            CoreV1Api(ApiClient(configuration=cfg)).list_namespace()
+        except Exception:
+            logger.exception("check k8s accessible failed, server_url: %s", server_url)
+            return False
 
     return True
 

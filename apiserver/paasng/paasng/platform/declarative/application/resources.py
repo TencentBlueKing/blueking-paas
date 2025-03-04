@@ -128,3 +128,9 @@ class ApplicationDesc(BaseModel):
             if plugin["type"] == plugin_type:
                 return plugin
         return None
+
+
+class ApplicationTenant(BaseModel):
+    app_tenant_mode: str
+    app_tenant_id: str
+    tenant_id: str

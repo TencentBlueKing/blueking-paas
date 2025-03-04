@@ -145,7 +145,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         slz = PackageStashConfirmRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        app_tenent_mode, app_tenant_id, tenant = validate_app_tenant_params(
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
             request.user, slz.validated_data["app_tenant_mode"]
         )
 
@@ -172,6 +172,10 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 stat.meta_info,
                 app_code=slz.validated_data["code"],
                 app_name=slz.validated_data["name_zh_cn"],
+                # 注入租户信息到应用描述中
+                app_tenant_mode=app_tenant_mode,
+                app_tenant_id=app_tenant_id,
+                tenant_id=tenant.id,
             )
 
             handler = get_desc_handler(stat.meta_info)
@@ -183,11 +187,6 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
                 else:
-                    # 更新 app 的租户信息
-                    application.app_tenant_mode = app_tenent_mode
-                    application.app_tenant_id = app_tenant_id
-                    application.tenant_id = tenant.id
-                    application.save(update_fields=["app_tenant_mode", "app_tenant_id", "tenant_id"])
                     # 创建 SMartAppExtraInfo, 记录应用原始 code
                     SMartAppExtraInfo.objects.create(
                         app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
@@ -379,6 +378,10 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 stat.meta_info,
                 app_code=application.code,
                 app_name=application.name,
+                # 注入租户信息到应用描述中
+                app_tenant_mode=application.app_tenant_mode,
+                app_tenant_id=application.app_tenant_id,
+                tenant_id=application.tenant_id,
             )
             handler = get_desc_handler(stat.meta_info)
             try:

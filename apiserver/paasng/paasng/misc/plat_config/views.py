@@ -69,5 +69,7 @@ class FrontendFeatureViewSet(ViewSet):
             "WEB_CONSOLE": settings.ENABLE_BCS,
             # 是否能创建 LessCode 应用
             "BK_LESSCODE_APP": settings.ENABLE_BK_LESSCODE,
+            # 开启了多租户，则应用不能申请 ESB API
+            "ESB_API": not settings.ENABLE_MULTI_TENANT_MODE,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

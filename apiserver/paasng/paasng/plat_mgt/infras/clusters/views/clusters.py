@@ -25,8 +25,13 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.constants import (
+    DEFAULT_COMPONENT_CONFIGS,
+    ClusterFeatureFlag,
+    ClusterTokenType,
+    ClusterType,
+)
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paas_wl.workloads.networking.entrance.constants import AddressType
@@ -145,6 +150,13 @@ class ClusterViewSet(viewsets.GenericViewSet):
             # 创建 ApiServers
             APIServer.objects.bulk_create(
                 [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
+            )
+            # 创建集群组件配置
+            ClusterComponent.objects.bulk_create(
+                [
+                    ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
+                    for cfg in DEFAULT_COMPONENT_CONFIGS
+                ]
             )
             # 创建 ElasticSearch 配置
             ClusterElasticSearchConfig.objects.create(

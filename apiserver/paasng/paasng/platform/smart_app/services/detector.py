@@ -72,10 +72,9 @@ def update_meta_info(
         spec_version = detect_spec_version(meta_info)
     except ValueError:
         return meta_info
+
     # 添加租户信息
-    meta_info["tenant"].update(
-        {"app_tenant_mode": app_tenant_mode, "app_tenant_id": app_tenant_id, "tenant_id": tenant_id}
-    )
+    meta_info["tenant"] = {"app_tenant_mode": app_tenant_mode, "app_tenant_id": app_tenant_id, "tenant_id": tenant_id}
 
     match spec_version:
         case AppSpecVersion.VER_2:

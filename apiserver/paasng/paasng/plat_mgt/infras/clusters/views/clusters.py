@@ -14,24 +14,33 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import logging
 
 from django.conf import settings
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterTokenType, ClusterType
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.constants import (
+    DEFAULT_COMPONENT_CONFIGS,
+    ClusterFeatureFlag,
+    ClusterTokenType,
+    ClusterType,
+)
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
+from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
 from paasng.infras.bk_user.client import BkUserClient
+from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
@@ -41,6 +50,7 @@ from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterUsageRetrieveOutputSLZ,
 )
 from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
+from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -109,6 +119,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
+        cert, ca, key, token = data["cert"], data["ca"], data["key"], data["token"]
+        api_servers = data["api_servers"]
+
+        if not check_k8s_accessible(api_servers, ca=ca, cert=cert, key=key, token=token):
+            raise error_codes.CANNOT_CREATE_CLUSTER.f(_("集群无法访问，请检查配置"))
+
         with transaction.atomic(using="workloads"):
             # 创建集群
             cluster = Cluster.objects.create(
@@ -123,19 +139,25 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 ingress_config=data["ingress_config"],
                 annotations=data["annotations"],
                 # 认证相关配置
-                ca_data=data["ca"],
-                cert_data=data["cert"],
-                key_data=data["key"],
+                ca_data=ca,
+                cert_data=cert,
+                key_data=key,
                 token_type=ClusterTokenType.SERVICE_ACCOUNT,
-                token_value=data["token"],
+                token_value=token,
                 # App 默认配置（仅含创建时的默认配置，不含节点选择器等）
                 container_log_dir=data["container_log_dir"],
             )
             # 创建 ApiServers
-            api_servers = [
-                APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
-            ]
-            APIServer.objects.bulk_create(api_servers)
+            APIServer.objects.bulk_create(
+                [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
+            )
+            # 创建集群组件配置
+            ClusterComponent.objects.bulk_create(
+                [
+                    ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
+                    for cfg in DEFAULT_COMPONENT_CONFIGS
+                ]
+            )
             # 创建 ElasticSearch 配置
             ClusterElasticSearchConfig.objects.create(
                 cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
@@ -162,23 +184,35 @@ class ClusterViewSet(viewsets.GenericViewSet):
         # 基础配置
         cluster.available_tenant_ids = data["available_tenant_ids"]
         cluster.description = data["description"]
+        cluster.exposed_url_type = (
+            ExposedURLType.SUBPATH if data["app_address_type"] == AddressType.SUBPATH else ExposedURLType.SUBDOMAIN
+        )
         cluster.ingress_config = data["ingress_config"]
         cluster.annotations = data["annotations"]
+
+        cert, ca, key, token = data["cert"], data["ca"], data["key"], data["token"]
+        api_servers = data["api_servers"]
 
         # 检查集群认证信息 & APIServers 是否被修改
         # 集群认证信息有效情况（二种，SLZ 会拦截其他无效的情况）
         #   1. ca、cert、key 都有值
         #   2. token 有值
-        auth_cfg_modified = bool((data["ca"] and data["cert"] and data["key"]) or data["token"])
+        auth_cfg_modified = bool((ca and cert and key) or token)
         exists_api_servers = cluster.api_servers.values_list("host", flat=True)
-        api_servers_modified = set(exists_api_servers) != set(data["api_servers"])
+        api_servers_modified = set(exists_api_servers) != set(api_servers)
+
+        # 只有在集群认证信息或 APIServers 有变更时，才需要检查集群是否可访问
+        if (auth_cfg_modified or api_servers_modified) and not check_k8s_accessible(
+            api_servers, ca=ca, cert=cert, key=key, token=token
+        ):
+            raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群无法访问，请检查配置"))
 
         # 集群认证信息
         if auth_cfg_modified:
-            cluster.ca_data = data["ca"]
-            cluster.cert_data = data["cert"]
-            cluster.key_data = data["key"]
-            cluster.token_value = data["token"]
+            cluster.ca_data = ca
+            cluster.cert_data = cert
+            cluster.key_data = key
+            cluster.token_value = token
 
         # App 默认配置
         cluster.default_tolerations = data["tolerations"]
@@ -206,10 +240,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除，再插入的方式
                 cluster.api_servers.all().delete()
-                api_servers = [
-                    APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in data["api_servers"]
-                ]
-                APIServer.objects.bulk_create(api_servers)
+                APIServer.objects.bulk_create(
+                    [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
+                )
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池
         if auth_cfg_modified or api_servers_modified:

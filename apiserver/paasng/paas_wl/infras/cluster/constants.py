@@ -101,3 +101,12 @@ class ClusterComponentName(StrStructuredEnum):
     BKAPP_LOG_COLLECTION = EnumField("bkapp-log-collection")
     BKPAAS_APP_OPERATOR = EnumField("bkpaas-app-operator")
     BCS_GENERAL_POD_AUTOSCALER = EnumField("bcs-general-pod-autoscaler")
+
+
+# 默认的集群组件信息
+DEFAULT_COMPONENT_CONFIGS = [
+    {"name": ClusterComponentName.BK_INGRESS_NGINX, "required": True},
+    {"name": ClusterComponentName.BKAPP_LOG_COLLECTION, "required": True},
+    {"name": ClusterComponentName.BKPAAS_APP_OPERATOR, "required": True},
+    {"name": ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER, "required": False},
+]

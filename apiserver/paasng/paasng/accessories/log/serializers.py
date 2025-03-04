@@ -56,7 +56,6 @@ class StructureLogLineSLZ(serializers.Serializer):
     message = serializers.CharField(help_text="日志内容")
     detail = serializers.DictField(help_text="日志详情", source="raw")
 
-    region = serializers.CharField()
     app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)

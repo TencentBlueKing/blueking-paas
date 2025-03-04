@@ -37,6 +37,7 @@
         </div>
       </div>
       <bk-badge
+        v-if="platformFeature.DEV_SANDBOX"
         :theme="'danger'"
         val="new"
         position="top-left"
@@ -117,6 +118,9 @@ export default {
         // }
         return module;
       });
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
     },
   },
 

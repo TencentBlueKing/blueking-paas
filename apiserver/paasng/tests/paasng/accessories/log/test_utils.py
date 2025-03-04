@@ -63,15 +63,6 @@ def make_stats_indexes_fake_resp():
         ("pod_name", {}, "pod_name"),
         ("pod_name", {"__ext": {"properties": {"io_kubernetes_pod": {"type": "keyword"}}}}, "__ext.io_kubernetes_pod"),
         (
-            "region",
-            {
-                "__ext": {
-                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_region": {"type": "keyword"}}}}
-                }
-            },
-            "__ext.labels.bkapp_paas_bk_tencent_com_region",
-        ),
-        (
             "app_code",
             {
                 "__ext": {
@@ -120,7 +111,6 @@ def test_get_es_term(query_term, mappings, expected):
 
 
 _default_log: dict = {
-    "region": NOT_SET,
     "app_code": NOT_SET,
     "module_name": NOT_SET,
     "environment": NOT_SET,
@@ -134,16 +124,11 @@ _default_log: dict = {
     ("log", "expected"),
     [
         (
-            {"__ext.labels.bkapp_paas_bk_tencent_com_region": "default"},
-            {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_region": "default", "region": "default"},
-        ),
-        (
             {"__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag"},
             {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag", "environment": "stag"},
         ),
         (
             {
-                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
                 "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
@@ -151,13 +136,11 @@ _default_log: dict = {
                 "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
             },
             {
-                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
                 "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
                 "__ext.labels.bkapp_paas_bk_tencent_com_process_name": "web",
                 "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
-                "region": "default",
                 "app_code": "code",
                 "module_name": "default",
                 "environment": "stag",

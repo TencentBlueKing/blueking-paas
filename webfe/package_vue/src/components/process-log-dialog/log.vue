@@ -140,7 +140,7 @@ export default {
       default: () => [],
     },
     logs: {
-      type: Array,
+      type: Array | String,
       default: () => [],
     },
   },
@@ -212,6 +212,13 @@ export default {
       if (this.isRealTimeLog) return;
       try {
         const logTxt = await this.$store.dispatch('log/downloadPreviousLogs', this.params);
+        if (!logTxt || !logTxt?.length) {
+          this.$paasMessage({
+            theme: 'warning',
+            message: this.$t('暂时没有日志记录'),
+          });
+          return;
+        }
         downloadTxt(logTxt, this.params.instanceName);
         // 404 处理
       } catch (e) {
@@ -316,7 +323,7 @@ export default {
         display: flex;
         margin-bottom: 8px;
         font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-'Arial';
+          'Arial';
 
         .pod-name {
           min-width: 95px;

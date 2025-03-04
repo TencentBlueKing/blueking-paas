@@ -19,7 +19,7 @@ import os
 import re
 import socket
 import sys
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from blue_krill.redis_tools.sentinel import SentinelBackend
 from blue_krill.secure.dj_environ import SecureEnv
@@ -218,7 +218,7 @@ def is_in_celery_worker(argv: Optional[List] = None) -> bool:
     return found_celery and found_worker
 
 
-def cache_redis_sentinel_url(url: str, sentinel_manager: str, sentinel_password: str):
+def cache_redis_sentinel_url(url: str, sentinel_manager: str, sentinel_password: str) -> dict[str, Any]:
     """Parse a redis sentinel url to django CACHES setting"""
     backend = SentinelBackend(url, sentinel_manager, {"password": sentinel_password})
     return {

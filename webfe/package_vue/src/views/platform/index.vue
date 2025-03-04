@@ -96,13 +96,18 @@ export default {
     },
     handleTabChange(active) {
       const { path, query } = this.$route;
-      const newQuery = {
-        ...(active === 'list' && query),
-        active,
-      };
+      let newQuery = {};
+      if (this.checkIfEndsWithAddOrEdit(path)) {
+        newQuery = { ...query };
+      } else {
+        newQuery = {
+          ...(active === 'list' && query),
+          active,
+        };
+      }
       this.$router.push({
         path,
-        query: !this.checkIfEndsWithAddOrEdit(path) && newQuery,
+        query: newQuery,
       });
       this.active = active;
     },

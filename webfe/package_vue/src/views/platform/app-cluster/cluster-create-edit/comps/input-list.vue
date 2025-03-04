@@ -69,6 +69,10 @@ export default {
     getData() {
       return this.formData.servers.map((v) => v.value);
     },
+    // 设置默认值
+    setData(data) {
+      this.formData.servers = [...data];
+    },
   },
 };
 </script>

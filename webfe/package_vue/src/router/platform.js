@@ -49,6 +49,12 @@ export const platformRouters = [
         meta: {
           title: i18n.t('添加集群'),
           supportBack: true,
+          backRoute: {
+            name: 'platformAppCluster',
+            query: {
+              active: 'list',
+            }
+          }
         },
       }
     ],

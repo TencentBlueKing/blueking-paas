@@ -130,13 +130,14 @@
         :width="localLanguage === 'en' ? 200 : 160"
       >
         <template slot-scope="{ row }">
-          <!-- <bk-button
+          <bk-button
             theme="primary"
             text
             class="mr10"
+            @click="editCluter(row)"
           >
             {{ $t('编辑') }}
-          </bk-button> -->
+          </bk-button>
           <bk-popconfirm
             width="276"
             trigger="click"
@@ -396,6 +397,18 @@ export default {
       const { width } = tagDom.getBoundingClientRect();
       parentDom.removeChild(tagDom);
       return width;
+    },
+    editCluter(row) {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: row.name,
+          step: 1,
+        },
+      });
     },
   },
 };

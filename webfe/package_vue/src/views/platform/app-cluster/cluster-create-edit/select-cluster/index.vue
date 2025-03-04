@@ -209,6 +209,7 @@ import ConfigInput from '../comps/config-input.vue';
 import ConfigSelect from '../comps/config-select.vue';
 import InputList from '../comps/input-list.vue';
 import { pick } from 'lodash';
+import { mapState } from 'vuex';
 
 export default {
   name: 'SelectCluster',
@@ -216,6 +217,12 @@ export default {
     ConfigInput,
     ConfigSelect,
     InputList,
+  },
+  props: {
+    clusterData: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -292,19 +299,63 @@ export default {
         ...k8sOptions.slice(4),
       ];
     },
+    isEdit() {
+      return this.$route.path.endsWith('/edit');
+    },
+    ...mapState({
+      curUserInfo: (state) => state.curUserInfo,
+    }),
   },
   watch: {
     'infoFormData.cluster_source'(newVal) {
       this.infoFormData.auth_type = 'token';
     },
+    // 集群 Server 依赖 bcs_cluster_id
     'infoFormData.bcs_cluster_id'(newVal) {
       this.infoFormData.api_servers = newVal ? this.urlTmpl.replace('{cluster_id}', newVal) : '';
     },
+    clusterData: {
+      handler(newVal) {
+        this.fillFormData(newVal);
+      },
+      deep: true,
+    },
   },
   created() {
+    if (this.$route.query?.id) {
+      this.$emit('get-detail');
+    }
+    if (!this.isEdit) {
+      // 新建回填当前用户租户
+      const { tenantId } = this.curUserInfo;
+      tenantId && this.infoFormData.available_tenant_ids.push(tenantId);
+    }
     this.getClusterServerUrlTmpl();
   },
   methods: {
+    // 编辑表单数据回填
+    fillFormData(data) {
+      // bcs、k8s基础信息
+      this.infoFormData = {
+        ...this.infoFormData,
+        ...data,
+        bcs_cluster_id: data.bcs_cluster_id || '',
+        bcs_project_id: data.bcs_project_id || '',
+        bk_biz_id: data.bk_biz_id || '',
+        api_servers: '',
+      };
+      // ElasticSearch 集群信息
+      this.elasticSearchFormData = {
+        ...this.elasticSearchFormData,
+        ...data.elastic_search_config,
+      };
+      this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
+      // apiServices 数据回填
+      const apiServers = data.api_servers.map((v) => {
+        return { value: v };
+      });
+      this.$refs.apiServices[0]?.setData(apiServers);
+    },
     infoSelectChange(data) {
       // 设置业务值
       if (data.property === 'bcs_project_id') {

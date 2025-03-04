@@ -65,6 +65,11 @@ export default {
     },
     // 返回上一页
     goBack() {
+      const { backRoute } = this.$route.meta;
+      if (backRoute) {
+        this.$router.push(backRoute);
+        return;
+      }
       this.$router.back();
     },
   },

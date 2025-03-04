@@ -8,20 +8,22 @@
     <SelectCluster
       v-if="curStep === 1"
       ref="selectCluster"
+      :cluster-data="clusterDetails"
+      @get-detail="getClusterDetails"
     />
     <ComponentConfig
       v-else-if="curStep === 2"
-      :cluster-id="clusterId"
+      :cluster-id="queryClusterId"
       ref="componentConfig"
     />
     <ComponentInstall
       @change-next-btn="changeNextStepDisabled"
-      :cluster-id="clusterId"
+      :cluster-id="queryClusterId"
       v-else-if="curStep === 3"
     />
     <ClusterFeature
       v-else-if="curStep === 4"
-      :cluster-id="clusterId"
+      :cluster-id="queryClusterId"
       ref="clusterFeature"
     />
     <section class="submit-btn">
@@ -80,9 +82,9 @@ export default {
         { title: this.$t('组件安装'), icon: 3 },
         { title: this.$t('集群特性'), icon: 4 },
       ],
-      // 暂时未固定值 paas-test 测试集群id，后续替换新建、编辑集群id
-      clusterId: '',
       nextStepDisabled: true,
+      // 集群详情
+      clusterDetails: {},
     };
   },
   computed: {
@@ -99,6 +101,24 @@ export default {
       }
       return '';
     },
+    // 编辑
+    isEdit() {
+      return this.$route.path.endsWith('/edit');
+    },
+    queryClusterId() {
+      return this.$route.query?.id || '';
+    },
+    queryStep() {
+      return this.$route.query?.step || 1;
+    },
+  },
+  created() {
+    if (this.isEdit) {
+      this.queryClusterId && this.getClusterDetails();
+    }
+    if (this.queryStep) {
+      this.curStep = Number(this.queryStep);
+    }
   },
   methods: {
     changeNextStepDisabled(data) {
@@ -115,12 +135,20 @@ export default {
     },
     setStep(step) {
       this.curStep = step;
+      const { query } = this.$route;
+      // 保留当前step
+      this.$router.push({
+        query: {
+          ...query,
+          step,
+        },
+      });
     },
     async handleSubmit() {
       switch (this.curStep) {
         case 1:
           // 选择集群
-          this.validate('selectCluster', this.createCluster);
+          this.validate('selectCluster', this.isEdit ? this.updateCluster : this.createCluster);
           break;
         case 2:
           // 组件配置
@@ -176,11 +204,33 @@ export default {
         await this.$store.dispatch('tenant/createCluster', {
           data,
         });
-        // 返回新建集群ID
-        this.clusterId = data.name;
+        this.$router.push({ query: { id: data.name } });
         this.$paasMessage({
           theme: 'success',
           message: this.$t('新建成功'),
+        });
+        this.setStep(2);
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.nextBtnLodaing = false;
+      }
+    },
+    // 编辑集群
+    async updateCluster(data) {
+      this.nextBtnLodaing = true;
+      const params = {
+        ...this.clusterDetails,
+        ...data,
+      };
+      try {
+        await this.$store.dispatch('tenant/updateCluster', {
+          clusterName: this.queryClusterId,
+          data: params,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('集群更新成功'),
         });
         this.setStep(2);
       } catch (e) {
@@ -194,7 +244,7 @@ export default {
       this.nextBtnLodaing = true;
       try {
         const ret = await this.$store.dispatch('tenant/updateCluster', {
-          clusterName: this.clusterId,
+          clusterName: this.queryClusterId,
           data,
         });
         successCallback(ret);
@@ -202,6 +252,17 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.nextBtnLodaing = false;
+      }
+    },
+    // 获取集群详情
+    async getClusterDetails() {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDetails', {
+          clusterName: this.queryClusterId,
+        });
+        this.clusterDetails = ret;
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
   },

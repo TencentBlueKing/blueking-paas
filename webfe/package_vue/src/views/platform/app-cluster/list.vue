@@ -94,6 +94,9 @@ export default {
         params: {
           type: 'add',
         },
+        query: {
+          step: 1,
+        },
       });
     },
   },

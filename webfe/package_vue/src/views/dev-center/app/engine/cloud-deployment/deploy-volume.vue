@@ -826,7 +826,10 @@ export default {
   methods: {
     // 重置数据
     resetData() {
-      if (!this.volumeFormData.sourceConfigArrData.length) return;
+      if (!this.volumeFormData.sourceConfigArrData.length) {
+        this.handleSetEditValue(this.$t('请先在左侧添加文件后，再编辑文件内容'));
+        return;
+      }
       this.curValue = this.volumeFormData.sourceConfigArrData[0].value || '';
       const initValue = this.volumeFormData.source_config_data[this.curValue];
       this.activeIndex = 0;

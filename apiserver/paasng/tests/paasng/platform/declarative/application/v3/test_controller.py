@@ -30,7 +30,6 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import CNATIVE_APP_CODE_FIELD
@@ -279,7 +278,7 @@ class TestMarketDisplayOptionsField:
 
 class TestServicesField:
     @pytest.fixture(autouse=True)
-    def _default_services(self, request):
+    def _default_services(self, request, app_tenant):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         service_names = ["mysql", "rabbitmq"]
@@ -292,7 +291,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([service.get_plans()[0]])
+            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

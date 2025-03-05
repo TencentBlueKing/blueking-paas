@@ -43,6 +43,9 @@ class AllocationPolicySLZ(serializers.Serializer):
     )
     env_clusters = EnvClustersSLZ(help_text="环境集群列表", default=dict, required=False)
 
+    class Meta:
+        ref_name = "plat_mgt.infras.clusters.AllocationPolicySLZ"
+
     def to_internal_value(self, data: Dict[str, Any]) -> AllocationPolicy:
         return AllocationPolicy(**super().to_internal_value(data))
 
@@ -52,6 +55,9 @@ class AllocationPrecedencePolicySLZ(serializers.Serializer):
 
     matcher = serializers.DictField(help_text="匹配器", default=dict)
     policy = AllocationPolicySLZ(help_text="分配策略")
+
+    class Meta:
+        ref_name = "plat_mgt.infras.clusters.AllocationPolicySLZ"
 
     def to_internal_value(self, data: Dict[str, Any]) -> AllocationPrecedencePolicy:
         return AllocationPrecedencePolicy(**super().to_internal_value(data))

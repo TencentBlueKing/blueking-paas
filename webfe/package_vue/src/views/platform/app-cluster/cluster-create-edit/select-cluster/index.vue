@@ -1,5 +1,8 @@
 <template>
-  <div class="select-cluster-container">
+  <div
+    class="select-cluster-container"
+    v-bkloading="{ isLoading: loading, zIndex: 10 }"
+  >
     <!-- 选择集群 -->
     <section class="card-style">
       <div class="card-title">{{ $t('基础信息') }}</div>
@@ -12,7 +15,7 @@
         ext-cls="cluster-form-cls"
       >
         <bk-form-item
-          v-for="item in bcsOptions"
+          v-for="item in displayBcsOptions"
           :label="$t(item.label)"
           :required="item.required"
           :property="item.property"
@@ -26,12 +29,15 @@
             :maxlength="item.maxlength"
             :disabled="item.disabled"
             v-model="infoFormData[item.property]"
+            @blur="inputBlur($event, item.property, 'infoFormData')"
+            @focus="inputFocus($event, item.property, 'infoFormData')"
           />
           <ConfigSelect
             v-else-if="item.type === 'select'"
             v-model="infoFormData[item.property]"
             :form-data="infoFormData"
             :property="item.property"
+            :api-data="clusterData"
             v-bind="item"
             @change="infoSelectChange"
           />
@@ -143,7 +149,7 @@
         ext-cls="cluster-form-cls"
       >
         <bk-form-item
-          v-for="item in elasticSearchOptions"
+          v-for="item in displayElasticSearchOptions"
           :label="$t(item.label)"
           :required="item.required"
           :property="item.property"
@@ -155,6 +161,8 @@
             v-if="['password', 'input'].includes(item.type)"
             v-model="elasticSearchFormData[item.property]"
             :type="item.type"
+            @blur="inputBlur($event, item.property, 'elasticSearchFormData')"
+            @focus="inputFocus($event, item.property, 'elasticSearchFormData')"
           />
           <ConfigSelect
             v-else-if="item.type === 'select'"
@@ -211,6 +219,9 @@ import InputList from '../comps/input-list.vue';
 import { pick } from 'lodash';
 import { mapState } from 'vuex';
 
+// token/password默认占位
+const featurePlaceholder = '￥%&*~@';
+
 export default {
   name: 'SelectCluster',
   components: {
@@ -223,14 +234,16 @@ export default {
       type: Object,
       default: () => {},
     },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
-      bcsOptions,
       k8sOptions,
       tokenOptions,
       certOptions,
-      elasticSearchOptions,
       availableTenantsOptions,
       infoFormData: {
         name: '',
@@ -279,6 +292,12 @@ export default {
     };
   },
   computed: {
+    displayBcsOptions() {
+      return this.isEdit ? this.updateRequiredFields(bcsOptions, ['token']) : bcsOptions;
+    },
+    displayElasticSearchOptions() {
+      return this.isEdit ? this.updateRequiredFields(elasticSearchOptions, ['password']) : elasticSearchOptions;
+    },
     isBcsCluster() {
       return this.infoFormData.cluster_source === 'bcs';
     },
@@ -333,22 +352,39 @@ export default {
     this.getClusterServerUrlTmpl();
   },
   methods: {
+    updateRequiredFields(options, propertiesToUpdate) {
+      return options.map((item) => {
+        if (propertiesToUpdate.includes(item.property)) {
+          return {
+            ...item,
+            required: false,
+            rules: [],
+          };
+        }
+        return item;
+      });
+    },
     // 编辑表单数据回填
-    fillFormData(data) {
+    fillFormData(data = {}) {
       // bcs、k8s基础信息
       this.infoFormData = {
         ...this.infoFormData,
         ...data,
-        bcs_cluster_id: data.bcs_cluster_id || '',
-        bcs_project_id: data.bcs_project_id || '',
-        bk_biz_id: data.bk_biz_id || '',
-        api_servers: '',
+        bk_biz_id: data.bk_biz_id || '', // 业务
+        api_servers: data.api_servers.length ? data.api_servers.join() : '',
       };
+      setTimeout(() => {
+        this.$set(this.infoFormData, 'bcs_project_id', data.bcs_project_id ?? '');
+        this.$set(this.infoFormData, 'bcs_cluster_id', data.bcs_cluster_id ?? '');
+      }, 200);
       // ElasticSearch 集群信息
       this.elasticSearchFormData = {
         ...this.elasticSearchFormData,
         ...data.elastic_search_config,
       };
+      // 编辑态 token与password不会返回，默认回填六位占位符
+      this.$set(this.infoFormData, 'token', featurePlaceholder);
+      this.$set(this.elasticSearchFormData, 'password', featurePlaceholder);
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
       // apiServices 数据回填
       const apiServers = data.api_servers.map((v) => {
@@ -359,7 +395,7 @@ export default {
     infoSelectChange(data) {
       // 设置业务值
       if (data.property === 'bcs_project_id') {
-        this.curProjectData = data.data;
+        this.curProjectData = data?.data || {};
         this.infoFormData.bk_biz_id = data.data.biz_name;
       }
     },
@@ -388,8 +424,14 @@ export default {
       // 业务
       data.bk_biz_id = this.curProjectData.biz_id;
       data.api_servers = [this.infoFormData.api_servers];
+      // 清空默认占位符
+      data.token = data.token === featurePlaceholder ? '' : data.token;
       // ElasticSearch 集群信息
-      data.elastic_search_config = { ...this.elasticSearchFormData };
+      const { password } = this.elasticSearchFormData;
+      data.elastic_search_config = {
+        ...this.elasticSearchFormData,
+        password: password === featurePlaceholder ? '' : password,
+      };
       return data;
     },
     // 格式化k8s集群数据
@@ -406,6 +448,8 @@ export default {
           'access_entry_ip',
           'available_tenant_ids',
         ]);
+        // 清空默认占位符
+        data.token = data.token === featurePlaceholder ? '' : data.token;
       } else {
         data = pick(this.infoFormData, [
           'name',
@@ -423,7 +467,11 @@ export default {
       // APIServers
       data.api_servers = this.$refs.apiServices[0]?.getData();
       // ElasticSearch 集群信息
-      data.elastic_search_config = { ...this.elasticSearchFormData };
+      const { password } = this.elasticSearchFormData;
+      data.elastic_search_config = {
+        ...this.elasticSearchFormData,
+        password: password === featurePlaceholder ? '' : password,
+      };
       return data;
     },
     // 表单校验
@@ -446,6 +494,16 @@ export default {
       }
       // K8S集群
       return this.formatK8sData();
+    },
+    inputFocus(val, property, dataName) {
+      if (['token', 'password'].includes(property) && val === featurePlaceholder) {
+        this.$set(this[dataName], property, '');
+      }
+    },
+    inputBlur(val, property, dataName) {
+      if (['token', 'password'].includes(property) && val === '') {
+        this.$set(this[dataName], property, featurePlaceholder);
+      }
     },
   },
 };

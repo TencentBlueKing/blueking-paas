@@ -8,6 +8,7 @@
     <SelectCluster
       v-if="curStep === 1"
       ref="selectCluster"
+      :loading="detailsLoading"
       :cluster-data="clusterDetails"
       @get-detail="getClusterDetails"
     />
@@ -85,6 +86,7 @@ export default {
       nextStepDisabled: true,
       // 集群详情
       clusterDetails: {},
+      detailsLoading: false,
     };
   },
   computed: {
@@ -113,9 +115,6 @@ export default {
     },
   },
   created() {
-    if (this.isEdit) {
-      this.queryClusterId && this.getClusterDetails();
-    }
     if (this.queryStep) {
       this.curStep = Number(this.queryStep);
     }
@@ -256,6 +255,7 @@ export default {
     },
     // 获取集群详情
     async getClusterDetails() {
+      this.detailsLoading = true;
       try {
         const ret = await this.$store.dispatch('tenant/getClusterDetails', {
           clusterName: this.queryClusterId,
@@ -263,6 +263,8 @@ export default {
         this.clusterDetails = ret;
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.detailsLoading = false;
       }
     },
   },

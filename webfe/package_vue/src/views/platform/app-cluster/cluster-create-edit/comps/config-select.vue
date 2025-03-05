@@ -36,12 +36,21 @@ export default {
     property: {
       type: String,
     },
+    apiData: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
       list: [],
       selectLoading: false,
     };
+  },
+  computed: {
+    isEdit() {
+      return this.$route.path.endsWith('/edit');
+    },
   },
   mounted() {
     this.init();
@@ -69,6 +78,16 @@ export default {
       this.selectLoading = true;
       try {
         this.list = await this.source.api(parmas);
+        if (this.isEdit && this.property === 'bcs_cluster_id') {
+          // 编辑态值，在下拉框中不存在时，使用id直接填充
+          const apiClusterId = this.apiData['bcs_cluster_id'];
+          if (!this.list.find((v) => v.id === apiClusterId)) {
+            this.list.push({
+              id: apiClusterId,
+              name: apiClusterId,
+            });
+          }
+        }
       } catch (e) {
         this.list = [];
         this.catchErrorHandler(e);

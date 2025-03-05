@@ -7,6 +7,8 @@
       v-bind="$attrs"
       :password-icon="[]"
       show-word-limit
+      @focus="$emit('focus', $event)"
+      @blur="$emit('blur', $event)"
     ></bk-input>
   </div>
 </template>
@@ -18,9 +20,6 @@ export default {
     type: {
       default: '',
     },
-  },
-  data() {
-    return {};
   },
 };
 </script>

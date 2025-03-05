@@ -172,10 +172,13 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 stat.meta_info,
                 app_code=slz.validated_data["code"],
                 app_name=slz.validated_data["name_zh_cn"],
-                app_tenant_mode=app_tenant_mode,
-                app_tenant_id=app_tenant_id,
-                tenant_id=tenant.id,
             )
+            # 租户信息放到单独的字段中，不会干扰应用描述文件字段
+            stat.meta_info["tenant"] = {
+                "app_tenant_mode": app_tenant_mode,
+                "app_tenant_id": app_tenant_id,
+                "tenant_id": tenant.id,
+            }
 
             handler = get_desc_handler(stat.meta_info)
             with atomic():
@@ -377,10 +380,13 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 stat.meta_info,
                 app_code=application.code,
                 app_name=application.name,
-                app_tenant_mode=application.app_tenant_mode,
-                app_tenant_id=application.app_tenant_id,
-                tenant_id=application.tenant_id,
             )
+            # 租户信息放到单独的字段中，不会干扰应用描述文件字段
+            stat.meta_info["tenant"] = {
+                "app_tenant_mode": application.app_tenant_mode,
+                "app_tenant_id": application.app_tenant_id,
+                "tenant_id": application.tenant_id,
+            }
             handler = get_desc_handler(stat.meta_info)
             try:
                 application = handler.handle_app(request.user)

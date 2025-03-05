@@ -65,16 +65,15 @@ def relative_path_of_app_desc(filepath: str) -> Optional[str]:
 
 
 def update_meta_info(
-    meta_info: Dict, app_code: str, app_name: str, app_tenant_mode: str, app_tenant_id: str, tenant_id: str
+    meta_info: Dict,
+    app_code: str,
+    app_name: str,
 ) -> Dict:
     """update meta info with app_code and app_name"""
     try:
         spec_version = detect_spec_version(meta_info)
     except ValueError:
         return meta_info
-
-    # 租户信息放到单独的字段中，不会干扰应用描述文件字段
-    meta_info["tenant"] = {"app_tenant_mode": app_tenant_mode, "app_tenant_id": app_tenant_id, "tenant_id": tenant_id}
 
     match spec_version:
         case AppSpecVersion.VER_2:

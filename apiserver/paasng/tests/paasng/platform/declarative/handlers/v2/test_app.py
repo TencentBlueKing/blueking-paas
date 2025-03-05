@@ -39,7 +39,9 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 def get_desc_handler(yaml_content: str) -> DescriptionHandler:
-    handler = _get_desc_handler(yaml.safe_load(yaml_content))
+    meta_info = yaml.safe_load(yaml_content)
+    meta_info["tenant"] = {"app_tenant_mode": "test_mode", "app_tenant_id": "", "tenant_id": "test_id"}
+    handler = _get_desc_handler(meta_info)
     assert isinstance(handler, AppDescriptionHandler)
     return handler
 

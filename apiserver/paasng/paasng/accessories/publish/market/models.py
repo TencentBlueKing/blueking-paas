@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
-from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
@@ -42,9 +41,6 @@ logger = logging.getLogger(__name__)
 
 
 class TagManager(models.Manager):
-    def get_query_set(self):
-        return super(TagManager, self).get_query_set().filter(region__in=[settings.RUN_VER, "all"])
-
     def get_default_tag(self):
         """自动给应用创建市场信息时,使用默认分类"""
         # 将最后添加的分类设置为默认分类
@@ -69,6 +65,10 @@ class Tag(models.Model):
     remark = models.CharField("备注", blank=True, null=True, max_length=255, help_text="备注")
     index = models.IntegerField("排序", default=0, help_text="显示排序字段")
     enabled = models.BooleanField("是否可选", default=True, help_text="创建应用时是否可选择该分类")
+
+    # The field is used to identify specific tags that are only available in certain regions,
+    # but this distinction is no longer necessary. Therefore, this field is deprecated and should
+    # not be used anymore.
     region = models.CharField("部署环境", max_length=32, help_text="部署区域")
 
     objects = TagManager()
@@ -83,7 +83,7 @@ class Tag(models.Model):
             return _(self.name)
 
     def __str__(self):
-        return "{}:{} region={} parent={}".format(self.id, self.name, self.region, self.parent)
+        return "{}:{} parent={}".format(self.id, self.name, self.parent)
 
 
 class ProductManager(WithOwnerManager):

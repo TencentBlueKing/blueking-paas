@@ -53,11 +53,8 @@ from paasng.platform.applications.utils import (
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
-from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
-from paasng.platform.scene_app.initializer import SceneAPPInitializer
-from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -139,9 +136,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
             raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
-        if source_origin == SourceOrigin.SCENE:
-            return self._init_scene_app(request, app_tenant_mode, app_tenant_id, tenant.id, params, engine_params)
-
         # lesscode app needs to create an application on the bk_lesscode platform first
         if source_origin == SourceOrigin.BK_LESS_CODE:
             bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
@@ -153,7 +147,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             except (LessCodeApiError, LessCodeGatewayServiceError) as e:
                 raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
 
-        return self._init_normal_app(
+        return self._init_application(
             params,
             engine_params,
             source_origin,
@@ -203,7 +197,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         env_cluster_names: Dict[str, str] = {}
 
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-        return self._init_normal_app(
+        return self._init_application(
             params,
             engine_params,
             source_origin,
@@ -327,7 +321,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # ai-agent-app 不支持指定集群（使用默认集群）
         env_cluster_names: Dict[str, str] = {}
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-        return self._init_normal_app(
+        return self._init_application(
             params,
             engine_params,
             source_origin,
@@ -392,7 +386,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             logger.warning(_("集群未配置默认的根域名, 请检查集群配置是否合理."))
             return False
 
-    def _init_normal_app(
+    def _init_application(
         self,
         params: Dict,
         engine_params: Dict,
@@ -423,9 +417,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         source_init_template = engine_params.get("source_init_template", "")
         language = ""
         if source_init_template:
-            language = Template.objects.get(
-                name=source_init_template, type__in=TemplateType.normal_app_types()
-            ).language
+            language = Template.objects.get(name=source_init_template).language
+
         module = create_default_module(
             application,
             source_init_template=source_init_template,
@@ -460,44 +453,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         return Response(
             data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
-            status=status.HTTP_201_CREATED,
-        )
-
-    def _init_scene_app(
-        self, request, app_tenant_mode: str, app_tenant_id: str, tenant_id: str, params: Dict, engine_params: Dict
-    ) -> Response:
-        """初始化场景 SaaS 应用，包含根据 app_desc 文件创建一或多个模块，配置应用市场配置等"""
-        tmpl_name = engine_params.get("source_init_template", "")
-        app_name, app_code, region = params["name_en"], params["code"], params["region"]
-
-        try:
-            application, result = SceneAPPInitializer(
-                request.user,
-                tmpl_name,
-                app_name,
-                app_code,
-                region,
-                app_tenant_mode,
-                app_tenant_id,
-                tenant_id,
-                engine_params,
-            ).execute()
-        except DescriptionValidationError as e:
-            logger.exception("Invalid app_desc.yaml cause create app failed")
-            raise error_codes.SCENE_TMPL_DESC_ERROR.f(e.message)
-        except ControllerError as e:
-            logger.exception("Controller error cause create app failed")
-            raise error_codes.CANNOT_CREATE_APP.f(e.message)
-
-        source_init_result: Dict[str, Any] = {"code": result.error}
-        if result.is_success():
-            source_init_result = {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
-
-        return Response(
-            data={
-                "application": slzs.ApplicationSLZ(application).data,
-                "source_init_result": source_init_result,
-            },
             status=status.HTTP_201_CREATED,
         )
 

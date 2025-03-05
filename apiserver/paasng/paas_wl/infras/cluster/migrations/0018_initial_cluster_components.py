@@ -17,14 +17,7 @@
 
 from django.db import migrations
 
-from paas_wl.infras.cluster.constants import ClusterComponentName
-
-DEFAULT_COMPONENT_CONFIGS = [
-    {"name": ClusterComponentName.BK_INGRESS_NGINX, "required": True},
-    {"name": ClusterComponentName.BKAPP_LOG_COLLECTION, "required": True},
-    {"name": ClusterComponentName.BKPAAS_APP_OPERATOR, "required": True},
-    {"name": ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER, "required": False},
-]
+from paas_wl.infras.cluster.constants import DEFAULT_COMPONENT_CONFIGS
 
 
 def forwards_func(apps, schema_editor):

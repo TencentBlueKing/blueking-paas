@@ -61,7 +61,6 @@ class AppDeclarativeController:
     :param spec_version: Config schema version
     """
 
-    # 默认是 Smart 应用，场景模板应用需要特殊指定
     source_origin = SourceOrigin.S_MART
     update_allowed_fields = [AppRegionField]
 
@@ -86,7 +85,6 @@ class AppDeclarativeController:
             raise DescriptionValidationError({"region": _("用户没有权限在 {} 下创建应用").format(desc.region)})
 
         is_smart_app = self.source_origin == SourceOrigin.S_MART
-        is_scene_app = self.source_origin == SourceOrigin.SCENE
 
         app_type = (
             ApplicationType.CLOUD_NATIVE if settings.SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
@@ -100,7 +98,6 @@ class AppDeclarativeController:
             name=desc.name_zh_cn,
             name_en=desc.name_en,
             is_smart_app=is_smart_app,
-            is_scene_app=is_scene_app,
             type=app_type,
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,

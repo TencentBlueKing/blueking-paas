@@ -20,13 +20,13 @@ from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
-    RuleBasedAllocationConfig,
-    UnifiedAllocationConfig,
+    RuleBasedAllocationPolicy,
+    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 
 
-class BaseAllocationConfigSLZ(serializers.Serializer):
+class BaseAllocationPolicySLZ(serializers.Serializer):
     plans = serializers.ListField(help_text="默认分配", child=serializers.CharField(), required=False)
     env_plans = serializers.DictField(
         help_text="按环境分配", child=serializers.ListField(child=serializers.CharField()), required=False
@@ -40,18 +40,18 @@ class BaseAllocationConfigSLZ(serializers.Serializer):
             raise serializers.ValidationError("Must provide either plans or env_plans, but not both.")
 
 
-class UnifiedAllocationConfigSLZ(BaseAllocationConfigSLZ):
-    def to_internal_value(self, data) -> UnifiedAllocationConfig:
-        return cattr.structure(super().to_internal_value(data), UnifiedAllocationConfig)
+class AllocationPolicySLZ(BaseAllocationPolicySLZ):
+    def to_internal_value(self, data) -> UnifiedAllocationPolicy:
+        return cattr.structure(super().to_internal_value(data), UnifiedAllocationPolicy)
 
 
-class RuleBasedAllocationConfigSLZ(BaseAllocationConfigSLZ):
+class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
     cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
 
-    def to_internal_value(self, data) -> RuleBasedAllocationConfig:
-        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationConfig)
+    def to_internal_value(self, data) -> RuleBasedAllocationPolicy:
+        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationPolicy)
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
@@ -63,8 +63,8 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     """
 
     tenant_id = serializers.CharField(help_text="所属租户")
-    rule_based_allocation_configs = RuleBasedAllocationConfigSLZ(many=True, help_text="规则分配配置")
-    unified_allocation_config = UnifiedAllocationConfigSLZ(help_text="统一分配配置")
+    allocation_precedence_policies = AllocationPrecedencePolicySLZ(many=True, help_text="规则分配配置")
+    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
 
     def to_internal_value(self, data) -> PolicyCombinationConfig:
         service_id = self.context.get("service_id")
@@ -75,8 +75,8 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
     service_id = serializers.CharField(help_text="服务 id")
-    rule_based_allocation_configs = RuleBasedAllocationConfigSLZ(many=True, help_text="规则分配配置")
-    unified_allocation_config = UnifiedAllocationConfigSLZ(help_text="统一分配配置")
+    allocation_precedence_policies = AllocationPrecedencePolicySLZ(many=True, help_text="规则分配配置")
+    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
 
 
 class DeletePolicyCombinationSLZ(serializers.Serializer):

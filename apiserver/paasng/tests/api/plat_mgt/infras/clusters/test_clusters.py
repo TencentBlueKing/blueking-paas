@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from typing import Any, Dict
+from unittest import mock
 from unittest.mock import patch
 
 import cattrs
@@ -134,8 +135,10 @@ class TestCreateCluster:
     """创建集群"""
 
     @pytest.fixture(autouse=True)
-    def _patch_settings(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+    def _patch(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
+            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        ):
             yield
 
     def test_create_cluster_from_bcs(self, plat_mgt_api_client):
@@ -301,6 +304,13 @@ class TestCreateCluster:
 
 class TestUpdateCluster:
     """更新集群"""
+
+    @pytest.fixture(autouse=True)
+    def _patch(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
+            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        ):
+            yield
 
     def test_update_scene_cluster_access(self, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群接入（第一步场景）"""

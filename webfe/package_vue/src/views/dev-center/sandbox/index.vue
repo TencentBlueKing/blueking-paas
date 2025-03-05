@@ -100,7 +100,7 @@
               ref="rightTabRef"
               class="right-tab-cls"
               :data="sandboxData"
-              :service-name="serviceName" 
+              :service-name="serviceName"
               :buildLog="buildLog"
               :runLog="runLog"
               :loading="isLogsLoading"

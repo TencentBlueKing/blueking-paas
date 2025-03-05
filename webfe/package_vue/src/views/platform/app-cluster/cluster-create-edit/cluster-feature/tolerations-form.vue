@@ -95,7 +95,7 @@
         </bk-form-item>
         <div class="tools">
           <i
-            v-show="nodesLength > 1"
+            v-show="zero || nodesLength > 1"
             class="paasng-icon paasng-minus-circle-shape"
             @click="delServer(index)"
           ></i>
@@ -117,6 +117,10 @@ export default {
     data: {
       type: Object,
       default: () => {},
+    },
+    zero: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -170,6 +174,9 @@ export default {
     },
     delServer(index) {
       this.formData.nodes.splice(index, 1);
+      if (this.formData.nodes.length < 1) {
+        this.$emit('zero', 0);
+      }
     },
     validate() {
       return this.$refs.formRef.validate();

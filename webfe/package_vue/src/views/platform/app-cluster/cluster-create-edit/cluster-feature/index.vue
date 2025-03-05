@@ -11,40 +11,72 @@
       class="card-style setting"
       v-bkloading="{ isLoading, zIndex: 10 }"
     >
-      <div class="card-title">
-        <span>{{ $t('高级设置') }}</span>
-        <span class="sub-tip ml8">
-          {{ $t('可通过为节点设置污点，并在开发者中心配置容忍度，以将应用部署到指定的集群节点上') }}
-        </span>
-      </div>
-      <div class="card-content">
-        <bk-form
-          :label-width="400"
-          form-type="vertical"
-          ref="formRef"
-          ext-cls="component-form-cls"
-        >
-          <bk-form-item
-            :label="$t('节点选择器（nodeSelector）')"
-            :property="'node_selector'"
+      <bk-collapse
+        v-model="activeNames"
+        ext-cls="setting-collapse-cls"
+      >
+        <bk-collapse-item name="1">
+          <div class="card-title">
+            <i
+              class="paasng-icon paasng-right-shape"
+              :class="{ expand: isExpanded }"
+            ></i>
+            <span>{{ $t('高级设置') }}</span>
+            <span class="sub-tip ml8">
+              {{ $t('可通过为节点设置污点，并在开发者中心配置容忍度，以将应用部署到指定的集群节点上') }}
+            </span>
+          </div>
+          <div
+            class="card-content"
+            slot="content"
           >
-            <KeyValueInput
-              ref="keyValueInput"
-              class="nodes-select"
-              :data="details"
-            />
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('容忍度（tolerations）')"
-            :property="'tolerations'"
-          >
-            <TolerationsForm
-              ref="tolerationsForm"
-              :data="details"
-            />
-          </bk-form-item>
-        </bk-form>
-      </div>
+            <bk-form
+              :label-width="400"
+              form-type="vertical"
+              ref="formRef"
+              ext-cls="component-form-cls"
+            >
+              <bk-form-item
+                :label="$t('节点选择器（nodeSelector）')"
+                :property="'node_selector'"
+              >
+                <i
+                  v-if="!isNodeVisible"
+                  v-bk-tooltips="$t('添加')"
+                  class="paasng-icon paasng-plus-thick"
+                  @click="handleAdd('node_selector')"
+                ></i>
+                <KeyValueInput
+                  v-else
+                  ref="keyValueInput"
+                  class="nodes-select"
+                  :data="details"
+                  :zero="true"
+                  @zero="isNodeVisible = false"
+                />
+              </bk-form-item>
+              <bk-form-item
+                :label="$t('容忍度（tolerations）')"
+                :property="'tolerations'"
+              >
+                <i
+                  v-if="!isTolerationsVisible"
+                  v-bk-tooltips="$t('添加')"
+                  class="paasng-icon paasng-plus-thick"
+                  @click="handleAdd('tolerations')"
+                ></i>
+                <TolerationsForm
+                  v-else
+                  ref="tolerationsForm"
+                  :data="details"
+                  :zero="true"
+                  @zero="isTolerationsVisible = false"
+                />
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </bk-collapse-item>
+      </bk-collapse>
     </section>
   </div>
 </template>
@@ -71,14 +103,30 @@ export default {
     return {
       isLoading: false,
       details: {},
+      activeNames: [],
+      isNodeVisible: false,
+      isTolerationsVisible: false,
     };
+  },
+  computed: {
+    isExpanded() {
+      return this.activeNames.length > 0;
+    },
   },
   created() {
     this.getClusterDetails();
   },
   methods: {
+    // 高级设置表单校验
     formValidate() {
-      return Promise.all([this.$refs.keyValueInput?.validate(), this.$refs.tolerationsForm?.validate()]);
+      if (!this.isExpanded) {
+        return Promise.resolve(true);
+      }
+      const validations = [
+        this.isNodeVisible && this.$refs.keyValueInput?.validate(),
+        this.isTolerationsVisible && this.$refs.tolerationsForm?.validate(),
+      ].filter(Boolean);
+      return validations.length ? Promise.all(validations) : Promise.resolve(true);
     },
     // 获取集群详情
     async getClusterDetails() {
@@ -121,6 +169,14 @@ export default {
       };
       return data;
     },
+    handleAdd(type) {
+      // 容忍度
+      if (type === 'tolerations') {
+        this.isTolerationsVisible = true;
+        return;
+      }
+      this.isNodeVisible = true;
+    },
   },
 };
 </script>
@@ -132,11 +188,38 @@ export default {
   }
   .setting {
     margin-top: 16px;
+    .card-title {
+      margin-bottom: 0;
+      i {
+        font-size: 12px;
+        color: #4d4f56;
+        transition: all 0.2s;
+        margin-right: 6px;
+        transform: translateY(-1px);
+        &.expand {
+          transform: rotate(90deg);
+        }
+      }
+    }
     .card-content {
+      margin-top: 18px;
       padding-left: 68px;
       padding-right: 120px;
       .nodes-select {
         width: calc(100% - 120px);
+      }
+      .paasng-plus-thick {
+        font-size: 18px;
+        cursor: pointer;
+      }
+    }
+  }
+  .setting-collapse-cls {
+    /deep/ .bk-collapse-item .bk-collapse-item-header {
+      padding: 0;
+      height: auto !important;
+      .fr {
+        display: none;
       }
     }
   }

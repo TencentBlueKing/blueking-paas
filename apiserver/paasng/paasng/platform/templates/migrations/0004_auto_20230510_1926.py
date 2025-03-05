@@ -34,6 +34,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='template',
             name='type',
-            field=models.CharField(choices=[('normal', '普通应用'), ('scene', '场景模板'), ('plugin', '插件模板')], max_length=16, verbose_name='模板类型'),
+            field=models.CharField(choices=[('normal', '普通应用'), ('plugin', '插件模板')], max_length=16, verbose_name='模板类型'),
         ),
     ]

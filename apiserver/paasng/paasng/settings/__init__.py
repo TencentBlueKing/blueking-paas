@@ -178,7 +178,6 @@ INSTALLED_APPS = [
     "paasng.infras.iam.members",
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
-    "paasng.platform.scene_app",
     "paasng.platform.smart_app",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
@@ -722,7 +721,7 @@ MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TAR
 # 新建的 lesscode 应用是否为云原生应用
 LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
 
-# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
+# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用
 SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
 
 # 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的

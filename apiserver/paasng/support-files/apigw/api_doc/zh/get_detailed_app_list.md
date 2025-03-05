@@ -184,7 +184,6 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
                 "name_en": "aaa",
                 "type": "cloud_native",
                 "is_smart_app": false,
-                "is_scene_app": false,
                 "is_plugin_app": false,
                 "language": "NodeJS",
                 "creator": "0335cce79c92",
@@ -256,7 +255,6 @@ curl -X GET -H 'Accept: */*' -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your a
 | logo_url | string | 应用 Logo 地址 |
 | type | string | 应用类型 |
 | is_smart_app | boolean | 是否为 S-mart 应用 |
-| is_scene_app | boolean | 是否为场景应用 |
 | is_plugin_app | boolean | 是否为插件应用 |
 | language | string | 应用使用的编程语言 |
 | created | string | 应用创建时间 |

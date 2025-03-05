@@ -44,7 +44,7 @@ class SourceOrigin(IntStructuredEnum):
     S_MART = EnumField(3, "S-Mart")
     # 旧镜像应用(非云原生)
     IMAGE_REGISTRY = EnumField(4, "Image Registry")
-    # 场景模板
+    # Deprecated: 场景模板现已不再使用，仅保留用于占位，防止误用导致数据错误
     SCENE = EnumField(5, "Scene")
     # 仅托管镜像的云原生应用
     CNATIVE_IMAGE = EnumField(6, "CNative Image")

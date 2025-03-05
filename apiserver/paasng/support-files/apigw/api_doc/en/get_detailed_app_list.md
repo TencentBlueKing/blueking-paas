@@ -183,7 +183,6 @@ Before calling the interface, please get your access_token first. For specific g
                 "name_en": "aaa",
                 "type": "cloud_native",
                 "is_smart_app": false,
-                "is_scene_app": false,
                 "is_plugin_app": false,
                 "language": "NodeJS",
                 "creator": "0335cce79c92",
@@ -256,7 +255,6 @@ Before calling the interface, please get your access_token first. For specific g
 | logo_url | string | App Logo address |
 | type | string | Apllication type |
 | is_smart_app | boolean | Whether it is a S-mart application |
-| is_scene_app | boolean | Whether it is a scene application |
 | is_plugin_app | boolean | Whether it is a plug-in application |
 | language | string | App programming language |
 | created | string | App creation time |

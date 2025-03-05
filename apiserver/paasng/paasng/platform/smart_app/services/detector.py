@@ -64,11 +64,7 @@ def relative_path_of_app_desc(filepath: str) -> Optional[str]:
     return None
 
 
-def update_meta_info(
-    meta_info: Dict,
-    app_code: str,
-    app_name: str,
-) -> Dict:
+def update_meta_info(meta_info: Dict, app_code: str, app_name: str) -> Dict:
     """update meta info with app_code and app_name"""
     try:
         spec_version = detect_spec_version(meta_info)

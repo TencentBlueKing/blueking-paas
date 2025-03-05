@@ -100,7 +100,7 @@
               ref="rightTabRef"
               class="right-tab-cls"
               :data="sandboxData"
-              :service-name="serviceName"
+              :service-name="serviceName" 
               :buildLog="buildLog"
               :runLog="runLog"
               :loading="isLogsLoading"
@@ -358,7 +358,7 @@ export default {
           appCode: this.code,
           moduleId: this.module,
         });
-        this.serviceName = res.map((service) => service.service?.display_name)?.join('、');
+        this.serviceName = res.map((service) => service.service?.display_name)?.join(', ');
       } catch (e) {
         this.catchErrorHandler(e);
       }

@@ -6,6 +6,14 @@
     </p>
     <div class="info">
       <div class="info-item">
+        <div class="label">{{ $t('代码仓库') }}：</div>
+        <div class="value">{{ repoUrl }}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">{{ $t('代码分支') }}：</div>
+        <div class="value">{{ repoBranch }}</div>
+      </div>
+      <div class="info-item">
         <div class="label">{{ $t('增强服务') }}：</div>
         <div class="value">{{ serviceName }}</div>
       </div>
@@ -60,6 +68,12 @@ export default {
     };
   },
   computed: {
+    repoUrl() {
+      return this.data?.repo?.url || "--"
+    },
+    repoBranch() {
+      return this.data?.repo?.version_info?.version_name || "--"
+    },
     envVarLength() {
       return Object.keys(this.data?.env_vars || {})?.length;
     },

@@ -106,10 +106,20 @@ export const bcsOptions = [
         source: {
             // BCS集群 依赖 项目
             dependency: 'bcs_project_id',
-            api: (arg) => {
-                return store.dispatch('tenant/getBcsClusters', {
-                    projectId: arg
-                });
+            api: async (arg) => {
+                try {
+                    const res = await store.dispatch('tenant/getBcsClusters', {
+                        projectId: arg
+                    });
+                    return res.map(item => {
+                        return {
+                            ...item,
+                            name: `${item.name}（${item.id}）`
+                        };
+                    });
+                } catch (e) {
+                    Promise.reject(e);
+                }
             }
         },
     },

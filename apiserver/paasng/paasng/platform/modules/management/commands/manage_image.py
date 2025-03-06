@@ -27,7 +27,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("-n", "--name", required=True, dest="name", help="name")
-        parser.add_argument("-r", "--region", required=True, dest="regions", help="available region name", nargs="+")
         parser.add_argument("--type", required=True, dest="type_", help="image type can be either cnb or legacy")
         parser.add_argument("--hidden", dest="is_hidden", help="is_hidden", action="store_true")
         parser.add_argument("--slugbuilder", required=False, help="slugbuilder image")
@@ -62,7 +61,6 @@ class Command(BaseCommand):
         type_,
         slugbuilder,
         slugrunner,
-        regions,
         is_hidden,
         display_name_zh_cn,
         display_name_en,
@@ -75,42 +73,37 @@ class Command(BaseCommand):
         slugbuilder = slugbuilder or image
         slugrunner = slugrunner or image
 
-        for region in regions:
-            image_name = name.format(region=region)
-            self.update_or_create_image(
-                AppSlugBuilder,
-                image_name,
-                region,
-                slugbuilder,
-                type_,
-                display_name_zh_cn,
-                display_name_en,
-                description_zh_cn,
-                description_en,
-                is_hidden,
-                parse_assignment_list(environments),
-                parse_assignment_list(labels),
-            )
-            self.update_or_create_image(
-                AppSlugRunner,
-                image_name,
-                region,
-                slugrunner,
-                type_,
-                display_name_zh_cn,
-                display_name_en,
-                description_zh_cn,
-                description_en,
-                is_hidden,
-                parse_assignment_list(environments),
-                parse_assignment_list(labels),
-            )
+        self.update_or_create_image(
+            AppSlugBuilder,
+            name,
+            slugbuilder,
+            type_,
+            display_name_zh_cn,
+            display_name_en,
+            description_zh_cn,
+            description_en,
+            is_hidden,
+            parse_assignment_list(environments),
+            parse_assignment_list(labels),
+        )
+        self.update_or_create_image(
+            AppSlugRunner,
+            name,
+            slugrunner,
+            type_,
+            display_name_zh_cn,
+            display_name_en,
+            description_zh_cn,
+            description_en,
+            is_hidden,
+            parse_assignment_list(environments),
+            parse_assignment_list(labels),
+        )
 
     def update_or_create_image(
         self,
         model,
         name,
-        region,
         image,
         type_,
         display_name_zh_cn,
@@ -129,7 +122,7 @@ class Command(BaseCommand):
 
         obj, created = model.objects.update_or_create(
             name=name,
-            region=region,
+            region="",
             defaults={
                 "is_hidden": is_hidden,
                 "display_name_zh_cn": display_name_zh_cn,

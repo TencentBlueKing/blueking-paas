@@ -121,7 +121,7 @@
                             :class="element.buildpacks.indexOf(bindDialog.row.id) === -1?'':'draggable-content-remove'"
                             :key="element.id"
                         >
-                            <span v-bk-tooltips="`${element.name} (${element.display_name})`">
+                            <span v-bk-tooltips="`${element.description}`">
                                 $[ element.name ]($[element.display_name])
                             </span>
                         </div>
@@ -142,7 +142,7 @@
                             :class="element.buildpacks.indexOf(bindDialog.row.id) !== -1?'':'draggable-content-new'"
                             :key="element.id"
                         >
-                            <span v-bk-tooltips="`${element.name} (${element.display_name})`">
+                            <span v-bk-tooltips="`${element.description}`">
                                 $[ element.name ]($[element.display_name])
                             </span>
                         </div>

@@ -61,10 +61,8 @@ class Command(BaseCommand):
         address,
         **kwargs,
     ):
-        buildpack_name = name.format(region="")
-
         obj, created = AppBuildPack.objects.update_or_create(
-            name=buildpack_name,
+            name=name,
             region="",
             defaults={
                 "display_name_zh_cn": display_name_zh_cn,
@@ -81,6 +79,6 @@ class Command(BaseCommand):
         )
 
         if created:
-            self.stdout.write(f"created {AppBuildPack.__name__}[{obj.pk}] {buildpack_name}")
+            self.stdout.write(f"created {AppBuildPack.__name__}[{obj.pk}] {name}")
         else:
-            self.stdout.write(f"updated {AppBuildPack.__name__}[{obj.pk}] {buildpack_name}")
+            self.stdout.write(f"updated {AppBuildPack.__name__}[{obj.pk}] {name}")

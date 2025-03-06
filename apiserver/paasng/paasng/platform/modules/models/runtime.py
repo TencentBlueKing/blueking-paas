@@ -39,7 +39,7 @@ class BuildpackManager(models.Manager):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """查询模块可用的构建工具
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
 
         # 关联已被绑定至该模块的镜像
@@ -93,7 +93,7 @@ class AppBuildPack(TimestampedModel):
     objects = BuildpackManager()
 
     def natural_key(self):
-        return (self.region, self.name)
+        return (self.name,)
 
     @property
     def info(self):
@@ -106,14 +106,14 @@ class AppBuildPack(TimestampedModel):
         }
 
     def __str__(self) -> str:
-        return f"{self.region}:{self.name}[{self.pk}]"
+        return f"{self.name}[{self.pk}]"
 
 
 class AppImageStackQuerySet(models.QuerySet):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
 
         # 关联已被绑定至该模块的镜像
@@ -123,10 +123,8 @@ class AppImageStackQuerySet(models.QuerySet):
             logger.debug("module %s 未初始化 BuildConfig", module)
 
         # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
-        if contain_hidden:
-            filters.append(models.Q(region=module.region))
-        else:
-            filters.append(models.Q(is_hidden=False, region=module.region))
+        if not contain_hidden:
+            filters.append(models.Q(is_hidden=False))
 
         qs = self.filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
@@ -180,7 +178,7 @@ class AppImageStackManager(models.Manager):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         return self.get_queryset().filter_module_available(module=module, contain_hidden=contain_hidden)
 
     def filter_by_full_image(self, module: "Module", full_image: str, contain_hidden: bool = False) -> models.QuerySet:
@@ -262,7 +260,7 @@ class AppImage(TimestampedModel):
         return ":".join([self.image, tag])
 
     def __str__(self) -> str:
-        return f"{self.region}:{self.name}[{self.pk}]"
+        return f"{self.name}[{self.pk}]"
 
     class Meta:
         abstract = True

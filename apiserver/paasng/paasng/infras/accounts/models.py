@@ -65,7 +65,7 @@ class User(AbstractBaseUser):
         _("active"),
         default=True,
         help_text=_(
-            "Designates whether this user should be treated as active. " "Unselect this instead of deleting accounts."
+            "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
         ),
     )
     date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
@@ -273,7 +273,13 @@ class Oauth2TokenHolder(TimestampedModel):
 
 
 class PrivateTokenHolder(AuditedModel):
-    """Private Token for sourcectl"""
+    """Besides the OAuth2 token, the private token is also supported for authentication
+    with external code services, such as GitLab, etc. When a user (such as a system user)
+    cannot use OAuth2, the private token is a good alternative.
+
+    Despite the name, the "private token" in this model is not related to the "UserPrivateToken"
+    model.
+    """
 
     provider = models.CharField(max_length=32)
     private_token = EncryptField(default="")

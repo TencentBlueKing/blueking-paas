@@ -264,7 +264,7 @@ class Oauth2BackendsViewSet(viewsets.ViewSet):
         scope = token_params.pop("scope", None)
         try:
             Oauth2TokenHolder.objects.update_or_create(
-                provider=backend_name, user=user_profile, region="ieod", scope=scope, defaults=token_params
+                provider=backend_name, user=user_profile, scope=scope, defaults=token_params
             )
         except Exception:
             msg = f"failed to save access token(from {backend}) to {user_profile.username}"

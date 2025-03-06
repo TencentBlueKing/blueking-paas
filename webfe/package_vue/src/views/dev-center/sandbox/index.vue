@@ -410,7 +410,7 @@ export default {
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}healthz`);
         const headers = { Authorization: `Bearer ${this.sandboxData.devserver_token}` };
 
-        const response = await axios({ method: 'get', url, headers, timeout: 5000 });
+        const response = await axios({ method: 'get', url, headers, timeout: 1000 });
         return response.data.status === 'active';
       } catch (e) {
         console.log('dev sandbox status ready but inaccessible!', e);

@@ -2894,6 +2894,8 @@ export default {
   '获取密码后，请在 “Welcome to code-server” 界面的 PASSWORD 处输入': 'After obtaining the password, please enter it in the PASSWORD field on the "Welcome to code-server" screen',
   沙箱资源不足: 'Insufficient Sandbox Resources',
   '沙箱功能正在灰度开放，目前沙箱资源已申请完。如需体验，请联系 BK 助手。': 'The sandbox feature is currently in phased rollout, and all sandbox resources have been allocated. If you wish to experience it, please contact the BK Assistant.',
+  完成: 'Complete',
+  跳过: 'Skip',
   获取沙箱密码: 'Get sandbox password',
   '获取密码用于进入在线 IDE。': 'Get the password to access the online IDE.',
   输入密码: 'Enter password',

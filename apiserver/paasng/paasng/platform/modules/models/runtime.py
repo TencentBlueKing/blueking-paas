@@ -49,25 +49,23 @@ class BuildpackManager(models.Manager):
             logger.debug("module %s 未初始化 BuildConfig", module)
 
         # 给迁移应用绑定镜像时，需要绑定隐藏的构建工具
-        if contain_hidden:
-            filters.append(models.Q(region=module.region))
-        else:
-            filters.append(models.Q(is_hidden=False, region=module.region))
+        if not contain_hidden:
+            filters.append(models.Q(is_hidden=False))
 
         qs = self.get_queryset().filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
         # A: 因为 models.Q(related_build_configs=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
-        """查询 region 可用的构建工具"""
-        qs = self.get_queryset().filter(region=region)
+    def filter_available(self, contain_hidden: bool = False) -> models.QuerySet:
+        """查询可用的构建工具"""
+        qs = self.get_queryset()
         if not contain_hidden:
             qs = qs.filter(is_hidden=False)
         return qs
 
-    def get_by_natural_key(self, region, name):
-        return self.get(region=region, name=name)
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 class AppBuildPack(TimestampedModel):
@@ -135,9 +133,9 @@ class AppImageStackQuerySet(models.QuerySet):
         # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
-        """过滤 region 可用的镜像"""
-        qs = self.filter(region=region)
+    def filter_available(self, contain_hidden: bool = False) -> models.QuerySet:
+        """过滤可用的镜像"""
+        qs = self.all()
         if not contain_hidden:
             qs = qs.filter(is_hidden=False)
         return qs
@@ -197,12 +195,12 @@ class AppImageStackManager(models.Manager):
         """根据label查询可用的镜像"""
         return self.filter_module_available(module, contain_hidden).filter_by_labels(labels)
 
-    def select_default_runtime(self, region: str, labels: dict, contain_hidden: bool = False) -> "AppImage":
-        """选择 region 下符合对应 labels 的默认运行时
+    def select_default_runtime(self, labels: dict, contain_hidden: bool = False) -> "AppImage":
+        """选择符合对应 labels 的默认运行时
 
         :raise ObjectDoesNotExist: when no available runtime
         """
-        original_qs = self.get_queryset().filter_by_region(region, contain_hidden=contain_hidden)  # type: AppImageStackQuerySet
+        original_qs = self.get_queryset().filter_available(contain_hidden=contain_hidden)  # type: AppImageStackQuerySet
 
         # firstly, try to select default runtime by labels
         if labels and (available_runtimes := original_qs.filter_by_labels(labels)).exists():
@@ -216,12 +214,7 @@ class AppImageStackManager(models.Manager):
 
         # finally, try to select default runtime by settings
         try:
-            image = settings.DEFAULT_RUNTIME_IMAGES[region]
-        except KeyError:
-            image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
-            logger.warning("Unable to get default image for region: %s, will use %s by default", region, image)
-        try:
-            return original_qs.get(name=image)
+            return original_qs.get(name=settings.DEFAULT_RUNTIME_IMAGES)
         except self.model.DoesNotExist:
             raise ObjectDoesNotExist
 
@@ -321,6 +314,6 @@ class AppSlugBuilder(AppImage):
         """
         return list(self.buildpacks.filter_module_available(module).filter(*args, **kwargs))
 
-    def list_region_available_buildpacks(self, region: str, *args, **kwargs) -> List[AppBuildPack]:
-        """查询 region 可用的构建工具"""
-        return list(self.buildpacks.filter_by_region(region).filter(*args, **kwargs))
+    def list_available_buildpacks(self, *args, **kwargs) -> List[AppBuildPack]:
+        """查询可用的构建工具"""
+        return list(self.buildpacks.filter_available().filter(*args, **kwargs))

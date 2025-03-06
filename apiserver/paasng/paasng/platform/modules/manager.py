@@ -249,7 +249,7 @@ class ModuleInitializer:
     def bind_runtime_by_labels(self, labels: Dict[str, str], contain_hidden: bool = False):
         """Bind slugbuilder/slugrunner/buildpacks by labels"""
         try:
-            slugbuilder = AppSlugBuilder.objects.select_default_runtime(self.module.region, labels, contain_hidden)
+            slugbuilder = AppSlugBuilder.objects.select_default_runtime(labels, contain_hidden)
             # by designed, name must be consistent between builder and runner
             slugrunner = AppSlugRunner.objects.get(name=slugbuilder.name)
         except ObjectDoesNotExist:

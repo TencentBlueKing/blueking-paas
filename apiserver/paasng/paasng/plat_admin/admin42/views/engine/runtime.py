@@ -71,9 +71,8 @@ class RuntimeStack:
         try:
             return {
                 "builder": AppSlugBuilderSLZ(self.builder).data,
-                "runner": AppSlugRunnerSLZ(
-                    AppSlugRunner.objects.get(name=self.builder.name, region=self.builder.region)
-                ).data,
+                # name 要唯一
+                "runner": AppSlugRunnerSLZ(AppSlugRunner.objects.filter(name=self.builder.name).first()).data,
                 "buildpacks": AppBuildPackSLZ(self.builder.buildpacks, many=True).data,
             }
         except Exception:
@@ -91,13 +90,10 @@ class RuntimeManageView(ApplicationDetailBaseView):
         kwargs["stacks"] = list(
             filter(
                 lambda item: item is not None,
-                [
-                    RuntimeStack(builder).to_dict()
-                    for builder in AppSlugBuilder.objects.filter(region=application.region)
-                ],
+                [RuntimeStack(builder).to_dict() for builder in AppSlugBuilder.objects.all()],
             )
         )
-        kwargs["buildpacks"] = AppBuildPackSLZ(AppBuildPack.objects.filter(region=application.region), many=True).data
+        kwargs["buildpacks"] = AppBuildPackSLZ(AppBuildPack.objects.all(), many=True).data
         return kwargs
 
 

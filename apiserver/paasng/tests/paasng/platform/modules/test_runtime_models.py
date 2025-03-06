@@ -143,7 +143,7 @@ class TestAppImageModel:
             G(model_class, region=settings.DEFAULT_REGION_NAME, **args)
 
         with ctx as expected_name:
-            instance = model_class.objects.select_default_runtime(region=settings.DEFAULT_REGION_NAME, labels=labels)
+            instance = model_class.objects.select_default_runtime(labels=labels)
             assert instance is not None
             assert instance.name == expected_name
 

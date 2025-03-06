@@ -1289,7 +1289,10 @@ export default {
     },
 
     gotoMore() {
-      const docUrl = `${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas_persistent_storage`;
+      const baseDocUrl = this.GLOBAL.LINK.BK_APP_DOC?.endsWith('/')
+        ? this.GLOBAL.LINK.BK_APP_DOC
+        : `${this.GLOBAL.LINK.BK_APP_DOC}/`;
+      const docUrl = `${baseDocUrl}topics/paas/paas_persistent_storage`;
       window.open(docUrl, '_blank');
     },
 

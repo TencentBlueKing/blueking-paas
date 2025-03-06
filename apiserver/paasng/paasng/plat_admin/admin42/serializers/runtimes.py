@@ -18,7 +18,6 @@ from typing import List
 
 from rest_framework import serializers
 
-from paasng.core.region.states import RegionType
 from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.utils.i18n.serializers import TranslatedCharField
@@ -75,6 +74,8 @@ class BuildPackBindInputSLZ(serializers.Serializer):
 
 
 class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
+    # deprecated region field
+    region = serializers.CharField(default="")
     name = serializers.CharField(required=True, max_length=64)
     type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
     image = serializers.CharField(required=True, max_length=256)
@@ -134,10 +135,6 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
         return buildpack_ids
 
 
-class AppSlugRunnerListInputSLZ(serializers.Serializer):
-    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
-
-
 class AppSlugRunnerListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
@@ -150,7 +147,8 @@ class AppSlugRunnerListOutputSLZ(serializers.ModelSerializer):
 
 
 class AppSlugRunnerCreateInputSLZ(serializers.ModelSerializer):
-    region = serializers.ChoiceField(required=True, choices=RegionType.get_choices())
+    # deprecated region field
+    region = serializers.CharField(default="")
     name = serializers.CharField(required=True, max_length=64)
     type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
     image = serializers.CharField(required=True, max_length=256)

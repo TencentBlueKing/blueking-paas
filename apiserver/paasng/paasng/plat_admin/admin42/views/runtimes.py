@@ -21,7 +21,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -32,7 +31,6 @@ from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugBuilderListOutputSLZ,
     AppSlugBuilderUpdateInputSLZ,
     AppSlugRunnerCreateInputSLZ,
-    AppSlugRunnerListInputSLZ,
     AppSlugRunnerListOutputSLZ,
     AppSlugRunnerUpdateInputSLZ,
     BuildPackBindInputSLZ,
@@ -195,7 +193,6 @@ class SlugBuilderManageView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["regions"] = list(get_all_regions().keys())
         context["image_types"] = dict(AppImageType.get_choices())
         context["step_meta_sets"] = {st.id: str(st) for st in StepMetaSet.objects.all()}
         return context
@@ -325,7 +322,6 @@ class AppSlugRunnerManageView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["regions"] = list(get_all_regions().keys())
         context["image_types"] = dict(AppImageType.get_choices())
         return context
 
@@ -337,11 +333,7 @@ class SlugRunnerAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugRunner 列表"""
-        slz = AppSlugRunnerListInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        slugrunners = AppSlugRunner.objects.order_by("is_hidden", "region", "type")
-        if region := slz.validated_data["region"]:
-            slugrunners = slugrunners.filter(region=region)
+        slugrunners = AppSlugRunner.objects.order_by("is_hidden", "type")
         return Response(AppSlugRunnerListOutputSLZ(slugrunners, many=True).data)
 
     def create(self, request):

@@ -217,7 +217,7 @@ class UnsupportedVerDescriptionHandler:
 
     @property
     def app_tenant(self) -> AppTenantConf:
-        raise DescriptionValidationError(self.message)
+        raise DescriptionValidationError("Missing tenant configuration information")
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         raise DescriptionValidationError(self.message)
@@ -234,7 +234,7 @@ class NoVerDescriptionHandler:
 
     @property
     def app_tenant(self) -> AppTenantConf:
-        raise DescriptionValidationError(self.message)
+        raise DescriptionValidationError("Missing tenant configuration information")
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         raise DescriptionValidationError(self.message)

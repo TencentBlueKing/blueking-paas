@@ -36,7 +36,7 @@ def _mock_shim_apis():
 
 
 @pytest.mark.parametrize(
-    ("data", "status_code"),
+    ("data", "status_code", "error_msg"),
     [
         (
             {
@@ -47,6 +47,7 @@ def _mock_shim_apis():
                 "repository": "http://git.example.com/template.git",
             },
             201,
+            "",
         ),
         (
             {
@@ -58,6 +59,7 @@ def _mock_shim_apis():
                 "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
             },
             201,
+            "",
         ),
         (
             {
@@ -68,17 +70,36 @@ def _mock_shim_apis():
                 "repository": "http://git.example.com/template.git",
             },
             400,
+            "id: 输入值不匹配要求的模式",
+        ),
+        # 插件 ID 冲突测试用例
+        (
+            {
+                "id": "duplicate_id",
+                "name": generate_random_string(length=20, chars=string.ascii_lowercase),
+                "template": "foo",
+                "creator": "user1",
+                "repository": "http://git.example.com/template.git",
+            },
+            400,
+            "插件已存在",
         ),
     ],
 )
 @pytest.mark.usefixtures("_mock_shim_apis")
-def test_creat_api(sys_api_client, pd, data, status_code):
+def test_creat_api(sys_api_client, pd, plugin, data, status_code, error_msg):
     url = reverse("sys.api.plugins_center.bk_plugins.create", kwargs={"pd_id": pd.identifier})
     with mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_grade_manager"), mock.patch(
         "paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_user_groups"
     ), mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.add_role_members"):
+        if data["id"] == "duplicate_id":
+            data["id"] = plugin.id
+
         response = sys_api_client.post(url, data=data)
         assert response.status_code == status_code
         if status_code == 201:
             assert response.data["publisher"] == data["creator"]
             assert response.data["repository"] == data["repository"]
+
+        if error_msg:
+            assert error_msg in response.json()["detail"]

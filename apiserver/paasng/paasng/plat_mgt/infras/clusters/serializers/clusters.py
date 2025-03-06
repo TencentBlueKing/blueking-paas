@@ -387,9 +387,6 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         if not isinstance(feature_flags, dict):
             raise ValidationError(_("特性标志必须为字典"))
 
-        if not feature_flags:
-            raise ValidationError(_("特性标志不能为空"))
-
         for k, v in feature_flags.items():
             try:
                 ClusterFeatureFlag(k)

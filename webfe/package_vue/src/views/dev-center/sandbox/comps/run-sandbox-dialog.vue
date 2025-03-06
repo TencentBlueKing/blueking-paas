@@ -34,14 +34,6 @@
           <span>
             {{ $t('由于沙箱环境复用了预发布环境的增强服务，启用 Celery 等后台进程可能会影响预发布环境的任务执行。') }}
           </span>
-          <!-- <bk-button
-            :theme="'primary'"
-            text
-            size="small"
-            ext-cls="alert-btn-cls"
-          >
-            {{ $t('如何修改沙箱启动进程') }}
-          </bk-button> -->
         </div>
       </bk-alert>
       <div class="process-box">

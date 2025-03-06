@@ -242,7 +242,5 @@ def get_metadata_reader(
         return PackageMetaDataReader(module, source_dir)
     elif source_origin == SourceOrigin.IMAGE_REGISTRY:
         raise NotImplementedError("IMAGE_REGISTRY doesn't support read AppDescription")
-    elif source_origin == SourceOrigin.SCENE:
-        return VCSMetaDataReader(get_repo_controller(module, operator))
     else:
         raise NotImplementedError

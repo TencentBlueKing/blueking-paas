@@ -39,6 +39,8 @@ from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTo
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 from paasng.utils.notifier import get_notification_backend
@@ -148,14 +150,24 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
+
         try:
-            return Response(
-                data=backend.fetch_token(
-                    username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
-                )
+            data = backend.fetch_token(
+                username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
             )
         except BKAppOauthError as e:
             return Response(status=e.response_code, data={"message": e.error_message})
+        # 新建 token 成功后添加审计记录
+        add_app_audit_record(
+            app_code=app_code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ACCESS_TOKEN,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data=data)
 
     @swagger_auto_schema(request_body=OAuthRefreshTokenSLZ)
     def refresh_app_token(self, request, app_code: str, env_name: str):
@@ -171,9 +183,20 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = slz.validated_data
 
         try:
-            return Response(data=backend.refresh_token(refresh_token=data["refresh_token"]))
+            data = backend.refresh_token(refresh_token=data["refresh_token"])
         except BKAppOauthError as e:
             return Response(status=e.response_code, data={"message": e.error_message})
+        # 刷新 token 成功后添加审计记录
+        add_app_audit_record(
+            app_code=app_code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.REFRESH,
+            target=OperationTarget.ACCESS_TOKEN,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data=data)
 
     def validate_app_token(self, request, app_code: str, env_name: str):
         application = self.get_application()
@@ -241,7 +264,7 @@ class Oauth2BackendsViewSet(viewsets.ViewSet):
         scope = token_params.pop("scope", None)
         try:
             Oauth2TokenHolder.objects.update_or_create(
-                provider=backend_name, user=user_profile, region="ieod", scope=scope, defaults=token_params
+                provider=backend_name, user=user_profile, scope=scope, defaults=token_params
             )
         except Exception:
             msg = f"failed to save access token(from {backend}) to {user_profile.username}"

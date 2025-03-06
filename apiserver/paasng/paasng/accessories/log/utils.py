@@ -42,15 +42,6 @@ logger = logging.getLogger(__name__)
 # 由于 ELK 方案是所有应用共用一个 ES index, 存在 mappings 互相干扰的问题
 # 因此需要将保留字段同名的字段优先级提高, 避免在 ELK 方案中无法正常过滤(ELK 方案在 logstash 中有清洗保留字段的逻辑)
 RESERVED_FIELDS = {
-    # TODO: 移除 region 字段
-    # 理由: region 字段并未使用
-    "region": [
-        "region",
-        "kubernetes.labels.region",
-        "kubernetes.labels.bkapp_paas_bk_tencent_com_region",
-        "__ext.labels.region",
-        "__ext.labels.bkapp_paas_bk_tencent_com_region",
-    ],
     "app_code": [
         "app_code",
         "kubernetes.labels.bkapp_paas_bk_tencent_com_code",

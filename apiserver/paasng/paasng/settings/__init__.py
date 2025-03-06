@@ -1322,13 +1322,6 @@ APP_DOCKER_REGISTRY_USERNAME = settings.get("APP_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 
-# 是否跳过为普通应用注入内置的镜像仓库凭证
-# Q: 为什么需要这么一个配置？
-# A: 有普通应用需要部署到独立集群（非平台管理），为避免内置凭证泄露，需要关闭内置凭证注入
-# （普通应用本身构建，部署不依赖镜像凭证，主要依赖制品库存储，拉取 slug 包，而 slug-runner / slug-builder 镜像本身就是公开的）
-# FIXME 注意：这个不是长远之计，后续可能会有云原生应用需要部署到独立集群（或者多租户相关需求），后续需要使用更好的方案替代该配置
-INJECT_BUILTIN_IMAGE_CREDENTIAL_FOR_DEFAULT_APP = settings.get("INJECT_BUILTIN_IMAGE_CREDENTIAL_FOR_DEFAULT_APP", True)
-
 # ------------------
 # bk-lesscode 相关配置
 # ------------------

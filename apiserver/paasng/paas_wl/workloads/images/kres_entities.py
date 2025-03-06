@@ -21,8 +21,9 @@ from typing import Dict, List
 
 from django.conf import settings
 
-from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.constants import ClusterAnnotationKey
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -56,11 +57,9 @@ class ImageCredentials(AppEntity):
             if not settings.APP_DOCKER_REGISTRY_HOST:
                 return False
 
-            if app.type == WlAppType.CLOUD_NATIVE:
-                return True
-
-            # 如果已指定不要为普通应用注入内置镜像凭证，则需检查后跳过
-            return settings.INJECT_BUILTIN_IMAGE_CREDENTIAL_FOR_DEFAULT_APP
+            # 明确说明当前集群不注入内置镜像凭证的，需要跳过（如：用户托管的集群的情况）
+            annos = get_cluster_by_app(app).annotations
+            return annos.get(ClusterAnnotationKey.SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL) != "true"
 
         if should_inject_builtin_image_credential():
             credentials.append(

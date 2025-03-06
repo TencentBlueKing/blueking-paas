@@ -78,6 +78,9 @@ class ClusterAnnotationKey(StrStructuredEnum):
     BCS_PROJECT_ID = EnumField("bcs_project_id", label=_("BCS 项目 ID"))
     BCS_CLUSTER_ID = EnumField("bcs_cluster_id", label=_("BCS 集群 ID"))
     BK_BIZ_ID = EnumField("bk_biz_id", label=_("蓝鲸业务 ID"))
+    SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL = EnumField(
+        "skip_inject_builtin_image_credential", label=_("跳过内置镜像凭证注入")
+    )
 
 
 class ClusterAllocationPolicyType(StrStructuredEnum):

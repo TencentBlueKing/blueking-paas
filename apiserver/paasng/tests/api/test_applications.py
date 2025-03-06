@@ -392,7 +392,7 @@ class TestApplicationUpdate:
                 spec_version=2,
                 app={"bk_app_code": random_name, "bk_app_name": random_name},
                 modules={random_name: {"is_default": True, "language": "python"}},
-                tenant={"app_tenant_mode": "test_mode", "app_tenant_id": "", "tenant_id": "test_tenant_id"},
+                tenant={"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": "test_tenant_id"},
             )
         ).handle_app(bk_user)
         app = Application.objects.get(code=random_name)

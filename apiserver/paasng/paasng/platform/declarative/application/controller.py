@@ -44,7 +44,7 @@ from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.fields import AppRegionField
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
-    ApplicationTenant,
+    AppTenantConf,
     MarketDesc,
     ModuleDesc,
     ServiceSpec,
@@ -70,19 +70,20 @@ class AppDeclarativeController:
     source_origin = SourceOrigin.S_MART
     update_allowed_fields = [AppRegionField]
 
-    def __init__(self, user: User, source_origin: Optional[SourceOrigin] = None):
+    def __init__(self, user: User, app_tenant_conf: AppTenantConf, source_origin: Optional[SourceOrigin] = None):
         if source_origin:
             self.source_origin = source_origin
         self.user = user
+        self.app_tenant_conf = app_tenant_conf
 
-    def perform_action(self, desc: ApplicationDesc, app_tenant: ApplicationTenant) -> Application:
+    def perform_action(self, desc: ApplicationDesc) -> Application:
         if not desc.instance_existed:
-            return self.perform_create(desc, app_tenant)
+            return self.perform_create(desc)
         else:
             return self.perform_update(desc)
 
     @atomic
-    def perform_create(self, desc: ApplicationDesc, app_tenant: ApplicationTenant) -> Application:
+    def perform_create(self, desc: ApplicationDesc) -> Application:
         """Create application by given input data"""
         allowed_regions = self.get_allowed_regions()
         if not desc.region:
@@ -108,9 +109,9 @@ class AppDeclarativeController:
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
             # 添加租户信息
-            app_tenant_mode=app_tenant.app_tenant_mode,
-            app_tenant_id=app_tenant.app_tenant_id,
-            tenant_id=app_tenant.tenant_id,
+            app_tenant_mode=self.app_tenant_conf.app_tenant_mode,
+            app_tenant_id=self.app_tenant_conf.app_tenant_id,
+            tenant_id=self.app_tenant_conf.tenant_id,
         )
         create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
         self.sync_modules(application, desc.modules)

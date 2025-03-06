@@ -24,6 +24,7 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.models import Cluster
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.constants import AppDescPluginType
@@ -40,7 +41,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 def get_desc_handler(yaml_content: str) -> DescriptionHandler:
     meta_info = yaml.safe_load(yaml_content)
-    meta_info["tenant"] = {"app_tenant_mode": "test_mode", "app_tenant_id": "", "tenant_id": "test_id"}
+    meta_info["tenant"] = {"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": "test_id"}
     handler = _get_desc_handler(meta_info)
     assert isinstance(handler, AppDescriptionHandler)
     return handler

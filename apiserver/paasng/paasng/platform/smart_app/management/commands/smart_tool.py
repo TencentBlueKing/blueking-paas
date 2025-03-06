@@ -82,7 +82,8 @@ class Command(BaseCommand):
             required=False,
             type=str,
             default=AppTenantMode.GLOBAL,
-            help="租户类型",
+            choices=AppTenantMode.get_values(),
+            help="租户类型，可选值：global, single",
         )
         parser.add_argument(
             "--app_tenant_id", dest="app_tenant_id", required=False, type=str, default="", help="租户ID"
@@ -90,7 +91,15 @@ class Command(BaseCommand):
 
     @handle_error
     def handle(self, file_: str, operator, app_tenant_mode, app_tenant_id, *args, **options):
-        breakpoint()
+        # 参数有效性校验
+        if app_tenant_mode == AppTenantMode.GLOBAL:
+            if app_tenant_id:
+                raise ValueError(
+                    f"当 app_tenant_mode 为 {AppTenantMode.GLOBAL} 时，app_tenant_id 必须为空，当前值为 {app_tenant_id}"
+                )
+        elif not app_tenant_id:
+            raise ValueError(f"当 app_tenant_mode 为 {app_tenant_mode} 时，app_tenant_id 不能为空")
+
         filepath = Path(file_)
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 

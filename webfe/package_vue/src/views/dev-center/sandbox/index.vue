@@ -22,6 +22,7 @@
       </div>
       <bk-button
         v-if="isSandboxReady"
+        id="tour-stpe1"
         :theme="'primary'"
         @click="showRequestDialog"
       >
@@ -78,6 +79,8 @@
               slot="main"
               class="iframe-box"
             >
+              <!-- 密码输入框引导占位 -->
+              <div id="tour-stpe2"></div>
               <iframe
                 v-if="isSandboxReady"
                 ref="iframeRef"
@@ -104,7 +107,6 @@
               :buildLog="buildLog"
               :runLog="runLog"
               :loading="isLogsLoading"
-              :env="env"
               :is-load-complete="isSandboxReady"
               :is-rerun="isProcessRunning || isBuildSuccess"
               :btn-loading="isRunNowLoading"
@@ -150,6 +152,8 @@ import { bus } from '@/common/bus';
 import axios from 'axios';
 import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
 import SubmitCodeDialog from './comps/submit-code-dialog.vue';
+import Driver from 'driver.js';
+import 'driver.js/dist/driver.css';
 
 export default {
   name: 'Sandbox',
@@ -193,6 +197,8 @@ export default {
         tree: {},
       },
       isShowTopAlert: true,
+      // 是否处于引导中
+      isInGuidance: false,
     };
   },
   computed: {
@@ -227,6 +233,15 @@ export default {
     // 是否显示运行状态
     isShowRunningStatus() {
       return !!(this.buildStatus && ['Failed', 'Success'].includes(this.buildStatus));
+    },
+  },
+  watch: {
+    isSandboxReady(newVal) {
+      if (newVal) {
+        setTimeout(() => {
+          this.ensureUserGuidance();
+        }, 1500);
+      }
     },
   },
   created() {
@@ -275,6 +290,8 @@ export default {
       this.back();
     },
     showRequestDialog() {
+      // 引导中不允许操作
+      if (this.isInGuidance) return;
       this.isDialogVisible = true;
     },
     rightTabChange(name) {
@@ -334,7 +351,7 @@ export default {
         if (res.status !== 'ready') {
           return;
         }
-        
+
         // 后台报告沙箱就绪后，检查网络是否可达（后台 / Web端链路不同，不一定即时可达，以检测结果为准）
         this.sandboxData = res;
         this.sandboxAccessible = await this.getSandboxAccessible();
@@ -391,12 +408,12 @@ export default {
     async getSandboxAccessible() {
       try {
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}healthz`);
-        const headers = {Authorization: `Bearer ${this.sandboxData.devserver_token}`}
+        const headers = { Authorization: `Bearer ${this.sandboxData.devserver_token}` };
 
-        const response = await axios({method: 'get', url, headers, timeout: 5000});
-        return response.data.status === 'active'
+        const response = await axios({ method: 'get', url, headers, timeout: 5000 });
+        return response.data.status === 'active';
       } catch (e) {
-        console.log("dev sandbox status ready but inaccessible!", e)
+        console.log('dev sandbox status ready but inaccessible!', e);
       }
 
       return false;
@@ -436,6 +453,7 @@ export default {
     },
     // 运行沙箱环境二次确认弹窗
     showRunSandboxDialog() {
+      if (this.isInGuidance) return;
       this.isRunSandboxVisible = true;
       this.getDevServerProcesses();
     },
@@ -600,10 +618,127 @@ export default {
     alertClose() {
       this.isShowTopAlert = false;
     },
+    ensureUserGuidance() {
+      const guideFlagKey = 'bkSandboxGuide';
+      // 检查 localStorage 中是否有引导标志
+      const hasGuided = localStorage.getItem(guideFlagKey);
+      if (!hasGuided) {
+        // 引导
+        this.startTour();
+        localStorage.setItem(guideFlagKey, 'true');
+      } else {
+        this.isInGuidance = false;
+      }
+    },
+    // 开始引导
+    startTour() {
+      this.isInGuidance = true;
+      const driverObj = Driver.driver({
+        popoverClass: 'sandbox-driverjs-cls',
+        nextBtnText: this.$t('下一步'),
+        doneBtnText: this.$t('完成'),
+        prevBtnText: '',
+        showButtons: ['next'],
+        allowClose: true,
+        progressText: '{{current}}/{{total}}',
+        onPopoverRender: (popover, { config, state }) => {
+          const isLastStep = state.activeIndex === config.steps.length - 1;
+          const firstButton = document.createElement('button');
+          if (isLastStep) {
+            firstButton.className = 'hide';
+          }
+          firstButton.innerText = this.$t('跳过');
+          const nextButton = popover.footerButtons.querySelector('.driver-popover-next-btn');
+          if (nextButton) {
+            popover.footerButtons.insertBefore(firstButton, nextButton);
+          } else {
+            popover.footerButtons.appendChild(firstButton);
+          }
+          firstButton.addEventListener('click', () => {
+            driverObj.destroy();
+          });
+          // 动态更新标题中的步骤信息
+          const stepInfo = `${state.activeIndex + 1}/${config.steps.length}`;
+          const originalTitle = popover.title.innerText;
+          popover.title.innerText = `${originalTitle} (${stepInfo})`;
+        },
+        onDestroyed: () => {
+          // 当引导结束
+          this.isInGuidance = false;
+        },
+        steps: [
+          {
+            element: '#tour-stpe1',
+            popover: {
+              title: this.$t('获取沙箱密码'),
+              description: this.$t('获取密码用于进入在线 IDE。'),
+              side: 'bottom',
+              align: 'start',
+            },
+          },
+          {
+            element: '#tour-stpe2',
+            popover: {
+              title: this.$t('输入密码'),
+              description: this.$t('输入密码后进入在线 IDE，可在线修改代码。'),
+              side: 'bottom',
+              align: 'start',
+            },
+          },
+          {
+            element: '#tour-stpe3',
+            popover: {
+              title: this.$t('立即运行'),
+              description: this.$t('在线修改代码后，点击立即运行即可通过浏览器访问。'),
+              side: 'bottom',
+              align: 'start',
+            },
+          },
+        ],
+      });
+      driverObj.drive();
+    },
   },
 };
 </script>
-
+<style lang="scss">
+.sandbox-driverjs-cls {
+  .driver-popover-title {
+    font-weight: 700;
+    font-size: 12px;
+    color: #313238;
+  }
+  .driver-popover-description {
+    font-size: 12px;
+    color: #313238;
+  }
+  .driver-popover-footer {
+    margin-top: 12px;
+    .driver-popover-navigation-btns {
+      button {
+        color: #3a84ff;
+        font-size: 12px;
+        text-shadow: none;
+        border: none;
+        background-color: #fff;
+        &:hover {
+          background-color: #fff;
+        }
+      }
+      .driver-popover-next-btn {
+        font-size: 12px;
+        color: #ffffff;
+        background: #3a84ff;
+        border-radius: 2px;
+        text-shadow: none;
+        &:hover {
+          background-color: #3a84ff;
+        }
+      }
+    }
+  }
+}
+</style>
 <style lang="scss" scoped>
 .footer-tools-box {
   position: relative;
@@ -718,14 +853,25 @@ export default {
         }
       }
       .iframe-box {
+        position: relative;
         height: 100%;
         iframe#iframe-embed {
+          position: relative;
           width: 100%;
           height: 100%;
           /* resize seems to inherit in at least Firefox */
           -webkit-resize: none;
           -moz-resize: none;
           resize: none;
+          z-index: 9;
+        }
+        #tour-stpe2 {
+          position: absolute;
+          width: 650px;
+          height: 250px;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
         }
       }
       .iframe-loading {

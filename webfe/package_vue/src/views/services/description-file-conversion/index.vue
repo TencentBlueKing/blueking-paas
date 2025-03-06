@@ -186,6 +186,10 @@ export default {
     // 本地yaml文件上传
     uploadHandle(data) {
       this.sourceCode = data;
+      this.$paasMessage({
+        theme: 'success',
+        message: this.$t('上传成功！'),
+      });
     },
   },
 };

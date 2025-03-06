@@ -117,12 +117,6 @@ class SlugbuilderBinder:
     @transaction.atomic
     def bind_buildpack(self, buildpack: AppBuildPack):
         """绑定 slugbuilder 和 buildpack"""
-        if self.slugbuilder.region != buildpack.region:
-            raise BindError(
-                f"region must be consistent between "
-                f"slugbuilder({self.slugbuilder.full_image}) and buildpack({buildpack.pk})"
-            )
-
         self.slugbuilder.buildpacks.add(buildpack)
 
     @transaction.atomic
@@ -132,12 +126,6 @@ class SlugbuilderBinder:
 
     def set_buildpacks(self, buildpacks: List[AppBuildPack]):
         """将 slugbuilder 绑定的 buildpack 设置成指定的值"""
-        for buildpack in buildpacks:
-            if self.slugbuilder.region != buildpack.region:
-                raise BindError(
-                    f"region must be consistent between "
-                    f"slugbuilder({self.slugbuilder.full_image}) and buildpack({buildpack.pk})"
-                )
         self.slugbuilder.buildpacks.set(buildpacks, clear=True)
 
 

@@ -29,7 +29,6 @@ from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugBuilderBindInputSLZ,
     AppSlugBuilderCreateInputSLZ,
-    AppSlugBuilderListInputSLZ,
     AppSlugBuilderListOutputSLZ,
     AppSlugBuilderUpdateInputSLZ,
     AppSlugRunnerCreateInputSLZ,
@@ -38,7 +37,6 @@ from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugRunnerUpdateInputSLZ,
     BuildPackBindInputSLZ,
     BuildPackCreateInputSLZ,
-    BuildPackListInputSLZ,
     BuildPackListOutputSLZ,
     BuildPackUpdateInputSLZ,
 )
@@ -56,7 +54,6 @@ class BuildPackManageView(GenericTemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["regions"] = list(get_all_regions().keys())
         context["buildpack_types"] = dict(BuildPackType.get_choices())
         return context
 
@@ -68,11 +65,7 @@ class BuildPackAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取所有 BuildPack 列表和详细信息"""
-        slz = BuildPackListInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        buildpacks = AppBuildPack.objects.order_by("is_hidden", "region", "type", "language")
-        if region := slz.validated_data["region"]:
-            buildpacks = buildpacks.filter(region=region)
+        buildpacks = AppBuildPack.objects.order_by("is_hidden", "type", "language")
         return Response(BuildPackListOutputSLZ(buildpacks, many=True).data)
 
     def get_bound_builders(self, request, pk):
@@ -81,10 +74,8 @@ class BuildPackAPIViewSet(GenericViewSet):
         bound_slugbuilders = buildpack.slugbuilders.all()
         # TAR 类型的 BuildPack 只能绑定 legacy 类型 slugbuilder，OCI 类型 BuildPack 只能绑定 cnb 类型 slugbuilder
         buildpack_builder_type_map = BuildPackType.get_buildpack_builder_type_map()
-        unbound_slugbuilders = (
-            AppSlugBuilder.objects.filter(type=buildpack_builder_type_map[buildpack.type])
-            .filter(region=buildpack.region)
-            .exclude(id__in=bound_slugbuilders)
+        unbound_slugbuilders = AppSlugBuilder.objects.filter(type=buildpack_builder_type_map[buildpack.type]).exclude(
+            id__in=bound_slugbuilders
         )
 
         return Response(
@@ -99,7 +90,8 @@ class BuildPackAPIViewSet(GenericViewSet):
         """设置被哪些 SlugBuilder 绑定"""
         buildpack = AppBuildPack.objects.get(pk=pk)
         slz = BuildPackBindInputSLZ(
-            data=request.data, context={"buildpack_type": buildpack.type, "buildpack_region": buildpack.region}
+            data=request.data,
+            context={"buildpack_type": buildpack.type},
         )
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -219,11 +211,9 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         bound_buildpacks = slugbuilder.buildpacks.all()
         builder_buildpack_type_map = AppImageType.get_builder_buildpack_type_map()
-        unbound_buildpacks = (
-            AppBuildPack.objects.filter(type__in=builder_buildpack_type_map[slugbuilder.type])
-            .filter(region=slugbuilder.region)
-            .exclude(id__in=bound_buildpacks)
-        )
+        unbound_buildpacks = AppBuildPack.objects.filter(
+            type__in=builder_buildpack_type_map[slugbuilder.type]
+        ).exclude(id__in=bound_buildpacks)
 
         return Response(
             {
@@ -240,9 +230,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             type=DataType.RAW_DATA,
             data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in slugbuilder.buildpacks.all()]},
         )
-        slz = AppSlugBuilderBindInputSLZ(
-            data=request.data, context={"slugbuilder_type": slugbuilder.type, "slugbuilder_region": slugbuilder.region}
-        )
+        slz = AppSlugBuilderBindInputSLZ(data=request.data, context={"slugbuilder_type": slugbuilder.type})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -265,11 +253,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
 
     def list(self, request):
         """获取 SlugBuilder 列表"""
-        slz = AppSlugBuilderListInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-        slugbuilders = AppSlugBuilder.objects.order_by("is_hidden", "region", "type")
-        if region := slz.validated_data["region"]:
-            slugbuilders = slugbuilders.filter(region=region)
+        slugbuilders = AppSlugBuilder.objects.order_by("is_hidden", "type")
         return Response(AppSlugBuilderListOutputSLZ(slugbuilders, many=True).data)
 
     def create(self, request):

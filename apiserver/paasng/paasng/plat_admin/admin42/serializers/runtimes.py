@@ -25,7 +25,8 @@ from paasng.utils.i18n.serializers import TranslatedCharField
 
 
 class BuildPackCreateInputSLZ(serializers.ModelSerializer):
-    region = serializers.ChoiceField(required=True, choices=RegionType.get_choices())
+    # deprecated region field
+    region = serializers.CharField(default="")
     name = serializers.CharField(required=True, max_length=64)
     language = serializers.CharField(required=True, max_length=32)
     type = serializers.ChoiceField(required=True, choices=BuildPackType.get_choices())
@@ -43,10 +44,6 @@ class BuildPackUpdateInputSLZ(BuildPackCreateInputSLZ):
     pass
 
 
-class BuildPackListInputSLZ(serializers.Serializer):
-    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
-
-
 class BuildPackListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
@@ -60,7 +57,7 @@ class BuildPackListOutputSLZ(serializers.ModelSerializer):
 
 class BuildPackBindInputSLZ(serializers.Serializer):
     """用于给单个 Buildpack 绑定 slugbuilder 列表
-    需要传入 context["buildpack_type"] 和 context["buildpack_region"] 用于验证 slugbuilder 类型
+    需要传入 context["buildpack_type"] 用于验证 slugbuilder 类型
     """
 
     slugbuilder_ids = serializers.ListField(child=serializers.CharField())
@@ -74,18 +71,10 @@ class BuildPackBindInputSLZ(serializers.Serializer):
             if builder_type != buildpack_builder_type_map[self.context["buildpack_type"]]:
                 raise serializers.ValidationError(f"builder type ({builder_type}): does not match buildpack type")
 
-        # 检测 region 是否匹配
-        builder_regions = {sb.region for sb in AppSlugBuilder.objects.filter(id__in=slugbuilder_ids)}
-        if len(builder_regions) > 1:
-            raise serializers.ValidationError("slugbuilder region must be same")
-        if len(builder_regions) == 1 and builder_regions.pop() != self.context["buildpack_region"]:
-            raise serializers.ValidationError("slugbuilder region does not match buildpack region")
-
         return slugbuilder_ids
 
 
 class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
-    region = serializers.ChoiceField(required=True, choices=RegionType.get_choices())
     name = serializers.CharField(required=True, max_length=64)
     type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
     image = serializers.CharField(required=True, max_length=256)
@@ -112,10 +101,6 @@ class AppSlugBuilderUpdateInputSLZ(AppSlugBuilderCreateInputSLZ):
         return name
 
 
-class AppSlugBuilderListInputSLZ(serializers.Serializer):
-    region = serializers.ChoiceField(default=None, required=False, allow_null=True, choices=RegionType.get_choices())
-
-
 class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
@@ -130,7 +115,7 @@ class AppSlugBuilderListOutputSLZ(serializers.ModelSerializer):
 
 class AppSlugBuilderBindInputSLZ(serializers.Serializer):
     """用于给 slugbuilder 绑定 buildpack 列表
-    需要传入 context["slugbuilder_type"] 和 context["slugbuilder_region"] 用于验证 buildpack 类型
+    需要传入 context["slugbuilder_type"] 用于验证 buildpack 类型
     """
 
     buildpack_ids = serializers.ListField(child=serializers.CharField())
@@ -145,13 +130,6 @@ class AppSlugBuilderBindInputSLZ(serializers.Serializer):
                 raise serializers.ValidationError(
                     f"buildpack type ({buildpack_type}): does not match slugbuilder type"
                 )
-
-        # 检测 region 是否匹配
-        buildpack_regions = {bp.region for bp in AppBuildPack.objects.filter(id__in=buildpack_ids)}
-        if len(buildpack_regions) > 1:
-            raise serializers.ValidationError("buildpack region must be same")
-        if len(buildpack_regions) == 1 and buildpack_regions.pop() != self.context["slugbuilder_region"]:
-            raise serializers.ValidationError("buildpack region does not match slugbuilder region")
 
         return buildpack_ids
 

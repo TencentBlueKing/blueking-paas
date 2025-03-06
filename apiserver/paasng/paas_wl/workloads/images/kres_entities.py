@@ -21,6 +21,7 @@ from typing import Dict, List
 
 from django.conf import settings
 
+from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
@@ -50,8 +51,18 @@ class ImageCredentials(AppEntity):
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
-        # inject builtin credential for APP_DOCKER_REGISTRY_HOST
-        if settings.APP_DOCKER_REGISTRY_HOST:
+
+        def should_inject_builtin_image_credential():
+            if not settings.APP_DOCKER_REGISTRY_HOST:
+                return False
+
+            if app.type == WlAppType.CLOUD_NATIVE:
+                return True
+
+            # 如果已指定不要为普通应用注入内置镜像凭证，则需检查后跳过
+            return settings.INJECT_BUILTIN_IMAGE_CREDENTIAL_FOR_DEFAULT_APP
+
+        if should_inject_builtin_image_credential():
             credentials.append(
                 ImageCredential(
                     registry=settings.APP_DOCKER_REGISTRY_HOST,
@@ -59,6 +70,7 @@ class ImageCredentials(AppEntity):
                     password=settings.APP_DOCKER_REGISTRY_PASSWORD,
                 )
             )
+
         return ImageCredentials(
             app=app,
             name=make_image_pull_secret_name(app),

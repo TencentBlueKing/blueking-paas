@@ -1322,7 +1322,6 @@ APP_DOCKER_REGISTRY_USERNAME = settings.get("APP_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 
-
 # ------------------
 # bk-lesscode 相关配置
 # ------------------

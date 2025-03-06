@@ -32,7 +32,7 @@ def forwards_func(apps, schema_editor):
 
         def get_tag_objs():
             for i, n in enumerate(["运维工具", "监控告警", "配置管理", "开发工具", "企业IT", "办公应用", "其它"]):
-                yield Tag(id=i + 1, name=n, region="default")
+                yield Tag(id=i + 1, name=n)
 
         Tag.objects.bulk_create(list(get_tag_objs()))
 

@@ -28,7 +28,6 @@ class ProtectedResource:
 
     def __init__(self):
         self.roles = {}
-        self.binded_obj_class = None
         self._permissions = OrderedDict()
         for codename, description in self.permissions:
             self._permissions[codename] = Permission(codename, description)

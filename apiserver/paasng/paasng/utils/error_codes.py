@@ -146,9 +146,6 @@ class ErrorCodes:
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
-    # 场景模板（Scene SaaS）相关
-    SCENE_TMPL_NOT_FOUND = ErrorCode(_("指定的场景模板不存在"))
-    SCENE_TMPL_DESC_ERROR = ErrorCode(_("场景模板应用描述文件异常"))
 
     # lesscode app 相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))
@@ -185,6 +182,8 @@ class ErrorCodes:
     IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
 
     # 应用集群
+    CANNOT_CREATE_CLUSTER = ErrorCode(_("无法创建应用集群"))
+    CANNOT_UPDATE_CLUSTER = ErrorCode(_("无法更新应用集群"))
     CANNOT_DELETE_CLUSTER = ErrorCode(_("无法删除应用集群"))
     # 集群组件
     CANNOT_UPDATE_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))

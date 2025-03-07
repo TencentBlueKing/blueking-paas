@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from typing import Any, Dict
+from unittest import mock
 from unittest.mock import patch
 
 import cattrs
@@ -30,11 +31,12 @@ from paas_wl.infras.cluster.constants import (
     ClusterAllocationPolicyType,
     ClusterFeatureFlag,
 )
-from paas_wl.infras.cluster.entities import IngressConfig
+from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.utils.basic import generate_random_string
 
@@ -133,8 +135,10 @@ class TestCreateCluster:
     """创建集群"""
 
     @pytest.fixture(autouse=True)
-    def _patch_settings(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+    def _patch(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
+            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        ):
             yield
 
     def test_create_cluster_from_bcs(self, plat_mgt_api_client):
@@ -301,6 +305,13 @@ class TestCreateCluster:
 class TestUpdateCluster:
     """更新集群"""
 
+    @pytest.fixture(autouse=True)
+    def _patch(self):
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
+            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        ):
+            yield
+
     def test_update_scene_cluster_access(self, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群接入（第一步场景）"""
         data = {
@@ -317,6 +328,14 @@ class TestUpdateCluster:
             "ca": "MTIzNDU2Cg==",
             "cert": "MTIzNDU2Cg==",
             "key": "MTIzNDU2Cg==",
+            "app_address_type": "subdomain",
+            "app_domains": [
+                {
+                    "https_enabled": True,
+                    "name": "bkapps.example.com",
+                    "reserved": True,
+                }
+            ],
             "container_log_dir": "/var/lib/containerd",
             "access_entry_ip": "127.0.0.11",
             "elastic_search_config": {
@@ -340,6 +359,10 @@ class TestUpdateCluster:
         init_default_cluster.refresh_from_db()
         assert init_default_cluster.token_value is None
         assert init_default_cluster.container_log_dir == "/var/lib/containerd"
+        assert init_default_cluster.exposed_url_type == ExposedURLType.SUBDOMAIN
+        assert init_default_cluster.ingress_config.app_root_domains == [
+            Domain(name="bkapps.example.com", https_enabled=True, reserved=True)
+        ]
         assert init_default_cluster.ingress_config.frontend_ingress_ip == "127.0.0.11"
         # 不提交 / 提交空值不会覆盖原来数据库中的值
         assert init_default_cluster.elastic_search_config.password == "admin"
@@ -542,7 +565,10 @@ class TestRetrieveClusterUsage:
                             AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
                         },
                     },
-                }
+                },
+                {
+                    "policy": {"env_specific": False, "clusters": [init_system_cluster.name]},
+                },
             ],
         }
         # 使用创建 API 初始化集群分配策略

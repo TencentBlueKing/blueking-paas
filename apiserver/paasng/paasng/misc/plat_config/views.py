@@ -46,6 +46,8 @@ class FrontendFeatureViewSet(ViewSet):
             "CNATIVE_MGRLEGACY": settings.FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY,
             # 应用令牌，用于 APP 调用用户态的云 API
             "APP_ACCESS_TOKEN": settings.FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN,
+            # 是否显示沙箱开发
+            "DEV_SANDBOX": settings.FE_FEATURE_SETTINGS_DEV_SANDBOX,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {
@@ -67,5 +69,7 @@ class FrontendFeatureViewSet(ViewSet):
             "WEB_CONSOLE": settings.ENABLE_BCS,
             # 是否能创建 LessCode 应用
             "BK_LESSCODE_APP": settings.ENABLE_BK_LESSCODE,
+            # 开启了多租户，则应用不能申请 ESB API
+            "ESB_API": not settings.ENABLE_MULTI_TENANT_MODE,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

@@ -34,6 +34,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngre
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 
 if TYPE_CHECKING:
@@ -182,6 +183,7 @@ class DevWlAppConstructor:
         setattr(dev_wl_app, "namespace", self._make_namespace_name())
         setattr(dev_wl_app, "module_name", self.module.name)
         setattr(dev_wl_app, "paas_app_code", self.app.code)
+        setattr(dev_wl_app, "environment", AppEnvironment.STAGING)
 
         return dev_wl_app
 

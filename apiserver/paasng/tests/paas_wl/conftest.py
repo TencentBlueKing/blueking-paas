@@ -32,7 +32,6 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.bk_app.applications.models import Build, BuildProcess, WlApp
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan, initialize_default_proc_spec_plans
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.utils import get_default_cluster_by_region
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
@@ -85,7 +84,8 @@ def crds_is_configured(django_db_setup, django_db_blocker):
     :return: Whether the CRDs are successfully configured
     """
     with django_db_blocker.unblock():
-        client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+        cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        client = get_client_by_cluster_name(cluster.name)
         version = VersionApi(client).get_code()
 
     # Minimal required version is 1.17
@@ -129,7 +129,8 @@ def _skip_when_no_crds(request, crds_is_configured):
 
 @pytest.fixture()
 def k8s_client(settings):
-    client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+    cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+    client = get_client_by_cluster_name(cluster.name)
     return client
 
 
@@ -141,7 +142,8 @@ def k8s_version(k8s_client):
 @pytest.fixture(scope="module")
 def namespace_maker(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        k8s_client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+        cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        k8s_client = get_client_by_cluster_name(cluster.name)
         k8s_version = VersionApi(k8s_client).get_code()
 
     class Maker:

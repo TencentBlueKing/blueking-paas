@@ -59,6 +59,7 @@ from environ import Env
 from moby_distribution.registry.utils import parse_image
 
 from .utils import (
+    cache_redis_sentinel_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
@@ -177,7 +178,6 @@ INSTALLED_APPS = [
     "paasng.infras.iam.members",
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
-    "paasng.platform.scene_app",
     "paasng.platform.smart_app",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
@@ -562,7 +562,13 @@ DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
 elif REDIS_URL:
-    CACHES = {"default": Env.cache_url_config(REDIS_URL)}
+    CACHES = {
+        "default": (
+            cache_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
+            if is_redis_sentinel_backend(REDIS_URL)
+            else Env.cache_url_config(REDIS_URL)
+        )
+    }
 else:
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.filebased.FileBasedCache", "LOCATION": "/tmp/django_cache"}
@@ -706,16 +712,13 @@ METRIC_CLIENT_TOKEN_DICT = settings.get("METRIC_CLIENT_TOKEN_DICT", {})
 # 是否默认允许创建 Smart 应用
 IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT", True)
 
-# 是否默认允许创建云原生应用
-IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT", False)
-
-# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
 # 新建的 lesscode 应用是否为云原生应用
 LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
 
-# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
+# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用
 SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
 
 # 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的
@@ -1316,7 +1319,6 @@ APP_DOCKER_REGISTRY_USERNAME = settings.get("APP_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 
-
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
@@ -1521,7 +1523,9 @@ FE_FEATURE_SETTINGS_ANALYTICS = settings.get("FE_FEATURE_SETTINGS_ANALYTICS", Fa
 FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO = settings.get("FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO", False)
 # 是否开启应用迁移相关功能
 FE_FEATURE_SETTINGS_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_MGRLEGACY", False)
-# 是否开启迁移至云原生应用的相关功能
+# 是否开启迁移至云原生应用的相关功能（注：启用该特性需要配置 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER）
 FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY", False)
 # 应用令牌，用于 APP 调用用户态的云 API
 FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)
+# 是否显示沙箱
+FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)

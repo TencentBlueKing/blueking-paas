@@ -163,7 +163,7 @@ class BaseGitRepoController:
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:
     source_origin = SourceOrigin(source_origin)
-    if source_origin not in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
+    if source_origin != SourceOrigin.AUTHORIZED_VCS:
         raise NotImplementedError
     if not source_control_type:
         raise NotImplementedError("empty source control type")

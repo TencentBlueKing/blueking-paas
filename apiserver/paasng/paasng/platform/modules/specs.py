@@ -19,6 +19,7 @@
 
 "Specification" describes an module. It includes many aspects, such as "use templated source code" etc.
 """
+
 from abc import ABC
 from typing import Any, Dict, List, Type
 
@@ -191,14 +192,4 @@ class CNativeImageSpecs(SourceOriginSpecs):
     runtime_type = RuntimeType.CUSTOM_IMAGE
     has_vcs = False
     has_template_code = False
-    deploy_via_package = False
-
-
-class SceneSpecs(SourceOriginSpecs):
-    """Specs for source_origin: SCENE"""
-
-    source_origin = SourceOrigin.SCENE
-    runtime_type = RuntimeType.BUILDPACK
-    has_vcs = True
-    has_template_code = True
     deploy_via_package = False

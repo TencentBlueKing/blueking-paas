@@ -476,12 +476,21 @@ paths:
                     region:
                       type: "string"
                       description: "region 名称"
-                    cluster_names:
-                      type: "array"
-                      description: "所有可选的集群名称"
-                      items:
-                        type: string
-                        description: "集群名称"
+                    env_cluster_names:
+                      type: "object"
+                      properties:
+                        stag:
+                          type: "array"
+                          description: "测试环境可选的集群名称"
+                          items:
+                            type: string
+                            description: "集群名称"
+                        prod:
+                          type: "array"
+                          description: "生产环境可选的集群名称"
+                          items:
+                            type: string
+                            description: "集群名称"
         default:
           description: 错误信息
           schema:

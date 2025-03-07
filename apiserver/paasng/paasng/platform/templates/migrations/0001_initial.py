@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=64, unique=True, verbose_name='模板名称')),
-                ('type', models.CharField(choices=[('normal', '普通应用'), ('scene', '场景模板')], max_length=16, verbose_name='模板类型')),
+                ('type', models.CharField(choices=[('normal', '普通应用')], max_length=16, verbose_name='模板类型')),
                 ('display_name_zh_cn', models.CharField(max_length=64, verbose_name='展示用名称')),
                 ('display_name_en', models.CharField(blank=True, max_length=64, verbose_name='展示用名称')),
                 ('description_zh_cn', models.CharField(max_length=128, verbose_name='模板描述')),

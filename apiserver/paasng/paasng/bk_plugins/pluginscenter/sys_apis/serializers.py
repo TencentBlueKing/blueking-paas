@@ -31,6 +31,11 @@ def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> T
     base_slz = base_slz_class()
     base_fields = base_slz.get_fields()
 
+    # 继承基础序列化类的 Meta 信息
+    meta_attrs = {}
+    if hasattr(base_slz_class, "Meta"):
+        meta_attrs = {k: v for k, v in base_slz_class.Meta.__dict__.items() if not k.startswith("_")}
+
     fields = {
         **base_fields,
         "creator": serializers.CharField(help_text="创建者", required=True),
@@ -41,5 +46,6 @@ def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> T
         "tenant_id": serializers.CharField(
             help_text="插件所属租户，如租户类型为全租户，则 tenant_id 为 system", default=DEFAULT_TENANT_ID
         ),
+        "Meta": type("Meta", (), meta_attrs),
     }
     return i18n(type("DynamicSysPluginSerializer", (serializers.Serializer,), fields))

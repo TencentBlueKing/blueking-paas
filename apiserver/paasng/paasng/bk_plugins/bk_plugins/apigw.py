@@ -25,6 +25,7 @@ from bkapi_client_core.exceptions import BKAPIError, RequestException
 from django.conf import settings
 from typing_extensions import Protocol
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
 
@@ -223,6 +224,12 @@ class PluginDefaultAPIGateway:
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE)
         bk_app_code, bk_app_secret = self._get_credentials()
         client.update_bkapi_authorization(bk_app_code=bk_app_code, bk_app_secret=bk_app_secret)
+        # API 网关的请求头中都需要添加 租户 ID
+        client.update_headers(
+            {
+                API_HERDER_TENANT_ID: self.plugin_app.tenant_id,
+            }
+        )
         return client.api
 
     def _get_credentials(self) -> Tuple[str, str]:

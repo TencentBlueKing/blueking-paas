@@ -351,9 +351,9 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
             raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
 
-        cnative_cluster_name = get_cnative_target_cluster(app.region).name
         for m in app.modules.all():
             for env in m.envs.all():
+                cnative_cluster_name = get_cnative_target_cluster().name
                 cluster_name = env.wl_app.config_set.latest().cluster
                 if not cluster_name:
                     raise error_codes.APP_MIGRATION_FAILED.f(f"应用模块({m.name})未绑定有效集群, 无法迁移")
@@ -467,8 +467,7 @@ class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 if binding := self._get_rcs_binding(m, env, wl_app):
                     app_rcs_bindings.append(binding)
 
-        # 目前仅有一个云原生集群
-        cnative_cluster = get_cnative_target_cluster(app.region)
+        cnative_cluster = get_cnative_target_cluster()
         root_domains = {
             # 当前普通应用的子域名
             "legacy": list(set(app_root_domains)),

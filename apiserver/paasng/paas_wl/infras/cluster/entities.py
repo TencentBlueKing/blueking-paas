@@ -22,7 +22,9 @@ from typing import Dict, List, Optional
 from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 
+from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType
+from paasng.platform.applications.models import ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -149,3 +151,61 @@ class AllocationPrecedencePolicy:
     matcher: Dict[ClusterAllocationPolicyCondType, str]
     # 具体的分配策略
     policy: AllocationPolicy
+
+    def match(self, ctx: "AllocationContext") -> bool:
+        # 匹配规则为空，则可以匹配所有
+        if not self.matcher:
+            return True
+
+        # 按匹配规则检查，任意不匹配的，都直接返回 False
+        for key, value in self.matcher.items():
+            if key == ClusterAllocationPolicyCondType.REGION_IS:
+                if ctx.region != value:
+                    return False
+            elif key == ClusterAllocationPolicyCondType.USERNAME_IN:
+                usernames = [u.strip() for u in value.split(",")]
+                if ctx.username not in usernames:
+                    return False
+            else:
+                raise ValueError(f"unknown cluster allocation policy condition type: {key}")
+
+        return True
+
+
+@define
+class AllocationContext:
+    """集群分配上下文
+
+    用于描述集群分配的上下文信息，包括租户 ID、可用区域、部署环境等。
+    供集群分配器 ClusterAllocator 使用，建议优先使用 from_xxx 方法创建。
+    """
+
+    tenant_id: str
+    # 可用区域
+    region: str
+    # 部署环境
+    environment: str
+    # 操作人
+    username: str | None = None
+
+    @classmethod
+    def from_module_env(cls, module_env: ModuleEnvironment) -> "AllocationContext":
+        return cls(
+            tenant_id=module_env.application.tenant_id,
+            region=module_env.application.region,
+            environment=module_env.environment,
+        )
+
+    @classmethod
+    def from_wl_app(cls, wl_app: "WlApp") -> "AllocationContext":
+        return cls(
+            tenant_id=wl_app.tenant_id,
+            region=wl_app.region,
+            environment=wl_app.environment,
+        )
+
+    def __str__(self):
+        return (
+            f"<tenant_id: {self.tenant_id}, region: {self.region}, "
+            + f"env: {self.environment}, username: {self.username}>"
+        )

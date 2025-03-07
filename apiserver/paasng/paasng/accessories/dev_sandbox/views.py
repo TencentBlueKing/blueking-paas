@@ -50,6 +50,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox = DevSandbox.objects.filter(
             module=module,
             code=self.kwargs["dev_sandbox_code"],
-            owner=self.request.user.pk,
+            owner=request.user.pk,
         ).first()
 
         if not dev_sandbox:
@@ -167,8 +168,13 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if cfg := dev_sandbox.code_editor_config:
             password = cfg.password
 
+        repo_ctrl = get_repo_controller(module, request.user.pk)
         resp_data = {
             "workspace": detail.workspace,
+            "repo": {
+                "url": repo_ctrl.build_url(dev_sandbox.version_info),
+                "version_info": dev_sandbox.version_info,
+            },
             "urls": detail.urls,
             "devserver_token": dev_sandbox.token,
             "code_editor_password": password,

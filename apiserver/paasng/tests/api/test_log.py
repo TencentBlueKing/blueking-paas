@@ -101,7 +101,6 @@ class TestModuleStructuredLogAPIView:
                                 "@timestamp": 1,
                                 "json": {"message": "foo"},
                                 "one": {"two": {"three": "four"}},
-                                "region": bk_app.region,
                                 "app_code": bk_app.code,
                                 "module_name": bk_module.name,
                                 "environment": "stag",
@@ -139,7 +138,6 @@ class TestModuleStructuredLogAPIView:
                     # "@timestamp": 1,
                     # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "region": bk_app.region,
                     "app_code": bk_app.code,
                     "module_name": "default",
                     "environment": "stag",
@@ -147,7 +145,6 @@ class TestModuleStructuredLogAPIView:
                     "stream": "foo",
                     "pod_name": "bar",
                 },
-                "region": bk_app.region,
                 "app_code": bk_app.code,
                 # 没有 module_name
                 "environment": "stag",
@@ -236,7 +233,7 @@ class TestCustomCollectorConfigViewSet:
                 },
             ],
         }
-        with mock.patch("paasng.accessories.log.views.config.get_application_cluster") as fake_cluster:
+        with mock.patch("paasng.accessories.log.views.config.get_app_prod_env_cluster") as fake_cluster:
             fake_cluster.has_feature_flag.return_value = True
             resp = api_client.get(url, data={"all": True})
             assert "url" in resp.data

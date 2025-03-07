@@ -155,7 +155,8 @@ class Process(AppEntity):
             module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
             process_spec = ModuleProcessSpec.objects.get(module=module, name=type_)
             probes = process_spec.probes.render_port() if process_spec.probes else None
-            process.probes = cattr.structure(cattr.unstructure(probes), ProbeSet)
+            if probes:
+                process.probes = cattr.structure(cattr.unstructure(probes), ProbeSet)
         except ObjectDoesNotExist:
             pass
 

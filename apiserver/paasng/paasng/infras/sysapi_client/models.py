@@ -8,7 +8,7 @@ from paasng.utils.text import generate_token
 
 
 class SysAPIClient(models.Model):
-    """A system API Client holds the credentials for calling system APIs.
+    """A system API Client which holds the credentials for calling system APIs.
     Supported authentication methods:
 
     - Authenticated App: an app authenticated by the API Gateway.

@@ -175,9 +175,9 @@ class AuthenticatedAppAsClientMiddleware:
 
 
 def set_sysapi_client(request: HttpRequest, client: SysAPIClient, set_non_cookies: bool = True):
-    """Mark current request authenticated with a user stored in database
+    """Mark current request to carry a system api client object.
 
-    :param user: a `models.User` object
+    :param client: a `SysAPIClient` object
     :param set_non_cookies: whether set a special attribute to mark current request was NOT authenticated
         via user cookies.
     """

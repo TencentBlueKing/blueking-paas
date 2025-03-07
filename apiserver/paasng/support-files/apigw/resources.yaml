@@ -384,7 +384,7 @@ paths:
         descriptionEn:
   /bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/:
     post:
-      operationId: deploy_dev_sandbox
+      operationId: deploy_dev_sandboxes
       description: 部署开发容器
       tags:
       - 部署相关接口

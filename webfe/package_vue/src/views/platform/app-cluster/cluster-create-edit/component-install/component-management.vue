@@ -254,7 +254,6 @@ export default {
         disabled: this.isInstalled,
       },
       componentBtnLoading: false,
-      diffVersion: {},
     };
   },
   computed: {
@@ -306,7 +305,7 @@ export default {
       this.$emit('show-edit', this.component.name);
     },
     // 安装/更新/重新安装
-    async getDiffVersion() {
+    async getDiffVersion(status) {
       const h = this.$createElement;
       this.componentBtnLoading = true;
       try {
@@ -319,18 +318,40 @@ export default {
           title: this.$t('组件版本更新确认'),
           extCls: 'diff-version-info-cls',
           subHeader: h('div', [
-            h('div', { class: ['tips'] }, `${this.$t('当前版本')}：${this.diffVersion.current_version || '--'}`),
-            h('div', { class: ['tips'] }, `${this.$t('最新版本')}：${this.diffVersion.latest_version || '--'}`),
+            h('div', { class: ['tips'] }, `${this.$t('当前版本')}：${ret.current_version || '--'}`),
+            h('div', { class: ['tips'] }, `${this.$t('最新版本')}：${ret.latest_version || '--'}`),
           ]),
           confirmFn: () => {
-            this.handleComponentEdit();
+            if (this.isBkIngressNginx) {
+              // bk-ingress-nginx 允许编辑侧栏
+              this.handleComponentEdit();
+              return;
+            }
+            // 其他组件的安装或更新，无需弹出侧栏
+            this.updateComponent({}, status);
           },
         });
-        this.diffVersion = ret;
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         this.componentBtnLoading = false;
+      }
+    },
+    // 更新组件配置
+    async updateComponent(data = {}, status) {
+      try {
+        await this.$store.dispatch('tenant/updateComponent', {
+          clusterName: this.clusterId,
+          componentName: this.component.name,
+          data,
+        });
+        const msg = status === 'installed' ? this.$t('更新成功') : this.$t('安装成功');
+        this.$paasMessage({
+          theme: 'success',
+          message: msg,
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
   },

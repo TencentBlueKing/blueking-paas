@@ -50,7 +50,7 @@ const commonOptions = [
         label: '集群访问入口 IP',
         type: 'input',
         property: 'access_entry_ip',
-        tips: '用于指引用户配置独立域名的解析，如果集群使用云厂商的 clb 做流量控制，那么这里应当填对应的vip',
+        tips: '用于指引用户配置独立域名的解析，如果集群使用云厂商的 clb 做流量控制，这里需要填写对应的 vip',
     },
 ];
 
@@ -73,8 +73,8 @@ const clusterToken = [
         type: 'password',
         property: 'token',
         required: true,
-        tips: '如 Master 节点/root/.kube/config 文件中 admin 用户 user.token 的值',
-        tipBtn: '集群配置说明',
+        tips: '如 Master 节点 /root/.kube/config 文件中 admin 用户 user.token 的值',
+        // tipBtn: '集群配置说明',
         rules: [...requiredRule],
     },
 ];
@@ -107,6 +107,7 @@ export const bcsOptions = [
             // BCS集群 依赖 项目
             dependency: 'bcs_project_id',
             api: async (arg) => {
+                if (!arg) return [];
                 try {
                     const res = await store.dispatch('tenant/getBcsClusters', {
                         projectId: arg

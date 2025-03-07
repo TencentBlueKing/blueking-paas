@@ -23,36 +23,46 @@
           :key="item.label"
           :error-display-type="'normal'"
         >
-          <ConfigInput
-            v-if="['textarea', 'input', 'password'].includes(item.type)"
-            :type="item.type"
-            :maxlength="item.maxlength"
-            :disabled="item.disabled"
-            v-model="infoFormData[item.property]"
-            @blur="inputBlur($event, item.property, 'infoFormData')"
-            @focus="inputFocus($event, item.property, 'infoFormData')"
-          />
-          <ConfigSelect
-            v-else-if="item.type === 'select'"
-            v-model="infoFormData[item.property]"
-            :form-data="infoFormData"
-            :property="item.property"
-            :api-data="clusterData"
-            v-bind="item"
-            @change="infoSelectChange"
-          />
-          <bk-radio-group
-            v-else-if="item.type === 'radio'"
-            v-model="infoFormData[item.property]"
-          >
-            <bk-radio
-              v-for="r in item.radios"
-              :value="r.value"
-              :key="r.value"
+          <template v-if="queryClusterId && disabledProperty.includes(item.property)">
+            <!-- 更新集群信息模型下，特定字段为禁用状态 -->
+            <ConfigInput
+              type="input"
+              :disabled="true"
+              v-model="infoFormData[item.property]"
+            />
+          </template>
+          <template v-else>
+            <ConfigInput
+              v-if="['textarea', 'input', 'password'].includes(item.type)"
+              :type="item.type"
+              :maxlength="item.maxlength"
+              :disabled="item.disabled"
+              v-model="infoFormData[item.property]"
+              @blur="inputBlur($event, item.property, 'infoFormData')"
+              @focus="inputFocus($event, item.property, 'infoFormData')"
+            />
+            <ConfigSelect
+              v-else-if="item.type === 'select'"
+              v-model="infoFormData[item.property]"
+              :form-data="infoFormData"
+              :property="item.property"
+              :api-data="clusterData"
+              v-bind="item"
+              @change="infoSelectChange"
+            />
+            <bk-radio-group
+              v-else-if="item.type === 'radio'"
+              v-model="infoFormData[item.property]"
             >
-              <span class="ml5">{{ r.label }}</span>
-            </bk-radio>
-          </bk-radio-group>
+              <bk-radio
+                v-for="r in item.radios"
+                :value="r.value"
+                :key="r.value"
+              >
+                <span class="ml5">{{ r.label }}</span>
+              </bk-radio>
+            </bk-radio-group>
+          </template>
           <p
             v-if="item.tips"
             slot="tip"
@@ -93,6 +103,8 @@
             :maxlength="item.maxlength"
             :disabled="item.disabled"
             v-model="infoFormData[item.property]"
+            @blur="inputBlur($event, item.property, 'infoFormData')"
+            @focus="inputFocus($event, item.property, 'infoFormData')"
           />
           <ConfigSelect
             v-else-if="item.type === 'select'"
@@ -289,6 +301,7 @@ export default {
       },
       curProjectData: {},
       urlTmpl: '',
+      disabledProperty: ['bcs_cluster_id', 'bcs_project_id'],
     };
   },
   computed: {
@@ -324,6 +337,10 @@ export default {
     ...mapState({
       curUserInfo: (state) => state.curUserInfo,
     }),
+    // 存在id说明集群已经创建
+    queryClusterId() {
+      return this.$route.query?.id || '';
+    },
   },
   watch: {
     'infoFormData.cluster_source'(newVal) {
@@ -341,7 +358,7 @@ export default {
     },
   },
   created() {
-    if (this.$route.query?.id) {
+    if (this.queryClusterId) {
       this.$emit('get-detail');
     }
     if (!this.isEdit) {
@@ -371,12 +388,9 @@ export default {
         ...this.infoFormData,
         ...data,
         bk_biz_id: data.bk_biz_id || '', // 业务
+        // bcs apiserver
         api_servers: data.api_servers.length ? data.api_servers.join() : '',
       };
-      setTimeout(() => {
-        this.$set(this.infoFormData, 'bcs_project_id', data.bcs_project_id ?? '');
-        this.$set(this.infoFormData, 'bcs_cluster_id', data.bcs_cluster_id ?? '');
-      }, 200);
       // ElasticSearch 集群信息
       this.elasticSearchFormData = {
         ...this.elasticSearchFormData,
@@ -385,6 +399,7 @@ export default {
       // 编辑态 token与password不会返回，默认回填六位占位符
       this.$set(this.infoFormData, 'token', featurePlaceholder);
       this.$set(this.elasticSearchFormData, 'password', featurePlaceholder);
+      // k8s APIServers 数据（数组）
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
       // apiServices 数据回填
       const apiServers = data.api_servers.map((v) => {
@@ -396,7 +411,7 @@ export default {
       // 设置业务值
       if (data.property === 'bcs_project_id') {
         this.curProjectData = data?.data || {};
-        this.infoFormData.bk_biz_id = data.data.biz_name;
+        this.infoFormData.bk_biz_id = data.data?.biz_name || '';
       }
     },
     // 获取bcs访问地址模版
@@ -422,7 +437,13 @@ export default {
         'available_tenant_ids',
       ]);
       // 业务
-      data.bk_biz_id = this.curProjectData.biz_id;
+      if (this.queryClusterId) {
+        // 更新模式
+        data.bk_biz_id = this.clusterData.bk_biz_id;
+      } else {
+        // 新建
+        data.bk_biz_id = this.curProjectData.biz_id;
+      }
       data.api_servers = [this.infoFormData.api_servers];
       // 清空默认占位符
       data.token = data.token === featurePlaceholder ? '' : data.token;
@@ -496,13 +517,17 @@ export default {
       return this.formatK8sData();
     },
     inputFocus(val, property, dataName) {
-      if (['token', 'password'].includes(property) && val === featurePlaceholder) {
-        this.$set(this[dataName], property, '');
+      if (this.queryClusterId) {
+        if (['token', 'password'].includes(property) && val === featurePlaceholder) {
+          this.$set(this[dataName], property, '');
+        }
       }
     },
     inputBlur(val, property, dataName) {
-      if (['token', 'password'].includes(property) && val === '') {
-        this.$set(this[dataName], property, featurePlaceholder);
+      if (this.queryClusterId) {
+        if (['token', 'password'].includes(property) && val === '') {
+          this.$set(this[dataName], property, featurePlaceholder);
+        }
       }
     },
   },

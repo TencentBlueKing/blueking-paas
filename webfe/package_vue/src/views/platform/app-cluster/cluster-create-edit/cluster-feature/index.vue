@@ -39,6 +39,7 @@
               <bk-form-item
                 :label="$t('节点选择器（nodeSelector）')"
                 :property="'node_selector'"
+                ext-cls="node-selector-form-cls"
               >
                 <i
                   v-if="!isNodeVisible"
@@ -49,7 +50,6 @@
                 <KeyValueInput
                   v-else
                   ref="keyValueInput"
-                  class="nodes-select"
                   :data="details"
                   :zero="true"
                   @zero="isNodeVisible = false"
@@ -58,6 +58,7 @@
               <bk-form-item
                 :label="$t('容忍度（tolerations）')"
                 :property="'tolerations'"
+                ext-cls="tolerations-form-cls"
               >
                 <i
                   v-if="!isTolerationsVisible"
@@ -204,14 +205,18 @@ export default {
     .card-content {
       margin-top: 18px;
       padding-left: 68px;
-      padding-right: 120px;
-      .nodes-select {
-        width: calc(100% - 120px);
-      }
       .paasng-plus-thick {
         font-size: 18px;
         cursor: pointer;
       }
+    }
+  }
+  .component-form-cls {
+    .node-selector-form-cls {
+      width: 830px;
+    }
+    .tolerations-form-cls {
+      width: 950px;
     }
   }
   .setting-collapse-cls {

@@ -32,7 +32,7 @@
         >
           <bk-select
             v-model="item.operator"
-            style="width: 160px"
+            style="width: 140px"
             :placeholder="$t('运算符')"
           >
             <bk-option
@@ -64,7 +64,7 @@
         >
           <bk-select
             v-model="item.effect"
-            style="width: 200px"
+            style="width: 240px"
           >
             <bk-option
               v-for="option in effectList"

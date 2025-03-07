@@ -22,6 +22,7 @@
                 :disabled="false"
                 v-model="data.matcher.key"
                 ext-cls="rules-select-custom"
+                @change="handleChange"
               >
                 <bk-option
                   v-for="option in types"
@@ -38,7 +39,10 @@
             :property="'matcherValue'"
             ext-cls="rules-vlaue"
           >
-            <bk-input v-model="data.matcher.value"></bk-input>
+            <bk-input
+              v-model="data.matcher.value"
+              :placeholder="placeholder"
+            ></bk-input>
           </bk-form-item>
         </div>
         <p
@@ -97,10 +101,7 @@
     </bk-form>
     <div class="tip flex-row">
       <i class="bk-icon icon-info mr5"></i>
-      <div>
-        <p>{{ $t('如果配置了多个集群') }}：</p>
-        <p>{{ $t('开发者在创建应用时，需要选择集群；如开发者没选择任何值，则使用默认集群。') }}</p>
-      </div>
+      <p>{{ $t('如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。') }}</p>
     </div>
     <div
       v-if="!isLastCard"
@@ -231,6 +232,15 @@ export default {
     isLastCard() {
       return this.allLength - 1 === this.order;
     },
+    curCardMatcher() {
+      return this.types.find((v) => v.key === this.data.matcher?.key) ?? {};
+    },
+    placeholder() {
+      const { name = '' } = this.curCardMatcher;
+      const lowerCaseName = name.toLocaleLowerCase();
+      const endsWithIn = lowerCaseName.endsWith('_in') || lowerCaseName.endsWith('.in');
+      return this.$t(endsWithIn ? '请输入，多个值以英文逗号连接' : '请输入');
+    },
   },
   methods: {
     // 获取当前规则语句分支
@@ -265,6 +275,9 @@ export default {
     },
     validate() {
       return this.$refs.rulesCard?.validate();
+    },
+    handleChange() {
+      this.data.matcher.value = '';
     },
   },
 };

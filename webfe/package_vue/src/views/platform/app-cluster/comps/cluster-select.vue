@@ -7,6 +7,7 @@
       :scroll-height="300"
       multiple
       display-tag
+      ref="ClusterSelect"
       ext-cls="cluster-select-cls"
       ext-popover-cls="cluster-select-popover-cls"
       @toggle="handleToggle"
@@ -49,6 +50,25 @@
           @change="transferChange"
         />
       </bk-option>
+      <div
+        slot="extension"
+        class="select-extension-cls"
+      >
+        <bk-button
+          :theme="'default'"
+          size="small"
+          @click="handleCancel"
+        >
+          {{ $t('取消') }}
+        </bk-button>
+        <bk-button
+          :theme="'primary'"
+          size="small"
+          @click="close"
+        >
+          {{ $t('确定') }}
+        </bk-button>
+      </div>
     </bk-select>
   </div>
 </template>
@@ -82,6 +102,7 @@ export default {
   data() {
     return {
       selectValue: [],
+      oldSelectValue: [],
     };
   },
   computed: {
@@ -124,6 +145,7 @@ export default {
     handleToggle(flag) {
       if (flag) {
         this.transferDragInit();
+        this.oldSelectValue = [...this.selectValue];
       }
     },
     // 穿梭框change
@@ -134,6 +156,16 @@ export default {
     // 取消选择当前的tag
     handleDeselect(data) {
       this.$refs.clusterTransfer?.deselect(data);
+    },
+    // 关闭下拉
+    close() {
+      this.$refs.ClusterSelect.close();
+    },
+    // 取消还原数据
+    handleCancel() {
+      this.selectValue = [...this.oldSelectValue];
+      this.$refs.clusterTransfer?.setTargetList(this.oldSelectValue);
+      this.close();
     },
   },
 };
@@ -159,6 +191,13 @@ export default {
   .cluster-select-cls {
     border-radius: 0 2px 2px 0;
   }
+}
+.select-extension-cls {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
 }
 .cluster-select-cls {
   min-height: 32px;
@@ -198,6 +237,9 @@ export default {
 </style>
 <style lang="scss">
 .cluster-select-popover-cls {
+  .bk-select-extension {
+    padding: 0 6px;
+  }
   .bk-option:hover {
     color: #63656e;
     background-color: #fff !important;

@@ -9,7 +9,7 @@
       <bk-table-column
         :label="$t('集群名称')"
         prop="name"
-        width="100"
+        width="160"
         show-overflow-tooltip
         :render-header="$renderHeader"
       >
@@ -152,7 +152,7 @@
                   {{ $t('集群名称') }}：
                   <span class="n">{{ syncNodeName }}</span>
                 </p>
-                <div>{{ $t('同步集群节点到开发中心，以便应用开启出口 IP 时能绑定到集群所有节点上。') }}</div>
+                <div>{{ $t('同步集群节点到开发者中心，以便应用开启出口 IP 时能绑定到集群所有节点上。') }}</div>
               </div>
             </div>
             <bk-button

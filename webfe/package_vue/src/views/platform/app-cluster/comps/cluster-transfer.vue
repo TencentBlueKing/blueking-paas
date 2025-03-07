@@ -125,6 +125,9 @@ export default {
       this.targetValueList.splice(index, 1);
       this.targetList = this.targetValueList;
     },
+    setTargetList(list) {
+      this.targetList = [...list];
+    },
   },
 };
 </script>

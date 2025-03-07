@@ -1,5 +1,8 @@
 <template>
-  <div class="rule-assignment-form">
+  <div
+    class="rule-assignment-form"
+    :key="cardKey"
+  >
     <!-- 最少两条规则 -->
     <RulesCards
       v-for="(item, i) in cardsList"
@@ -38,6 +41,7 @@ export default {
   data() {
     return {
       cardsList: [],
+      cardKey: 0,
     };
   },
   computed: {
@@ -78,10 +82,12 @@ export default {
     // 添加卡片
     handleAdd(index) {
       this.cardsList.splice(index + 1, 0, cloneDeep(defaultCardItem));
+      this.cardKey += 1;
     },
     // 删除单项规则
     handleDelete(index) {
       this.cardsList.splice(index, 1);
+      this.cardKey += 1;
     },
     // 移动规则项
     moveArrayItem(index, order) {
@@ -94,6 +100,7 @@ export default {
         this.$set(this.cardsList, index, this.cardsList[index - 1]);
         this.$set(this.cardsList, index - 1, temp);
       }
+      this.cardKey += 1;
     },
     // 卡片列表校验
     async validate() {

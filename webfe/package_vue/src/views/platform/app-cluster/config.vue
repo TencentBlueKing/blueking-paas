@@ -142,6 +142,14 @@
             >
               {{ $t('编辑') }}
             </bk-button>
+            <bk-button
+              theme="primary"
+              text
+              class="ml10"
+              @click="handleAllocationPolicies(row)"
+            >
+              {{ $t('删除') }}
+            </bk-button>
           </template>
         </bk-table-column>
       </bk-table>
@@ -333,6 +341,30 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 删除分配策略
+    async handleAllocationPolicies(row) {
+      this.$bkInfo({
+        title: this.$t('确认删除租户 {k} 的集群分配策略？', { k: row.policies.tenant_id }),
+        confirmLoading: true,
+        width: 480,
+        confirmFn: async () => {
+          try {
+            await this.$store.dispatch('tenant/delClusterAllocationPolicies', {
+              id: row.policies?.id,
+            });
+            this.$paasMessage({
+              theme: 'success',
+              message: this.$t('删除成功'),
+            });
+            this.init();
+            return true;
+          } catch (e) {
+            this.catchErrorHandler(e);
+            return false;
+          }
+        },
+      });
     },
   },
 };

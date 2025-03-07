@@ -118,4 +118,5 @@ export default {
   '节点选择器（nodeSelector）': 'Node Selector (nodeSelector)',
   '容忍度（tolerations）': 'Tolerations (tolerations)',
   '请输入，多个值以英文逗号连接': 'Please enter multiple values separated by commas.',
+  '确认删除租户 {k} 的集群分配策略？': 'Are you sure you want to delete the cluster allocation policy for tenant {k}?',
 };

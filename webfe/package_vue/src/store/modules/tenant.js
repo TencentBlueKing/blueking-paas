@@ -58,6 +58,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 删除分配策略
+     */
+    delClusterAllocationPolicies({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_allocation_policies/${id}/`;
+      return http.delete(url);
+    },
+    /**
      * 获取当前租户可用的集群
      */
     getAvailableClusters({}, { id }) {

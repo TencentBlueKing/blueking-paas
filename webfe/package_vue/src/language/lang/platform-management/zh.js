@@ -118,4 +118,5 @@ export default {
   '节点选择器（nodeSelector）': '节点选择器（nodeSelector）',
   '容忍度（tolerations）': '容忍度（tolerations）',
   '请输入，多个值以英文逗号连接': '请输入，多个值以英文逗号连接',
+  '确认删除租户 {k} 的集群分配策略？': '确认删除租户 {k} 的集群分配策略？',
 };

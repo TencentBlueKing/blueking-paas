@@ -49,7 +49,7 @@ class ApplicationClusterMigrator(CNativeBaseMigrator):
             raise PreCheckMigrationFailed(f"app({self.app.code}) type does not set to cloud_native")
 
     def _migrate(self):
-        cnative_cluster_name = get_cnative_target_cluster(self.app.region).name
+        cnative_cluster_name = get_cnative_target_cluster().name
         for env in self.app.get_app_envs():
             EnvClusterService(env).bind_cluster(cnative_cluster_name)
 

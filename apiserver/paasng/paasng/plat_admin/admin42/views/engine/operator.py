@@ -17,8 +17,6 @@
 
 from rest_framework.permissions import IsAuthenticated
 
-from paas_wl.infras.cluster.shim import RegionClusterService
-from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -35,8 +33,4 @@ class OperatorManageView(GenericTemplateView):
         if "view" not in kwargs:
             kwargs["view"] = self
 
-        # "Cnative default" cluster == THE default cluster
-        kwargs["cnative_default_cluster"] = {
-            region: RegionClusterService(region).get_default_cluster().name for region in get_all_regions()
-        }
         return kwargs

@@ -24,7 +24,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.models import Config, WlApp
 from paas_wl.core.resource import get_process_selector
-from paas_wl.infras.cluster.utils import get_default_cluster_by_region
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.workloads.networking.ingress.entities import PIngressDomain, PServicePortPair
@@ -43,7 +43,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        return get_default_cluster_by_region(settings.DEFAULT_REGION_NAME)
+        return Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
 
 
 @pytest.fixture(scope="session")

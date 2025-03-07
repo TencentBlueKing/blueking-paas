@@ -32,7 +32,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMap
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentStorage as PersistentStorageSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
-from paas_wl.infras.cluster.shim import get_application_cluster
+from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KStorageClass
@@ -305,7 +305,7 @@ def check_storage_class_exists(application: Application, storage_class_name: str
     :param storage_class_name: 要检查的 StorageClass 的名称。
     :return bool: 如果 StorageClass 存在,返回 True。否则返回 False。
     """
-    cluster = get_application_cluster(application)
+    cluster = get_app_prod_env_cluster(application)
     with get_client_by_cluster_name(cluster_name=cluster.name) as client:
         storage_class_client = KStorageClass(client)
         try:

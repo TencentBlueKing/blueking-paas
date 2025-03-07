@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from paas_wl.bk_app.applications.api import (
     create_app_ignore_duplicated,
@@ -24,7 +24,8 @@ from paas_wl.bk_app.applications.api import (
 )
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model import fieldmgr
@@ -41,13 +42,14 @@ default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 def initialize_simple(
     module: Module,
     image: str,
-    cluster_name: Optional[str] = None,
-    api_version: Optional[str] = ApiVersion.V1ALPHA2,
-    command: Optional[List[str]] = None,
-    args: Optional[List[str]] = None,
-    target_port: Optional[int] = None,
+    cluster_name: str | None = None,
+    api_version: str | None = ApiVersion.V1ALPHA2,
+    command: List[str] | None = None,
+    args: List[str] | None = None,
+    target_port: int | None = None,
 ) -> Dict:
     """Initialize a cloud-native application, return the initialized object
+    注意：该方法仅提供给单元测试使用 TODO (su) 从该模块中移出
 
     :param module: Module object, a module can only be initialized once
     :param image: The container image of main process
@@ -56,10 +58,6 @@ def initialize_simple(
     :param args: Custom args
     :param target_port: Custom target port
     """
-    if not cluster_name:
-        cluster_name = RegionClusterService(module.region).get_default_cluster().name
-
-    assert cluster_name
     model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
     create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
     return model_res
@@ -68,8 +66,8 @@ def initialize_simple(
 def create_engine_apps(
     application: Application,
     module: Module,
-    cluster_name: str,
-    environments: Optional[List[str]] = None,
+    cluster_name: str | None,
+    environments: List[str] | None = None,
 ):
     """Create engine app instances for application"""
     environments = environments or default_environments
@@ -86,6 +84,10 @@ def create_engine_apps(
             environment=environment,
             tenant_id=application.tenant_id,
         )
+        if not cluster_name:
+            ctx = AllocationContext.from_module_env(env)
+            cluster_name = ClusterAllocator(ctx).get_default().name
+
         EnvClusterService(env).bind_cluster(cluster_name)
         setup_env_log_model(env)
 

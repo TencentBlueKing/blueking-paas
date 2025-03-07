@@ -409,7 +409,7 @@ paths:
         descriptionEn:
   /bkapps/applications/{app_code}/modules/{module}/dev_sandboxes/{dev_sandbox_code}/:
     delete:
-      operationId: delete_dev_sandbox
+      operationId: delete_dev_sandboxes
       description: ''
       tags: []
       responses:
@@ -432,7 +432,7 @@ paths:
         disabledStages: []
         descriptionEn:
     get:
-      operationId: get_dev_sandbox_detail
+      operationId: get_dev_sandboxes_detail
       description: 查询开发容器详情
       tags:
       - 部署相关接口

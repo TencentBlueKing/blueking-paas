@@ -24,15 +24,15 @@ from io import BytesIO
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.response import Response
 
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_required
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import LightApplicationViewSetErrorCode
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
@@ -40,6 +40,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import create_third_app
 from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.utils.sysapi import BaseSysAPIViewSet
 
 try:
     from paasng.infras.legacydb_te.adaptors import AppAdaptor, AppTagAdaptor
@@ -51,10 +52,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class LightAppViewSet(viewsets.ViewSet):
+class LightAppViewSet(BaseSysAPIViewSet):
     """为标准运维提供轻应用管理接口，部分代码迁移自 open—paas"""
 
-    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.LightAppCreateSLZ)
     def create(self, request):
         """创建轻应用"""
@@ -131,7 +132,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
             return self.make_app_response(session, light_app)
 
-    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(query_serializer=slzs.LightAppDeleteSLZ())
     def delete(self, request):
         """软删除轻应用"""
@@ -154,7 +155,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
         return self.make_feedback_response(LightApplicationViewSetErrorCode.SUCCESS, data={"count": 1})
 
-    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.LightAppEditSLZ)
     def edit(self, request):
         """修改轻应用"""
@@ -197,7 +198,7 @@ class LightAppViewSet(viewsets.ViewSet):
 
             return self.make_app_response(session, app)
 
-    @site_perm_required(SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.MANAGE_LIGHT_APPLICATIONS)
     @swagger_auto_schema(query_serializer=slzs.LightAppQuerySLZ())
     def query(self, request):
         """查询轻应用"""
@@ -298,8 +299,8 @@ class LightAppViewSet(viewsets.ViewSet):
         return app
 
 
-class SysAppViewSet(viewsets.ViewSet):
-    @site_perm_required(SiteAction.SYSAPI_MANAGE_APPLICATIONS)
+class SysAppViewSet(BaseSysAPIViewSet):
+    @sysapi_client_perm_required(ClientAction.MANAGE_APPLICATIONS)
     @swagger_auto_schema(request_body=slzs.SysThirdPartyApplicationSLZ, tags=["创建第三方(外链)应用"])
     def create_sys_third_app(self, request, sys_id):
         """给特定系统提供的创建第三方应用的 API, 应用ID 必现以系统ID为前缀"""

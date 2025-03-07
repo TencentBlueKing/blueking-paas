@@ -15,9 +15,10 @@
 # to the current version of the project delivered to anyone in the future.
 """The different roles of the system API client."""
 
-from typing import Dict, Type
+from functools import wraps
+from typing import Dict
 
-from rest_framework.permissions import BasePermission
+from paasng.utils.error_codes import error_codes
 
 from .constants import ClientAction, ClientRole
 
@@ -92,25 +93,24 @@ class ClientPermChecker:
 client_perm_checker = ClientPermChecker()
 
 
-def sysapi_client_perm_class(action: ClientAction) -> Type[BasePermission]:
-    """Create a dynamic permission class for system API client.
+def sysapi_client_perm_required(action: ClientAction):
+    """Require the request to be made by a system API client with the required permission."""
 
-    :param action: Client action type.
-    :return: A permission class.
-    """
+    def decorated(func):
+        # Set an attribute to mark the function as protected so that the `perm_insure`
+        # module knows.
+        func._protected_by_sysapi_client_perm_required = True
 
-    class SysAPIClientPermission(BasePermission):
-        """The permission class for system API client."""
-
-        code = "UnauthorizedSysAPIClient"
-        message = "A valid system API client with the required permissions must be provided."
-
-        def has_permission(self, request, view):
+        @wraps(func)
+        def view_func(self, request, *args, **kwargs):
             sys_client = getattr(request, "sysapi_client", None)
             if not sys_client:
-                return False
+                raise error_codes.SYSAPI_CLIENT_NOT_FOUND
+            if not client_perm_checker.role_can_do(ClientRole(sys_client.role), action):
+                raise error_codes.SYSAPI_CLIENT_PERM_DENIED
 
-            role = ClientRole(sys_client.role)
-            return client_perm_checker.role_can_do(role, action)
+            return func(self, request, *args, **kwargs)
 
-    return SysAPIClientPermission
+        return view_func
+
+    return decorated

@@ -22,16 +22,16 @@ from django.http.response import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_required
 from paasng.plat_admin.system.applications import (
     SimpleAppSource,
     UniSimpleApp,
@@ -56,12 +56,13 @@ from paasng.platform.applications.operators import get_contact_info_by_appids
 from paasng.platform.applications.tenant import validate_tenant_id_header
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.utils.error_codes import error_codes
+from paasng.utils.sysapi import BaseSysAPIViewSet
 
 logger = logging.getLogger(__name__)
 
 
 @ForceAllowAuthedApp.mark_view_set
-class SysUniApplicationViewSet(viewsets.ViewSet):
+class SysUniApplicationViewSet(BaseSysAPIViewSet):
     """System universal application view sets"""
 
     def get_contact_info_data(self, application: Application, app_source: SimpleAppSource, contact_info_dict: dict):
@@ -112,7 +113,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["SYSTEMAPI"], responses={200: UniversalAppSLZ(many=True)}, query_serializer=QueryUniApplicationsByID
     )
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def query_by_id(self, request):
         request_serializer = QueryUniApplicationsByID(data=request.query_params)
         request_serializer.is_valid(raise_exception=True)
@@ -147,7 +148,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         responses={200: UniversalAppSLZ(many=True)},
         query_serializer=QueryUniApplicationsByUserName,
     )
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def query_by_username(self, request):
         """根据 username 查询多平台应用信息"""
         serializer = QueryUniApplicationsByUserName(data=request.query_params)
@@ -163,7 +164,7 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["SYSTEMAPI"], responses={200: MinimalAppSLZ(many=True)}, query_serializer=SearchApplicationSLZ
     )
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list_minimal_app(self, request):
         """查询多平台应用基本信息，可根据 id 或者 name 模糊搜索, 最多只返回 1000 条数据"""
         serializer = SearchApplicationSLZ(data=request.query_params)
@@ -186,11 +187,11 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         return paginator.get_paginated_response(serializer.data)
 
 
-class SysAddonsAPIViewSet(viewsets.ViewSet):
+class SysAddonsAPIViewSet(BaseSysAPIViewSet):
     """System api for managing Application Addons"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
-    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    @sysapi_client_perm_required(ClientAction.READ_SERVICES)
     def query_credentials(self, request, code, module_name, environment, service_name):
         """查询增强服务的 credentials 信息"""
         application = get_object_or_404(Application, code=code)
@@ -207,7 +208,7 @@ class SysAddonsAPIViewSet(viewsets.ViewSet):
         return Response(data=AddonCredentialsSLZ({"credentials": credentials}).data)
 
     @swagger_auto_schema(tags=["SYSTEMAPI"])
-    @site_perm_required(SiteAction.SYSAPI_READ_SERVICES)
+    @sysapi_client_perm_required(ClientAction.READ_SERVICES)
     def list_services(self, request, code, module_name, environment):
         """查询增强服务启用/实例分配情况"""
         application = get_object_or_404(Application, code=code)
@@ -217,11 +218,11 @@ class SysAddonsAPIViewSet(viewsets.ViewSet):
         return Response(data=service_info)
 
 
-class LessCodeSystemAPIViewSet(viewsets.ViewSet):
+class LessCodeSystemAPIViewSet(BaseSysAPIViewSet):
     """System api for lesscode"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI", "LESSCODE"])
-    @site_perm_required(SiteAction.SYSAPI_READ_DB_CREDENTIAL)
+    @sysapi_client_perm_required(ClientAction.READ_DB_CREDENTIAL)
     def query_db_credentials(self, request, code, module_name, environment):
         """查询数据库增强服务的 credentials 信息"""
         application = get_object_or_404(Application, code=code)
@@ -235,7 +236,7 @@ class LessCodeSystemAPIViewSet(viewsets.ViewSet):
         return Response(data={"credentials": credentials})
 
     @swagger_auto_schema(tags=["SYSTEMAPI", "LESSCODE"])
-    @site_perm_required(SiteAction.SYSAPI_BIND_DB_SERVICE)
+    @sysapi_client_perm_required(ClientAction.READ_DB_CREDENTIAL)
     def bind_db_service(self, request, code, module_name):
         """尝试绑定数据库增强服务"""
         application = get_object_or_404(Application, code=code)
@@ -264,11 +265,11 @@ class LessCodeSystemAPIViewSet(viewsets.ViewSet):
         return svc
 
 
-class ClusterNamespaceInfoView(viewsets.ViewSet):
+class ClusterNamespaceInfoView(BaseSysAPIViewSet):
     """System api for query app cluster/namespace info"""
 
     @swagger_auto_schema(tags=["SYSTEMAPI"], responses={"200": ClusterNamespaceSLZ(many=True)})
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list_by_app_code(self, request, code):
         """list app cluster/namespace info"""
         application = get_object_or_404(Application, code=code)

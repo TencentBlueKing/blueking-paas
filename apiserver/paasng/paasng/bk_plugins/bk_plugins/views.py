@@ -29,13 +29,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_required
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.tenant import validate_tenant_id_header
 from paasng.utils.error_codes import error_codes
+from paasng.utils.sysapi import BaseSysAPIViewSet
 
 from . import serializers
 from .apigw import set_distributors
@@ -85,16 +86,16 @@ class FilterPluginsMixin:
 
 
 @ForceAllowAuthedApp.mark_view_set
-class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
+class SysBkPluginsViewset(FilterPluginsMixin, BaseSysAPIViewSet):
     """Viewset for bk_plugin type applications"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list(self, request):
         """查询所有的蓝鲸插件"""
         plugins, paginator = self.filter_plugins(request)
         return paginator.get_paginated_response(serializers.BkPluginSLZ(plugins, many=True).data)
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def retrieve(self, request, code):
         """查询某个蓝鲸插件的详细信息"""
         plugin = get_plugin_or_404(code)
@@ -102,10 +103,10 @@ class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
 
 
 @ForceAllowAuthedApp.mark_view_set
-class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
+class SysBkPluginsBatchViewset(FilterPluginsMixin, BaseSysAPIViewSet):
     """Viewset for batch operations on bk_plugin type applications"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list_detailed(self, request):
         """批量查询蓝鲸插件的详细信息（包含各环境部署状态等）"""
         plugins, paginator = self.filter_plugins(request)
@@ -121,13 +122,13 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
         return paginator.get_paginated_response(results)
 
 
-class SysBkPluginLogsViewset(viewsets.ViewSet):
+class SysBkPluginLogsViewset(BaseSysAPIViewSet):
     """Viewset for querying bk_plugin's logs"""
 
     # 该接口已注册到 APIGW
     # 网关名称 list_bk_plugin_logs
     # 请勿随意修改该接口协议
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
         if request.method == "GET":
@@ -152,10 +153,10 @@ def get_plugin_or_404(code: str) -> BkPlugin:
     return BkPlugin.from_application(application)
 
 
-class SysBkPluginTagsViewSet(viewsets.ViewSet):
+class SysBkPluginTagsViewSet(BaseSysAPIViewSet):
     """Viewset for querying bk_plugin's tags"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def list(self, request):
         """View all plugin tags in the system"""
         tags = BkPluginTag.objects.all()

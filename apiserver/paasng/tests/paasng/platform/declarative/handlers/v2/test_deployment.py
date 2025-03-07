@@ -24,6 +24,7 @@ from unittest import mock
 import cattr
 import pytest
 import yaml
+from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.models import Application
@@ -118,8 +119,8 @@ class TestAppDescriptionHandler:
     @pytest.fixture()
     def _create_for_test_svc_discovery(self):
         # 为了检验 BKPAAS_SERVICE_ADDRESSES_BKSAAS 通过
-        G(Application, code="foo-app")
-        app = G(Application, code="bar-app")
+        G(Application, code="foo-app", region=settings.DEFAULT_REGION_NAME)
+        app = G(Application, code="bar-app", region=settings.DEFAULT_REGION_NAME)
         G(Module, name="api", application=app)
 
     @pytest.mark.usefixtures("_create_for_test_svc_discovery")

@@ -26,7 +26,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.shim import get_application_cluster
+from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paasng.core.region.app import S3BucketRegionHelper
 from paasng.core.region.models import get_region
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
@@ -212,7 +212,7 @@ def turn_on_bk_log_feature(application: Application):
         # 如果已默认开启, 则直接返回
         return
 
-    cluster = get_application_cluster(application)
+    cluster = get_app_prod_env_cluster(application)
     if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
         # 集群未开启日志平台特性, 则直接返回
         return

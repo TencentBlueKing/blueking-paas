@@ -39,6 +39,7 @@ from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
+from paasng.infras.bcs.exceptions import BCSGatewayServiceError
 from paasng.infras.bk_user.client import BkUserClient
 from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
 from paasng.plat_mgt.infras.clusters.serializers import (
@@ -94,12 +95,24 @@ class ClusterViewSet(viewsets.GenericViewSet):
         if cluster.bcs_project_id and cluster.bcs_cluster_id:
             # 对来源于 BCS 的集群，需要获取 BCS 项目和集群名称
             client = BCSClient(get_tenant(request.user).id, request.user.username)
-            if bcs_project := client.get_auth_project(cluster.bcs_project_id):
-                context["bcs_project_name"] = bcs_project.name
-                context["bk_biz_name"] = bcs_project.businessName
 
-            if bcs_cluster := client.get_cluster(cluster.bcs_project_id, cluster.bcs_cluster_id):
-                context["bcs_cluster_name"] = bcs_cluster.clusterName
+            try:
+                bcs_project = client.get_auth_project(cluster.bcs_project_id)
+                bcs_cluster = client.get_cluster(cluster.bcs_project_id, cluster.bcs_cluster_id)
+            except BCSGatewayServiceError as e:
+                logger.warning(
+                    "username %s get bcs project %s, cluster %s error: %s",
+                    request.user.username,
+                    cluster.bcs_project_id,
+                    cluster.bcs_cluster_id,
+                    e,
+                )
+            else:
+                if bcs_project:
+                    context["bcs_project_name"] = bcs_project.name
+                    context["bk_biz_name"] = bcs_project.businessName
+                if bcs_cluster:
+                    context["bcs_cluster_name"] = bcs_cluster.clusterName
 
         return Response(data=ClusterRetrieveOutputSLZ(cluster, context=context).data)
 

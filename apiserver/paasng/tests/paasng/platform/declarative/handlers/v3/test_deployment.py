@@ -23,7 +23,10 @@ from unittest import mock
 
 import pytest
 import yaml
+from django.conf import settings
+from django_dynamic_fixture import G
 
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, get_svc_disc_as_env_variables
 from paasng.platform.declarative.exceptions import DescriptionValidationError
@@ -73,6 +76,14 @@ def yaml_v3_example() -> str:
 
 
 class TestCnativeAppDescriptionHandler:
+    @pytest.fixture()
+    def _create_for_test_svc_discovery(self):
+        # 为了检验 BKPAAS_SERVICE_ADDRESSES_BKSAAS 通过
+        G(Application, code="foo-app", region=settings.DEFAULT_REGION_NAME)
+        app = G(Application, code="bar-app", region=settings.DEFAULT_REGION_NAME)
+        G(Module, name="api", application=app)
+
+    @pytest.mark.usefixtures("_create_for_test_svc_discovery")
     def test_handle_normal(self, bk_module, bk_deployment, yaml_v3_example):
         with mock.patch(
             "paasng.platform.declarative.handlers.DeploymentDeclarativeController._update_bkmonitor"

@@ -248,10 +248,7 @@ class AppTagAdaptor:
 
         tag_list = []
         for tag in console_tags:
-            region = settings.DEFAULT_REGION_NAME
-            tag_list.append(
-                TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark="", parent_id=0, region=region)
-            )
+            tag_list.append(TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark="", parent_id=0))
         return tag_list
 
     def get(self, code: str) -> "legacy_models.LApplicationTag":

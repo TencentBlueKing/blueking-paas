@@ -19,12 +19,13 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.infras.cluster.shim import RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
-
-from .fields import AppIDField, AppNameField
 
 
 @i18n
@@ -43,14 +44,30 @@ class MarketParamsMixin(serializers.Serializer):
     source_tp_url = serializers.URLField(required=False, allow_blank=True, help_text="第三方访问地址")
 
 
+class EnvClusterNamesSLZ(serializers.Serializer):
+    stag = serializers.CharField(help_text="预发布环境集群名称")
+    prod = serializers.CharField(help_text="生产环境集群名称")
+
+    def validate_stag(self, name: str) -> str:
+        return self._validate(name, AppEnvironment.STAGING)
+
+    def validate_prod(self, name: str) -> str:
+        return self._validate(name, AppEnvironment.PRODUCTION)
+
+    def _validate(self, name: str, environment: AppEnvironment) -> str:
+        ctx = AllocationContext(
+            tenant_id=self.context["tenant_id"],
+            region=self.parent.parent.initial_data["region"],
+            environment=environment,
+            username=self.context.get("username"),
+        )
+        if not ClusterAllocator(ctx).check_available(name):
+            raise ValidationError(_("集群名称错误，无法找到名为 {name} 的集群").format(name=name))
+
+        return name
+
+
 class AdvancedCreationParamsMixin(serializers.Serializer):
     """高级应用创建选项"""
 
-    cluster_name = serializers.CharField(required=False)
-
-    def validate_cluster_name(self, value: str) -> str:
-        # Get region value from parent serializer
-        region = self.parent.initial_data["region"]
-        if not RegionClusterService(region).has_cluster(value):
-            raise ValidationError(_("集群名称错误，无法找到名为 {value} 的集群").format(value=value))
-        return value
+    env_cluster_names = EnvClusterNamesSLZ(help_text="各环境集群名称", required=False)

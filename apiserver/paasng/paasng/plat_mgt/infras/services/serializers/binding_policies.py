@@ -41,11 +41,17 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
 
 
 class AllocationPolicySLZ(BaseAllocationPolicySLZ):
+    class Meta:
+        ref_name = "plat_mgt.infras.services.AllocationPolicySLZ"
+
     def to_internal_value(self, data) -> UnifiedAllocationPolicy:
         return cattr.structure(super().to_internal_value(data), UnifiedAllocationPolicy)
 
 
 class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
+    class Meta:
+        ref_name = "plat_mgt.infras.services.AllocationPrecedencePolicySLZ"
+
     cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
     cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()

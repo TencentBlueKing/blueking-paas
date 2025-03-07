@@ -170,9 +170,7 @@
 #   bkmonitor: example-metric-client-token
 ## 是否默认允许创建 Smart 应用
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
-## 是否默认允许创建云原生应用
-# IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
-## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
 # MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
 ## 新建的 lesscode 应用是否为云原生应用
 # LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true

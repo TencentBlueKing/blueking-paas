@@ -128,3 +128,16 @@ class ApplicationDesc(BaseModel):
             if plugin["type"] == plugin_type:
                 return plugin
         return None
+
+
+class AppTenantConf(BaseModel):
+    """应用租户相关的配置，参数的详细说明可参考：paasng/platform/applications/models.py 中 Application 的定义
+
+    :param app_tenant_mode: 应用在租户层面的可用范围，可选值：全租户、指定租户
+    :param app_tenant_id: 应用租户 ID
+    :param tenant_id: 应用所属租户
+    """
+
+    app_tenant_mode: str
+    app_tenant_id: str
+    tenant_id: str

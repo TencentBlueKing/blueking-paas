@@ -30,7 +30,7 @@ from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppEnvOverlay
 from paasng.platform.bkapp_model.fieldlock.replicas import generate_locked_replicas_values
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD, CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
-from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
+from paasng.platform.declarative.application.resources import ApplicationDesc, AppTenantConf, get_application
 from paasng.platform.declarative.application.validations import v2 as app_spec_v2
 from paasng.platform.declarative.application.validations import v3 as app_spec_v3
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -100,6 +100,9 @@ class DescriptionHandler(Protocol):
     @property
     def app_desc(self) -> ApplicationDesc: ...
 
+    @property
+    def app_tenant(self) -> AppTenantConf: ...
+
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
@@ -140,12 +143,17 @@ class CNativeAppDescriptionHandler:
         )
         return app_desc
 
+    @property
+    def app_tenant(self) -> AppTenantConf:
+        """Turn json data into application tenant object"""
+        return AppTenantConf(**self.json_data["tenant"])
+
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
         :param user: User to perform actions as
         """
-        controller = AppDeclarativeController(user, source_origin)
+        controller = AppDeclarativeController(user, self.app_tenant, source_origin)
         return controller.perform_action(self.app_desc)
 
 
@@ -182,6 +190,10 @@ class AppDescriptionHandler:
         )
         return app_desc
 
+    @property
+    def app_tenant(self) -> AppTenantConf:
+        return AppTenantConf(**self.json_data["tenant"])
+
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         """Handle a YAML config for application initialization
 
@@ -193,7 +205,7 @@ class AppDescriptionHandler:
         if "module" not in json_data and "modules" not in json_data:
             raise DescriptionValidationError({"modules": _("内容不能为空")})
 
-        controller = AppDeclarativeController(user, source_origin)
+        controller = AppDeclarativeController(user, self.app_tenant, source_origin)
         return controller.perform_action(self.app_desc)
 
 
@@ -207,6 +219,10 @@ class UnsupportedVerDescriptionHandler:
     def app_desc(self) -> ApplicationDesc:
         raise DescriptionValidationError(self.message)
 
+    @property
+    def app_tenant(self) -> AppTenantConf:
+        raise DescriptionValidationError("Missing tenant configuration information")
+
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         raise DescriptionValidationError(self.message)
 
@@ -219,6 +235,10 @@ class NoVerDescriptionHandler:
     @property
     def app_desc(self) -> ApplicationDesc:
         raise DescriptionValidationError(self.message)
+
+    @property
+    def app_tenant(self) -> AppTenantConf:
+        raise DescriptionValidationError("Missing tenant configuration information")
 
     def handle_app(self, user: User, source_origin: Optional[SourceOrigin] = None) -> Application:
         raise DescriptionValidationError(self.message)

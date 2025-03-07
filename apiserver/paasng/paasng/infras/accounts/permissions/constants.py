@@ -26,20 +26,6 @@ class SiteAction(StrStructuredEnum):
     # 注意：这里是指后台管理页面的权限，进入后台管理后，查询相关资源需要平台管理/应用模板管理/平台运营的权限
     VISIT_ADMIN42 = EnumField("visit_admin42", label=_("访问后台管理"))
 
-    # 读取应用信息的权限，第三方系统调用
-    SYSAPI_READ_APPLICATIONS = EnumField("sysapi:read:applications", label=_("系统 API：读取应用信息"))
-    # 修改应用信息的权限，第三方系统调用
-    SYSAPI_MANAGE_APPLICATIONS = EnumField("sysapi:manage:applications", label=_("系统 API：应用管理"))
-    # 读取增强服务信息权限，第三方系统调用
-    SYSAPI_READ_SERVICES = EnumField("sysapi:read:services", label=_("系统 API：读取服务信息"))
-    # 轻应用管理权限，仅轻应用系统调用可用
-    SYSAPI_MANAGE_LIGHT_APPLICATIONS = EnumField("sysapi:manage:light-applications", label=_("系统 API：轻应用管理"))
-    # 白名单访问控制，仅系统 API 调用可用
-    SYSAPI_MANAGE_ACCESS_CONTROL = EnumField("sysapi:manage:access_control", label=_("系统 API：白名单访问控制"))
-    # 读取 DB 凭证及服务信息，仅 LessCode 系统调用可用
-    SYSAPI_READ_DB_CREDENTIAL = EnumField("sysapi:read:db-credential", label=_("系统 API：读取 DB 凭证信息"))
-    SYSAPI_BIND_DB_SERVICE = EnumField("sysapi:bind:db-service", label=_("系统 API：绑定 DB 服务"))
-
     # 平台管理（增强服务，运行时，应用集群，应用资源方案，应用管理，用户管理，代码库配置管理等）
     MANAGE_PLATFORM = EnumField("manage_platform", label=_("平台管理"))
     # 应用模板管理（应用模板管理, 监控仪表盘模版管理）

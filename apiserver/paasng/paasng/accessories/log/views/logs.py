@@ -48,7 +48,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.bk_log.exceptions import BkLogGatewayServiceError
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_required
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
@@ -454,11 +454,7 @@ class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView): ...
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):
-    # WARNING: This class does not inherit from BaseSysAPIViewSet because it define the
-    # permission_classes on its own. As long as the `IsAuthenticated` permission class is
-    # not included, we should be fine.
-    permission_classes: List = []
+    permission_classes: List = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
-    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment):
         return super().query_logs(request, code, module_name, environment)

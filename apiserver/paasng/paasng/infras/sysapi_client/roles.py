@@ -15,8 +15,9 @@
 # to the current version of the project delivered to anyone in the future.
 """The different roles of the system API client."""
 
-from functools import wraps
-from typing import Dict
+from typing import Dict, Type
+
+from rest_framework.permissions import BasePermission
 
 from paasng.utils.error_codes import error_codes
 
@@ -93,24 +94,65 @@ class ClientPermChecker:
 client_perm_checker = ClientPermChecker()
 
 
-def sysapi_client_perm_required(action: ClientAction):
-    """Require the request to be made by a system API client with the required permission."""
+def sysapi_client_perm_class(action: ClientAction) -> Type[BasePermission]:
+    """Create a dynamic permission class for system API client.
 
-    def decorated(func):
-        # Set an attribute to mark the function as protected so that the `perm_insure`
-        # module knows.
-        func._protected_by_sysapi_client_perm_required = True
+    IMPORTANT: The permission class created by this function does not adhere to
+    rest_framework's standard. It does not return False when the check fails;
+    instead, it raises a customized APIError. This is done to provide a more
+    informative error response.
 
-        @wraps(func)
-        def view_func(self, request, *args, **kwargs):
+    :param action: Client action type.
+    :return: A permission class.
+    """
+
+    class SysAPIClientPermission(BasePermission):
+        """The permission class for system API client."""
+
+        def has_permission(self, request, view):
             sys_client = getattr(request, "sysapi_client", None)
             if not sys_client:
                 raise error_codes.SYSAPI_CLIENT_NOT_FOUND
             if not client_perm_checker.role_can_do(ClientRole(sys_client.role), action):
                 raise error_codes.SYSAPI_CLIENT_PERM_DENIED
 
-            return func(self, request, *args, **kwargs)
+            return True
 
-        return view_func
+    return SysAPIClientPermission
 
-    return decorated
+
+def sysapi_client_view_actions_perm(
+    view_action_map: Dict[str, ClientAction], default_action: ClientAction | None = None
+) -> Type[BasePermission]:
+    """Create a permission class for system API view, it allows using different
+    client action for different view actions.
+
+    IMPORTANT: The permission class created by this function does not adhere to
+    rest_framework's standard. It does not return False when the check fails;
+    instead, it raises a customized APIError. This is done to provide a more
+    informative error response.
+
+    :param view_action_map: A map from view action to client action.
+    :param default_action: Optional, the default client action if the view action
+        is not found.
+    :return: Permission class.
+    """
+
+    class ClientViewActionsPermission(BasePermission):
+        """The permission class for system API views."""
+
+        def has_permission(self, request, view):
+            # Get the action from the view action map, if not found, use the default action.
+            action = view_action_map.get(view.action, default_action)
+            if not action:
+                raise ValueError('No client action found for view action "%s".' % view.action)
+
+            sys_client = getattr(request, "sysapi_client", None)
+            if not sys_client:
+                raise error_codes.SYSAPI_CLIENT_NOT_FOUND
+            if not client_perm_checker.role_can_do(ClientRole(sys_client.role), action):
+                raise error_codes.SYSAPI_CLIENT_PERM_DENIED
+
+            return True
+
+    return ClientViewActionsPermission

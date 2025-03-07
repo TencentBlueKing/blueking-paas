@@ -25,7 +25,7 @@ from paasng.accessories.log.serializers import LogQueryParamsSLZ
 from paasng.accessories.log.views.logs import ModuleStdoutLogAPIView, ModuleStructuredLogAPIView
 from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.infras.sysapi_client.constants import ClientAction
-from paasng.infras.sysapi_client.roles import sysapi_client_perm_required
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.datetime import convert_timestamp_to_str
@@ -84,15 +84,11 @@ class V1StdoutLogAPIView(ModuleStdoutLogAPIView):
 
 
 class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
-    # WARNING: This class does not inherit from BaseSysAPIViewSet because it define the
-    # permission_classes on its own. As long as the `IsAuthenticated` permission class is
-    # not included, we should be fine.
-    permission_classes: List = [AllowAnyActionsOnAllApps]
+    permission_classes: List = [AllowAnyActionsOnAllApps, sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
     # 该接口已注册到 APIGW
     # 网关名称 search_structured_log
     # 请勿随意修改该接口协议
-    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment=None):
         slz = LogQueryParamsSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
@@ -128,6 +124,5 @@ class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
             }
         )
 
-    @sysapi_client_perm_required(ClientAction.READ_APPLICATIONS)
     def query_logs_get(self, request, code, module_name, environment=None):
         return self.query_logs(request, code, module_name, environment)

@@ -55,9 +55,9 @@ from paasng.accessories.services.models import ServiceCategory
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
@@ -649,7 +649,7 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
-    permission_classes = [site_perm_class(SiteAction.SYSAPI_READ_APPLICATIONS)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
     def retrieve_related_applications_info(self, request, db_name):
         """查看 mysql 增强服务的数据库关联的应用信息

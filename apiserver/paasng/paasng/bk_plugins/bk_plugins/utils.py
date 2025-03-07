@@ -32,7 +32,7 @@ def ensure_builtin_user():
     user, created = User.objects.get_or_create(username=username)
     if created:
         UserPrivateToken.objects.create_token(user=user, expires_in=None)
-    role = SiteRole.SYSTEM_API_BASIC_READER.value
+    role = SiteRole.ADMIN.value
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     profile, _ = UserProfile.objects.update_or_create(
         user=user_id, defaults={"role": role, "enable_regions": settings.DEFAULT_REGION_NAME}

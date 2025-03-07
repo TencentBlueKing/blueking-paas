@@ -122,7 +122,6 @@ class Command(BaseCommand):
 
         obj, created = model.objects.update_or_create(
             name=name,
-            region="",
             defaults={
                 "is_hidden": is_hidden,
                 "display_name_zh_cn": display_name_zh_cn,

@@ -63,7 +63,6 @@ class Command(BaseCommand):
     ):
         obj, created = AppBuildPack.objects.update_or_create(
             name=name,
-            region="",
             defaults={
                 "display_name_zh_cn": display_name_zh_cn,
                 "display_name_en": display_name_en,

@@ -18,7 +18,6 @@
 from contextlib import nullcontext
 
 import pytest
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.test import override_settings
 from django_dynamic_fixture import G
@@ -32,19 +31,14 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize("model_class", [AppSlugBuilder, AppSlugRunner])
 class TestAppImageModel:
     @pytest.mark.parametrize(
-        ("region", "is_hidden", "expect_empty"),
+        ("is_hidden", "expect_empty"),
         [
-            (..., False, False),
-            (..., True, True),
-            ("random_name", True, True),
+            (False, False),
+            (True, True),
         ],
     )
-    def test_filter(self, request, bk_module, model_class, region, is_hidden, expect_empty):
-        if region is not ...:
-            region = request.getfixturevalue(region)
-        else:
-            region = bk_module.region
-        instance = G(model_class, region=region, is_hidden=is_hidden)
+    def test_filter(self, bk_module, model_class, is_hidden, expect_empty):
+        instance = G(model_class, is_hidden=is_hidden)
         expected = [] if expect_empty else [instance]
         assert list(model_class.objects.filter_module_available(bk_module)) == expected
 
@@ -57,7 +51,7 @@ class TestAppImageModel:
         ],
     )
     def test_filter_full_image(self, bk_module, model_class, image, tag, full_image, expect_empty):
-        instance = G(model_class, region=bk_module.region, image=image, tag=tag)
+        instance = G(model_class, image=image, tag=tag)
         expected = [] if expect_empty else [instance]
         assert list(type(instance).objects.filter_by_full_image(bk_module, full_image)) == expected
 
@@ -86,7 +80,7 @@ class TestAppImageModel:
     def test_filter_by_labels(
         self, bk_module, model_class, labels, language, source_origin, expect_matched, expect_empty
     ):
-        instance = G(model_class, region=bk_module.region)
+        instance = G(model_class)
         for key in labels:
             instance.set_label(key, labels[key])
         runtime_labels = {"language": language}
@@ -137,10 +131,10 @@ class TestAppImageModel:
             ([{"name": "a"}, {"name": "foo"}], {}, nullcontext("foo")),
         ],
     )
-    @override_settings(DEFAULT_RUNTIME_IMAGES={settings.DEFAULT_REGION_NAME: "foo"})
+    @override_settings(DEFAULT_RUNTIME_IMAGES="foo")
     def test_select_default_runtime(self, bk_module, model_class, runtimes, labels, ctx):
         for args in runtimes:
-            G(model_class, region=settings.DEFAULT_REGION_NAME, **args)
+            G(model_class, **args)
 
         with ctx as expected_name:
             instance = model_class.objects.select_default_runtime(labels=labels)
@@ -150,24 +144,18 @@ class TestAppImageModel:
 
 class TestAppSlugBuilder:
     @pytest.mark.parametrize(
-        ("region", "is_hidden", "bind", "expect_empty"),
+        ("is_hidden", "bind", "expect_empty"),
         [
-            ("random_name", False, False, True),
-            ("random_name", True, False, True),
-            ("random_name", True, True, False),
-            ("random_name", False, True, False),
-            (..., False, True, False),
-            (..., True, True, False),
-            (..., True, False, True),
-            (..., False, False, False),
+            # is_hidden 为 False 时, 表示不隐藏 buildpack. 无论是否被绑定, 模块可绑定的列表中都能查到
+            (False, False, False),
+            (False, True, False),
+            # is_hidden 为 True 时, 表示隐藏 buildpack. 模块可绑定的列表中只能查到已被绑定的 buildpack
+            (True, True, False),
+            (True, False, True),
         ],
     )
-    def test_get_buildpack_choices(
-        self, request, bk_module, buildpack, slugbuilder, region, is_hidden, bind, expect_empty
-    ):
+    def test_get_buildpack_choices(self, bk_module, buildpack, slugbuilder, is_hidden, bind, expect_empty):
         build_config = BuildConfig.objects.get_or_create_by_module(bk_module)
-        if region is not ...:
-            buildpack.region = request.getfixturevalue(region)
         if bind:
             build_config.buildpacks.add(buildpack)
         buildpack.is_hidden = is_hidden

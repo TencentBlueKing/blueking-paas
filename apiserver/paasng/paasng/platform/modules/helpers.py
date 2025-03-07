@@ -157,8 +157,6 @@ class ModuleRuntimeBinder:
     @transaction.atomic
     def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder):
         """绑定构建和运行镜像,如果两个镜像的名称不一致将会报错"""
-        module = self.module
-
         if slugbuilder is None:
             raise RuntimeError("slugbuilder is None")
 
@@ -166,16 +164,6 @@ class ModuleRuntimeBinder:
             raise BindError(
                 f"name must be consistent between "
                 f"slugbuilder({slugbuilder.full_image}) and slugrunner({slugrunner.full_image})"
-            )
-
-        if slugbuilder.region != module.region:
-            raise BindError(
-                f"region must be consistent between " f"slugbuilder({slugbuilder.full_image}) and module({module.pk})"
-            )
-
-        if slugrunner.region != module.region:
-            raise BindError(
-                f"region must be consistent between " f"slugrunner({slugrunner.full_image}) and module({module.pk})"
             )
 
         # 当前模块只能使用一个镜像
@@ -204,7 +192,7 @@ class ModuleRuntimeBinder:
         if slugbuilder is None:
             raise RuntimeError("slugbuilder is None")
 
-        if slugbuilder.region != buildpack.region or not slugbuilder.buildpacks.filter(pk=buildpack.pk).exists():
+        if not slugbuilder.buildpacks.filter(pk=buildpack.pk).exists():
             # 当前 slugbuilder 不能与当前 buildpack 建立关联
             raise BindError(
                 f"binding between slugbuilder {slugbuilder.full_image} and buildpack {buildpack.name} is not allowed"

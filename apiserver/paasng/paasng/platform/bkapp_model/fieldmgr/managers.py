@@ -97,6 +97,10 @@ class MultiFieldsManager:
             self.row_group.reset_manager(f)
         self.store.save(self.row_group)
 
+    def get(self, fields: list[Field]) -> dict[Field, Optional[FieldMgrName]]:
+        """Get manager for each field in fields."""
+        return {f: self.row_group.get_manager(f) for f in fields}
+
 
 class RowGroupStore:
     """The managed fields row group store.

@@ -132,6 +132,10 @@ class TestRetrieveDevSandbox:
         assert resp.json() == {
             "workspace": "/data/workspace",
             "devserver_token": bk_dev_sandbox.token,
+            "repo": {
+                "url": "svn://127.0.0.1:8080/app/branch/master",
+                "version_info": {"revision": "...", "version_name": "master", "version_type": "branch"},
+            },
             "code_editor_password": bk_dev_sandbox.code_editor_config.password,
             "env_vars": {"FOO": "BAR"},
             "app_url": "example.com/app/",

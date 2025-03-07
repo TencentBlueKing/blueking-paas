@@ -28,6 +28,8 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
@@ -104,3 +106,20 @@ def get_or_create_engine_app(owner: str, region: str, engine_app_name: str, tena
     return EngineApp.objects.create(
         id=info.uuid, name=engine_app_name, owner=owner, region=region, tenant_id=tenant_id
     )
+
+
+def check_replicas_manually_scaled(m: Module) -> bool:
+    """check if replicas has been manually scaled by web form"""
+    process_names = ModuleProcessSpec.objects.filter(module=m).values_list("name", flat=True)
+
+    if not process_names:
+        return False
+
+    # NOTE: 页面手动扩缩容会修改 spec.env_overlay.replicas 的管理者为 web_form, 因此只需要检查 f_overlay_replicas 字段
+    replicas_fields = []
+    for proc_name in process_names:
+        for env_name in AppEnvName:
+            replicas_fields.append(fieldmgr.f_overlay_replicas(proc_name, env_name))
+
+    managers = fieldmgr.MultiFieldsManager(m).get(replicas_fields)
+    return fieldmgr.FieldMgrName.WEB_FORM in managers.values()

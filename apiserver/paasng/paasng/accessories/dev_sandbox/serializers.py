@@ -82,6 +82,11 @@ class DevSandboxCreateOutputSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="沙箱唯一标识")
 
 
+class DevSandboxRepoInfoSLZ(serializers.Serializer):
+    url = serializers.CharField(help_text="代码仓库地址")
+    version_info = SourceCodeVersionInfoSLZ(help_text="代码版本信息")
+
+
 class DevSandboxRetrieveOutputSLZ(serializers.Serializer):
     workspace = serializers.CharField(help_text="沙箱工作目录")
 
@@ -89,6 +94,7 @@ class DevSandboxRetrieveOutputSLZ(serializers.Serializer):
     code_editor_password = serializers.CharField(help_text="代码编辑器访问密码", allow_null=True)
     env_vars = serializers.JSONField(help_text="沙箱环境变量")
 
+    repo = DevSandboxRepoInfoSLZ(help_text="代码仓库信息")
     app_url = serializers.CharField(help_text="SaaS 服务地址", source="urls.app")
     devserver_url = serializers.CharField(help_text="devserver 服务地址", source="urls.devserver")
     code_editor_url = serializers.CharField(help_text="code editor 服务地址", source="urls.code_editor")

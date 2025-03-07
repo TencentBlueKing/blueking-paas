@@ -30,7 +30,6 @@ class TagData:
     index: int
     remark: str
     parent_id: int
-    region: str
 
 
 class TagMap(django_models.Model):

@@ -14,16 +14,19 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from typing import NamedTuple
+from dataclasses import dataclass
 
 import pytest
 from rest_framework import viewsets
 from rest_framework.test import APIRequestFactory
 
-from paasng.infras.accounts.middlewares import AuthenticatedAppAsUserMiddleware, PrivateTokenAuthenticationMiddleware
-from paasng.infras.accounts.models import AuthenticatedAppAsUser, User, UserPrivateToken
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
+from paasng.infras.sysapi_client.constants import ClientRole
+from paasng.infras.sysapi_client.middlewares import (
+    AuthenticatedAppAsClientMiddleware,
+    PrivateTokenAuthenticationMiddleware,
+)
+from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 
 pytestmark = pytest.mark.django_db
 
@@ -40,41 +43,39 @@ class TestPrivateTokenAuthenticationMiddleware:
 
         middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
-        assert not hasattr(request, "user")
+        assert not hasattr(request, "sysapi_client")
 
     def test_random_invalid_token(self):
         request = request_factory.get("/")
 
         middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
-        assert not hasattr(request, "user")
+        assert not hasattr(request, "sysapi_client")
 
-    def test_valid_token_provided(self):
-        user = User.objects.create(username="foo_user")
-        token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
+    @pytest.mark.parametrize(
+        "request_maker",
+        [
+            # Token in query string
+            lambda token: request_factory.get("/", {"private_token": token}),
+            # Token in Authorization header
+            lambda token: request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token}"),
+        ],
+        ids=["query_param", "auth_header"],
+    )
+    def test_valid_token_authentication(self, request_maker):
+        client = SysAPIClient.objects.create(name="foo_client", role=ClientRole.BASIC_READER)
+        token = ClientPrivateToken.objects.create_token(client=client, expires_in=None)
 
-        # Provide token in query string
-        request = request_factory.get("/", {"private_token": token.token})
-
-        middleware = PrivateTokenAuthenticationMiddleware(get_response)
-        middleware(request)
-        assert request.user.username == "foo_user"
-        assert request.user.is_authenticated
-
-    def test_valid_token_provided_by_header(self):
-        user = User.objects.create(username="foo_user")
-        token = UserPrivateToken.objects.create_token(user=user, expires_in=None)
-
-        # Provide token in query string
-        request = request_factory.get("/", HTTP_AUTHORIZATION=f"Bearer {token.token}")
+        # Create request using the parameterized request maker
+        request = request_maker(token.token)
 
         middleware = PrivateTokenAuthenticationMiddleware(get_response)
         middleware(request)
-        assert request.user.username == "foo_user"
-        assert request.user.is_authenticated
+        assert request.sysapi_client.name == "foo_client"
 
 
-class SimpleApp(NamedTuple):
+@dataclass
+class SimpleApp:
     """Simulating App type in `apigw_manager` module"""
 
     bk_app_code: str
@@ -90,23 +91,23 @@ class ForTestNotMarkedAuthViewSet(viewsets.ViewSet):
     pass
 
 
-class TestAuthenticatedAppAsUserMiddleware:
+class TestAuthenticatedAppAsClientMiddleware:
     @pytest.mark.parametrize(
-        ("app", "marked_as_force_allow", "expected_username"),
+        ("app", "marked_as_force_allow", "expected_name"),
         [
-            (SimpleApp(bk_app_code="foo", verified=True), False, "foo-user"),
+            (SimpleApp(bk_app_code="foo", verified=True), False, "foo-client"),
             (SimpleApp(bk_app_code="foo", verified=False), False, ""),
             (SimpleApp(bk_app_code="bar", verified=True), False, ""),
-            # When view set has been marked as "force allow authed app", an user will be created
+            # When view set has been marked as "force allow authed app", a new client will be created
             (SimpleApp(bk_app_code="bar", verified=True), True, "authed-app-bar"),
             (SimpleApp(bk_app_code="bar", verified=False), True, ""),
             (None, False, ""),
         ],
     )
-    def test_verified_app_provided(self, app, marked_as_force_allow, expected_username):
+    def test_verified_app_provided(self, app, marked_as_force_allow, expected_name):
         # Set up data fixtures
-        user = User.objects.create(username="foo-user")
-        AuthenticatedAppAsUser.objects.create(user=user, bk_app_code="foo")
+        client = SysAPIClient.objects.create(name="foo-client", role=ClientRole.BASIC_READER)
+        AuthenticatedAppAsClient.objects.create(client=client, bk_app_code="foo")
 
         request = request_factory.get("/")
         if app:
@@ -117,9 +118,9 @@ class TestAuthenticatedAppAsUserMiddleware:
             if marked_as_force_allow
             else ForTestNotMarkedAuthViewSet.as_view({"get": "retrieve"})
         )
-        AuthenticatedAppAsUserMiddleware(get_response).process_view(request, view_func, None, None)
-        if expected_username:
-            assert request.user.username == expected_username
-            assert request.user.is_authenticated
+        AuthenticatedAppAsClientMiddleware(get_response).process_view(request, view_func, None, None)
+        if expected_name:
+            assert request.sysapi_client.name == expected_name
+            assert request.sysapi_client.is_active is True
         else:
-            assert not hasattr(request, "user")
+            assert not hasattr(request, "sysapi_client")

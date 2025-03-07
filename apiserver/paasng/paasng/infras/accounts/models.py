@@ -107,6 +107,7 @@ class UserPrivateTokenManager(models.Manager):
         return self.get(user=User.objects.get(username=user))
 
 
+# TODO: Remove this model, it has been migrated to the sysapi_client app.
 class UserPrivateToken(models.Model):
     """Private token can be used to authenticate an user, these tokens usually have very long
     expiration period. So they are perfect for system level communications.
@@ -339,6 +340,7 @@ class AuthenticatedAppAsUserManager(models.Manager):
         return self.get(bk_app_code=bk_app_code)
 
 
+# TODO: Remove this model, it has been migrated to the sysapi_client app.
 class AuthenticatedAppAsUser(TimestampedModel):
     """Store relationships which treat an authenticated(by API Gateway) app as an regular user,
     useful for calling system APIs without providing any real user credentials"""

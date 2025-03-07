@@ -32,14 +32,6 @@ class GlobalSiteResource(ProtectedResource):
     permissions = [
         (SiteAction.VISIT_SITE, "can visit site"),
         (SiteAction.VISIT_ADMIN42, "can visit admin pages"),
-        # System Api
-        (SiteAction.SYSAPI_READ_APPLICATIONS, "can read application and modules infos"),
-        (SiteAction.SYSAPI_MANAGE_APPLICATIONS, "can manage a application"),
-        (SiteAction.SYSAPI_READ_SERVICES, "can read services infos"),
-        (SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS, "can manage light application"),
-        (SiteAction.SYSAPI_MANAGE_ACCESS_CONTROL, "can manage access_control strategies"),
-        (SiteAction.SYSAPI_READ_DB_CREDENTIAL, "can read db-credential"),
-        (SiteAction.SYSAPI_BIND_DB_SERVICE, "can bind db-service"),
         # Admin42
         (SiteAction.MANAGE_PLATFORM, "can manage platform"),
         (SiteAction.MANAGE_APP_TEMPLATES, "can manage app templates"),
@@ -65,13 +57,6 @@ def gen_site_role_perm_map(role: SiteRole) -> Dict[SiteAction, bool]:
     perm_map = {
         SiteAction.VISIT_SITE: True,
         SiteAction.VISIT_ADMIN42: False,
-        SiteAction.SYSAPI_READ_APPLICATIONS: False,
-        SiteAction.SYSAPI_MANAGE_APPLICATIONS: False,
-        SiteAction.SYSAPI_READ_SERVICES: False,
-        SiteAction.SYSAPI_MANAGE_ACCESS_CONTROL: False,
-        SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS: False,
-        SiteAction.SYSAPI_READ_DB_CREDENTIAL: False,
-        SiteAction.SYSAPI_BIND_DB_SERVICE: False,
         SiteAction.MANAGE_PLATFORM: False,
         SiteAction.MANAGE_APP_TEMPLATES: False,
         SiteAction.OPERATE_PLATFORM: False,
@@ -98,28 +83,6 @@ def gen_site_role_perm_map(role: SiteRole) -> Dict[SiteAction, bool]:
         perm_map[SiteAction.VISIT_ADMIN42] = True
         perm_map[SiteAction.OPERATE_PLATFORM] = True
 
-    elif role == SiteRole.SYSTEM_API_BASIC_READER:
-        perm_map[SiteAction.SYSAPI_READ_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_READ_SERVICES] = True
-
-    elif role == SiteRole.SYSTEM_API_BASIC_MAINTAINER:
-        perm_map[SiteAction.SYSAPI_READ_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_MANAGE_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_READ_SERVICES] = True
-        perm_map[SiteAction.SYSAPI_MANAGE_ACCESS_CONTROL] = True
-
-    elif role == SiteRole.SYSTEM_API_LIGHT_APP_MAINTAINER:
-        perm_map[SiteAction.SYSAPI_READ_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_READ_SERVICES] = True
-        perm_map[SiteAction.SYSAPI_MANAGE_LIGHT_APPLICATIONS] = True
-
-    elif role == SiteRole.SYSTEM_API_LESSCODE:
-        perm_map[SiteAction.SYSAPI_READ_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_MANAGE_APPLICATIONS] = True
-        perm_map[SiteAction.SYSAPI_READ_SERVICES] = True
-        perm_map[SiteAction.SYSAPI_READ_DB_CREDENTIAL] = True
-        perm_map[SiteAction.SYSAPI_BIND_DB_SERVICE] = True
-
     return perm_map
 
 
@@ -135,10 +98,6 @@ def _init_global_site_resource():
         SiteRole.PLATFORM_MANAGER,
         SiteRole.APP_TEMPLATES_MANAGER,
         SiteRole.PLATFORM_OPERATOR,
-        SiteRole.SYSTEM_API_BASIC_READER,
-        SiteRole.SYSTEM_API_BASIC_MAINTAINER,
-        SiteRole.SYSTEM_API_LIGHT_APP_MAINTAINER,
-        SiteRole.SYSTEM_API_LESSCODE,
     ]:
         resource.add_role(role, gen_site_role_perm_map(role))
 

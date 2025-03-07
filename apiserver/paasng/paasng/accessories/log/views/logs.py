@@ -45,10 +45,10 @@ from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.utils import clean_logs, parse_request_to_es_dsl
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.bk_log.exceptions import BkLogGatewayServiceError
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
@@ -454,8 +454,7 @@ class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView): ...
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):
-    permission_classes: List = []
+    permission_classes: List = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment):
         return super().query_logs(request, code, module_name, environment)

@@ -712,10 +712,7 @@ METRIC_CLIENT_TOKEN_DICT = settings.get("METRIC_CLIENT_TOKEN_DICT", {})
 # 是否默认允许创建 Smart 应用
 IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT", True)
 
-# 是否默认允许创建云原生应用
-IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT", False)
-
-# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称，不配置时使用 region 默认集群
+# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
 # 新建的 lesscode 应用是否为云原生应用
@@ -1322,7 +1319,6 @@ APP_DOCKER_REGISTRY_USERNAME = settings.get("APP_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 
-
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
@@ -1527,7 +1523,7 @@ FE_FEATURE_SETTINGS_ANALYTICS = settings.get("FE_FEATURE_SETTINGS_ANALYTICS", Fa
 FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO = settings.get("FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO", False)
 # 是否开启应用迁移相关功能
 FE_FEATURE_SETTINGS_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_MGRLEGACY", False)
-# 是否开启迁移至云原生应用的相关功能
+# 是否开启迁移至云原生应用的相关功能（注：启用该特性需要配置 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER）
 FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY", False)
 # 应用令牌，用于 APP 调用用户态的云 API
 FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)

@@ -18,18 +18,18 @@
 import logging
 import typing
 
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.functional import cached_property
 from rest_framework.exceptions import PermissionDenied
 
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.shim import RegionClusterService
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.region.models import get_region
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.constants import LegacyAppTag, MigrationStatus
 from paasng.platform.mgrlegacy.models import MigrationProcess
-from paasng.utils.configs import get_region_aware
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -188,21 +188,16 @@ class LegacyAppManager:
         return None
 
 
-def get_cnative_target_cluster(region: str) -> Cluster:
-    """Get the target cluster when migrating an application to the cloud-native type.
-
-    :param region: The region name.
-    :return: The cluster, return the default cluster if the target cluster is not
-        configured in the given region.
+def get_cnative_target_cluster() -> Cluster:
     """
-    try:
-        target_cluster_name = get_region_aware("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", region)
-    except KeyError:
-        logger.warning("Get mgrlegacy target cluster failed, return default instead, region: %s.", region)
-        return RegionClusterService(region).get_default_cluster()
+    Get the target cluster when migrating an application to the cloud-native type.
 
-    if target_cluster_name:
-        return RegionClusterService(region).get_cluster_by_name(target_cluster_name)
+    :raises: ImproperlyConfigured if MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.
+    :return: migrate to cnative application's target cluster.
+    """
+    target_cluster_name = settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER
 
-    # MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is "", return default cluster
-    return RegionClusterService(region).get_default_cluster()
+    if not target_cluster_name:
+        raise ImproperlyConfigured("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.")
+
+    return Cluster.objects.get(name=target_cluster_name)

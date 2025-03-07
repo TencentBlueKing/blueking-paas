@@ -21,7 +21,8 @@ from typing import Dict, List, NamedTuple, Optional
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from paas_wl.infras.cluster.shim import Cluster, RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
@@ -93,7 +94,6 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
     try:
         addrs = get_preallocated_address(
             application.code,
-            env.module.region,
             clusters=clusters,
             module_name=env.module.name,
             preferred_url_type=preferred_url_type,
@@ -113,7 +113,6 @@ class PreAddresses(NamedTuple):
 
 def get_preallocated_address(
     app_code: str,
-    region: Optional[str] = None,
     clusters: Optional[Dict[AppEnvName, Cluster]] = None,
     module_name: Optional[str] = None,
     preferred_url_type: Optional[ExposedURLType] = None,
@@ -128,11 +127,7 @@ def get_preallocated_address(
     :raises: ValueError no preallocated address can be found
     """
     preferred_url_type = preferred_url_type or ExposedURLType.SUBPATH
-    region = region or settings.DEFAULT_REGION_NAME
     clusters = clusters or {}
-
-    helper = RegionClusterService(region)
-    stag_address, prod_address = "", ""
 
     def _get_cluster_addr(cluster, addr_key: str) -> str:
         """A small helper function for getting address."""
@@ -150,11 +145,19 @@ def get_preallocated_address(
                 return getattr(addr, addr_key).as_url().as_address()
         return ""
 
+    def _get_default_cluster(app_code: str, environment: AppEnvName) -> Cluster:
+        app: Application = Application.objects.filter(code=app_code).first()
+        if not app:
+            raise ValueError(f"application {app_code} not found")
+
+        ctx = AllocationContext(tenant_id=app.tenant_id, region=app.region, environment=environment)
+        return ClusterAllocator(ctx).get_default()
+
     # 生产环境
-    prod_cluster = clusters.get(AppEnvName.PROD) or helper.get_default_cluster()
+    prod_cluster = clusters.get(AppEnvName.PROD) or _get_default_cluster(app_code, AppEnvName.PROD)
     prod_address = _get_cluster_addr(prod_cluster, "prod")
-    # 测试环境
-    stag_cluster = clusters.get(AppEnvName.STAG) or helper.get_default_cluster()
+    # 预发布环境
+    stag_cluster = clusters.get(AppEnvName.STAG) or _get_default_cluster(app_code, AppEnvName.STAG)
     stag_address = _get_cluster_addr(stag_cluster, "stag")
 
     if not (stag_address and prod_address):
@@ -176,6 +179,3 @@ def get_bk_doc_url_prefix() -> str:
     # Address for bk_docs_center saas
     # Remove the "/" at the end to ensure that the subdomain and subpath mode are handled in the same way
     return get_preallocated_address(settings.BK_DOC_APP_ID).prod.rstrip("/")
-
-
-# pre-allocated addresses related functions end

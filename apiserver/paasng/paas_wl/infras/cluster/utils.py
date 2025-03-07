@@ -16,20 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
-
-from .shim import RegionClusterService
-
-
-def get_default_cluster_by_region(region: str) -> Cluster:
-    """Get default cluster name by region"""
-    try:
-        return Cluster.objects.get(is_default=True, region=region)
-    except Cluster.DoesNotExist:
-        raise RuntimeError(f"No default cluster found in region `{region}`")
+from paas_wl.infras.cluster.shim import ClusterAllocator
 
 
 def get_cluster_by_app(app: WlApp) -> Cluster:
@@ -43,7 +34,7 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
 
     cluster_name = app.config_set.latest().cluster
     if not cluster_name:
-        return get_default_cluster_by_region(app.region)
+        return ClusterAllocator(AllocationContext.from_wl_app(app)).get_default()
 
     try:
         return Cluster.objects.get(name=cluster_name)
@@ -52,15 +43,13 @@ def get_cluster_by_app(app: WlApp) -> Cluster:
 
 
 def get_dev_sandbox_cluster(app: WlApp) -> Cluster:
-    # 优先使用开发沙箱集群
+    # 优先使用指定的开发沙箱集群
     if cluster_name := settings.DEV_SANDBOX_CLUSTER:
         try:
             return Cluster.objects.get(name=cluster_name)
-        except ObjectDoesNotExist:
+        except Cluster.DoesNotExist:
             raise RuntimeError(f"dev sandbox cluster called {cluster_name} no found")
 
-    # 否则使用 region 下的默认集群，注意：
-    #   - 功能要求 k8s 版本 >= 1.20.x, 版本过低可能会导致 ingress 等资源出现版本兼容问题
-    #
-    # TODO：Cluster 增加新字段（配置项）来标记功能所使用的集群（以及配置整个功能开关等）
-    return RegionClusterService(app.region).get_default_cluster()
+    # 否则使用使用匹配到的的默认集群，注意：
+    #  - 功能要求 k8s 版本 >= 1.20.x, 版本过低可能会导致 ingress 等资源出现版本兼容问题
+    return ClusterAllocator(AllocationContext.from_wl_app(app)).get_default()

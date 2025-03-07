@@ -950,7 +950,8 @@ export default {
       return this.$store.state.cloudApi.cloudAppData;
     },
     clusterList() {
-      return this.advancedOptionsObj[this.regionChoose] || [];
+      // 目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
+      return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
     },
     imageRepositoryTemplate() {
       if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
@@ -1222,7 +1223,7 @@ export default {
       advancedRegionClusters.forEach((item) => {
         // eslint-disable-next-line no-prototype-builtins
         if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
-          this.$set(this.advancedOptionsObj, item.region, item.cluster_names);
+          this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
         }
       });
     },
@@ -1413,7 +1414,11 @@ export default {
       // 集群名称
       if (this.formData.clusterName) {
         params.advanced_options = {
-          cluster_name: this.formData.clusterName,
+          // 暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
+          env_cluster_names: {
+            stag: this.formData.clusterName,
+            prod: this.formData.clusterName,
+          }
         };
       }
 

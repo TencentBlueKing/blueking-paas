@@ -235,7 +235,7 @@ class TagSLZ(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ("url", "id", "name", "parent", "remark", "index", "region")
+        fields = ("url", "id", "name", "parent", "remark", "index")
 
 
 class ProductStateSLZ(serializers.ModelSerializer):

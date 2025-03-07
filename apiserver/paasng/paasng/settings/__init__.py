@@ -145,6 +145,7 @@ INSTALLED_APPS = [
     "django_prometheus",
     "paasng.misc.plat_config",
     "paasng.infras.accounts",
+    "paasng.infras.sysapi_client",
     "paasng.platform.applications",
     "paasng.accessories.log",
     "paasng.platform.modules",
@@ -233,7 +234,7 @@ MIDDLEWARE = [
     "paasng.utils.middlewares.WhiteNoiseRespectPrefixMiddleware",
     "bkpaas_auth.middlewares.CookieLoginMiddleware",
     "paasng.infras.accounts.middlewares.SiteAccessControlMiddleware",
-    "paasng.infras.accounts.middlewares.PrivateTokenAuthenticationMiddleware",
+    "paasng.infras.sysapi_client.middlewares.PrivateTokenAuthenticationMiddleware",
     # API Gateway related
     "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware",  # JWT 认证
     "apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware",  # JWT 透传的应用信息
@@ -242,10 +243,7 @@ MIDDLEWARE = [
     "paasng.infras.accounts.middlewares.WrapUsernameAsUserMiddleware",
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
-    "paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware",
-    # Internal service authentication related
-    "blue_krill.auth.client.VerifiedClientMiddleware",
-    "paasng.infras.accounts.internal.user.SysUserFromVerifiedClientMiddleware",
+    "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
@@ -984,7 +982,7 @@ BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", BK_APP_SECRET)
 BKAUTH_BK_LOGIN_APIGW_STAGE = settings.get("BKAUTH_BK_LOGIN_APIGW_STAGE", "prod")
 BKAUTH_USER_INFO_APIGW_URL = settings.get(
     "BKAUTH_USER_INFO_APIGW_URL",
-    f'{BK_API_URL_TMPL.format(api_name="bk-login")}/{BKAUTH_BK_LOGIN_APIGW_STAGE}/login/api/v3/open/bk-tokens/userinfo/',
+    f"{BK_API_URL_TMPL.format(api_name='bk-login')}/{BKAUTH_BK_LOGIN_APIGW_STAGE}/login/api/v3/open/bk-tokens/userinfo/",
 )
 BKAUTH_USER_COOKIE_VERIFY_URL = settings.get("BKAUTH_USER_COOKIE_VERIFY_URL", f"{BK_LOGIN_API_URL}/api/v3/is_login/")
 
@@ -1298,9 +1296,9 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking
 # S-Mart 基础镜像信息
 _SMART_TAG_SUFFIX = "smart"
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f'{parse_image(settings.get("APP_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f'{parse_image(settings.get("HEROKU_RUNNER_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
+SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

@@ -245,6 +245,10 @@ def unwrap_partial(func):
 def action_perms(permission_classes: List[Type[BasePermission]], policy: str = "replace"):
     """A decorator that support action level permission_classes for ViewSet.
 
+    WARNING/TODO: This decorator's functionality is flawed; it cannot replace the permission_classes
+    when the policy is set to "replace" because a permission check occurs before the handler function
+    is called. **STOP USING IT!** The existing code will be migrated.
+
     :param permission_classes: A list of permission classes.
     :param policy: The policy for setting the permission_classes, default is "replace".
         Can be "replace" or "extend".

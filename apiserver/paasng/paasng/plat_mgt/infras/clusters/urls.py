@@ -84,8 +84,8 @@ urlpatterns = [
     ),
     path(
         "api/plat_mgt/infras/cluster_allocation_policies/<str:policy_id>/",
-        views.ClusterAllocationPolicyViewSet.as_view({"put": "update"}),
-        name="plat_mgt.infras.cluster_allocation_policy.update",
+        views.ClusterAllocationPolicyViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="plat_mgt.infras.cluster_allocation_policy.update_destroy",
     ),
     # 可选集群特性
     path(

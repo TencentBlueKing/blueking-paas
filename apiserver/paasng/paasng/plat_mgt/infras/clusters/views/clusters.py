@@ -201,7 +201,8 @@ class ClusterViewSet(viewsets.GenericViewSet):
             ExposedURLType.SUBPATH if data["app_address_type"] == AddressType.SUBPATH else ExposedURLType.SUBDOMAIN
         )
         cluster.ingress_config = data["ingress_config"]
-        cluster.annotations = data["annotations"]
+        # 注：通过 update 的方式，防止覆盖一些手动配置的注解 key
+        cluster.annotations.update(data["annotations"])
 
         cert, ca, key, token = data["cert"], data["ca"], data["key"], data["token"]
         api_servers = data["api_servers"]

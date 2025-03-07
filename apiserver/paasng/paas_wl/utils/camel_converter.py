@@ -14,6 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+"""
+该模块与 paasng.utils.camel_converter.py/paasng.platform.declarative.util 重复
+因为 wl 不能引用 ng ，因此将其复制，未来考虑底层抽出后合并
+"""
 
 from typing import Any, Dict
 

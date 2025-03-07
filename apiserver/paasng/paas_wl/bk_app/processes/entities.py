@@ -21,7 +21,7 @@ from typing import Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
-from paasng.utils.structure import prepare_json_field
+from paasng.utils.structure import register
 
 
 @dataclass
@@ -91,14 +91,14 @@ class TCPSocketAction(BaseModel):
     host: Optional[str] = None
 
 
-@prepare_json_field
+@register
 class ProbeHandler(BaseModel):
     exec: Optional[ExecAction] = None
     http_get: Optional[HTTPGetAction] = None
     tcp_socket: Optional[TCPSocketAction] = None
 
 
-@prepare_json_field
+@register
 class Probe(BaseModel):
     """
     健康探针
@@ -124,7 +124,7 @@ class Probe(BaseModel):
     failure_threshold: Optional[int] = 3
 
 
-@prepare_json_field
+@register
 class ProbeSet(BaseModel):
     """
     健康探针集

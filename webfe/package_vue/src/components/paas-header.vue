@@ -274,6 +274,7 @@ export default {
         { paths: ['/developer-center/app', '/sandbox'], active: 'appDevelopment' },
         { paths: ['/plugin-center'], active: 'pluginDevelopment' },
         { paths: ['/developer-center/service'], active: 'tools' },
+        { paths: ['/developer-center/platform'], active: 'platformManagement' },
       ];
       // 默认高亮
       let active = 'homePage';
@@ -340,22 +341,24 @@ export default {
         pluginDevelopment: { type: 'router-link', to: { name: 'plugin' } },
         apiGateway: { type: 'external-link', href: this.GLOBAL.LINK.APIGW_INDEX, target: '_blank' },
         tools: { type: 'router-link', to: { name: 'serviceCode' } },
+        platformManagement: { type: 'router-link', to: { name: 'platformManagement' } },
       };
-      const navList = navData.map((item) => {
-        const { text, name } = item;
-        const config = navConfig[name];
-        return {
-          text,
-          name,
-          ...config,
-        };
-      });
-
-      // 应用开关过滤插件开发
-      if (!this.userFeature.ALLOW_PLUGIN_CENTER) {
-        return navList.filter((e) => e.name !== 'pluginDevelopment');
-      }
-      return navList;
+      return navData
+        .map((item) => {
+          const { text, name } = item;
+          const config = navConfig[name];
+          return {
+            text,
+            name,
+            ...config,
+          };
+        })
+        .filter((item) => {
+          // 特性开关控制插件开发、平台管理
+          const excludePlugin = !this.userFeature.ALLOW_PLUGIN_CENTER && item.name === 'pluginDevelopment';
+          const excludePlatform = !this.userFeature.PLATFORM_MANAGEMENT && item.name === 'platformManagement';
+          return !excludePlugin && !excludePlatform;
+        });
     },
   },
 };

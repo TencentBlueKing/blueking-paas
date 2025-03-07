@@ -1037,6 +1037,18 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-gitlab-3:before {
 	content: "\e266";
 }
+.paasng-circle-correct-filled:before {
+	content: "\e291";
+}
+.paasng-plugin:before {
+	content: "\e293";
+}
+.paasng-file-5:before {
+	content: "\e295";
+}
+.paasng-unfinished:before {
+	content: "\e292";
+}
 .paasng-jiangxu:before {
 	content: "\e26d";
 }
@@ -1099,4 +1111,7 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-zhuanhuan:before {
 	content: "\e28f";
+}
+.paasng-waiting-2:before {
+	content: "\e294";
 }

@@ -115,7 +115,7 @@ class ClusterAllocationPolicyCreateInputSLZ(serializers.Serializer):
     type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
     allocation_policy = AllocationPolicySLZ(help_text="手动分配配置", required=False)
     allocation_precedence_policies = serializers.ListField(
-        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), required=False
+        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), max_length=20, required=False
     )
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
@@ -160,7 +160,7 @@ class ClusterAllocationPolicyUpdateInputSLZ(serializers.Serializer):
     type = serializers.ChoiceField(help_text="分配策略类型", choices=ClusterAllocationPolicyType.get_choices())
     allocation_policy = AllocationPolicySLZ(help_text="手动分配配置", required=False)
     allocation_precedence_policies = serializers.ListField(
-        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), required=False
+        help_text="分配规则列表", child=AllocationPrecedencePolicySLZ(), max_length=20, required=False
     )
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:

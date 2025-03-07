@@ -107,7 +107,7 @@ class TestSaasProbes:
     def test_probes_changes_after_handling_new_yaml(
         self, bk_module, bk_deployment, yaml_content, yaml_content_after_change
     ):
-        """验证 saas 应用探针对象 ProcessProbe 成功修改"""
+        """验证 saas 应用探针对象 ModuleProcessSpec 成功修改"""
         # bk_deployment.app_environment  外键未实例化，补全
         name = bk_deployment.app_environment.engine_app.name
         region = bk_deployment.app_environment.engine_app.region

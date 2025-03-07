@@ -22,7 +22,7 @@ from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.utils.command import get_command_name
 from tests.paas_wl.utils.wl_app import create_wl_app, create_wl_release
 
-pytestmark = pytest.mark.django_db(databases=["workloads"])
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestProcess:

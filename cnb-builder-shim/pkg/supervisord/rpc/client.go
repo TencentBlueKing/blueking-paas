@@ -39,7 +39,7 @@ func NewClient(rpcAddress string) (*Client, error) {
 	client := &Client{config: ClientConfig{RPCAddress: rpcAddress}}
 
 	var err error
-	for attempt := 0; attempt < 3; attempt++ {
+	for _ = range 3 {
 		var state State
 		client.rpcClient, err = xmlrpc.NewClient(rpcAddress, nil)
 		if err == nil {

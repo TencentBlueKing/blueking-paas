@@ -117,7 +117,7 @@ func (c *Client) ReloadConfig() ([]string, []string, []string, error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
+	// result 结果为 [[added, changed, removed]]，分别表示新增、修改、删除的进程组
 	return result[0][0], result[0][1], result[0][2], err
 }
 

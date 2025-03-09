@@ -34,6 +34,7 @@ type ServerConfig struct {
 	ConfigPath string // Supervisord 启动配置路径
 }
 
+// NewServer ...
 func NewServer(configPath string) *Server {
 	return &Server{config: ServerConfig{ConfigPath: configPath}}
 }

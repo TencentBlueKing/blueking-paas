@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package supervisord
+package processesctl
 
 import (
 	"fmt"
@@ -24,6 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
@@ -158,13 +160,30 @@ type ProcessCtl interface {
 	Reload(processes []Process, procEnvs ...appdesc.Env) error
 }
 
+// ControllerType 定义控制器类型
+type ControllerType string
+
+const (
+	RPC ControllerType = "rpc"
+)
+
+// NewProcessController 根据类型返回不同的 ProcessCtl 实现
+func NewProcessController(controllerType ControllerType) (ProcessCtl, error) {
+	switch controllerType {
+	case RPC:
+		return newRPCProcessController()
+	default:
+		return nil, errors.New("unsupported controller type")
+	}
+}
+
 // RPCProcessController ...
 type RPCProcessController struct {
 	client *rpc.Client
 }
 
-// NewRPCProcessController ...
-func NewRPCProcessController() (*RPCProcessController, error) {
+// 创建 RPC 类型的 ProcessController
+func newRPCProcessController() (*RPCProcessController, error) {
 	client, err := rpc.AutoConnectClient(rpcAddress, confFilePath)
 	if err != nil {
 		return nil, err

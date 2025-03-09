@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package supervisord
+package processesctl
 
 import (
 	"testing"
@@ -27,5 +27,5 @@ import (
 
 func TestFileSystemFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "supervisord Suite")
+	RunSpecs(t, "processesctl Suite")
 }

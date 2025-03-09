@@ -16,21 +16,24 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package launch
+package processesctl
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/pkg/errors"
+
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
 
 var supervisorDir = "/cnb/devsandbox/supervisor"
+var rpcPort = "9001"
+var rpcAddress = "http://127.0.0.1:9001/RPC2"
 
 var confFilePath = filepath.Join(supervisorDir, "dev.conf")
 
@@ -54,40 +57,15 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 command = {{ .CommandPath }}
 stdout_logfile = {{ .ProcLogFile }}
 redirect_stderr = true
-{{ end -}}
+{{ end }}
+[inet_http_server]
+port=127.0.0.1:{{ .Port }}
 `
 
-var reloadScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  echo "supervisord is already running. update and restart processes..."
-  supervisorctl -c %[2]s reload
-else
-  echo "supervisord is not running. start supervisord..."
-  supervisord -c %[2]s
-fi
-`, supervisorDir, confFilePath)
-
-var statusScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  supervisorctl -c %[2]s status
-fi
-`, supervisorDir, confFilePath)
-
-var stopScript = fmt.Sprintf(`#!/bin/bash
-
-socket_file="%[1]s/supervisor.sock"
-# 检查 supervisor 的 socket 文件是否存在
-if [ -S "$socket_file" ]; then
-  echo "stop all processes..."
-  supervisorctl -c %[2]s stop all
-fi
-`, supervisorDir, confFilePath)
+type Process struct {
+	ProcType    string
+	CommandPath string
+}
 
 // ProcessConf is a process config
 type ProcessConf struct {
@@ -98,14 +76,16 @@ type ProcessConf struct {
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {
 	RootDir     string
+	Port        string
 	Processes   []ProcessConf
 	Environment string
 }
 
-// MakeSupervisorConf returns a new SupervisorConf
-func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
+// returns a new SupervisorConf
+func makeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
+		Port:    rpcPort,
 	}
 
 	if procEnvs != nil {
@@ -128,30 +108,7 @@ func MakeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*Supervis
 	return conf, nil
 }
 
-// NewSupervisorCtl returns a new SupervisorCtl
-func NewSupervisorCtl() *SupervisorCtl {
-	return &SupervisorCtl{
-		RootDir: supervisorDir,
-	}
-}
-
-// SupervisorCtl is a supervisorctl wrapper with supervisor binary
-type SupervisorCtl struct {
-	RootDir string
-}
-
-// Reload start or update/restart the processes
-func (ctl *SupervisorCtl) Reload(conf *SupervisorConf) error {
-	if err := os.MkdirAll(filepath.Join(ctl.RootDir, "log"), 0o755); err != nil {
-		return err
-	}
-	if err := ctl.refreshConf(conf); err != nil {
-		return err
-	}
-	return ctl.reload()
-}
-
-func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
+func refreshConf(conf *SupervisorConf) error {
 	tmplFile := "supervisord.conf.tmpl"
 
 	tmpl, err := template.New(tmplFile).Parse(confTmpl)
@@ -166,41 +123,6 @@ func (ctl *SupervisorCtl) refreshConf(conf *SupervisorConf) error {
 	defer file.Close()
 
 	return tmpl.Execute(file, *conf)
-}
-
-func (ctl *SupervisorCtl) reload() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(reloadScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
-}
-
-// Status get the status of all processes by running 'supervisorctl status'.
-func (ctl *SupervisorCtl) Status() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(statusScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
-}
-
-// stop all processes by running 'supervisorctl stop all'.
-func (ctl *SupervisorCtl) Stop() error {
-	cmd := exec.Command("bash")
-
-	cmd.Env = os.Environ()
-	cmd.Stdin = bytes.NewBufferString(stopScript)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-
-	return cmd.Run()
 }
 
 // validateEnvironment validates the environment variables for supervisor conf.
@@ -224,4 +146,79 @@ func validateEnvironment(procEnvs []appdesc.Env) error {
 		strings.Join(invalidEnvNames, ", "),
 		invalidChars,
 	)
+}
+
+// ProcessCtl 用于进程控制的接口
+type ProcessCtl interface {
+	// Status 获取所有进程的状态
+	Status() ([]rpc.ProcessInfo, error)
+	// Start 启动进程（只能操作已存在的进程）
+	Start(name string) error
+	// Stop 停止(不是删除)进程
+	Stop(name string) error
+	// Reload 更新和重启进程列表
+	Reload(processes []Process, procEnvs ...appdesc.Env) error
+}
+
+// ControllerType 定义控制器类型
+type ControllerType string
+
+const (
+	RPC ControllerType = "rpc"
+)
+
+// NewProcessController 根据类型返回不同的 ProcessCtl 实现
+func NewProcessController(controllerType ControllerType) (ProcessCtl, error) {
+	switch controllerType {
+	case RPC:
+		return newRPCProcessController()
+	default:
+		return nil, errors.New("unsupported controller type")
+	}
+}
+
+// RPCProcessController ...
+type RPCProcessController struct {
+	client *rpc.Client
+}
+
+// 创建 RPC 类型的 ProcessController
+func newRPCProcessController() (*RPCProcessController, error) {
+	client, err := rpc.AutoConnectClient(rpcAddress, confFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return &RPCProcessController{
+		client: client,
+	}, nil
+}
+
+// Status 获取所有进程的状态
+func (p *RPCProcessController) Status() ([]rpc.ProcessInfo, error) {
+	return p.client.GetAllProcessInfo()
+}
+
+// Stop 停止(不是删除)进程
+func (p *RPCProcessController) Stop(name string) error {
+	return p.client.StopProcess(name, true)
+}
+
+// Start 启动进程（只能操作已存在的进程）
+func (p *RPCProcessController) Start(name string) error {
+	return p.client.StartProcess(name, true)
+}
+
+// Reload 更新和重启进程列表
+func (p *RPCProcessController) Reload(processes []Process, procEnvs ...appdesc.Env) error {
+	conf, err := makeSupervisorConf(processes, procEnvs...)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(conf.RootDir, "log"), 0o755); err != nil {
+		return err
+	}
+	if err := refreshConf(conf); err != nil {
+		return err
+	}
+	return p.client.Update()
 }

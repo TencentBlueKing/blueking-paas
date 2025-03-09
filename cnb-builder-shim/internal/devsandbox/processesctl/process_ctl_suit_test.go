@@ -16,23 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package subcmd
+package processesctl
 
 import (
-	"github.com/spf13/cobra"
+	"testing"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "process status.",
-	Long:  "Get status of all processes.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return launch.NewSupervisorCtl().Status()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(statusCmd)
+func TestFileSystemFetcher(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "processesctl Suite")
 }

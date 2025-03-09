@@ -48,6 +48,10 @@ func GetAppLogs(logDir string, lines int) (map[string][]string, error) {
 		return nil, err
 	}
 	for logType, file := range logFiles {
+		// 忽略 supervisord 日志
+		if logType == "supervisord" {
+			continue
+		}
 		logPath := filepath.Join(logDir, file.Name())
 		logLines, err := tailFile(logPath, lines)
 		if err != nil {

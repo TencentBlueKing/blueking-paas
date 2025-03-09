@@ -16,23 +16,37 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package subcmd
+package rpc
 
 import (
-	"github.com/spf13/cobra"
+	"context"
+	"os/exec"
+	"time"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
+	"github.com/pkg/errors"
 )
 
-var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "stop process.",
-	Long:  "stop process.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return launch.NewSupervisorCtl().Stop()
-	},
+type Server struct {
+	config ServerConfig
 }
 
-func init() {
-	rootCmd.AddCommand(stopCmd)
+type ServerConfig struct {
+	ConfigPath string // Supervisord 启动配置路径
+}
+
+// NewServer ...
+func NewServer(configPath string) *Server {
+	return &Server{config: ServerConfig{ConfigPath: configPath}}
+}
+
+// Start 使用 command 显式启动 Supervisord Server
+func (s *Server) Start() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "start supervisord")
+	}
+	return nil
 }

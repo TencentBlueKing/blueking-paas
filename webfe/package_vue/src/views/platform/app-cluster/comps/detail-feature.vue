@@ -8,19 +8,19 @@
     <ul class="feature">
       <li
         class="item"
-        v-for="(val, key) in featureMap"
-        :key="key"
+        v-for="(item, index) in featureMaps"
+        :key="index"
       >
         <div
           class="label"
           v-bk-overflow-tips
         >
-          {{ val }}
+          {{ item.name }}
         </div>
         <div class="value">
           <i
             class="paasng-icon paasng-correct"
-            v-if="data.feature_flags?.[key]"
+            v-if="data.feature_flags?.[item.key]"
           ></i>
           <i
             class="paasng-icon paasng-icon-close"
@@ -96,15 +96,21 @@ export default {
   },
   data() {
     return {
-      featureMap: {
-        ENABLE_BCS_EGRESS: this.$t('支持提供出口 IP'),
-        ENABLE_MOUNT_LOG_TO_HOST: this.$t('允许挂载日志到主机'),
-        INGRESS_USE_REGEX: this.$t('Ingress 路径是否使用正则表达式'),
-        ENABLE_BK_LOG_COLLECTOR: this.$t('使用蓝鲸日志平台方案采集日志'),
-        ENABLE_BK_MONITOR: this.$t('使用蓝鲸监控获取资源使用指标'),
-        ENABLE_AUTOSCALING: this.$t('支持自动扩缩容'),
-      },
+      featureMaps: [],
     };
+  },
+  created() {
+    this.getClusterFeatureFlags();
+  },
+  methods: {
+    async getClusterFeatureFlags() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterFeatureFlags');
+        this.featureMaps = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>

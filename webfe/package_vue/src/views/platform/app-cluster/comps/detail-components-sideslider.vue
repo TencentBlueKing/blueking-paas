@@ -18,7 +18,7 @@
       <div class="view-title">{{ $t('基本信息') }}</div>
       <DetailsRow
         v-for="(val, key) in baseInfoMap"
-        :label-width="100"
+        :label-width="labelWidth"
         :key="key"
       >
         <template slot="label">
@@ -32,7 +32,7 @@
       <div class="view-title">{{ $t('部署信息') }}</div>
       <DetailsRow
         v-for="(val, key) in deployedMap"
-        :label-width="100"
+        :label-width="labelWidth"
         :key="key"
       >
         <template slot="label">
@@ -160,6 +160,12 @@ export default {
         releaseName: release.name,
         releaseVersion: release.version,
       };
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 120 : 100;
     },
   },
 };

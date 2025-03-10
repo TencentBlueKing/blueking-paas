@@ -15,7 +15,7 @@
     >
       <DetailsRow
         :label-width="labelWidth"
-        :label="`${$t('组件介绍')}：`"
+        :label="removePrefix('组件介绍')"
         :value="getComponentIntroduction(component.name)"
       />
       <DetailsRow
@@ -24,7 +24,7 @@
         :is-full="true"
         :align="'flex-start'"
       >
-        <template slot="label">{{ `${$t('组件配置')}：` }}</template>
+        <template slot="label">{{ removePrefix('组件配置') }}</template>
         <div slot="value">
           <div class="tools-btns">
             <!-- bk-ingress-nginx 允许编辑 -->
@@ -75,7 +75,7 @@
               <DetailsRow
                 :label-width="90"
                 :label="`HTTPS ${$t('端口')}：`"
-                :value="values?.service?.nodePorts?.https"
+                :value="values?.service?.nodePorts?.https || '--'"
               />
             </template>
             <template v-else>
@@ -104,7 +104,7 @@
       <DetailsRow
         v-if="!isBkIngressNginx"
         :label-width="labelWidth"
-        :label="`${$t('组件说明')}：`"
+        :label="removePrefix('组件说明')"
       >
         <div slot="value">
           {{ getComponentDescription(component.name) }}
@@ -123,7 +123,7 @@
         :is-full="true"
         :align="'flex-start'"
       >
-        <template slot="label">{{ `${$t('组件状态')}：` }}</template>
+        <template slot="label">{{ removePrefix('组件状态') }}</template>
         <div
           slot="value"
           class="status-wrapper"
@@ -266,7 +266,7 @@ export default {
       return this.clusterSource === 'bcs';
     },
     labelWidth() {
-      return this.localLanguage === 'en' ? 165 : 80;
+      return this.localLanguage === 'en' ? 100 : 80;
     },
     disabledTooltipsConfig() {
       return {
@@ -349,16 +349,23 @@ export default {
           componentName: this.component.name,
           data,
         });
-        const msg = status === 'installed' ? this.$t('更新成功') : this.$t('安装成功');
+        const msg = status === 'installed' ? this.$t('更新成功') : this.$t('已下发安装任务');
         this.$paasMessage({
           theme: 'success',
           message: msg,
         });
-        // 获取组件详情
-        this.$emit('get-detail', this.component.name);
+        // 轮询获取组件详情
+        this.$emit('polling', this.component.name);
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 获取中英文label值
+    removePrefix(str, prefix = '组件') {
+      if (this.localLanguage === 'en') {
+        return `${this.$t(str.slice(prefix.length))}：`;
+      }
+      return `${this.$t(str)}：`;
     },
   },
 };

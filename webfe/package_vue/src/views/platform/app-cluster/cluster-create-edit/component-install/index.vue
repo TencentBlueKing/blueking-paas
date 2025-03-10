@@ -21,6 +21,7 @@
         @show-detail="handleShowDetail"
         @show-values="handleShowValues"
         @show-edit="handleShowEdit"
+        @polling="handlePollingDetail"
       />
     </section>
 
@@ -50,6 +51,7 @@
             @show-detail="handleShowDetail"
             @show-values="handleShowValues"
             @show-edit="handleShowEdit"
+            @polling="handlePollingDetail"
           />
         </bk-collapse-item>
       </bk-collapse>
@@ -205,7 +207,7 @@ export default {
         this.setComponentLoadingState(componentName, false);
       }
     },
-    async pollComponentDetail(componentName) {
+    async pollComponentDetail(componentName, conditionalFn = (ret) => ret.status === 'installing') {
       try {
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {
           clusterName: this.clusterId,
@@ -213,7 +215,7 @@ export default {
         });
         this.$set(this.componentDetails, componentName, ret);
         // 如果组件的 status 是 'installing'，则在 5 秒后再次请求
-        if (ret.status === 'installing') {
+        if (conditionalFn(ret)) {
           setTimeout(() => this.pollComponentDetail(componentName), 5000);
         }
       } catch (e) {
@@ -222,6 +224,13 @@ export default {
         }
         this.catchErrorHandler(e);
       }
+    },
+
+    // 更新、安装轮询当前组件详情
+    handlePollingDetail(name) {
+      this.pollComponentDetail(name, (ret) => {
+        return !['installation_failed', 'installed'].includes(ret.status);
+      });
     },
 
     // 新增一个方法来专门设置组件详情的加载状态

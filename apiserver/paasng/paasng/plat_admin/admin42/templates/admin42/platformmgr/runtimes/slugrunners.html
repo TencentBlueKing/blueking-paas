@@ -18,16 +18,6 @@
         新建
     </bk-button>
 
-    <bk-radio-group v-model="curRegionActive" @change="switchRegion" class="filter-wrapper">
-        <bk-radio-button
-            v-for="item in regionList"
-            :value="item.key"
-            class="filter-item"
-        >
-            $[ item.text ]
-        </bk-radio-button>
-    </bk-radio-group>
-
     <!--  数据列表  -->
     <bk-table :data="data" :size="setting.size">
         <bk-table-column label="名称" prop="name" min-width="250">
@@ -45,11 +35,6 @@
         <bk-table-column label="镜像类型" prop="type" :filters="typeFilters" :filter-multiple="true" :filter-method="filterMethod" width="100">
             <template slot-scope="props">
                 <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.type ]</span>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="可用区域" prop="region">
-            <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.region ]</span>
             </template>
         </bk-table-column>
         <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="320">
@@ -123,14 +108,6 @@
                             <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
                             <bk-select v-model="dialog.form.type" v-else>
                                 <bk-option v-for="type in image_types" :key="type" :id="type" :name="type"></bk-option>
-                            </bk-select>
-                        </bk-form-item>
-                    </bk-col>
-                    <bk-col :span="16">
-                        <bk-form-item label="可用区域" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.region" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
-                            <bk-select v-model="dialog.form.region" v-else>
-                                <bk-option v-for="region in regions" :key="region" :id="region" :name="region"></bk-option>
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
@@ -300,8 +277,6 @@
         detail: decodeURI("{% url 'admin.runtimes.slugrunner.detail' '${id}' %}"),
     }
 
-    const regions = {{ regions | to_json }}
-
     const image_types = {{ image_types | to_json }}
 
     let typeFilters = []
@@ -321,11 +296,6 @@
         {
             id: 'type',
             label: '镜像类型',
-            disabled: true,
-        },
-        {
-            id: 'region',
-            label: '可用区域',
             disabled: true,
         },
         {
@@ -361,10 +331,7 @@
                     // oldEnvList, oldLabelList 记录修改前的数据，用于取消操作恢复数据
                     oldEnvList: [],
                     oldLabelList: [],
-                    regions: regions,
                     image_types: image_types,
-                    regionList: [],
-                    curRegionActive: 'all',
                     setting: {
                         max: 3,
                         fields: settingFields,
@@ -399,21 +366,9 @@
                     const el = this.$bkLoading({title: '加载中'});
                     try {
                         let url = URLRouter.list;
-                        if (this.curRegionActive !== 'all') {
-                            url += '?region=' + this.curRegionActive;
-                        }
                         await this.$http.get(url).then(res => {
                             this.data = res;
                         })
-                        if (this.curRegionActive === 'all') {
-                            this.regionList = [{"key": "all", "text": `全部 (${this.data.length})`}];
-                            for (let i = 0; i < regions.length; i++) {
-                                this.regionList.push({
-                                    "key": regions[i],
-                                    "text": `${regions[i]} (${this.data.filter(item => item.region === regions[i]).length})`
-                                });
-                            }
-                        }
                     } catch (e) {
                         if (e.response.status === 400) {
                             this.$bkMessage({
@@ -463,7 +418,6 @@
                     }
                     if (success) {
                         this.cancelDialog();
-                        this.switchRegion("all");
                     }
                 },
                 handleCreate: function () {
@@ -518,7 +472,6 @@
                 deleteRow: async function (row) {
                     const url = this.fillUrlTemplate(URLRouter.detail, {row});
                     await this.$http.delete(url);
-                    this.switchRegion("all");
                 },
                 fillUrlTemplate: function (url_template, {row}) {
                     if (!row) {
@@ -585,11 +538,6 @@
                             row.isEdit = false;
                         }
                     }
-                },
-                switchRegion: function(region) {
-                    this.expandRowKeys = [];
-                    this.curRegionActive = region;
-                    this.fetchSlugrunnerList();
                 },
                 handleSettingChange ({ fields, size }) {
                     this.setting.size = size;

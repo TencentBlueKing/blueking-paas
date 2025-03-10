@@ -82,10 +82,7 @@ class Command(BaseCommand):
             if not dry_run:
                 binder.bind_image(slugrunner, slugbuilder)
 
-            for buildpack in [bp for bp in buildpacks if bp.region == module.region]:
-                print(
-                    f"binding buildpack {buildpack.name}[{buildpack.pk}] "
-                    f"to module {module.application.code}[{module.name}]"
-                )
+            for bp in buildpacks:
+                print(f"binding buildpack {bp.name}[{bp.pk}] " f"to module {module.application.code}[{module.name}]")
                 if not dry_run:
-                    binder.bind_buildpack(buildpack)
+                    binder.bind_buildpack(bp)

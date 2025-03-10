@@ -40,7 +40,7 @@ def retrieve_template_build_config(region: str, template: Template) -> BuildConf
 
     try:
         builder = AppSlugBuilder.objects.select_default_runtime(
-            region=region, labels={"language": template.language, "category": APP_CATEGORY.NORMAL_APP.value}
+            labels={"language": template.language, "category": APP_CATEGORY.NORMAL_APP.value}
         )
         # by designed, name must be consistent between builder and runner
         runner = AppSlugRunner.objects.get(name=builder.name)
@@ -105,9 +105,7 @@ class TemplateRuntimeManager:
             raise TypeError("required_buildpacks is invalid")
 
         builder = AppSlugBuilder.objects.get(name=bp_stack_name)
-        available_bps = {
-            bp.name: bp for bp in builder.list_region_available_buildpacks(region=self.region, name__in=bp_names)
-        }
+        available_bps = {bp.name: bp for bp in builder.list_available_buildpacks(name__in=bp_names)}
 
         if missing_bps := available_bps.keys() - set(bp_names):
             raise RuntimeError("No buildpacks can be found for name: {}".format(missing_bps))
@@ -117,7 +115,7 @@ class TemplateRuntimeManager:
     def get_language_buildpack(self, bp_stack_name: str) -> Optional[AppBuildPack]:
         """获取和模块(或模板)语言相关的构建工具"""
         builder = AppSlugBuilder.objects.get(name=bp_stack_name)
-        buildpacks = builder.list_region_available_buildpacks(region=self.region, language=self.template.language)
+        buildpacks = builder.list_available_buildpacks(language=self.template.language)
         if not buildpacks:
             return None
         # 选取指定语言的最新一个非隐藏的 buildpack

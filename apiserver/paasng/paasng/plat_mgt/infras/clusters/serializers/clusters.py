@@ -336,16 +336,19 @@ class TolerationSLZ(serializers.Serializer):
 
     key = serializers.CharField(help_text="键")
     operator = serializers.ChoiceField(help_text="运算符", choices=TolerationOperator.get_choices())
-    value = serializers.CharField(help_text="值", default=None, required=False)
+    value = serializers.CharField(help_text="值", default=None, allow_blank=True, allow_null=True, required=False)
     effect = serializers.ChoiceField(help_text="效果", choices=TolerationEffect.get_choices())
     tolerationSeconds = serializers.IntegerField(help_text="容忍秒数", min_value=0, default=0, required=False)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        if attrs["operator"] == TolerationOperator.EQUAL:
+        op = attrs["operator"]
+
+        if op == TolerationOperator.EQUAL:
             if not attrs.get("value"):
                 raise ValidationError(_("运算符为 Equal 时，值（value）必须提供"))
-        elif attrs.get("value"):
-            raise ValidationError(_("运算符不为 Equal 时，值（value）需为空"))
+        elif op == TolerationOperator.EXISTS:
+            # 如果运算符为 Exists，则不能提供 value
+            attrs.pop("value", None)
 
         return attrs
 

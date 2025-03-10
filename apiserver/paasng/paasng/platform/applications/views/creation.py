@@ -372,6 +372,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             region=app.region,
             # 注：这里用途是创建市场配置，因此固定为生产环境
             environment=AppEnvironment.PRODUCTION,
+            username=self.request.user.username,
         )
         cluster = ClusterAllocator(ctx).get(cluster_name)
 

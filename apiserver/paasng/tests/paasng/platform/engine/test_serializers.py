@@ -27,7 +27,7 @@ from paasng.platform.engine import serializers as slzs
 from paasng.platform.engine.models.config_var import ConfigVar
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "environment_name, bk_env",
     [("stag", "bk_stag_env"), ("prod", "bk_prod_env"), ("_global_", None)],
@@ -51,6 +51,7 @@ class TestConfigVar:
         assert slz.validated_data == dict(
             environment=bk_env,
             module=bk_module,
+            tenant_id=bk_module.tenant_id,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
             **data,
@@ -65,7 +66,7 @@ class TestConfigVar:
         assert slz.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 class TestConfigVarImportSLZ:
     @pytest.fixture()
     def expected(self, request):
@@ -196,7 +197,7 @@ class TestConfigVarImportSLZ:
             slz.is_valid(raise_exception=True)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 class TestConfigVarFormatSLZ:
     @pytest.fixture()
     def expected(self, request):

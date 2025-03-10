@@ -34,7 +34,7 @@ from paasng.platform.engine.models.config_var import (
     get_config_vars,
 )
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
-from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ
+from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ, ConfigVarSLZ
 from paasng.platform.modules.models import Module
 from tests.utils.helpers import initialize_module
 
@@ -425,3 +425,49 @@ class TestExportedConfigVars:
     )
     def test_to_file_content(self, env_variables, expected):
         assert ExportedConfigVars(env_variables=env_variables).to_file_content() == expected
+
+
+class TestConfigVarTenantId:
+    @pytest.fixture()
+    def bk_module_with_tenant(self, bk_module):
+        """给模块添加随机 tenant_id"""
+        bk_module.tenant_id = get_random_string(length=12, allowed_chars=ascii_uppercase)
+        bk_module.save()
+        return bk_module
+
+    def test_tenant_id_consistency_on_create(self, bk_module_with_tenant):
+        """单个添加环境变量"""
+        test_data = {
+            "key": "TEST_KEY",
+            "value": "test_value",
+            "environment_name": "prod",
+            "description": "test description",
+        }
+
+        slz = ConfigVarSLZ(data=test_data, context={"module": bk_module_with_tenant})
+        slz.is_valid(raise_exception=True)
+        var = slz.save()
+
+        # 验证 tenant_id 是否与所属模块一致
+        db_var = ConfigVar.objects.get(id=var.id)
+        assert db_var.tenant_id == bk_module_with_tenant.tenant_id
+
+    def test_tenant_id_consistency_on_batch(self, bk_module_with_tenant, random_config_var_maker):
+        """批量编辑环境变量"""
+        test_data = [random_config_var_maker(environment_name="prod") for _ in range(3)]
+
+        serializer = ConfigVarFormatWithIdSLZ(
+            data=test_data,
+            context={"module": bk_module_with_tenant},
+            many=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        valid_data = serializer.validated_data
+        # 执行批量保存
+        ConfigVarManager().batch_save(bk_module_with_tenant, valid_data)
+
+        # 验证 tenant_id 是否与所属模块一致
+        assert (
+            ConfigVar.objects.filter(module=bk_module_with_tenant, tenant_id=bk_module_with_tenant.tenant_id).count()
+            == 3
+        )

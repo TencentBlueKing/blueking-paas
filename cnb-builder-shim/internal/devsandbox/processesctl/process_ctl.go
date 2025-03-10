@@ -190,9 +190,6 @@ func newRPCProcessController() (*RPCProcessController, error) {
 	if err != nil {
 		return nil, err
 	}
-	if client == nil {
-		return nil, errors.Wrap(err, "new rpc process controller")
-	}
 	return &RPCProcessController{
 		client: client,
 	}, nil

@@ -62,7 +62,6 @@ func NewClient(rpcAddress string) (*Client, error) {
 
 // StartServerAndNewClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
 func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, error) {
-	var err error
 	for _ = range 3 {
 		client, err := NewClient(rpcAddress)
 		if err == nil {
@@ -75,7 +74,7 @@ func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, err
 		// 等待服务就绪
 		time.Sleep(2 * time.Second)
 	}
-	return nil, errors.Wrap(err, "start server and new client")
+	return nil, errors.New("start server and new client failed")
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回

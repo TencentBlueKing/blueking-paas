@@ -19,7 +19,10 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"github.com/pkg/errors"
 	"os/exec"
 	"time"
 )
@@ -45,8 +48,10 @@ func (s *Server) Start() error {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return err
+		return errors.New(fmt.Sprintf("failed to start supervisord: %s", stderr.String()))
 	}
 	return nil
 }

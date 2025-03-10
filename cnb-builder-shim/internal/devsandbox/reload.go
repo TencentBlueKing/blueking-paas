@@ -27,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/phase"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
 )
 
 var (
@@ -76,9 +75,9 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 	// 2. 构建时，supervisor 会因 terminated by SIGSEGV 发生预期之外进程退出，
 	// 然后本身的托管能力又会拉起进程，导致 /app/v3logs 目录权限在 cnb or root
 	// 间横跳，从而使构建时遇到 v3logs 文件夹权限错误而构建失败
-	processCtl, _ := processesctl.NewProcessController(processesctl.RPC)
-	// 如果没有启动过，不需要停止
-	_ = processCtl.StopAllProcesses()
+	//processCtl, _ := processesctl.NewProcessController(processesctl.RPC)
+	//如果没有启动过，不需要停止
+	//_ = processCtl.StopAllProcesses()
 	cmd := phase.MakeBuilderCmd()
 	return m.runCmd(reloadID, cmd)
 }

@@ -73,9 +73,7 @@ class Command(BaseCommand):
         logger.info(f"user: {client.name} created.")
 
         # Create relationship
-        AuthenticatedAppAsClient.objects.update_or_create(
-            bk_app_code=bk_app_code, defaults={"client": client, "is_active": True}
-        )
+        AuthenticatedAppAsClient.objects.update_or_create(bk_app_code=bk_app_code, defaults={"client": client})
         logger.info(f"app-user relation: {bk_app_code}-{client.name} created.")
 
     @staticmethod

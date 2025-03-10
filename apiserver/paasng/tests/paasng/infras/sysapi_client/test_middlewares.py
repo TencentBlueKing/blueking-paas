@@ -124,3 +124,26 @@ class TestAuthenticatedAppAsClientMiddleware:
             assert request.sysapi_client.is_active is True
         else:
             assert not hasattr(request, "sysapi_client")
+
+    @pytest.mark.parametrize(
+        ("is_active", "should_have_client"),
+        [
+            (True, True),
+            (False, False),
+        ],
+    )
+    def test_client_activeness(self, is_active, should_have_client):
+        client = SysAPIClient.objects.create(name="foo-client", role=ClientRole.BASIC_READER, is_active=is_active)
+        AuthenticatedAppAsClient.objects.create(client=client, bk_app_code="foo")
+
+        request = request_factory.get("/")
+        request.app = SimpleApp(bk_app_code="foo", verified=True)
+
+        view_func = ForTestNotMarkedAuthViewSet.as_view({"get": "retrieve"})
+        AuthenticatedAppAsClientMiddleware(get_response).process_view(request, view_func, None, None)
+
+        if should_have_client:
+            assert request.sysapi_client.name == "foo-client"
+            assert request.sysapi_client.is_active is True
+        else:
+            assert not hasattr(request, "sysapi_client")

@@ -4,11 +4,12 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from paasng.utils.models import AuditedModel
 from paasng.utils.text import generate_token
 
 
-class SysAPIClient(models.Model):
-    """A system API Client which holds the credentials for calling system APIs.
+class SysAPIClient(AuditedModel):
+    """A system API Client for calling system APIs.
     Supported authentication methods:
 
     - Authenticated App: an app authenticated by the API Gateway.
@@ -29,8 +30,6 @@ class SysAPIClient(models.Model):
         default=True,
         help_text=_("Whether this client is active, if not, it can not be used to call system APIs."),
     )
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
 
     def natural_key(self):
         return (self.name,)
@@ -60,10 +59,10 @@ class ClientPrivateToken(models.Model):
     have an expiration period lasting several months.
     """
 
-    client = models.ForeignKey(SysAPIClient, on_delete=models.CASCADE)
+    client = models.ForeignKey(SysAPIClient, on_delete=models.CASCADE, db_constraint=False)
     token = models.CharField(max_length=64, unique=True)
     expires_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, help_text=_("Whether this token is active."))
 
     objects = ClientPrivateTokenManager()
 
@@ -86,15 +85,12 @@ class AuthenticatedAppAsClientManager(models.Manager):
         return self.get(bk_app_code=bk_app_code)
 
 
-class AuthenticatedAppAsClient(models.Model):
+class AuthenticatedAppAsClient(AuditedModel):
     """Store relationships which treat an authenticated(by API Gateway) app as an system client,
     useful for calling system APIs without providing any real client credentials"""
 
-    client = models.ForeignKey(SysAPIClient, on_delete=models.CASCADE)
+    client = models.ForeignKey(SysAPIClient, on_delete=models.CASCADE, db_constraint=False)
     bk_app_code = models.CharField(max_length=64, unique=True)
-    is_active = models.BooleanField(default=True)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
 
     objects = AuthenticatedAppAsClientManager()
 

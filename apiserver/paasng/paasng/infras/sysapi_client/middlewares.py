@@ -69,7 +69,11 @@ class PrivateTokenAuthenticationMiddleware:
             return None
 
         logger.debug(f"private token {token_string} is valid, client_id is {token_obj.client_id}")
-        return token_obj.client
+        client = token_obj.client
+        if not client.is_active:
+            logger.warning("The client %s is not active.", client.name)
+            return None
+        return client
 
     def get_token_string(self, request) -> Optional[str]:
         """Get private token string from current request"""
@@ -150,14 +154,19 @@ class AuthenticatedAppAsClientMiddleware:
             return None
 
         try:
-            obj = AuthenticatedAppAsClient.objects.get(bk_app_code=request.app.bk_app_code, is_active=True)
+            obj = AuthenticatedAppAsClient.objects.get(bk_app_code=request.app.bk_app_code)
         except AuthenticatedAppAsClient.DoesNotExist:
             if hasattr(view_func, "cls") and ForceAllowAuthedApp.check_marked(view_func.cls):
                 # Automatically create a new user and relation
                 return self.create_client(request.app.bk_app_code)
             return None
         else:
-            return obj.client
+            client = obj.client
+
+        if not client.is_active:
+            logger.warning("The client %s is not active.", client.name)
+            return None
+        return client
 
     @staticmethod
     def create_client(bk_app_code: str) -> SysAPIClient:
@@ -168,9 +177,7 @@ class AuthenticatedAppAsClientMiddleware:
         )
 
         # Create the relationship
-        AuthenticatedAppAsClient.objects.update_or_create(
-            bk_app_code=bk_app_code, defaults={"client": client, "is_active": True}
-        )
+        AuthenticatedAppAsClient.objects.update_or_create(bk_app_code=bk_app_code, defaults={"client": client})
         return client
 
 

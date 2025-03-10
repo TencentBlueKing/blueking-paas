@@ -85,7 +85,7 @@ def _migrate_app_as_clients(apps):
         
         _, created = AuthenticatedAppAsClient.objects.get_or_create(
             bk_app_code=app_as_user.bk_app_code,
-            defaults={"client": client, "is_active": app_as_user.is_active}
+            defaults={"client": client}
         )
         
         if created:

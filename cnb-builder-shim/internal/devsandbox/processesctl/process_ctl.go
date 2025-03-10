@@ -158,6 +158,8 @@ type ProcessCtl interface {
 	Stop(name string) error
 	// Reload 更新和重启进程列表
 	Reload(processes []Process, procEnvs ...appdesc.Env) error
+	// StopAllProcesses 停止所有进程
+	StopAllProcesses() error
 }
 
 // ControllerType 定义控制器类型
@@ -184,7 +186,7 @@ type RPCProcessController struct {
 
 // 创建 RPC 类型的 ProcessController
 func newRPCProcessController() (*RPCProcessController, error) {
-	client, err := rpc.StartServerAndNewClient(rpcAddress, confFilePath)
+	client, err := rpc.NewClient(rpcAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -221,4 +223,10 @@ func (p *RPCProcessController) Reload(processes []Process, procEnvs ...appdesc.E
 		return err
 	}
 	return p.client.Update()
+}
+
+// StopAllProcesses 停止所有进程
+func (p *RPCProcessController) StopAllProcesses() error {
+	_, err := p.client.StopAllProcesses(true)
+	return err
 }

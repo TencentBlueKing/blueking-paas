@@ -41,9 +41,10 @@ func NewClient(rpcAddress string) (*Client, error) {
 	client := &Client{config: ClientConfig{RPCAddress: rpcAddress}}
 
 	var err error
-	for _ = range 3 {
+	for attempt := range 3 {
 		var state State
 		client.rpcClient, err = xmlrpc.NewClient(rpcAddress, nil)
+		fmt.Printf("Try to connect to Supervisord (%d)", attempt)
 		if err == nil {
 			// 验证连接是否正常
 			if state, err = client.GetState(); err == nil {
@@ -62,24 +63,6 @@ func NewClient(rpcAddress string) (*Client, error) {
 		}
 	}
 	return client, errors.Wrap(err, "new supervisord client")
-}
-
-// StartServerAndNewClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
-func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, error) {
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		client, err := NewClient(rpcAddress)
-		if err == nil {
-			return client, nil
-		}
-		server := NewServer(configPath)
-		if err = server.Start(); err != nil {
-			fmt.Println("Failed to start supervisord server", err)
-		}
-		// 等待服务就绪
-		time.Sleep(2 * time.Second)
-	}
-	return nil, err
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回

@@ -112,6 +112,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
                 "status": release.deploy_result.status,
             },
             "values": values,
+            "status": ClusterComponentStatus.from_helm_release_status(release.deploy_result.status),
             "workloads": K8SWorkloadStateGetter(cluster_name, release).get_states(),
         }
         return Response(data=ClusterComponentRetrieveOutputSLZ(component).data)

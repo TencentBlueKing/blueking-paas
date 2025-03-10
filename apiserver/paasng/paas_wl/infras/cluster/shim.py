@@ -69,7 +69,7 @@ class EnvClusterService:
         ctx = AllocationContext.from_module_env(self.env)
         return ClusterAllocator(ctx).get_default().name
 
-    def bind_cluster(self, cluster_name: str | None):
+    def bind_cluster(self, cluster_name: str | None, operator: str | None = None):
         """bind `env` to cluster named `cluster_name`, if cluster_name is not given, use default cluster
 
         :raises: Cluster.DoesNotExist if cluster not found
@@ -80,6 +80,10 @@ class EnvClusterService:
             cluster = Cluster.objects.get(name=cluster_name)
         else:
             ctx = AllocationContext.from_module_env(self.env)
+            # 支持带操作人的集群分配
+            if operator:
+                ctx.username = operator
+
             cluster = ClusterAllocator(ctx).get_default()
 
         # bind cluster to wl_app

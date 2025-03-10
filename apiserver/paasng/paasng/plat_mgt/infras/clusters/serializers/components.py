@@ -57,6 +57,7 @@ class ClusterComponentRetrieveOutputSLZ(serializers.Serializer):
     chart = HelmChartSLZ(help_text="Helm Chart 信息")
     release = HelmReleaseSLZ(help_text="Helm Release 信息")
     values = serializers.JSONField(help_text="组件配置（特殊指定部分，非全量）")
+    status = serializers.ChoiceField(help_text="组件状态", choices=ClusterComponentStatus.get_choices())
     workloads = serializers.ListField(help_text="工作负载列表", child=WorkloadSLZ())
 
 

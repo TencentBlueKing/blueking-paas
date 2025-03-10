@@ -54,5 +54,7 @@ func (c *Client) GetState() (State, error) {
 
 // Restart 重启 Supervisor Server
 func (c *Client) Restart() error {
-	return c.callMethodWithCheck("supervisor.restart", nil)
+	var res bool
+	err := c.rpcClient.Call("supervisor.restart", nil, &res)
+	return err
 }

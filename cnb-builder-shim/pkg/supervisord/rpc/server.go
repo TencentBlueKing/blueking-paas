@@ -43,7 +43,7 @@ func NewServer(configPath string) *Server {
 
 // Start 使用 command 显式启动 Supervisord Server
 func (s *Server) Start() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)

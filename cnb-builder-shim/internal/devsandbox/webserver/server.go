@@ -35,11 +35,14 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
+
+var processControllerType = processesctl.RPC
 
 type envConfig struct {
 	DevServerAddr string `env:"DEV_SERVER_ADDR" envDefault:":8000"`
@@ -94,6 +97,8 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/app_logs", AppLogHandler())
 	r.GET("/processes/status", ProcessStatusHandler())
 	r.GET("/processes/list", ProcessListHandler())
+	r.DELETE("/processes/:processName", ProcessStopHandler())
+	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
 
@@ -261,7 +266,12 @@ func AppLogHandler() gin.HandlerFunc {
 // ProcessStatusHandler ...
 func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		status, err := devsandbox.Status()
+		processCtl, err := processesctl.NewProcessController(processControllerType)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
+			return
+		}
+		status, err := processCtl.Status()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
 			return
@@ -281,6 +291,49 @@ func ProcessListHandler() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"processes": appDesc.GetProcesses()})
+	}
+}
+
+// ProcessStopHandler ...
+func ProcessStopHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		processName := c.Param("processName")
+
+		processCtl, err := processesctl.NewProcessController(processControllerType)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
+			return
+		}
+
+		err = processCtl.Stop(processName)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	}
+}
+
+// ProcessStartHandler ...
+func ProcessStartHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		processName := c.Param("processName")
+
+		processCtl, err := processesctl.NewProcessController(processControllerType)
+		if err != nil {
+			fmt.Printf("Failed to start process: %s\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
+			return
+		}
+
+		err = processCtl.Start(processName)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	}
 }
 

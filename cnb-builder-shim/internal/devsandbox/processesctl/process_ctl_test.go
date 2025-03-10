@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package launch
+package processesctl
 
 import (
 	"fmt"
@@ -29,8 +29,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
-var _ = Describe("Test supervisorctl", func() {
-	var ctl *SupervisorCtl
+var _ = Describe("Test process_ctl", func() {
 	var supervisorTmpDir string
 
 	oldConfFilePath := confFilePath
@@ -38,7 +37,6 @@ var _ = Describe("Test supervisorctl", func() {
 	BeforeEach(func() {
 		supervisorTmpDir, _ = os.MkdirTemp("", "supervisor")
 		confFilePath = filepath.Join(supervisorTmpDir, "dev.conf")
-		ctl = NewSupervisorCtl()
 	})
 	AfterEach(func() {
 		Expect(os.RemoveAll(supervisorTmpDir)).To(BeNil())
@@ -48,7 +46,7 @@ var _ = Describe("Test supervisorctl", func() {
 	DescribeTable(
 		"Test MakeSupervisorConf with invalid environment variables",
 		func(processes []Process, procEnv []appdesc.Env, expectedErrorStr string) {
-			_, err := MakeSupervisorConf(processes, procEnv...)
+			_, err := makeSupervisorConf(processes, procEnv...)
 			Expect(err.Error()).To(Equal(expectedErrorStr))
 		}, Entry(
 			"invalid with (%)",
@@ -81,8 +79,8 @@ var _ = Describe("Test supervisorctl", func() {
 	)
 
 	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
-		conf, _ := MakeSupervisorConf(processes, procEnv...)
-		Expect(ctl.refreshConf(conf)).To(BeNil())
+		conf, _ := makeSupervisorConf(processes, procEnv...)
+		Expect(refreshConf(conf)).To(BeNil())
 
 		content, _ := os.ReadFile(confFilePath)
 		Expect(string(content)).To(Equal(expectedConfContent))
@@ -113,7 +111,10 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)),
+
+[inet_http_server]
+port=127.0.0.1:%[2]s
+`, supervisorDir, rpcPort)),
 		Entry("with env_variables",
 			[]Process{
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
@@ -145,5 +146,8 @@ redirect_stderr = true
 command = /cnb/processes/worker
 stdout_logfile = %[1]s/log/worker.log
 redirect_stderr = true
-`, supervisorDir)))
+
+[inet_http_server]
+port=127.0.0.1:%[2]s
+`, supervisorDir, rpcPort)))
 })

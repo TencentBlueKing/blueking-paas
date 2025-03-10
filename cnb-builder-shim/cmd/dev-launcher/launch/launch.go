@@ -27,12 +27,15 @@ import (
 	"github.com/buildpacks/lifecycle/launch"
 	"github.com/pkg/errors"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
 // DefaultAppDir is the default build dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
+
+var processControllerType = processesctl.RPC
 
 // Process is a process to launch
 type Process struct {
@@ -49,7 +52,6 @@ func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
-
 	if releaseHook := desc.GetPreReleaseHook(); releaseHook != "" {
 		if err = runPreReleaseHook(releaseHook, desc.GetEnvs()); err != nil {
 			return errors.Wrap(err, "run pre release hook")
@@ -119,11 +121,19 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
-	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
-		return err
-	} else {
-		return NewSupervisorCtl().Reload(conf)
+	supervisordProcesses := []processesctl.Process{}
+	for _, proc := range processes {
+		supervisordProcesses = append(supervisordProcesses,
+			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
+	if err := processesctl.RefreshConf(supervisordProcesses, procEnvs...); err != nil {
+		return err
+	}
+	ctl, err := processesctl.NewProcessController(processControllerType)
+	if err != nil {
+		return errors.Wrap(err, "reload processes")
+	}
+	return ctl.Reload()
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

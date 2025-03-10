@@ -21,7 +21,6 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"os/exec"
 	"time"
@@ -51,7 +50,7 @@ func (s *Server) Start() error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return errors.New(fmt.Sprintf("failed to start supervisord: %s", stderr.String()))
+		return errors.New(stderr.String())
 	}
 	return nil
 }

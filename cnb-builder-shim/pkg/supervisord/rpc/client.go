@@ -69,7 +69,7 @@ func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, err
 		}
 		server := NewServer(configPath)
 		if err = server.Start(); err != nil {
-			fmt.Println("Failed to start supervisord server: ", err)
+			fmt.Printf("Failed to start supervisord server: %s \n", err)
 		}
 		// 等待服务就绪
 		time.Sleep(2 * time.Second)

@@ -52,7 +52,6 @@ func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
-
 	if releaseHook := desc.GetPreReleaseHook(); releaseHook != "" {
 		if err = runPreReleaseHook(releaseHook, desc.GetEnvs()); err != nil {
 			return errors.Wrap(err, "run pre release hook")
@@ -127,11 +126,14 @@ func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
 		supervisordProcesses = append(supervisordProcesses,
 			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
+	if err := processesctl.RefreshConf(supervisordProcesses, procEnvs...); err != nil {
+		return err
+	}
 	ctl, err := processesctl.NewProcessController(processControllerType)
 	if err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
-	return ctl.Reload(supervisordProcesses, procEnvs...)
+	return ctl.Reload()
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

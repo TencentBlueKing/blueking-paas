@@ -157,7 +157,7 @@ type ProcessCtl interface {
 	// Stop 停止(不是删除)进程
 	Stop(name string) error
 	// Reload 更新和重启进程列表
-	Reload(processes []Process, procEnvs ...appdesc.Env) error
+	Reload() error
 	// StopAllProcesses 停止所有进程
 	StopAllProcesses() error
 }
@@ -210,8 +210,8 @@ func (p *RPCProcessController) Start(name string) error {
 	return p.client.StartProcess(name, true)
 }
 
-// Reload 更新和重启进程列表
-func (p *RPCProcessController) Reload(processes []Process, procEnvs ...appdesc.Env) error {
+// RefreshConf 重新生成配置文件
+func RefreshConf(processes []Process, procEnvs ...appdesc.Env) error {
 	conf, err := makeSupervisorConf(processes, procEnvs...)
 	if err != nil {
 		return err
@@ -222,6 +222,11 @@ func (p *RPCProcessController) Reload(processes []Process, procEnvs ...appdesc.E
 	if err := refreshConf(conf); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Reload 更新和重启进程列表
+func (p *RPCProcessController) Reload() error {
 	return p.client.Update()
 }
 

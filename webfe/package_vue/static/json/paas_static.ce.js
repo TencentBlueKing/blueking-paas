@@ -347,6 +347,10 @@ export const PAAS_STATIC_CONFIG = {
                 {
                     "text": staticI18n.$t("工具"),
                     "name": "tools",
+                },
+                {
+                    "text": staticI18n.$t("平台管理"),
+                    "name": "platformManagement",
                 }
             ],
             "api_subnav_service": [

@@ -137,7 +137,7 @@ class TestClusterAllocationPolicyViewSet:
 
         policy = init_policies[1]
         url = reverse(
-            "plat_mgt.infras.cluster_allocation_policy.update",
+            "plat_mgt.infras.cluster_allocation_policy.update_destroy",
             kwargs={"policy_id": policy.uuid},
         )
         resp = plat_mgt_api_client.put(url, data=data)
@@ -165,7 +165,7 @@ class TestClusterAllocationPolicyViewSet:
 
         policy = init_policies[0]
         url = reverse(
-            "plat_mgt.infras.cluster_allocation_policy.update",
+            "plat_mgt.infras.cluster_allocation_policy.update_destroy",
             kwargs={"policy_id": policy.uuid},
         )
         resp = plat_mgt_api_client.put(url, data=data)

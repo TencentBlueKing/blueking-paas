@@ -350,6 +350,10 @@ class TolerationSLZ(serializers.Serializer):
             # 如果运算符为 Exists，则不能提供 value
             attrs.pop("value", None)
 
+        # 但效果不是 NO_EXECUTE 时，不可以提供容忍秒数
+        if attrs["effect"] != TolerationEffect.NO_EXECUTE:
+            attrs.pop("tolerationSeconds", None)
+
         return attrs
 
 

@@ -34,6 +34,7 @@
             v-model="item.operator"
             style="width: 140px"
             :placeholder="$t('运算符')"
+            @change="handleChange($event, index)"
           >
             <bk-option
               v-for="option in operatorList"
@@ -46,12 +47,13 @@
         <bk-form-item
           label=""
           :required="true"
-          :rules="ruleInput"
+          :rules="item.operator === 'Exists' ? [] : ruleInput"
           :property="'nodes.' + index + '.value'"
           ext-cls="item-input-cls"
         >
           <bk-input
             v-model="item.value"
+            :disabled="item.operator === 'Exists'"
             ext-cls="input-cls"
           ></bk-input>
         </bk-form-item>
@@ -183,6 +185,11 @@ export default {
     },
     getData() {
       return this.formData.nodes;
+    },
+    handleChange(val, index) {
+      if (val === 'Exists') {
+        this.$set(this.formData.nodes[index], 'value', '');
+      }
     },
   },
 };

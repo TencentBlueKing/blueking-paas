@@ -53,13 +53,14 @@
             <bk-radio-group
               v-else-if="item.type === 'radio'"
               v-model="infoFormData[item.property]"
+              style="width: 680px"
             >
               <bk-radio
                 v-for="r in item.radios"
                 :value="r.value"
                 :key="r.value"
               >
-                <span class="ml5">{{ r.label }}</span>
+                <span class="ml5">{{ $t(r.label) }}</span>
               </bk-radio>
             </bk-radio-group>
           </template>
@@ -120,13 +121,14 @@
           <bk-radio-group
             v-else-if="item.type === 'radio'"
             v-model="infoFormData[item.property]"
+            style="width: 680px"
           >
             <bk-radio
               v-for="r in item.radios"
               :value="r.value"
               :key="r.value"
             >
-              <span class="ml5">{{ r.label }}</span>
+              <span class="ml5">{{ $t(r.label) }}</span>
             </bk-radio>
           </bk-radio-group>
           <p
@@ -151,7 +153,7 @@
       <div class="card-title">
         <span>{{ $t('ElasticSearch 集群信息') }}</span>
         <span class="sub-tip ml8">
-          {{ $t('用于采集应用日志，配置在下一步安装 bkapp-log-collection 组件时也会使用到') }}
+          {{ $t('用于采集应用日志，该配置将在后续安装 bkapp-log-collection 时会生效') }}
         </span>
       </div>
       <bk-form
@@ -365,6 +367,7 @@ export default {
       // 新建回填当前用户租户
       const { tenantId } = this.curUserInfo;
       tenantId && this.infoFormData.available_tenant_ids.push(tenantId);
+      this.infoFormData.container_log_dir = '/var/lib/docker/containers';
     }
     this.getClusterServerUrlTmpl();
   },

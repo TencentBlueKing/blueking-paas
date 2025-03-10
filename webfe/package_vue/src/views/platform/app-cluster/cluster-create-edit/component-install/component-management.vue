@@ -14,13 +14,13 @@
       v-bkloading="{ isLoading: loading, zIndex: 10 }"
     >
       <DetailsRow
-        :label-width="80"
+        :label-width="labelWidth"
         :label="`${$t('组件介绍')}：`"
         :value="getComponentIntroduction(component.name)"
       />
       <DetailsRow
         v-if="isBkIngressNginx"
-        :label-width="80"
+        :label-width="labelWidth"
         :is-full="true"
         :align="'flex-start'"
       >
@@ -57,14 +57,10 @@
                 <span class="tip">
                   <i class="paasng-icon paasng-info-line ml8"></i>
                   <span v-if="accessMethod === 'nodePort'">
-                    {{
-                      $t(
-                        '使用 CLB 作为接入层，监听器根据域名转发至不同集群的 NodePort。Nginx 同样根据域名配置 upstream，指向相应的集群 NodePort。'
-                      )
-                    }}
+                    {{ $t('使用 CLB 作为接入层，监听器将流量转发到集群节点的指定的 NodePort。') }}
                   </span>
                   <span v-else>
-                    {{ $t('主机网络模式下，bk-ingress-nginx 会直接监听在对应节点的 80 和 443 端口。') }}
+                    {{ $t('直接使用节点主机网络，nginx 将会将流量转发到节点的 80 & 443 端口。') }}
                   </span>
                 </span>
               </template>
@@ -85,7 +81,7 @@
             <template v-else>
               <!-- hostNerwork -->
               <DetailsRow
-                :label-width="80"
+                :label-width="labelWidth"
                 :label="`${$t('节点标签')}：`"
                 :align="'flex-start'"
               >
@@ -106,13 +102,13 @@
         </div>
       </DetailsRow>
       <DetailsRow
-        :label-width="80"
+        v-if="!isBkIngressNginx"
+        :label-width="labelWidth"
         :label="`${$t('组件说明')}：`"
       >
         <div slot="value">
           {{ getComponentDescription(component.name) }}
           <bk-button
-            v-if="!isBkIngressNginx"
             class="values-btn"
             :text="true"
             @click="handleViewValues"
@@ -123,7 +119,7 @@
         </div>
       </DetailsRow>
       <DetailsRow
-        :label-width="80"
+        :label-width="labelWidth"
         :is-full="true"
         :align="'flex-start'"
       >
@@ -146,7 +142,7 @@
             <span>{{ localLanguage === 'en' ? component?.status : COMPONENT_STATUS[component?.status] || '--' }}</span>
           </template>
           <bk-button
-            v-if="component?.status === 'installed'"
+            v-if="['installed', 'installation_failed'].includes(component?.status)"
             :text="true"
             class="ml10"
             @click="handleViewDetail"
@@ -249,10 +245,6 @@ export default {
         installed: '#18C0A1',
         installation_failed: '#E71818',
       },
-      disabledTooltipsConfig: {
-        content: this.$t('非 BCS 集群需要手动安装集群组件'),
-        disabled: this.isInstalled,
-      },
       componentBtnLoading: false,
     };
   },
@@ -273,24 +265,36 @@ export default {
     isInstalled() {
       return this.clusterSource === 'bcs';
     },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 165 : 80;
+    },
+    disabledTooltipsConfig() {
+      return {
+        content: this.$t('非 BCS 集群需要手动安装集群组件'),
+        disabled: this.isInstalled,
+      };
+    },
   },
   methods: {
     // 获取组件介绍
     getComponentIntroduction(name) {
       const introduction = {
-        'bk-ingress-nginx': '为应用提供负载均等功能。',
+        'bk-ingress-nginx':
+          'Nginx Ingress 控制器，基于 Nginx 实现 HTTP/HTTPS 流量路由、负载均衡、自定义域名、URL 路径规则等功能。',
         'bkapp-log-collection':
-          '将所有应用日志统一采集到 ElasticSearch，包含应用标准输出日志、开发框架定义的结构化日志、应用接入层日志等。',
-        'bkpaas-app-operator': '云原生应用的控制引擎，必须安装后才能部署应用。',
-        'bcs-general-pod-autoscaler': 'BCS 提供的增强型扩缩容组件。',
+          '将应用的各类日志采集到 ElasticSearch 集群，以支持后续查询标准输出、预定义的结构化、Nginx 接入层等日志。',
+        'bkpaas-app-operator':
+          '云原生应用的关键基建，是开发者中心基于 k8s 能力实现的 operator，承担着云原生应用相关资源的管理，调度等职责。',
+        'bcs-general-pod-autoscaler':
+          '蓝鲸容器管理平台（BCS）提供的增强型 Pod 水平扩缩容组件，支持按各类指标对应用集成副本数量进行扩缩容。',
       };
-      return introduction[name] || '--';
+      return this.$t(introduction[name]) || '--';
     },
     getComponentDescription(name) {
       const description = {
-        'bkapp-log-collection': '已经根据上一步填写的日志路径和 ElasticSearch 集群信息生成 values。',
+        'bkapp-log-collection': this.$t('已经根据前面步骤填写的配置生成 Values。'),
       };
-      return description[name] || this.$t('使用默认 values 部署即可。');
+      return description[name] || this.$t('使用默认 Values 即可，无需额外配置。');
     },
     // 查看组件详情
     handleViewDetail() {
@@ -328,7 +332,7 @@ export default {
               return;
             }
             // 其他组件的安装或更新，无需弹出侧栏
-            this.updateComponent({}, status);
+            this.updateComponent({ values: {} }, status);
           },
         });
       } catch (e) {
@@ -350,6 +354,8 @@ export default {
           theme: 'success',
           message: msg,
         });
+        // 获取组件详情
+        this.$emit('get-detail', this.component.name);
       } catch (e) {
         this.catchErrorHandler(e);
       }

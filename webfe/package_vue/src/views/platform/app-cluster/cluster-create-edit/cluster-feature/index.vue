@@ -15,7 +15,7 @@
         v-model="activeNames"
         ext-cls="setting-collapse-cls"
       >
-        <bk-collapse-item name="1">
+        <bk-collapse-item name="setting">
           <div class="card-title">
             <i
               class="paasng-icon paasng-right-shape"
@@ -23,7 +23,7 @@
             ></i>
             <span>{{ $t('高级设置') }}</span>
             <span class="sub-tip ml8">
-              {{ $t('可通过为节点设置污点，并在开发者中心配置容忍度，以将应用部署到指定的集群节点上') }}
+              {{ $t('可通过为节点设置污点，并在开发者中心配置容忍度，以将应用部署到指定的集群节点上。') }}
             </span>
           </div>
           <div
@@ -145,11 +145,33 @@ export default {
             };
           });
           this.$refs.keyValueInput?.setData(transformedArray);
+          this.editBackfill();
         });
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
+      }
+    },
+    // 编辑回显
+    editBackfill() {
+      const { node_selector = {}, tolerations = [] } = this.details;
+      if (Object.keys(node_selector)?.length) {
+        this.isNodeVisible = true;
+        this.$nextTick(() => {
+          const nodes = Object.entries(node_selector).map(([key, value]) => {
+            return {
+              key: key,
+              value: value,
+            };
+          });
+          this.$refs.keyValueInput?.setData(nodes);
+        });
+        this.activeNames = ['setting'];
+      }
+      if (tolerations?.length) {
+        this.isTolerationsVisible = true;
+        this.activeNames = ['setting'];
       }
     },
     // 获取高级设置的表单数据
@@ -198,7 +220,7 @@ export default {
         margin-right: 6px;
         transform: translateY(-1px);
         &.expand {
-          transform: rotate(90deg);
+          transform: rotate(90deg) translateX(-1px);
         }
       }
     }
@@ -213,18 +235,23 @@ export default {
   }
   .component-form-cls {
     .node-selector-form-cls {
-      width: 830px;
+      max-width: 830px;
     }
     .tolerations-form-cls {
-      width: 950px;
+      max-width: 950px;
     }
   }
   .setting-collapse-cls {
-    /deep/ .bk-collapse-item .bk-collapse-item-header {
-      padding: 0;
-      height: auto !important;
-      .fr {
-        display: none;
+    /deep/ .bk-collapse-item {
+      .bk-collapse-item-header {
+        padding: 0;
+        height: auto !important;
+        .fr {
+          display: none;
+        }
+      }
+      .bk-collapse-item-content {
+        padding: 0 !important;
       }
     }
   }

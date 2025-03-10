@@ -11,12 +11,12 @@
     </div>
     <div class="card-content">
       <div
-        v-for="(val, key) in featureMap"
-        :key="val"
+        v-for="(item, index) in featureMaps"
+        :key="index"
         class="feature-item"
       >
-        <bk-checkbox v-model="featureFlags[key]">
-          {{ val }}
+        <bk-checkbox v-model="featureFlags[item.key]">
+          {{ $t(item.name) }}
         </bk-checkbox>
       </div>
     </div>
@@ -41,14 +41,7 @@ export default {
       isLoading: false,
       details: {},
       featureFlags: {},
-      featureMap: {
-        ENABLE_BCS_EGRESS: this.$t('支持提供出口 IP'),
-        ENABLE_MOUNT_LOG_TO_HOST: this.$t('允许挂载日志到主机'),
-        INGRESS_USE_REGEX: this.$t('Ingress 路径是否使用正则表达式'),
-        ENABLE_BK_LOG_COLLECTOR: this.$t('使用蓝鲸日志平台方案采集日志'),
-        ENABLE_BK_MONITOR: this.$t('使用蓝鲸监控获取资源使用指标'),
-        ENABLE_AUTOSCALING: this.$t('支持自动扩缩容'),
-      },
+      featureMaps: [],
     };
   },
   watch: {
@@ -64,7 +57,18 @@ export default {
       immediate: true,
     },
   },
+  created() {
+    this.getClusterFeatureFlags();
+  },
   methods: {
+    async getClusterFeatureFlags() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterFeatureFlags');
+        this.featureMaps = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
     setDefault() {
       this.featureFlags = {
         ENABLE_BCS_EGRESS: false,

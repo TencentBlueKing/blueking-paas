@@ -11,7 +11,7 @@
         v-for="(item, index) in formData.list"
         :required="true"
         :rules="rule"
-        :icon-offset="dataLength === 1 ? 115 : 143"
+        :icon-offset="iconOffset"
         :property="'list.' + index + '.name'"
         :key="index"
       >
@@ -24,7 +24,7 @@
               }"
             >
               <bk-checkbox v-model="item.https_enabled">
-                {{ $t('启用 HTTPS') }}
+                {{ `${$t('启用')} HTTPS` }}
               </bk-checkbox>
             </span>
             <i
@@ -75,6 +75,15 @@ export default {
   computed: {
     dataLength() {
       return this.formData.list.length;
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    iconOffset() {
+      if (this.localLanguage === 'en') {
+        return this.dataLength === 1 ? 131 : 159;
+      }
+      return this.dataLength === 1 ? 115 : 143;
     },
   },
   methods: {

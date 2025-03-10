@@ -130,7 +130,7 @@ export default {
         releaseName: this.$t('Release 名称'),
         namespace: this.$t('命名空间'),
         releaseVersion: this.$t('版本号'),
-        chartName: 'Chart',
+        chartName: `Chart ${this.$t('名称')}`,
         chartVersion: `Chart ${this.$t('版本')}`,
         app_version: `APP ${this.$t('版本')}`,
       },

@@ -9,16 +9,6 @@
     <div slot="header">
       <div class="header-box">
         <span>{{ $t('编辑组件配置') }}</span>
-        <div>
-          <bk-button
-            class="values-btn"
-            :text="true"
-            @click="$emit('show-values', name)"
-          >
-            <i class="paasng-icon paasng-file-5 mr5"></i>
-            <span>{{ $t('查看 Values') }}</span>
-          </bk-button>
-        </div>
       </div>
     </div>
     <div
@@ -38,7 +28,12 @@
           </div>
           <div class="info">
             <p class="title">{{ item.title }}</p>
-            <p class="tip">{{ item.tip }}</p>
+            <p
+              class="tip"
+              v-bk-overflow-tips
+            >
+              {{ item.tip }}
+            </p>
           </div>
         </div>
       </div>
@@ -141,14 +136,14 @@ export default {
       // 使用组件详情进行更新
       nodePortOptions: [
         {
-          label: 'HTTP 端口',
+          label: `HTTP ${this.$t('端口')}`,
           type: 'input',
           property: 'http',
           required: true,
           rules: [...requiredRule],
         },
         {
-          label: 'HTTPS 端口',
+          label: `HTTPS ${this.$t('端口')}`,
           type: 'input',
           property: 'https',
           required: true,
@@ -166,15 +161,13 @@ export default {
       accessMethod: [
         {
           title: 'nodePort',
-          tip: this.$t(
-            '使用 CLB 作为接入层，监听器根据域名转发至不同集群的 NodePort。Nginx 同样根据域名配置 upstream，指向相应的集群 NodePort。'
-          ),
+          tip: this.$t('使用 CLB 作为接入层，监听器将流量转发到集群节点的指定的 NodePort。'),
           icon: 'paasng-branch-line',
           value: false,
         },
         {
           title: 'hostNetwork',
-          tip: this.$t('主机网络模式下，bk-ingress-nginx 会直接监听在对应节点的 80 和 443 端口。'),
+          tip: this.$t('直接使用节点主机网络，nginx 将会将流量转发到节点的 80 & 443 端口。'),
           icon: 'paasng-host',
           value: true,
         },
@@ -248,16 +241,16 @@ export default {
       }
       Promise.all(validateArr)
         .then((r) => {
-          const { hostNetwork } = this.formData;
+          const { hostNetwork, http, https } = this.formData;
           let data = cloneDeep(this.values);
           data.hostNetwork = hostNetwork;
           if (this.isHostNetwork) {
             data.nodeSelector = this.$refs.keyValueInput[0]?.getData();
           } else {
-            const { http, https } = this.formData;
             data.service.nodePorts = { http, https };
           }
-          this.updateComponent(data);
+          const params = { values: data };
+          this.updateComponent(params);
         })
         .catch((e) => {
           console.warn(e);
@@ -278,6 +271,8 @@ export default {
           message: this.$t('编辑成功！'),
         });
         this.closeSideslider();
+        // 获取组件详情
+        this.$emit('get-detail', 'bk-ingress-nginx');
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

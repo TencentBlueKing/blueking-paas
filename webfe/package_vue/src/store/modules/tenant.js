@@ -183,5 +183,12 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/operations/diff_version/`;
       return http.get(url);
     },
+    /**
+     * 获取集群特性可启用项
+     */
+    getClusterFeatureFlags({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
+      return http.get(url);
+    },
   },
 };

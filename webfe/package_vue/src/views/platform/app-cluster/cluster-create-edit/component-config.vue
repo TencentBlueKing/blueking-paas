@@ -35,10 +35,10 @@
             :value="r.value"
             :key="r.value"
           >
-            <span class="ml5 mr5">{{ r.label }}</span>
+            <span class="ml5 mr5">{{ $t(r.label) }}</span>
             <span class="radio-tip">
               <i class="paasng-icon paasng-info-line"></i>
-              {{ r.tip }}
+              {{ $t(r.tip) }}
             </span>
           </bk-radio>
         </bk-radio-group>
@@ -109,7 +109,6 @@ export default {
         const ret = await this.$store.dispatch('tenant/getClusterDetails', {
           clusterName,
         });
-        console.log('集群详情', ret);
         this.clusterDetails = ret;
         const {
           component_preferred_namespace,

@@ -22,7 +22,6 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.bk_plugins.pluginscenter import constants, shim
@@ -37,18 +36,16 @@ from paasng.bk_plugins.pluginscenter.models import (
 from paasng.bk_plugins.pluginscenter.serializers import PluginInstanceSLZ
 from paasng.bk_plugins.pluginscenter.sys_apis.serializers import make_sys_plugin_slz_class
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 
 logger = logging.getLogger(__name__)
-
-API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
 
 
 class SysPluginApiViewSet(viewsets.ViewSet):
     """插件开发中心提供的应用态 API"""
 
-    permission_classes = API_PERMISSION_CLASSES
+    permission_classes = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
     @atomic
     def create(self, request, pd_id, **kwargs):

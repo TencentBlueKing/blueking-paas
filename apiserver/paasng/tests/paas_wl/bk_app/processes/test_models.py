@@ -17,16 +17,8 @@
 
 import pytest
 
-from paas_wl.bk_app.processes.constants import ProbeType
-from paas_wl.bk_app.processes.models import ProcessProbe, ProcessProbeManager, ProcessSpec, ProcessSpecManager
-from paasng.platform.bkapp_model.entities import (
-    AutoscalingConfig,
-    ExecAction,
-    HTTPGetAction,
-    Probe,
-    ProbeSet,
-    TCPSocketAction,
-)
+from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecManager
+from paasng.platform.bkapp_model.entities import AutoscalingConfig
 from paasng.platform.engine.models.deployment import ProcessTmpl
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -100,57 +92,3 @@ class TestProcessSpecManager:
         assert web.scaling_config.min_replicas == 1
         assert web.scaling_config.max_replicas == 3
         assert web.scaling_config.policy == "default"
-
-
-class TestProcessProbeManager:
-    def test_sync(self, wl_app):
-        mgr = ProcessProbeManager(wl_app)
-        mgr.sync(
-            [
-                ProcessTmpl(
-                    name="web",
-                    command="/bin/start.sh",
-                    probes=ProbeSet(
-                        liveness=Probe(exec=ExecAction(command=["/bin/healthz.sh"])),
-                        readiness=Probe(tcp_socket=TCPSocketAction(port=8080, host="127.0.0.1")),
-                    ),
-                ),
-                ProcessTmpl(
-                    name="celery",
-                    command="/bin/start_celery.sh",
-                    probes=ProbeSet(
-                        startup=Probe(http_get=HTTPGetAction(port=8080, path="/healthz", host="127.0.0.1")),
-                    ),
-                ),
-            ]
-        )
-
-        probes = ProcessProbe.objects.filter(app=wl_app)
-        assert probes.count() == 3
-        assert probes.filter(process_type="web").count() == 2
-        assert probes.filter(process_type="celery").count() == 1
-
-        mgr.sync(
-            [
-                ProcessTmpl(
-                    name="web",
-                    command="foo",
-                    probes=ProbeSet(
-                        liveness=Probe(http_get=HTTPGetAction(port=8080, path="/healthz")),
-                        readiness=Probe(tcp_socket=TCPSocketAction(port=8080)),
-                        startup=Probe(exec=ExecAction(command=["/bin/healthz.sh"])),
-                    ),
-                )
-            ]
-        )
-        probes = ProcessProbe.objects.filter(app=wl_app, process_type="web")
-        assert probes.count() == 3
-        probe = probes.filter(probe_type=ProbeType.LIVENESS).first()
-        assert probe is not None
-        assert probe.success_threshold == 1
-        assert probe.failure_threshold == 3
-        assert probe.probe_handler.http_get.port == 8080
-        assert probe.probe_handler.http_get.path == "/healthz"
-
-        mgr.sync([ProcessTmpl(name="web", command="foo", probes=None)])
-        assert not ProcessProbe.objects.filter(app=wl_app).exists()

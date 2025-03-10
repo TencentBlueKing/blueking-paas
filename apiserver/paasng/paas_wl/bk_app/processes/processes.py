@@ -37,7 +37,7 @@ from paas_wl.bk_app.processes.controllers import list_processes
 from paas_wl.bk_app.processes.entities import Status
 from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
-from paas_wl.bk_app.processes.models import ProcessProbeManager, ProcessSpecManager
+from paas_wl.bk_app.processes.models import ProcessSpecManager
 from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
@@ -223,10 +223,6 @@ class ProcessManager:
                           where 'replicas' and 'plan' is optional
         """
         ProcessSpecManager(self.wl_app).sync(processes)
-
-    def sync_processes_probes(self, processes: List[ProcessTmpl]):
-        """Sync probes by plain ProcessProbe structure"""
-        ProcessProbeManager(self.wl_app).sync(processes)
 
     def list_processes_specs(self, target_status: Optional[str] = None) -> List[Dict]:
         """Get specs of current app's all processes

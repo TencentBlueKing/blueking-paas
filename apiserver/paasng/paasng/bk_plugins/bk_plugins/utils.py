@@ -32,14 +32,15 @@ def ensure_builtin_user():
     user, created = User.objects.get_or_create(username=username)
     if created:
         UserPrivateToken.objects.create_token(user=user, expires_in=None)
-    role = SiteRole.ADMIN.value
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
+    # This user only acts as a holder for the sourcectl private token, so no specific
+    # role is required.
     profile, _ = UserProfile.objects.update_or_create(
-        user=user_id, defaults={"role": role, "enable_regions": settings.DEFAULT_REGION_NAME}
+        user=user_id, defaults={"role": SiteRole.USER.value, "enable_regions": settings.DEFAULT_REGION_NAME}
     )
     profile.refresh_from_db(fields=["role", "enable_regions"])
 
-    # 关联源码管理 private_token
+    # 关联源码管理的 private_token
     PrivateTokenHolder.objects.update_or_create(
         user=profile,
         provider="tc_git",

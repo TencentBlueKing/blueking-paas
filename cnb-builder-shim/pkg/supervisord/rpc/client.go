@@ -65,6 +65,25 @@ func NewClient(rpcAddress string) (*Client, error) {
 	return client, errors.Wrap(err, "new supervisord client")
 }
 
+// StartServerAndNewClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
+func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, error) {
+	var err error
+	for attempt := range 3 {
+		fmt.Printf("Try to connect to Supervisord(%d)", attempt)
+		client, err := NewClient(rpcAddress)
+		if err == nil {
+			return client, nil
+		}
+		server := NewServer(configPath)
+		if err = server.Start(); err != nil {
+			fmt.Println("Failed to start supervisord server", err)
+		}
+		// 等待服务就绪
+		time.Sleep(2 * time.Second)
+	}
+	return nil, err
+}
+
 // 请求 rpc 方法接口并验证 bool 类型返回
 func (c *Client) callMethodWithCheck(method string, args ...interface{}) error {
 	var result bool

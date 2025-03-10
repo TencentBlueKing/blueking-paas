@@ -75,7 +75,7 @@ func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, err
 		// 等待服务就绪
 		time.Sleep(2 * time.Second)
 	}
-	return nil, err
+	return nil, errors.Wrap(err, "start server and new client")
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回

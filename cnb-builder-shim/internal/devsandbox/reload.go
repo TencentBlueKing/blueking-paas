@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/phase"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
 )
 
 var (
@@ -36,8 +37,6 @@ var (
 	ReloadLogDir = path.Join(ReloadDir, "log")
 	// reload sub command of dev-launcher
 	reloadSubCommand = "reload"
-	// stop sub command of dev-launcher
-	stopSubCommand = "stop"
 )
 
 // ReloadStatus is the status of a reload operation.
@@ -77,13 +76,13 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 	// 2. 构建时，supervisor 会因 terminated by SIGSEGV 发生预期之外进程退出，
 	// 然后本身的托管能力又会拉起进程，导致 /app/v3logs 目录权限在 cnb or root
 	// 间横跳，从而使构建时遇到 v3logs 文件夹权限错误而构建失败
-	//processCtl, err := processesctl.NewProcessController(processesctl.RPC)
-	//if err != nil {
-	//	return errors.Wrap(err, "new process controller")
-	//}
-	//if err = processCtl.StopAllProcesses(); err != nil {
-	//	return errors.Wrap(err, "stop all processes")
-	//}
+	processCtl, err := processesctl.NewProcessController(processesctl.RPC)
+	// 如果没有启动过，不需要停止
+	if err == nil {
+		if err = processCtl.StopAllProcesses(); err != nil {
+			return errors.Wrap(err, "stop all processes")
+		}
+	}
 	cmd := phase.MakeBuilderCmd()
 	return m.runCmd(reloadID, cmd)
 }

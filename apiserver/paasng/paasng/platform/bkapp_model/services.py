@@ -29,7 +29,7 @@ from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
@@ -123,3 +123,16 @@ def check_replicas_manually_scaled(m: Module) -> bool:
 
     managers = fieldmgr.MultiFieldsManager(m).get(replicas_fields)
     return fieldmgr.FieldMgrName.WEB_FORM in managers.values()
+
+
+def upsert_process_service_flag(m: Module, implicit_needed: bool):
+    """upsert process service flag by app module
+
+    :param m: app module
+    :param implicit_needed: 是否隐式需要 process services 配置
+    """
+    for env in m.get_envs():
+        ProcessServicesFlag.objects.update_or_create(
+            app_environment=env,
+            defaults={"implicit_needed": implicit_needed, "tenant_id": m.tenant_id},
+        )

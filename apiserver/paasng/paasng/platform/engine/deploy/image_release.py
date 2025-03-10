@@ -26,7 +26,8 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.bkapp_model.services import upsert_process_service_flag
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.handlers import DeployHandleResult
 from paasng.platform.engine.configurations.image import ImageCredentialManager, RuntimeImageInfo, get_credential_refs
@@ -134,11 +135,7 @@ class ImageReleaseMgr(DeployStep):
 
             # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
             implicit_needed = result.spec_version != AppSpecVersion.VER_3
-            ProcessServicesFlag.objects.update_or_create(
-                app_environment=app_environment,
-                defaults={"implicit_needed": implicit_needed, "tenant_id": app_environment.tenant_id},
-            )
-
+            upsert_process_service_flag(app_environment.module, implicit_needed)
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except Exception as e:

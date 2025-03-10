@@ -430,13 +430,13 @@ class TestExportedConfigVars:
 class TestConfigVarTenantId:
     @pytest.fixture()
     def bk_module_with_random_tenant(self, bk_module):
-        """创建一个测试模块（重写父级 fixture 添加随机 tenant_id）"""
+        """给模块添加随机 tenant_id"""
         bk_module.tenant_id = get_random_string(length=12, allowed_chars=ascii_uppercase)
         bk_module.save()
         return bk_module
 
     def test_tenant_id_consistency_on_create(self, bk_module_with_random_tenant):
-        """测试通过序列化器创建环境变量时 tenant_id 自动填充"""
+        """单个添加环境变量"""
         test_data = {
             "key": "TEST_KEY",
             "value": "test_value",
@@ -453,7 +453,7 @@ class TestConfigVarTenantId:
         assert db_var.tenant_id == bk_module_with_random_tenant.tenant_id
 
     def test_tenant_id_consistency_on_batch(self, bk_module_with_random_tenant, random_config_var_maker):
-        """测试批量操作时 tenant_id 与模块一致"""
+        """批量编辑环境变量"""
         test_data = [random_config_var_maker(environment_name="prod") for _ in range(3)]
 
         serializer = ConfigVarFormatWithIdSLZ(

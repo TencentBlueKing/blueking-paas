@@ -184,7 +184,7 @@ type RPCProcessController struct {
 
 // 创建 RPC 类型的 ProcessController
 func newRPCProcessController() (*RPCProcessController, error) {
-	client, err := rpc.AutoConnectClient(rpcAddress, confFilePath)
+	client, err := rpc.StartServerAndNewClient(rpcAddress, confFilePath)
 	if err != nil {
 		return nil, err
 	}

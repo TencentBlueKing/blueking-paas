@@ -81,7 +81,7 @@ func (c *Client) GetAllProcessInfo() ([]ProcessInfo, error) {
 
 // StartProcess 启动进程
 func (c *Client) StartProcess(name string, wait bool) error {
-	return c.callMethodAndVerifyBool("supervisor.startProcess", name, wait)
+	return c.callMethodWithCheck("supervisor.startProcess", name, wait)
 }
 
 // StartAllProcesses 启动所有进程
@@ -96,7 +96,7 @@ func (c *Client) StartProcessGroup(name string, wait bool) ([]ProcessInfo, error
 
 // StopProcess 停止进程
 func (c *Client) StopProcess(name string, wait bool) error {
-	return c.callMethodAndVerifyBool("supervisor.stopProcess", name, wait)
+	return c.callMethodWithCheck("supervisor.stopProcess", name, wait)
 }
 
 // StopProcessGroup 停止进程组内的所有进程
@@ -123,12 +123,12 @@ func (c *Client) ReloadConfig() ([]string, []string, []string, error) {
 
 // AddProcessGroup 新增进程组
 func (c *Client) AddProcessGroup(name string) error {
-	return c.callMethodAndVerifyBool("supervisor.addProcessGroup", name)
+	return c.callMethodWithCheck("supervisor.addProcessGroup", name)
 }
 
 // RemoveProcessGroup 删除进程组
 func (c *Client) RemoveProcessGroup(name string) error {
-	return c.callMethodAndVerifyBool("supervisor.removeProcessGroup", name)
+	return c.callMethodWithCheck("supervisor.removeProcessGroup", name)
 }
 
 // Update 更新所有进程，为了让配置生效，需要删除和重建进程组

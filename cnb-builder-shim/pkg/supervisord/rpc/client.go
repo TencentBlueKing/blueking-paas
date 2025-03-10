@@ -25,11 +25,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Client 是 supervisord 客户端
 type Client struct {
 	rpcClient *xmlrpc.Client
 	config    ClientConfig
 }
 
+// ClientConfig 客户端配置
 type ClientConfig struct {
 	RPCAddress string // XML-RPC 地址
 }
@@ -62,8 +64,8 @@ func NewClient(rpcAddress string) (*Client, error) {
 	return client, errors.Wrap(err, "new supervisord client")
 }
 
-// AutoConnectClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
-func AutoConnectClient(rpcAddress string, configPath string) (*Client, error) {
+// StartServerAndNewClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
+func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, error) {
 	var err error
 	for attempt := 0; attempt < 3; attempt++ {
 		client, err := NewClient(rpcAddress)
@@ -81,7 +83,7 @@ func AutoConnectClient(rpcAddress string, configPath string) (*Client, error) {
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回
-func (c *Client) callMethodAndVerifyBool(method string, args ...interface{}) error {
+func (c *Client) callMethodWithCheck(method string, args ...interface{}) error {
 	var result bool
 	err := c.rpcClient.Call(method, args, &result)
 	if err != nil {

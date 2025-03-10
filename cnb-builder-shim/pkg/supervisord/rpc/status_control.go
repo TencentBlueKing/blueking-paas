@@ -44,7 +44,7 @@ const (
 	StateNameShutdown   StateName = "SHUTDOWN"   // Supervisor is in the process of shutting down.
 )
 
-// GetState ...
+// GetState 获取 Supervisor Server
 func (c *Client) GetState() (State, error) {
 	var state State
 	err := c.rpcClient.Call("supervisor.getState", nil, &state)
@@ -52,7 +52,7 @@ func (c *Client) GetState() (State, error) {
 	return state, err
 }
 
-// Restart ...
+// Restart 重启 Supervisor Server
 func (c *Client) Restart() error {
-	return c.callMethodAndVerifyBool("supervisor.restart", nil)
+	return c.callMethodWithCheck("supervisor.restart", nil)
 }

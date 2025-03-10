@@ -26,15 +26,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Server 是 supervisord 服务端
 type Server struct {
 	config ServerConfig
 }
 
+// ServerConfig 服务端配置
 type ServerConfig struct {
 	ConfigPath string // Supervisord 启动配置路径
 }
 
-// NewServer ...
+// NewServer 用于创建一个新的 Supervisord Server
 func NewServer(configPath string) *Server {
 	return &Server{config: ServerConfig{ConfigPath: configPath}}
 }

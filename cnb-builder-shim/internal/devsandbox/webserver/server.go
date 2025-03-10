@@ -268,7 +268,7 @@ func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processCtl, err := processesctl.NewProcessController(processControllerType)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
 			return
 		}
 		status, err := processCtl.Status()
@@ -301,7 +301,7 @@ func ProcessStopHandler() gin.HandlerFunc {
 
 		processCtl, err := processesctl.NewProcessController(processControllerType)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
 			return
 		}
 
@@ -322,7 +322,8 @@ func ProcessStartHandler() gin.HandlerFunc {
 
 		processCtl, err := processesctl.NewProcessController(processControllerType)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
+			fmt.Printf("Failed to start process: %s\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
 			return
 		}
 

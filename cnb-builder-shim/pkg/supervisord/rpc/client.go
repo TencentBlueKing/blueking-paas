@@ -43,20 +43,18 @@ func NewClient(rpcAddress string) (*Client, error) {
 	var err error
 	for attempt := range 3 {
 		var state State
-		client.rpcClient, err = xmlrpc.NewClient(rpcAddress, nil)
 		fmt.Printf("Try to connect to Supervisord (%d)\n", attempt)
-		if err == nil {
-			// 验证连接是否正常
-			state, err = client.GetState()
-			// 如果获取状态失败或者状态不是运行中则尝试重启
-			if err != nil || state.Name != StateNameRunning {
-				if err = client.Restart(); err == nil {
-					fmt.Println("Supervisord restarted")
-					time.Sleep(1 * time.Second)
-					continue
-				}
-			}
+		client.rpcClient, _ = xmlrpc.NewClient(rpcAddress, nil)
+		// 验证连接是否正常
+		state, err = client.GetState()
+		if err == nil && state.Name == StateNameRunning {
 			return client, nil
+		}
+		// 如果获取状态失败或者状态不是运行中则尝试重启
+		if err = client.Restart(); err == nil {
+			fmt.Println("Supervisord restarted")
+			time.Sleep(1 * time.Second)
+			continue
 		}
 	}
 	return client, errors.Wrap(err, "new supervisord client")

@@ -22,8 +22,6 @@ import (
 	"context"
 	"os/exec"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Server 是 supervisord 服务端
@@ -43,12 +41,27 @@ func NewServer(configPath string) *Server {
 
 // Start 使用 command 显式启动 Supervisord Server
 func (s *Server) Start() error {
+	if s.isRunning() {
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "start supervisord")
+		return err
 	}
 	return nil
+}
+
+func (s *Server) isRunning() bool {
+	// 使用 pgrep 检查 supervisord 进程
+	cmd := exec.Command("pgrep", "-f", "supervisord")
+	if err := cmd.Run(); err == nil {
+		// 如果命令成功执行，说明 supervisord 已运行
+		return true
+	}
+
+	// 如果命令执行失败，说明 supervisord 未运行
+	return false
 }

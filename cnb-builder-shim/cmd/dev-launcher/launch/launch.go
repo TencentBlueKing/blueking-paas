@@ -122,16 +122,16 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
+	supervisordProcesses := []processesctl.Process{}
+	for _, proc := range processes {
+		supervisordProcesses = append(supervisordProcesses,
+			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
+	}
 	ctl, err := processesctl.NewProcessController(processControllerType)
 	if err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
-	supervisord_processes := []processesctl.Process{}
-	for _, proc := range processes {
-		supervisord_processes = append(supervisord_processes,
-			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
-	}
-	return ctl.Reload(supervisord_processes, procEnvs...)
+	return ctl.Reload(supervisordProcesses, procEnvs...)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

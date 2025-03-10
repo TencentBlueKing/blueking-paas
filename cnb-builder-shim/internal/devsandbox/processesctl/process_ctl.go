@@ -227,7 +227,7 @@ func RefreshConf(processes []Process, procEnvs ...appdesc.Env) error {
 
 // Reload 更新和重启进程列表
 func (p *RPCProcessController) Reload() error {
-	return p.client.Update()
+	return p.client.Restart()
 }
 
 // StopAllProcesses 停止所有进程

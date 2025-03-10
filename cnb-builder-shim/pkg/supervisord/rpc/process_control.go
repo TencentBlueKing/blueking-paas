@@ -18,8 +18,6 @@
 
 package rpc
 
-import "fmt"
-
 // ProcessInfo stores information about a process
 // https://supervisord.org/api.html#process-control
 type ProcessInfo struct {
@@ -139,7 +137,6 @@ func (c *Client) Update() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(added, changed, removed)
 
 	toStart := append(added, changed...)
 	toStop := append(changed, removed...)

@@ -29,7 +29,7 @@ from rest_framework.response import Response
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import AccountFeatureFlag, User, UserPrivateToken, UserProfile
+from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
@@ -86,10 +86,9 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         results = []
         for username in serializer.data["username_list"]:
             if provider_type is ProviderType.DATABASE:
-                # 创建平台系统用户
-                user, created = User.objects.get_or_create(username=username)
-                if created:
-                    UserPrivateToken.objects.create_token(user=user, expires_in=None)
+                # Disable creating database user because the function has been migrated
+                # to the sysapi_client app.
+                raise RuntimeError("Creating database user is not allowed")
 
             user_id = user_id_encoder.encode(provider_type, username)
             obj, _ = UserProfile.objects.update_or_create(

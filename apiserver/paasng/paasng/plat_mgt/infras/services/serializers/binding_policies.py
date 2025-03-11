@@ -38,6 +38,7 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
 
         if plans_exists == env_plans_exists:
             raise serializers.ValidationError("Must provide either plans or env_plans, but not both.")
+        return attrs
 
 
 class AllocationPolicySLZ(BaseAllocationPolicySLZ):

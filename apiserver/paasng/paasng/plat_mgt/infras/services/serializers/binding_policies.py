@@ -20,8 +20,6 @@ from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
-    RuleBasedAllocationPolicy,
-    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 
@@ -45,9 +43,6 @@ class AllocationPolicySLZ(BaseAllocationPolicySLZ):
     class Meta:
         ref_name = "plat_mgt.infras.services.AllocationPolicySLZ"
 
-    def to_internal_value(self, data) -> UnifiedAllocationPolicy:
-        return cattr.structure(super().to_internal_value(data), UnifiedAllocationPolicy)
-
 
 class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     class Meta:
@@ -56,9 +51,6 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
     cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
     cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
-
-    def to_internal_value(self, data) -> RuleBasedAllocationPolicy:
-        return cattr.structure(super().to_internal_value(data), RuleBasedAllocationPolicy)
 
 
 class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
@@ -74,9 +66,10 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
 
     def to_internal_value(self, data) -> PolicyCombinationConfig:
+        attrs = super().to_internal_value(data)
         service_id = self.context.get("service_id")
-        data["service_id"] = service_id
-        return cattr.structure(super().to_internal_value(data), PolicyCombinationConfig)
+        attrs["service_id"] = service_id
+        return cattr.structure(attrs, PolicyCombinationConfig)
 
 
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):

@@ -62,7 +62,7 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = PolicyCombinationManager(service, data["tenant_id"])
+        mgr = PolicyCombinationManager(service, getattr(data, "tenant_id"))
         mgr.upsert(data)
         return Response(status=status.HTTP_200_OK)
 

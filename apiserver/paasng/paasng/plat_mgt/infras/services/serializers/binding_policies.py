@@ -18,9 +18,7 @@
 import cattr
 from rest_framework import serializers
 
-from paasng.accessories.servicehub.binding_policy.policy import (
-    PolicyCombinationConfig,
-)
+from paasng.accessories.servicehub.binding_policy.policy import PolicyCombinationConfig
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 
 

@@ -15,7 +15,7 @@ def forwards_func(apps, schema_editor):
     User = apps.get_model("accounts", "User")
     UserProfile = apps.get_model("accounts", "UserProfile")
 
-    # See `ClientRole` to known more about these hardcoded role values
+    # See `ClientRole` to know more about these hardcoded role values
     sys_roles = {50, 60, 70, 80}
     for profile_id in UserProfile.objects.filter(role__in=sys_roles).values_list("id", flat=True):
         profile = UserProfile.objects.get(id=profile_id)

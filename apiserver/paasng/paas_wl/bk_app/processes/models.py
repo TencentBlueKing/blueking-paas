@@ -27,7 +27,7 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -277,60 +277,7 @@ def _get_structure(app: "WlApp") -> Dict:
 # Set the "get_structure" function to current implementation
 set_global_get_structure(_get_structure)
 
-
 ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
-
-
-class ProcessProbe(models.Model):
-    """[multi-tenancy] This model is not tenant-aware.
-
-    # TODO 使用 ModuleProcessSpec.probes 替代
-    """
-
-    app = models.ForeignKey("api.App", related_name="process_probe", on_delete=models.CASCADE, db_constraint=False)
-    # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
-    process_type = models.CharField(max_length=255)
-    probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())
-
-    probe_handler = ProbeHandlerField(default=dict, help_text="具体的检测机制配置，例如 httpGet 完整配置")
-    initial_delay_seconds = models.IntegerField(default=0)
-    timeout_seconds = models.PositiveIntegerField(default=1)
-    period_seconds = models.PositiveIntegerField(default=10)
-    success_threshold = models.PositiveIntegerField(default=1)
-    failure_threshold = models.PositiveIntegerField(default=3)
-
-    class Meta:
-        unique_together = ("app", "process_type", "probe_type")
-
-
-class ProcessProbeManager:
-    def __init__(self, wl_app: "WlApp"):
-        self.wl_app = wl_app
-
-    def sync(self, processes: List[ProcessTmpl]):
-        """Sync ProcessProbes data with given processes."""
-        ProcessProbe.objects.filter(app=self.wl_app).delete()
-
-        for proc in processes:
-            if not proc.probes:
-                continue
-
-            for probe_type in [ProbeType.READINESS, ProbeType.LIVENESS, ProbeType.STARTUP]:
-                probe = getattr(proc.probes, probe_type.value)
-                if not probe:
-                    continue
-
-                ProcessProbe.objects.create(
-                    app=self.wl_app,
-                    process_type=proc.name,
-                    probe_type=probe_type,
-                    probe_handler=probe.get_probe_handler(),
-                    initial_delay_seconds=probe.initial_delay_seconds,
-                    timeout_seconds=probe.timeout_seconds,
-                    period_seconds=probe.period_seconds,
-                    success_threshold=probe.success_threshold,
-                    failure_threshold=probe.failure_threshold,
-                )
 
 
 def initialize_default_proc_spec_plans():

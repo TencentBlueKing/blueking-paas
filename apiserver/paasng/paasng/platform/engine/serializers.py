@@ -399,6 +399,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
             data["is_global"] = False
             data["environment_id"] = module.get_envs(env_name).pk
         data["module"] = module.pk
+        data["tenant_id"] = module.tenant_id
         return super().to_internal_value(data)
 
 

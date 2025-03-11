@@ -53,6 +53,7 @@ class ProbeHandler(BaseModel):
     tcp_socket: Optional[TCPSocketAction] = None
 
 
+@prepare_json_field
 class Probe(BaseModel):
     """
     健康探针
@@ -76,9 +77,6 @@ class Probe(BaseModel):
     period_seconds: Optional[int] = 10
     success_threshold: Optional[int] = 1
     failure_threshold: Optional[int] = 3
-
-    def get_probe_handler(self) -> ProbeHandler:
-        return ProbeHandler(exec=self.exec, http_get=self.http_get, tcp_socket=self.tcp_socket)
 
     def render_port(self):
         """render target_port to settings.CONTAINER_PORT if original value is ${PORT}"""

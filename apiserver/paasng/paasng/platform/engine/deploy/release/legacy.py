@@ -63,7 +63,6 @@ class ApplicationReleaseMgr(DeployStep):
             procs = self.deployment.get_processes()
             proc_mgr = ProcessManager(self.engine_app.env)
             proc_mgr.sync_processes_specs(procs)
-            proc_mgr.sync_processes_probes(procs)
 
         with self.procedure("更新应用配置"):
             update_image_runtime_config(deployment=self.deployment)

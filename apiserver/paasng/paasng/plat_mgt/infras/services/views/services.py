@@ -29,6 +29,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.infras.services.serializers import (
+    BasePlanObjSLZ,
     PlanUpsertInputSLZ,
     PlanWithSvcSLZ,
 )
@@ -112,7 +113,7 @@ class PlanViewSet(viewsets.GenericViewSet):
     def destroy(self, request, service_id, plan_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
         plan = self.get_plan(service_id, plan_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.delete(service, plan_id)
@@ -142,7 +143,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         service = mixed_service_mgr.get(uuid=service_id)
 
         plan = self.get_plan(service_id, plan_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
@@ -156,7 +157,7 @@ class PlanViewSet(viewsets.GenericViewSet):
             target=OperationTarget.ADDON_PLAN,
             attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=PlanWithSvcSLZ(plan).data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

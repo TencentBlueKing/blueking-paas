@@ -34,7 +34,7 @@
             v-model="item.operator"
             style="width: 140px"
             :placeholder="$t('运算符')"
-            @change="handleChange($event, index)"
+            @change="operatorChange($event, index)"
           >
             <bk-option
               v-for="option in operatorList"
@@ -67,6 +67,7 @@
           <bk-select
             v-model="item.effect"
             style="width: 240px"
+            @change="effectChange($event, index)"
           >
             <bk-option
               v-for="option in effectList"
@@ -80,7 +81,7 @@
         <bk-form-item
           label=""
           :required="true"
-          :rules="ruleInput"
+          :rules="item.effect !== 'NoExecute' ? [] : ruleInput"
           :icon-offset="30"
           :property="'nodes.' + index + '.tolerationSeconds'"
         >
@@ -90,6 +91,7 @@
             :max="1000"
             :min="0"
             :initial-control-value="0"
+            :disabled="item.effect !== 'NoExecute'"
             v-model="item.tolerationSeconds"
           >
             <div slot="append">s</div>
@@ -184,12 +186,26 @@ export default {
       return this.$refs.formRef.validate();
     },
     getData() {
-      return this.formData.nodes;
+      // 禁用项不传递
+      return this.formData.nodes.map((node) => {
+        const updatedNode = { ...node };
+        if (updatedNode.effect !== 'NoExecute') {
+          delete updatedNode.tolerationSeconds;
+        }
+        if (updatedNode.operator === 'Exists') {
+          delete updatedNode.value;
+        }
+        return updatedNode;
+      });
     },
-    handleChange(val, index) {
+    operatorChange(val, index) {
       if (val === 'Exists') {
         this.$set(this.formData.nodes[index], 'value', '');
       }
+    },
+    effectChange(val, index) {
+      const value = val !== 'NoExecute' ? '' : 0;
+      this.$set(this.formData.nodes[index], 'tolerationSeconds', value);
     },
   },
 };

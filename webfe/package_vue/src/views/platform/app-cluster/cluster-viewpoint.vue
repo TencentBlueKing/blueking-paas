@@ -323,7 +323,7 @@ export default {
               directives: [
                 {
                   name: 'copy',
-                  value: data.bound_app_module_envs.map((v) => v.app_code).join(),
+                  value: JSON.stringify(data.bound_app_module_envs, null, 2),
                 },
               ],
             }),

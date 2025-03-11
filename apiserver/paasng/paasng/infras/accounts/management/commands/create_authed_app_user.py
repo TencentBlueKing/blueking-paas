@@ -16,22 +16,26 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Add a database user and allow it to be authenticated by a verified application,
-see `AuthenticatedAppAsUserMiddleware` for more details"""
+see `AuthenticatedAppAsClientMiddleware` for more details
+
+IMPORTANT: This command should have been renamed to create_authed_app_client after we migrated
+the authentication mechanism to the sysapi client, but the original name was retained for compatibility reasons.
+"""
+
 import logging
 
-from bkpaas_auth.models import DatabaseUser
 from django.core.management.base import BaseCommand
 
-from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import AuthenticatedAppAsUser, User, UserProfile
+from paasng.infras.sysapi_client.constants import ClientRole
+from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
 
 logger = logging.getLogger("commands")
 
 ROLE_CHOICES = [
-    SiteRole.SYSTEM_API_BASIC_READER.value,
-    SiteRole.SYSTEM_API_BASIC_MAINTAINER.value,
-    SiteRole.SYSTEM_API_LIGHT_APP_MAINTAINER.value,
-    SiteRole.SYSTEM_API_LESSCODE.value,
+    ClientRole.BASIC_READER.value,
+    ClientRole.BASIC_MAINTAINER.value,
+    ClientRole.LIGHT_APP_MAINTAINER.value,
+    ClientRole.LESSCODE.value,
 ]
 
 
@@ -54,7 +58,7 @@ class Command(BaseCommand):
             required=False,
             type=int,
             choices=ROLE_CHOICES,
-            default=SiteRole.SYSTEM_API_BASIC_READER.value,
+            default=ClientRole.BASIC_READER.value,
             help=(
                 'User role, choices: 50 - "basic reader"(default); '
                 '60 - "basic maintainer"; 70 - "light app maintainer".'
@@ -64,20 +68,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         bk_app_code = options["bk_app_code"]
         username = options["username"] or self._get_default_username(bk_app_code)
-        # Create user
-        user_db, _ = User.objects.get_or_create(username=username)
-        logger.info(f"user: {user_db.username} created.")
-
-        # Create profile with role
-        user = DatabaseUser.from_db_obj(user_db)
-        UserProfile.objects.update_or_create(user=user.pk, defaults={"role": options["role"]})
-        logger.info(f"profile: {user.pk}({user.username}) created.")
+        # Create the client
+        client, _ = SysAPIClient.objects.get_or_create(name=username, defaults={"role": options["role"]})
+        logger.info(f"user: {client.name} created.")
 
         # Create relationship
-        AuthenticatedAppAsUser.objects.update_or_create(
-            bk_app_code=bk_app_code, defaults={"user": user_db, "is_active": True}
-        )
-        logger.info(f"app-user relation: {bk_app_code}-{user.username} created.")
+        AuthenticatedAppAsClient.objects.update_or_create(bk_app_code=bk_app_code, defaults={"client": client})
+        logger.info(f"app-user relation: {bk_app_code}-{client.name} created.")
 
     @staticmethod
     def _get_default_username(bk_app_code: str) -> str:

@@ -152,7 +152,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 if plan.is_eager:
                     rel.provision()
 
-        SERVICE_BIND_COUNTER.labels(service=service_obj.name, region=application.region).inc()
+        SERVICE_BIND_COUNTER.labels(service=service_obj.name).inc()
         serializer = slzs.ServiceAttachmentSLZ(
             {
                 "id": rel_pk,
@@ -485,9 +485,7 @@ class ServiceSetViewSet(viewsets.ViewSet):
         return paginator
 
     def list_by_category(self, request, category_id):
-        """
-        根据增强服务分类，查询该分类下的所有增强服务(不区分 region)
-        """
+        """根据增强服务分类，查询该分类下的所有增强服务。"""
         # 保证 category 存在
         category = get_object_or_404(ServiceCategory, pk=category_id)
         services: List[ServiceObj] = list(mixed_service_mgr.list_by_category(category_id=category.id))
@@ -500,9 +498,7 @@ class ServiceSetViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
     def list_by_name(self, request, service_name):
-        """
-        根据增强服务的英文名字，查询所有命名为该名字的增强服务(不区分 region), 并带上绑定服务的实例信息
-        """
+        """根据增强服务的英文名字，查询所有命名为该名字的增强服务, 并带上绑定服务的实例信息"""
         # 查询用户具有权限的应用id列表
         application_ids = list(UserApplicationFilter(request.user).filter().values_list("id", flat=True))
 

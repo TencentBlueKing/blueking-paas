@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 
 def _fetch_service_categories() -> List[ServiceCategory]:
-    """Fetch service categories by region."""
+    """Fetch service categories."""
     category_ids = {obj.category_id for obj in mixed_service_mgr.list_visible()}
     categories = ServiceCategory.objects.filter(pk__in=category_ids).order_by("-sort_priority")
     return list(categories)

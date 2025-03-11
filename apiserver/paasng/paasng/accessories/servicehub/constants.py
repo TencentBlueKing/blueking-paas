@@ -35,7 +35,6 @@ LEGACY_PLAN_INSTANCE = dict(
     description="迁移服务",
     is_active=True,
     is_eager=True,
-    region="--",
     properties=dict(),
 )
 

@@ -299,11 +299,16 @@ ensure-runtimes() {
 }
 
 ensure-init-data() {
-    python manage.py better_loaddata fixtures/* -e templates.template
+    python manage.py loaddata fixtures/* -e templates.template
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     python manage.py create_authed_app_user --bk_app_code=bk_dataweb  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_apigateway --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_log_search --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_monitorv3 --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
+    python manage.py create_authed_app_user --bk_app_code=bk_sops --role=70
+    python manage.py create_authed_app_user --bk_app_code=bk_lesscode --role=80
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
     # 将开发者中心注册到通知中心
     python manage.py register_to_bk_notice

@@ -29,7 +29,6 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -40,14 +39,14 @@ from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.infras.iam.helpers import (
     add_role_members,
     delete_role_members,
     fetch_application_members,
     remove_user_all_roles,
 )
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
@@ -68,7 +67,7 @@ from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 # TODO: 确认具体权限
-API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
+API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 
 class PluginInstanceViewSet(viewsets.ViewSet):

@@ -565,6 +565,14 @@ export default {
 
     // 基本信息提交
     handleSubmitBaseInfo() {
+      // 检查 logo 是否上传
+      if (!this.curFileData.length) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('必须上传 logo'),
+        });
+        return;
+      }
       this.$refs.formNameRef?.validate().then(
         async () => {
           this.updateAppBasicInfo();

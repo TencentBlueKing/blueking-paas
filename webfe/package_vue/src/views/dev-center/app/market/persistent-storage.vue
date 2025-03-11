@@ -11,7 +11,11 @@
           <FunctionalDependency
             mode="partial"
             :title="$t('暂无持久存储功能')"
-            :functional-desc="$t('开发者中心的持久存储功能为多个模块和进程提供了一个共享的数据源，实现了数据的共享与交互，并确保了数据在系统故障或重启后的持久化和完整性。')"
+            :functional-desc="
+              $t(
+                '开发者中心的持久存储功能为多个模块和进程提供了一个共享的数据源，实现了数据的共享与交互，并确保了数据在系统故障或重启后的持久化和完整性。'
+              )
+            "
             :guide-title="$t('如需使用该功能，需要：')"
             :guide-desc-list="[
               $t('1. 在应用集群创建 StorageClass 并注册到开发者中心'),
@@ -33,7 +37,11 @@
             >
               <p class="mt10 exception-text">{{ $t('暂无持久存储资源') }}</p>
               <p class="exception-text">
-                {{ $t('持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。') }}
+                {{
+                  $t(
+                    '持久化存储使用腾讯云 CFS，可用于多个模块、进程间共享数据。持久存储申请后就会产生实际的费用，请按需申请，不用的资源请及时删除。'
+                  )
+                }}
               </p>
               <p class="guide-link mt15">
                 <bk-button
@@ -60,7 +68,11 @@
               <span class="tips">
                 <i class="paasng-icon paasng-info-line tips-line" />
                 <span>
-                  {{ $t('持久化存储可用于多个模块、进程间共享数据。持久存储申请后就会产生资源成本，请按需申请，不用的资源请及时删除。') }}
+                  {{
+                    $t(
+                      '持久化存储可用于多个模块、进程间共享数据。持久存储申请后就会产生资源成本，请按需申请，不用的资源请及时删除。'
+                    )
+                  }}
                 </span>
               </span>
             </div>
@@ -82,16 +94,21 @@
                 <div class="main">
                   <p class="name">{{ item.display_name }}</p>
                   <div class="info">
-                    <span>{{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}</span>
+                    <span>
+                      {{ $t('生效环境') }}：{{ item.environment_name === 'stag' ? $t('预发布环境') : $t('生产环境') }}
+                    </span>
                     <span>{{ $t('容量') }}：{{ persistentStorageSizeMap[item.storage_size] }}</span>
                     <span>{{ $t('已绑定模块数') }}：{{ item.bound_modules?.length || 0 }}</span>
                   </div>
                 </div>
                 <div
-                  :class="['delete', { 'disabled': item.bound_modules?.length }]"
+                  :class="['delete', { disabled: item.bound_modules?.length }]"
                   v-show="curHoverPanels === item.display_name"
                   v-bk-tooltips="{
-                    content: $t('当前存在{n}个模块已绑定该持久存储。请先前往“模块配置”下的“挂载卷”页面，删除相关挂载项，之后才可以删除持久存储。', { n: item.bound_modules?.length }),
+                    content: $t(
+                      '当前存在{n}个模块已绑定该持久存储。请先前往“模块配置”下的“挂载卷”页面，删除相关挂载项，之后才可以删除持久存储。',
+                      { n: item.bound_modules?.length }
+                    ),
                     disabled: !item.bound_modules?.length,
                   }"
                   @click.stop="handlerDelete(item)"
@@ -100,7 +117,10 @@
                   {{ $t('删除') }}
                 </div>
               </section>
-              <section class="content" v-if="item.isExpanded">
+              <section
+                class="content"
+                v-if="item.isExpanded"
+              >
                 <bk-table
                   v-if="item.bound_modules?.length"
                   :data="item.bound_modules"
@@ -172,7 +192,9 @@
             </div>
           </bk-alert>
           <div class="delete-tips spacing-x1">
-            {{ $t('请完整输入') }} <code>{{ appCode }}</code> {{ $t('来确认删除存储！') }}
+            {{ $t('请完整输入') }}
+            <code>{{ appCode }}</code>
+            {{ $t('来确认删除存储！') }}
           </div>
           <bk-input v-model="deleteName"></bk-input>
         </section>
@@ -329,7 +351,10 @@ export default {
       }, 500);
     },
     gotoMore() {
-      const docUrl = `${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas_persistent_storage`;
+      const baseDocUrl = this.GLOBAL.LINK.BK_APP_DOC?.endsWith('/')
+        ? this.GLOBAL.LINK.BK_APP_DOC
+        : `${this.GLOBAL.LINK.BK_APP_DOC}/`;
+      const docUrl = `${baseDocUrl}topics/paas/paas_persistent_storage`;
       window.open(docUrl, '_blank');
     },
   },
@@ -453,15 +478,15 @@ export default {
   }
 }
 .del-storage-dialog-content {
-    i.remind-cls {
-      margin-right: 3px;
-      font-size: 14px;
-      color: #ea3636;
-    }
-    .delete-tips {
-        margin-top: 16px;
-        line-height: 22px;
-    }
+  i.remind-cls {
+    margin-right: 3px;
+    font-size: 14px;
+    color: #ea3636;
+  }
+  .delete-tips {
+    margin-top: 16px;
+    line-height: 22px;
+  }
 }
 </style>
 <style>

@@ -247,7 +247,9 @@ export default {
           if (this.isHostNetwork) {
             data.nodeSelector = this.$refs.keyValueInput[0]?.getData();
           } else {
-            data.service.nodePorts = { http, https };
+            data.service = {
+              nodePorts: { http, https },
+            };
           }
           const params = { values: data };
           this.updateComponent(params);

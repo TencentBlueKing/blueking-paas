@@ -44,7 +44,9 @@ pytestmark = [
 
 
 def create_module(bk_app):
-    module = Module.objects.create(region=bk_app.region, application=bk_app, name=generate_random_string(length=8))
+    module = Module.objects.create(
+        region=bk_app.region, application=bk_app, name=generate_random_string(length=8), creator=bk_app.creator
+    )
     initialize_module(module)
     return module
 

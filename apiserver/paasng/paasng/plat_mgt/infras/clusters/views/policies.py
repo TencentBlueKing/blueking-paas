@@ -97,6 +97,17 @@ class ClusterAllocationPolicyViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster_allocation_policy"],
+        operation_description="删除集群分配策略",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def destroy(self, request, *args, **kwargs):
+        policy = self.get_object()
+        policy.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster_allocation_policy"],
         operation_description="获取集群分配策略条件",
         responses={status.HTTP_200_OK: ClusterAllocationPolicyCondTypeOutputSLZ()},
     )

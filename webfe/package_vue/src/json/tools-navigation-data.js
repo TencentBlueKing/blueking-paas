@@ -44,6 +44,7 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'serviceAPIGateway',
     label: i18n.t('API 网关'),
     iconfontName: 'cloudapi',
@@ -54,6 +55,7 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'serviceFramework',
     label: i18n.t('开发框架'),
     iconfontName: 'kaifakuangjia',
@@ -64,6 +66,7 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'serviceMagicBox',
     label: i18n.t('前端组件库'),
     iconfontName: 'qianduanzujianku',
@@ -74,6 +77,7 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'serviceLesscode',
     label: i18n.t('运维开发工具'),
     iconfontName: 'yunweikaifa',
@@ -84,6 +88,7 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'workflow',
     label: i18n.t('流程引擎'),
     iconfontName: 'liuchengfuwu',
@@ -94,11 +99,13 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'serve',
     name: 'appServices',
     label: i18n.t('增强服务'),
     iconfontName: 'diamond',
     sublist: [
       {
+        groupId: 'serve',
         name: i18n.t('数据存储'),
         matchRouters: ['serviceVas', 'serviceInnerPage'],
         destRoute: {
@@ -109,6 +116,7 @@ export default [
         },
       },
       {
+        groupId: 'serve',
         name: i18n.t('健康监测'),
         matchRouters: ['serviceVas', 'serviceInnerPage'],
         destRoute: {

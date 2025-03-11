@@ -154,8 +154,9 @@ class ModuleInitializer:
                 environment=environment,
                 tenant_id=self.application.tenant_id,
             )
-            # bind env to cluster
-            EnvClusterService(env).bind_cluster(env_cluster_names.get(environment))
+            # 为部署环境绑定集群，支持以模块创建者的身份选择可用集群
+            username = get_username_by_bkpaas_user_id(self.module.creator)
+            EnvClusterService(env).bind_cluster(env_cluster_names.get(environment), operator=username)
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)

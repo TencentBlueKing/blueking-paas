@@ -10,6 +10,7 @@
             <paasNav
               :nav-categories="navCategories"
               :nav-items="navItems"
+              :groups="groups"
             />
           </div>
           <div class="overview-fright">
@@ -37,6 +38,7 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
+      groups: [{ devTools: this.$t('开发者工具') }, { serve: this.$t('服务') }],
     };
   },
   computed: {

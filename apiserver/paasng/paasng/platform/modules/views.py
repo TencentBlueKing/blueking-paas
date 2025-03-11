@@ -128,6 +128,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             source_init_template=source_init_template,
             owner=application.owner,
             creator=request.user.pk,
+            tenant_id=application.tenant_id,
         )
         ret = init_module_in_view(
             module,
@@ -296,6 +297,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             owner=application.owner,
             creator=request.user.pk,
             **module_src_cfg,
+            tenant_id=application.tenant_id,
         )
 
         ret = init_module_in_view(

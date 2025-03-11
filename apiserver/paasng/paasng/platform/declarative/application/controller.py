@@ -42,7 +42,13 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.fields import AppRegionField
-from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc, ServiceSpec
+from paasng.platform.declarative.application.resources import (
+    ApplicationDesc,
+    AppTenantConf,
+    MarketDesc,
+    ModuleDesc,
+    ServiceSpec,
+)
 from paasng.platform.declarative.application.serializers import AppDescriptionSLZ
 from paasng.platform.declarative.basic import remove_omitted
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -64,10 +70,11 @@ class AppDeclarativeController:
     source_origin = SourceOrigin.S_MART
     update_allowed_fields = [AppRegionField]
 
-    def __init__(self, user: User, source_origin: Optional[SourceOrigin] = None):
+    def __init__(self, user: User, app_tenant_conf: AppTenantConf, source_origin: Optional[SourceOrigin] = None):
         if source_origin:
             self.source_origin = source_origin
         self.user = user
+        self.app_tenant_conf = app_tenant_conf
 
     def perform_action(self, desc: ApplicationDesc) -> Application:
         if not desc.instance_existed:
@@ -101,6 +108,10 @@ class AppDeclarativeController:
             type=app_type,
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
+            # 添加租户信息
+            app_tenant_mode=self.app_tenant_conf.app_tenant_mode,
+            app_tenant_id=self.app_tenant_conf.app_tenant_id,
+            tenant_id=self.app_tenant_conf.tenant_id,
         )
         create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
         self.sync_modules(application, desc.modules)
@@ -176,6 +187,7 @@ class AppDeclarativeController:
                 source_type=None,
                 language=module_desc.language.value,
                 source_init_template="",
+                tenant_id=application.tenant_id,
             )
             # Initialize module
             try:
@@ -243,6 +255,7 @@ class AppDeclarativeController:
                 introduction_en=market_desc.introduction_en,
                 introduction_zh_cn=market_desc.introduction_zh_cn,
                 logo=market_desc.logo,
+                tenant_id=application.tenant_id,
             )
         )
         logo = product_defaults.pop("logo", None)

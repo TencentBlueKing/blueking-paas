@@ -42,7 +42,12 @@ pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="legacy-db")]
 def raw_module(bk_user) -> Module:
     """Raw application and module objects without initializing"""
     application = G(
-        Application, owner=bk_user.pk, code="awesome-app", language="Python", region=settings.DEFAULT_REGION_NAME
+        Application,
+        owner=bk_user.pk,
+        code="awesome-app",
+        language="Python",
+        region=settings.DEFAULT_REGION_NAME,
+        creator=bk_user,
     )
     register_iam_after_create_application(application)
     module = create_default_module(application)

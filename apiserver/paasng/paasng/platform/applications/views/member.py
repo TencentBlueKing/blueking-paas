@@ -24,7 +24,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.permissions.application import app_action_required
+from paasng.infras.accounts.permissions.application import app_view_actions_perm
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import (
     add_role_members,
@@ -49,15 +49,23 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
     """Viewset for application members management"""
 
     pagination_class = None
-    permission_classes = [IsAuthenticated]
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "list": AppAction.VIEW_BASIC_INFO,
+                "leave": AppAction.VIEW_BASIC_INFO,
+            },
+            default_action=AppAction.MANAGE_MEMBERS,
+        ),
+    ]
+
     def list(self, request, **kwargs):
         """Always add 'result' key in response"""
         members = fetch_application_members(self.get_application().code)
         return Response({"results": ApplicationMemberSLZ(members, many=True).data})
 
-    @app_action_required(AppAction.MANAGE_MEMBERS)
     def create(self, request, **kwargs):
         application = self.get_application()
 
@@ -79,7 +87,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         sync_developers_to_sentry.delay(application.id)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @app_action_required(AppAction.MANAGE_MEMBERS)
     def update(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -98,7 +105,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def leave(self, request, *args, **kwargs):
         application = self.get_application()
 
@@ -115,7 +121,6 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @app_action_required(AppAction.MANAGE_MEMBERS)
     def destroy(self, request, *args, **kwargs):
         application = self.get_application()
 

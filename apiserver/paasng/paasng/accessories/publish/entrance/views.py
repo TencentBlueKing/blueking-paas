@@ -29,12 +29,12 @@ from paasng.accessories.publish.entrance.serializers import (
     ApplicationAvailableEntranceSLZ,
     ApplicationCustomDomainEntranceSLZ,
     ApplicationDefaultEntranceSLZ,
-    PreferredRootDoaminSLZ,
-    RootDoaminSLZ,
+    PreferredRootDomainSLZ,
+    RootDomainSLZ,
     UpdateExposedURLTypeSLZ,
 )
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
-from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
+from paasng.infras.accounts.permissions.application import app_view_actions_perm, application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import ExposedURLType
@@ -142,9 +142,17 @@ class ApplicationAvailableAddressViewset(viewsets.ViewSet, ApplicationCodeInPath
 
 
 class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "list_root_domains": AppAction.VIEW_BASIC_INFO,
+                "update_preferred_root_domain": AppAction.BASIC_DEVELOP,
+            }
+        ),
+    ]
 
-    @swagger_auto_schema(responses={"200": RootDoaminSLZ()}, tags=["访问入口"])
+    @swagger_auto_schema(responses={"200": RootDomainSLZ()}, tags=["访问入口"])
     def list_root_domains(self, request, code, module_name):
         """
         查看模块所属集群的子域名根域名和当前模块的偏好的根域名
@@ -164,7 +172,7 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             switchable_domains.append(preferred_root_domain)
 
         return Response(
-            data=RootDoaminSLZ(
+            data=RootDomainSLZ(
                 {
                     "root_domains": switchable_domains,
                     "preferred_root_domain": preferred_root_domain,
@@ -172,7 +180,6 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             ).data
         )
 
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def update_preferred_root_domain(self, request, code, module_name):
         """
         更新模块的偏好根域
@@ -181,7 +188,7 @@ class ModuleRootDomainsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         root_domains = get_module_prod_env_root_domains(module, include_reserved=True)
 
-        serializer = PreferredRootDoaminSLZ(data=request.data)
+        serializer = PreferredRootDomainSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         preferred_root_domain: str = serializer.data["preferred_root_domain"]
 

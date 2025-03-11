@@ -36,7 +36,7 @@ from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import (
-    app_action_required,
+    app_view_actions_perm,
     application_perm_class,
     check_application_perm,
 )
@@ -90,9 +90,19 @@ logger = logging.getLogger(__name__)
 
 
 class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "list": AppAction.VIEW_BASIC_INFO,
+                "retrieve": AppAction.VIEW_BASIC_INFO,
+            },
+            default_action=AppAction.MANAGE_MODULE,
+        ),
+    ]
+
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateModuleSLZ, tags=["创建模块"])
-    @app_action_required(AppAction.MANAGE_MODULE)
     def create(self, request, *args, **kwargs):
         """创建一个新模块, 创建 lesscode 模块时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供"""
         application = self.get_application()
@@ -145,7 +155,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             status=status.HTTP_201_CREATED,
         )
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code):
         """查看所有应用模块"""
         slz = ListModulesSLZ(data=request.query_params)
@@ -160,7 +169,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=MinimalModuleSLZ(modules, many=True).data)
 
     @swagger_auto_schema(tags=["应用模块"], response_serializer=ModuleSLZ)
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def retrieve(self, request, code, module_name):
         """查看应用模块信息
 
@@ -172,7 +180,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = application.get_module(module_name)
         return Response(data=ModuleSLZ(module).data, status=status.HTTP_200_OK)
 
-    @app_action_required(AppAction.MANAGE_MODULE)
     def destroy(self, request, code, module_name):
         """
         删除蓝鲸应用模块
@@ -227,7 +234,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     # [deprecated] use `api.applications.entrances.set_default_entrance` instead
     @transaction.atomic
-    @app_action_required(AppAction.MANAGE_MODULE)
     def set_as_default(self, request, code, module_name):
         """设置某个模块为主模块"""
         application = self.get_application()
@@ -254,8 +260,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 )
 
         logger.info(
-            f"Switching default module for application[{application.code}], "
-            f"{default_module.name} -> {module.name}..."
+            f"Switching default module for application[{application.code}], {default_module.name} -> {module.name}..."
         )
         default_module.is_default = False
         module.is_default = True
@@ -268,7 +273,6 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_200_OK)
 
     @transaction.atomic
-    @app_action_required(AppAction.MANAGE_MODULE)
     @swagger_auto_schema(request_body=CreateCNativeModuleSLZ, tags=["创建模块"])
     def create_cloud_native_module(self, request, code):
         """创建云原生应用模块（非默认）"""

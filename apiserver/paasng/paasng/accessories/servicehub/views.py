@@ -54,7 +54,10 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager, Sharing
 from paasng.accessories.services.models import ServiceCategory
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
-from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
+from paasng.infras.accounts.permissions.application import (
+    app_view_actions_perm,
+    application_perm_class,
+)
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -109,6 +112,14 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
 
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"unbind": AppAction.MANAGE_ADDONS_SERVICES},
+            default_action=AppAction.BASIC_DEVELOP,
+        ),
+    ]
+
     @staticmethod
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id)
@@ -121,7 +132,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateAttachmentSLZ, response_serializer=slzs.ServiceAttachmentSLZ)
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def bind(self, request):
         """创建蓝鲸应用与增强服务的绑定关系"""
         serializer = slzs.CreateAttachmentSLZ(data=request.data)
@@ -175,7 +185,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         return Response(serializer.data)
 
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def retrieve(self, request, code, module_name, service_id):
         """查看应用模块与增强服务的绑定关系详情。
 
@@ -211,7 +220,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
         return Response({"count": len(results), "results": serializer.data, "plans": plans})
 
-    @app_action_required(AppAction.BASIC_DEVELOP)
     @swagger_auto_schema(response_serializer=slzs.PossiblePlansOutputSLZ)
     def list_possible_plans(self, request, code, module_name, service_id):
         """获取应用模块绑定服务时，可能的方案详情，主要由客户端在绑定前调用。关键逻辑：
@@ -246,7 +254,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = slzs.PossiblePlansOutputSLZ(data)
         return Response(slz.data)
 
-    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
@@ -284,7 +291,6 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         return Response(status=status.HTTP_200_OK)
 
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def list_provisioned_env_keys(self, request, code, module_name):
         """获取已经生效的增强服务环境变量 KEY"""
         module = self.get_module_via_path()
@@ -543,14 +549,19 @@ class ServiceSetViewSet(viewsets.ViewSet):
 class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与共享增强服务有关的接口"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"destroy": AppAction.MANAGE_ADDONS_SERVICES},
+            default_action=AppAction.BASIC_DEVELOP,
+        ),
+    ]
 
     @staticmethod
     def get_service(service_id, application):
         return mixed_service_mgr.get_or_404(service_id)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def list_shareable(self, request, code, module_name, service_id):
         """查看所有可被共享的模块
 
@@ -564,7 +575,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["增强服务"], request_body=slzs.CreateSharedAttachmentsSLZ, responses={201: openapi_empty_response}
     )
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def create_shared(self, request, code, module_name, service_id):
         """创建增强服务共享关系
 
@@ -600,7 +610,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({}, status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.SharedServiceInfoSLZ)
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def retrieve(self, request, code, module_name, service_id):
         """查看已创建的共享关系
 
@@ -614,7 +623,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(slzs.SharedServiceInfoSLZ(info).data)
 
     @swagger_auto_schema(tags=["增强服务"], responses={204: openapi_empty_response})
-    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     def destroy(self, request, code, module_name, service_id):
         """解除共享关系
 
@@ -705,7 +713,14 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
 class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """已解绑待回收增强服务实例相关API"""
 
-    @app_action_required(AppAction.BASIC_DEVELOP)
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"list_by_module": AppAction.BASIC_DEVELOP},
+            default_action=AppAction.MANAGE_ADDONS_SERVICES,
+        ),
+    ]
+
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.UnboundServiceEngineAppAttachmentSLZ(many=True))
     def list_by_module(self, request, code, module_name):
         """查看模块所有已解绑增强服务实例，按增强服务归类"""
@@ -735,7 +750,6 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
         serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
         return Response(serializer.data)
 
-    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     @swagger_auto_schema(tags=["增强服务"], query_serializer=slzs.DeleteUnboundServiceEngineAppAttachmentSLZ)
     def delete(self, request, code, module_name, service_id):
         """回收已解绑增强服务"""
@@ -755,7 +769,6 @@ class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCode
 
         return Response()
 
-    @app_action_required(AppAction.MANAGE_ADDONS_SERVICES)
     @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveUnboundServiceSensitiveFieldSLZ)
     def retrieve_sensitive_field(self, request, code, module_name, service_id):
         """验证验证码查看解绑实例的敏感信息字段"""

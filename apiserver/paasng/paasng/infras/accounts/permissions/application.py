@@ -29,7 +29,6 @@ from paasng.infras.iam.permissions.resources.application import AppAction, Appli
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
-from paasng.utils.views import action_perms
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +37,6 @@ class BaseAppPermission(BasePermission):
     """The base class for application permission. It doesn't provide any functionality
     yet but it can be useful for other modules to check the permission type.
     """
-
-
-def app_action_required(action: AppAction, policy: str = "extend"):
-    """A decorator to require the user to have the specified application action permission,
-    must be used on viewset method.
-
-    :param action: Application action type.
-    :param policy: How to combine the permission classes. Default is "extend".
-    """
-    return action_perms(permission_classes=[application_perm_class(action)], policy=policy)
 
 
 def application_perm_class(action: AppAction) -> Type[BasePermission]:

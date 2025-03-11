@@ -119,7 +119,9 @@ class TestFilterByEnvironmentName:
 @pytest.fixture()
 def dest_module(bk_app):
     """Return another module if current application fixture"""
-    module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+    module = Module.objects.create(
+        application=bk_app, name="test", language="python", source_init_template="test", creator=bk_app.creator
+    )
     initialize_module(module)
     return module
 

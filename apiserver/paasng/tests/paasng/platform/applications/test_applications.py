@@ -118,7 +118,11 @@ class TestApplicationManager(BaseCaseWithApps):
 
         # 给 app_another1 添加 Python 语言的模块后能过滤出来
         Module.objects.create(
-            region=self.app_another1.region, application=self.app_another1, name="python", language="Python"
+            region=self.app_another1.region,
+            application=self.app_another1,
+            name="python",
+            language="Python",
+            creator=self.app_another1.creator,
         )
         apps_new = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
         assert set(apps_new) == {self.app1, self.app_another2, self.app_another1}

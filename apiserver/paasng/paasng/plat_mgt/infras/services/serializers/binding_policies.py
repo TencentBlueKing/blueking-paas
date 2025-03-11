@@ -33,8 +33,8 @@ class BaseAllocationPolicySLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        plans_exists = bool(attrs.get("plans"))
-        env_plans_exists = bool(attrs.get("env_plans"))
+        plans_exists = bool(getattr(attrs, "plans"))
+        env_plans_exists = bool(getattr(attrs, "env_plans"))
 
         if plans_exists == env_plans_exists:
             raise serializers.ValidationError("Must provide either plans or env_plans, but not both.")

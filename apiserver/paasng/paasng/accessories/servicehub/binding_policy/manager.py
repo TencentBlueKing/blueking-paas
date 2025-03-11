@@ -152,7 +152,9 @@ class ServiceBindingPolicyManager:
             return None
 
     def get_precedence_policies(self) -> QuerySet[ServiceBindingPrecedencePolicy]:
-        return ServiceBindingPrecedencePolicy.objects.filter(tenant_id=self.tenant_id).order_by("-priority")
+        return ServiceBindingPrecedencePolicy.objects.filter(
+            service_id=self.service.uuid, tenant_id=self.tenant_id
+        ).order_by("-priority")
 
 
 class PolicyCombinationManager:

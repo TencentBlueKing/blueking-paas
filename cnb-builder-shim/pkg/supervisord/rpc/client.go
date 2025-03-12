@@ -25,17 +25,15 @@ import (
 // Client 是 supervisord 客户端
 type Client struct {
 	rpcClient *xmlrpc.Client
-	config    ClientConfig
-}
-
-// ClientConfig 客户端配置
-type ClientConfig struct {
-	RPCAddress string // XML-RPC 地址
 }
 
 // NewClient 新建 RPC 客户端
-func NewClient(rpcAddress string) *Client {
-	return &Client{config: ClientConfig{RPCAddress: rpcAddress}}
+func NewClient(rpcAddress string) (*Client, error) {
+	rpcClient, err := xmlrpc.NewClient(rpcAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{rpcClient: rpcClient}, nil
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回

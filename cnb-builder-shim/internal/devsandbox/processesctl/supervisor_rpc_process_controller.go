@@ -134,7 +134,10 @@ type SupervisorRPCProcessController struct {
 
 // 创建 Supervisor RPC 类型的 ProcessController
 func newSupervisorRPCProcessController() (*SupervisorRPCProcessController, error) {
-	client := rpc.NewClient(rpcAddress)
+	client, err := rpc.NewClient(rpcAddress)
+	if err != nil {
+		return nil, err
+	}
 	return &SupervisorRPCProcessController{
 		client: client,
 	}, nil

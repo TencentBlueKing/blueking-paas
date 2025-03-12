@@ -35,8 +35,6 @@ import (
 // DefaultAppDir is the default build dir
 var DefaultAppDir = utils.EnvOrDefault("CNB_APP_DIR", "/app")
 
-var processControllerType = processesctl.RPC
-
 // Process is a process to launch
 type Process struct {
 	ProcType    string
@@ -126,14 +124,11 @@ func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
 		supervisordProcesses = append(supervisordProcesses,
 			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
-	if err := processesctl.RefreshConf(supervisordProcesses, procEnvs...); err != nil {
-		return err
-	}
-	ctl, err := processesctl.NewProcessController(processControllerType)
+	ctl, err := processesctl.NewProcessController()
 	if err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
-	return ctl.Reload()
+	return ctl.Reload(supervisordProcesses, procEnvs...)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

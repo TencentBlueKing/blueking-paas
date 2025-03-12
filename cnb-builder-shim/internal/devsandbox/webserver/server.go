@@ -42,8 +42,6 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
-var processControllerType = processesctl.RPC
-
 type envConfig struct {
 	DevServerAddr string `env:"DEV_SERVER_ADDR" envDefault:":8000"`
 	Token         string `env:"TOKEN" envDefault:"jwram1lpbnuugmcv"`
@@ -266,7 +264,7 @@ func AppLogHandler() gin.HandlerFunc {
 // ProcessStatusHandler ...
 func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		processCtl, err := processesctl.NewProcessController(processControllerType)
+		processCtl, err := processesctl.NewProcessController()
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
 			return
@@ -299,7 +297,7 @@ func ProcessStopHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processesctl.NewProcessController(processControllerType)
+		processCtl, err := processesctl.NewProcessController()
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
 			return
@@ -320,7 +318,7 @@ func ProcessStartHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processesctl.NewProcessController(processControllerType)
+		processCtl, err := processesctl.NewProcessController()
 		if err != nil {
 			fmt.Printf("Failed to start process: %s\n", err)
 			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})

@@ -18,9 +18,6 @@
 package rpc
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/kolo/xmlrpc"
 	"github.com/pkg/errors"
 )
@@ -37,43 +34,8 @@ type ClientConfig struct {
 }
 
 // NewClient 新建 RPC 客户端
-func NewClient(rpcAddress string) (*Client, error) {
-	client := &Client{config: ClientConfig{RPCAddress: rpcAddress}}
-
-	var err error
-	for _ = range 2 {
-		var state State
-		client.rpcClient, _ = xmlrpc.NewClient(rpcAddress, nil)
-		// 验证连接是否正常
-		state, err = client.GetState()
-		if err == nil && state.Name == StateNameRunning {
-			return client, nil
-		}
-		// 如果获取状态失败或者状态不是运行中则尝试重启
-		if err = client.Restart(); err == nil {
-			fmt.Println("Supervisord restarted")
-			time.Sleep(1 * time.Second)
-			continue
-		}
-	}
-	return client, errors.Wrap(err, "new supervisord client")
-}
-
-// StartServerAndNewClient 自动连接到 Supervisord,若 Supervisord 未启动则尝试启动
-func StartServerAndNewClient(rpcAddress string, configPath string) (*Client, error) {
-	for _ = range 2 {
-		client, err := NewClient(rpcAddress)
-		if err == nil {
-			return client, nil
-		}
-		server := NewServer(configPath)
-		if err = server.Start(); err != nil {
-			fmt.Printf("Failed to start supervisord server: %s \n", err)
-		}
-		// 等待服务就绪
-		time.Sleep(1 * time.Second)
-	}
-	return nil, errors.New("start server and new client failed")
+func NewClient(rpcAddress string) *Client {
+	return &Client{config: ClientConfig{RPCAddress: rpcAddress}}
 }
 
 // 请求 rpc 方法接口并验证 bool 类型返回

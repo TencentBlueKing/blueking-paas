@@ -23,6 +23,7 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
@@ -55,11 +56,13 @@ class EnvClusterNamesSLZ(serializers.Serializer):
         return self._validate(name, AppEnvironment.PRODUCTION)
 
     def _validate(self, name: str, environment: AppEnvironment) -> str:
+        cur_user = self.context["user"]
+
         ctx = AllocationContext(
-            tenant_id=self.context["tenant_id"],
+            tenant_id=get_tenant(cur_user).id,
             region=self.parent.parent.initial_data["region"],
             environment=environment,
-            username=self.context.get("username"),
+            username=cur_user.username,
         )
         if not ClusterAllocator(ctx).check_available(name):
             raise ValidationError(_("集群名称错误，无法找到名为 {name} 的集群").format(name=name))

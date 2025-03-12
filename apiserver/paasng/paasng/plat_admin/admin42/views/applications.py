@@ -297,9 +297,10 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         # 注：不同模块 / 环境可选的集群可能是不同的 -> {module_name-environment [available_clusters]}
         cluster_choices: Dict[str, List[Dict[str, str]]] = {}
         for env in application.envs.all():
+            ctx = AllocationContext.from_module_env(env)
+            ctx.username = self.request.user.username
             cluster_choices[f"{env.module.name}-{env.environment}"] = [
-                {"id": cluster.name, "name": cluster.name}
-                for cluster in ClusterAllocator(AllocationContext.from_module_env(env)).list()
+                {"id": cluster.name, "name": cluster.name} for cluster in ClusterAllocator(ctx).list()
             ]
 
         kwargs["cluster_choices"] = cluster_choices
@@ -309,6 +310,7 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         for env in application.envs.all():
             if url_obj := get_exposed_url(env):
                 env_urls[env.id] = url_obj.address
+
         kwargs["env_urls"] = env_urls
 
         return kwargs

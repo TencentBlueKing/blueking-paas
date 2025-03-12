@@ -15,20 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict
+from typing import Any, Dict
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.models import Template
 
 from .app import ApplicationSLZ
 from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
@@ -44,7 +40,7 @@ class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
     is_plugin_app = serializers.BooleanField(default=False)
     is_ai_agent_app = serializers.BooleanField(default=False)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         super().validate(attrs)
 
         if attrs["engine_enabled"] and not attrs.get("engine_params"):
@@ -57,15 +53,6 @@ class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
             raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
 
         return attrs
-
-    def validate_advanced_options(self, advanced_options: Dict[str, str] | None) -> Dict[str, str] | None:
-        if not advanced_options:
-            return None
-
-        if not AccountFeatureFlag.objects.has_feature(self.context["user"], AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-            raise ValidationError(_("你无法使用高级创建选项"))
-
-        return advanced_options
 
     def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
         if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
@@ -82,38 +69,21 @@ class CloudNativeAppCreateInputSLZ(AppBasicInfoMixin):
     advanced_options = AdvancedCreationParamsMixin(required=False)
     is_plugin_app = serializers.BooleanField(default=False)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         attrs = super().validate(attrs)
 
-        source_config = attrs["source_config"]
-        build_config = attrs["bkapp_spec"]["build_config"]
+        src_cfg = attrs["source_config"]
+        build_cfg = attrs["bkapp_spec"]["build_config"]
 
-        validate_build_method(build_config.build_method, source_config["source_origin"])
+        validate_build_method(build_cfg.build_method, src_cfg["source_origin"])
 
-        if (
-            build_config.build_method == RuntimeType.CUSTOM_IMAGE
-            and build_config.image_repository != source_config.get("source_repo_url")
-        ):
+        repo_url = src_cfg.get("source_repo_url")
+        if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE and build_cfg.image_repository != repo_url:
             raise ValidationError("image_repository is not consistent with source_repo_url")
 
-        # 插件应用还需要额外检查模板是否为插件专用的
-        if attrs["is_plugin_app"]:
-            source_init_template = source_config["source_init_template"]
-            if not Template.objects.filter(name=source_init_template, type=TemplateType.PLUGIN).exists():
-                raise ValidationError(f"{source_init_template} is not a template for plugin applications")
-
-        self._validate_image_credential(build_config.image_credential)
+        self._validate_image_credential(build_cfg.image_credential)
 
         return attrs
-
-    def validate_advanced_options(self, advanced_options: Dict[str, str] | None) -> Dict[str, str] | None:
-        if not advanced_options:
-            return None
-
-        if not AccountFeatureFlag.objects.has_feature(self.context["user"], AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-            raise ValidationError(_("你无法使用高级创建选项"))
-
-        return advanced_options
 
     def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
         if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
@@ -137,7 +107,6 @@ class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
 
         data.update(
             {
-                # 以下参数使用默认值，不需要传入
                 "is_ai_agent_app": True,
                 # AI Agent 应用也是一个插件，需要自动注册网关
                 "is_plugin_app": True,
@@ -164,21 +133,19 @@ class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):
 class ApplicationCreateOutputSLZ(serializers.Serializer):
     """应用创建成功后的返回结果"""
 
-    application = ApplicationSLZ(read_only=True)
-    source_init_result = serializers.JSONField(read_only=True)
+    application = ApplicationSLZ(help_text="应用详情")
+    source_init_result = serializers.JSONField(help_text="源码初始化结果")
 
 
 class AdvancedRegionClusterSLZ(serializers.Serializer):
     """高级创建选项中的集群信息"""
 
-    region = serializers.CharField(help_text=_("区域名称"))
-    env_cluster_names = serializers.JSONField(help_text=_("各环境集群名称"))
+    region = serializers.CharField(help_text="区域名称")
+    env_cluster_names = serializers.JSONField(help_text="各环境集群名称")
 
 
 class CreationOptionsOutputSLZ(serializers.Serializer):
     """应用创建选项"""
 
-    allow_adv_options = serializers.BooleanField(help_text=_("是否允许使用高级创建选项"))
-    adv_region_clusters = serializers.ListField(
-        help_text=_("高级创建选项中的集群信息"), child=AdvancedRegionClusterSLZ()
-    )
+    allow_adv_options = serializers.BooleanField(help_text="是否允许使用高级创建选项")
+    adv_region_clusters = serializers.ListField(help_text="高级创建选项中的集群信息", child=AdvancedRegionClusterSLZ())

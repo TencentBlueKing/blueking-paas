@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Any, Dict
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -24,6 +26,8 @@ from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.serializers.fields import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, i18n
@@ -74,3 +78,12 @@ class AdvancedCreationParamsMixin(serializers.Serializer):
     """高级应用创建选项"""
 
     env_cluster_names = EnvClusterNamesSLZ(help_text="各环境集群名称", required=False)
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        if not attrs:
+            return attrs
+
+        if not AccountFeatureFlag.objects.has_feature(self.context["user"], AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
+            raise ValidationError(_("你无法使用高级创建选项"))
+
+        return attrs

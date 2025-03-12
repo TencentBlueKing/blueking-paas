@@ -266,13 +266,13 @@ func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processCtl, err := processesctl.NewProcessController()
 		if err != nil {
-			fmt.Printf("Failed to get process status: %s\n", err)
-			c.JSON(http.StatusOK, gin.H{"status": []interface{}{}})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
 			return
 		}
 		status, err := processCtl.Status()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
+			fmt.Printf("Failed to get process status: %s\n", err)
+			c.JSON(http.StatusOK, gin.H{"status": []interface{}{}})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"status": status})

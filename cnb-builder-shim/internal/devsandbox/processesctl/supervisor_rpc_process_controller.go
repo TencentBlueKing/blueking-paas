@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
@@ -163,6 +164,10 @@ func (p *SupervisorRPCProcessController) Reload(processes []Process, procEnvs ..
 	if err := RefreshConf(processes, procEnvs...); err != nil {
 		return err
 	}
+	// 首次运行，没有 supervisor server，直接启动
+	server := rpc.NewServer(confFilePath)
+	_ = server.Start()
+	time.Sleep(1 * time.Second)
 	return p.client.Restart()
 }
 

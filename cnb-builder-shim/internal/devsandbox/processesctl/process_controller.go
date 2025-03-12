@@ -20,9 +20,8 @@ package processesctl
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/pkg/errors"
+	"strings"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
@@ -89,6 +88,6 @@ func NewProcessController() (ProcessCtl, error) {
 	case SupervisorRPC:
 		return newSupervisorRPCProcessController()
 	default:
-		return nil, errors.New("unsupported controller type")
+		return nil, errors.New("unknown controller type")
 	}
 }

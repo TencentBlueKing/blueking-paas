@@ -77,8 +77,15 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 	// 然后本身的托管能力又会拉起进程，导致 /app/v3logs 目录权限在 cnb or root
 	// 间横跳，从而使构建时遇到 v3logs 文件夹权限错误而构建失败
 	processCtl, err := processesctl.NewProcessController()
-	if err == nil {
-		_ = processCtl.StopAllProcesses()
+	if err != nil {
+		return errors.Wrap(err, "rebuild")
+	}
+	// 若能获取进程列表，且进程列表不为空，则停止所有进程
+	if processes, err := processCtl.Status(); err == nil && len(processes) > 0 {
+		err = processCtl.StopAllProcesses()
+		if err != nil {
+			return errors.Wrap(err, "rebuild")
+		}
 	}
 	cmd := phase.MakeBuilderCmd()
 	return m.runCmd(reloadID, cmd)

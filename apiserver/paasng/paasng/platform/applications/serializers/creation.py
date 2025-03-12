@@ -1,0 +1,184 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from typing import Dict
+
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
+
+from .app import ApplicationSLZ
+from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
+
+
+class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
+    """普通应用创建应用表单，目前产品上已经没有入口，但是暂时先保留 API"""
+
+    type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), default=ApplicationType.DEFAULT.value)
+    engine_enabled = serializers.BooleanField(default=True, required=False)
+    engine_params = ModuleSourceConfigSLZ(required=False)
+    advanced_options = AdvancedCreationParamsMixin(required=False)
+    is_plugin_app = serializers.BooleanField(default=False)
+    is_ai_agent_app = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        super().validate(attrs)
+
+        if attrs["engine_enabled"] and not attrs.get("engine_params"):
+            raise ValidationError(_("应用引擎参数未提供"))
+
+        # Be compatible with current application creation page, should be removed when new design was published
+        if not attrs["engine_enabled"]:
+            attrs["type"] = ApplicationType.ENGINELESS_APP.value
+        elif attrs["type"] == ApplicationType.ENGINELESS_APP.value:
+            raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
+
+        return attrs
+
+    def validate_advanced_options(self, advanced_options: Dict[str, str] | None) -> Dict[str, str] | None:
+        if not advanced_options:
+            return None
+
+        if not AccountFeatureFlag.objects.has_feature(self.context["user"], AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
+            raise ValidationError(_("你无法使用高级创建选项"))
+
+        return advanced_options
+
+    def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
+        if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
+            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
+
+        return is_plugin_app
+
+
+class CloudNativeAppCreateInputSLZ(AppBasicInfoMixin):
+    """创建云原生架构应用的表单"""
+
+    source_config = ModuleSourceConfigSLZ(required=True, help_text=_("源码/镜像配置"))
+    bkapp_spec = BkAppSpecSLZ()
+    advanced_options = AdvancedCreationParamsMixin(required=False)
+    is_plugin_app = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        source_config = attrs["source_config"]
+        build_config = attrs["bkapp_spec"]["build_config"]
+
+        validate_build_method(build_config.build_method, source_config["source_origin"])
+
+        if (
+            build_config.build_method == RuntimeType.CUSTOM_IMAGE
+            and build_config.image_repository != source_config.get("source_repo_url")
+        ):
+            raise ValidationError("image_repository is not consistent with source_repo_url")
+
+        # 插件应用还需要额外检查模板是否为插件专用的
+        if attrs["is_plugin_app"]:
+            source_init_template = source_config["source_init_template"]
+            if not Template.objects.filter(name=source_init_template, type=TemplateType.PLUGIN).exists():
+                raise ValidationError(f"{source_init_template} is not a template for plugin applications")
+
+        self._validate_image_credential(build_config.image_credential)
+
+        return attrs
+
+    def validate_advanced_options(self, advanced_options: Dict[str, str] | None) -> Dict[str, str] | None:
+        if not advanced_options:
+            return None
+
+        if not AccountFeatureFlag.objects.has_feature(self.context["user"], AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
+            raise ValidationError(_("你无法使用高级创建选项"))
+
+        return advanced_options
+
+    def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
+        if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
+            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
+
+        return is_plugin_app
+
+    def _validate_image_credential(self, image_credential: Dict[str, str] | None):
+        if not image_credential:
+            return
+
+        if not image_credential.get("password") or not image_credential.get("username"):
+            raise ValidationError("image credential missing valid username and password")
+
+
+class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):
+    """创建 AI Agent 应用"""
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        data.update(
+            {
+                # 以下参数使用默认值，不需要传入
+                "is_ai_agent_app": True,
+                # AI Agent 应用也是一个插件，需要自动注册网关
+                "is_plugin_app": True,
+                "type": ApplicationType.CLOUD_NATIVE.value,
+                "engine_enabled": True,
+            }
+        )
+
+        return data
+
+
+class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):
+    """创建第三方（外链）应用"""
+
+    engine_enabled = serializers.BooleanField(default=False)
+    market_params = MarketParamsMixin()
+
+    def validate(self, attrs):
+        if attrs["engine_enabled"]:
+            raise ValidationError(_("该接口只支持创建外链应用"))
+        return attrs
+
+
+class ApplicationCreateOutputSLZ(serializers.Serializer):
+    """应用创建成功后的返回结果"""
+
+    application = ApplicationSLZ(read_only=True)
+    source_init_result = serializers.JSONField(read_only=True)
+
+
+class AdvancedRegionClusterSLZ(serializers.Serializer):
+    """高级创建选项中的集群信息"""
+
+    region = serializers.CharField(help_text=_("区域名称"))
+    env_cluster_names = serializers.JSONField(help_text=_("各环境集群名称"))
+
+
+class CreationOptionsOutputSLZ(serializers.Serializer):
+    """应用创建选项"""
+
+    allow_adv_options = serializers.BooleanField(help_text=_("是否允许使用高级创建选项"))
+    adv_region_clusters = serializers.ListField(
+        help_text=_("高级创建选项中的集群信息"), child=AdvancedRegionClusterSLZ()
+    )

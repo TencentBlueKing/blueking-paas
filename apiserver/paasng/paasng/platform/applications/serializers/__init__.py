@@ -38,10 +38,6 @@ from .app import (
     ApplicationWithMarketMinimalSLZ,
     ApplicationWithMarketSLZ,
     ApplicationWithMarkMinimalSLZ,
-    CreateAIAgentAppSLZ,
-    CreateApplicationV2SLZ,
-    CreateCloudNativeApplicationSLZ,
-    CreateThirdPartyApplicationSLZ,
     EnvironmentDeployInfoSLZ,
     IdleApplicationListOutputSLZ,
     IdleModuleEnvSLZ,
@@ -54,13 +50,28 @@ from .app import (
     SysThirdPartyApplicationSLZ,
     UpdateApplicationSLZ,
 )
-from .cnative import CreateCloudNativeAppSLZ
+from .creation import (
+    AIAgentAppCreateInputSLZ,
+    ApplicationCreateInputV2SLZ,
+    ApplicationCreateOutputSLZ,
+    CloudNativeAppCreateInputSLZ,
+    CreationOptionsOutputSLZ,
+    ThirdPartyAppCreateInputSLZ,
+)
 from .fields import AppIDField, AppIDSMartField, ApplicationField, AppNameField
 from .light_app import LightAppCreateSLZ, LightAppDeleteSLZ, LightAppEditSLZ, LightAppQuerySLZ
 from .member_role import ApplicationMemberRoleOnlySLZ, ApplicationMemberSLZ, RoleField
 from .validators import AppIDUniqueValidator
 
 __all__ = [
+    # creation
+    "AIAgentAppCreateInputSLZ",
+    "ApplicationCreateInputV2SLZ",
+    "ApplicationCreateOutputSLZ",
+    "CloudNativeAppCreateInputSLZ",
+    "CreationOptionsOutputSLZ",
+    "ThirdPartyAppCreateInputSLZ",
+    # other
     "ApplicationEvaluationIssueCountListResultSLZ",
     "ApplicationFeatureFlagSLZ",
     "ApplicationGroupFieldSLZ",
@@ -77,10 +88,6 @@ __all__ = [
     "ApplicationWithMarketMinimalSLZ",
     "ApplicationWithMarketSLZ",
     "ApplicationWithMarkMinimalSLZ",
-    "CreateAIAgentAppSLZ",
-    "CreateApplicationV2SLZ",
-    "CreateCloudNativeApplicationSLZ",
-    "CreateThirdPartyApplicationSLZ",
     "EnvironmentDeployInfoSLZ",
     "MarketAppMinimalSLZ",
     "MarketConfigSLZ",
@@ -95,7 +102,6 @@ __all__ = [
     "ApplicationEvaluationListResultSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
-    "CreateCloudNativeAppSLZ",
     "AppIDField",
     "AppIDSMartField",
     "ApplicationField",

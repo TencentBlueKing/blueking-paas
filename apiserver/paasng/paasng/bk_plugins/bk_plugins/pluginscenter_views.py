@@ -100,7 +100,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
-            type_=app_type,
+            app_type=app_type,
             operator=encoded_operator,
             is_plugin_app=True,
             app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),

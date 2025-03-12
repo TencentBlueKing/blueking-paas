@@ -76,7 +76,7 @@ def create_application(
     code: str,
     name: str,
     name_en: str,
-    type_: str,
+    app_type: str,
     operator: str,
     is_plugin_app: bool,
     is_ai_agent_app: bool = False,
@@ -86,7 +86,7 @@ def create_application(
 ):
     """创建 Application 模型"""
     application = Application.objects.create(
-        type=type_,
+        type=app_type,
         owner=operator,
         creator=operator,
         region=region,
@@ -149,7 +149,7 @@ def create_third_app(
         code=code,
         name=name,
         name_en=name_en,
-        type_=ApplicationType.ENGINELESS_APP.value,
+        app_type=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
         app_tenant_mode=app_tenant_mode,

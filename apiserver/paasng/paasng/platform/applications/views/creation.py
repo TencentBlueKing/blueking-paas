@@ -20,13 +20,13 @@
 import logging
 from typing import Any, Dict
 
+from bkpaas_auth.models import User
 from django.conf import settings
 from django.db import IntegrityError as DbIntegrityError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -35,14 +35,21 @@ from paas_wl.infras.cluster.shim import ClusterAllocator
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.core.region.models import get_all_regions
-from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.serializers import (
+    AIAgentAppCreateInputSLZ,
+    ApplicationCreateInputV2SLZ,
+    ApplicationCreateOutputSLZ,
+    CloudNativeAppCreateInputSLZ,
+    CreationOptionsOutputSLZ,
+    ThirdPartyAppCreateInputSLZ,
+)
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.platform.applications.utils import (
@@ -52,7 +59,7 @@ from paasng.platform.applications.utils import (
     create_third_app,
 )
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
-from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
+from paasng.platform.bk_lesscode.exceptions import LessCodeGatewayServiceError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
 from paasng.platform.templates.models import Template
@@ -65,101 +72,166 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     serializer_class = None
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(request_body=slzs.CreateThirdPartyApplicationSLZ, tags=["创建应用"])
-    def create_third_party(self, request):
-        """[API] 创建第三方应用(外链应用)"""
-        serializer = slzs.CreateThirdPartyApplicationSLZ(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.data
-        self.validate_region_perm(data["region"])
-
-        market_params = data["market_params"]
-        operator = request.user.pk
-
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
-        try:
-            application = create_third_app(
-                data["region"],
-                data["code"],
-                data["name_zh_cn"],
-                data["name_en"],
-                operator,
-                app_tenant_mode,
-                app_tenant_id,
-                tenant.id,
-                market_params,
-            )
-        except DbIntegrityError as e:
-            # 并发创建时, 可能会绕过 CreateThirdPartyApplicationSLZ 中 code 和 name 的存在性校验
-            if "Duplicate entry" in str(e):
-                err_msg = _("code 为 {} 或 name 为 {} 的应用已存在").format(data["code"], data["name_zh_cn"])
-                raise error_codes.CANNOT_CREATE_APP.f(err_msg)
-            raise
-
-        return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": None},
-            status=status.HTTP_201_CREATED,
-        )
-
     @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateApplicationV2SLZ, tags=["创建应用"])
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="创建应用",
+        request_body=ApplicationCreateInputV2SLZ,
+        responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
+    )
     def create_v2(self, request):
-        """[API] 创建新的蓝鲸应用（v2 版），支持更多自定义参数
-        创建 lesscode 应用时需要从cookie中获取用户登录信息,该 APIGW 不能直接注册到 APIGW 上提供
+        slz = ApplicationCreateInputV2SLZ(data=request.data, context={"user": request.user})
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+        self._validate_create_region_application_perm(params["region"])
 
-        TODO (su) 这个函数有点过于复杂了，考虑：1. 把该放到 slz 中的校验放进去，2. 移除场景应用初始化
-        """
-        serializer = slzs.CreateApplicationV2SLZ(
-            data=request.data,
-            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
-        )
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
+        # 特殊处理，如果不启用应用引擎，则视为创建第三方应用
         if not params["engine_enabled"]:
             return self.create_third_party(request)
 
-        self.validate_region_perm(params["region"])
-        # Handle advanced options
-        advanced_options = params.get("advanced_options", {})
-        env_cluster_names = {}
-        if advanced_options:
-            # Permission check
-            if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-                raise ValidationError(_("你无法使用高级创建选项"))
-
-            env_cluster_names = advanced_options.get("env_cluster_names")
-
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-        # Guide: check if a bk_plugin can be created
-        if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
-            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
 
-        # lesscode app needs to create an application on the bk_lesscode platform first
+        # LessCode 应用需要调用 API 在 lesscode 平台创建应用
         if source_origin == SourceOrigin.BK_LESS_CODE:
-            bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
-            try:
-                # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
-                make_bk_lesscode_client(login_cookie=bk_token, tenant_id=get_tenant(request.user).id).create_app(
-                    params["code"], params["name_zh_cn"], ModuleName.DEFAULT.value
-                )
-            except (LessCodeApiError, LessCodeGatewayServiceError) as e:
-                raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
+            # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
+            self._create_app_on_lesscode_platform(request, params["code"], params["name_zh_cn"])
 
-        return self._init_application(
-            params,
-            engine_params,
-            source_origin,
-            env_cluster_names,
+        env_cluster_names: Dict[str, str] = {}
+        if advanced_options := params.get("advanced_options"):
+            env_cluster_names = advanced_options.get("env_cluster_names", {})
+
+        return self._init_application(request.user, params, engine_params, source_origin, env_cluster_names)
+
+    @transaction.atomic
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="创建云原生应用",
+        request_body=CloudNativeAppCreateInputSLZ,
+        responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
+    )
+    def create_cloud_native(self, request):
+        slz = CloudNativeAppCreateInputSLZ(data=request.data, context={"user": request.user})
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+        self._validate_create_region_application_perm(params["region"])
+
+        src_cfg = params["source_config"]
+        source_origin = SourceOrigin(src_cfg["source_origin"])
+        module_src_cfg: Dict[str, Any] = {"source_origin": source_origin}
+
+        # 如果指定模板信息，则需要提取并保存
+        if tmpl_name := src_cfg["source_init_template"]:
+            tmpl = Template.objects.get(name=tmpl_name)
+            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
+
+        # LessCode 应用需要调用 API 在 LessCode 平台创建应用
+        if source_origin == SourceOrigin.BK_LESS_CODE:
+            # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
+            self._create_app_on_lesscode_platform(request, params["code"], params["name_zh_cn"])
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request.user,
+            params["app_tenant_mode"],
+        )
+
+        application = create_application(
+            region=params["region"],
+            code=params["code"],
+            name=params["name_zh_cn"],
+            name_en=params["name_en"],
+            app_type=ApplicationType.CLOUD_NATIVE.value,
+            operator=request.user.pk,
+            is_plugin_app=params["is_plugin_app"],
+            app_tenant_mode=app_tenant_mode,
+            app_tenant_id=app_tenant_id,
+            tenant_id=tenant.id,
+        )
+        module = create_default_module(application, **module_src_cfg)
+
+        # 初始化应用镜像凭证信息
+        if image_credential := params["bkapp_spec"]["build_config"].image_credential:
+            try:
+                AppUserCredential.objects.create(
+                    application_id=application.id, tenant_id=application.tenant_id, **image_credential
+                )
+            except DbIntegrityError:
+                raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))
+
+        env_cluster_names: Dict[str, str] = {}
+        if advanced_options := params.get("advanced_options"):
+            env_cluster_names = advanced_options.get("env_cluster_names", {})
+
+        source_init_result = init_module_in_view(
+            module,
+            repo_type=src_cfg.get("source_control_type"),
+            repo_url=src_cfg.get("source_repo_url"),
+            repo_auth_info=src_cfg.get("source_repo_auth_info"),
+            source_dir=src_cfg.get("source_dir", ""),
+            env_cluster_names=env_cluster_names,
+            bkapp_spec=params["bkapp_spec"],
+        ).source_init_result
+
+        post_create_application.send(sender=self.__class__, application=application)
+
+        create_market_config(
+            application=application,
+            # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
+            source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
+            # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
+            prefer_https=self._get_cluster_entrance_https_enabled(
+                application,
+                env_cluster_names.get(AppEnvironment.PRODUCTION),
+                ExposedURLType(module.exposed_url_type),
+            ),
+        )
+        return Response(
+            data=ApplicationCreateOutputSLZ(
+                {"application": application, "source_init_result": source_init_result}
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="创建第三方（外链）应用",
+        request_body=ThirdPartyAppCreateInputSLZ,
+        responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
+    )
+    def create_third_party(self, request):
+        slz = slzs.ThirdPartyAppCreateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        self._validate_create_region_application_perm(data["region"])
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request.user,
+            data["app_tenant_mode"],
+        )
+        application = create_third_app(
+            data["region"],
+            data["code"],
+            data["name_zh_cn"],
+            data["name_en"],
             request.user.pk,
             app_tenant_mode,
             app_tenant_id,
             tenant.id,
+            data["market_params"],
+        )
+
+        return Response(
+            data=ApplicationCreateOutputSLZ({"application": application, "source_init_result": None}).data,
+            status=status.HTTP_201_CREATED,
         )
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateApplicationV2SLZ, tags=["创建蓝鲸可视化开发平台应用"])
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="创建 LessCode（蓝鲸可视化开发平台）应用",
+        request_body=ApplicationCreateInputV2SLZ,
+        responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
+    )
     def create_lesscode_app(self, request):
         """注册在 APIGW 上给 bk_lesscode 平台调用，调用参数如下:
         {
@@ -176,141 +248,34 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
+        slz = ApplicationCreateInputV2SLZ(data=request.data, context={"user": request.user})
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+        self._validate_create_region_application_perm(params["region"])
+
         # 根据配置判断新建的 lesscode 应用是否为云原生应用
         if settings.LESSCODE_APP_USE_CLOUD_NATIVE_TYPE:
-            serializer_class = slzs.CreateCloudNativeApplicationSLZ
-        else:
-            serializer_class = slzs.CreateApplicationV2SLZ
-
-        serializer = serializer_class(
-            data=request.data,
-            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
-        )
-        serializer.is_valid(raise_exception=True)
-        params = serializer.data
-        self.validate_region_perm(params["region"])
+            params["type"] = ApplicationType.CLOUD_NATIVE.value
 
         engine_params = params.get("engine_params", {})
-
         source_origin = SourceOrigin(engine_params["source_origin"])
-        # lesscode 应用不支持指定集群，只能使用默认集群
+        # LessCode 应用不支持指定集群，只能使用默认集群
         env_cluster_names: Dict[str, str] = {}
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-        return self._init_application(
-            params,
-            engine_params,
-            source_origin,
-            env_cluster_names,
-            request.user.pk,
-            app_tenant_mode,
-            app_tenant_id,
-            tenant.id,
-        )
-
-    def _create_app_in_lesscode(self, request, code: str, name: str):
-        """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 产品上创建应用"""
-        bk_token = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
-        try:
-            make_bk_lesscode_client(login_cookie=bk_token, tenant_id=get_tenant(request.user).id).create_app(
-                code, name, ModuleName.DEFAULT.value
-            )
-        except (LessCodeApiError, LessCodeGatewayServiceError) as e:
-            raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
+        return self._init_application(request.user, params, engine_params, source_origin, env_cluster_names)
 
     @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateCloudNativeAppSLZ, tags=["创建应用"])
-    def create_cloud_native(self, request):
-        """[API] 创建云原生架构应用
-
-        TODO (su)：目前创建云原生应用流程复杂，需要梳理简化下
-        """
-        serializer = slzs.CreateCloudNativeAppSLZ(
-            data=request.data,
-            context={"tenant_id": get_tenant(request.user).id, "username": request.user.username},
-        )
-        serializer.is_valid(raise_exception=True)
-        params = serializer.validated_data
-        self.validate_region_perm(params["region"])
-
-        env_cluster_names: Dict[str, str] = {}
-        if advanced_options := params.get("advanced_options", {}):
-            if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS):
-                raise ValidationError(_("你无法使用高级创建选项"))
-            env_cluster_names = advanced_options.get("env_cluster_names", {})
-
-        # Guide: check if a bk_plugin can be created
-        if params["is_plugin_app"] and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
-            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
-
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-
-        source_config = params["source_config"]
-        source_origin = SourceOrigin(source_config["source_origin"])
-        module_src_cfg: Dict[str, Any] = {"source_origin": source_origin}
-
-        # 如果指定模板信息，则需要提取并保存
-        if tmpl_name := source_config["source_init_template"]:
-            tmpl = Template.objects.get(name=tmpl_name)
-            module_src_cfg.update({"language": tmpl.language, "source_init_template": tmpl_name})
-        # lesscode app needs to create an application on the bk_lesscode platform first
-        if source_origin == SourceOrigin.BK_LESS_CODE:
-            # 目前页面创建的应用名称都存储在 name_zh_cn 字段中, name_en 只用于 smart 应用
-            self._create_app_in_lesscode(request, params["code"], params["name_zh_cn"])
-
-        application = create_application(
-            region=params["region"],
-            code=params["code"],
-            name=params["name_zh_cn"],
-            name_en=params["name_en"],
-            type_=ApplicationType.CLOUD_NATIVE.value,
-            operator=request.user.pk,
-            is_plugin_app=params["is_plugin_app"],
-            app_tenant_mode=app_tenant_mode,
-            app_tenant_id=app_tenant_id,
-            tenant_id=tenant.id,
-        )
-        module = create_default_module(application, **module_src_cfg)
-
-        # 初始化应用镜像凭证信息
-        if image_credential := params["bkapp_spec"]["build_config"].image_credential:
-            self._init_image_credential(application, image_credential)
-
-        source_init_result = init_module_in_view(
-            module,
-            repo_type=source_config.get("source_control_type"),
-            repo_url=source_config.get("source_repo_url"),
-            repo_auth_info=source_config.get("source_repo_auth_info"),
-            source_dir=source_config.get("source_dir", ""),
-            env_cluster_names=env_cluster_names,
-            bkapp_spec=params["bkapp_spec"],
-        ).source_init_result
-
-        post_create_application.send(sender=self.__class__, application=application)
-        create_market_config(
-            application=application,
-            # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
-            source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
-            # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
-            prefer_https=self._get_cluster_entrance_https_enabled(
-                application,
-                env_cluster_names.get(AppEnvironment.PRODUCTION),
-                ExposedURLType(module.exposed_url_type),
-            ),
-        )
-        return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
-            status=status.HTTP_201_CREATED,
-        )
-
-    @transaction.atomic
-    @swagger_auto_schema(request_body=slzs.CreateAIAgentAppSLZ, tags=["ai-agent-app"])
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="创建 AI Agent 插件应用",
+        request_body=AIAgentAppCreateInputSLZ,
+        responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
+    )
     def create_ai_agent_app(self, request):
-        """创建 AI Agent 插件应用"""
-        serializer = slzs.CreateAIAgentAppSLZ(data=request.data)
+        serializer = AIAgentAppCreateInputSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
-        self.validate_region_perm(params["region"])
+        self._validate_create_region_application_perm(params["region"])
 
         source_origin = SourceOrigin.AI_AGENT
         engine_params = {
@@ -320,20 +285,17 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         }
         # ai-agent-app 不支持指定集群（使用默认集群）
         env_cluster_names: Dict[str, str] = {}
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, params["app_tenant_mode"])
-        return self._init_application(
-            params,
-            engine_params,
-            source_origin,
-            env_cluster_names,
-            request.user.pk,
-            app_tenant_mode,
-            app_tenant_id,
-            tenant.id,
-        )
 
+        return self._init_application(request.user, params, engine_params, source_origin, env_cluster_names)
+
+    @swagger_auto_schema(
+        tags=["platform.applications.creation"],
+        operation_description="获取创建应用高级选项",
+        request_body=CreationOptionsOutputSLZ,
+        responses={status.HTTP_201_CREATED: CreationOptionsOutputSLZ()},
+    )
     def get_creation_options(self, request):
-        """[API] 获取创建应用模块时的选项信息"""
+        """[API] 获取创建应用模块时的高级选项配置"""
         # 是否允许用户使用高级选项
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
 
@@ -352,17 +314,12 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
                 adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
 
-        options = {
-            # ADVANCED options:
-            "allow_adv_options": allow_advanced,
-            # configs related with clusters, contains content only when "allow_adv_options" is true
-            "adv_region_clusters": adv_region_clusters,
-        }
-        return Response(options)
+        resp_data = {"allow_adv_options": allow_advanced, "adv_region_clusters": adv_region_clusters}
+        return Response(CreationOptionsOutputSLZ(resp_data).data)
 
-    def validate_region_perm(self, region: str):
+    def _validate_create_region_application_perm(self, region: str):
         if not user_can_create_in_region(self.request.user, region):
-            raise error_codes.CANNOT_CREATE_APP.f(_("你无法在所指定的 region 中创建应用"))
+            raise error_codes.CANNOT_CREATE_APP.f(_("无法在所指定的 region 中创建应用"))
 
     def _get_cluster_entrance_https_enabled(
         self, app: Application, cluster_name: str | None, exposed_url_type: ExposedURLType
@@ -387,30 +344,41 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             logger.warning(_("集群未配置默认的根域名, 请检查集群配置是否合理."))
             return False
 
+    def _create_app_on_lesscode_platform(self, request, code: str, name: str):
+        """在开发者中心产品页面上创建 Lesscode 应用时，需要同步在 Lesscode 平台上创建应用"""
+        login_cookie = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
+        try:
+            client = make_bk_lesscode_client(login_cookie=login_cookie, tenant_id=get_tenant(request.user).id)
+            client.create_app(code, name, ModuleName.DEFAULT.value)
+        except LessCodeGatewayServiceError as e:
+            raise error_codes.CREATE_LESSCODE_APP_ERROR.f(e.message)
+
     def _init_application(
         self,
+        request_user: User,
         params: Dict,
         engine_params: Dict,
         source_origin: SourceOrigin,
         env_cluster_names: Dict[str, str],
-        operator: str,
-        app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
-        app_tenant_id: str = "",
-        tenant_id: str = DEFAULT_TENANT_ID,
     ) -> Response:
         """初始化应用，包含创建默认模块，应用市场配置等"""
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request_user,
+            params["app_tenant_mode"],
+        )
+
         application = create_application(
             region=params["region"],
             code=params["code"],
             name=params["name_zh_cn"],
             name_en=params["name_en"],
-            type_=params["type"],
+            app_type=params["type"],
             is_plugin_app=params["is_plugin_app"],
             is_ai_agent_app=params["is_ai_agent_app"],
-            operator=operator,
+            operator=request_user.pk,
             app_tenant_mode=app_tenant_mode,
             app_tenant_id=app_tenant_id,
-            tenant_id=tenant_id,
+            tenant_id=tenant.id,
         )
 
         # Create engine related data
@@ -440,6 +408,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             application.save(update_fields=["language"])
 
         post_create_application.send(sender=self.__class__, application=application)
+
         create_market_config(
             application=application,
             # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
@@ -453,14 +422,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
         return Response(
-            data={"application": slzs.ApplicationSLZ(application).data, "source_init_result": source_init_result},
+            data=ApplicationCreateOutputSLZ(
+                {"application": application, "source_init_result": source_init_result}
+            ).data,
             status=status.HTTP_201_CREATED,
         )
-
-    def _init_image_credential(self, application: Application, image_credential: Dict):
-        try:
-            AppUserCredential.objects.create(
-                application_id=application.id, tenant_id=application.tenant_id, **image_credential
-            )
-        except DbIntegrityError:
-            raise error_codes.CREATE_CREDENTIALS_FAILED.f(_("同名凭证已存在"))

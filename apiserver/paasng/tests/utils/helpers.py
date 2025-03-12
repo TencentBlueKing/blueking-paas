@@ -26,8 +26,13 @@ from django.conf import settings
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.applications.api import CreatedAppInfo
+from paas_wl.bk_app.applications.api import CreatedAppInfo, create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
+from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.shim.setup_elk import ClusterElasticSearchConfig
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
@@ -37,14 +42,15 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.bkapp_model.services import initialize_simple
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.constants import ExposedURLType, SourceOrigin
 from paasng.platform.modules.handlers import setup_module_log_model
-from paasng.platform.modules.manager import ModuleInitializer
-from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
@@ -382,14 +388,8 @@ def _mock_wl_services_in_creation():
             "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
         ),
         mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
-        mock.patch("paasng.platform.bkapp_model.services.update_metadata_by_env", new=fake_update_metadata_by_env),
         mock.patch("paasng.platform.modules.manager.EnvClusterService"),
         mock.patch("paasng.platform.modules.manager.get_exposed_url_type", return_value=ExposedURLType.SUBPATH),
-        mock.patch(
-            "paasng.platform.bkapp_model.services.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
-        ),
-        mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"),
-        mock.patch("paasng.platform.bkapp_model.services.EnvClusterService"),
         mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
         mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
         mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
@@ -485,7 +485,7 @@ def create_cnative_app(
     # TODO: 使用新的创建模块逻辑
     with contextmanager(_mock_wl_services_in_creation)():
         module = application.get_default_module()
-        initialize_simple(module, "", cluster_name=cluster_name)
+        initialize_simple_cnative(module, "", cluster_name=cluster_name)
         module_initializer = ModuleInitializer(module)
         # Set-up the repository data
         module.source_origin = SourceOrigin.AUTHORIZED_VCS
@@ -538,3 +538,99 @@ def register_iam_after_create_application(application: Application):
 
     # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
     cli.add_user_group_members(user_groups[0]["id"], [creator], NEVER_EXPIRE_DAYS)
+
+
+def initialize_simple_cnative(
+    module: Module,
+    image: str,
+    cluster_name: str | None = None,
+    api_version: str = ApiVersion.V1ALPHA2,
+    command: List[str] | None = None,
+    args: List[str] | None = None,
+    target_port: int | None = None,
+) -> Dict:
+    """Initialize a cloud-native application, return the initialized object
+
+    :param module: Module object, a module can only be initialized once
+    :param image: The container image of main process
+    :param cluster_name: The name of cluster to deploy BkApp.
+    :param command: Custom command
+    :param args: Custom args
+    :param target_port: Custom target port
+    """
+    model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
+    create_engine_apps(module.application, module, [AppEnvName.STAG, AppEnvName.PROD], cluster_name)
+    return model_res
+
+
+def create_cnative_app_model_resource(
+    module: Module,
+    image: str,
+    api_version: str = ApiVersion.V1ALPHA2,
+    command: List[str] | None = None,
+    args: List[str] | None = None,
+    target_port: int | None = None,
+) -> Dict:
+    """Create a cloud-native AppModelResource object
+
+    :param module: The Module object current app model resource bound with
+    """
+    from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
+
+    application = module.application
+    resource = create_app_resource(
+        name=generate_bkapp_name(module),
+        image=image,
+        api_version=api_version,
+        command=command,
+        args=args,
+        target_port=target_port,
+    )
+    model_resource = AppModelResource.objects.create_from_resource(application, str(module.id), resource)
+    return {
+        "application_id": model_resource.application_id,
+        "module_id": model_resource.module_id,
+        "manifest": model_resource.revision.json_value,
+    }
+
+
+def create_engine_apps(
+    app: Application,
+    module: Module,
+    environments: List[str],
+    cluster_name: str | None,
+):
+    """Create engine app instances for application"""
+    for environment in environments:
+        engine_app_name = make_engine_app_name(module, app.code, environment)
+        # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
+        info = create_app_ignore_duplicated(
+            app.region,
+            engine_app_name,
+            WlAppType.CLOUD_NATIVE,
+            app.tenant_id,
+        )
+        engine_app = EngineApp.objects.create(
+            id=info.uuid,
+            name=engine_app_name,
+            owner=app.owner,
+            region=app.region,
+            tenant_id=app.tenant_id,
+        )
+        env = ModuleEnvironment.objects.create(
+            application=app,
+            module=module,
+            engine_app_id=engine_app.id,
+            environment=environment,
+            tenant_id=app.tenant_id,
+        )
+        if not cluster_name:
+            ctx = AllocationContext.from_module_env(env)
+            cluster_name = ClusterAllocator(ctx).get_default().name
+
+        EnvClusterService(env).bind_cluster(cluster_name)
+        setup_env_log_model(env)
+
+        # Update metadata
+        engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
+        update_metadata_by_env(env, engine_app_meta_info)

@@ -32,4 +32,15 @@ export default [
     },
     sublist: [],
   },
+  {
+    groupId: 'platform',
+    name: 'platformAddOns',
+    label: i18n.t('增强服务'),
+    iconfontName: 'cloudapi',
+    matchRouters: ['platformAddOns'],
+    destRoute: {
+      name: 'platformAddOns',
+    },
+    sublist: [],
+  },
 ];

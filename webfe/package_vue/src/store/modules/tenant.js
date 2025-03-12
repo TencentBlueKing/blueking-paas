@@ -204,5 +204,40 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
       return http.get(url);
     },
+    /**
+     * 获取服务方案
+     */
+    getPlans({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/`;
+      return http.get(url);
+    },
+    /**
+     * 获取所属服务
+     */
+    getPlatformServices({}) {
+      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      return http.get(url);
+    },
+    /**
+     * 添加方案
+     */
+    addPlan({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改方案
+     */
+    modifyPlan({}, { id, planId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/${planId}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除方案
+     */
+    deletePlan({}, { id, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/${planId}/`;
+      return http.delete(url);
+    },
   },
 };

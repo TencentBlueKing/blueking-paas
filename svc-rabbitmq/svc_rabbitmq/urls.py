@@ -25,6 +25,6 @@ urlpatterns = [
     re_path(r"^", include("paas_service.urls")),
     re_path(r"^", include("vendor.urls")),
     re_path(r"^", include("monitor.urls")),
-    re_path(r"^django/admin/", admin.site.urls),
+    re_path(r"^admin/", admin.site.urls),
     re_path(r"^accounts/login/", RedirectView.as_view(url="/")),
 ]

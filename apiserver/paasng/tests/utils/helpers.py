@@ -360,29 +360,31 @@ _faked_wl_apps = {}
 _faked_env_metadata = {}
 
 
+def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
+    obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
+
+    # Store params in global, so we can manually create the objects later.
+    _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
+    return obj
+
+
+def fake_update_metadata_by_env(env, metadata_part):
+    # Store params in global, so we can manually update the metadata later.
+    if env.id not in _faked_env_metadata:
+        _faked_env_metadata[env.id] = metadata_part
+    else:
+        _faked_env_metadata[env.id].update(metadata_part)
+
+
 def _mock_wl_services_in_creation():
     """Mock workloads related functions related with app creation, the calls being
     mocked will be stored and can be used for restoring data later.
     """
 
-    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
-        obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
-
-        # Store params in global, so we can manually create the objects later.
-        _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
-        return obj
-
-    def fake_update_metadata_by_env(env, metadata_part):
-        # Store params in global, so we can manually update the metadata later.
-        if env.id not in _faked_env_metadata:
-            _faked_env_metadata[env.id] = metadata_part
-        else:
-            _faked_env_metadata[env.id].update(metadata_part)
-
     mock_cluster_setup_elk = mock.Mock()
     mock_cluster_setup_elk.uuid = uuid.uuid4()
-    mock_cluster_es_confg_queryset = mock.Mock()
-    mock_cluster_es_confg_queryset.first.return_value = None
+    mock_cluster_es_config_queryset = mock.Mock()
+    mock_cluster_es_config_queryset.first.return_value = None
     with (
         mock.patch(
             "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
@@ -396,7 +398,7 @@ def _mock_wl_services_in_creation():
     ):
         fake_log().get_cluster().has_feature_flag.return_value = False
         fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
-        mock_filter.return_value = mock_cluster_es_confg_queryset
+        mock_filter.return_value = mock_cluster_es_config_queryset
         yield
 
 
@@ -594,12 +596,7 @@ def create_cnative_app_model_resource(
     }
 
 
-def create_engine_apps(
-    app: Application,
-    module: Module,
-    environments: List[str],
-    cluster_name: str | None,
-):
+def create_engine_apps(app: Application, module: Module, environments: List[str], cluster_name: str | None):
     """Create engine app instances for application"""
     for environment in environments:
         engine_app_name = make_engine_app_name(module, app.code, environment)

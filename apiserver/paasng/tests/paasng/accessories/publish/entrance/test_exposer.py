@@ -24,7 +24,7 @@ from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.platform.modules.constants import ExposedURLType
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()

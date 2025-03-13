@@ -26,7 +26,10 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paasng.core.tenant.user import get_tenant
-from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
+from paasng.infras.accounts.permissions.application import (
+    app_view_actions_perm,
+    application_perm_class,
+)
 from paasng.infras.bkmonitorv3.client import make_bk_monitor_client
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorGatewayServiceError, BkMonitorSpaceDoesNotExist
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
@@ -62,10 +65,19 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
     serializer_class = AlertRuleSLZ
     pagination_class = None
 
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_ALERT_RECORDS)]
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "list": AppAction.VIEW_BASIC_INFO,
+                "update": AppAction.EDIT_ALERT_POLICY,
+                "init_alert_rules": AppAction.EDIT_ALERT_POLICY,
+            },
+            default_action=AppAction.VIEW_ALERT_RECORDS,
+        ),
+    ]
 
     @swagger_auto_schema(query_serializer=ListAlertRulesSLZ)
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code, module_name):
         """查询告警规则列表"""
         serializer = ListAlertRulesSLZ(data=self.request.query_params)
@@ -89,7 +101,6 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @app_action_required(AppAction.EDIT_ALERT_POLICY)
     def update(self, request, code, id):
         """更新告警规则"""
         filter_kwargs = {"id": id, "application": self.get_application()}
@@ -112,7 +123,6 @@ class AlertRulesView(GenericViewSet, ApplicationCodeInPathMixin):
         serializer = SupportedAlertSLZ(supported_alerts, many=True)
         return Response(serializer.data)
 
-    @app_action_required(AppAction.EDIT_ALERT_POLICY)
     def init_alert_rules(self, request, code):
         """初始化告警规则"""
         application = self.get_application()

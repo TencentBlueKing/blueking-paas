@@ -78,7 +78,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.PluginSyncRequestSLZ,
-        responses={201: serializers.BkPluginSLZ},
+        responses={201: serializers.BkPluginSLZ()},
     )
     @atomic
     def create_plugin(self, request):
@@ -92,15 +92,12 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
 
-        app_type = (
-            ApplicationType.CLOUD_NATIVE if settings.PLUGIN_APP_USE_CLOUD_NATIVE_TYPE else ApplicationType.DEFAULT
-        )
         application = create_application(
             region=region,
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
-            type_=app_type,
+            app_type=ApplicationType.CLOUD_NATIVE,
             operator=encoded_operator,
             is_plugin_app=True,
             app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
@@ -140,7 +137,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.PluginSyncRequestSLZ,
-        responses={200: serializers.BkPluginSLZ},
+        responses={200: serializers.BkPluginSLZ()},
     )
     @atomic
     def update_plugin(self, request, code):
@@ -184,7 +181,7 @@ class PluginDeployViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.DeployPluginRequestSLZ,
-        responses={201: api_serializers.PluginDeployResponseSLZ},
+        responses={201: api_serializers.PluginDeployResponseSLZ()},
     )
     def deploy_plugin(self, request, code):
         """部署插件"""

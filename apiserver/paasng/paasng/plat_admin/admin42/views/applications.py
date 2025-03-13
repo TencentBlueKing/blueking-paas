@@ -297,9 +297,10 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         # 注：不同模块 / 环境可选的集群可能是不同的 -> {module_name-environment [available_clusters]}
         cluster_choices: Dict[str, List[Dict[str, str]]] = {}
         for env in application.envs.all():
+            ctx = AllocationContext.from_module_env(env)
+            ctx.username = self.request.user.username
             cluster_choices[f"{env.module.name}-{env.environment}"] = [
-                {"id": cluster.name, "name": cluster.name}
-                for cluster in ClusterAllocator(AllocationContext.from_module_env(env)).list()
+                {"id": cluster.name, "name": cluster.name} for cluster in ClusterAllocator(ctx).list()
             ]
 
         kwargs["cluster_choices"] = cluster_choices
@@ -309,6 +310,7 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         for env in application.envs.all():
             if url_obj := get_exposed_url(env):
                 env_urls[env.id] = url_obj.address
+
         kwargs["env_urls"] = env_urls
 
         return kwargs
@@ -321,14 +323,14 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
 
     def bind_cluster(self, request, code, module_name, environment):
         """切换环境所绑定的集群"""
-        slz = BindEnvClusterSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-
         # Get the environment object
         application = get_object_or_404(Application, code=code)
         env = application.get_module(module_name).envs.get(environment=environment)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
 
+        slz = BindEnvClusterSLZ(data=request.data, context={"module_env": env, "operator": request.user.username})
+        slz.is_valid(raise_exception=True)
+
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
         EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
 
         add_admin_audit_record(

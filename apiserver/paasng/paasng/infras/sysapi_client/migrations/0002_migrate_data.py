@@ -97,6 +97,8 @@ def _migrate_app_as_clients(apps):
 class Migration(migrations.Migration):
     dependencies = [
         ("sysapi_client", "0001_initial"),
+        # Dependent on the legacy private token model
+        ("accounts", "0003_privatetokenholder"),
     ]
 
     operations = [migrations.RunPython(forwards_func)]

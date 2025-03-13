@@ -7,6 +7,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("accounts", "0003_privatetokenholder"),
+        # Dependent on the migration that migrates the data such as private tokens
+        # from the "accounts" app to the new "sysapi_client" app. 
+        ("sysapi_client", "0002_migrate_data"),
     ]
 
     operations = [

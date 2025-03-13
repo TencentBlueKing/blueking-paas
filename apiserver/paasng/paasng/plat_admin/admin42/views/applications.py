@@ -323,14 +323,14 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
 
     def bind_cluster(self, request, code, module_name, environment):
         """切换环境所绑定的集群"""
-        slz = BindEnvClusterSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-
         # Get the environment object
         application = get_object_or_404(Application, code=code)
         env = application.get_module(module_name).envs.get(environment=environment)
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
 
+        slz = BindEnvClusterSLZ(data=request.data, context={"module_env": env, "operator": request.user.username})
+        slz.is_valid(raise_exception=True)
+
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
         EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
 
         add_admin_audit_record(

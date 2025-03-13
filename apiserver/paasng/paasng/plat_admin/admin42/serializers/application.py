@@ -24,6 +24,8 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.infras.cluster.allocator import ClusterAllocator
+from paas_wl.infras.cluster.entities import AllocationContext
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
@@ -86,6 +88,15 @@ class BindEnvClusterSLZ(serializers.Serializer):
     """绑定应用部署环境集群配置"""
 
     cluster_name = serializers.CharField(max_length=32)
+
+    def validate_cluster_name(self, cluster_name: str) -> str:
+        ctx = AllocationContext.from_module_env(self.context["module_env"])
+        ctx.username = self.context["operator"]
+
+        if not ClusterAllocator(ctx).check_available(cluster_name):
+            raise ValidationError("selected cluster cannot use for current module_env")
+
+        return cluster_name
 
 
 class ApplicationFilterSLZ(serializers.Serializer):

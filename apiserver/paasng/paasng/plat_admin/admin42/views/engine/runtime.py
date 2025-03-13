@@ -72,7 +72,7 @@ class RuntimeStack:
             return {
                 "builder": AppSlugBuilderSLZ(self.builder).data,
                 # name 要唯一
-                "runner": AppSlugRunnerSLZ(AppSlugRunner.objects.filter(name=self.builder.name).first()).data,
+                "runner": AppSlugRunnerSLZ(AppSlugRunner.objects.get(name=self.builder.name)).data,
                 "buildpacks": AppBuildPackSLZ(self.builder.buildpacks, many=True).data,
             }
         except Exception:

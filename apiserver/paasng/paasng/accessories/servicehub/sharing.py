@@ -83,7 +83,6 @@ class ServiceSharingManager:
             raise SharedAttachmentAlreadyExists(f"already created shared attachment, ref_module: {ref_module.name}")
 
         return SharedServiceAttachment.objects.create(
-            region=self.application.region,
             module=self.module,
             service_type=db_properties.col_service_type,
             service_id=service.uuid,

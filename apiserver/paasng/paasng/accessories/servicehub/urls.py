@@ -20,7 +20,6 @@ from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
-REGION = "(?P<region>[a-z0-9_-]{1,32})"
 SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
 APP_UUID = "(?P<application_id>[0-9a-f-]{32,36})"
 CATEGORY_ID = r"(?P<category_id>[\d]+)"

@@ -44,7 +44,6 @@ class Command(BaseCommand):
         )
 
     def _get_service(self, mgr: RemoteServiceMgr, name: str) -> Optional[RemoteServiceObj]:
-        """Iterate all regions to get remote service object"""
         try:
             return mgr.find_by_name(name)
         except ServiceObjNotFound:

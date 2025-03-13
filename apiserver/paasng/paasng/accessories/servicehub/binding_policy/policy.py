@@ -191,8 +191,11 @@ class PolicyCombinationConfig:
     - If the region is "region_default", assign plans ["plan_region"].
     - Else if the cluster is "cluster_default", assign plans ["plan_cluster"].
     - Fallback to plans ["plan_default"] if none of the above conditions are met.
+
     This can be represented as:
-    tenant_policy_config = PolicyCombinationConfig(
+
+    ```
+    PolicyCombinationConfig(
         tenant_id="tenant_x",
         service_id="service_x"
         allocation_precedence_policies=[
@@ -211,6 +214,7 @@ class PolicyCombinationConfig:
         ],
         allocation_policy=UnifiedAllocationPolicy(plans=["plan_default"])
     )
+    ```
     """
 
     tenant_id: str

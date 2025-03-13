@@ -19,7 +19,6 @@ import csv
 from dataclasses import dataclass
 from typing import Dict, List
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
@@ -39,7 +38,7 @@ class BaseAppInfo:
 
 
 class Command(BaseCommand):
-    help = "Bulk Unbundling Addon Services"
+    help = "Unbind multiple addon services"
 
     def add_arguments(self, parser):
         parser.add_argument("--source", type=str, dest="source")
@@ -49,7 +48,6 @@ class Command(BaseCommand):
             type=str,
             help=("specify a service name"),
         )
-        parser.add_argument("--region", required=False, type=str, default=settings.DEFAULT_REGION_NAME)
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
     def handle_input_data(self, source: str) -> Dict[str, Dict[str, List[str]]]:
@@ -93,7 +91,7 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(
                 self.style.ERROR(
-                    f"APP(code:{app_code})-module({module.name}) cannot unbundle the service<{service_id}>: {e}"
+                    f"APP(code:{app_code})-module({module.name}) fail to unbind the service<{service_id}>: {e}"
                 )
             )
             return
@@ -101,7 +99,7 @@ class Command(BaseCommand):
         module_attachment.delete()
         self.stdout.write(
             self.style.SUCCESS(
-                f"APP(code:{app_code})-module({module.name}) unbundle the service<{service_id}> Successfully."
+                f"APP(code:{app_code})-module({module.name}) unbound the service<{service_id}> successfully."
             )
         )
         return
@@ -115,23 +113,22 @@ class Command(BaseCommand):
             rel.delete()
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"APP(code:{app_code})-module({module.name})-env({env}) unbundle the service<{service_id}>."
+                    f"APP(code:{app_code})-module({module.name})-env({env}) unbound the service<{service_id}> successfully."
                 )
             )
 
-    def handle(self, source: str, name: str, region: str, dry_run: bool, *args, **options):
+    def handle(self, source: str, name: str, dry_run: bool, *args, **options):
         """
         批量解绑增强的绑定关系
 
         :param source: .csv 文件的路径
         :param name: 服务名称
-        :param region: 区域
         :param dry_run: 是否为模拟运行
         """
         try:
             service = mixed_service_mgr.find_by_name(name)
         except ServiceObjNotFound:
-            self.stdout.write(self.style.WARNING(f"Addon service(name:{name},region:{region}) does not exist, skip"))
+            self.stdout.write(self.style.WARNING(f"Addon service(name:{name}) does not exist, skip"))
             return
 
         to_del_data = self.handle_input_data(source)

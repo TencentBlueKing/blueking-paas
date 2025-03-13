@@ -18,18 +18,14 @@
 import json
 
 import pytest
-from django.utils.decorators import method_decorator
 from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory
-from rest_framework.viewsets import ViewSet
 
 from paasng.utils.views import (
     ERROR_CODE_NUM_HEADER,
     BkStandardApiJSONRenderer,
     HookChain,
-    action_perms,
     one_line_error,
 )
 
@@ -117,42 +113,3 @@ def make_permission():
     class Permission(BasePermission): ...
 
     return Permission
-
-
-def test_permission_classes():
-    foo = make_permission()
-    bar = make_permission()
-    baz = make_permission()
-
-    @method_decorator(action_perms([]), name="action_c")
-    class TestViewSet(ViewSet):
-        permission_classes = [baz]
-
-        @action_perms([foo])
-        def action_a(self, request):
-            assert self.permission_classes == [foo]
-            assert type(self).permission_classes != self.permission_classes
-            return Response()
-
-        @action_perms([bar], policy="extend")
-        def action_b(self, request):
-            assert self.permission_classes == [baz, bar]
-            assert type(self).permission_classes != self.permission_classes
-            return Response()
-
-        def action_c(self, request):
-            assert self.permission_classes == []
-            assert type(self).permission_classes != self.permission_classes
-            return Response()
-
-        def action_d(self, request):
-            assert self.permission_classes == [baz]
-            assert type(self).permission_classes == self.permission_classes
-            return Response()
-
-    request = APIRequestFactory().request()
-
-    TestViewSet.as_view({"get": "action_a"})(request)
-    TestViewSet.as_view({"get": "action_b"})(request)
-    TestViewSet.as_view({"get": "action_c"})(request)
-    TestViewSet.as_view({"get": "action_d"})(request)

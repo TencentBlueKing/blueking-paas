@@ -37,7 +37,10 @@ from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.models import MarketConfig, Product
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
-from paasng.infras.accounts.permissions.application import app_action_required, application_perm_class
+from paasng.infras.accounts.permissions.application import (
+    app_view_actions_perm,
+    application_perm_class,
+)
 from paasng.infras.accounts.serializers import VerificationCodeSLZ
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
@@ -348,7 +351,17 @@ class ApplicationListViewSet(viewsets.ViewSet):
 class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """View class for a single application."""
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "destroy": AppAction.DELETE_APPLICATION,
+                "update": AppAction.EDIT_BASIC_INFO,
+            },
+            default_action=AppAction.VIEW_BASIC_INFO,
+        ),
+    ]
+
     def retrieve(self, request, code):
         """获取单个应用的信息"""
         application = self.get_application()
@@ -371,7 +384,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
 
-    @app_action_required(AppAction.DELETE_APPLICATION)
     def destroy(self, request, code):
         """删除蓝鲸应用
 
@@ -442,7 +454,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DELETE_APP.f(str(e))
 
     # 编辑应用名称的权限：管理员、运营
-    @app_action_required(AppAction.EDIT_BASIC_INFO)
     @transaction.atomic
     def update(self, request, code):
         """
@@ -485,7 +496,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         return Response(serializer.data)
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     @swagger_auto_schema(tags=["普通应用概览数据"])
     def get_overview(self, request, code):
         """普通应用、云原生应用概览页面数据"""
@@ -518,14 +528,22 @@ class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "switch_app_desc_flag": AppAction.BASIC_DEVELOP,
+            },
+            default_action=AppAction.VIEW_BASIC_INFO,
+        ),
+    ]
+
     @swagger_auto_schema(tags=["特性标记"])
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list(self, request, code):
         application = self.get_application()
         return Response(application.feature_flag.get_application_features())
 
     @swagger_auto_schema(tags=["特性标记"])
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
     def list_with_env(self, request, code, module_name, environment):
         """根据应用部署环境获取 FeatureFlag 信息，适用于需要区分环境的场景"""
         cluster = get_cluster_by_app(self.get_wl_app_via_path())
@@ -533,7 +551,6 @@ class ApplicationFeatureFlagViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin
         return Response(response_data)
 
     @swagger_auto_schema(tags=["特性标记"])
-    @app_action_required(AppAction.BASIC_DEVELOP)
     def switch_app_desc_flag(self, request, code):
         application = self.get_application()
         flag = AppFeatureFlag.APPLICATION_DESCRIPTION
@@ -564,13 +581,21 @@ class ApplicationLogoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     serializer_class = slzs.ApplicationLogoSLZ
 
-    @app_action_required(AppAction.VIEW_BASIC_INFO)
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {
+                "retrieve": AppAction.VIEW_BASIC_INFO,
+                "update": AppAction.EDIT_BASIC_INFO,
+            }
+        ),
+    ]
+
     def retrieve(self, request, code):
         """查看应用 Logo 相关信息"""
         serializer = slzs.ApplicationLogoSLZ(instance=self.get_application())
         return Response(serializer.data)
 
-    @app_action_required(AppAction.EDIT_BASIC_INFO)
     def update(self, request, code):
         """修改应用 Logo"""
         application = self.get_application()

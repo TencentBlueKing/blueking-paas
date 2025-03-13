@@ -71,6 +71,7 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
         application_environment = ApplicationEnvironment.objects.get(engine_app=self.engine_app)
         params = {
             "engine_app_name": self.engine_app.name,
+            "region": self.engine_app.region,
             "application_code": application_environment.application.code,
             "application_id": application_environment.application.id,
         }

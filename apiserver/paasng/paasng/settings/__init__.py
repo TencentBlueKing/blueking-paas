@@ -1092,7 +1092,7 @@ ENGINE_OFFLINE_RESUMABLE_SECS = 60
 # == 应用运行时相关配置
 #
 # 默认运行时镜像名称
-DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_NAME: "blueking"})
+DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", "blueking")
 
 # ------------------
 # CI 相关配置

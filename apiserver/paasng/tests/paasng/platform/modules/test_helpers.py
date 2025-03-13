@@ -36,8 +36,6 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
     ("slugbuilder_attrs", "slugrunner_attrs", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False),
-        (dict(region=generate_random_string()), dict(), False),
-        (dict(), dict(region=generate_random_string()), False),
         (dict(), dict(), True),
     ],
 )
@@ -73,11 +71,7 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
     ("slugbuilder_attrs", "buildpack_attrs", "linked", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False, False),
-        (dict(region=generate_random_string()), dict(), False, False),
-        (dict(), dict(region=generate_random_string()), False, False),
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), True, True),
-        (dict(region=generate_random_string()), dict(), True, False),
-        (dict(), dict(region=generate_random_string()), True, False),
         (dict(), dict(), True, True),
     ],
 )

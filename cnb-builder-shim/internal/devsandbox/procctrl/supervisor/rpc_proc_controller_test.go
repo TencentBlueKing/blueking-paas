@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package processesctl
+package supervisor
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 )
 
@@ -45,12 +46,12 @@ var _ = Describe("Test process_ctl", func() {
 
 	DescribeTable(
 		"Test MakeSupervisorConf with invalid environment variables",
-		func(processes []Process, procEnv []appdesc.Env, expectedErrorStr string) {
+		func(processes []procdef.Process, procEnv []appdesc.Env, expectedErrorStr string) {
 			_, err := makeSupervisorConf(processes, procEnv...)
 			Expect(err.Error()).To(Equal(expectedErrorStr))
 		}, Entry(
 			"invalid with (%)",
-			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]procdef.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
 				{Name: "FOO", Value: `%abc`},
 				{Name: "BAR", Value: `ab%c`},
@@ -59,7 +60,7 @@ var _ = Describe("Test process_ctl", func() {
 		),
 		Entry(
 			"invalid with (%)",
-			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]procdef.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
 				{Name: "FOO", Value: `%abc`},
 				{Name: "BAR", Value: `abc`},
@@ -68,7 +69,7 @@ var _ = Describe("Test process_ctl", func() {
 		),
 		Entry(
 			`invalid with ("%)`,
-			[]Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
+			[]procdef.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
 				{Name: "FOO_TEST", Value: `http://abc.com/cc`},
 				{Name: "FOO", Value: `%abc`},
@@ -78,14 +79,14 @@ var _ = Describe("Test process_ctl", func() {
 		),
 	)
 
-	DescribeTable("Test refreshConf", func(processes []Process, procEnv []appdesc.Env, expectedConfContent string) {
+	DescribeTable("Test refreshConf", func(processes []procdef.Process, procEnv []appdesc.Env, expectedConfContent string) {
 		conf, _ := makeSupervisorConf(processes, procEnv...)
 		Expect(refreshConf(conf)).To(BeNil())
 
 		content, _ := os.ReadFile(confFilePath)
 		Expect(string(content)).To(Equal(expectedConfContent))
 	}, Entry("without env_variables",
-		[]Process{
+		[]procdef.Process{
 			{ProcType: "web", CommandPath: "/cnb/processes/web"},
 			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 		}, []appdesc.Env{},
@@ -116,7 +117,7 @@ redirect_stderr = true
 port=127.0.0.1:%[2]s
 `, supervisorDir, rpcPort)),
 		Entry("with env_variables",
-			[]Process{
+			[]procdef.Process{
 				{ProcType: "web", CommandPath: "/cnb/processes/web"},
 				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
 			},

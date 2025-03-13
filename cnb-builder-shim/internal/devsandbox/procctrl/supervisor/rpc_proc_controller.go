@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package processesctl
+package supervisor
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
@@ -35,7 +36,6 @@ var rpcPort = "9001"
 var rpcAddress = "http://127.0.0.1:9001/RPC2"
 
 var confFilePath = filepath.Join(supervisorDir, "dev.conf")
-var controllerType = SupervisorRPC
 var confTmpl = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
 
@@ -65,12 +65,35 @@ port=127.0.0.1:{{ .Port }}
 type SupervisorConf struct {
 	RootDir     string
 	Port        string
-	Processes   []ProcessConf
+	Processes   []procdef.ProcessConf
 	Environment string
 }
 
+// validateEnvironment validates the environment variables for supervisor conf.
+//
+// see detail environment conf in http://supervisord.org/configuration.html
+// char " and % in environment value will cause supervisord to fail
+func validateEnvironment(procEnvs []appdesc.Env) error {
+	invalidChars := `"%`
+	invalidEnvNames := []string{}
+	for _, env := range procEnvs {
+		if strings.ContainsAny(env.Value, invalidChars) {
+			invalidEnvNames = append(invalidEnvNames, env.Name)
+		}
+	}
+	if len(invalidEnvNames) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"environment variables: %s has invalid characters (%s)",
+		strings.Join(invalidEnvNames, ", "),
+		invalidChars,
+	)
+}
+
 // returns a new SupervisorConf
-func makeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
+func makeSupervisorConf(processes []procdef.Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
 		Port:    rpcPort,
@@ -88,7 +111,7 @@ func makeSupervisorConf(processes []Process, procEnvs ...appdesc.Env) (*Supervis
 	}
 
 	for _, p := range processes {
-		conf.Processes = append(conf.Processes, ProcessConf{
+		conf.Processes = append(conf.Processes, procdef.ProcessConf{
 			Process:     p,
 			ProcLogFile: filepath.Join(conf.RootDir, "log", p.ProcType+".log"),
 		})
@@ -114,7 +137,7 @@ func refreshConf(conf *SupervisorConf) error {
 }
 
 // RefreshConf 重新生成配置文件
-func RefreshConf(processes []Process, procEnvs ...appdesc.Env) error {
+func RefreshConf(processes []procdef.Process, procEnvs ...appdesc.Env) error {
 	conf, err := makeSupervisorConf(processes, procEnvs...)
 	if err != nil {
 		return err
@@ -134,7 +157,7 @@ type SupervisorRPCProcessController struct {
 }
 
 // 创建 Supervisor RPC 类型的 ProcessController
-func newSupervisorRPCProcessController() (*SupervisorRPCProcessController, error) {
+func NewSupervisorRPCProcessController() (*SupervisorRPCProcessController, error) {
 	client, err := rpc.NewClient(rpcAddress)
 	if err != nil {
 		return nil, err
@@ -159,8 +182,8 @@ func (p *SupervisorRPCProcessController) Start(name string) error {
 	return p.client.StartProcess(name, true)
 }
 
-// Reload 更新和重启进程列表
-func (p *SupervisorRPCProcessController) Reload(processes []Process, procEnvs ...appdesc.Env) error {
+// Reload 批量更新和重启进程列表
+func (p *SupervisorRPCProcessController) Reload(processes []procdef.Process, procEnvs ...appdesc.Env) error {
 	if err := RefreshConf(processes, procEnvs...); err != nil {
 		return err
 	}

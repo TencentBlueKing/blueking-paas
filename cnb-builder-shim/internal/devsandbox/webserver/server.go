@@ -35,7 +35,7 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -264,7 +264,7 @@ func AppLogHandler() gin.HandlerFunc {
 // ProcessStatusHandler ...
 func ProcessStatusHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		processCtl, err := processesctl.NewProcessController()
+		processCtl, err := procctrl.NewProcessController()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("get status error: %s", err.Error())})
 			return
@@ -298,7 +298,7 @@ func ProcessStopHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processesctl.NewProcessController()
+		processCtl, err := procctrl.NewProcessController()
 		if err != nil {
 			fmt.Printf("Failed to stop process: %s\n", err)
 			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})
@@ -320,7 +320,7 @@ func ProcessStartHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		processName := c.Param("processName")
 
-		processCtl, err := processesctl.NewProcessController()
+		processCtl, err := procctrl.NewProcessController()
 		if err != nil {
 			fmt.Printf("Failed to start process: %s\n", err)
 			c.JSON(http.StatusBadRequest, gin.H{"message": "请先运行应用"})

@@ -16,50 +16,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package processesctl
+package procctrl
 
 import (
-	"fmt"
-	"github.com/pkg/errors"
-	"strings"
-
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/supervisor"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
-
-type Process struct {
-	ProcType    string
-	CommandPath string
-}
-
-// ProcessConf is a process config
-type ProcessConf struct {
-	Process
-	ProcLogFile string
-}
-
-// validateEnvironment validates the environment variables for supervisor conf.
-//
-// see detail environment conf in http://supervisord.org/configuration.html
-// char " and % in environment value will cause supervisord to fail
-func validateEnvironment(procEnvs []appdesc.Env) error {
-	invalidChars := `"%`
-	invalidEnvNames := []string{}
-	for _, env := range procEnvs {
-		if strings.ContainsAny(env.Value, invalidChars) {
-			invalidEnvNames = append(invalidEnvNames, env.Name)
-		}
-	}
-	if len(invalidEnvNames) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"environment variables: %s has invalid characters (%s)",
-		strings.Join(invalidEnvNames, ", "),
-		invalidChars,
-	)
-}
 
 // ProcessCtl 用于进程控制的接口
 type ProcessCtl interface {
@@ -69,25 +33,14 @@ type ProcessCtl interface {
 	Start(name string) error
 	// Stop 停止(不是删除)进程
 	Stop(name string) error
-	// Reload 更新和重启进程列表
-	Reload(processes []Process, procEnvs ...appdesc.Env) error
+	// Reload 批量更新和重启进程列表
+	Reload(processes []procdef.Process, procEnvs ...appdesc.Env) error
 	// StopAllProcesses 停止所有进程
 	StopAllProcesses() error
 }
 
-// ControllerType 定义控制器类型
-type ControllerType string
-
-const (
-	SupervisorRPC ControllerType = "SUPERVISOR_RPC"
-)
-
-// NewProcessController 根据类型返回不同的 ProcessCtl 实现
+// NewProcessController ...
 func NewProcessController() (ProcessCtl, error) {
-	switch controllerType {
-	case SupervisorRPC:
-		return newSupervisorRPCProcessController()
-	default:
-		return nil, errors.New("unknown controller type")
-	}
+	// 暂时只支持一种类型的进程控制，后续可以根据需求扩展
+	return supervisor.NewSupervisorRPCProcessController()
 }

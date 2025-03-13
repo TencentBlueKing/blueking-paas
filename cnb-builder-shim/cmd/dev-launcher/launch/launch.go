@@ -27,7 +27,8 @@ import (
 	"github.com/buildpacks/lifecycle/launch"
 	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/processesctl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -119,16 +120,16 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
-	supervisordProcesses := []processesctl.Process{}
+	procs := []procdef.Process{}
 	for _, proc := range processes {
-		supervisordProcesses = append(supervisordProcesses,
-			processesctl.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
+		procs = append(procs,
+			procdef.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
-	ctl, err := processesctl.NewProcessController()
+	ctl, err := procctrl.NewProcessController()
 	if err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
-	return ctl.Reload(supervisordProcesses, procEnvs...)
+	return ctl.Reload(procs, procEnvs...)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

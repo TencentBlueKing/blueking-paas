@@ -16,16 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package processesctl
+package procdef
 
-import (
-	"testing"
+// Process 进程描述
+type Process struct {
+	ProcType    string
+	CommandPath string
+}
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
-func TestFileSystemFetcher(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "processesctl Suite")
+// ProcessConf is a process config
+type ProcessConf struct {
+	Process
+	ProcLogFile string
 }

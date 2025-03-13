@@ -360,26 +360,24 @@ _faked_wl_apps = {}
 _faked_env_metadata = {}
 
 
-def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
-    obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
-
-    # Store params in global, so we can manually create the objects later.
-    _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
-    return obj
-
-
-def fake_update_metadata_by_env(env, metadata_part):
-    # Store params in global, so we can manually update the metadata later.
-    if env.id not in _faked_env_metadata:
-        _faked_env_metadata[env.id] = metadata_part
-    else:
-        _faked_env_metadata[env.id].update(metadata_part)
-
-
 def _mock_wl_services_in_creation():
     """Mock workloads related functions related with app creation, the calls being
     mocked will be stored and can be used for restoring data later.
     """
+
+    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
+        obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
+
+        # Store params in global, so we can manually create the objects later.
+        _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
+        return obj
+
+    def fake_update_metadata_by_env(env, metadata_part):
+        # Store params in global, so we can manually update the metadata later.
+        if env.id not in _faked_env_metadata:
+            _faked_env_metadata[env.id] = metadata_part
+        else:
+            _faked_env_metadata[env.id].update(metadata_part)
 
     mock_cluster_setup_elk = mock.Mock()
     mock_cluster_setup_elk.uuid = uuid.uuid4()
@@ -407,8 +405,6 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
 
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
-
-    :param bk_app: Application object.
     """
     from paas_wl.bk_app.applications.api import update_metadata_by_env
     from paas_wl.bk_app.applications.models import WlApp
@@ -437,10 +433,7 @@ def create_cnative_app(
     force_info: Optional[dict] = None,
     cluster_name: Optional[str] = None,
 ):
-    """Create a cloud-native application, for testing purpose only
-
-    :param owner_username: username of owner
-    """
+    """Create a cloud-native application, for testing purpose only"""
     if owner_username:
         user = auth.create_user(username=owner_username)
     else:
@@ -573,10 +566,7 @@ def create_cnative_app_model_resource(
     args: List[str] | None = None,
     target_port: int | None = None,
 ) -> Dict:
-    """Create a cloud-native AppModelResource object
-
-    :param module: The Module object current app model resource bound with
-    """
+    """Create a cloud-native AppModelResource object"""
     from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
 
     application = module.application

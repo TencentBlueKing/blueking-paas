@@ -39,7 +39,6 @@ from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.user import user_can_create_in_region
-from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import (
@@ -199,7 +198,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         responses={status.HTTP_201_CREATED: ApplicationCreateOutputSLZ()},
     )
     def create_third_party(self, request):
-        slz = slzs.ThirdPartyAppCreateInputSLZ(data=request.data)
+        slz = ThirdPartyAppCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         self._validate_create_region_application_perm(data["region"])

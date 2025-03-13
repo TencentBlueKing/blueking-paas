@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -120,10 +120,10 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
-	procs := []procdef.Process{}
+	procs := []base.Process{}
 	for _, proc := range processes {
 		procs = append(procs,
-			procdef.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
+			base.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
 	ctl, err := procctrl.NewProcessController()
 	if err != nil {

@@ -19,7 +19,7 @@
 package procctrl
 
 import (
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/supervisor"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
@@ -34,7 +34,7 @@ type ProcessCtl interface {
 	// Stop 停止(不是删除)进程
 	Stop(name string) error
 	// Reload 批量更新和重启进程列表
-	Reload(processes []procdef.Process, procEnvs ...appdesc.Env) error
+	Reload(processes []base.Process, procEnvs ...appdesc.Env) error
 	// StopAllProcesses 停止所有进程
 	StopAllProcesses() error
 }

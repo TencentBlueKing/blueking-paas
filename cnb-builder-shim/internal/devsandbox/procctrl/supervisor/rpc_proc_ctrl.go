@@ -26,7 +26,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/procdef"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
@@ -65,7 +65,7 @@ port=127.0.0.1:{{ .Port }}
 type SupervisorConf struct {
 	RootDir     string
 	Port        string
-	Processes   []procdef.ProcessConf
+	Processes   []base.ProcessConf
 	Environment string
 }
 
@@ -93,7 +93,7 @@ func validateEnvironment(procEnvs []appdesc.Env) error {
 }
 
 // returns a new SupervisorConf
-func makeSupervisorConf(processes []procdef.Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
+func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
 		RootDir: supervisorDir,
 		Port:    rpcPort,
@@ -111,7 +111,7 @@ func makeSupervisorConf(processes []procdef.Process, procEnvs ...appdesc.Env) (*
 	}
 
 	for _, p := range processes {
-		conf.Processes = append(conf.Processes, procdef.ProcessConf{
+		conf.Processes = append(conf.Processes, base.ProcessConf{
 			Process:     p,
 			ProcLogFile: filepath.Join(conf.RootDir, "log", p.ProcType+".log"),
 		})
@@ -137,7 +137,7 @@ func refreshConf(conf *SupervisorConf) error {
 }
 
 // RefreshConf 重新生成配置文件
-func RefreshConf(processes []procdef.Process, procEnvs ...appdesc.Env) error {
+func RefreshConf(processes []base.Process, procEnvs ...appdesc.Env) error {
 	conf, err := makeSupervisorConf(processes, procEnvs...)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (p *SupervisorRPCProcessController) Start(name string) error {
 }
 
 // Reload 批量更新和重启进程列表
-func (p *SupervisorRPCProcessController) Reload(processes []procdef.Process, procEnvs ...appdesc.Env) error {
+func (p *SupervisorRPCProcessController) Reload(processes []base.Process, procEnvs ...appdesc.Env) error {
 	if err := RefreshConf(processes, procEnvs...); err != nil {
 		return err
 	}

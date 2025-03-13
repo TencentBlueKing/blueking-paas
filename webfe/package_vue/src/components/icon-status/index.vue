@@ -51,7 +51,7 @@ export default {
 .icon-status-container {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
 
   .icon-content {
     --icon-size: 14px;
@@ -59,7 +59,7 @@ export default {
 
     font-size: var(--icon-size);
     color: var(--icon-color);
-    transition: opacity 0.2s ease;
+    transform: translateY(1px);
 
     &:hover {
       opacity: 0.8;

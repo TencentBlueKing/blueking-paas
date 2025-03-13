@@ -10,19 +10,29 @@
           {{ $t('必须安装这些组件后，集群才能部署蓝鲸应用') }}
         </span>
       </div>
-      <ComponentManagement
-        v-for="component in requiredComponents"
-        :key="component.name"
-        :component="component"
-        :details="componentDetails[component.name]"
-        :loading="componentLoadingStates[component.name]"
-        :cluster-source="clusterDetails?.cluster_source"
-        :cluster-id="clusterId"
-        @show-detail="handleShowDetail"
-        @show-values="handleShowValues"
-        @show-edit="handleShowEdit"
-        @polling="handlePollingDetail"
-      />
+      <bk-exception
+        v-if="!requiredComponents.length"
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        {{ $t('暂无数据') }}
+      </bk-exception>
+      <template v-else>
+        <ComponentManagement
+          v-for="component in requiredComponents"
+          :key="component.name"
+          :component="component"
+          :details="componentDetails[component.name]"
+          :loading="componentLoadingStates[component.name]"
+          :cluster-source="clusterDetails?.cluster_source"
+          :cluster-id="clusterId"
+          @show-detail="handleShowDetail"
+          @show-values="handleShowValues"
+          @show-edit="handleShowEdit"
+          @polling="handlePollingDetail"
+        />
+      </template>
     </section>
 
     <section
@@ -39,20 +49,30 @@
             <i class="paasng-icon paasng-right-shape"></i>
             <span>{{ $t('可选组件') }}</span>
           </div>
-          <ComponentManagement
-            slot="content"
-            v-for="component in optionalComponents"
-            :key="component.name"
-            :component="component"
-            :details="componentDetails[component.name]"
-            :loading="componentLoadingStates[component.name]"
-            :cluster-source="clusterDetails?.cluster_source"
-            :cluster-id="clusterId"
-            @show-detail="handleShowDetail"
-            @show-values="handleShowValues"
-            @show-edit="handleShowEdit"
-            @polling="handlePollingDetail"
-          />
+          <bk-exception
+            v-if="!optionalComponents.length"
+            class="exception-wrap-item exception-part"
+            type="empty"
+            scene="part"
+          >
+            {{ $t('暂无数据') }}
+          </bk-exception>
+          <template v-else>
+            <ComponentManagement
+              slot="content"
+              v-for="component in optionalComponents"
+              :key="component.name"
+              :component="component"
+              :details="componentDetails[component.name]"
+              :loading="componentLoadingStates[component.name]"
+              :cluster-source="clusterDetails?.cluster_source"
+              :cluster-id="clusterId"
+              @show-detail="handleShowDetail"
+              @show-values="handleShowValues"
+              @show-edit="handleShowEdit"
+              @polling="handlePollingDetail"
+            />
+          </template>
         </bk-collapse-item>
       </bk-collapse>
     </section>

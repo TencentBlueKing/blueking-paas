@@ -88,6 +88,7 @@ export const bcsOptions = [
         type: 'select',
         property: 'bcs_project_id',
         required: true,
+        searchable: true,
         rules: [...requiredRule],
         source: {
             // 通过接口获取数据
@@ -101,6 +102,7 @@ export const bcsOptions = [
         type: 'select',
         property: 'bcs_cluster_id',
         required: true,
+        searchable: true,
         tips: '为方便接入和管理，请先将集群导入至 BCS',
         rules: [...requiredRule],
         source: {

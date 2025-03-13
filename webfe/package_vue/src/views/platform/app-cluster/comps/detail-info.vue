@@ -1,5 +1,13 @@
 <template>
   <div class="cluster-detail-info">
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="view-title">{{ $t('基本信息') }}</div>
     <DetailsRow
       v-for="(val, key) in baseInfoKeys"
@@ -24,7 +32,7 @@
           <div
             v-else
             v-for="item in data[key]"
-            key="item"
+            :key="item"
           >
             {{ item }}
           </div>
@@ -56,7 +64,7 @@
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
     </DetailsRow>
-    <div class="view-title">{{ $t('可用租户') }}</div>
+    <div class="view-title">{{ $t('租户信息') }}</div>
     <DetailsRow
       v-for="(val, key) in tenantKeys"
       :key="key"
@@ -118,11 +126,27 @@ export default {
       },
     };
   },
+  methods: {
+    handleEdit() {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step: 1,
+          alone: true,
+        },
+      });
+    },
+  },
 };
 </script>
 
 <style lang="scss" scoped>
 .cluster-detail-info {
+  position: relative;
   .dot-wrapper {
     display: flex;
     align-items: center;
@@ -144,7 +168,7 @@ export default {
   color: #313238;
   line-height: 22px;
   margin-top: 24px;
-  &:first-child {
+  &:first-of-type {
     margin-top: 0;
   }
 }

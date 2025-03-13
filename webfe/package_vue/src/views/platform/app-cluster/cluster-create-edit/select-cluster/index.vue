@@ -23,8 +23,8 @@
           :key="item.label"
           :error-display-type="'normal'"
         >
-          <template v-if="queryClusterId && disabledProperty.includes(item.property)">
-            <!-- 更新集群信息模型下，特定字段为禁用状态 -->
+          <template v-if="!!queryClusterId && specialPropertys.includes(item.property)">
+            <!-- 更新集群信息，特定字段为禁用状态 -->
             <ConfigInput
               type="input"
               :disabled="true"
@@ -36,7 +36,7 @@
               v-if="['textarea', 'input', 'password'].includes(item.type)"
               :type="item.type"
               :maxlength="item.maxlength"
-              :disabled="item.disabled"
+              :disabled="item.disabled || (!!queryClusterId && editDisabledPropertys.includes(item.property))"
               v-model="infoFormData[item.property]"
               @blur="inputBlur($event, item.property, 'infoFormData')"
               @focus="inputFocus($event, item.property, 'infoFormData')"
@@ -68,6 +68,7 @@
             v-if="item.tips"
             slot="tip"
             class="item-tips"
+            v-bk-overflow-tips
           >
             {{ $t(item.tips) }}
             <bk-button
@@ -102,7 +103,7 @@
             v-if="['textarea', 'input', 'password'].includes(item.type)"
             :type="item.type"
             :maxlength="item.maxlength"
-            :disabled="item.disabled"
+            :disabled="item.disabled || (!!queryClusterId && editDisabledPropertys.includes(item.property))"
             v-model="infoFormData[item.property]"
             @blur="inputBlur($event, item.property, 'infoFormData')"
             @focus="inputFocus($event, item.property, 'infoFormData')"
@@ -135,6 +136,7 @@
             v-if="item.tips"
             slot="tip"
             class="item-tips"
+            v-bk-overflow-tips
           >
             {{ $t(item.tips) }}
             <bk-button
@@ -303,7 +305,9 @@ export default {
       },
       curProjectData: {},
       urlTmpl: '',
-      disabledProperty: ['bcs_cluster_id', 'bcs_project_id'],
+      // 编辑态特殊处理
+      specialPropertys: ['bcs_cluster_id', 'bcs_project_id'],
+      editDisabledPropertys: ['name'],
     };
   },
   computed: {
@@ -547,9 +551,14 @@ export default {
     }
   }
   .item-tips {
+    max-width: 750px;
+    width: max-content;
     font-size: 12px;
     color: #979ba5;
     line-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     .tip-btn {
       padding: 0;
     }

@@ -1,5 +1,13 @@
 <template>
   <div class="detail-feature-container">
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="detail-title">{{ $t('集群特性') }}</div>
     <div class="header">
       <div class="label">{{ $t('集群特性') }}</div>
@@ -111,19 +119,33 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    handleEdit() {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step: 4,
+          alone: true,
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .detail-feature-container {
+  position: relative;
   .detail-title {
     font-weight: 700;
     font-size: 14px;
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
     }
   }
@@ -174,6 +196,7 @@ export default {
     margin-right: 4px;
   }
   .toleration {
+    margin-top: 5px;
     .row {
       display: flex;
       align-items: center;

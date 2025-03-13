@@ -205,7 +205,7 @@ export default {
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
     }
   }

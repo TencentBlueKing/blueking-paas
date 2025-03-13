@@ -100,6 +100,7 @@
               +{{ row.featureTagIndex < 0 ? row.feature.length : row.feature.length - row.featureTagIndex }}
             </span>
           </div>
+          <span v-else>--</span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -338,8 +339,13 @@ export default {
         this.resizeObserver = new ResizeObserver((entries) => {
           this.calculateVisibleTags();
         });
-        this.resizeObserver.observe(document.querySelector('.tenant-column'));
-        this.resizeObserver.observe(document.querySelector('.feature-column'));
+        const tenantColumn = document.querySelector('.tenant-column');
+        const featureColumn = document.querySelector('.feature-column');
+        if (tenantColumn === null || featureColumn === null) {
+          return;
+        }
+        this.resizeObserver.observe(tenantColumn);
+        this.resizeObserver.observe(featureColumn);
       });
     },
     // 计算当前td可展示的tags
@@ -348,6 +354,9 @@ export default {
         const tenantParentDom = document.querySelector('.available-tenants-tags');
         const featureParentDom = document.querySelector('.feature-tags');
         const pageDom = document.querySelector('.tenant-viewpoint-container');
+        if (tenantParentDom === null || featureParentDom === null || pageDom === null) {
+          return;
+        }
         const { width: tenantParentWidth } = tenantParentDom.getBoundingClientRect();
         const { width: featureParentWidth } = featureParentDom.getBoundingClientRect();
 

@@ -3,6 +3,15 @@
     class="detail-components-container"
     v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
   >
+    <!-- 安装信息编辑 -->
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit(2)"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="view-title">{{ $t('安装信息') }}</div>
     <DetailsRow
       v-for="(val, key) in installInfoKeys"
@@ -40,7 +49,18 @@
         </span>
       </template>
     </DetailsRow>
-    <div class="view-title">{{ $t('组件详情') }}</div>
+    <div class="view-title comps-details">
+      {{ $t('组件详情') }}
+      <!-- 组件安装编辑 -->
+      <bk-button
+        v-if="componentList.length"
+        theme="primary"
+        :outline="true"
+        @click="handleEdit(3)"
+      >
+        {{ $t('编辑') }}
+      </bk-button>
+    </div>
     <bk-exception
       v-if="!componentList.length"
       class="exception-wrap-item exception-part"
@@ -55,6 +75,7 @@
       type="card"
       ext-cls="components-tab-cls"
       @tab-change="handleTabChange"
+      :key="tabKey"
     >
       <bk-tab-panel
         v-for="(panel, index) in componentList"
@@ -69,6 +90,10 @@
           <i
             class="paasng-icon paasng-check-circle-shape"
             v-if="panel.status === 'installed'"
+          ></i>
+          <i
+            class="paasng-icon paasng-close-circle-shape"
+            v-else-if="panel.status === 'installation_failed'"
           ></i>
           <i
             class="paasng-icon paasng-unfinished"
@@ -123,6 +148,7 @@ export default {
         subdomain: this.$t('子域名'),
       },
       firstLoad: false,
+      tabKey: 0,
     };
   },
   created() {
@@ -173,6 +199,7 @@ export default {
         if (this.firstLoad) {
           this.handleTabChange(this.componentList[0]?.name);
         }
+        this.tabKey += 1;
       } catch (e) {
         this.reset();
         this.catchErrorHandler(e);
@@ -205,12 +232,26 @@ export default {
         this.cardLoading = false;
       }
     },
+    handleEdit(step) {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step,
+          alone: true,
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .detail-components-container {
+  position: relative;
   .tab-panel-wrapper {
     i {
       font-size: 14px;
@@ -222,6 +263,9 @@ export default {
     .paasng-unfinished {
       color: #f59500;
     }
+    .paasng-close-circle-shape {
+      color: #ea3636;
+    }
   }
   .view-title {
     font-weight: 700;
@@ -229,8 +273,18 @@ export default {
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
+    }
+    &.comps-details {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 24px;
+      border-top: 1px solid #dcdee5;
+    }
+    .bk-primary {
+      font-weight: 400;
     }
   }
   .paasng-info-line {

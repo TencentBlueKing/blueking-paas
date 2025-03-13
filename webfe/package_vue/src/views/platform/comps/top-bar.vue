@@ -66,6 +66,10 @@ export default {
     // 返回上一页
     goBack() {
       const { backRoute } = this.$route.meta;
+      // 详情页单独编辑
+      if (this.$route.query?.alone) {
+        backRoute.query.type = 'detail';
+      }
       if (backRoute) {
         this.$router.push(backRoute);
         return;

@@ -1,7 +1,8 @@
 <template>
   <div class="cluster-create-edit">
-    <!-- 步骤条 -->
+    <!-- 步骤条/详情模式单步编辑不展示步骤条 -->
     <ProgressBar
+      v-if="!isDetailSingleStepEdit"
       :cur-step="curStep"
       :steps="steps"
     />
@@ -29,7 +30,7 @@
     />
     <section class="submit-btn">
       <bk-button
-        v-if="curStep > 1"
+        v-if="curStep > 1 && !isDetailSingleStepEdit"
         :theme="'default'"
         @click="setStep(curStep - 1)"
       >
@@ -44,7 +45,12 @@
           :loading="nextBtnLodaing"
           @click="handleSubmit"
         >
-          {{ curStep === 1 ? $t('保存并下一步') : curStep === steps.length ? $t('保存') : $t('下一步') }}
+          <!-- 详情页单独编辑 -->
+          <template v-if="isDetailSingleStepEdit">{{ $t('保存') }}</template>
+          <!-- 按步骤新建/编辑 -->
+          <template v-else>
+            {{ curStep === 1 ? $t('保存并下一步') : curStep === steps.length ? $t('保存') : $t('下一步') }}
+          </template>
         </bk-button>
       </span>
       <bk-button
@@ -103,15 +109,15 @@ export default {
       }
       return '';
     },
-    // 编辑
-    isEdit() {
-      return this.$route.path.endsWith('/edit');
-    },
     queryClusterId() {
       return this.$route.query?.id || '';
     },
     queryStep() {
       return this.$route.query?.step || 1;
+    },
+    // 是否为详情页单独编辑
+    isDetailSingleStepEdit() {
+      return this.$route.query?.alone || false;
     },
   },
   created() {
@@ -129,6 +135,11 @@ export default {
         name: 'platformAppCluster',
         query: {
           active: 'list',
+          ...(this.isDetailSingleStepEdit ? { type: 'detail' } : {}),
+        },
+        params: {
+          // 返回详情需要的集群id
+          ...(this.isDetailSingleStepEdit ? { clusterId: this.queryClusterId } : {}),
         },
       });
     },
@@ -147,7 +158,7 @@ export default {
       switch (this.curStep) {
         case 1:
           // 选择集群
-          this.validate('selectCluster', this.isEdit ? this.updateCluster : this.createCluster);
+          this.validate('selectCluster', this.queryClusterId ? this.updateCluster : this.createCluster);
           break;
         case 2:
           // 组件配置
@@ -177,7 +188,11 @@ export default {
               theme: 'success',
               message: this.$t('更新组件配置成功'),
             });
-            this.setStep(3);
+            if (!this.isDetailSingleStepEdit) {
+              this.setStep(3);
+            } else {
+              this.back();
+            }
           });
         } else if (refName === 'clusterFeature') {
           // 更新集群特性
@@ -203,6 +218,7 @@ export default {
         await this.$store.dispatch('tenant/createCluster', {
           data,
         });
+        // 集群新建完成，添加id参数
         this.$router.push({ query: { id: data.name } });
         this.$paasMessage({
           theme: 'success',
@@ -231,7 +247,11 @@ export default {
           theme: 'success',
           message: this.$t('集群更新成功'),
         });
-        this.setStep(2);
+        if (!this.isDetailSingleStepEdit) {
+          this.setStep(2);
+        } else {
+          this.back();
+        }
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

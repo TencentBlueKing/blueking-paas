@@ -23,7 +23,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.handlers import sync_default_entrances_for_cnative_module_switching
 from paas_wl.workloads.networking.entrance.handlers import sync_default_entrances_for_module_switching
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @mock.patch("paas_wl.workloads.networking.entrance.handlers.refresh_module_subpaths")

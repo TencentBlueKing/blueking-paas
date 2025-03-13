@@ -398,7 +398,8 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
             try:
                 ClusterFeatureFlag(k)
             except ValueError:
-                raise ValidationError(_("特性标志 {} 不合法").format(k))
+                # 不合法的特性标志直接忽略（历史遗留的废弃数据）
+                feature_flags.pop(k)
 
             if not isinstance(v, bool):
                 raise ValidationError(_("特性标志的值必须为布尔值"))

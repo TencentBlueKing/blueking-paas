@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.db import migrations
-from paasng.platform.applications.constants import ApplicationType
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 
 def forwards(apps, schema_editor):
     """Migrate all app logo data from Product to Application model"""
-    Product = apps.get_model('market', 'Product')
+    Product = apps.get_model("market", "Product")
     for product in Product.objects.all():
         if product.logo and product.logo.name:
             application = product.application
             application.logo = product.logo.name
-            application.save(update_fields=['logo'])
+            application.save(update_fields=["logo"])
 
 
 class Migration(migrations.Migration):
@@ -38,6 +38,6 @@ class Migration(migrations.Migration):
     ]
 
     dependencies = [
-        ('applications', '0006_application_logo'),
-        ('market', '0001_initial'),
+        ("applications", "0006_application_logo"),
+        ("market", "0001_initial"),
     ]

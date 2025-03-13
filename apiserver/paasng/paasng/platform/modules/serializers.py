@@ -261,12 +261,18 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = serializers.CharField(required=False, default="", allow_blank=True)
 
-    def validate_source_init_template(self, tmpl_name):
+    def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:
             return tmpl_name
 
-        if not Template.objects.filter(name=tmpl_name).exists():
+        filters = {"name": tmpl_name}
+        # 插件应用还需要额外检查模板是否为插件专用的
+        if self.parent.initial_data.get("is_plugin_app"):
+            filters["type"] = TemplateType.PLUGIN
+
+        if not Template.objects.filter(**filters).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
+
         return tmpl_name
 
 

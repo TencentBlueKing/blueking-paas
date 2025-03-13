@@ -54,10 +54,7 @@ class Command(BaseCommand):
         buildpacks = self.get_buildpacks(buildpack_ids, buildpack_names)
         binder = SlugbuilderBinder(slugbuilder)
 
-        for buildpack in [bp for bp in buildpacks if bp.region == slugbuilder.region]:
-            print(
-                f"binding buildpack {buildpack.name}[{buildpack.pk}] to slugbuilder "
-                f"{slugbuilder.name}[{slugbuilder.pk}]"
-            )
+        for bp in buildpacks:
+            print(f"binding buildpack {bp.name}[{bp.pk}] to slugbuilder " f"{slugbuilder.name}[{slugbuilder.pk}]")
             if not dry_run:
-                binder.bind_buildpack(buildpack)
+                binder.bind_buildpack(bp)

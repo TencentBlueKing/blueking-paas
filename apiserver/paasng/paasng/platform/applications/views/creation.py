@@ -253,10 +253,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         params = slz.validated_data
         self._validate_create_region_application_perm(params["region"])
 
-        # 根据配置判断新建的 lesscode 应用是否为云原生应用
-        if settings.LESSCODE_APP_USE_CLOUD_NATIVE_TYPE:
-            params["type"] = ApplicationType.CLOUD_NATIVE.value
-
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
         # LessCode 应用不支持指定集群，只能使用默认集群

@@ -33,7 +33,9 @@ from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParams
 class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
     """普通应用创建应用表单，目前产品上已经没有入口，但是暂时先保留 API"""
 
-    type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), default=ApplicationType.DEFAULT.value)
+    type = serializers.ChoiceField(
+        choices=ApplicationType.get_django_choices(), default=ApplicationType.CLOUD_NATIVE.value
+    )
     engine_enabled = serializers.BooleanField(default=True, required=False)
     engine_params = ModuleSourceConfigSLZ(required=False)
     advanced_options = AdvancedCreationParamsMixin(required=False)

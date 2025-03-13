@@ -713,15 +713,6 @@ IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_B
 # 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
-# 新建的 lesscode 应用是否为云原生应用
-LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
-
-# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用
-SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
-
-# 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的
-PLUGIN_APP_USE_CLOUD_NATIVE_TYPE = settings.get("PLUGIN_APP_USE_CLOUD_NATIVE_TYPE", True)
-
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
 BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
     "BKPAAS_K8S_CLUSTER_COMPONENTS",

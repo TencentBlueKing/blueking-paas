@@ -172,10 +172,6 @@
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
 ## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
 # MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
-## 新建的 lesscode 应用是否为云原生应用
-# LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
-## 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
-# SOURCE_PACKAGE_APP_CLOUD_NATIVE: true
 
 ## 开发者中心使用的 k8s 集群组件（helm chart 名称）
 # BKPAAS_K8S_CLUSTER_COMPONENTS:

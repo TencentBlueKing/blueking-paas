@@ -46,8 +46,8 @@ from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.bk_plugins.bk_plugins.models import BkPluginProfile
 from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.core.core.storages.utils import SADBManager
-from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import UserProfile
+from paasng.infras.sysapi_client.constants import ClientRole
+from paasng.infras.sysapi_client.models import ClientPrivateToken, SysAPIClient
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -533,37 +533,29 @@ def api_client(request, bk_user):
 
 
 @pytest.fixture()
-def sys_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with system API permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(
-        user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_BASIC_MAINTAINER.value}
-    )
-    return client
+def sys_api_client():
+    """Return an authenticated client which has a system API client with BASIC_MAINTAINER permissions"""
+    return _build_api_client(role=ClientRole.BASIC_MAINTAINER)
 
 
 @pytest.fixture()
-def sys_light_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with Light App permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(
-        user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_LIGHT_APP_MAINTAINER.value}
-    )
-    return client
+def sys_light_api_client():
+    """Return an authenticated client which has a system API client with LIGHT_APP_MAINTAINER permissions"""
+    return _build_api_client(role=ClientRole.LIGHT_APP_MAINTAINER)
 
 
 @pytest.fixture()
-def sys_lesscode_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with Lesscode permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_LESSCODE.value})
-    return client
+def sys_lesscode_api_client():
+    """Return an authenticated client which has a system API client with LESSCODE permissions"""
+    return _build_api_client(role=ClientRole.LESSCODE)
+
+
+def _build_api_client(role: ClientRole):
+    """Helper function to build an API client with the given role"""
+    client = SysAPIClient.objects.create(name="test_client", role=role)
+    token = ClientPrivateToken.objects.create_token(client=client, expires_in=None)
+    # Use the private token to authenticate the client
+    return APIClient(headers={"Authorization": f"Bearer {token.token}"})
 
 
 @pytest.fixture()

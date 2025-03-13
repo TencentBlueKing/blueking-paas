@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-04 19:57+0800\n"
+"POT-Creation-Date: 2025-03-12 11:50+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -332,11 +332,15 @@ msgstr "BCS Cluster ID"
 msgid "蓝鲸业务 ID"
 msgstr "Blueking Business ID"
 
-#: paas_wl/infras/cluster/constants.py:86
+#: paas_wl/infras/cluster/constants.py:82
+msgid "跳过内置镜像凭证注入"
+msgstr ""
+
+#: paas_wl/infras/cluster/constants.py:89
 msgid "统一分配"
 msgstr "Uniform allocation"
 
-#: paas_wl/infras/cluster/constants.py:87
+#: paas_wl/infras/cluster/constants.py:90
 msgid "按规则分配"
 msgstr "Allocate according to rules"
 
@@ -461,8 +465,8 @@ msgid "内存使用量"
 msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
-#: paasng/platform/applications/views/creation.py:441
-#: paasng/platform/modules/views.py:337
+#: paasng/platform/applications/views/creation.py:158
+#: paasng/platform/modules/views.py:336
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
 
@@ -607,7 +611,7 @@ msgstr "You can only view up to the first {MAX_RESULT_WINDOW} logs"
 msgid "日志采集路径必须是绝对路径"
 msgstr "Log collection path must be an absolute path"
 
-#: paasng/accessories/log/shim/setup_bklog.py:228
+#: paasng/accessories/log/shim/setup_bklog.py:230
 #: paasng/accessories/log/shim/setup_elk.py:163
 msgid "日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"
 msgstr ""
@@ -815,7 +819,7 @@ msgid "已找到解决方案"
 msgstr "Solution found"
 
 #: paasng/bk_plugins/bk_plugins/pluginscenter_views.py:230
-#: paasng/platform/engine/views/deploy.py:214
+#: paasng/platform/engine/views/deploy.py:219
 msgid "部署请求异常，请稍候再试"
 msgstr "Deployment request exception, please try again later"
 
@@ -2299,7 +2303,7 @@ msgid "BCS 集群必须提供且仅提供一个 API Server"
 msgstr "BCS clusters must provide and only provide one API Server."
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:290
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:419
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:427
 msgid "集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"
 msgstr ""
 "When the cluster authentication method is set to certificate, CA "
@@ -2312,7 +2316,7 @@ msgstr ""
 "provided."
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:297
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:425
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:433
 msgid "集群所属租户 ID {} 不在可用租户 ID 列表中"
 msgstr ""
 "The tenant ID {} of the cluster is not in the list of available tenant IDs."
@@ -2321,86 +2325,78 @@ msgstr ""
 msgid "集群名称 {} 已被使用"
 msgstr "The cluster name {} is already in use."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:346
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:348
 msgid "运算符为 Equal 时，值（value）必须提供"
 msgstr "When the operator is Equal, a value must be provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:348
-msgid "运算符不为 Equal 时，值（value）需为空"
-msgstr "When the operator is not Equal, the value must be empty."
-
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:373
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:380
 msgid "集群名称不可修改"
 msgstr "The cluster name cannot be modified."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:382
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:389
 msgid "当前集群已被租户 {} 分配，无法变更可用租户"
 msgstr ""
 "The current cluster has already been assigned to tenant {}, and the "
 "available tenant cannot be changed."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:388
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:395
 msgid "特性标志必须为字典"
 msgstr "Feature flags must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:394
-msgid "特性标志 {} 不合法"
-msgstr "The feature flag {} is invalid."
-
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:397
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:405
 msgid "特性标志的值必须为布尔值"
 msgstr "The value of the feature flag must be a boolean."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:403
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:411
 msgid "节点选择器必须为字典"
 msgstr "Node selectors must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:407
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:415
 msgid "节点选择器 key 必须为字符串"
 msgstr "The key of the node selector must be a string."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:409
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:417
 msgid "节点选择器 value 必须为字符串"
 msgstr "The value of the node selector must be a string."
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:102
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:108
 msgid "集群名 {} 不存在或不可用"
 msgstr "The cluster name {} does not exist or is unavailable."
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:119
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:164
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:125
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:170
 msgid "需要配置统一分配策略"
 msgstr "A unified allocation policy needs to be configured."
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:127
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:172
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:133
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:178
 msgid "需要配置分配规则"
 msgstr "Allocation rules need to be configured."
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:130
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:175
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:136
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:181
 msgid "至少配置两条分配规则"
 msgstr "At least configure two allocation rules"
 
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:133
-#: paasng/plat_mgt/infras/clusters/serializers/policies.py:178
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:139
+#: paasng/plat_mgt/infras/clusters/serializers/policies.py:184
 msgid "最后一条分配规则必须是 else 条件"
 msgstr "The last assignment rule must be an else condition"
 
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:126
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:208
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:139
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:222
 msgid "集群无法访问，请检查配置"
 msgstr "Cluster cannot be accessed, please check the configuration"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:131
+#: paasng/plat_mgt/infras/clusters/views/components.py:132
 msgid "非 BCS 集群不支持对比组件版本"
 msgstr "Non-BCS clusters do not support comparing component versions"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:166
+#: paasng/plat_mgt/infras/clusters/views/components.py:167
 msgid "非 BCS 集群需要手动更新组件"
 msgstr "Non-BCS clusters require manual component updates"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:198
+#: paasng/plat_mgt/infras/clusters/views/components.py:199
 msgid "配置异常，请联系管理员处理"
 msgstr "Configuration exception, please contact the administrator"
 
@@ -2424,36 +2420,54 @@ msgstr "APP Name"
 msgid "S-Mart 不可关闭应用描述文件"
 msgstr "S-Mart cannot close the APP description file"
 
-#: paasng/platform/applications/serializers/app.py:60
-msgid "应用引擎参数未提供"
-msgstr "APP engine parameters not provided"
-
-#: paasng/platform/applications/serializers/app.py:66
-msgid "已开启引擎，类型不能为 \"engineless_app\""
-msgstr "Engine enabled, type cannot be \"engineless_app"
-
-#: paasng/platform/applications/serializers/app.py:98
-msgid "该接口只支持创建外链应用"
-msgstr ""
-"This interface only supports the creation of external link applications."
-
-#: paasng/platform/applications/serializers/app.py:140
+#: paasng/platform/applications/serializers/app.py:84
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 
-#: paasng/platform/applications/serializers/app.py:301
+#: paasng/platform/applications/serializers/app.py:158
+msgid "排序字段不合法"
+msgstr "Invalid sort fields"
+
+#: paasng/platform/applications/serializers/app.py:245
 #, python-format
 msgid "无效的选项: %s"
 msgstr "Invalid option: %s"
 
-#: paasng/platform/applications/serializers/app.py:336
+#: paasng/platform/applications/serializers/app.py:280
 #, python-format
 msgid "无效的分类选项: %s"
 msgstr "Invalid classification option: %s"
 
-#: paasng/platform/applications/serializers/cnative.py:35
+#: paasng/platform/applications/serializers/app.py:370
+msgid "已经标记该应用"
+msgstr "Application marked"
+
+#: paasng/platform/applications/serializers/creation.py:51
+msgid "应用引擎参数未提供"
+msgstr "APP engine parameters not provided"
+
+#: paasng/platform/applications/serializers/creation.py:57
+msgid "已开启引擎，类型不能为 \"engineless_app\""
+msgstr "Engine enabled, type cannot be \"engineless_app"
+
+#: paasng/platform/applications/serializers/creation.py:66
+#: paasng/platform/applications/serializers/creation.py:114
+msgid "你无法使用高级创建选项"
+msgstr "You cannot use the advanced creation option"
+
+#: paasng/platform/applications/serializers/creation.py:72
+#: paasng/platform/applications/serializers/creation.py:120
+msgid "当前版本下无法创建蓝鲸插件应用"
+msgstr "The bk-plugin APP cannot be created under the current version"
+
+#: paasng/platform/applications/serializers/creation.py:80
 msgid "源码/镜像配置"
 msgstr "Source Code/Image Configuration"
+
+#: paasng/platform/applications/serializers/creation.py:154
+msgid "该接口只支持创建外链应用"
+msgstr ""
+"This interface only supports the creation of external link applications."
 
 #: paasng/platform/applications/serializers/fields.py:40
 #: paasng/platform/applications/serializers/fields.py:41
@@ -2481,10 +2495,9 @@ msgstr ""
 msgid "%s 不是合法选项"
 msgstr "%s is not a legal option"
 
-#: paasng/platform/applications/serializers/mixins.py:55
-#, python-brace-format
-msgid "集群名称错误，无法找到名为 {value} 的集群"
-msgstr "Cluster name error, cluster named {value} could not be found"
+#: paasng/platform/applications/serializers/mixins.py:65
+msgid "集群名称错误，无法找到名为 {name} 的集群"
+msgstr "Cluster name error, cluster named {name} could not be found"
 
 #: paasng/platform/applications/serializers/validators.py:71
 msgid "{} 为 {} 的应用已存在"
@@ -2507,30 +2520,15 @@ msgstr "request header does not contain the X-Bk-Tenant-Id field"
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views/creation.py:94
-msgid "code 为 {} 或 name 为 {} 的应用已存在"
-msgstr "The APP which code is {} or name is {} already exists"
+#: paasng/platform/applications/views/creation.py:314
+msgid "无法在所指定的 region 中创建应用"
+msgstr "Cannot create an application in the specified region"
 
-#: paasng/platform/applications/views/creation.py:121
-#: paasng/platform/applications/views/creation.py:225
-msgid "你无法使用高级创建选项"
-msgstr "You cannot use the advanced creation option"
-
-#: paasng/platform/applications/views/creation.py:130
-#: paasng/platform/applications/views/creation.py:234
-msgid "当前版本下无法创建蓝鲸插件应用"
-msgstr "The bk-plugin APP cannot be created under the current version"
-
-#: paasng/platform/applications/views/creation.py:344
-msgid "你无法在所指定的 region 中创建应用"
-msgstr "You cannot create an application in the specified region"
-
-#: paasng/platform/applications/views/creation.py:362
-#, python-format
-msgid "集群未配置默认的根域名, 请检查 region=%s 下的集群配置是否合理."
+#: paasng/platform/applications/views/creation.py:336
+msgid "集群未配置默认的根域名, 请检查集群配置是否合理."
 msgstr ""
 "The cluster is not configured with a default root domain. Please check if "
-"the cluster configuration under region=%s is correct."
+"the cluster configuration is correct."
 
 #: paasng/platform/bkapp_model/serializers/serializers.py:143
 msgid "至多设置一个探活配置"
@@ -2553,19 +2551,19 @@ msgstr ""
 msgid "BkApp 配置信息"
 msgstr "BkApp config info"
 
-#: paasng/platform/declarative/application/controller.py:85
+#: paasng/platform/declarative/application/controller.py:92
 msgid "用户没有权限在 {} 下创建应用"
 msgstr "User does not have permission to create APP under {}"
 
-#: paasng/platform/declarative/application/controller.py:142
+#: paasng/platform/declarative/application/controller.py:153
 msgid "你没有权限操作当前应用"
 msgstr "You do not have permission to operate the current APP"
 
-#: paasng/platform/declarative/application/controller.py:199
+#: paasng/platform/declarative/application/controller.py:207
 msgid "未定义主模块, 请检查 app_desc.yaml."
 msgstr "default module not defined, please check app_desc.yaml."
 
-#: paasng/platform/declarative/application/controller.py:216
+#: paasng/platform/declarative/application/controller.py:224
 #, python-brace-format
 msgid ""
 "目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导"
@@ -2595,17 +2593,17 @@ msgstr "An APP must have a default module"
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
 
-#: paasng/platform/declarative/handlers.py:188
-#: paasng/platform/declarative/handlers.py:190
+#: paasng/platform/declarative/handlers.py:204
+#: paasng/platform/declarative/handlers.py:206
 msgid "内容不能为空"
 msgstr "content cannot be empty"
 
-#: paasng/platform/declarative/handlers.py:385
-#: paasng/platform/declarative/handlers.py:414
+#: paasng/platform/declarative/handlers.py:456
+#: paasng/platform/declarative/handlers.py:485
 msgid "模块配置内容不能为空"
 msgstr "The module configuration content cannot be empty"
 
-#: paasng/platform/declarative/handlers.py:406
+#: paasng/platform/declarative/handlers.py:477
 msgid "未找到 {} 模块的配置，当前已配置模块为 {}"
 msgstr ""
 "Configuration of {} module not found, currently configured module is {}"
@@ -3013,7 +3011,7 @@ msgstr ""
 "The variable named {key} already exists in this environment and cannot be "
 "added repeatedly."
 
-#: paasng/platform/engine/serializers.py:421
+#: paasng/platform/engine/serializers.py:422
 #, python-format
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
@@ -3028,26 +3026,26 @@ msgstr ""
 "MB), which will seriously affect the deployment performance. Please try to "
 "clean up unnecessary files to reduce the size."
 
-#: paasng/platform/engine/views/deploy.py:130
-#: paasng/platform/engine/views/deploy.py:132
+#: paasng/platform/engine/views/deploy.py:135
+#: paasng/platform/engine/views/deploy.py:137
 msgid "历史版本不存在或已被清理"
 msgstr "The historical version does not exist or has been cleaned up"
 
-#: paasng/platform/engine/views/deploy.py:211
+#: paasng/platform/engine/views/deploy.py:216
 #, python-brace-format
 msgid "应用描述文件校验失败：{exception}"
 msgstr "APP description file verification failed: {exception}"
 
-#: paasng/platform/engine/views/deploy.py:213
+#: paasng/platform/engine/views/deploy.py:218
 msgid "对象存储服务异常, 请稍后再试"
 msgstr "Object storage service exception, please try again later"
 
-#: paasng/platform/engine/views/deploy.py:343
+#: paasng/platform/engine/views/deploy.py:348
 #, python-brace-format
 msgid "没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id}"
 
-#: paasng/platform/engine/views/deploy.py:347
+#: paasng/platform/engine/views/deploy.py:352
 #, python-brace-format
 msgid "模块 {module_name} 下没有 id 为 {id} 的部署记录"
 msgstr "No deployment record with id {id} under module {module_name}"
@@ -3355,31 +3353,31 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:373
-#: paasng/platform/modules/manager.py:411
+#: paasng/platform/modules/manager.py:375
+#: paasng/platform/modules/manager.py:413
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:376
-#: paasng/platform/modules/manager.py:447
+#: paasng/platform/modules/manager.py:378
+#: paasng/platform/modules/manager.py:449
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:381
-#: paasng/platform/modules/manager.py:437
-#: paasng/platform/modules/manager.py:441
+#: paasng/platform/modules/manager.py:383
+#: paasng/platform/modules/manager.py:439
+#: paasng/platform/modules/manager.py:443
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:417
+#: paasng/platform/modules/manager.py:419
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:444
+#: paasng/platform/modules/manager.py:446
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:451
+#: paasng/platform/modules/manager.py:453
 msgid "初始化应用模型失败, 请稍候再试"
 msgstr "Failed to initialize the application model. Please try again later."
 
@@ -3453,21 +3451,21 @@ msgstr "Source code configuration"
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 
-#: paasng/platform/modules/views.py:188
+#: paasng/platform/modules/views.py:187
 msgid "主模块不允许被删除"
 msgstr "The default module is not allowed to be deleted"
 
-#: paasng/platform/modules/views.py:240
+#: paasng/platform/modules/views.py:239
 #, python-brace-format
 msgid "{module_name} 模块已经被删除"
 msgstr "The {module_name} module has been removed."
 
-#: paasng/platform/modules/views.py:243
+#: paasng/platform/modules/views.py:242
 #, python-brace-format
 msgid "{module_name} 模块已经是主模块"
 msgstr "The {module_name} module is already the default module"
 
-#: paasng/platform/modules/views.py:253
+#: paasng/platform/modules/views.py:252
 #, python-brace-format
 msgid ""
 "目标 {module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场"
@@ -3477,39 +3475,39 @@ msgstr ""
 "Market service, switching the default module will cause the APP to be "
 "exceptionally accessible in the marketplace"
 
-#: paasng/platform/modules/views.py:323
+#: paasng/platform/modules/views.py:322
 msgid "当前应用下不允许创建新模块"
 msgstr "New modules are not allowed to be created under the current APP"
 
-#: paasng/platform/modules/views.py:328
+#: paasng/platform/modules/views.py:327
 #, python-brace-format
 msgid "单个应用下最多能创建 {num} 个模块"
 msgstr "Up to {num} modules can be created under a single APP"
 
-#: paasng/platform/modules/views.py:411 paasng/platform/modules/views.py:512
+#: paasng/platform/modules/views.py:410 paasng/platform/modules/views.py:511
 msgid "构建工具不存在"
 msgstr "The build tool does not exist"
 
-#: paasng/platform/modules/views.py:500
+#: paasng/platform/modules/views.py:499
 msgid "不支持的构建方式"
 msgstr "Unsupported build method"
 
-#: paasng/platform/modules/views.py:507
+#: paasng/platform/modules/views.py:506
 msgid "当前模块不支持修改构建方式为 {}"
 msgstr "The current module does not support modifying the build mode as {}"
 
-#: paasng/platform/modules/views.py:616
+#: paasng/platform/modules/views.py:615
 msgid "当前应用不支持配置「启动命令」"
 msgstr ""
 "The current APP does not support the configuration of 「start commands」"
 
-#: paasng/platform/smart_app/management/commands/smart_tool.py:57
-#: paasng/platform/smart_app/views.py:218
-#: paasng/platform/smart_app/views.py:295
+#: paasng/platform/smart_app/management/commands/smart_tool.py:59
+#: paasng/platform/smart_app/views.py:219
+#: paasng/platform/smart_app/views.py:296
 msgid "缺失应用市场配置（market)!"
 msgstr "Missing  Market  configuration (market)!"
 
-#: paasng/platform/smart_app/management/commands/smart_tool.py:59
+#: paasng/platform/smart_app/management/commands/smart_tool.py:61
 msgid "请检查源码包是否存在 app_desc.yaml 文件"
 msgstr "Please check if the source package has an app_desc.yaml file"
 
@@ -3534,7 +3532,7 @@ msgstr "The content of the app description file is not in valid YAML format"
 msgid "源码包文件格式错误，文件可能已经损坏"
 msgstr "source package file format error, file may be damaged"
 
-#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:270
+#: paasng/platform/smart_app/views.py:81 paasng/platform/smart_app/views.py:271
 #: paasng/platform/sourcectl/views.py:256
 msgid "请联系管理员"
 msgstr "Please contact administrator"
@@ -3553,33 +3551,33 @@ msgstr ""
 "The source code file is incomplete. Please try again or contact the "
 "administrator."
 
-#: paasng/platform/smart_app/views.py:234
+#: paasng/platform/smart_app/views.py:235
 msgid "自动生成应用 ID 失败，请重试或联系管理员"
 msgstr ""
 "Failed to automatically generate the application ID. Please try again or "
 "contact the administrator."
 
-#: paasng/platform/smart_app/views.py:239
+#: paasng/platform/smart_app/views.py:240
 #, python-brace-format
 msgid "S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!"
 msgstr ""
 "The S-mart package has been used to create the application (ID: "
 "{smart_app_code}), duplication is not allowed!"
 
-#: paasng/platform/smart_app/views.py:292
+#: paasng/platform/smart_app/views.py:293
 msgid "非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"
 msgstr ""
 "Non-cloud native application, please use the app_desc.yaml with "
 "version(spec_version: 2)"
 
-#: paasng/platform/smart_app/views.py:299
+#: paasng/platform/smart_app/views.py:300
 #, python-brace-format
 msgid "应用描述文件中声明的应用 ID({app_desc_code}) 未创建过 S-mart 应用"
 msgstr ""
 "The application ID ({app_desc_code}) declared in the application descriptor "
 "file has not been used to create an S-mart application."
 
-#: paasng/platform/smart_app/views.py:372
+#: paasng/platform/smart_app/views.py:373
 msgid "文件签名不一致"
 msgstr "File signature mismatch."
 
@@ -3838,28 +3836,28 @@ msgstr "Already under review, please do not repeat your APP"
 msgid "提交申请成功"
 msgstr "Submitted successfully"
 
-#: paasng/settings/__init__.py:891
+#: paasng/settings/__init__.py:888
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing old permission center URL, recommended to switch to BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:895
+#: paasng/settings/__init__.py:892
 msgid "蓝鲸权限中心的应用ID"
 msgstr "BlueKing permission center APP ID"
 
-#: paasng/settings/__init__.py:899
+#: paasng/settings/__init__.py:896
 msgid "蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing permission center intranet access URL, recommended to switch to "
 "BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:901
+#: paasng/settings/__init__.py:898
 msgid "蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL"
 msgstr ""
 "BlueKing configuration platform access URL, recommended to switch to "
 "BKPAAS_CC_URL"
 
-#: paasng/settings/__init__.py:902
+#: paasng/settings/__init__.py:899
 msgid "蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL"
 msgstr ""
 "BlueKing job platform access URL, recommended to switch to BKPAAS_JOB_URL"

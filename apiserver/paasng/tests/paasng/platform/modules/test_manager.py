@@ -102,13 +102,12 @@ class TestModuleInitializer:
         application = raw_module.application
 
         # Initialize builder/runner/buildpacks
-        slugbuilder = G(AppSlugBuilder, name="test", is_hidden=False, region=application.region)
+        slugbuilder = G(AppSlugBuilder, name="test", is_hidden=False)
         default_buildpack = G(
             AppBuildPack,
             name="default",
             language=application.language,
             is_hidden=False,
-            region=application.region,
         )
         slugbuilder.buildpacks.add(default_buildpack)
 
@@ -117,13 +116,12 @@ class TestModuleInitializer:
             name="test",
             language="invalid_language",
             is_hidden=False,
-            region=application.region,
         )
         slugbuilder.buildpacks.add(buildpack)
-        G(AppSlugRunner, name="test", is_hidden=False, region=application.region)
+        G(AppSlugRunner, name="test", is_hidden=False)
 
         # Override settings
-        settings.DEFAULT_RUNTIME_IMAGES = {application.region: slugbuilder.name}
+        settings.DEFAULT_RUNTIME_IMAGES = slugbuilder.name
 
         with mock.patch("paasng.platform.modules.manager.Template.objects.get") as mocked_get_tmpl:
             mocked_get_tmpl.return_value = Template(

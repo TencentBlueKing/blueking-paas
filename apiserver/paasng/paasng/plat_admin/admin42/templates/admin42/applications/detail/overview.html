@@ -95,9 +95,12 @@
                     <bk-collapse v-bind:value="module.envs.map(env=>env.environment)">
                         <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment">
                             $[ env.environment ] 环境
-                            <div slot="content" style="margin-bottom: 20px">
-                                <div style="margin-bottom: 5px" >部署集群：</div>
+                            <div slot="content" class="mb20">
+                                <div class="mb5">部署集群：
+                                    <span v-bk-tooltips="{content: '下拉框数据为当前模块环境 & 操作人可选集群，如有特殊需求，可在平台管理处按 Username.In 规则添加分配策略'}">❔</span>
+                                </div>
                                 <bk-select
+                                    allow-create
                                     v-model="env.cluster_name"
                                     style="width: 250px;"
                                     @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
@@ -172,7 +175,7 @@
 
 {% block main_script %}
 <script>
-    const data = {{ application | to_json }}
+    const application = {{ application | to_json }}
     const clusterChoices = {{ cluster_choices | to_json }}
     const envUrls = {{ env_urls | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
@@ -192,7 +195,7 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    application: data,
+                    application: application,
                     clusterChoices: clusterChoices,
                     envUrls: envUrls,
                     USER_IS_ADMIN_IN_APP,
@@ -277,8 +280,7 @@
                                     this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName} 成功，配置将在下次部署时生效`})
                                 })
                             } catch (e) {
-                                this.$bkMessage({theme: 'error', message: `更换应用部署环境绑定集群失败`})
-                                location.reload()
+                                this.$bkMessage({theme: 'error', message: e.message})
                             }
                         },
                         cancelFn: async () => {

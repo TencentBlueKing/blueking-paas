@@ -34,69 +34,13 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
-from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
+from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import UserNameField
 from paasng.utils.validators import RE_APP_SEARCH
 
 from .fields import ApplicationField, AppNameField
-from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
-
-
-class CreateApplicationV2SLZ(AppBasicInfoMixin):
-    """普通应用创建应用表单，目前产品上已经没有入口，但是暂时先保留 API"""
-
-    type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), default=ApplicationType.DEFAULT.value)
-    engine_enabled = serializers.BooleanField(default=True, required=False)
-    engine_params = ModuleSourceConfigSLZ(required=False)
-    advanced_options = AdvancedCreationParamsMixin(required=False)
-    is_plugin_app = serializers.BooleanField(default=False)
-    is_ai_agent_app = serializers.BooleanField(default=False)
-
-    def validate(self, attrs):
-        super().validate(attrs)
-
-        if attrs["engine_enabled"] and not attrs.get("engine_params"):
-            raise ValidationError(_("应用引擎参数未提供"))
-
-        # Be compatible with current application creation page, should be removed when new design was published
-        if not attrs["engine_enabled"]:
-            attrs["type"] = ApplicationType.ENGINELESS_APP.value
-        elif attrs["type"] == ApplicationType.ENGINELESS_APP.value:
-            raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
-
-        return attrs
-
-
-class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
-    def to_internal_value(self, data: Dict):
-        data = super().to_internal_value(data)
-        data["type"] = ApplicationType.CLOUD_NATIVE.value
-        return data
-
-
-class CreateAIAgentAppSLZ(AppBasicInfoMixin):
-    def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-        # 以下参数使用默认值，不需要传入
-        data["is_ai_agent_app"] = True
-        # AI Agent 应用也是一个插件，也需要自动注册网关
-        data["is_plugin_app"] = True
-        data["type"] = ApplicationType.CLOUD_NATIVE.value
-        data["engine_enabled"] = True
-        return data
-
-
-class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
-    """创建外链应用的表单"""
-
-    engine_enabled = serializers.BooleanField(default=False)
-    market_params = MarketParamsMixin()
-
-    def validate(self, attrs):
-        if attrs["engine_enabled"]:
-            raise ValidationError(_("该接口只支持创建外链应用"))
-        return attrs
+from .mixins import AppBasicInfoMixin
 
 
 class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
@@ -210,9 +154,9 @@ class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
     order = serializers.CharField(help_text="排序", default="id")
 
     def validate_order(self, value):
-        allowed_orders = ["cpu_usage_avg", "-cpu_usage_avg", "pv", "-pv", "uv", "-uv", "id", "-id"]
-        if value not in allowed_orders:
-            raise serializers.ValidationError(f"排序字段必须是 {', '.join(allowed_orders)} 之一")
+        if value not in ["cpu_usage_avg", "-cpu_usage_avg", "pv", "-pv", "uv", "-uv", "id", "-id"]:
+            raise ValidationError(_("排序字段不合法"))
+
         return value
 
 
@@ -423,7 +367,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
                 owner=self.context["request"].user.pk, application__code=attrs["application"].code
             ).exists()
         ):
-            raise serializers.ValidationError("您已经标记该应用")
+            raise ValidationError(_("已经标记该应用"))
         return attrs
 
     class Meta:
@@ -510,7 +454,7 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
     def validate(self, data):
         code = self.context.get("code")
         if not code:
-            raise serializers.ValidationError("Cannot get app code")
+            raise ValidationError("Cannot get app code")
 
         all_module_names = set(Module.objects.filter(application__code=code).values_list("name", flat=True))
 
@@ -523,14 +467,14 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
 
             # Check for duplicate module_name
             if module_name in module_names:
-                raise serializers.ValidationError(f"Duplicate module_name: {module_name}.")
+                raise ValidationError(f"Duplicate module_name: {module_name}.")
             # Check for duplicate order
             if order in orders:
-                raise serializers.ValidationError(f"Duplicate order: {order}.")
+                raise ValidationError(f"Duplicate order: {order}.")
 
             # check if the module_name is a module of the app
             if module_name not in all_module_names:
-                raise serializers.ValidationError(f"No module named as {module_name}.")
+                raise ValidationError(f"No module named as {module_name}.")
 
             module_names.add(module_name)
             orders.add(order)
@@ -538,6 +482,6 @@ class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
         # Check if all modules for the app code have set an order
         missing_orders = all_module_names - module_names
         if missing_orders:
-            raise serializers.ValidationError(f"Modules missing an order: {', '.join(missing_orders)}.")
+            raise ValidationError(f"Modules missing an order: {', '.join(missing_orders)}.")
 
         return data

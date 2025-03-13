@@ -28,17 +28,14 @@ Other modules which have similar purpose:
 These modules will be refactored in the future.
 """
 
-from typing import Dict, List, NamedTuple, Optional, Union
+from typing import Dict, NamedTuple, Optional, Union
 from uuid import UUID
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import WlAppMetadata, get_metadata, update_metadata
 from paas_wl.bk_app.applications.models import Build, WlApp
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.processes.models import ProcessSpec
-from paas_wl.core.resource import generate_bkapp_name
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.modules.models import Module
 
 
 class CreatedAppInfo(NamedTuple):
@@ -93,37 +90,6 @@ def delete_wl_resources(env: ModuleEnvironment):
     # TODO: Remove below lines when data was fully migrated
     ProcessSpec.objects.filter(engine_app_id=wl_app.pk).delete()
     wl_app.delete()
-
-
-def create_cnative_app_model_resource(
-    module: Module,
-    image: str,
-    api_version: Optional[str] = ApiVersion.V1ALPHA2,
-    command: Optional[List[str]] = None,
-    args: Optional[List[str]] = None,
-    target_port: Optional[int] = None,
-) -> Dict:
-    """Create a cloud-native AppModelResource object
-
-    :param module: The Module object current app model resource bound with
-    """
-    from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
-
-    application = module.application
-    resource = create_app_resource(
-        name=generate_bkapp_name(module),
-        image=image,
-        api_version=api_version,
-        command=command,
-        args=args,
-        target_port=target_port,
-    )
-    model_resource = AppModelResource.objects.create_from_resource(application, str(module.id), resource)
-    return {
-        "application_id": model_resource.application_id,
-        "module_id": model_resource.module_id,
-        "manifest": model_resource.revision.json_value,
-    }
 
 
 def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:

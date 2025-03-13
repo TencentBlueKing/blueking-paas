@@ -21,8 +21,6 @@ from unittest import mock
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
-from paas_wl.core.resource import generate_bkapp_name
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.building import ApplicationBuilder, BuildProcessResultHandler, DockerBuilder
@@ -49,11 +47,12 @@ class TestNormalApp:
             yield
 
     def test_failed_when_parsing_processes(self, builder_class, bk_deployment_full):
-        with mock.patch(
-            "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
-        ) as mocked_get_procfile, mock.patch(
-            "paasng.platform.engine.utils.output.RedisChannelStream"
-        ) as mocked_stream:
+        with (
+            mock.patch(
+                "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
+            ) as mocked_get_procfile,
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+        ):
             mocked_get_procfile.side_effect = GetProcfileError("Invalid Procfile format")
             attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
             builder = builder_class.from_deployment_id(bk_deployment_full.id)
@@ -72,13 +71,15 @@ class TestNormalApp:
             )
 
     def test_failed_when_upload_source(self, builder_class, bk_deployment_full):
-        with mock.patch(
-            "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
-        ) as mocked_get_procfile, mock.patch(
-            "paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)
-        ) as mocked_c_and_upload, mock.patch(
-            "paasng.platform.engine.utils.output.RedisChannelStream"
-        ) as mocked_stream:
+        with (
+            mock.patch(
+                "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
+            ) as mocked_get_procfile,
+            mock.patch(
+                "paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)
+            ) as mocked_c_and_upload,
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+        ):
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             mocked_c_and_upload.side_effect = RuntimeError("Unable to upload")
 
@@ -96,15 +97,17 @@ class TestNormalApp:
             assert mocked_stream().write_message.call_args[0][0] == "步骤 [上传仓库代码] 出错了，请稍候重试。"
 
     def test_start_normal(self, builder_class, bk_deployment_full):
-        with mock.patch(
-            "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
-        ) as mocked_get_procfile, mock.patch(
-            "paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)
-        ), mock.patch("paasng.platform.engine.deploy.building.BuildProcessPoller") as mocked_poller, mock.patch(
-            "paasng.platform.engine.utils.output.RedisChannelStream"
-        ) as mocked_stream, mock.patch(
-            "paasng.platform.engine.deploy.building.{}.launch_build_processes".format(builder_class.__name__)
-        ) as launch_build_processes:
+        with (
+            mock.patch(
+                "paasng.platform.engine.configurations.source_file.MetaDataFileReader.get_procfile"
+            ) as mocked_get_procfile,
+            mock.patch("paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)),
+            mock.patch("paasng.platform.engine.deploy.building.BuildProcessPoller") as mocked_poller,
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+            mock.patch(
+                "paasng.platform.engine.deploy.building.{}.launch_build_processes".format(builder_class.__name__)
+            ) as launch_build_processes,
+        ):
             mocked_get_procfile.return_value = {"web": "gunicorn"}
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
@@ -141,31 +144,20 @@ class TestNormalApp:
 @pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.mark.parametrize("builder_class", [ApplicationBuilder, DockerBuilder])
 class TestCloudNative:
-    @pytest.fixture()
-    def model_resource(self, bk_cnative_app, bk_module_full):
-        """Initialize the app model resource"""
-        resource = create_app_resource(
-            # Use Application code as default resource name
-            name=generate_bkapp_name(bk_module_full),
-            image="nginx:latest",
-            command=None,
-            args=None,
-            target_port=None,
-        )
-        return AppModelResource.objects.create_from_resource(bk_cnative_app, bk_module_full.id, resource)
-
-    def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full, model_resource):
+    def test_start_build(self, builder_class, bk_cnative_app, bk_module_full, bk_deployment_full):
         # Replace the deploy desc handler to skip the metadata reading action
         desc_handler = get_deploy_desc_handler(None, {"web": "gunicorn"})
-        with mock.patch(
-            "paasng.platform.engine.deploy.building.get_deploy_desc_handler_by_version", return_value=desc_handler
-        ), mock.patch(
-            "paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)
-        ), mock.patch("paasng.platform.engine.deploy.building.BuildProcessPoller") as mocked_poller, mock.patch(
-            "paasng.platform.engine.utils.output.RedisChannelStream"
-        ) as mocked_stream, mock.patch(
-            "paasng.platform.engine.deploy.building.{}.launch_build_processes".format(builder_class.__name__)
-        ) as launch_build_processes:
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.building.get_deploy_desc_handler_by_version", return_value=desc_handler
+            ),
+            mock.patch("paasng.platform.engine.deploy.building.{}.compress_and_upload".format(builder_class.__name__)),
+            mock.patch("paasng.platform.engine.deploy.building.BuildProcessPoller") as mocked_poller,
+            mock.patch("paasng.platform.engine.utils.output.RedisChannelStream") as mocked_stream,
+            mock.patch(
+                "paasng.platform.engine.deploy.building.{}.launch_build_processes".format(builder_class.__name__)
+            ) as launch_build_processes,
+        ):
             # Return a fake build_process ID
             faked_build_process_id = uuid.uuid4().hex
             launch_build_processes.return_value = faked_build_process_id

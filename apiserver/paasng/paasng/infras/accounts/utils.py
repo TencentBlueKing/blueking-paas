@@ -41,7 +41,7 @@ def id_to_username(user_id: str) -> str:
 
 
 class ForceAllowAuthedApp:
-    """See `AuthenticatedAppAsUserMiddleware` for related details."""
+    """See `AuthenticatedAppAsClientMiddleware` for related details."""
 
     _view_sets: Set[Type] = set()
 

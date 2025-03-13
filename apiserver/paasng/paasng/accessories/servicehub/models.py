@@ -274,7 +274,7 @@ class ServiceBindingPolicy(AuditedModel):
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
-    service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    service_id = models.UUIDField(verbose_name="增强服务 ID")
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
 

@@ -20,7 +20,6 @@
 import logging
 from typing import Dict, List, Optional
 
-from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
@@ -91,12 +90,6 @@ class AppDeclarativeController:
         elif desc.region not in allowed_regions:
             raise DescriptionValidationError({"region": _("用户没有权限在 {} 下创建应用").format(desc.region)})
 
-        is_smart_app = self.source_origin == SourceOrigin.S_MART
-
-        app_type = (
-            ApplicationType.CLOUD_NATIVE if settings.SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
-        )
-
         application = Application.objects.create(
             owner=self.user.pk,
             creator=self.user.pk,
@@ -104,8 +97,8 @@ class AppDeclarativeController:
             code=desc.code,
             name=desc.name_zh_cn,
             name_en=desc.name_en,
-            is_smart_app=is_smart_app,
-            type=app_type,
+            is_smart_app=bool(self.source_origin == SourceOrigin.S_MART),
+            type=ApplicationType.CLOUD_NATIVE,
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
             # 添加租户信息

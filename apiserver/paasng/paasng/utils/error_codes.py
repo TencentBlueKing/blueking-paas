@@ -20,6 +20,10 @@ from django.utils.translation import gettext_lazy as _
 
 
 class ErrorCodes:
+    # System API client related
+    SYSAPI_CLIENT_NOT_FOUND = ErrorCode(_("请求未携带有效的 sysapi client 信息"))
+    SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
+
     # 用户与通知相关
     ERROR_SENDING_NOTIFICATION = ErrorCode(_("发送通知消息失败，请稍候重试"))
     NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))

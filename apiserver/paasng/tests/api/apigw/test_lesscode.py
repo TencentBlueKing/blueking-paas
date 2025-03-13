@@ -22,9 +22,7 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
-from django.test.utils import override_settings
 
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -56,21 +54,7 @@ class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("is_lesscode_app_cloud_native", "app_type"),
-        [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
-    )
-    def test_create_lesscode_api(
-        self,
-        bk_user,
-        api_client,
-        mock_wl_services_in_creation,
-        lesscode_public_params,
-        bk_app_code,
-        bk_app_name,
-        is_lesscode_app_cloud_native,
-        app_type,
-    ):
+    def test_create_lesscode_api(self, bk_user, api_client, lesscode_public_params, bk_app_code, bk_app_name):
         lesscode_public_params.update(
             {
                 "region": settings.DEFAULT_REGION_NAME,
@@ -78,14 +62,9 @@ class TestApiInAPIGW:
                 "name": bk_app_name,
             }
         )
-        with override_settings(LESSCODE_APP_USE_CLOUD_NATIVE_TYPE=is_lesscode_app_cloud_native):
-            response = api_client.post(
-                "/apigw/api/bkapps/applications/",
-                data=lesscode_public_params,
-            )
+        response = api_client.post("/apigw/api/bkapps/applications/", data=lesscode_public_params)
         assert response.status_code == 201
         assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
-        assert response.json()["application"]["type"] == app_type
 
 
 class TestModuleSourcePackageViewSet:
@@ -117,7 +96,8 @@ class TestModuleSourcePackageViewSet:
             local_path.write_bytes(tar_path.read_bytes())
 
         with mock.patch(
-            "paasng.platform.sourcectl.package.uploader.download_file_via_url", side_effect=download_file_via_url
+            "paasng.platform.sourcectl.package.uploader.download_file_via_url",
+            side_effect=download_file_via_url,
         ):
             response = api_client.post(
                 url,

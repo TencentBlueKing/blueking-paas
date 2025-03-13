@@ -74,7 +74,6 @@ svc = Service.objects.create(name="rabbitmq", display_name_zh_cn="RabbitMQ", dis
 
 config = {"host":"127.0.0.1","port":5672,"management_api":"http://127.0.0.1:15672","admin":"admin","password":"password","version":"4.0.2",}
 
-# 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 region 的值
 Plan.objects.create(name="default", description="rabbitmq 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```
 

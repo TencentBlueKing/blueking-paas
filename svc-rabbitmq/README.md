@@ -58,20 +58,24 @@ export DJANGO_SETTINGS_MODULE="svc_rabbitmq.settings"
 
 ```bash
 python manage.py migrate
+```
 
-# 初始化数据放在 /data/fixtures 目录下
-# 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 default.json 中 region 的值
-python manage.py loaddata data/fixtures/default.json
+初始化增强服务的套餐信息：
 
-## 初始化 rabbitmq 集群，请根据实际情况修改参数的值
-python manage.py register_cluster \
---name "builtin" \
---host "10.0.0.1" \
---port "5672" \
---api-port "15672" \
---admin "admin" \
---password "blueking" \
---check
+```python
+python manage.py shell
+
+import json
+from paas_service.models import Service
+from paas_service.models import Plan
+
+# category 为增强服务分类，apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
+svc = Service.objects.create(name="rabbitmq", display_name_zh_cn="RabbitMQ", display_name_en="RabbitMQ", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
+
+config = {"host":"127.0.0.1","port":5672,"management_api":"http://127.0.0.1:15672","admin":"admin","password":"password","version":"4.0.2",}
+
+# 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 region 的值
+Plan.objects.create(name="default", description="rabbitmq 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类

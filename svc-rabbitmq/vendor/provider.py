@@ -140,7 +140,7 @@ PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
 class Provider(BaseProvider):
     host: Optional[str] = None
     port: Optional[int] = None
-    management_api: Optional[int] = None
+    management_api: Optional[str] = None
     admin: Optional[str] = None
     password: Optional[str] = None
     version: Optional[str] = None

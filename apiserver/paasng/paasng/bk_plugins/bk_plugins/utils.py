@@ -20,18 +20,16 @@ from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings
 
 from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import PrivateTokenHolder, User, UserPrivateToken, UserProfile
+from paasng.infras.accounts.models import PrivateTokenHolder, User, UserProfile
 
 
 def ensure_builtin_user():
-    """初始化内置的操作用户"""
+    """初始化内置的操作用户。内置用户的主要功能，是用来持有访问部分源码管理系统的 private token。"""
     conf = settings.PLUGIN_REPO_CONF
     username = conf["username"]
 
     # 创建平台系统用户
-    user, created = User.objects.get_or_create(username=username)
-    if created:
-        UserPrivateToken.objects.create_token(user=user, expires_in=None)
+    User.objects.get_or_create(username=username)
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     # This user only acts as a holder for the sourcectl private token, so no specific
     # role is required.

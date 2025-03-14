@@ -21,8 +21,7 @@ from bkpaas_auth.core.constants import ProviderType
 from rest_framework import serializers
 
 from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import UserPrivateToken
-from paasng.utils.serializers import UserField as BaseUserField
+from paasng.utils.serializers import UserField
 
 PROVIDER_TYPE_CHCOISE = (
     (ProviderType.UIN.value, "UIN"),
@@ -31,23 +30,6 @@ PROVIDER_TYPE_CHCOISE = (
     (ProviderType.DATABASE.value, "DATABASE"),
 )
 logger = logging.getLogger(__name__)
-
-
-class UserField(BaseUserField):
-    def to_representation(self, obj):
-        try:
-            representation = super().to_representation(obj)
-            if representation["provider_type"] == ProviderType.DATABASE.value:
-                representation["private_token"] = (
-                    UserPrivateToken.objects.filter(user__username=representation["username"])
-                    .values_list("token", flat=True)
-                    .first()
-                )
-        except ValueError as e:
-            logger.warning("except a dirty userprofile, error: %s", e)
-            return {"id": obj, "username": obj, "provider_type": None}
-        else:
-            return representation
 
 
 class UserProfileBulkCreateFormSLZ(serializers.Serializer):

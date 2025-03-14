@@ -48,15 +48,15 @@
           </div>
           <div class="config">
             <DetailsRow
-              :label-width="90"
+              :label-width="labelWidth"
               :label="`${$t('访问方式')}：`"
               :value="accessMethod"
             >
               <template slot="value">
-                <span>{{ accessMethod }}</span>
+                <span>{{ accessMethod ?? '--' }}</span>
                 <span
                   class="tip"
-                  v-if="['nodePort', 'hostNetwork'].includes(accessMethod)"
+                  v-if="accessMethod !== null"
                 >
                   <i class="paasng-icon paasng-info-line ml8"></i>
                   <span v-if="accessMethod === 'nodePort'">
@@ -68,16 +68,16 @@
                 </span>
               </template>
             </DetailsRow>
-            <template v-if="['nodePort', 'hostNetwork'].includes(accessMethod)">
+            <template v-if="accessMethod !== null">
               <!-- nodePort -->
               <template v-if="accessMethod === 'nodePort'">
                 <DetailsRow
-                  :label-width="90"
+                  :label-width="labelWidth"
                   :label="`HTTP ${$t('端口')}：`"
                   :value="values?.service?.nodePorts?.http || '--'"
                 />
                 <DetailsRow
-                  :label-width="90"
+                  :label-width="labelWidth"
                   :label="`HTTPS ${$t('端口')}：`"
                   :value="values?.service?.nodePorts?.https || '--'"
                 />
@@ -90,7 +90,7 @@
                   :align="'flex-start'"
                 >
                   <div slot="value">
-                    <span v-if="!values.nodeSelector?.length">--</span>
+                    <span v-if="!Object.keys(values.nodeSelector)?.length">--</span>
                     <span
                       v-else
                       v-for="(val, key) in values.nodeSelector"
@@ -158,7 +158,10 @@
         </div>
       </DetailsRow>
       <!-- 安装操作 -->
-      <div class="install-btns">
+      <div
+        class="install-btns"
+        :style="{ marginLeft: labelWidth + 'px' }"
+      >
         <!-- 未安装/安装失败 -->
         <span
           v-if="['not_installed', 'installation_failed'].includes(component?.status)"
@@ -168,7 +171,7 @@
           <bk-button
             :theme="'primary'"
             :disabled="!isInstalled"
-            :loading="componentBtnLoading"
+            :loading="componentBtnLoading || btnLoading"
             @click="getDiffVersion(component?.status)"
           >
             {{ component?.status === 'not_installed' ? $t('安装') : $t('重新安装') }}
@@ -184,7 +187,7 @@
             :theme="'primary'"
             :outline="true"
             :disabled="!isInstalled"
-            :loading="componentBtnLoading"
+            :loading="componentBtnLoading || btnLoading"
             @click="getDiffVersion(component?.status)"
           >
             {{ $t('更新') }}
@@ -215,6 +218,10 @@ export default {
       default: () => {},
     },
     loading: {
+      type: Boolean,
+      default: false,
+    },
+    btnLoading: {
       type: Boolean,
       default: false,
     },
@@ -261,10 +268,10 @@ export default {
       return this.$store.state.localLanguage;
     },
     accessMethod() {
-      if (this.values?.hostNetwork) {
-        return this.values?.hostNetwork ? 'hostNetwork' : 'nodePort';
+      if (typeof this.values?.hostNetwork === 'boolean') {
+        return this.values.hostNetwork ? 'hostNetwork' : 'nodePort';
       }
-      return '--';
+      return null;
     },
     values() {
       return this.details?.values || {};
@@ -334,13 +341,8 @@ export default {
             h('div', { class: ['tips'] }, `${this.$t('最新版本')}：${ret.latest_version || '--'}`),
           ]),
           confirmFn: () => {
-            if (this.isBkIngressNginx) {
-              // bk-ingress-nginx 允许编辑侧栏
-              this.handleComponentEdit();
-              return;
-            }
-            // 其他组件的安装或更新，无需弹出侧栏
-            this.updateComponent({ values: {} }, status);
+            const params = this.isBkIngressNginx ? this.values : {};
+            this.updateComponent({ values: params }, status);
           },
         });
       } catch (e) {
@@ -486,7 +488,6 @@ export default {
     }
   }
   .install-btns {
-    margin-left: 80px;
     .btn-wrapper {
       display: inline-block;
     }

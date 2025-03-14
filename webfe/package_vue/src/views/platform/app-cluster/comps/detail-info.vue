@@ -37,7 +37,9 @@
             {{ item }}
           </div>
         </template>
-        <template v-else>{{ data[key] || '--' }}</template>
+        <template v-else>
+          {{ key === 'cluster_source' ? clusterSourceMap[data[key]] : data[key] || '--' }}
+        </template>
       </template>
     </DetailsRow>
     <div class="view-title">{{ $t('ElasticSearch 集群信息') }}</div>
@@ -121,6 +123,10 @@ export default {
       },
       tenantKeys: {
         available_tenant_ids: this.$t('可用租户'),
+      },
+      clusterSourceMap: {
+        bcs: this.$t('BCS 集群'),
+        native_k8s: this.$t('K8S 集群（不推荐，无法使用访问控制台等功能）'),
       },
     };
   },

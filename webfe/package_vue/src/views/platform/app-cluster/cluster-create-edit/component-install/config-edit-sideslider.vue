@@ -201,6 +201,9 @@ export default {
   methods: {
     init() {
       const { hostNetwork = false, service } = this.values;
+      if (hostNetwork) {
+        this.handleSwitch(this.accessMethod[1]);
+      }
       this.formData = {
         http: service?.nodePorts?.http || '',
         https: service?.nodePorts?.https || '',
@@ -234,52 +237,35 @@ export default {
         });
       }
     },
+    // 伪编辑-不发送请求
     submitData() {
       let validateArr = [this.$refs.formRef.validate()];
       if (this.isHostNetwork) {
         validateArr.push(this.$refs.keyValueInput[0]?.validate());
       }
       Promise.all(validateArr)
-        .then((r) => {
+        .then(() => {
           const { hostNetwork, http, https } = this.formData;
           let data = cloneDeep(this.values);
           data.hostNetwork = hostNetwork;
           if (this.isHostNetwork) {
             data.nodeSelector = this.$refs.keyValueInput[0]?.getData();
+            data.service = {
+              nodePorts: {},
+            };
           } else {
             data.service = {
               nodePorts: { http, https },
             };
+            data.nodeSelector = {};
           }
           const params = { values: data };
-          this.updateComponent(params);
+          this.$emit('update-config', params);
+          this.closeSideslider();
         })
         .catch((e) => {
           console.warn(e);
         });
-    },
-    // 更新组件配置
-    async updateComponent(data) {
-      this.saveLoading = true;
-      try {
-        await this.$store.dispatch('tenant/updateComponent', {
-          clusterName: this.clusterId,
-          componentName: this.name,
-          data,
-        });
-        // 成功提示
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('编辑成功！'),
-        });
-        this.closeSideslider();
-        // 获取组件详情
-        this.$emit('get-detail', 'bk-ingress-nginx');
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.saveLoading = false;
-      }
     },
   },
 };

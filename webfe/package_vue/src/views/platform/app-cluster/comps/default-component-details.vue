@@ -3,7 +3,7 @@
     <!-- 默认组件详情样式 -->
     <DetailsRow
       :label-width="80"
-      :label="`${$t('组件介绍')}：`"
+      :label="removePrefix('组件介绍')"
       :value="$t(introduceMap[data?.name]) || '--'"
     />
     <DetailsRow
@@ -11,7 +11,7 @@
       :is-full="true"
       :align="'flex-start'"
     >
-      <template slot="label">{{ `${$t('组件配置')}：` }}</template>
+      <template slot="label">{{ removePrefix('组件配置') }}</template>
       <div slot="value">
         <div
           class="config"
@@ -20,39 +20,41 @@
           <DetailsRow
             :label-width="80"
             :label="`${$t('访问方式')}：`"
-            :value="accessMethod"
+            :value="accessMethod ?? '--'"
           />
-          <template v-if="accessMethod === 'nodePort'">
-            <DetailsRow
-              :label-width="80"
-              :label="`HTTP ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.http || '--'"
-            />
-            <DetailsRow
-              :label-width="80"
-              :label="`HTTPS ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.https || '--'"
-            />
-          </template>
-          <template v-else>
-            <!-- hostNerwork -->
-            <DetailsRow
-              :label-width="80"
-              :label="`${$t('节点标签')}：`"
-              :align="'flex-start'"
-            >
-              <div slot="value">
-                <span v-if="!values.nodeSelector?.length">--</span>
-                <span
-                  v-else
-                  v-for="(val, key) in values.nodeSelector"
-                  class="tag"
-                  :key="key"
-                >
-                  {{ key }} = {{ val }}
-                </span>
-              </div>
-            </DetailsRow>
+          <template v-if="accessMethod !== null">
+            <template v-if="accessMethod === 'nodePort'">
+              <DetailsRow
+                :label-width="80"
+                :label="`HTTP ${$t('端口')}：`"
+                :value="values?.service?.nodePorts?.http || '--'"
+              />
+              <DetailsRow
+                :label-width="80"
+                :label="`HTTPS ${$t('端口')}：`"
+                :value="values?.service?.nodePorts?.https || '--'"
+              />
+            </template>
+            <template v-else>
+              <!-- hostNetwork -->
+              <DetailsRow
+                :label-width="80"
+                :label="`${$t('节点标签')}：`"
+                :align="'flex-start'"
+              >
+                <div slot="value">
+                  <span v-if="!values.nodeSelector?.length">--</span>
+                  <span
+                    v-else
+                    v-for="(val, key) in values.nodeSelector"
+                    class="tag"
+                    :key="key"
+                  >
+                    {{ key }} = {{ val }}
+                  </span>
+                </div>
+              </DetailsRow>
+            </template>
           </template>
         </div>
         <template v-else>
@@ -74,7 +76,7 @@
       :is-full="true"
       :align="'flex-start'"
     >
-      <template slot="label">{{ `${$t('组件状态')}：` }}</template>
+      <template slot="label">{{ removePrefix('组件状态') }}</template>
       <div
         slot="value"
         class="status-wrapper"
@@ -184,7 +186,10 @@ export default {
       return this.detailData?.values || {};
     },
     accessMethod() {
-      return this.values?.hostNetwork ? 'hostNerwork' : 'nodePort';
+      if (typeof this.values?.hostNetwork === 'boolean') {
+        return this.values.hostNetwork ? 'hostNetwork' : 'nodePort';
+      }
+      return null;
     },
     valuesData() {
       return JSON.stringify(this.values, null, 2);
@@ -201,6 +206,13 @@ export default {
     // 查看values
     handleViewValues() {
       this.isEditorSideslider = true;
+    },
+    // 英文环境下去掉组件前缀
+    removePrefix(str, prefix = '组件') {
+      if (this.localLanguage === 'en') {
+        return `${this.$t(str.slice(prefix.length))}：`;
+      }
+      return `${this.$t(str)}：`;
     },
   },
 };

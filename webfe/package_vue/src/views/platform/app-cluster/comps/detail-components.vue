@@ -58,7 +58,7 @@
         :outline="true"
         @click="handleEdit(3)"
       >
-        {{ $t('编辑') }}
+        {{ $t('管理') }}
       </bk-button>
     </div>
     <bk-exception

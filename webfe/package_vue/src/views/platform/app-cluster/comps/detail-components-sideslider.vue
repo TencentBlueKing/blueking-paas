@@ -89,7 +89,7 @@
             <!-- JSON格式预览 -->
             <vue-json-pretty
               :data="row.conditions"
-              :deep="1"
+              :deep="0"
               :show-length="true"
               :highlight-mouseover-node="true"
             />

@@ -25,12 +25,13 @@
           :component="component"
           :details="componentDetails[component.name]"
           :loading="componentLoadingStates[component.name]"
+          :btn-loading="componentBtnLoadings[component.name]"
           :cluster-source="clusterDetails?.cluster_source"
           :cluster-id="clusterId"
           @show-detail="handleShowDetail"
           @show-values="handleShowValues"
           @show-edit="handleShowEdit"
-          @polling="handlePollingDetail"
+          @polling="pollingDetail"
         />
       </template>
     </section>
@@ -65,12 +66,13 @@
               :component="component"
               :details="componentDetails[component.name]"
               :loading="componentLoadingStates[component.name]"
+              :btn-loading="componentBtnLoadings[component.name]"
               :cluster-source="clusterDetails?.cluster_source"
               :cluster-id="clusterId"
               @show-detail="handleShowDetail"
               @show-values="handleShowValues"
               @show-edit="handleShowEdit"
-              @polling="handlePollingDetail"
+              @polling="pollingDetail"
             />
           </template>
         </bk-collapse-item>
@@ -100,7 +102,7 @@
       :data="detailSidesliderData"
       :cluster-id="clusterId"
       @show-values="handleShowValues"
-      @get-detail="getComponentDetail"
+      @update-config="updateNginxComponentValues"
     />
   </div>
 </template>
@@ -132,6 +134,8 @@ export default {
       componentLoadingStates: {},
       // 组件列表详情
       componentDetails: {},
+      // 组件安装/更新按钮loading
+      componentBtnLoadings: {},
       // 必要组件
       requiredComponents: [],
       // 可选组件
@@ -216,6 +220,8 @@ export default {
         // 使用 Promise.all 并行获取组件详情，required 为必填项 必须安装成功才允许下一步
         const nextDisabled = res.some((v) => v.required && v.status !== 'installed');
         this.$emit('change-next-btn', nextDisabled);
+        // 关闭容器Loading
+        this.isLoading = false;
         await Promise.all(res.map((component) => this.getComponentDetail(component.name)));
       } catch (e) {
         this.catchErrorHandler(e);
@@ -223,8 +229,11 @@ export default {
         this.isLoading = false;
       }
     },
-    async pollComponentDetail(componentName, initialCheck = true) {
+
+    // 直接获取组件详情调用
+    async getComponentDetail(componentName) {
       try {
+        // 开启组件区域 loading
         this.setComponentLoadingState(componentName, true);
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {
           clusterName: this.clusterId,
@@ -232,12 +241,9 @@ export default {
         });
         this.$set(this.componentDetails, componentName, ret);
 
-        // 判断是否需要继续轮询，安装、更新需要结束的状态与直接获取详情的结束状态不同
-        const isPoll =
-          (initialCheck && ret.status === 'installing') ||
-          (!initialCheck && !['installation_failed', 'installed'].includes(ret.status));
+        // 状态为 installing 轮询接口
 
-        if (isPoll) {
+        if (ret.status === 'installing') {
           setTimeout(() => {
             this.pollComponentDetail(componentName, initialCheck);
           }, 5000);
@@ -252,19 +258,45 @@ export default {
       }
     },
 
-    // 直接获取组件详情调用
-    async getComponentDetail(componentName) {
-      await this.pollComponentDetail(componentName, true);
-    },
-
     // 更新、安装操作时调用
-    async handlePollingDetail(componentName) {
-      await this.pollComponentDetail(componentName, false);
+    async pollingDetail(componentName) {
+      try {
+        // 开启按钮安装/更新loading
+        this.$set(this.componentBtnLoadings, componentName, true);
+        const ret = await this.$store.dispatch('tenant/getComponentDetail', {
+          clusterName: this.clusterId,
+          componentName,
+        });
+        this.$set(this.componentDetails, componentName, ret);
+        if (['installation_failed', 'installed'].includes(ret.status)) {
+          // 结束轮询
+          this.$set(this.componentBtnLoadings, componentName, false);
+        } else {
+          setTimeout(() => {
+            this.pollingDetail(componentName);
+          }, 5000);
+        }
+      } catch (e) {
+        if (e.status === 404) {
+          setTimeout(() => {
+            this.pollingDetail(componentName);
+          }, 5000);
+          return;
+        }
+        this.catchErrorHandler(e);
+        // 其他错误情况关闭Loading
+        this.$set(this.componentBtnLoadings, componentName, false);
+      }
     },
 
     // 新增一个方法来专门设置组件详情的加载状态
     setComponentLoadingState(componentName, isLoading) {
       this.$set(this.componentLoadingStates, componentName, isLoading);
+    },
+    // 更新bk-ingress-nginx组件配置
+    updateNginxComponentValues(values) {
+      const config = Object.assign(this.componentDetails['bk-ingress-nginx'], values);
+      this.$set(this.componentDetails, 'bk-ingress-nginx', config);
     },
   },
 };

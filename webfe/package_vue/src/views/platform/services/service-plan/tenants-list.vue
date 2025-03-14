@@ -13,7 +13,7 @@
     </div>
     <ul class="list">
       <li
-        v-for="item in tenants"
+        v-for="item in displayTenants"
         :key="item.id"
         :class="['item', { actvie: actvieId === item.id }]"
         @click="switchTenant(item)"
@@ -42,6 +42,19 @@ export default {
       searchValue: '',
       actvieId: '',
     };
+  },
+  computed: {
+    // 字段模糊搜索
+    displayTenants() {
+      const lowerCaseSearchTerm = this.searchValue.toLocaleLowerCase();
+      if (!lowerCaseSearchTerm) {
+        return this.tenants;
+      }
+      // 过滤数据，检查 name 是否包含搜索词
+      return this.tenants.filter((item) => {
+        return item.name?.toLocaleLowerCase().includes(lowerCaseSearchTerm);
+      });
+    },
   },
   watch: {
     tenants(newVal) {

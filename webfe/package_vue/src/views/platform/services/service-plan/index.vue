@@ -19,11 +19,11 @@
           :clearable="true"
           v-model="searchValue"
           :right-icon="'bk-icon icon-search'"
-          :placeholder="$t('搜索方案名称、方案别名、所属方案')"
+          :placeholder="$t('搜索方案名称、所属服务')"
         ></bk-input>
       </div>
       <bk-table
-        :data="displayPlans"
+        :data="searchPlans"
         dark-header
         size="small"
         class="plan-table-cls"
@@ -32,13 +32,14 @@
         <bk-table-column
           :label="$t('方案名称')"
           prop="name"
-          :width="140"
+          :width="150"
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
             <bk-button
               :text="true"
               title="primary"
+              @click="showPlanDetails(row, 'planBaseInfo')"
             >
               {{ row.name }}
             </bk-button>
@@ -64,19 +65,24 @@
           prop="service_name"
           :width="100"
           show-overflow-tooltip
+          :render-header="$renderHeader"
         ></bk-table-column>
         <bk-table-column
           :label="$t('资源池')"
-          :width="100"
+          :width="80"
           show-overflow-tooltip
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             <bk-button
+              v-if="row.service_config?.provider_name === 'pool'"
               :text="true"
               title="primary"
+              @click="showPlanDetails(row, 'planResourcePool')"
             >
               {{ row.pre_created_instances?.length || 0 }}
             </bk-button>
+            <span v-else>{{ row.pre_created_instances?.length || 0 }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -84,6 +90,7 @@
           prop="name"
           :width="80"
           show-overflow-tooltip
+          :render-header="$renderHeader"
         >
           <template slot-scope="{ row }">
             <span :class="['tag', { yes: row.is_active }]">{{ row.is_active ? $t('是') : $t('否') }}</span>
@@ -123,6 +130,13 @@
       :config="sidesliderConfig"
       @refresh="getPlans"
     />
+    <!-- 方案详情、资源池 -->
+    <PlanDetailSideslider
+      :show.sync="planDetailsConfig.isShow"
+      :data="planDetailsConfig.row"
+      :active="planDetailsConfig.active"
+      @refresh="getPlans"
+    />
   </div>
 </template>
 
@@ -131,12 +145,14 @@ import TenantsList from './tenants-list.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import PlanSideslider from './plan-sideslider.vue';
+import PlanDetailSideslider from './plan-detail-sideslider';
 export default {
   name: 'ServicePlan',
   components: {
     TenantsList,
     VueJsonPretty,
     PlanSideslider,
+    PlanDetailSideslider,
   },
   data() {
     return {
@@ -151,10 +167,17 @@ export default {
       platformServices: [],
       // 当期高亮的租户id
       curTenantId: '',
+      // 新建/编辑侧栏
       isShowPlanSideslider: false,
       sidesliderConfig: {
         row: {},
         type: '',
+      },
+      // 详情侧拉
+      planDetailsConfig: {
+        isShow: false,
+        row: {},
+        active: '',
       },
     };
   },
@@ -163,13 +186,25 @@ export default {
     this.getPlans();
   },
   computed: {
+    // 当前租户下的方案
     displayPlans() {
       return this.planList.filter((item) => item.tenant_id === this.curTenantId);
+    },
+    // 字段搜索
+    searchPlans() {
+      const lowerCaseSearchTerm = this.searchValue.toLocaleLowerCase();
+      if (!lowerCaseSearchTerm) {
+        return this.displayPlans;
+      }
+      return this.displayPlans.filter((item) => {
+        const nameValue = item.name.toLocaleLowerCase();
+        const serviceValue = item.service_name.toLocaleLowerCase();
+        return nameValue.includes(lowerCaseSearchTerm) || serviceValue.includes(lowerCaseSearchTerm);
+      });
     },
   },
   methods: {
     handleChange(tenantId) {
-      // 请求租户下的方案
       this.curTenantId = tenantId;
     },
     // 获取所有租户
@@ -206,7 +241,7 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    // 新建/编辑
+    // 新建/编辑方案侧栏
     showSideslider(type, row) {
       this.isShowPlanSideslider = true;
       this.sidesliderConfig.type = type;
@@ -240,6 +275,12 @@ export default {
         },
       });
     },
+    // 方案详情-侧栏
+    showPlanDetails(row, active) {
+      this.planDetailsConfig.isShow = true;
+      this.planDetailsConfig.row = row;
+      this.planDetailsConfig.active = active;
+    },
   },
 };
 </script>
@@ -254,10 +295,6 @@ export default {
     padding: 16px;
     .plan-table-cls {
       margin-top: 12px;
-    }
-    .tag.yes {
-      background: #daf6e5;
-      color: #299e56;
     }
   }
 }

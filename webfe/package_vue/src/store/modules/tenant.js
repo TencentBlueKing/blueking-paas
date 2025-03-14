@@ -239,5 +239,33 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/${planId}/`;
       return http.delete(url);
     },
+    /**
+     * 获取方案下的资源池
+     */
+    getPreCreatedInstances({}, { serviceId, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/plans/${planId}/`;
+      return http.get(url);
+    },
+    /**
+     * 添加资源池
+     */
+    addResourcePool({}, { data }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改资源池
+     */
+    updateResourcePool({}, { planId, id, data }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除资源池
+     */
+    deleteResourcePool({}, { planId, id }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      return http.delete(url);
+    },
   },
 };

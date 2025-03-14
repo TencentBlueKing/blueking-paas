@@ -38,6 +38,7 @@
             v-else-if="item.type === 'select'"
             v-model="formData[item.property]"
             :disabled="!isAdd"
+            searchable
           >
             <bk-option
               v-for="option in services"
@@ -95,7 +96,7 @@
 <script>
 import VueJsonEditor from 'vue-json-editor';
 export default {
-  name: 'ComponentConfigEdit',
+  name: 'EditAddSideslider',
   components: {
     VueJsonEditor,
   },

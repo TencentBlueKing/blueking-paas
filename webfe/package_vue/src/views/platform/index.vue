@@ -160,6 +160,10 @@ export default {
   }
   .tag {
     background: #f0f1f5;
+    &.yes {
+      background: #daf6e5;
+      color: #299e56;
+    }
   }
   .border-tag {
     background: #fafbfd;

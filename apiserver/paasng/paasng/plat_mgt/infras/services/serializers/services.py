@@ -52,7 +52,7 @@ class PlanWithSvcSLZ(BasePlanObjSLZ):
 
     def get_pre_created_instances(self, plan: PlanObj) -> list:
         # 若非资源池类型的服务, 不返回预创建实例
-        if plan.service and plan.service.config.get("provider_name") != "pool":
-            return []
-        pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
-        return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
+        if plan.service and plan.service.config.get("provider_name") == "pool":
+            pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
+            return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
+        return []

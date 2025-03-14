@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 import typing
 from contextlib import contextmanager
@@ -42,10 +43,10 @@ from .exceptions import APIError, ResourceNotFound
 if typing.TYPE_CHECKING:
     from django.core.cache import BaseCache
 
-    from .models import Cluster
+    from .clusters import Cluster
 
 
-quote = partial(amqp_quote, safe='')
+quote = partial(amqp_quote, safe="")
 
 
 class API(HTTPClient):
@@ -73,10 +74,10 @@ class API(HTTPClient):
 
             exception = self.Exceptions.get(status_code, APIError)
             raise exception(
-                message=json_response['error'], reason=json_response["reason"], reply_code=status_code
+                message=json_response["error"], reason=json_response["reason"], reply_code=status_code
             ) from err
 
-    def partial(self, path: "str", method: "str", headers=None) -> 'typing.Callable':
+    def partial(self, path: "str", method: "str", headers=None) -> "typing.Callable":
         return partial(self.request, path=path, method=method, headers=headers)
 
 
@@ -145,9 +146,9 @@ class PolicyHandler(ManagementHandler):
 
 
 class UserPolicyHandler(PolicyHandler):
-    path = 'policies/'
+    path = "policies/"
 
-    def create(self, virtual_host: "str", name: "str", policies: 'dict'):
+    def create(self, virtual_host: "str", name: "str", policies: "dict"):
         """Create policy for specific vhost"""
         policies["name"] = name
         policies["vhost"] = virtual_host
@@ -156,9 +157,9 @@ class UserPolicyHandler(PolicyHandler):
 
 
 class LimitPolicyHandler(PolicyHandler):
-    path = 'vhost-limits/'
+    path = "vhost-limits/"
 
-    def create(self, virtual_host: "str", name: "str", value: 'int'):
+    def create(self, virtual_host: "str", name: "str", value: "int"):
         """Create policy for specific vhost"""
         path = "%s/%s/" % (quote(virtual_host), quote(name))
         return self.http_client.put(
@@ -172,7 +173,7 @@ class LimitPolicyHandler(PolicyHandler):
 
 
 class ConnectionHandler(Connection):
-    API_CONNECTION_CHANNELS = 'connections/%s/channels'
+    API_CONNECTION_CHANNELS = "connections/%s/channels"
 
     def channels(self, connection):
         """Get Channels of connection.
@@ -215,7 +216,7 @@ class ManagementClient:
     """details https://rawcdn.githack.com/rabbitmq/rabbitmq-management/v3.7.0/priv/www/api/index.html"""
 
     @classmethod
-    def from_cluster(cls, cluster: 'Cluster'):
+    def from_cluster(cls, cluster: "Cluster"):
         return cls(api_url=cluster.management_api, username=cluster.admin, password=cluster.password)
 
     def __init__(self, api_url, username, password, timeout=10, verify=None, cert=None):
@@ -237,7 +238,7 @@ class ManagementClient:
         self.nodes = self.http_client.partial("nodes", "get")
         self.whoami = self.http_client.partial("whoami", "get")
 
-    def alive(self, virtual_host='/') -> 'bool':
+    def alive(self, virtual_host="/") -> "bool":
         """Aliveness Test."""
         result = self.http_client.get("aliveness-test/" + quote(virtual_host))
         return result["status"] == "ok"
@@ -246,7 +247,7 @@ class ManagementClient:
         """Top Processes."""
         nodes = []
         for node in self.nodes():
-            nodes.append(self.http_client.get(urljoin("top/", node['name'])))
+            nodes.append(self.http_client.get(urljoin("top/", node["name"])))
         return nodes
 
 
@@ -254,9 +255,9 @@ class CacheClient(ManagementClient):
     class APIWrapper:
         undefined = object()
 
-        def __init__(self, api, cache_name: "str", expires: 'int'):
+        def __init__(self, api, cache_name: "str", expires: "int"):
             self.api = api
-            self.cache: 'BaseCache' = caches[cache_name]
+            self.cache: "BaseCache" = caches[cache_name]
             self.expires = expires
 
         def __getattr__(self, item):
@@ -280,7 +281,7 @@ class CacheClient(ManagementClient):
     def __init__(
         self,
         cache_name: "str" = "default",
-        expires: 'int' = settings.RABBITMQ_MANAGEMENT_API_CACHE_SECONDS,
+        expires: "int" = settings.RABBITMQ_MANAGEMENT_API_CACHE_SECONDS,
         *args,
         **kwargs,
     ):

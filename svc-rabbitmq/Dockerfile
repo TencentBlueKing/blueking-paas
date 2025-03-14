@@ -30,7 +30,6 @@ ADD ./tasks ./tasks
 ADD ./templates ./templates
 ADD ./vendor ./vendor
 ADD ./manage.py .
-ADD ./migrate.sh .
 ADD ./start.sh .
 
 CMD ["/bin/bash", "./start.sh"]

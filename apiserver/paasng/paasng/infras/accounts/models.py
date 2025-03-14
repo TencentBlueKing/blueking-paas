@@ -17,7 +17,7 @@
 
 import datetime
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from bkpaas_auth import get_user_by_user_id
 from blue_krill.models.fields import EncryptField
@@ -34,7 +34,6 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatur
 from paasng.infras.accounts.oauth.models import Project, Scope
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
-from paasng.utils.text import generate_token
 
 
 class User(AbstractBaseUser):
@@ -86,56 +85,6 @@ class User(AbstractBaseUser):
 
     def natural_key(self):
         return (self.username,)
-
-
-class UserPrivateTokenManager(models.Manager):
-    """Custom manager for UserPrivateToken"""
-
-    def create_token(self, user: User, expires_in: Optional[int]) -> "UserPrivateToken":
-        """Create a random private token for user
-
-        :param expires_in: after how many seconds, this token will be marked expired, None means
-            never expires.
-        """
-        token = generate_token(length=30)
-        expires_at = None
-        if expires_in:
-            expires_at = timezone.now() + datetime.timedelta(seconds=expires_in)
-        return self.create(user=user, token=token, expires_at=expires_at)
-
-    def get_by_natural_key(self, user: str, token: str, **kwargs):
-        return self.get(user=User.objects.get(username=user))
-
-
-# TODO: Remove this model, it has been migrated to the sysapi_client app.
-class UserPrivateToken(models.Model):
-    """Private token can be used to authenticate an user, these tokens usually have very long
-    expiration period. So they are perfect for system level communications.
-    """
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=64, unique=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-
-    objects = UserPrivateTokenManager()
-
-    def has_expired(self):
-        """Check if token has expired"""
-        if not self.is_active:
-            return True
-
-        # empty "expired_at" field means this token will never expire
-        if not self.expires_at:
-            return False
-        return timezone.now() > self.expires_at
-
-    def natural_key(self):
-        return self.user, self.token
-
-
-# 声明要求确保了所有 User 对象在任何 UserPrivateToken 对象之前序列化
-UserPrivateToken.natural_key.dependencies = ["accounts.user"]  # type: ignore
 
 
 class UserProfileManager(models.Manager):
@@ -278,7 +227,7 @@ class PrivateTokenHolder(AuditedModel):
     with external code services, such as GitLab, etc. When a user (such as a system user)
     cannot use OAuth2, the private token is a good alternative.
 
-    Despite the name, the "private token" in this model is not related to the "UserPrivateToken"
+    Despite the name, the "private token" in this model is not related to the "ClientPrivateToken"
     model.
     """
 
@@ -333,23 +282,3 @@ class AccountFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=64)
     objects = AccountFeatureFlagManager()
-
-
-class AuthenticatedAppAsUserManager(models.Manager):
-    def get_by_natural_key(self, bk_app_code: str):
-        return self.get(bk_app_code=bk_app_code)
-
-
-# TODO: Remove this model, it has been migrated to the sysapi_client app.
-class AuthenticatedAppAsUser(TimestampedModel):
-    """Store relationships which treat an authenticated(by API Gateway) app as an regular user,
-    useful for calling system APIs without providing any real user credentials"""
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    bk_app_code = models.CharField(max_length=64, unique=True)
-    is_active = models.BooleanField(default=True)
-
-    objects = AuthenticatedAppAsUserManager()
-
-    def natural_key(self):
-        return (self.bk_app_code,)

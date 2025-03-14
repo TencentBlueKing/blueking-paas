@@ -114,7 +114,7 @@ class AuthenticatedAppAsClientMiddleware:
 
     If other services want to call apiserver's SYSTEM APIs, this middleware can be very useful.
     Under these circumstances, a valid "app_code/app_secret" pair usually was already provided in every
-    request, if "app_code" was configured in `AuthenticatedAppAsUser`, no extra credentials were
+    request, if "app_code" was configured in `AuthenticatedAppAsClient`, no extra credentials were
     needed in order to make a authenticated request.
     """
 

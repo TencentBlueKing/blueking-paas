@@ -15,7 +15,7 @@
     <div class="view-title">{{ $t('安装信息') }}</div>
     <DetailsRow
       v-for="(val, key) in installInfoKeys"
-      :label-width="126"
+      :label-width="labelWidth"
       :align="'flex-start'"
       :key="key"
     >
@@ -158,6 +158,12 @@ export default {
     curActiveTabData() {
       return this.componentList.find((v) => v.name === this.tabActive) ?? {};
     },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 150 : 120;
+    },
   },
   watch: {
     data: {
@@ -294,6 +300,7 @@ export default {
   .components-tab-cls {
     /deep/ .bk-tab-section {
       background: #f5f7fa;
+      padding: 12px 16px 16px 16px !important;
     }
     /deep/ .bk-tab-label-wrapper i.bk-tab-scroll-controller {
       border: none;

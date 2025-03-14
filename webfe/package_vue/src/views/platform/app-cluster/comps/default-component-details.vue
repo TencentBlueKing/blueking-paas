@@ -2,12 +2,12 @@
   <div class="default-component-details">
     <!-- 默认组件详情样式 -->
     <DetailsRow
-      :label-width="80"
+      :label-width="labelWidth"
       :label="removePrefix('组件介绍')"
       :value="$t(introduceMap[data?.name]) || '--'"
     />
     <DetailsRow
-      :label-width="80"
+      :label-width="labelWidth"
       :is-full="true"
       :align="'flex-start'"
     >
@@ -18,19 +18,19 @@
           v-if="isBkIngressNginx"
         >
           <DetailsRow
-            :label-width="80"
+            :label-width="configLabelWidth"
             :label="`${$t('访问方式')}：`"
             :value="accessMethod ?? '--'"
           />
           <template v-if="accessMethod !== null">
             <template v-if="accessMethod === 'nodePort'">
               <DetailsRow
-                :label-width="80"
+                :label-width="configLabelWidth"
                 :label="`HTTP ${$t('端口')}：`"
                 :value="values?.service?.nodePorts?.http || '--'"
               />
               <DetailsRow
-                :label-width="80"
+                :label-width="configLabelWidth"
                 :label="`HTTPS ${$t('端口')}：`"
                 :value="values?.service?.nodePorts?.https || '--'"
               />
@@ -38,7 +38,7 @@
             <template v-else>
               <!-- hostNetwork -->
               <DetailsRow
-                :label-width="80"
+                :label-width="configLabelWidth"
                 :label="`${$t('节点标签')}：`"
                 :align="'flex-start'"
               >
@@ -72,7 +72,7 @@
       </div>
     </DetailsRow>
     <DetailsRow
-      :label-width="80"
+      :label-width="labelWidth"
       :is-full="true"
       :align="'flex-start'"
     >
@@ -196,6 +196,12 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 80 : 70;
+    },
+    configLabelWidth() {
+      return this.localLanguage === 'en' ? 100 : 80;
     },
   },
   methods: {

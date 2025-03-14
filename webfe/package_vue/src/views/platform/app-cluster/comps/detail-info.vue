@@ -12,7 +12,7 @@
     <DetailsRow
       v-for="(val, key) in baseInfoKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
       :align="key === 'api_servers' ? 'flex-start' : 'center'"
     >
       <template slot="label">{{ `${val}：` }}</template>
@@ -46,7 +46,7 @@
     <DetailsRow
       v-for="(val, key) in configKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
     >
       <template slot="label">{{ `${val}：` }}</template>
       <template slot="value">
@@ -68,7 +68,7 @@
     <DetailsRow
       v-for="(val, key) in tenantKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
       :align="'flex-start'"
       :label="`${val}：`"
     >
@@ -129,6 +129,14 @@ export default {
         native_k8s: this.$t('K8S 集群（不推荐，无法使用访问控制台等功能）'),
       },
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 150 : 100;
+    },
   },
   methods: {
     handleEdit() {

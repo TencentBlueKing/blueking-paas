@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Tuple
 
 from django.http import Http404
 from drf_yasg.utils import swagger_auto_schema
@@ -23,7 +24,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub.manager import mixed_plan_mgr, mixed_service_mgr
 from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperationError
-from paasng.accessories.servicehub.services import NOTSET, PlanObj
+from paasng.accessories.servicehub.services import NOTSET, PlanObj, ServiceObj
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -42,13 +43,14 @@ class PlanViewSet(viewsets.GenericViewSet):
     # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    def get_plan(self, service_id, plan_id) -> PlanObj:
+    def get_service_and_plan(self, service_id, plan_id) -> Tuple[ServiceObj, PlanObj]:
+        """需要返回 service 和 plan 两个对象，不然 service 被垃圾回收后，plan 无法获取到 service 对象"""
         service = mixed_service_mgr.get(uuid=service_id)
         plans = service.get_plans(is_active=NOTSET)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         if not plan:
             raise Http404("PlanObjNotFound")
-        return plan
+        return service, plan
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
@@ -76,7 +78,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: PlanWithSvcSLZ()},
     )
     def retrieve(self, request, service_id, plan_id, *args, **kwargs):
-        plan = self.get_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id)
         return Response(data=PlanWithSvcSLZ(plan).data)
 
     @swagger_auto_schema(
@@ -111,8 +113,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, service_id, plan_id, *args, **kwargs):
-        service = mixed_service_mgr.get(uuid=service_id)
-        plan = self.get_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id)
         data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
@@ -140,9 +141,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        service = mixed_service_mgr.get(uuid=service_id)
-
-        plan = self.get_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id)
         data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
@@ -150,7 +149,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        plan = self.get_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id)
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,

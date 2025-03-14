@@ -1704,8 +1704,6 @@ msgstr ""
 "management, and application marketplace management."
 
 #: paasng/infras/sysapi_client/constants.py:23
-#, fuzzy
-#| msgid "没有特定角色的用户"
 msgid "没有特定角色"
 msgstr "No specific roles"
 
@@ -1718,8 +1716,6 @@ msgid "基础管理"
 msgstr "Basic Management"
 
 #: paasng/infras/sysapi_client/constants.py:27
-#, fuzzy
-#| msgid "系统 API：轻应用管理"
 msgid "轻应用管理"
 msgstr "Mini-App management"
 
@@ -1728,8 +1724,6 @@ msgid "lesscode 系统专用角色"
 msgstr "Dedicated role for the lesscode system"
 
 #: paasng/infras/sysapi_client/constants.py:36
-#, fuzzy
-#| msgid "系统 API：读取应用信息"
 msgid "读取应用信息"
 msgstr "Read application information"
 
@@ -1738,8 +1732,6 @@ msgid "管理应用信息"
 msgstr "Manage application information"
 
 #: paasng/infras/sysapi_client/constants.py:38
-#, fuzzy
-#| msgid "读取增强服务实例信息失败"
 msgid "读取增强服务信息"
 msgstr "Failed to read Add-ons Instance information"
 
@@ -1752,20 +1744,14 @@ msgid "管理轻应用"
 msgstr "Manage Mini-App"
 
 #: paasng/infras/sysapi_client/constants.py:47
-#, fuzzy
-#| msgid "系统 API：读取 DB 凭证信息"
 msgid "读取 DB 凭证信息"
 msgstr "Read DB credential information"
 
 #: paasng/infras/sysapi_client/constants.py:48
-#, fuzzy
-#| msgid "系统 API：绑定 DB 服务"
 msgid "绑定 DB 服务"
 msgstr "Bind DB service"
 
 #: paasng/infras/sysapi_client/models.py:23
-#, fuzzy
-#| msgid "A user with that username already exists."
 msgid "A client with that name already exists."
 msgstr ""
 
@@ -3909,11 +3895,11 @@ msgstr "Empty response after successful operation"
 
 #: paasng/utils/error_codes.py:24
 msgid "请求未携带有效的 sysapi client 信息"
-msgstr ""
+msgstr "No sysapi client found in the current request"
 
 #: paasng/utils/error_codes.py:25
 msgid "当前的 sysapi client 无权访问"
-msgstr ""
+msgstr "Permission denied for the current sysapi client"
 
 #: paasng/utils/error_codes.py:28
 msgid "发送通知消息失败，请稍候重试"
@@ -4387,24 +4373,3 @@ msgstr "This value does not match the required pattern."
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr "zh-cn"
-
-#~ msgid "系统 API 用户：基础可读"
-#~ msgstr "System API Users: Basic Readable"
-
-#~ msgid "系统 API 用户：具有基本管理权限"
-#~ msgstr "System API users: with basic administrative privileges"
-
-#~ msgid "系统 API 用户：具有轻应用管理权限"
-#~ msgstr "System API users: have mini-app management permissions"
-
-#~ msgid "系统 API 用户: 具有 lesscode 权限"
-#~ msgstr "System API user: has lesscode permission"
-
-#~ msgid "系统 API：应用管理"
-#~ msgstr "System API: Application management"
-
-#~ msgid "系统 API：读取服务信息"
-#~ msgstr "System API: Read service information"
-
-#~ msgid "系统 API：白名单访问控制"
-#~ msgstr "System API: Whitelist access control"

@@ -69,7 +69,7 @@ export default {
   .label-text {
     font-size: 12px;
     line-height: 1.5;
-    color: var(--text-color, #63656e);
+    color: #313238;
   }
 }
 </style>

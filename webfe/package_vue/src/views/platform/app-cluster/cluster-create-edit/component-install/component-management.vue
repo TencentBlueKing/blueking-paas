@@ -54,7 +54,10 @@
             >
               <template slot="value">
                 <span>{{ accessMethod }}</span>
-                <span class="tip">
+                <span
+                  class="tip"
+                  v-if="['nodePort', 'hostNetwork'].includes(accessMethod)"
+                >
                   <i class="paasng-icon paasng-info-line ml8"></i>
                   <span v-if="accessMethod === 'nodePort'">
                     {{ $t('使用 CLB 作为接入层，监听器将流量转发到集群节点的指定的 NodePort。') }}
@@ -65,38 +68,40 @@
                 </span>
               </template>
             </DetailsRow>
-            <!-- nodePort -->
-            <template v-if="accessMethod === 'nodePort'">
-              <DetailsRow
-                :label-width="90"
-                :label="`HTTP ${$t('端口')}：`"
-                :value="values?.service?.nodePorts?.http || '--'"
-              />
-              <DetailsRow
-                :label-width="90"
-                :label="`HTTPS ${$t('端口')}：`"
-                :value="values?.service?.nodePorts?.https || '--'"
-              />
-            </template>
-            <template v-else>
-              <!-- hostNerwork -->
-              <DetailsRow
-                :label-width="labelWidth"
-                :label="`${$t('节点标签')}：`"
-                :align="'flex-start'"
-              >
-                <div slot="value">
-                  <span v-if="!values.nodeSelector?.length">--</span>
-                  <span
-                    v-else
-                    v-for="(val, key) in values.nodeSelector"
-                    class="tag"
-                    :key="key"
-                  >
-                    {{ key }} = {{ val }}
-                  </span>
-                </div>
-              </DetailsRow>
+            <template v-if="['nodePort', 'hostNetwork'].includes(accessMethod)">
+              <!-- nodePort -->
+              <template v-if="accessMethod === 'nodePort'">
+                <DetailsRow
+                  :label-width="90"
+                  :label="`HTTP ${$t('端口')}：`"
+                  :value="values?.service?.nodePorts?.http || '--'"
+                />
+                <DetailsRow
+                  :label-width="90"
+                  :label="`HTTPS ${$t('端口')}：`"
+                  :value="values?.service?.nodePorts?.https || '--'"
+                />
+              </template>
+              <template v-else>
+                <!-- hostNetwork -->
+                <DetailsRow
+                  :label-width="labelWidth"
+                  :label="`${$t('节点标签')}：`"
+                  :align="'flex-start'"
+                >
+                  <div slot="value">
+                    <span v-if="!values.nodeSelector?.length">--</span>
+                    <span
+                      v-else
+                      v-for="(val, key) in values.nodeSelector"
+                      class="tag"
+                      :key="key"
+                    >
+                      {{ key }} = {{ val }}
+                    </span>
+                  </div>
+                </DetailsRow>
+              </template>
             </template>
           </div>
         </div>
@@ -256,7 +261,10 @@ export default {
       return this.$store.state.localLanguage;
     },
     accessMethod() {
-      return this.details?.hostNetwork ? 'hostNerwork' : 'nodePort';
+      if (this.values?.hostNetwork) {
+        return this.values?.hostNetwork ? 'hostNetwork' : 'nodePort';
+      }
+      return '--';
     },
     values() {
       return this.details?.values || {};

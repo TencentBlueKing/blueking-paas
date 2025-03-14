@@ -201,9 +201,18 @@ export default {
       this.isLoading = true;
       try {
         const res = await this.$store.dispatch('tenant/getClusterComponents', { clusterName: this.clusterId });
-        this.isLoading = false;
-        this.requiredComponents = res.filter((v) => v.required);
-        this.optionalComponents = res.filter((v) => !v.required);
+        // 必要组件指定规则
+        const requiredOrder = ['bk-ingress-nginx', 'bkpaas-app-operator', 'bkapp-log-collection'];
+        // 必要组件排序
+        this.requiredComponents = res
+          .filter((v) => v.required)
+          .sort((a, b) => {
+            const indexA = requiredOrder.indexOf(a.name);
+            const indexB = requiredOrder.indexOf(b.name);
+            return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+          });
+        // 其他组件按字母排序
+        this.optionalComponents = res.filter((v) => !v.required).sort((a, b) => a.name.localeCompare(b.name));
         // 使用 Promise.all 并行获取组件详情，required 为必填项 必须安装成功才允许下一步
         const nextDisabled = res.some((v) => v.required && v.status !== 'installed');
         this.$emit('change-next-btn', nextDisabled);
@@ -214,43 +223,43 @@ export default {
         this.isLoading = false;
       }
     },
-    // 获取集群组件详情
-    async getComponentDetail(componentName) {
+    async pollComponentDetail(componentName, initialCheck = true) {
       try {
-        // 更加精准的加载状态，跟踪每个组件详情的加载，而不是全局状态
         this.setComponentLoadingState(componentName, true);
-        // 调用轮询函数获取组件详细信息
-        await this.pollComponentDetail(componentName);
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.setComponentLoadingState(componentName, false);
-      }
-    },
-    async pollComponentDetail(componentName, conditionalFn = (ret) => ret.status === 'installing') {
-      try {
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {
           clusterName: this.clusterId,
           componentName,
         });
         this.$set(this.componentDetails, componentName, ret);
-        // 如果组件的 status 是 'installing'，则在 5 秒后再次请求
-        if (conditionalFn(ret)) {
-          setTimeout(() => this.pollComponentDetail(componentName), 5000);
+
+        // 判断是否需要继续轮询，安装、更新需要结束的状态与直接获取详情的结束状态不同
+        const isPoll =
+          (initialCheck && ret.status === 'installing') ||
+          (!initialCheck && !['installation_failed', 'installed'].includes(ret.status));
+
+        if (isPoll) {
+          setTimeout(() => {
+            this.pollComponentDetail(componentName, initialCheck);
+          }, 5000);
         }
       } catch (e) {
         if (e.status === 404) {
           return;
         }
         this.catchErrorHandler(e);
+      } finally {
+        this.setComponentLoadingState(componentName, false);
       }
     },
 
-    // 更新、安装轮询当前组件详情
-    handlePollingDetail(name) {
-      this.pollComponentDetail(name, (ret) => {
-        return !['installation_failed', 'installed'].includes(ret.status);
-      });
+    // 直接获取组件详情调用
+    async getComponentDetail(componentName) {
+      await this.pollComponentDetail(componentName, true);
+    },
+
+    // 更新、安装操作时调用
+    async handlePollingDetail(componentName) {
+      await this.pollComponentDetail(componentName, false);
     },
 
     // 新增一个方法来专门设置组件详情的加载状态

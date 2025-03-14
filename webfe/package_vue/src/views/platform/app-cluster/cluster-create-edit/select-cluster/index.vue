@@ -190,7 +190,7 @@
     </section>
     <section class="card-style">
       <div class="card-title">
-        <span>{{ $t('可用租户') }}</span>
+        <span>{{ $t('租户信息') }}</span>
         <span class="sub-tip ml8">
           {{ $t('哪些租户在集群分配的时候可以看到这个集群') }}
         </span>

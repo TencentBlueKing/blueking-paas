@@ -45,7 +45,7 @@
           </div>
         </div>
         <span v-else>
-          {{ (key === 'exposed_url_type' ? pathMap[data[key]] : data[key]) || '--' }}
+          {{ (key === 'app_address_type' ? pathMap[data[key]] : data[key]) || '--' }}
         </span>
       </template>
     </DetailsRow>
@@ -139,7 +139,7 @@ export default {
       installInfoKeys: {
         component_preferred_namespace: this.$t('命名空间'),
         component_image_registry: this.$t('镜像仓库'),
-        exposed_url_type: this.$t('应用访问类型'),
+        app_address_type: this.$t('应用访问类型'),
         app_domains: this.$t('应用域名'),
       },
       componentDetail: {},

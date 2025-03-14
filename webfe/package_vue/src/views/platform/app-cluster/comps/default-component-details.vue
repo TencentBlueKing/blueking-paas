@@ -4,7 +4,7 @@
     <DetailsRow
       :label-width="80"
       :label="`${$t('组件介绍')}：`"
-      :value="introduceMap[data?.name] || '--'"
+      :value="$t(introduceMap[data?.name]) || '--'"
     />
     <DetailsRow
       :label-width="80"
@@ -165,9 +165,14 @@ export default {
       // 与其他组件展示不同
       specialComponent: 'bk-ingress-nginx',
       introduceMap: {
-        'bk-ingress-nginx': this.$t('为应用提供负载均等功能。'),
-        'bkpaas-app-operator': this.$t('云原生应用的控制引擎，必须安装后才能部署应用。'),
-        'bcs-general-pod-autoscaler': this.$t('Saas 服务水平扩缩容组件，支持基于资源使用情况调整服务副本数量。'),
+        'bk-ingress-nginx':
+          'Nginx Ingress 控制器，基于 Nginx 实现 HTTP/HTTPS 流量路由、负载均衡、自定义域名、URL 路径规则等功能。',
+        'bkapp-log-collection':
+          '将应用的各类日志采集到 ElasticSearch 集群，以支持后续查询标准输出、预定义的结构化、Nginx 接入层等日志。',
+        'bkpaas-app-operator':
+          '云原生应用的关键基建，是开发者中心基于 k8s 能力实现的 operator，承担着云原生应用相关资源的管理，调度等职责。',
+        'bcs-general-pod-autoscaler':
+          '蓝鲸容器管理平台（BCS）提供的增强型 Pod 水平扩缩容组件，支持按各类指标对应用集成副本数量进行扩缩容。',
       },
     };
   },

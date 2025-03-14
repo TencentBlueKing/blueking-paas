@@ -39,7 +39,7 @@
     </ul>
     <div class="detail-title">{{ $t('高级设置') }}</div>
     <DetailsRow
-      :label-width="168"
+      :label-width="175"
       :is-full="true"
       :align="'flex-start'"
     >
@@ -60,14 +60,14 @@
       </div>
     </DetailsRow>
     <DetailsRow
-      :label-width="168"
+      :label-width="175"
       :is-full="true"
       :align="'flex-start'"
     >
       <template slot="label">{{ `${$t('容忍度（tolerations）')}：` }}</template>
       <div
         slot="value"
-        class="toleration"
+        :class="['toleration', { mt5: Object.keys(data.tolerations)?.length }]"
       >
         <template v-if="!data.tolerations || Object.keys(data.tolerations).length === 0">--</template>
         <div
@@ -196,7 +196,6 @@ export default {
     margin-right: 4px;
   }
   .toleration {
-    margin-top: 5px;
     .row {
       display: flex;
       align-items: center;

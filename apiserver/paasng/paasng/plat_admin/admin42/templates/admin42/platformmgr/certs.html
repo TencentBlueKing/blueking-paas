@@ -3,7 +3,7 @@
 {% block main_content %}
 <div id="platform-shared-certs-list" style="width: 100%;" class="p20">
     <bk-alert type="info" title="更新证书内容后，请运行 refresh_cert 工具更新各应用已创建的证书 Secret 资源（耗时较长）。"></bk-alert>
-    <bk-button :theme="'primary'" :title="'创建共享证书'" class="mr10" @click="handleCreate">
+    <bk-button :theme="'primary'" :title="'创建共享证书'" class="mt10" @click="handleCreate">
         创建共享证书
     </bk-button>
     <bk-table :data="data" :cell-class-name="cellStyleCallback" style="margin-top: 20px;">
@@ -35,18 +35,18 @@
             $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]共享证书
         </div>
         <bk-form :label-width="120" :model="dialog.form" :rules="rules">
-            <bk-form-item label="所属租户" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
+            <bk-form-item label="所属租户" :required="true" :desc="dialog.type !== 'create' ? '证书创建后不可变更' : ''">
                 <bk-input v-model="dialog.form.tenant_id" :disabled="dialog.type !== 'create'" placeholder="租户 ID"></bk-input>
             </bk-form-item>
-            <bk-form-item label="证书名称" :property="'name'" :required="true" :desc="dialog.type !== 'create'?'证书创建后不可变更':''">
+            <bk-form-item label="证书名称" :property="'name'" :required="true" :desc="dialog.type !== 'create' ? '证书创建后不可变更' : ''">
                 <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'" placeholder="只能由字符 [a-zA-Z0-9-_] 组成"></bk-input>
             </bk-form-item>
             <bk-form-item label="证书通配符" :property="'auto_match_cns'" :required="true">
-                <bk-input v-model="dialog.form.auto_match_cns" :disabled="dialog.type === 'delete'" placeholder='# Multiple CN are seperated by ";", for example: "foo.com;*.bar.com"'></bk-input>
+                <bk-input v-model="dialog.form.auto_match_cns" :disabled="dialog.type === 'delete'" placeholder='# Multiple CN are separated by ";", for example: "foo.com;*.bar.com"'></bk-input>
             </bk-form-item>
             <bk-form-item label="证书内容" :property="'cert_data'" :required="true">
                 <bk-input
-                    placeholder="请直接输入的证书内容"
+                    placeholder="请直接输入证书的内容"
                     :type="'textarea'"
                     :rows="3"
                     v-model="dialog.form.cert_data">
@@ -54,7 +54,7 @@
             </bk-form-item>
             <bk-form-item label="密钥内容" :property="'key_data'" :required="true">
                 <bk-input
-                    placeholder="请直接输入的密钥内容"
+                    placeholder="请直接输入密钥的内容"
                     :type="'textarea'"
                     :rows="3"
                     v-model="dialog.form.key_data">

@@ -161,13 +161,6 @@ class Provider(BaseProvider):
         # {prefix}-{name}-{id}
         return "-".join(parts)
 
-    def _validate_cluster_config(self, config: dict) -> None:
-        """Validate required fields in the cluster config."""
-        required_fields = ["host", "port", "management_api", "admin", "password", "version"]
-        for attr in required_fields:
-            if attr not in config or not config[attr]:
-                raise ValueError(f"集群配置缺少必要的配置字段: {attr}，请检查方案配置")
-
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""
         if not self.clusters:
@@ -179,14 +172,18 @@ class Provider(BaseProvider):
                 "password": self.password,
                 "version": self.version,
             }
-            self._validate_cluster_config(values)
-            return Cluster(**values)
+            try:
+                return Cluster(**values)
+            except Exception as e:
+                raise ValueError(f"cluster 配置不正确: {e}")
 
         result = WRItemList.from_json(self.clusters).get()
         if not result:
             raise ValueError("clusters 列表配置不正确，无法获取集群配置")
-        self._validate_cluster_config(**result.values)
-        return Cluster(**result.values)
+        try:
+            return Cluster(**result.values)
+        except Exception as e:
+            raise ValueError(f"cluster 配置不正确: {e}")
 
     def create_instance(
         self, name: "str", bill: "InstanceBill", context: "dict", cluster: "Cluster"

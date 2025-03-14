@@ -19,6 +19,7 @@ import logging
 from typing import Any, Dict, List
 
 from kubernetes.client import ApiClient, Configuration, CoreV1Api
+from kubernetes.config.kube_config import FileOrData
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
@@ -109,11 +110,17 @@ def check_k8s_accessible(
 
     # Token / 证书认证二选一
     if token:
-        cfg.api_key = {"authorization": "Bearer " + token}
+        cfg.api_key["authorization"] = f"Bearer {token}"
     elif ca and cert and key:
-        cfg.ssl_ca_cert = ca
-        cfg.cert_file = cert
-        cfg.key_file = key
+        config = {
+            "certificate-authority-data": ca,
+            "client-certificate-data": cert,
+            "client-key-data": key,
+        }
+
+        cfg.ssl_ca_cert = FileOrData(config, file_key_name="certificate-authority").as_file()
+        cfg.cert_file = FileOrData(config, file_key_name="client-certificate").as_file()
+        cfg.key_file = FileOrData(config, file_key_name="client-key").as_file()
     else:
         logger.error("check k8s accessible failed, missing token or ca/cert/key")
         return False

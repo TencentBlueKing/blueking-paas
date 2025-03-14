@@ -58,7 +58,7 @@ class ClusterFeatureFlagsSLZ(serializers.Serializer):
 
     ENABLE_MOUNT_LOG_TO_HOST = serializers.BooleanField(help_text="允许挂载日志到主机", required=False, default=False)
     INGRESS_USE_REGEX = serializers.BooleanField(
-        help_text="Ingress路径是否使用正则表达式", required=False, default=False
+        help_text="Ingress 路径是否使用正则表达式", required=False, default=False
     )
     ENABLE_BK_MONITOR = serializers.BooleanField(help_text="从蓝鲸监控查询资源使用率", default=False)
     ENABLE_BK_LOG_COLLECTOR = serializers.BooleanField(help_text="使用蓝鲸日志平台方案采集日志", default=False)

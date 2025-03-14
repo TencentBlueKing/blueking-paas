@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 class Cluster(BaseModel):
     host: str
-    port: int = 5672
+    port: int
     management_api: str
     admin: str
     password: str

@@ -64,6 +64,9 @@ python manage.py migrate
 
 ```python
 python manage.py shell
+```
+
+```python
 
 import json
 from paas_service.models import Service
@@ -72,7 +75,14 @@ from paas_service.models import Plan
 # category 为增强服务分类，apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 svc = Service.objects.create(name="rabbitmq", display_name_zh_cn="RabbitMQ", display_name_en="RabbitMQ", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
 
-config = {"host":"127.0.0.1","port":5672,"management_api":"http://127.0.0.1:15672","admin":"admin","password":"password","version":"4.0.2",}
+config = {
+    "host": "127.0.0.1",  # RabbitMQ 服务的主机地址
+    "port": 5672,         # RabbitMQ 服务的端口号
+    "management_api": "http://127.0.0.1:15672",  # RabbitMQ 管理 API 的地址
+    "admin": "admin",     # RabbitMQ 的管理员用户名
+    "password": "password",  # RabbitMQ 的管理员密码
+    "version": "4.0.2",   # RabbitMQ 的版本号
+}
 
 Plan.objects.create(name="default", description="rabbitmq 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```

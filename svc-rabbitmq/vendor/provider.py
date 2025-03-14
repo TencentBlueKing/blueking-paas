@@ -161,25 +161,31 @@ class Provider(BaseProvider):
         # {prefix}-{name}-{id}
         return "-".join(parts)
 
+    def _validate_cluster_config(self, config: dict) -> None:
+        """Validate required fields in the cluster config."""
+        required_fields = ["host", "port", "management_api", "admin", "password", "version"]
+        for attr in required_fields:
+            if attr not in config or not config[attr]:
+                raise ValueError(f"集群配置缺少必要的配置字段: {attr}，请检查方案配置")
+
     def pick_cluster(self) -> Cluster:
         """pick a single cluster config from available clusters"""
         if not self.clusters:
-            assert self.host, "未设置 rabbitmq 服务地址"
-            assert self.port, "未设置 rabbitmq 服务端口"
-            assert self.management_api, "未设置 rabbitmq 管理地址"
-            assert self.admin, "未设置 rabbitmq 管理员用户"
-            assert self.password, "未设置 mysql 管理员用户密码"
-            assert self.version, "未设置 rabbitmq 版本"
-            return Cluster(
-                host=self.host,
-                port=self.port,
-                management_api=self.management_api,
-                admin=self.admin,
-                password=self.password,
-                version=self.version,
-            )
+            values = {
+                "host": self.host,
+                "port": self.port,
+                "management_api": self.management_api,
+                "admin": self.admin,
+                "password": self.password,
+                "version": self.version,
+            }
+            self._validate_cluster_config(values)
+            return Cluster(**values)
 
         result = WRItemList.from_json(self.clusters).get()
+        if not result:
+            raise ValueError("clusters 列表配置不正确，无法获取集群配置")
+        self._validate_cluster_config(**result.values)
         return Cluster(**result.values)
 
     def create_instance(

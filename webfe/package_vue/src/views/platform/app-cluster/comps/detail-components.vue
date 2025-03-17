@@ -96,7 +96,7 @@
             v-else-if="panel.status === 'installation_failed'"
           ></i>
           <i
-            class="paasng-icon paasng-unfinished"
+            class="paasng-icon paasng-time-filled"
             v-else
           ></i>
           <span class="panel-name">{{ panel.name }}</span>
@@ -266,8 +266,8 @@ export default {
     .paasng-check-circle-shape {
       color: #18c0a1;
     }
-    .paasng-unfinished {
-      color: #f59500;
+    .paasng-time-filled {
+      color: #c4c6cc;
     }
     .paasng-close-circle-shape {
       color: #ea3636;

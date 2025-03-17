@@ -32,6 +32,7 @@
           @show-values="handleShowValues"
           @show-edit="handleShowEdit"
           @polling="pollingDetail"
+          @change-status="changeComponentStatus"
         />
       </template>
     </section>
@@ -73,6 +74,7 @@
               @show-values="handleShowValues"
               @show-edit="handleShowEdit"
               @polling="pollingDetail"
+              @change-status="changeComponentStatus"
             />
           </template>
         </bk-collapse-item>
@@ -230,11 +232,23 @@ export default {
       }
     },
 
+    // 本地更新状态组件状态
+    changeComponentStatus(componentName, status) {
+      const data = this.componentDetails[componentName];
+      this.$set(this.componentDetails, componentName, {
+        ...data,
+        status,
+      });
+    },
+
     // 直接获取组件详情调用
-    async getComponentDetail(componentName) {
+    async getComponentDetail(componentName, isPoll = false) {
       try {
         // 开启组件区域 loading
-        this.setComponentLoadingState(componentName, true);
+        if (!isPoll) {
+          // 轮询状态无需开启lodaing
+          this.setComponentLoadingState(componentName, true);
+        }
         const ret = await this.$store.dispatch('tenant/getComponentDetail', {
           clusterName: this.clusterId,
           componentName,
@@ -242,14 +256,17 @@ export default {
         this.$set(this.componentDetails, componentName, ret);
 
         // 状态为 installing 轮询接口
-
         if (ret.status === 'installing') {
           setTimeout(() => {
-            this.pollComponentDetail(componentName, initialCheck);
+            this.getComponentDetail(componentName, true);
           }, 5000);
         }
       } catch (e) {
         if (e.status === 404) {
+          // 未安装接口为404
+          this.$set(this.componentDetails, componentName, {
+            status: 'not_installed',
+          });
           return;
         }
         this.catchErrorHandler(e);
@@ -278,14 +295,17 @@ export default {
         }
       } catch (e) {
         if (e.status === 404) {
+          this.$set(this.componentDetails, componentName, {
+            status: 'not_installed',
+          });
           setTimeout(() => {
             this.pollingDetail(componentName);
           }, 5000);
           return;
         }
-        this.catchErrorHandler(e);
         // 其他错误情况关闭Loading
         this.$set(this.componentBtnLoadings, componentName, false);
+        this.catchErrorHandler(e);
       }
     },
 

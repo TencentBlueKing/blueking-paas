@@ -8,7 +8,10 @@
       ></i>
     </slot>
     <slot name="label">
-      <span class="label-text">
+      <span
+        class="label-text"
+        :style="{ fontSize: `${fontSize}px` }"
+      >
         {{ label || '--' }}
       </span>
     </slot>
@@ -33,6 +36,10 @@ export default {
     label: {
       type: String,
       default: '',
+    },
+    fontSize: {
+      type: Number,
+      default: 12,
     },
   },
   computed: {
@@ -59,7 +66,7 @@ export default {
 
     font-size: var(--icon-size);
     color: var(--icon-color);
-    transform: translateY(1px);
+    transform: translateY(0px);
 
     &:hover {
       opacity: 0.8;
@@ -68,7 +75,6 @@ export default {
 
   .label-text {
     font-size: 12px;
-    line-height: 1.5;
     color: #313238;
   }
 }

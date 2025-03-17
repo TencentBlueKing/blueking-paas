@@ -34,7 +34,7 @@ export default {
   '集群（生产环境）': 'Cluster (Production Env)',
   '未配置，应用无法部署': 'Not configured, app cannot be deployed',
   前往添加: 'To Add',
-  当前暂无可用集群: 'No Clusters Currently Available',
+  当前租户暂无可用集群: 'No Available Clusters for the Current Tenant',
   您可以: 'You Can',
   '1. 联系平台管理员，为当前租户分配可用集群': '1. Contact the platform administrator to allocate an available cluster for the current tenant',
   '2. 在 [集群列表] 中添加新集群': '2. Add a new cluster in the [Cluster List]',

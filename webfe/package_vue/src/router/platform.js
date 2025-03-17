@@ -23,7 +23,7 @@ const clusterCreateEdit = () =>
 
 export const platformRouters = [
   {
-    path: '/developer-center/platform/',
+    path: '/plat-mgt/',
     name: 'platformManagement',
     component: platformManagement,
     redirect: {

@@ -3,7 +3,7 @@
     <div class="component-header mb15">
       <div
         class="icon-warpper"
-        :style="{ backgroundColor: statusColors[component?.status] }"
+        :style="{ backgroundColor: statusColors[detailStatus] }"
       >
         <i class="paasng-icon paasng-plugin"></i>
       </div>
@@ -133,23 +133,28 @@
           slot="value"
           class="status-wrapper"
         >
+          <!-- 组件状态：使用详情中的 status 实时更新状态 -->
           <IconStatus
-            v-if="component?.status !== 'installing'"
-            :icon-class="statusMap[component?.status].iconClass"
-            :icon-color="statusMap[component?.status].color"
-            :label="localLanguage === 'en' ? component?.status : COMPONENT_STATUS[component?.status] || '--'"
+            v-if="detailStatus !== 'installing'"
+            :icon-class="statusMap[detailStatus]?.iconClass"
+            :icon-color="statusMap[detailStatus]?.color"
+            :label="localLanguage === 'en' ? detailStatus : COMPONENT_STATUS[detailStatus] || $t('未安装')"
+            :font-size="14"
           />
           <template v-else>
             <round-loading
               size="mini"
               class="mr5"
+              style="margin-left: 0"
             />
-            <span>{{ localLanguage === 'en' ? component?.status : COMPONENT_STATUS[component?.status] || '--' }}</span>
+            <span class="status-text">
+              {{ localLanguage === 'en' ? detailStatus : COMPONENT_STATUS[detailStatus] || $t('未安装') }}
+            </span>
           </template>
           <bk-button
-            v-if="['installed', 'installation_failed'].includes(component?.status)"
+            v-if="['installed', 'installation_failed'].includes(detailStatus)"
             :text="true"
-            class="ml10"
+            class="view-detail"
             @click="handleViewDetail"
           >
             <i class="paasng-icon paasng-file-5"></i>
@@ -162,24 +167,24 @@
         class="install-btns"
         :style="{ marginLeft: labelWidth + 'px' }"
       >
-        <!-- 未安装/安装失败 -->
+        <!-- 未安装/安装失败/更新中按钮也需要显示-loading状态 -->
         <span
-          v-if="['not_installed', 'installation_failed'].includes(component?.status)"
+          v-if="['not_installed', 'installation_failed', 'installing'].includes(detailStatus)"
           v-bk-tooltips="disabledTooltipsConfig"
           class="btn-wrapper"
         >
           <bk-button
             :theme="'primary'"
             :disabled="!isInstalled"
-            :loading="componentBtnLoading || btnLoading"
-            @click="getDiffVersion(component?.status)"
+            :loading="componentBtnLoading || btnLoading || detailStatus === 'installing'"
+            @click="getDiffVersion(detailStatus)"
           >
-            {{ component?.status === 'not_installed' ? $t('安装') : $t('重新安装') }}
+            {{ detailStatus === 'not_installed' ? $t('安装') : $t('重新安装') }}
           </bk-button>
         </span>
-        <!-- 已安装可更新 -->
+        <!-- 已安装可更新/安装中按钮也需要显示-loading状态 -->
         <span
-          v-else-if="component?.status === 'installed'"
+          v-else-if="['installed', 'installing'].includes(detailStatus)"
           v-bk-tooltips="disabledTooltipsConfig"
           class="btn-wrapper"
         >
@@ -187,8 +192,8 @@
             :theme="'primary'"
             :outline="true"
             :disabled="!isInstalled"
-            :loading="componentBtnLoading || btnLoading"
-            @click="getDiffVersion(component?.status)"
+            :loading="componentBtnLoading || btnLoading || detailStatus === 'installing'"
+            @click="getDiffVersion(detailStatus)"
           >
             {{ $t('更新') }}
           </bk-button>
@@ -239,8 +244,8 @@ export default {
       COMPONENT_STATUS,
       statusMap: {
         not_installed: {
-          color: '#f59500',
-          iconClass: 'paasng-unfinished',
+          color: '#c4c6cc',
+          iconClass: 'paasng-time-filled',
         },
         installed: {
           color: '#18c0a1',
@@ -288,6 +293,9 @@ export default {
         content: this.$t('非 BCS 集群需要手动安装集群组件'),
         disabled: this.isInstalled,
       };
+    },
+    detailStatus() {
+      return this.details?.status || 'not_installed';
     },
   },
   methods: {
@@ -344,11 +352,13 @@ export default {
             const params = this.isBkIngressNginx ? this.values : {};
             this.updateComponent({ values: params }, status);
           },
+          cancelFn: () => {
+            this.componentBtnLoading = false;
+          },
         });
       } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
         this.componentBtnLoading = false;
+        this.catchErrorHandler(e);
       }
     },
     // 更新组件配置
@@ -366,8 +376,12 @@ export default {
         });
         // 轮询获取组件详情
         this.$emit('polling', this.component.name);
+        // 手动改变状态为 installing
+        this.$emit('change-status', this.component.name, 'installing');
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.componentBtnLoading = false;
       }
     },
     // 获取中英文label值
@@ -452,6 +466,8 @@ export default {
     }
   }
   .status-wrapper {
+    display: flex;
+    align-items: center;
     i {
       font-size: 14px;
       margin-right: 5px;
@@ -459,11 +475,19 @@ export default {
     .paasng-check-circle-shape {
       color: #18c0a1;
     }
-    .paasng-unfinished {
-      color: #f59500;
+    .paasng-time-filled {
+      color: #c4c6cc;
     }
     .paasng-close-circle-shape {
       color: #ea3636;
+    }
+    .status-text {
+      font-size: 14px;
+      color: #313238;
+    }
+    .view-detail {
+      margin-left: 18px;
+      height: auto;
     }
   }
   .tip {
@@ -488,6 +512,7 @@ export default {
     }
   }
   .install-btns {
+    margin-top: 8px;
     .btn-wrapper {
       display: inline-block;
     }

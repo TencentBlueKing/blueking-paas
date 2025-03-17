@@ -24,16 +24,23 @@
           :error-display-type="'normal'"
         >
           <template v-if="!!queryClusterId && specialPropertys.includes(item.property)">
-            <!-- 更新集群信息，特定字段为禁用状态 -->
+            <!-- 更新集群信息，特定字段为禁用状态、编辑态-有 xx_name 优先展示 xx_name -->
             <ConfigInput
               type="input"
               :disabled="true"
-              v-model="infoFormData[item.property]"
+              :value="infoFormData[item.editProperty] || infoFormData[item.property]"
             />
           </template>
           <template v-else>
+            <!-- 项目-禁用编辑显示 -->
             <ConfigInput
-              v-if="['textarea', 'input', 'password'].includes(item.type)"
+              v-if="!!queryClusterId && item.property === 'bk_biz_id'"
+              type="input"
+              :disabled="true"
+              :value="infoFormData[item.editProperty] || infoFormData[item.property]"
+            />
+            <ConfigInput
+              v-else-if="['textarea', 'input', 'password'].includes(item.type)"
               :type="item.type"
               :maxlength="item.maxlength"
               :disabled="item.disabled || (!!queryClusterId && editDisabledPropertys.includes(item.property))"

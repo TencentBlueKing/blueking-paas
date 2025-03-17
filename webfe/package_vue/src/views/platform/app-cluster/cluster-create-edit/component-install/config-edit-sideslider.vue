@@ -58,12 +58,22 @@
             v-model="formData[item.property]"
             :type="item.type"
           />
-          <KeyValueInput
-            v-else
-            :is-title="true"
-            :is-sign="true"
-            ref="keyValueInput"
-          />
+          <template v-else>
+            <i
+              v-if="!isTagVisible"
+              v-bk-tooltips="$t('添加')"
+              class="paasng-icon paasng-plus-thick"
+              @click="handleAdd()"
+            ></i>
+            <KeyValueInput
+              v-else
+              :is-title="true"
+              :is-sign="true"
+              :zero="true"
+              ref="keyValueInput"
+              @zero="isTagVisible = false"
+            />
+          </template>
         </bk-form-item>
         <bk-form-item class="mt20">
           <bk-button
@@ -155,7 +165,6 @@ export default {
           label: '节点标签',
           type: 'arr-input',
           property: 'resources',
-          required: true,
         },
       ],
       accessMethod: [
@@ -174,6 +183,7 @@ export default {
       ],
       // 保存按钮loading
       saveLoading: false,
+      isTagVisible: false,
     };
   },
   computed: {
@@ -233,14 +243,20 @@ export default {
               value: value,
             };
           });
-          this.$refs.keyValueInput[0]?.setData(nodes);
+          if (nodes.length) {
+            this.$refs.keyValueInput[0]?.setData(nodes);
+          }
+          this.isTagVisible = !!nodes?.length;
         });
       }
+    },
+    handleAdd() {
+      this.isTagVisible = true;
     },
     // 伪编辑-不发送请求
     submitData() {
       let validateArr = [this.$refs.formRef.validate()];
-      if (this.isHostNetwork) {
+      if (this.isHostNetwork && this.isTagVisible) {
         validateArr.push(this.$refs.keyValueInput[0]?.validate());
       }
       Promise.all(validateArr)
@@ -249,7 +265,7 @@ export default {
           let data = cloneDeep(this.values);
           data.hostNetwork = hostNetwork;
           if (this.isHostNetwork) {
-            data.nodeSelector = this.$refs.keyValueInput[0]?.getData();
+            data.nodeSelector = this.isTagVisible ? this.$refs.keyValueInput[0]?.getData() : {};
             data.service = {
               nodePorts: {},
             };

@@ -321,7 +321,7 @@ export default {
       this.$bkInfo({
         type: 'warning',
         width: 480,
-        title: this.$t('当前暂无可用集群'),
+        title: this.$t('当前租户暂无可用集群'),
         subHeader: h(
           'div',
           {

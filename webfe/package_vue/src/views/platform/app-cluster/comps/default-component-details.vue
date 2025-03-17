@@ -150,8 +150,8 @@ export default {
       COMPONENT_STATUS,
       statusMap: {
         not_installed: {
-          color: '#f59500',
-          iconClass: 'paasng-unfinished',
+          color: '#c4c6cc',
+          iconClass: 'paasng-time-filled',
         },
         installed: {
           color: '#18c0a1',
@@ -237,8 +237,8 @@ export default {
     .paasng-check-circle-shape {
       color: #18c0a1;
     }
-    .paasng-unfinished {
-      color: #f59500;
+    .paasng-time-filled {
+      color: #c4c6cc;
     }
   }
   i.paasng-file-5 {

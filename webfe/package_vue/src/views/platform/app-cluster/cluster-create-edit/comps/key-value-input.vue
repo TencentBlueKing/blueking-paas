@@ -8,7 +8,7 @@
     >
       <div
         class="item-title"
-        v-if="isTitle"
+        v-if="isTitle && nodesLength"
       >
         <div>{{ $t('键') }}</div>
         <div>{{ $t('值') }}</div>

@@ -136,7 +136,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         api_servers = data["api_servers"]
 
         if not check_k8s_accessible(api_servers, ca=ca, cert=cert, key=key, token=token):
-            raise error_codes.CANNOT_CREATE_CLUSTER.f(_("集群无法访问，请检查配置"))
+            raise error_codes.CANNOT_CREATE_CLUSTER.f(_("集群连通性测试失败，请检查 Server，Token 等配置是否准确"))
 
         with transaction.atomic(using="workloads"):
             # 创建集群
@@ -219,7 +219,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         if (auth_cfg_modified or api_servers_modified) and not check_k8s_accessible(
             api_servers, ca=ca, cert=cert, key=key, token=token
         ):
-            raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群无法访问，请检查配置"))
+            raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群连通性测试失败，请检查 Server，Token 等配置是否准确"))
 
         # 集群认证信息
         if auth_cfg_modified:

@@ -7,9 +7,9 @@ from django.db import migrations
 from django.utils import translation
 from django.conf import settings
 
+from paasng.accessories.servicehub.constants import ServiceBindingPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.binding_policy.policy import get_service_type
-from paasng.accessories.servicehub.constants import ServiceBindingPolicyType
 
 logger = logging.getLogger(__name__)
 

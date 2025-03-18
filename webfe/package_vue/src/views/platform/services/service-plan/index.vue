@@ -134,6 +134,8 @@
     <PlanDetailSideslider
       :show.sync="planDetailsConfig.isShow"
       :data="planDetailsConfig.row"
+      :tenant-id="curTenantId"
+      :services="platformServices"
       :active="planDetailsConfig.active"
       @refresh="getPlans"
     />
@@ -277,6 +279,7 @@ export default {
     },
     // 方案详情-侧栏
     showPlanDetails(row, active) {
+      this.getPlatformServices();
       this.planDetailsConfig.isShow = true;
       this.planDetailsConfig.row = row;
       this.planDetailsConfig.active = active;

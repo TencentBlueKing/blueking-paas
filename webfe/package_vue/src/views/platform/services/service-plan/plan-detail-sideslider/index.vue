@@ -33,7 +33,10 @@
         >
           <BaseInfo
             v-if="tabActive === 'planBaseInfo'"
-            :data="data"
+            :data="displayInfoData"
+            v-bind="$attrs"
+            @operate="isRefresh = true"
+            @change-details="changeDetails"
           />
           <ResourcePool
             v-else
@@ -77,6 +80,7 @@ export default {
       contentLoading: false,
       instancesLength: 0,
       isRefresh: false,
+      displayInfoData: {},
     };
   },
   computed: {
@@ -112,9 +116,17 @@ export default {
     shown() {
       this.instancesLength = this.data?.pre_created_instances?.length || 0;
       this.tabActive = this.active || 'planBaseInfo';
+      this.displayInfoData = { ...this.data };
     },
     changeInstancesLength(length) {
       this.instancesLength = length;
+    },
+    // 方案详情
+    changeDetails(details) {
+      this.displayInfoData = {
+        ...this.data,
+        ...details,
+      };
     },
   },
 };

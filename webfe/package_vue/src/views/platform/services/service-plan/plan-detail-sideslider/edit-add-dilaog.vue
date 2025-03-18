@@ -115,12 +115,16 @@ export default {
   methods: {
     valueChange(flag) {
       this.dialogLoading = false;
-      console.log('flag', flag);
-      console.log('this.data', this.data);
-      if (flag) {
+      if (flag && !this.isAdd) {
         const { row = {} } = this.data;
         this.formData.recyclable = !!Object.keys(row.config)?.length;
         this.valuesJson = JSON.parse(row.credentials);
+      } else {
+        this.valuesJson = {};
+        this.formData = {
+          recyclable: true,
+          config: {},
+        };
       }
     },
     close() {
@@ -145,7 +149,6 @@ export default {
           } else {
             this.updateResourcePool(params);
           }
-          console.log('ppp', params);
         })
         .catch((e) => {
           console.warn(e);

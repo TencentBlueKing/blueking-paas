@@ -23,6 +23,8 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.entities import IngressDomain, IngressPathBackend
+from paas_wl.infras.cluster.constants import ClusterAnnotationKey
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_CONFIGURATION_SNIPPET,
@@ -62,10 +64,17 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
         if obj.set_header_x_script_name:
             annotations[ANNOT_CONFIGURATION_SNIPPET] = nginx_adaptor.make_configuration_snippet()
 
-        # 当有多个 ingress controller 存在时，可以指定需要使用的链路
-        if settings.APP_INGRESS_CLASS is not None:
-            annotations["kubernetes.io/ingress.class"] = settings.APP_INGRESS_CLASS
+        # 特殊指定 IngressClassName 的情况
+        ingress_cls_name = settings.APP_INGRESS_CLASS
 
+        annos = get_cluster_by_app(obj.app).annotations
+        if cls_name := annos.get(ClusterAnnotationKey.INGRESS_CLASS_NAME):
+            ingress_cls_name = cls_name
+
+        if ingress_cls_name is not None:
+            annotations["kubernetes.io/ingress.class"] = ingress_cls_name
+
+        # tls 证书 Secrets
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
             if domain.tls_enabled:

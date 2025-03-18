@@ -81,6 +81,8 @@ class ClusterAnnotationKey(StrStructuredEnum):
     SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL = EnumField(
         "skip_inject_builtin_image_credential", label=_("跳过内置镜像凭证注入")
     )
+    # NOTE: 该配置仅对普通应用生效，云原生应用需要在 Operator 的 Helm Chart Values 中配置
+    INGRESS_CLASS_NAME = EnumField("ingress_class_name", label=_("Ingress 类名"))
 
 
 class ClusterAllocationPolicyType(StrStructuredEnum):

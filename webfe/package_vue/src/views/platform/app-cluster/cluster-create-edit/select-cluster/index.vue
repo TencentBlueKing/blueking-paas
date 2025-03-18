@@ -242,8 +242,8 @@ import InputList from '../comps/input-list.vue';
 import { pick } from 'lodash';
 import { mapState } from 'vuex';
 
-// token/password默认占位
-const featurePlaceholder = '￥%&*~@';
+// 敏感默认占位符
+const featurePlaceholder = '••••••';
 
 export default {
   name: 'SelectCluster',
@@ -315,14 +315,21 @@ export default {
       // 编辑态特殊处理
       specialPropertys: ['bcs_cluster_id', 'bcs_project_id'],
       editDisabledPropertys: ['name'],
+      // 敏感字段
+      sensitivePropertys: ['token', 'ca', 'cert', 'key', 'password'],
     };
   },
   computed: {
     displayBcsOptions() {
-      return this.isEdit ? this.updateRequiredFields(bcsOptions, ['token']) : bcsOptions;
+      return this.queryClusterId ? this.updateRequiredFields(bcsOptions, ['token']) : bcsOptions;
     },
     displayElasticSearchOptions() {
-      return this.isEdit ? this.updateRequiredFields(elasticSearchOptions, ['password']) : elasticSearchOptions;
+      return this.queryClusterId ? this.updateRequiredFields(elasticSearchOptions, ['password']) : elasticSearchOptions;
+    },
+    displayK8sOptions() {
+      return this.queryClusterId
+        ? this.updateRequiredFields(this.correspondingK8sOptions, ['token', 'ca', 'cert', 'key'])
+        : this.correspondingK8sOptions;
     },
     isBcsCluster() {
       return this.infoFormData.cluster_source === 'bcs';
@@ -330,7 +337,8 @@ export default {
     isToken() {
       return this.infoFormData.auth_type === 'token';
     },
-    displayK8sOptions() {
+    // 组合对应的formitem
+    correspondingK8sOptions() {
       if (this.isToken) {
         return [
           ...k8sOptions.slice(0, 4), // 取出 k8sOptions 的第一个元素之前的部分
@@ -356,9 +364,6 @@ export default {
     },
   },
   watch: {
-    'infoFormData.cluster_source'(newVal) {
-      this.infoFormData.auth_type = 'token';
-    },
     // 集群 Server 依赖 bcs_cluster_id
     'infoFormData.bcs_cluster_id'(newVal) {
       this.infoFormData.api_servers = newVal ? this.urlTmpl.replace('{cluster_id}', newVal) : '';
@@ -383,6 +388,7 @@ export default {
     this.getClusterServerUrlTmpl();
   },
   methods: {
+    // 去掉指定属性的必填属性
     updateRequiredFields(options, propertiesToUpdate) {
       return options.map((item) => {
         if (propertiesToUpdate.includes(item.property)) {
@@ -410,9 +416,8 @@ export default {
         ...this.elasticSearchFormData,
         ...data.elastic_search_config,
       };
-      // 编辑态 token与password不会返回，默认回填六位占位符
-      this.$set(this.infoFormData, 'token', featurePlaceholder);
-      this.$set(this.elasticSearchFormData, 'password', featurePlaceholder);
+      // 敏感字段后端未返回，前端回填默认值
+      this.sensitiveInfoPlaceholder();
       // k8s APIServers 数据（数组）
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
       // apiServices 数据回填
@@ -420,6 +425,13 @@ export default {
         return { value: v };
       });
       this.$refs.apiServices[0]?.setData(apiServers);
+    },
+    // 编辑态下，敏感信息默认回填六位占位符
+    sensitiveInfoPlaceholder() {
+      ['token', 'ca', 'cert', 'key'].forEach((field) => {
+        this.$set(this.infoFormData, field, featurePlaceholder);
+      });
+      this.$set(this.elasticSearchFormData, 'password', featurePlaceholder);
     },
     infoSelectChange(data) {
       // 设置业务值
@@ -436,6 +448,10 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 提交时，处理前端默认占位数据
+    replacePlaceholders(value) {
+      return value === featurePlaceholder ? '' : value;
     },
     formatBcsData() {
       let data = pick(this.infoFormData, [
@@ -460,12 +476,12 @@ export default {
       }
       data.api_servers = [this.infoFormData.api_servers];
       // 清空默认占位符
-      data.token = data.token === featurePlaceholder ? '' : data.token;
+      data.token = this.replacePlaceholders(data.token);
       // ElasticSearch 集群信息
       const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
-        password: password === featurePlaceholder ? '' : password,
+        password: this.replacePlaceholders(password),
       };
       return data;
     },
@@ -484,7 +500,7 @@ export default {
           'available_tenant_ids',
         ]);
         // 清空默认占位符
-        data.token = data.token === featurePlaceholder ? '' : data.token;
+        data.token = this.replacePlaceholders(data.token);
       } else {
         data = pick(this.infoFormData, [
           'name',
@@ -498,6 +514,10 @@ export default {
           'access_entry_ip',
           'available_tenant_ids',
         ]);
+        // 清空默认占位符
+        ['ca', 'cert', 'key'].forEach((field) => {
+          data[field] = this.replacePlaceholders(data[field]);
+        });
       }
       // APIServers
       data.api_servers = this.$refs.apiServices[0]?.getData();
@@ -505,7 +525,7 @@ export default {
       const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
-        password: password === featurePlaceholder ? '' : password,
+        password: this.replacePlaceholders(password),
       };
       return data;
     },
@@ -530,16 +550,18 @@ export default {
       // K8S集群
       return this.formatK8sData();
     },
+    // 编辑态下
     inputFocus(val, property, dataName) {
       if (this.queryClusterId) {
-        if (['token', 'password'].includes(property) && val === featurePlaceholder) {
+        // 敏感字段回填输入框，聚焦时直接清空
+        if (this.sensitivePropertys.includes(property) && val === featurePlaceholder) {
           this.$set(this[dataName], property, '');
         }
       }
     },
     inputBlur(val, property, dataName) {
       if (this.queryClusterId) {
-        if (['token', 'password'].includes(property) && val === '') {
+        if (this.sensitivePropertys.includes(property) && val.trim() === '') {
           this.$set(this[dataName], property, featurePlaceholder);
         }
       }

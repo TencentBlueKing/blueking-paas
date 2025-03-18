@@ -2334,8 +2334,8 @@ msgid "API 地址类型为 BCS 网关时，API Server 中必须包含 BCS 集群
 msgstr "When the API address type is BCS Gateway, the API Server must contain the BCS cluster ID"
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:330
-msgid "原生 K8S 集群不允许使用 BCS 网关作为 API 地址类型"
-msgstr "Native K8S clusters do not allow the use of BCS gateway as the API address type"
+msgid "原生 K8S 集群不支持使用 BCS 网关作为 API 地址类型"
+msgstr "Native K8S clusters do not support the use of BCS gateway as the API address type"
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:335
 msgid "API Server 地址必须以 http 或 https 开头"

@@ -154,17 +154,12 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
             return ClusterAPIAddressType.CUSTOM
 
         api_servers = APIServer.objects.filter(cluster=obj)
-        # BCS 网关只会有一个地址，多个那就算是自定义
-        if api_servers.count() > 1:
-            return ClusterAPIAddressType.CUSTOM
 
-        # 只要有任意一个 API Server 的 host 中不包含 bcs_cluster_id，则认为是自定义地址
-        for srv in api_servers:
-            if bcs_cluster_id not in srv.host:
-                return ClusterAPIAddressType.CUSTOM
+        # BCS 网关只会有一个地址，并且访问地址中应该包含 BCS 集群 ID
+        if api_servers.count() == 1 and bcs_cluster_id in api_servers[0].host:
+            return ClusterAPIAddressType.BCS_GATEWAY
 
-        # 通过所有检查后，才认为是 BCS 网关地址
-        return ClusterAPIAddressType.BCS_GATEWAY
+        return ClusterAPIAddressType.CUSTOM
 
     @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_api_servers(self, obj: Cluster) -> List[str]:
@@ -327,7 +322,7 @@ class ClusterCreateInputSLZ(serializers.Serializer):
                     raise ValidationError(_("API 地址类型为 BCS 网关时，API Server 中必须包含 BCS 集群 ID"))
 
         elif api_address_type == ClusterAPIAddressType.BCS_GATEWAY:
-            raise ValidationError(_("原生 K8S 集群不允许使用 BCS 网关作为 API 地址类型"))
+            raise ValidationError(_("原生 K8S 集群不支持使用 BCS 网关作为 API 地址类型"))
 
         # 检查 API Server 地址是否合法
         for srv in api_servers:

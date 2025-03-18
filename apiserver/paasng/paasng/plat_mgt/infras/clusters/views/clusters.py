@@ -21,6 +21,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
+from requests.exceptions import RequestException
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -99,7 +100,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             try:
                 bcs_project = client.get_auth_project(cluster.bcs_project_id)
                 bcs_cluster = client.get_cluster(cluster.bcs_project_id, cluster.bcs_cluster_id)
-            except BCSGatewayServiceError as e:
+            except (BCSGatewayServiceError, RequestException) as e:
                 logger.warning(
                     "username %s get bcs project %s, cluster %s error: %s",
                     request.user.username,

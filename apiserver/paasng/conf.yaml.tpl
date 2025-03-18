@@ -254,6 +254,7 @@
 ## 对象存储（bkrepo）配置
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: bkpaas
+#   PROJECT_ID: bkpaas
 #   ENDPOINT: http://bkrepo.example.com
 #   USERNAME: bkpaas3
 #   PASSWORD: ''

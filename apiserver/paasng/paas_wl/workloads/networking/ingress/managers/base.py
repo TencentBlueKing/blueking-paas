@@ -19,17 +19,14 @@ import abc
 import logging
 from typing import Dict, List, Optional, Sequence, Type
 
-from django.conf import settings
-
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.core.app_structure import has_proc_type
-from paas_wl.infras.cluster.constants import ClusterAnnotationKey
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.workloads.networking.ingress.entities import PIngressDomain
 from paas_wl.workloads.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
 from paas_wl.workloads.networking.ingress.kres_entities.ingress import ProcessIngress, ingress_kmodel
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
+from paas_wl.workloads.networking.ingress.managers.ing_class import get_ingress_class_by_wl_app
 from paas_wl.workloads.networking.ingress.plugins import get_default_plugins
 from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.workloads.networking.ingress.plugins.ingress import IngressPlugin
@@ -144,14 +141,8 @@ class AppIngressMgr(abc.ABC):
         """Construct resource annotations"""
         annotations = {}
 
-        # 特殊指定 IngressClassName 的情况
-        ingress_cls_name = settings.APP_INGRESS_CLASS
-
-        annos = get_cluster_by_app(self.app).annotations
-        if cls_name := annos.get(ClusterAnnotationKey.INGRESS_CLASS_NAME):
-            ingress_cls_name = cls_name
-
-        if ingress_cls_name is not None:
+        # ingressClassName
+        if ingress_cls_name := get_ingress_class_by_wl_app(self.app):
             annotations["kubernetes.io/ingress.class"] = ingress_cls_name
 
         return annotations
@@ -264,4 +255,4 @@ class IngressUpdater:
         #
         # Why check both conditions? An ingress could be created before the service object,
         # so the process type was also checked to avoid an unintended result.
-        return not (name not in svc_names and not has_proc_type(self.app, proc_type))
+        return name in svc_names or has_proc_type(self.app, proc_type)

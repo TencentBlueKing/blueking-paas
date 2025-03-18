@@ -18,13 +18,10 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.dev_sandbox.entities import IngressDomain, IngressPathBackend
-from paas_wl.infras.cluster.constants import ClusterAnnotationKey
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_CONFIGURATION_SNIPPET,
@@ -33,6 +30,7 @@ from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_SSL_REDIRECT,
 )
 from paas_wl.workloads.networking.ingress.kres_slzs.utils import NginxRegexRewrittenProvider
+from paas_wl.workloads.networking.ingress.managers import get_ingress_class_by_wl_app
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxIngress
@@ -64,14 +62,8 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
         if obj.set_header_x_script_name:
             annotations[ANNOT_CONFIGURATION_SNIPPET] = nginx_adaptor.make_configuration_snippet()
 
-        # 特殊指定 IngressClassName 的情况
-        ingress_cls_name = settings.APP_INGRESS_CLASS
-
-        annos = get_cluster_by_app(obj.app).annotations
-        if cls_name := annos.get(ClusterAnnotationKey.INGRESS_CLASS_NAME):
-            ingress_cls_name = cls_name
-
-        if ingress_cls_name is not None:
+        # ingressClassName
+        if ingress_cls_name := get_ingress_class_by_wl_app(obj.app):
             annotations["kubernetes.io/ingress.class"] = ingress_cls_name
 
         # tls 证书 Secrets

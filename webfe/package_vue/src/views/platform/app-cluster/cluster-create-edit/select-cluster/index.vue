@@ -66,10 +66,27 @@
                 v-for="r in item.radios"
                 :value="r.value"
                 :key="r.value"
+                :class="{ 'border-tip': !!r.tip }"
+                v-bk-tooltips="{ content: $t(r.tip), disabled: !r.tip, width: 385 }"
               >
                 <span class="ml5">{{ $t(r.label) }}</span>
               </bk-radio>
             </bk-radio-group>
+            <!-- bcs - 集群 Server 特殊处理 -->
+            <div v-else-if="Array.isArray(item.type)">
+              <!-- BCS 网关 -->
+              <ConfigInput
+                v-if="infoFormData.api_address_type === 'bcs_gateway'"
+                type="input"
+                :disabled="true"
+                v-model="infoFormData[item.property]"
+              />
+              <!-- 自定义 -->
+              <InputList
+                ref="clusterServices"
+                v-else
+              />
+            </div>
           </template>
           <p
             v-if="item.tips"
@@ -131,10 +148,14 @@
             v-model="infoFormData[item.property]"
             style="width: 680px"
           >
+            <!-- disabledFn 内部判断是否禁用 -->
             <bk-radio
               v-for="r in item.radios"
               :value="r.value"
               :key="r.value"
+              :class="{ 'border-tip': !!r.tip }"
+              v-bk-tooltips="{ content: $t(r.tip), disabled: !r.tip, width: 385 }"
+              :disabled="r.disabledFn && r.disabledFn(infoFormData.cluster_source)"
             >
               <span class="ml5">{{ $t(r.label) }}</span>
             </bk-radio>
@@ -291,6 +312,8 @@ export default {
         available_tenant_ids: [],
         // k8s集群数据 - 集群认证方式
         auth_type: 'token',
+        // 集群 API 地址类型
+        api_address_type: 'bcs_gateway',
         // APIServers
         api_servers_list: [],
         // 证书认证机构
@@ -362,8 +385,18 @@ export default {
     queryClusterId() {
       return this.$route.query?.id || '';
     },
+    customAPIAddress() {
+      return this.infoFormData.api_address_type === 'custom';
+    },
   },
   watch: {
+    // 集群 API 地址类型
+    'infoFormData.cluster_source'(newVal) {
+      // k8s 只允许自定义
+      if (newVal === 'native_k8s') {
+        this.infoFormData.api_address_type = 'custom';
+      }
+    },
     // 集群 Server 依赖 bcs_cluster_id
     'infoFormData.bcs_cluster_id'(newVal) {
       this.infoFormData.api_servers = newVal ? this.urlTmpl.replace('{cluster_id}', newVal) : '';
@@ -424,7 +457,13 @@ export default {
       const apiServers = data.api_servers.map((v) => {
         return { value: v };
       });
-      this.$refs.apiServices[0]?.setData(apiServers);
+      // 回填 Servers
+      this.$nextTick(() => {
+        this.$refs.apiServices[0]?.setData(apiServers);
+        if (this.infoFormData.api_address_type === 'custom') {
+          this.$refs.clusterServices[0]?.setData(apiServers);
+        }
+      });
     },
     // 编辑态下，敏感信息默认回填六位占位符
     sensitiveInfoPlaceholder() {
@@ -465,6 +504,7 @@ export default {
         'container_log_dir',
         'access_entry_ip',
         'available_tenant_ids',
+        'api_address_type',
       ]);
       // 业务
       if (this.queryClusterId) {
@@ -474,7 +514,11 @@ export default {
         // 新建
         data.bk_biz_id = this.curProjectData.biz_id;
       }
-      data.api_servers = [this.infoFormData.api_servers];
+      if (data.api_address_type === 'custom') {
+        data.api_servers = this.$refs.clusterServices[0]?.getData();
+      } else {
+        data.api_servers = [this.infoFormData.api_servers];
+      }
       // 清空默认占位符
       data.token = this.replacePlaceholders(data.token);
       // ElasticSearch 集群信息
@@ -498,6 +542,7 @@ export default {
           'container_log_dir',
           'access_entry_ip',
           'available_tenant_ids',
+          'api_address_type',
         ]);
         // 清空默认占位符
         data.token = this.replacePlaceholders(data.token);
@@ -513,6 +558,7 @@ export default {
           'container_log_dir',
           'access_entry_ip',
           'available_tenant_ids',
+          'api_address_type',
         ]);
         // 清空默认占位符
         ['ca', 'cert', 'key'].forEach((field) => {
@@ -535,6 +581,10 @@ export default {
       let validateArr = [this.$refs.clusterInfoForm.validate(), this.$refs.tenantForm.validate()];
       if (this.isBcsCluster) {
         // bcs校验
+        validateArr.unshift(this.$refs.bcsForm.validate());
+        if (this.customAPIAddress) {
+          validateArr.unshift(this.$refs.clusterServices[0]?.validate());
+        }
         validateArr.unshift(this.$refs.bcsForm.validate());
       } else {
         // k8s校验
@@ -577,6 +627,9 @@ export default {
     margin-bottom: 16px;
     &:last-child {
       margin-bottom: 0;
+    }
+    /deep/ .bk-form-radio.border-tip .bk-radio-text span {
+      border-bottom: 1px dashed;
     }
   }
   .item-tips {

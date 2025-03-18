@@ -181,4 +181,8 @@ export default {
   '不调度（NoSchedule）': '不调度（NoSchedule）',
   '倾向不调度（PreferNoSchedule）': '倾向不调度（PreferNoSchedule）',
   '不执行（NoExecute）': '不执行（NoExecute）',
+  'BCS 网关': 'BCS 网关',
+  '集群 API 地址类型': '集群 API 地址类型',
+  '通过 BCS 提供的网关操作集群，格式如：https://bcs-api.bk.example.com/clusters/BCS-K8S-00000/': '通过 BCS 提供的网关操作集群，格式如：https://bcs-api.bk.example.com/clusters/BCS-K8S-00000/',
+  '可通过 IP + Port 或 Service 名称访问，如：https://127.0.0.1:8443，https://kubernetes.default.svc.cluster.local 等': '可通过 IP + Port 或 Service 名称访问，如：https://127.0.0.1:8443，https://kubernetes.default.svc.cluster.local 等',
 };

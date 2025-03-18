@@ -67,6 +67,30 @@ const clusterSource = [
     },
 ];
 
+const apiAddressType = [
+    {
+        label: '集群 API 地址类型',
+        type: 'radio',
+        property: 'api_address_type',
+        required: true,
+        radios: [
+            {
+                value: 'bcs_gateway',
+                label: 'BCS 网关',
+                tip: '通过 BCS 提供的网关操作集群，格式如：https://bcs-api.bk.example.com/clusters/BCS-K8S-00000/',
+                disabledFn(val) {
+                    return val === 'native_k8s';
+                },
+            },
+            {
+                value: 'custom',
+                label: '自定义',
+                tip: '可通过 IP + Port 或 Service 名称访问，如：https://127.0.0.1:8443，https://kubernetes.default.svc.cluster.local 等',
+            },
+        ]
+    },
+];
+
 const clusterToken = [
     {
         label: '集群 Token',
@@ -136,11 +160,13 @@ export const bcsOptions = [
         required: true,
         disabled: true,
     },
+    ...apiAddressType,
     {
         label: '集群 Server',
-        type: 'input',
+        type: ['input', 'arr-input'],
         property: 'api_servers',
         disabled: true,
+        required: true,
     },
     ...clusterToken,
     ...commonOptions,
@@ -193,6 +219,8 @@ export const k8sOptions = [
             { value: 'cert', label: '证书' },
         ]
     },
+    ...apiAddressType,
+    // k8s默认为自定义
     {
         label: 'APIServers',
         type: 'arr-input',

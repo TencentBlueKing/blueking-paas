@@ -24,7 +24,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.templates.command import EnhancedTemplateCommand
 from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.exceptions import TmplNotExists, TmplRegionNotSupported
+from paasng.platform.templates.exceptions import TmplNotExists
 from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
 from paasng.platform.templates.utils import StoreType, download_from_blob_store, uncompress_tar_to_local_path
@@ -54,9 +54,6 @@ class Templater:
             tmpl: Template = Template.objects.get(name=tmpl_name, type=type)
         except ObjectDoesNotExist:
             raise TmplNotExists(f"Template <{tmpl_name}>, Type <{type}> does not exists")
-        else:
-            if region not in tmpl.enabled_regions:
-                raise TmplRegionNotSupported(f"Template <{tmpl.name}> does not support this region <{region}>")
         self.tmpl = tmpl
         self.command = EnhancedTemplateCommand(force_executable_files=DEFAULT_EXECUTABLE_FILES)
         self.region = region
@@ -74,10 +71,7 @@ class Templater:
 
     def download_tmpl(self) -> Path:
         """Download current app template to a local temp directory"""
-        location = self.tmpl.blob_url.get(self.region)
-        if location is None:
-            raise TmplRegionNotSupported(f"Template <{self.tmpl.name}> does not support this region <{self.region}>")
-
+        location = self.tmpl.blob_url
         o = urlparse(location)
         scheme, bucket, path = o.scheme.lower(), o.netloc, Path(o.path)
         logger.debug("checkout template from [%s: %s]", scheme, location)

@@ -50,7 +50,7 @@ class TemplateManageView(GenericTemplateView):
 class TemplateViewSet(ListModelMixin, GenericViewSet):
     """平台服务管理-模板配置API"""
 
-    queryset = Template.objects.all()
+    queryset = Template.objects.all().order_by("is_hidden", "type")
     serializer_class = TemplateSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     schema = None

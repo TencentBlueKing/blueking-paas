@@ -21,8 +21,6 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.core.region.models import get_all_regions
-from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 
 
@@ -60,22 +58,7 @@ class TemplateSLZ(serializers.ModelSerializer):
             raise ValidationError(_("标签必须为 List 格式"))
         return tags
 
-    def validate(self, attrs: Dict) -> Dict:
-        enabled_regions = attrs["enabled_regions"]
-        if not isinstance(enabled_regions, list):
-            raise ValidationError(_("允许被使用的版本必须为 List 格式"))
-
-        available_regions = get_all_regions().keys()
-        if unsupported_regions := set(enabled_regions) - available_regions:
-            raise ValidationError(_("Region {} 不受支持").format(unsupported_regions))
-
-        blob_url_conf = attrs["blob_url"]
-        if not isinstance(blob_url_conf, dict):
-            raise ValidationError(_("二进制包存储配置必须为 Dict 格式"))
-
-        # 模板类型为插件的情况下，无需检查二进制包存储配置
-        if attrs["type"] != TemplateType.PLUGIN:  # noqa: SIM102
-            if regions := set(enabled_regions) - blob_url_conf.keys():
-                raise ValidationError(_("Region {} 不存在对应的二进制包存储路径").format(regions))
-
-        return attrs
+    def validate_blob_url(self, value: str) -> str:
+        if not value:
+            raise ValidationError(_("二进制包存储配置必须为有效的地址字符串"))
+        return value

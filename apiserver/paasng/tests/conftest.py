@@ -31,7 +31,6 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
 from django.test.utils import override_settings
-from django_dynamic_fixture import G
 from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -48,11 +47,8 @@ from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.core.core.storages.utils import SADBManager
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import ClientPrivateToken, SysAPIClient
-from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.applications.utils import create_default_module
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
@@ -773,41 +769,6 @@ def _init_tmpls():
             "runtime_type": RuntimeType.BUILDPACK,
         },
     )
-
-
-@pytest.fixture()
-def create_custom_app():
-    def create(owner, **kwargs):
-        random_name = generate_random_string(length=6)
-        region = kwargs.get("region", "ieod")
-        application = G(
-            Application,
-            owner=owner.pk,
-            code=kwargs.get("code", random_name),
-            name=kwargs.get("name", random_name),
-            language=kwargs.get("language", "Python"),
-            region=region,
-        )
-
-        if "init_default_module" in kwargs:
-            create_default_module(application, source_origin=kwargs.get("source_origin", SourceOrigin.BK_LESS_CODE))
-
-        from tests.utils.helpers import register_iam_after_create_application
-
-        register_iam_after_create_application(application)
-
-        # 添加开发者
-        from paasng.infras.iam.helpers import add_role_members
-
-        if "developers" in kwargs and isinstance(kwargs["developers"], list):
-            add_role_members(application.code, ApplicationRole.DEVELOPER, kwargs["developers"])
-        # 添加运营者
-        if "ops" in kwargs and isinstance(kwargs["ops"], list):
-            add_role_members(application.code, ApplicationRole.OPERATOR, kwargs["ops"])
-
-        return application
-
-    return create
 
 
 @pytest.fixture()

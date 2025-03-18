@@ -35,7 +35,7 @@
       </template>
       <template slot="value">
         <div v-if="key === 'app_domains'">
-          <template v-if="!data[key]">--</template>
+          <template v-if="!data[key]?.length">--</template>
           <div
             v-else
             v-for="(item, i) in data[key]"

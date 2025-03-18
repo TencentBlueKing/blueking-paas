@@ -255,7 +255,8 @@ ensure-smart-image() {
 ensure-runtimes() {
     stack="${PAAS_STACK:-heroku-18}"
     bkrepo_endpoint="${PAAS_BLOBSTORE_BKREPO_ENDPOINT%/}"
-    bkrepo_project="${PAAS_BLOBSTORE_BKREPO_PROJECT:-bkpaas}"
+    # 多租户模式下自动添加 system_ 前缀
+    bkrepo_project="${PAAS_ENABLE_MULTI_TENANT_MODE:+system_}${PAAS_BLOBSTORE_BKREPO_PROJECT:-bkpaas}"
     runtimes_url="${PAAS_RUNTIMES_URL:-${bkrepo_endpoint}/generic/${bkrepo_project}/bkpaas3-platform-assets}"
     # 此处需和 paas-stack chart 中 extraInitial.devops 参数中路径一致，否则会导致部署失败
     buildpack_url="${runtimes_url}/buildpacks"

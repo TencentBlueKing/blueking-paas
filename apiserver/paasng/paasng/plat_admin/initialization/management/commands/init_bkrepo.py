@@ -20,10 +20,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from blue_krill.storages.blobstore.bkrepo import BKGenericRepo, BKRepoManager, RepositoryType, RequestError
+from blue_krill.storages.blobstore.bkrepo import BKRepoManager, RepositoryType, RequestError
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,6 @@ BUILTIN_REPOS = [
     Repo(name="maven", type=RepositoryType.MAVEN, public=True),
     Repo(name="generic", type=RepositoryType.GENERIC, public=True),
 ]
-
-BUILTIN_APP_TMPLS = {
-    assets_path / "dj_auth_template_blueapps_dj2.tar.gz": "open/dj_auth_template_blueapps_dj2.tar.gz",
-    assets_path / "node-js-bk-magic-vue-spa.tar.gz": "open/node-js-bk-magic-vue-spa.tar.gz",
-    assets_path / "dj_with_hello_world_dj2.tar.gz": "open/dj_with_hello_world_dj2.tar.gz",
-}
 
 
 @contextmanager
@@ -169,14 +164,6 @@ class Command(BaseCommand):
             repo="npm",
         )
 
-        tmpls_repo = self.get_tmpls_repo(bkpaas3_username, bkpaas3_password)
-        for filepath, key in BUILTIN_APP_TMPLS.items():
-            if filepath.exists():
-                logger.info("即将上传开发框架模板至 %s", key)
-                dry_run or tmpls_repo.upload_file(Path(filepath), key, allow_overwrite=True)
-            else:
-                logger.warning("源码模板不存在! 请检查 %s", filepath)
-
         logger.info("初始化 bkrepo 成功")
 
     @staticmethod
@@ -186,17 +173,8 @@ class Command(BaseCommand):
             endpoint_url=config["ENDPOINT"],
             username=username,
             password=password,
-        )
-
-    @staticmethod
-    def get_tmpls_repo(username: str, password: str):
-        config = settings.BLOBSTORE_BKREPO_CONFIG
-        return BKGenericRepo(
-            bucket=settings.BLOBSTORE_BUCKET_TEMPLATES,
-            project=config["PROJECT"],
-            endpoint_url=config["ENDPOINT"],
-            username=username,
-            password=password,
+            tenant_id=OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else None,
+            enable_multi_tenant_mode=settings.ENABLE_MULTI_TENANT_MODE,
         )
 
     @property

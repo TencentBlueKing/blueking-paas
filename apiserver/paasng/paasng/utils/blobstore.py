@@ -36,6 +36,8 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.encoding import force_bytes, force_str
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,6 +75,9 @@ def make_blob_store(bucket: str, store_type: Optional[StoreType] = None, **kwarg
             endpoint_url=config["ENDPOINT"],
             username=config["USERNAME"],
             password=config["PASSWORD"],
+            # 目前多租户模式下，制品统一放到运营租户下
+            tenant_id=OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else None,
+            enable_multi_tenant_mode=settings.ENABLE_MULTI_TENANT_MODE,
         )
     return S3Store(
         bucket=bucket,

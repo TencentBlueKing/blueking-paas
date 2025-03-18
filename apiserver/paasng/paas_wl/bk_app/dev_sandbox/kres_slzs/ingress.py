@@ -18,7 +18,6 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -31,6 +30,7 @@ from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_SSL_REDIRECT,
 )
 from paas_wl.workloads.networking.ingress.kres_slzs.utils import NginxRegexRewrittenProvider
+from paas_wl.workloads.networking.ingress.managers import get_ingress_class_by_wl_app
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxIngress
@@ -62,10 +62,11 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
         if obj.set_header_x_script_name:
             annotations[ANNOT_CONFIGURATION_SNIPPET] = nginx_adaptor.make_configuration_snippet()
 
-        # 当有多个 ingress controller 存在时，可以指定需要使用的链路
-        if settings.APP_INGRESS_CLASS is not None:
-            annotations["kubernetes.io/ingress.class"] = settings.APP_INGRESS_CLASS
+        # ingressClassName
+        if ingress_cls_name := get_ingress_class_by_wl_app(obj.app):
+            annotations["kubernetes.io/ingress.class"] = ingress_cls_name
 
+        # tls 证书 Secrets
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
             if domain.tls_enabled:

@@ -290,7 +290,6 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
             if self.remote_client.config.prefer_async_delete:
                 UnboundRemoteServiceEngineAppAttachment.objects.create(
-                    region=self.db_obj.region,
                     owner=self.db_obj.owner,
                     engine_app=self.db_engine_app,
                     service_id=self.db_obj.service_id,

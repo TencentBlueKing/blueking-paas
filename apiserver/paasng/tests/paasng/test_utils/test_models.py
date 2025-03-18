@@ -133,7 +133,7 @@ class TestBkUserField:
             code=generate_random_string(6),
             name=generate_random_string(6),
             name_en=generate_random_string(6),
-            type_=ApplicationType.DEFAULT,
+            app_type=ApplicationType.DEFAULT,
             operator=user_id_encoder.encode(ProviderType.BK, "foo"),
             is_plugin_app=False,
         )

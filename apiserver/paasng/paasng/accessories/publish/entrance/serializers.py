@@ -56,12 +56,12 @@ class ApplicationAvailableEntranceSLZ(serializers.Serializer):
     entrances = PlainEntranceSLZ(many=True)
 
 
-class RootDoaminSLZ(serializers.Serializer):
+class RootDomainSLZ(serializers.Serializer):
     root_domains = serializers.ListField(
         help_text="查看模块所属集群的子域名根域", child=serializers.CharField(), default=[]
     )
     preferred_root_domain = serializers.CharField(help_text="偏好的根域名", default="")
 
 
-class PreferredRootDoaminSLZ(serializers.Serializer):
+class PreferredRootDomainSLZ(serializers.Serializer):
     preferred_root_domain = serializers.CharField(help_text="偏好的根域名", required=True)

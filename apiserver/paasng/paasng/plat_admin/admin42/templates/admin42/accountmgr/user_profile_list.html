@@ -67,9 +67,6 @@
         <bk-table-column label="用户名" prop="user.username">
             <template slot-scope="props">
                 <span>$[ props.row.user.username ]</span>
-                <span v-bk-tooltips="{content: 'private_token: ' + props.row.user.private_token, placements: ['right']}" v-if="props.row.user.private_token">
-                    <i class="bk-icon icon-info-circle-shape"></i>
-                </span>
             </template>
         </bk-table-column>
         <bk-table-column label="角色">

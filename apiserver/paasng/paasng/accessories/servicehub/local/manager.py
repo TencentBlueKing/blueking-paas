@@ -24,7 +24,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
 from uuid import UUID
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.db.transaction import atomic
@@ -164,7 +163,6 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         self.db_obj.clean_service_instance()
         if self.db_obj.service.prefer_async_delete:
             UnboundServiceEngineAppAttachment.objects.create(
-                region=self.db_obj.region,
                 owner=self.db_obj.owner,
                 engine_app=self.db_obj.engine_app,
                 service=self.db_obj.service,
@@ -233,11 +231,8 @@ class LocalServiceMgr(BaseServiceMgr):
 
         :raises: ServiceObjNotFound
         """
-        # INFO: After using BindingPolicy for service plan selection, the local service
-        # doesn't support the region field anymore, only the object using the default region
-        # will be returned.
         try:
-            obj = Service.objects.get(uuid=uuid, region=settings.DEFAULT_REGION_NAME)
+            obj = Service.objects.get(uuid=uuid, is_active=True)
         except (Service.DoesNotExist, ValidationError) as e:
             raise ServiceObjNotFound(f"Service with id={uuid} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
@@ -248,21 +243,14 @@ class LocalServiceMgr(BaseServiceMgr):
         :raises: ServiceObjNotFound
         """
         try:
-            obj = Service.objects.get(name=name, region=settings.DEFAULT_REGION_NAME)
+            obj = Service.objects.get(name=name, is_active=True)
         except Service.DoesNotExist as e:
             raise ServiceObjNotFound(f"Service with name={name} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
 
     def list_by_category(self, category_id: int, include_hidden=False) -> Generator[ServiceObj, None, None]:
         """query a list of services by category"""
-        # INFO: After using BindingPolicy for service plan selection, the local service
-        # doesn't support the region field anymore, only the object using the default region
-        # will be returned.
-        services = Service.objects.filter(
-            region=settings.DEFAULT_REGION_NAME,
-            category=category_id,
-            is_active=True,
-        )
+        services = Service.objects.filter(category=category_id, is_active=True)
         if not include_hidden:
             services = services.filter(is_visible=True)
         for svc in services:
@@ -270,7 +258,7 @@ class LocalServiceMgr(BaseServiceMgr):
 
     def list_visible(self) -> Iterable[ServiceObj]:
         """list all Services that is not hidden"""
-        services = Service.objects.filter(region=settings.DEFAULT_REGION_NAME, is_active=True)
+        services = Service.objects.filter(is_active=True)
         for svc in services:
             if not svc.is_visible:
                 continue
@@ -278,7 +266,7 @@ class LocalServiceMgr(BaseServiceMgr):
 
     def list(self) -> Iterable[ServiceObj]:
         """List all services"""
-        services = Service.objects.filter(region=settings.DEFAULT_REGION_NAME)
+        services = Service.objects.filter(is_active=True)
         for svc in services:
             yield LocalServiceObj.from_db_object(svc)
 

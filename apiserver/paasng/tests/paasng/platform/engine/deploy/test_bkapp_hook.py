@@ -32,9 +32,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestPreReleaseDummyExecutor:
     @pytest.fixture(autouse=True)
     def _setup_wl_app(self, bk_cnative_app, bk_deployment):
-        name = bk_deployment.app_environment.engine_app.name
-        region = bk_deployment.app_environment.engine_app.region
-        WlApp.objects.create(name=name, region=region)
+        engine_app = bk_deployment.app_environment.engine_app
+        WlApp.objects.get_or_create(name=engine_app.name, region=engine_app.region)
 
     def test_start(self, bk_cnative_app, bk_module, bk_deployment):
         with (

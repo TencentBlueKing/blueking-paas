@@ -35,7 +35,6 @@ class Command(BaseCommand):
         parser.add_argument("-l", "--language", required=True, help="language")
         parser.add_argument("-T", "--type", dest="type_", default="tar", help="type")
         parser.add_argument("-a", "--address", required=True, help="address")
-        parser.add_argument("-r", "--region", required=True, dest="regions", help="available region name", nargs="+")
         parser.add_argument(
             "-e",
             "--environment",
@@ -54,7 +53,6 @@ class Command(BaseCommand):
         display_name_en,
         description_zh_cn,
         description_en,
-        regions,
         is_hidden,
         environments,
         tag,
@@ -63,27 +61,23 @@ class Command(BaseCommand):
         address,
         **kwargs,
     ):
-        for region in regions:
-            buildpack_name = name.format(region=region)
+        obj, created = AppBuildPack.objects.update_or_create(
+            name=name,
+            defaults={
+                "display_name_zh_cn": display_name_zh_cn,
+                "display_name_en": display_name_en,
+                "description_zh_cn": description_zh_cn,
+                "description_en": description_en,
+                "is_hidden": is_hidden,
+                "version": tag,
+                "language": language,
+                "type": type_,
+                "address": address,
+                "environments": parse_assignment_list(environments),
+            },
+        )
 
-            obj, created = AppBuildPack.objects.update_or_create(
-                name=buildpack_name,
-                region=region,
-                defaults={
-                    "display_name_zh_cn": display_name_zh_cn,
-                    "display_name_en": display_name_en,
-                    "description_zh_cn": description_zh_cn,
-                    "description_en": description_en,
-                    "is_hidden": is_hidden,
-                    "version": tag,
-                    "language": language,
-                    "type": type_,
-                    "address": address,
-                    "environments": parse_assignment_list(environments),
-                },
-            )
-
-            if created:
-                self.stdout.write(f"created {AppBuildPack.__name__}[{obj.pk}] {buildpack_name}")
-            else:
-                self.stdout.write(f"updated {AppBuildPack.__name__}[{obj.pk}] {buildpack_name}")
+        if created:
+            self.stdout.write(f"created {AppBuildPack.__name__}[{obj.pk}] {name}")
+        else:
+            self.stdout.write(f"updated {AppBuildPack.__name__}[{obj.pk}] {name}")

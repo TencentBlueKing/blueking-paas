@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_state(cluster_name: str, client, ignore_labels: Dict[str, str], tenant_id: str) -> RegionClusterState:
-    """Generate region state for a single region"""
+    """Generate a new state for the given cluster."""
 
     nodes = get_nodes(client)
     nodes = list(filter_nodes_with_labels(nodes, ignore_labels))

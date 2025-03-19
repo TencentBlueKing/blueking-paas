@@ -22,7 +22,6 @@ from unittest import mock
 from uuid import UUID
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinationManager, ServiceBindingPolicyManager
@@ -62,7 +61,7 @@ class TestMixedMgrGetAndList:
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
+        G(Service, category=category, logo_b64="dummy")
 
         services = list(mixed_service_mgr.list_by_category(category_id=Category.DATA_STORAGE))
         assert len(services) == 2
@@ -73,7 +72,7 @@ class TestMixedMgrGetAndList:
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
+        G(Service, category=category, logo_b64="dummy")
 
         assert len(list(mixed_service_mgr.list_visible())) == 3
 
@@ -84,7 +83,7 @@ class TestMixedMgrGetAndList:
     def test_get_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
+        svc = G(Service, category=category, logo_b64="dummy")
 
         obj = mixed_service_mgr.get(str(svc.uuid))
         assert obj is not None
@@ -96,7 +95,7 @@ class TestMixedMgrGetAndList:
     def test_find_by_name_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
+        svc = G(Service, category=category, logo_b64="dummy")
 
         obj = mixed_service_mgr.find_by_name(str(svc.name))
         assert obj is not None
@@ -268,7 +267,7 @@ class TestLocalMgrProvisionAndInstance:
     def svc(self, bk_app):
         """Create a local service object."""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, name="mysql", category=category, region=bk_app.region, logo_b64="dummy")
+        svc = G(Service, name="mysql", category=category, logo_b64="dummy")
         # Create 2 plans
         G(Plan, name="plan-stag", service=svc, config="{}")
         G(Plan, name="plan-prod", service=svc, config="{}")

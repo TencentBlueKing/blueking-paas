@@ -254,11 +254,11 @@
 ## 对象存储（bkrepo）配置
 # BLOBSTORE_BKREPO_CONFIG:
 #   PROJECT: bkpaas
-#   PROJECT_ID: bkpaas
 #   ENDPOINT: http://bkrepo.example.com
 #   USERNAME: bkpaas3
 #   PASSWORD: ''
-
+## BK-Repo 项目名称，仅在创建项目时使用
+# BLOBSTORE_BKREPO_PROJECT_NAME = "bkpaas"
 ## 增强服务 LOGO bucket
 # SERVICE_LOGO_BUCKET: bkpaas3-platform-assets
 ## 应用 Logo 存储 bucket 名称

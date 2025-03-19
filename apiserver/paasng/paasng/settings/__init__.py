@@ -795,6 +795,8 @@ RGW_STORAGE_BUCKET_NAME = "app-logo"
 
 # 当配置该项时，使用 BK-Repo 而不是 S3 作为 BlobStore 存储
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
+# BK-Repo 项目名称，仅在创建项目时使用
+BLOBSTORE_BKREPO_PROJECT_NAME = settings.get("BLOBSTORE_BKREPO_PROJECT_NAME", "bkpaas")
 
 # 增强服务 LOGO bucket
 SERVICE_LOGO_BUCKET = settings.get("SERVICE_LOGO_BUCKET", "bkpaas3-platform-assets")

@@ -69,7 +69,7 @@ def make_blob_store(bucket: str, store_type: Optional[StoreType] = None, **kwarg
         config = settings.BLOBSTORE_BKREPO_CONFIG
         return BKGenericRepo(
             bucket=bucket,
-            project_id=config["PROJECT_ID"],
+            project=config["PROJECT"],
             endpoint_url=config["ENDPOINT"],
             username=config["USERNAME"],
             password=config["PASSWORD"],
@@ -98,7 +98,7 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
         config = settings.BLOBSTORE_BKREPO_CONFIG
         return BKRepoStorage(
             bucket=bucket,
-            project_id=config["PROJECT"],
+            project=config["PROJECT"],
             endpoint_url=config["ENDPOINT"],
             username=config["USERNAME"],
             password=config["PASSWORD"],

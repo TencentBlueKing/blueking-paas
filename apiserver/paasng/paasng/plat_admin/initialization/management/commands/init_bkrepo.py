@@ -90,7 +90,9 @@ class Command(BaseCommand):
         parser.add_argument("--addons-username", dest="addons_username", required=True)
         parser.add_argument("--addons-password", dest="addons_password", required=True)
         parser.add_argument("--addons-project", dest="addons_project", required=False, default="bksaas-addons")
-        parser.add_argument("--addons-project-id", dest="addons_project_id", required=False, default="bksaas-addons")
+        parser.add_argument(
+            "--addons-project-name", dest="addons_project_name", required=False, default="bksaas-addons"
+        )
         parser.add_argument("--lesscode-username", dest="lesscode_username", required=True)
         parser.add_argument("--lesscode-password", dest="lesscode_password", required=True)
 
@@ -105,7 +107,7 @@ class Command(BaseCommand):
         addons_username,
         addons_password,
         addons_project,
-        addons_project_id,
+        addons_project_name,
         lesscode_username,
         lesscode_password,
         **kwargs,
@@ -124,14 +126,14 @@ class Command(BaseCommand):
         manager = self.get_manager(super_username, super_password)
         # 创建项目
         # 创建 PaaS3.0 项目
-        logger.info("即将创建 bkrepo 项目: %s", self.bkpaas_project)
+        logger.info("即将创建 bkrepo 项目: %s", self.bkpaas_project_name)
         with allow_resource_exists():
-            dry_run or manager.create_project(self.bkpaas_project)
+            dry_run or manager.create_project(self.bkpaas_project_name)
 
         # 创建增强服务项目
-        logger.info("即将创建 bkrepo 项目: %s", addons_project)
+        logger.info("即将创建 bkrepo 项目: %s", addons_project_name)
         with allow_resource_exists():
-            dry_run or manager.create_project(addons_project)
+            dry_run or manager.create_project(addons_project_name)
 
         # 创建用户
         # 创建 PaaS3.0 用户
@@ -140,7 +142,7 @@ class Command(BaseCommand):
             username=bkpaas3_username,
             password=bkpaas3_password,
             association_users=[],
-            project_id=self.bkpaas_project_id,
+            project=self.bkpaas_project,
         )
         # 创建增强服务用户
         logger.info("即将创建 bkrepo 用户: %s", addons_username)
@@ -148,7 +150,7 @@ class Command(BaseCommand):
             username=addons_username,
             password=addons_password,
             association_users=[],
-            project_id=addons_project_id,
+            project=addons_project,
         )
 
         # 创建 PaaS3.0 仓库
@@ -156,7 +158,7 @@ class Command(BaseCommand):
             logger.info("即将创建 bkrepo 的仓库: %s", repo)
             with allow_resource_exists():
                 dry_run or manager.create_repo(
-                    project_id=self.bkpaas_project_id, repo=repo.name, repo_type=repo.type, public=repo.public
+                    project=self.bkpaas_project, repo=repo.name, repo_type=repo.type, public=repo.public
                 )
 
         # 创建 LessCode 用户
@@ -165,7 +167,7 @@ class Command(BaseCommand):
             username=lesscode_username,
             password=lesscode_password,
             association_users=[],
-            project_id=self.bkpaas_project_id,
+            project=self.bkpaas_project,
             repo="npm",
         )
 
@@ -186,5 +188,5 @@ class Command(BaseCommand):
         return settings.BLOBSTORE_BKREPO_CONFIG["PROJECT"]
 
     @property
-    def bkpaas_project_id(self):
-        return settings.BLOBSTORE_BKREPO_CONFIG["PROJECT_ID"]
+    def bkpaas_project_name(self):
+        return settings.BLOBSTORE_BKREPO_PROJECT_NAME

@@ -10,6 +10,7 @@ from django.conf import settings
 from paasng.accessories.servicehub.binding_policy.policy import get_service_type
 from paasng.accessories.servicehub.constants import ServiceBindingPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 
 logger = logging.getLogger(__name__)
 
@@ -45,17 +46,13 @@ def init_service_binding_policy(apps, schema_editor):
             logger.info("Init service(%s) binding policy for service", service.name)
 
             plans = service.get_plans()
-            tenant_data = defaultdict(lambda: {"plan_ids": []})
-            for p in plans:
-                tenant_data[p.tenant_id]["plan_ids"].append(p.uuid)
-
-            for tenant_id, data in tenant_data.items():
-                ServiceBindingPolicy.objects.update_or_create(
-                    service_id=service.uuid,
-                    service_type=get_service_type(service),
-                    tenant_id=tenant_id,
-                    defaults={"type": ServiceBindingPolicyType.STATIC.value, "data": data},
-                )
+            data = {"plan_ids": [p.uuid for p in plans]}
+            ServiceBindingPolicy.objects.update_or_create(
+                service_id=service.uuid,
+                service_type=get_service_type(service),
+                tenant_id=DEFAULT_TENANT_ID if not settings.ENABLE_MULTI_TENANT_MODE else OP_TYPE_TENANT_ID,
+                defaults={"type": ServiceBindingPolicyType.STATIC.value, "data": data},
+            )
 
             logger.info("Service(%s) binding policy init done", service.name)
 

@@ -149,10 +149,16 @@ export default {
       isEditorSideslider: false,
       isShowComponentEdit: false,
       activeNames: ['ptional-components'],
+      initTimerId: null,
+      updateTimerId: null,
     };
   },
   created() {
     this.init();
+  },
+  beforeDestroy() {
+    clearTimeout(this.initTimerId);
+    clearTimeout(this.updateTimerId);
   },
   computed: {
     detailSidesliderData() {
@@ -215,7 +221,13 @@ export default {
           .sort((a, b) => {
             const indexA = requiredOrder.indexOf(a.name);
             const indexB = requiredOrder.indexOf(b.name);
-            return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+            // 如果两个组件都不在 requiredOrder 中，保持原有顺序
+            if (indexA === -1 && indexB === -1) return 0;
+            // 如果 a 不在 requiredOrder 中，将 a 排在后面
+            if (indexA === -1) return 1;
+            // 如果 b 不在 requiredOrder 中，将 b 排在后面
+            if (indexB === -1) return -1;
+            return indexA - indexB;
           });
         // 其他组件按字母排序
         this.optionalComponents = res.filter((v) => !v.required).sort((a, b) => a.name.localeCompare(b.name));
@@ -257,7 +269,7 @@ export default {
 
         // 状态为 installing 轮询接口
         if (ret.status === 'installing') {
-          setTimeout(() => {
+          this.initTimerId = setTimeout(() => {
             this.getComponentDetail(componentName, true);
           }, 5000);
         }
@@ -289,7 +301,7 @@ export default {
           // 结束轮询
           this.$set(this.componentBtnLoadings, componentName, false);
         } else {
-          setTimeout(() => {
+          this.updateTimerId = setTimeout(() => {
             this.pollingDetail(componentName);
           }, 5000);
         }
@@ -298,7 +310,7 @@ export default {
           this.$set(this.componentDetails, componentName, {
             status: 'not_installed',
           });
-          setTimeout(() => {
+          this.updateTimerId = setTimeout(() => {
             this.pollingDetail(componentName);
           }, 5000);
           return;

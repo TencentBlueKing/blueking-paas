@@ -80,10 +80,12 @@ export default {
       return this.$store.state.localLanguage;
     },
     iconOffset() {
-      if (this.localLanguage === 'en') {
-        return this.dataLength === 1 ? 131 : 159;
-      }
-      return this.dataLength === 1 ? 115 : 143;
+      const OFFSET = {
+        en: { single: 131, multiple: 159 },
+        default: { single: 115, multiple: 143 },
+      };
+      const language = this.localLanguage === 'en' ? 'en' : 'default';
+      return this.dataLength === 1 ? OFFSET[language].single : OFFSET[language].multiple;
     },
   },
   methods: {

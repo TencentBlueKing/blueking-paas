@@ -362,16 +362,9 @@ export default {
     },
     // 组合对应的formitem
     correspondingK8sOptions() {
-      if (this.isToken) {
-        return [
-          ...k8sOptions.slice(0, 4), // 取出 k8sOptions 的第一个元素之前的部分
-          ...tokenOptions,
-          ...k8sOptions.slice(4),
-        ];
-      }
       return [
-        ...k8sOptions.slice(0, 4), // 取出 k8sOptions 的第一个元素之前的部分
-        ...certOptions,
+        ...k8sOptions.slice(0, 4), // 提取前四个元素
+        ...(this.isToken ? tokenOptions : certOptions),
         ...k8sOptions.slice(4),
       ];
     },

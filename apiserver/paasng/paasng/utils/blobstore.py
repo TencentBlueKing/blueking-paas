@@ -98,7 +98,7 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
         config = settings.BLOBSTORE_BKREPO_CONFIG
         return BKRepoStorage(
             bucket=bucket,
-            project=config["PROJECT"],
+            project_id=config["PROJECT"],
             endpoint_url=config["ENDPOINT"],
             username=config["USERNAME"],
             password=config["PASSWORD"],

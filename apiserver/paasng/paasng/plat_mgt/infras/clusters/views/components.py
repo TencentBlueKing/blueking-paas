@@ -66,7 +66,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterComponentListOutputSLZ(many=True)},
     )
     def list(self, request, cluster_name, *args, **kwargs):
-        release_map = {r.name: r for r in HelmClient(cluster_name).list_releases()}
+        release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
 
         components = []
         for comp in self.get_queryset():

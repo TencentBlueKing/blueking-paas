@@ -343,10 +343,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     )
     def retrieve_default_feature_flags(self, request, cluster_name, *args, **kwargs):
         cluster = self.get_object()
-
         feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster.type)
-        # FIXME: (多租户)根据集群是否有安装某类组件，提供不同的默认特性配置（比如 GPA）
-
         return Response(ClusterDefaultFeatureFlagsRetrieveOutputSLZ({"feature_flags": feature_flags}).data)
 
     @swagger_auto_schema(

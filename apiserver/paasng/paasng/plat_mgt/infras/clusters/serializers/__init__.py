@@ -25,6 +25,7 @@ from .clusters import (
     ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
+    ClusterStatusRetrieveOutputSLZ,
     ClusterUpdateInputSLZ,
     ClusterUsageRetrieveOutputSLZ,
 )
@@ -48,8 +49,9 @@ __all__ = [
     "ClusterRetrieveOutputSLZ",
     "ClusterCreateInputSLZ",
     "ClusterUpdateInputSLZ",
-    "ClusterUsageRetrieveOutputSLZ",
+    "ClusterStatusRetrieveOutputSLZ",
     "ClusterDefaultFeatureFlagsRetrieveOutputSLZ",
+    "ClusterUsageRetrieveOutputSLZ",
     # components
     "ClusterComponentListOutputSLZ",
     "ClusterComponentRetrieveOutputSLZ",

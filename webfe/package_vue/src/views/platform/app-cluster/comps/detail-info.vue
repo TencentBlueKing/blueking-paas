@@ -28,17 +28,17 @@
           ></span>
         </div>
         <template v-else-if="key === 'api_servers'">
-          <template v-if="!data[key]">--</template>
+          <template v-if="!displayInfoData[key]">--</template>
           <div
             v-else
-            v-for="item in data[key]"
+            v-for="item in displayInfoData[key]"
             :key="item"
           >
             {{ item }}
           </div>
         </template>
         <template v-else>
-          {{ key === 'cluster_source' ? clusterSourceMap[data[key]] : data[key] || '--' }}
+          {{ key === 'cluster_source' ? clusterSourceMap[displayInfoData[key]] : displayInfoData[key] || '--' }}
         </template>
       </template>
     </DetailsRow>
@@ -136,6 +136,14 @@ export default {
     },
     labelWidth() {
       return this.localLanguage === 'en' ? 150 : 100;
+    },
+    displayInfoData() {
+      return {
+        ...this.data,
+        bcs_project_name: this.data.bcs_project_name || this.data.bcs_project_id,
+        bcs_cluster_name: this.data.bcs_cluster_name || this.data.bcs_cluster_id,
+        bk_biz_name: this.data.bk_biz_name || this.data.bk_biz_id,
+      };
     },
   },
   methods: {

@@ -8,7 +8,7 @@ def forwards_func(apps, schema_editor):
     for t in Template.objects.all():
         if not t.enabled_regions:
             t.is_hidden = True
-            t.save(update_fields=["is_hidden"])
+            t.save(update_fields=["is_hidden", "updated"])
 
 
 class Migration(migrations.Migration):

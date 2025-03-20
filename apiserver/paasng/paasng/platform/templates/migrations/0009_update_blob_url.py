@@ -18,7 +18,7 @@ def forwards_func(apps, schema_editor):
         # Modify the empty value
         if t.blob_url == {}:
             t.blob_url = ""
-            t.save(update_fields=["blob_url"])
+            t.save(update_fields=["blob_url", "updated"])
             continue
 
         if not (isinstance(t.blob_url, dict) and t.blob_url):
@@ -35,7 +35,7 @@ def forwards_func(apps, schema_editor):
             )
 
         t.blob_url = value
-        t.save(update_fields=["blob_url"])
+        t.save(update_fields=["blob_url", "updated"])
 
 
 class Migration(migrations.Migration):

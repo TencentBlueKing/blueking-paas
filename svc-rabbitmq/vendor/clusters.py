@@ -15,18 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .base import AppIngressMgr
-from .domain import CustomDomainIngressMgr, assign_custom_hosts
-from .ing_class import get_ingress_class_by_wl_app
-from .misc import AppDefaultIngresses, LegacyAppIngressMgr
-from .subpath import assign_subpaths
+from pydantic import BaseModel
 
-__all__ = [
-    "AppIngressMgr",
-    "AppDefaultIngresses",
-    "LegacyAppIngressMgr",
-    "CustomDomainIngressMgr",
-    "assign_custom_hosts",
-    "assign_subpaths",
-    "get_ingress_class_by_wl_app",
-]
+
+class Cluster(BaseModel):
+    host: str
+    port: int
+    management_api: str
+    admin: str
+    password: str
+    version: str

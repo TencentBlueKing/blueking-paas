@@ -19,8 +19,6 @@ import abc
 import logging
 from typing import Dict, List, Optional, Sequence, Type
 
-from django.conf import settings
-
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.core.app_structure import has_proc_type
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -28,6 +26,7 @@ from paas_wl.workloads.networking.ingress.entities import PIngressDomain
 from paas_wl.workloads.networking.ingress.exceptions import DefaultServiceNameRequired, EmptyAppIngressError
 from paas_wl.workloads.networking.ingress.kres_entities.ingress import ProcessIngress, ingress_kmodel
 from paas_wl.workloads.networking.ingress.kres_entities.service import service_kmodel
+from paas_wl.workloads.networking.ingress.managers.ing_class import get_ingress_class_by_wl_app
 from paas_wl.workloads.networking.ingress.plugins import get_default_plugins
 from paas_wl.workloads.networking.ingress.plugins.exceptions import PluginNotConfigured
 from paas_wl.workloads.networking.ingress.plugins.ingress import IngressPlugin
@@ -142,9 +141,9 @@ class AppIngressMgr(abc.ABC):
         """Construct resource annotations"""
         annotations = {}
 
-        # 当有多个 ingress controller 存在时，可以指定需要使用的链路
-        if settings.APP_INGRESS_CLASS is not None:
-            annotations["kubernetes.io/ingress.class"] = settings.APP_INGRESS_CLASS
+        # ingressClassName
+        if ingress_cls_name := get_ingress_class_by_wl_app(self.app):
+            annotations["kubernetes.io/ingress.class"] = ingress_cls_name
 
         return annotations
 
@@ -237,8 +236,7 @@ class IngressUpdater:
         """Update target service and port_name for current ingress resource"""
         ingress = ingress_kmodel.get(self.app, self.ingress_name)
         logger.info(
-            f"updating existed ingress<{ingress.name}>, set service_name={service_name} "
-            f"port_name={service_port_name}"
+            f"updating existed ingress<{ingress.name}>, set service_name={service_name} port_name={service_port_name}"
         )
         ingress.service_name = service_name
         ingress.service_port_name = service_port_name
@@ -257,6 +255,4 @@ class IngressUpdater:
         #
         # Why check both conditions? An ingress could be created before the service object,
         # so the process type was also checked to avoid an unintended result.
-        if name not in svc_names and not has_proc_type(self.app, proc_type):
-            return False
-        return True
+        return name in svc_names or has_proc_type(self.app, proc_type)

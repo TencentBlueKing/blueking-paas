@@ -15,18 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .base import AppIngressMgr
-from .domain import CustomDomainIngressMgr, assign_custom_hosts
-from .ing_class import get_ingress_class_by_wl_app
-from .misc import AppDefaultIngresses, LegacyAppIngressMgr
-from .subpath import assign_subpaths
+from django.conf import settings
 
-__all__ = [
-    "AppIngressMgr",
-    "AppDefaultIngresses",
-    "LegacyAppIngressMgr",
-    "CustomDomainIngressMgr",
-    "assign_custom_hosts",
-    "assign_subpaths",
-    "get_ingress_class_by_wl_app",
-]
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.constants import ClusterAnnotationKey
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+
+
+def get_ingress_class_by_wl_app(wl_app: WlApp) -> str | None:
+    # 集群注解中指定 IngressClassName 的情况
+    annos = get_cluster_by_app(wl_app).annotations
+    if cls_name := annos.get(ClusterAnnotationKey.INGRESS_CLASS_NAME):
+        return cls_name
+
+    # 特殊指定 IngressClassName 的情况
+    return settings.APP_INGRESS_CLASS

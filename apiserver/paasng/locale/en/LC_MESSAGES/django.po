@@ -2309,68 +2309,80 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:280
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:320
 msgid "BCS 集群必须提供项目，集群，业务信息"
 msgstr "BCS clusters must provide project, cluster, and business information."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:283
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:324
 msgid "BCS 集群必须提供且仅提供一个 API Server"
 msgstr "BCS clusters must provide and only provide one API Server."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:290
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:427
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:327
+msgid "API 地址类型为 BCS 网关时，API Server 中必须包含 BCS 集群 ID"
+msgstr "When the API address type is BCS Gateway, the API Server must contain the BCS cluster ID"
+
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:330
+msgid "原生 K8S 集群不支持使用 BCS 网关作为 API 地址类型"
+msgstr "Native K8S clusters do not support the use of BCS gateway as the API address type"
+
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:335
+msgid "API Server 地址必须以 http 或 https 开头"
+msgstr "The API Server address must start with http or https"
+
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:342
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:479
 msgid "集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"
 msgstr ""
 "When the cluster authentication method is set to certificate, CA "
 "certificate, certificate, and private key must all be provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:293
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:345
 msgid "集群认证方式为 Token 时，Token 必须提供"
 msgstr ""
 "When the cluster authentication method is set to Token, the Token must be "
 "provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:297
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:433
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:349
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:485
 msgid "集群所属租户 ID {} 不在可用租户 ID 列表中"
 msgstr ""
 "The tenant ID {} of the cluster is not in the list of available tenant IDs."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:301
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:353
 msgid "集群名称 {} 已被使用"
 msgstr "The cluster name {} is already in use."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:348
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:400
 msgid "运算符为 Equal 时，值（value）必须提供"
 msgstr "When the operator is Equal, a value must be provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:380
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:432
 msgid "集群名称不可修改"
 msgstr "The cluster name cannot be modified."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:389
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:441
 msgid "当前集群已被租户 {} 分配，无法变更可用租户"
 msgstr ""
 "The current cluster has already been assigned to tenant {}, and the "
 "available tenant cannot be changed."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:395
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:447
 msgid "特性标志必须为字典"
 msgstr "Feature flags must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:405
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:457
 msgid "特性标志的值必须为布尔值"
 msgstr "The value of the feature flag must be a boolean."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:411
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:463
 msgid "节点选择器必须为字典"
 msgstr "Node selectors must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:415
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:467
 msgid "节点选择器 key 必须为字符串"
 msgstr "The key of the node selector must be a string."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:417
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:469
 msgid "节点选择器 value 必须为字符串"
 msgstr "The value of the node selector must be a string."
 
@@ -2401,7 +2413,7 @@ msgstr "The last assignment rule must be an else condition"
 #: paasng/plat_mgt/infras/clusters/views/clusters.py:139
 #: paasng/plat_mgt/infras/clusters/views/clusters.py:222
 msgid "集群连通性测试失败，请检查 Server，Token 等配置是否准确"
-msgstr "Cluster connectivity test failed, please check if the Server, Token, and other configurations are correct"
+msgstr "The cluster connectivity test failed. Please check whether the Server, Token and other configurations are correct."
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:132
 msgid "非 BCS 集群不支持对比组件版本"
@@ -2409,7 +2421,7 @@ msgstr "Non-BCS clusters do not support comparing component versions"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:152
 msgid "获取组件版本信息失败，请确认操作人是否有权限"
-msgstr "Failed to obtain component version information, please confirm whether the operator has the necessary permissions"
+msgstr "Failed to get component version information. Please confirm whether the operator has permission."
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:174
 msgid "非 BCS 集群需要手动更新组件"

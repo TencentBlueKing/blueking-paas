@@ -41,6 +41,15 @@ class ClusterAuthType(StrStructuredEnum):
     CERT = EnumField("cert", "证书")
 
 
+class ClusterAPIAddressType(StrStructuredEnum):
+    """集群 API 地址类型"""
+
+    # 格式如：https://bcs-api.bk.tencent.com/clusters/BCS-K8S-00000/
+    BCS_GATEWAY = EnumField("bcs_gateway", "BCS 网关")
+    # 自定义地址：如：https://127.0.0.1:60035，https://kubernetes.default.svc.cluster.local 等
+    CUSTOM = EnumField("custom", "自定义（如 IP / SvcName）")
+
+
 class TolerationOperator(StrStructuredEnum):
     """容忍度运算符"""
 

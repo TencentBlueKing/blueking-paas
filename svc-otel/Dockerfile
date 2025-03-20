@@ -27,7 +27,6 @@ ADD ./data ./data
 ADD ./svc_otel ./svc_otel
 ADD ./static ./static
 ADD ./manage.py .
-ADD ./migrate.sh .
 ADD ./start.sh .
 
 ENV TINI_VERSION v0.19.0

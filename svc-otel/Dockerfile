@@ -24,7 +24,6 @@ ADD ./poetry.lock .
 # Install dependecies in system
 RUN poetry config virtualenvs.create false && poetry install --no-root -vvv
 
-ADD ./data ./data
 ADD ./svc_otel ./svc_otel
 ADD ./static ./static
 ADD ./manage.py .

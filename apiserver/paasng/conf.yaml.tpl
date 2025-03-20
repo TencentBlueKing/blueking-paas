@@ -257,7 +257,11 @@
 #   ENDPOINT: http://bkrepo.example.com
 #   USERNAME: bkpaas3
 #   PASSWORD: ''
-
+## bkrepo 项目名称，仅在创建项目时使用。bkrepo 的项目 ID 在 BLOBSTORE_BKREPO_CONFIG["PROJECT"] 中定义
+## NOTE: 按目前 bkrepo 的规则，启用/关闭多租户模式的情况下:
+## 关闭多租户: 项目 ID == 项目名称
+## 启用多租户: 项目 ID == f"{租户 ID}_{项目名称}"
+# BLOBSTORE_BKREPO_PROJECT_NAME = "bkpaas"
 ## 增强服务 LOGO bucket
 # SERVICE_LOGO_BUCKET: bkpaas3-platform-assets
 ## 应用 Logo 存储 bucket 名称

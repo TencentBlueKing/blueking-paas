@@ -37,7 +37,6 @@ class MarketMigration(BaseMigration):
         MarketConfig.objects.update_or_create(
             application=app,
             defaults=dict(
-                region=app.region,
                 # PaaS2.0 中部署到了正式环境则表示启用应用市场服务
                 enabled=self.context.legacy_app_proxy.is_prod_deployed(),
                 # 当 auto_enable_when_deploy 为 True 时, 部署后即自动上架到市场; 否则就不会

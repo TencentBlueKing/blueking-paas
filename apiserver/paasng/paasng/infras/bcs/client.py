@@ -107,7 +107,7 @@ class BCSClient:
         if resp.get("code") == 0:
             return
 
-        logger.error("call bcs api failed, resp: %s", resp)
+        logger.warning("call bcs api failed, resp: %s", resp)
         raise BCSApiError(resp["message"])
 
 
@@ -213,5 +213,5 @@ class BCSUserClient:
         if resp.get("code") == 0:
             return
 
-        logger.error("call bcs api failed, resp: %s", resp)
+        logger.warning("call bcs api failed, resp: %s", resp)
         raise BCSApiError(resp["message"])

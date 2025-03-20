@@ -350,14 +350,14 @@ webencodings = "*"
 
 [[package]]
 name = "blue-krill"
-version = "2.1.0"
+version = "2.1.2"
 description = "Tools and common packages for blueking PaaS platform."
 optional = false
 python-versions = "<3.12,>=3.9"
 groups = ["main"]
 files = [
-    {file = "blue_krill-2.1.0-py3-none-any.whl", hash = "sha256:f59a0632ebe8259eced5021b6b1b9a1c52ba649483b8a712b5d48a90363e5e30"},
-    {file = "blue_krill-2.1.0.tar.gz", hash = "sha256:b2cd00ae57b8e5e9ddb706a07a545f2e8e1278cef66476b1af5adbe542d2ee55"},
+    {file = "blue_krill-2.1.2-py3-none-any.whl", hash = "sha256:25cd214a4746a421550b034f7145df45c30ccc854115e1043b11486b16fb7bb0"},
+    {file = "blue_krill-2.1.2.tar.gz", hash = "sha256:c3ed6baf0e00a6da9b95d4fe68a7198e0ad872cd0fae4508ff3a4a85825a09e2"},
 ]
 
 [package.dependencies]
@@ -4365,4 +4365,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "1fb8377f0598be0defe6a36093891b65ea29073d6063e1a0725c150c59456cb3"
+content-hash = "e88126344d325ae7befc1374bcb04f8b0a7dcef7a72cfa2e8cf4d90e1a684a0e"

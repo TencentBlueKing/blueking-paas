@@ -204,10 +204,10 @@ export default {
 
     /**
      * 查询模板详情(构建信息)
-     * @param {Object} params tplType模版类型, region应用版本 tplName模版名称
+     * @param {Object} params tplType模版类型, tplName模版名称
      */
-    getBuildDataInfo({}, { tplTyp, region, tplName }, config = {}) {
-      const url = `${BACKEND_URL}/api/tmpls/${tplTyp}/region/${region}/template/${tplName}`;
+    getBuildDataInfo({}, { tplTyp, tplName }, config = {}) {
+      const url = `${BACKEND_URL}/api/tmpls/${tplTyp}/template/${tplName}`;
       return http.get(url, config);
     },
 
@@ -223,11 +223,10 @@ export default {
 
     /**
      * 获取蓝鲸插件模板信息
-     * @param {Object} params 请求参数：region
      */
-    getPluginTmpls({}, { region }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/plugin/tmpls/?region=${region}`;
-      return http.get(url, config);
+    getPluginTmpls({}) {
+      const url = `${BACKEND_URL}/api/bkapps/plugin/tmpls/`;
+      return http.get(url);
     },
   },
 };

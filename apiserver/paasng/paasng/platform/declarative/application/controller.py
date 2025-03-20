@@ -111,9 +111,8 @@ class AppDeclarativeController:
         default_module = application.get_default_module()
 
         post_create_application.send(sender=self.__class__, application=application)
-        # Create market related data after application created, to avoid market related data be covered
+        # Create market related data after application created, to avoid overwriting market related data
         MarketConfig.objects.create(
-            region=application.region,
             application=application,
             enabled=False,
             auto_enable_when_deploy=True,

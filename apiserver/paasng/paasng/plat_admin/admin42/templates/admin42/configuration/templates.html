@@ -29,32 +29,16 @@
             </template>
         </bk-table-column>
         <bk-table-column label="开发语言" prop="language" width="80"></bk-table-column>
-        <bk-table-column label="可发布到应用集市" width="150" align="center">
+        <bk-table-column label="应用集市" width="80" align="center">
             <template slot-scope="props">
                 <span v-if="props.row.market_ready">✅</span>
                 <span v-else>❌</span>
             </template>
         </bk-table-column>
-        <bk-table-column label="允许被使用的版本" width="230" align="center">
+        <bk-table-column label="隐藏" width="60" align="center">
             <template slot-scope="props">
-                <span v-for="region in props.row.enabled_regions">
-                    <bk-tag>$[ region ]</bk-tag>
-                </span>
-                <span v-if="!props.row.enabled_regions.length" class="ml20">--</span>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="标签" width="200" align="center">
-            <template slot-scope="props">
-                <span v-for="tag in props.row.tags">
-                    <bk-tag>$[ tag ]</bk-tag>
-                </span>
-                <span v-if="!props.row.tags.length" class="ml20">--</span>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="代码仓库信息" align="center">
-            <template slot-scope="props">
-                <span v-bk-tooltips="props.row.repo_url" v-if="props.row.repo_url">$[ props.row.repo_url ]</span>
-                <span v-else>--</span>
+                <span v-if="props.row.is_hidden">是</span>
+                <span v-else>否</span>
             </template>
         </bk-table-column>
         <bk-table-column label="操作" width="200">
@@ -119,17 +103,8 @@
                     show-length highlight-mouseover-node :deep="1"
                 ></json-pretty>
             </bk-form-item>
-            <bk-form-item label="不同版本二进制包存储路径">
-                <div v-for="(url, region) in readOnlyDialog.form.blob_url" style="display: flex">
-                    <bk-tag>$[ region ]: $[ url ]</bk-tag>
-                </div>
-                <span v-if="!Object.keys(readOnlyDialog.form.blob_url).length" class="ml10">--</span>
-            </bk-form-item>
-            <bk-form-item label="允许被使用的版本">
-                <span v-for="tag in readOnlyDialog.form.enabled_regions">
-                    <bk-tag>$[ tag ]</bk-tag>
-                </span>
-                <span v-if="!readOnlyDialog.form.enabled_regions.length" class="ml10">--</span>
+            <bk-form-item label="二进制包存储路径">
+                <span>$[ readOnlyDialog.form.blob_url ]</span>
             </bk-form-item>
             <bk-form-item label="必须的构建工具">
                 <template v-if="readOnlyDialog.form.required_buildpacks.length === 0">
@@ -167,6 +142,10 @@
             </bk-form-item>
             <bk-form-item label="代码仓库信息">
                 <bk-input v-model="readOnlyDialog.form.repo_url" disabled="true"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="是否隐藏">
+                <span v-if="readOnlyDialog.form.is_hidden">是</span>
+                <span v-else>否</span>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
@@ -223,11 +202,8 @@
             <bk-form-item label="预设增强服务配置">
                 <json-editor v-model="dialog.form.preset_services_config"></json-editor>
             </bk-form-item>
-            <bk-form-item label="不同版本二进制包存储路径" :required="true">
+            <bk-form-item label="二进制包存储路径" :required="true">
                 <json-editor v-model="dialog.form.blob_url"></json-editor>
-            </bk-form-item>
-            <bk-form-item label="允许被使用的版本" :required="true">
-                <json-editor v-model="dialog.form.enabled_regions"></json-editor>
             </bk-form-item>
             <bk-form-item label="必须的构建工具">
                 <json-editor v-model="dialog.form.required_buildpacks"></json-editor>
@@ -240,6 +216,9 @@
             </bk-form-item>
             <bk-form-item label="代码仓库信息">
                 <bk-input v-model="dialog.form.repo_url"></bk-input>
+            </bk-form-item>
+            <bk-form-item label="是否隐藏">
+                <bk-switcher v-model="dialog.form.is_hidden"></bk-switcher>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
@@ -281,22 +260,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         language: '',
                         market_ready: false,
                         preset_services_config: {},
-                        blob_url: {},
-                        enabled_regions: [],
+                        blob_url: "",
                         required_buildpacks: [],
                         processes: {},
                         tags: [],
-                        repo_url: ''
+                        repo_url: '',
+                        is_hidden: false,
                     },
                     row: undefined
                 },
                 readOnlyDialog: {
                     visible: false,
                     form: {
-                        enabled_regions: [],
                         required_buildpacks: [],
                         tags: [],
-                        blob_url: {}
+                        blob_url: ""
                     }
                 },
                 rules: {
@@ -369,13 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             trigger: 'blur'
                         }
                     ],
-                    enabled_regions: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
-                        }
-                    ],
                 }
             }
         },
@@ -428,7 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     required_buildpacks: [],
                     processes: {},
                     tags: [],
-                    repo_url: ''
+                    repo_url: '',
+                    is_hidden: false,
                 }
                 this.dialog.visible = true
             },

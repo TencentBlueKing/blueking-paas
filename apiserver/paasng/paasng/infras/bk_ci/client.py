@@ -179,5 +179,5 @@ class BkCIPipelineClient(BaseBkCIClient):
         if resp.get("status") == 0:
             return
 
-        logger.error("call bk ci api failed, resp: %s", resp)
+        logger.warning("call bk ci api failed, resp: %s", resp)
         raise BkCIApiError(resp["message"])

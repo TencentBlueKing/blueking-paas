@@ -47,7 +47,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     serializer_class = ProcessSpecPlanSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [SearchFilter]
-    search_fields = ["region", "environment"]
+    search_fields = ["environment"]
     queryset = ProcessSpecPlan.objects.all()
 
     def _list_data(self):
@@ -130,7 +130,6 @@ class ProcessSpecManageViewSet(GenericViewSet):
 
         defaults = {
             "type": "process",
-            "region": wl_app.region,
             "target_replicas": 1,
             "target_status": ProcessTargetStatus.START,
             "plan": plan,

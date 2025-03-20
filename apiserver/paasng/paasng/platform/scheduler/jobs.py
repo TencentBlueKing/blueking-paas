@@ -77,6 +77,8 @@ def init_service_binding_policy():
                 continue
 
             ServiceBindingPolicyManager(service, default_tenant_id).set_static(plans)
+            # 添加自动绑定记录，避免重复初始化
+            ServiceBindingPolicyAutoBindRecord.objects.create(service_id=service.uuid)
             logger.info("Init service binding policy for service(%s) success", service.name)
         except Exception:
             logger.exception("Init service binding policy for service(%s) error", service.name)

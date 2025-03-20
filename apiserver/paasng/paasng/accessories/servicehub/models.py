@@ -312,3 +312,9 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
 
     class Meta:
         unique_together = ("tenant_id", "service_id", "priority")
+
+
+class ServiceBindingPolicyAutoBindRecord(AuditedModel):
+    """绑定策略自动操作记录"""
+
+    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)

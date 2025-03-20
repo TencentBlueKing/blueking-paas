@@ -66,7 +66,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterComponentListOutputSLZ(many=True)},
     )
     def list(self, request, cluster_name, *args, **kwargs):
-        release_map = {r.name: r for r in HelmClient(cluster_name).list_releases()}
+        release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
 
         components = []
         for comp in self.get_queryset():
@@ -140,11 +140,18 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             cur_version = release.chart.version
 
         bcs_client = BCSUserClient(
-            get_tenant(request.user).id, request.user.username, request.COOKIES.get(settings.BK_COOKIE_NAME)
+            get_tenant(request.user).id,
+            request.user.username,
+            request.COOKIES.get(settings.BK_COOKIE_NAME),
         )
-        if chart_versions := bcs_client.get_chart_versions(
-            cluster.bcs_project_id, cluster_component.repository, component_name
-        ):
+        try:
+            chart_versions = bcs_client.get_chart_versions(
+                cluster.bcs_project_id, cluster_component.repository, component_name
+            )
+        except BCSGatewayServiceError:
+            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("获取组件版本信息失败，请确认操作人是否有权限"))
+
+        if chart_versions:
             # API 返回是按时间逆序，因此第一个就是最新版本
             latest_version = chart_versions[0].version
 

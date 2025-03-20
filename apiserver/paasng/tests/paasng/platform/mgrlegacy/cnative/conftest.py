@@ -66,36 +66,32 @@ def cnb_image_name():
 
 @pytest.fixture()
 def buildpack(bk_module):
-    buildpack = G(AppBuildPack, name=get_random_string(6), region=bk_module.region, language=bk_module.language)
+    buildpack = G(AppBuildPack, name=get_random_string(6), language=bk_module.language)
     return buildpack
 
 
 @pytest.fixture()
 def slugbuilder(bk_module, buildpack, image_name):
-    slugbuilder = G(
-        AppSlugBuilder, name=image_name, region=bk_module.region, labels={APP_CATEGORY.NORMAL_APP.value: "1"}
-    )
+    slugbuilder = G(AppSlugBuilder, name=image_name, labels={APP_CATEGORY.NORMAL_APP.value: "1"})
     slugbuilder.buildpacks.add(buildpack)
     return slugbuilder
 
 
 @pytest.fixture()
 def slugrunner(bk_module, buildpack, image_name):
-    return G(AppSlugRunner, name=image_name, region=bk_module.region, labels={APP_CATEGORY.NORMAL_APP.value: "1"})
+    return G(AppSlugRunner, name=image_name, labels={APP_CATEGORY.NORMAL_APP.value: "1"})
 
 
 @pytest.fixture()
 def cnb_builder(bk_module, buildpack, cnb_image_name):
-    builder = G(
-        AppSlugBuilder, name=cnb_image_name, region=bk_module.region, labels={APP_CATEGORY.CNATIVE_APP.value: "1"}
-    )
+    builder = G(AppSlugBuilder, name=cnb_image_name, labels={APP_CATEGORY.CNATIVE_APP.value: "1"})
     builder.buildpacks.add(buildpack)
     return builder
 
 
 @pytest.fixture()
 def cnb_runner(bk_module, cnb_image_name):
-    return G(AppSlugRunner, name=cnb_image_name, region=bk_module.region, labels={APP_CATEGORY.CNATIVE_APP.value: "1"})
+    return G(AppSlugRunner, name=cnb_image_name, labels={APP_CATEGORY.CNATIVE_APP.value: "1"})
 
 
 @pytest.fixture()

@@ -16,17 +16,19 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
-from dataclasses import dataclass
-from typing import Dict, List, Type
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Type
 
 from django.conf import settings
-from django.core import exceptions
-from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData, OperationFailed
+from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData
+from paas_service.utils import WRItemList
 
 from .client import Client
-from .helper import ClusterSelector, DefaultClusterStrategy, InstanceHelper, Version
-from .models import Cluster, InstanceBill, LimitPolicy, UserPolicy
+from .clusters import Cluster
+from .helper import InstanceHelper, Version
+from .models import InstanceBill, LimitPolicy, UserPolicy
 from .utils import generate_password
 
 logger = logging.getLogger(__name__)
@@ -34,10 +36,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProviderPlugin:
-    context: 'dict'
-    client: 'Client'
-    cluster: 'Cluster'
-    virtual_host: 'str'
+    context: "dict"
+    client: "Client"
+    cluster: "Cluster"
+    virtual_host: "str"
 
     def on_create(self):
         pass
@@ -55,7 +57,7 @@ class UserPolicyProviderPlugin(ProviderPlugin):
     def on_create(self):
         policies = self.context.setdefault("policies", [])
         for instance in UserPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
-            policy: 'UserPolicy' = instance.resolved
+            policy: "UserPolicy" = instance.resolved
             policies.append(policy.name)
             self.client.user_policy.create(
                 self.virtual_host,
@@ -81,7 +83,7 @@ class LimitPolicyProviderPlugin(ProviderPlugin):
 
         limits = self.context.setdefault("limits", [])
         for instance in LimitPolicy.objects.filter(enable=True, cluster_id=self.cluster.pk):
-            policy: 'LimitPolicy' = instance.resolved
+            policy: "LimitPolicy" = instance.resolved
             limits.append(policy.name)
             self.client.limit_policy.create(self.virtual_host, policy.limit, policy.value)
 
@@ -128,17 +130,23 @@ class AdminAutoPermission(ProviderPlugin):
         )
 
 
-PROVIDER_PLUGINS: 'List[Type[ProviderPlugin]]' = [
+PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
     AdminAutoPermission,
-    UserPolicyProviderPlugin,
-    LimitPolicyProviderPlugin,
     DeadLetterRoutingProviderPlugin,
 ]
 
 
 @dataclass
 class Provider(BaseProvider):
-    def make_instance_name(self, name: 'str', uuid: 'str') -> 'str':
+    host: Optional[str] = None
+    port: Optional[int] = None
+    management_api: Optional[str] = None
+    admin: Optional[str] = None
+    password: Optional[str] = None
+    version: Optional[str] = None
+    clusters: List = field(default_factory=list)
+
+    def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []
         if settings.INSTANCE_DEFAULT_PREFIX:
             parts.append(settings.INSTANCE_DEFAULT_PREFIX)
@@ -153,11 +161,34 @@ class Provider(BaseProvider):
         # {prefix}-{name}-{id}
         return "-".join(parts)
 
+    def pick_cluster(self) -> Cluster:
+        """pick a single cluster config from available clusters"""
+        if not self.clusters:
+            values = {
+                "host": self.host,
+                "port": self.port,
+                "management_api": self.management_api,
+                "admin": self.admin,
+                "password": self.password,
+                "version": self.version,
+            }
+            try:
+                return Cluster(**values)
+            except Exception as e:
+                raise ValueError(f"cluster 配置不正确: {e}")
+
+        result = WRItemList.from_json(self.clusters).get()
+        if not result:
+            raise ValueError("clusters 列表配置不正确，无法获取集群配置")
+        try:
+            return Cluster(**result.values)
+        except Exception as e:
+            raise ValueError(f"cluster 配置不正确: {e}")
+
     def create_instance(
-        self, name: 'str', bill: 'InstanceBill', context: 'dict', cluster: 'Cluster'
-    ) -> 'InstanceData':
+        self, name: "str", bill: "InstanceBill", context: "dict", cluster: "Cluster"
+    ) -> "InstanceData":
         """创建实例"""
-        context["cluster_id"] = cluster.id
         context["host"] = cluster.host
         context["port"] = cluster.port
         bill_uid = bill.uuid.hex
@@ -189,11 +220,18 @@ class Provider(BaseProvider):
             plugin = cls(context=context, cluster=cluster, client=client, virtual_host=virtual_host)
             plugin.on_create()
 
-        return InstanceHelper.create_instance_data(
-            cluster=cluster, bill=bill, virtual_host=virtual_host, user=user, password=password
+        return InstanceData(
+            credentials={
+                "host": cluster.host,
+                "port": cluster.port,
+                "user": user,
+                "password": password,
+                "vhost": virtual_host,
+            },
+            config={"bill": bill.uuid.hex},
         )
 
-    def create(self, params: Dict) -> 'InstanceData':
+    def create(self, params: Dict) -> "InstanceData":
         engine_app_name = params.get("engine_app_name")
         if not engine_app_name:
             raise ArgumentInvalidError("engine_app_name is empty")
@@ -202,35 +240,26 @@ class Provider(BaseProvider):
         bill = InstanceBill.objects.create(name=engine_app_name, action="create")
         with bill.log_context() as context:  # type: dict
             context["engine_app_name"] = engine_app_name
-
-            clusters = Cluster.objects.filter(enable=True)
-            if "cluster_id" in context:
-                clusters = clusters.filter(id=context["cluster_id"])
-
-            selector = ClusterSelector(DefaultClusterStrategy, clusters)
-            cluster = selector.one()  # 选择一个可用的集群
-            if not cluster:
-                raise OperationFailed("no available cluster found")
+            cluster = self.pick_cluster()
 
             try:
                 return self.create_instance(engine_app_name, bill, context, cluster)
-            except Exception as err:
-                logger.exception(err)
-                raise err
+            except Exception:
+                logger.exception("Failed to delete instance")
+                raise
 
-    def delete_instance(self, context: 'dict', cluster: 'Cluster', instance_data: 'InstanceData'):
-        helper = InstanceHelper(instance_data)
-        credentials = helper.get_credentials()
+    def delete_instance(self, context: "dict", cluster: "Cluster", instance_data: "InstanceData"):
+        credentials = instance_data.credentials
         client = Client.from_cluster(cluster)
 
         # 1. 删除用户
         if not context.setdefault("user_deleted", False):
-            user = credentials.user
+            user = credentials["user"]
             client.user.delete(user)
             context["user_deleted"] = True
 
         # 2. 删除 vhost
-        virtual_host = credentials.vhost
+        virtual_host = credentials["vhost"]
         if not context.setdefault("vhost_deleted", False):
             client.virtual_host.delete(virtual_host)
             context["vhost_deleted"] = True
@@ -239,21 +268,30 @@ class Provider(BaseProvider):
             plugin = cls(context=context, cluster=cluster, client=client, virtual_host=virtual_host)
             plugin.on_delete()
 
-    def delete(self, instance_data: 'InstanceData'):
-        helper = InstanceHelper(instance_data)
-        try:
-            cluster = helper.get_cluster()
-        except exceptions.ObjectDoesNotExist:
-            raise OperationFailed("unknown cluster")
+    def delete(self, instance_data: "InstanceData"):
+        """删除 RabbitMq 实例
 
+        :param instance_data:
+        credentials:
+            "host": str,
+            "port": str,
+            "user": str,
+            "password": str,
+            "vhost": str,
+        config: {}
+        :return:
+        """
+        helper = InstanceHelper(instance_data)
         bill = helper.get_bill()
         bill.action = "delete"
+
+        cluster = self.pick_cluster()
         with bill.log_context() as context:  # type: dict
             try:
                 self.delete_instance(context, cluster, instance_data)
-            except Exception as err:
-                logger.exception(err)
-                raise err
+            except Exception:
+                logger.exception("Failed to delete instance")
+                raise
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError

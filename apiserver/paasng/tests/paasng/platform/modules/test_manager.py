@@ -87,7 +87,6 @@ class TestModuleInitializer:
                 language="Python",
                 # Set preset services
                 preset_services_config=services_in_template,
-                enabled_regions=[settings.DEFAULT_REGION_NAME],
             )
 
             module_initializer.bind_default_services()
@@ -128,7 +127,6 @@ class TestModuleInitializer:
                 name="bar",
                 language="Python",
                 required_buildpacks=[buildpack.name],
-                enabled_regions=[settings.DEFAULT_REGION_NAME],
             )
             module_initializer = ModuleInitializer(raw_module)
             module_initializer.bind_default_runtime()

@@ -1,6 +1,13 @@
 <template>
   <div :class="['platform-top-bar', { 'has-tab': tabPanels.length }]">
-    <div class="title">{{ title }}</div>
+    <div class="title">
+      <i
+        v-if="showBackIcon"
+        class="paasng-icon paasng-arrows-left icon-cls-back"
+        @click="goBack"
+      />
+      {{ title }}
+    </div>
     <div
       v-if="tabPanels.length"
       class="top-tab"
@@ -48,10 +55,26 @@ export default {
         };
       });
     },
+    showBackIcon() {
+      return this.$route.meta?.supportBack;
+    },
   },
   methods: {
     handleTabChange(activeName) {
       this.$emit('tab-change', activeName);
+    },
+    // 返回上一页
+    goBack() {
+      const { backRoute } = this.$route.meta;
+      // 详情页单独编辑
+      if (this.$route.query?.alone) {
+        backRoute.query.type = 'detail';
+      }
+      if (backRoute) {
+        this.$router.push(backRoute);
+        return;
+      }
+      this.$router.back();
     },
   },
 };
@@ -75,6 +98,13 @@ export default {
     padding-left: 24px;
     font-size: 16px;
     color: #313238;
+  }
+  .icon-cls-back {
+    margin-right: 5px;
+    color: #3a84ff;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
   }
 }
 .platform-tab-cls {

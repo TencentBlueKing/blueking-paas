@@ -17,6 +17,7 @@
 
 from .base import AppIngressMgr
 from .domain import CustomDomainIngressMgr, assign_custom_hosts
+from .ing_class import get_ingress_class_by_wl_app
 from .misc import AppDefaultIngresses, LegacyAppIngressMgr
 from .subpath import assign_subpaths
 
@@ -27,4 +28,5 @@ __all__ = [
     "CustomDomainIngressMgr",
     "assign_custom_hosts",
     "assign_subpaths",
+    "get_ingress_class_by_wl_app",
 ]

@@ -28,6 +28,7 @@ from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSear
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.plat_mgt.infras.clusters.constants import (
+    ClusterAPIAddressType,
     ClusterAuthType,
     ClusterSource,
     TolerationEffect,
@@ -104,6 +105,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     bcs_cluster_name = serializers.SerializerMethodField(help_text="BCS 集群名称")
     bk_biz_name = serializers.SerializerMethodField(help_text="蓝鲸业务名称")
 
+    api_address_type = serializers.SerializerMethodField(help_text="API Server 地址类型")
     api_servers = serializers.SerializerMethodField(help_text="API Server 列表")
 
     # 注意：敏感信息如 ca，cert，key，token 需要不会暴露给前端（字段都没有）
@@ -124,6 +126,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     tolerations = serializers.JSONField(help_text="污点容忍度", source="default_tolerations")
     feature_flags = serializers.JSONField(help_text="特性标志")
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_cluster_source(self, obj: Cluster) -> str:
         """集群来源：如果已配置 BCS 集群信息，则认为来源是 BCS"""
         if obj.bcs_project_id and obj.bcs_cluster_id and obj.bk_biz_id:
@@ -131,18 +134,38 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
 
         return ClusterSource.NATIVE_K8S
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_bcs_project_name(self, _: Cluster) -> str:
         return self.context.get("bcs_project_name", "")
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_bcs_cluster_name(self, _: Cluster) -> str:
         return self.context.get("bcs_cluster_name", "")
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_bk_biz_name(self, _: Cluster) -> str:
         return self.context.get("bk_biz_name", "")
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    def get_api_address_type(self, obj: Cluster) -> ClusterAPIAddressType:
+        bcs_cluster_id = obj.bcs_cluster_id
+        # 不是 BCS 集群，自然只能是使用自定义地址
+        if not bcs_cluster_id:
+            return ClusterAPIAddressType.CUSTOM
+
+        api_servers = APIServer.objects.filter(cluster=obj)
+
+        # BCS 网关只会有一个地址，并且访问地址中应该包含 BCS 集群 ID
+        if api_servers.count() == 1 and bcs_cluster_id in api_servers[0].host:
+            return ClusterAPIAddressType.BCS_GATEWAY
+
+        return ClusterAPIAddressType.CUSTOM
+
+    @swagger_serializer_method(serializer_or_field=serializers.ListField(child=serializers.CharField()))
     def get_api_servers(self, obj: Cluster) -> List[str]:
         return list(APIServer.objects.filter(cluster=obj).values_list("host", flat=True))
 
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_auth_type(self, obj: Cluster) -> ClusterAuthType:
         if obj.ca_data and obj.cert_data and obj.key_data:
             return ClusterAuthType.CERT
@@ -208,6 +231,10 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         allow_null=True,
         allow_blank=True,
     )
+    api_address_type = serializers.ChoiceField(
+        help_text="k8s api 地址类型",
+        choices=ClusterAPIAddressType.get_choices(),
+    )
     # 注：虽然 bcs 集群只需要一个 server，也统一为列表结构
     api_servers = serializers.ListField(
         help_text="API Server 列表",
@@ -259,10 +286,10 @@ class ClusterCreateInputSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        # BCS 集群特殊配置校验
-        self._validate_cluster_source(attrs)
+        # 集群配置校验
+        self._validate_cluster_configs(attrs)
         # 认证配置校验
-        self._validate_auth(attrs)
+        self._validate_auth_configs(attrs)
         # 可用租户 ID 列表校验
         self._validate_available_tenant_ids(attrs)
 
@@ -274,17 +301,37 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         return attrs
 
-    def _validate_cluster_source(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        if attrs["cluster_source"] == ClusterSource.BCS:
-            if not (attrs.get("bcs_project_id") and attrs.get("bcs_cluster_id") and attrs.get("bk_biz_id")):
+    def _validate_cluster_configs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        cluster_source = attrs["cluster_source"]
+        api_address_type = attrs["api_address_type"]
+
+        bcs_project_id = attrs.get("bcs_project_id")
+        bcs_cluster_id = attrs.get("bcs_cluster_id")
+        bk_biz_id = attrs.get("bk_biz_id")
+        api_servers = attrs.get("api_servers", [])
+
+        if cluster_source == ClusterSource.BCS:
+            if not (bcs_project_id and bcs_cluster_id and bk_biz_id):
                 raise ValidationError(_("BCS 集群必须提供项目，集群，业务信息"))
 
-            if len(attrs.get("api_servers", [])) != 1:
-                raise ValidationError(_("BCS 集群必须提供且仅提供一个 API Server"))
+            if api_address_type == ClusterAPIAddressType.BCS_GATEWAY:
+                if len(api_servers) != 1:
+                    raise ValidationError(_("BCS 集群必须提供且仅提供一个 API Server"))
+
+                if bcs_cluster_id not in api_servers[0]:
+                    raise ValidationError(_("API 地址类型为 BCS 网关时，API Server 中必须包含 BCS 集群 ID"))
+
+        elif api_address_type == ClusterAPIAddressType.BCS_GATEWAY:
+            raise ValidationError(_("原生 K8S 集群不支持使用 BCS 网关作为 API 地址类型"))
+
+        # 检查 API Server 地址是否合法
+        for srv in api_servers:
+            if not srv.startswith("http"):
+                raise ValidationError(_("API Server 地址必须以 http 或 https 开头"))
 
         return attrs
 
-    def _validate_auth(self, attrs: Dict[str, Any]):
+    def _validate_auth_configs(self, attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
         if auth_type == ClusterAuthType.CERT and not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
             raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
@@ -418,7 +465,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
 
         return node_selector
 
-    def _validate_auth(self, attrs: Dict[str, Any]):
+    def _validate_auth_configs(self, attrs: Dict[str, Any]):
         """更新清理下的认证配置比较特殊，允许为 None / 空字符串时候表示不覆盖"""
         if attrs["auth_type"] == ClusterAuthType.CERT:
             ca, cert, key = attrs.get("ca"), attrs.get("cert"), attrs.get("key")
@@ -448,14 +495,20 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         return data
 
 
-class AppModuleEnvSLZ(serializers.Serializer):
-    app_code = serializers.CharField(help_text="应用 Code")
-    module_name = serializers.CharField(help_text="模块名称")
-    environment = serializers.CharField(help_text="部署环境")
+class ClusterStatusRetrieveOutputSLZ(serializers.Serializer):
+    base = serializers.BooleanField(help_text="基础配置")
+    component = serializers.BooleanField(help_text="组件配置")
+    feature = serializers.BooleanField(help_text="集群特性")
 
 
 class ClusterDefaultFeatureFlagsRetrieveOutputSLZ(serializers.Serializer):
     feature_flags = serializers.JSONField(help_text="特性标志")
+
+
+class AppModuleEnvSLZ(serializers.Serializer):
+    app_code = serializers.CharField(help_text="应用 Code")
+    module_name = serializers.CharField(help_text="模块名称")
+    environment = serializers.CharField(help_text="部署环境")
 
 
 class ClusterUsageRetrieveOutputSLZ(serializers.Serializer):

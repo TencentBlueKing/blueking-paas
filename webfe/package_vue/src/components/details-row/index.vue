@@ -50,6 +50,7 @@ export default {
 <style lang="scss" scoped>
 .details-row {
   display: flex;
+  margin-top: 4px;
   .label {
     flex-shrink: 0;
     font-size: 12px;

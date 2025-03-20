@@ -50,7 +50,7 @@
                 <!-- 按环境分配 env_specific -->
                 <template v-if="row.policies.allocation_policy?.env_specific">
                   <span class="tag">
-                    {{ $t('集群（预发布环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}
+                    {{ $t('集群（预发布环境）') }}：{{ row.policies.allocation_policy.env_clusters.stag?.join(', ') }}
                   </span>
                   <span class="tag">
                     {{ $t('集群（生产环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}
@@ -178,8 +178,8 @@ export default {
       filterValue: 'all',
       filterList: [
         { name: 'all', label: this.$t('全部'), count: 0 },
-        { name: 'notConfigured', label: this.$t('未配置'), count: 0 },
         { name: 'configured', label: this.$t('已配置'), count: 0 },
+        { name: 'notConfigured', label: this.$t('未配置'), count: 0 },
       ],
       searchValue: '',
       isTableLoading: false,
@@ -251,6 +251,11 @@ export default {
       const lowerCaseKeyword = this.searchValue.toLowerCase();
       return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
     },
+    // 关键字搜索
+    filterByKeyword(list) {
+      const lowerCaseKeyword = this.searchValue.toLowerCase();
+      return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
+    },
     handlerChange(data) {
       this.filterValue = data.name;
     },
@@ -316,13 +321,17 @@ export default {
       this.$bkInfo({
         type: 'warning',
         width: 480,
-        title: this.$t('暂无集群可供分配'),
+        title: this.$t('当前租户暂无可用集群'),
         subHeader: h(
           'div',
           {
             class: ['cluster-info-header-cls'],
           },
-          this.$t('请先在 [集群列表] 添加集群，方可分配集群。')
+          [
+            h('p', { class: 'tip-text mb5' }, `${this.$t('您可以')}：`),
+            h('p', { class: 'tip-text' }, this.$t('1. 联系平台管理员，为当前租户分配可用集群')),
+            h('p', { class: 'tip-text' }, this.$t('2. 在 [集群列表] 中添加新集群')),
+          ]
         ),
         okText: this.$t('前往添加'),
         confirmFn: () => {
@@ -372,15 +381,15 @@ export default {
 
 <style lang="scss" scoped>
 .cluster-info-header-cls {
-  display: flex;
-  align-items: center;
-  height: 46px;
   text-align: left;
   font-size: 14px;
-  padding: 0 16px;
+  padding: 8px 16px;
   color: #4d4f56;
   background: #f5f6fa;
   border-radius: 2px;
+  .tip-text {
+    line-height: 22px;
+  }
 }
 .platform-config {
   .filter-group {

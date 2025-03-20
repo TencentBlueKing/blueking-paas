@@ -21,14 +21,6 @@ from paasng.platform.engine.models.config_var import BuiltInEnvVarDetail
 from .models import get_region
 
 
-class AppRegionHelper:
-    """AppRegionHelper is a helper for connect Application and region"""
-
-    def __init__(self, application):
-        self.application = application
-        self.region = get_region(self.application.region)
-
-
 class BuiltInEnvsRegionHelper:
     """Helps getting env vars from region configs, for example:
 

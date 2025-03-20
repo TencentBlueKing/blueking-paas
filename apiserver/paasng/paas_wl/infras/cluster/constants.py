@@ -46,7 +46,7 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     # Because in ingress-nginx-controller >= 0.22.0, any substrings within the request URI that
     # need to be passed to the rewritten path must explicitly be defined in a capture group.
     # Ref: https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
-    INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress路径是否使用正则表达式"), default=False)
+    INGRESS_USE_REGEX = FeatureFlagField(label=_("Ingress 路径是否使用正则表达式"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸监控
     ENABLE_BK_MONITOR = FeatureFlagField(label=_("从蓝鲸监控查询资源使用率"), default=False)
     # 低于 k8s 1.12 的集群不支持蓝鲸日志平台采集器
@@ -81,6 +81,8 @@ class ClusterAnnotationKey(StrStructuredEnum):
     SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL = EnumField(
         "skip_inject_builtin_image_credential", label=_("跳过内置镜像凭证注入")
     )
+    # NOTE: 该配置仅对普通应用生效，云原生应用需要在 Operator 的 Helm Chart Values 中配置
+    INGRESS_CLASS_NAME = EnumField("ingress_class_name", label=_("Ingress 类名"))
 
 
 class ClusterAllocationPolicyType(StrStructuredEnum):

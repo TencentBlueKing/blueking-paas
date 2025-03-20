@@ -1133,12 +1133,17 @@ router.beforeEach(async (to, from, next) => {
     const url = window.location.href.replace(window.GLOBAL_CONFIG.V3_OA_DOMAIN, window.GLOBAL_CONFIG.V3_WOA_DOMAIN);
     window.location.replace(url);
   } else {
-    if (to.path.startsWith('/plugin-center')) {
+    const checkUserFeature = async (featureKey) => {
       // 可能为页面刷新重新调用获取功能开关
-      if (!store.state.userFeature.ALLOW_PLUGIN_CENTER) {
+      if (!store.state.userFeature[featureKey]) {
         await store.dispatch('getUserFeature');
       }
-      store.state.userFeature.ALLOW_PLUGIN_CENTER ? next() : next({ name: '404' });
+      store.state.userFeature[featureKey] ? next() : next({ name: '404' });
+    };
+    if (to.path.startsWith('/plugin-center')) {
+      checkUserFeature('ALLOW_PLUGIN_CENTER');
+    } else if (to.path.startsWith('/plat-mgt')) {
+      checkUserFeature('PLATFORM_MANAGEMENT');
     }
     next();
   }

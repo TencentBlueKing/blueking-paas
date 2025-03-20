@@ -39,6 +39,7 @@ from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.utils.basic import generate_random_string
+from tests.utils.mocks.helm import StubHelmClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -94,6 +95,7 @@ class TestRetrieveCluster:
             "bcs_project_name": "",
             "bcs_cluster_name": "",
             "bk_biz_name": "",
+            "api_address_type": "custom",
             "api_servers": [
                 "http://127.0.0.8:6553",
                 "http://127.0.0.9:6553",
@@ -130,14 +132,70 @@ class TestRetrieveCluster:
             },
         }
 
+    def test_retrieve_bcs_cluster(self, init_default_cluster, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(
+            reverse(
+                "plat_mgt.infras.cluster.retrieve_update_destroy",
+                kwargs={"cluster_name": init_default_cluster.name},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert resp.json() == {
+            "name": init_default_cluster.name,
+            "description": "default tenant cluster",
+            "cluster_source": "bcs",
+            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_cluster_id": "BCS-K8S-00000",
+            "bk_biz_id": "12345",
+            "bcs_project_name": "",
+            "bcs_cluster_name": "",
+            "bk_biz_name": "",
+            "api_address_type": "bcs_gateway",
+            "api_servers": [
+                "http://bcs-api.example.com/clusters/BCS-K8S-00000",
+            ],
+            "auth_type": "token",
+            "container_log_dir": "/var/lib/docker/containers",
+            "access_entry_ip": "127.0.0.1",
+            "elastic_search_config": {
+                "scheme": "https",
+                "host": "127.0.0.11",
+                "port": 9200,
+                "username": "admin",
+            },
+            "available_tenant_ids": ["default"],
+            "app_address_type": "subpath",
+            "app_domains": [
+                {
+                    "https_enabled": False,
+                    "name": "bkapps.example.com",
+                    "reserved": False,
+                }
+            ],
+            "component_image_registry": "hub.bktencent.com",
+            "component_preferred_namespace": "blueking",
+            "node_selector": {},
+            "tolerations": [],
+            "feature_flags": {
+                ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: True,
+                ClusterFeatureFlag.INGRESS_USE_REGEX: False,
+                ClusterFeatureFlag.ENABLE_BK_MONITOR: True,
+                ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR: True,
+                ClusterFeatureFlag.ENABLE_AUTOSCALING: True,
+                ClusterFeatureFlag.ENABLE_BCS_EGRESS: True,
+            },
+        }
+
 
 class TestCreateCluster:
     """创建集群"""
 
     @pytest.fixture(autouse=True)
     def _patch(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
-            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        with (
+            override_settings(ENABLE_MULTI_TENANT_MODE=True),
+            mock.patch("paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True),
         ):
             yield
 
@@ -152,6 +210,7 @@ class TestCreateCluster:
             "bcs_project_id": "8470abd6fe455ca",
             "bcs_cluster_id": "BCS-K8S-00000",
             "bk_biz_id": "12345",
+            "api_address_type": "bcs_gateway",
             "api_servers": ["http://bcs-api.example.com/clusters/BCS-K8S-00000"],
             "auth_type": "token",
             "token": generate_random_string(32),
@@ -204,6 +263,7 @@ class TestCreateCluster:
             "cluster_source": "bcs",
             "bcs_project_id": "",
             "bcs_cluster_id": None,
+            "api_address_type": "bcs_gateway",
             "api_servers": ["http://bcs-api.example.com/clusters/BCS-K8S-00000"],
             "auth_type": "token",
             "token": generate_random_string(32),
@@ -230,6 +290,7 @@ class TestCreateCluster:
             "name": cluster_name,
             "description": "test_bcs_cluster",
             "cluster_source": "native_k8s",
+            "api_address_type": "custom",
             "api_servers": [
                 "http://127.0.0.1:6553",
                 "http://127.0.0.2:6553",
@@ -278,6 +339,7 @@ class TestCreateCluster:
             "name": generate_random_string(length=8),
             "description": "test_bcs_cluster",
             "cluster_source": "native_k8s",
+            "api_address_type": "custom",
             "api_servers": [
                 "http://127.0.0.1:6553",
                 "http://127.0.0.2:6553",
@@ -307,8 +369,9 @@ class TestUpdateCluster:
 
     @pytest.fixture(autouse=True)
     def _patch(self):
-        with override_settings(ENABLE_MULTI_TENANT_MODE=True), mock.patch(
-            "paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True
+        with (
+            override_settings(ENABLE_MULTI_TENANT_MODE=True),
+            mock.patch("paasng.plat_mgt.infras.clusters.views.clusters.check_k8s_accessible", return_value=True),
         ):
             yield
 
@@ -319,6 +382,7 @@ class TestUpdateCluster:
             "description": generate_random_string(64),
             # bcs 集群改成原生 k8s 集群
             "cluster_source": "native_k8s",
+            "api_address_type": "custom",
             "api_servers": [
                 "http://127.0.0.1:6553",
                 "http://127.0.0.2:6553",
@@ -376,6 +440,7 @@ class TestUpdateCluster:
             "bcs_project_id": "fake_project_id",
             "bcs_cluster_id": "BCS-K8S-55555",
             "bk_biz_id": "54321",
+            "api_address_type": "bcs_gateway",
             "api_servers": [
                 "http://bcs-api.example.com/clusters/BCS-K8S-55555",
             ],
@@ -421,6 +486,7 @@ class TestUpdateCluster:
             "name": init_system_cluster.name,
             "description": generate_random_string(64),
             "cluster_source": "native_k8s",
+            "api_address_type": "custom",
             "api_servers": [
                 "http://127.0.0.18:6553",
                 "http://127.0.0.19:6553",
@@ -545,7 +611,21 @@ class TestRetrieveClusterDefaultFeatureFlags:
 class TestRetrieveClusterStatus:
     """获取集群状态"""
 
-    # TODO（多租户）支持获取集群配置 & 组件状态
+    @pytest.fixture(autouse=True)
+    def _patch_helm_client(self):
+        with patch("paasng.plat_mgt.infras.clusters.views.clusters.HelmClient", new=StubHelmClient):
+            yield
+
+    def test_retrieve(self, init_default_cluster, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(
+            reverse(
+                "plat_mgt.infras.cluster.status",
+                kwargs={"cluster_name": init_default_cluster.name},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert resp.json() == {"base": True, "component": False, "feature": True}
 
 
 class TestRetrieveClusterUsage:
@@ -623,12 +703,17 @@ class TestSyncClusterNodes:
             def to_dict(self):
                 return cattrs.unstructure(self)
 
-        with patch(
-            "paas_wl.workloads.networking.egress.cluster_state.get_nodes",
-            return_value=[Node(metadata=Metadata(name=name)) for name in ["127.0.0.11", "127.0.0.12", "127.0.0.13"]],
-        ), patch(
-            "paasng.plat_mgt.infras.clusters.views.clusters.sync_state_to_nodes",
-            return_value=None,
+        with (
+            patch(
+                "paas_wl.workloads.networking.egress.cluster_state.get_nodes",
+                return_value=[
+                    Node(metadata=Metadata(name=name)) for name in ["127.0.0.11", "127.0.0.12", "127.0.0.13"]
+                ],
+            ),
+            patch(
+                "paasng.plat_mgt.infras.clusters.views.clusters.sync_state_to_nodes",
+                return_value=None,
+            ),
         ):
             yield
 

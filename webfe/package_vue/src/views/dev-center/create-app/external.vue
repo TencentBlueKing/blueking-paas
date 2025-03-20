@@ -198,7 +198,7 @@ export default {
     },
   },
   created() {
-    this.fetchSpecsByRegion();
+    this.fetchSpecs();
   },
   methods: {
     // 格式化参数
@@ -254,7 +254,7 @@ export default {
       }
     },
     // 获取应用版本
-    async fetchSpecsByRegion() {
+    async fetchSpecs() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         this.formData.region = Object.keys(res)[0] || 'default';

@@ -50,7 +50,7 @@
                 <!-- 按环境分配 env_specific -->
                 <template v-if="row.policies.allocation_policy?.env_specific">
                   <span class="tag">
-                    {{ $t('集群（预发布环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}
+                    {{ $t('集群（预发布环境）') }}：{{ row.policies.allocation_policy.env_clusters.stag?.join(', ') }}
                   </span>
                   <span class="tag">
                     {{ $t('集群（生产环境）') }}：{{ row.policies.allocation_policy.env_clusters.prod?.join(', ') }}

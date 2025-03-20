@@ -46,9 +46,12 @@ class AppDescV2Builder:
         env_variables: Optional[List] = None,
         processes: Optional[Dict] = None,
     ):
+        if processes is None or len(processes) == 0:
+            processes = {"web": {"command": "echo hello"}}
         module_desc = {
             "is_default": is_default,
             "language": language,
+            "processes": processes,
         }
         if source_dir:
             module_desc["source_dir"] = source_dir
@@ -56,8 +59,6 @@ class AppDescV2Builder:
             module_desc["services"] = services
         if env_variables:
             module_desc["env_variables"] = env_variables
-        if processes:
-            module_desc["processes"] = processes
         return module_desc
 
 

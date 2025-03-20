@@ -1418,7 +1418,7 @@ export default {
           env_cluster_names: {
             stag: this.formData.clusterName,
             prod: this.formData.clusterName,
-          }
+          },
         };
       }
 
@@ -1632,7 +1632,6 @@ export default {
     // 获取蓝鲸插件模板信息
     async getPluginTmpls() {
       try {
-        const region = this.platformFeature?.REGION_DISPLAY ? 'ieod' : 'default';
         const res = await this.$store.dispatch('cloudApi/getPluginTmpls');
         this.curPluginTemplate = res[0]?.name || '';
         this.pluginTmpls = res;

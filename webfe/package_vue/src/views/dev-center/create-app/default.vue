@@ -818,7 +818,7 @@ export default {
   },
   created() {
     this.fetchAdvancedOptions();
-    this.fetchSpecsByRegion();
+    this.fetchSpecs();
     for (const key in this.gitExtendConfig) {
       // 初始化 repo List
       const config = this.gitExtendConfig[key];
@@ -978,7 +978,7 @@ export default {
         });
       }
     },
-    fetchSpecsByRegion() {
+    fetchSpecs() {
       this.$http.get(`${BACKEND_URL}/api/bkapps/regions/specs`).then((resp) => {
         this.allRegionsSpecs = resp;
         _.forEachRight(this.allRegionsSpecs, (value, key) => {

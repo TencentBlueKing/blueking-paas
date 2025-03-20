@@ -28,7 +28,7 @@ from paasng.platform.modules.models.build_cfg import ImageTagOptions
 class BuildConfig:
     """BuildConfig dataclass, provide similar attribute of modules.models.BuildConfig
 
-    This class is used to keep the response structure of `RegionTemplateViewSet.retrieve`
+    This class is used to keep the response structure of `TemplateDetailedViewSet.retrieve`
     similar to `ModuleBuildConfigViewSet.retrieve`
     """
 

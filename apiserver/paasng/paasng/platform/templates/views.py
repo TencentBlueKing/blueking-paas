@@ -23,7 +23,6 @@ from rest_framework.response import Response
 
 from paasng.platform.engine.configurations.image import get_image_repository_template
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.manager import TemplateRuntimeManager, retrieve_template_build_config
 from paasng.platform.templates.models import Template
 from paasng.platform.templates.serializers import SearchTemplateSLZ, TemplateDetailSLZ, TemplateSLZ
@@ -32,29 +31,28 @@ from paasng.utils.error_codes import error_codes
 
 class TemplateViewSet(viewsets.ViewSet):
     def list_tmpls(self, request, tpl_type):
-        """获取指定 region、类型的模板列表"""
+        """获取指定类型的模板列表"""
         slz = SearchTemplateSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
-        params = slz.validated_data
-        tmpls = Template.objects.filter_by_region(region=params["region"], type=tpl_type)
+        tmpls = Template.objects.filter(type=tpl_type, is_hidden=False)
         return Response(TemplateSLZ(tmpls, many=True).data)
 
 
-class RegionTemplateViewSet(viewsets.ViewSet):
+class TemplateDetailedViewSet(viewsets.ViewSet):
     @swagger_auto_schema(response_serializer=TemplateSLZ(many=True))
-    def list(self, request, tpl_type, region):
-        """获取指定 region、类型的模板列表"""
-        tmpls = Template.objects.filter_by_region(region=region, type=tpl_type)
+    def list(self, request, tpl_type):
+        """获取指定类型的模板列表"""
+        tmpls = Template.objects.filter(type=tpl_type, is_hidden=False)
         return Response(TemplateSLZ(tmpls, many=True).data)
 
     @swagger_auto_schema(response_serializer=TemplateDetailSLZ)
-    def retrieve(self, request, tpl_type, region, tpl_name):
+    def retrieve(self, request, tpl_type, tpl_name):
         """获取指定模板的详情"""
         try:
-            mgr = TemplateRuntimeManager(region=region, tmpl_name=tpl_name)
-            build_config = retrieve_template_build_config(region=region, template=mgr.template)
-        except (ObjectDoesNotExist, TmplRegionNotSupported):
+            mgr = TemplateRuntimeManager(tmpl_name=tpl_name)
+            build_config = retrieve_template_build_config(template=mgr.template)
+        except ObjectDoesNotExist:
             raise error_codes.NORMAL_TMPL_NOT_FOUND.f(_("模板名称: {tmpl_name}").format(tmpl_name=tpl_name))
 
         build_config_data = {

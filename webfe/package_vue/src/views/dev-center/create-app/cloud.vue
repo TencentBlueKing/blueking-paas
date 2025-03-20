@@ -1534,7 +1534,6 @@ export default {
         const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
           appCode: this.appCode,
           tplTyp: 'normal',
-          region: this.regionChoose,
           tplName: this.formData.sourceInitTemplate,
         });
         this.buildDialog.visiable = true;
@@ -1634,9 +1633,7 @@ export default {
     async getPluginTmpls() {
       try {
         const region = this.platformFeature?.REGION_DISPLAY ? 'ieod' : 'default';
-        const res = await this.$store.dispatch('cloudApi/getPluginTmpls', {
-          region,
-        });
+        const res = await this.$store.dispatch('cloudApi/getPluginTmpls');
         this.curPluginTemplate = res[0]?.name || '';
         this.pluginTmpls = res;
       } catch (e) {

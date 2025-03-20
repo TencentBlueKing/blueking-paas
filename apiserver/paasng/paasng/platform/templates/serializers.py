@@ -29,7 +29,6 @@ from paasng.utils.i18n.serializers import TranslatedCharField
 class SearchTemplateSLZ(serializers.Serializer):
     """获取可用模板列表"""
 
-    region = serializers.CharField(required=True, max_length=16, help_text="应用版本")
     tags = serializers.CharField(required=False, max_length=128, default="", help_text="标签，多个则以英文逗号拼接")
     fuzzy_name = serializers.CharField(required=False, max_length=64, help_text="名称（模糊匹配）")
 
@@ -45,11 +44,7 @@ class TemplateSLZ(serializers.Serializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
     tags = serializers.JSONField()
-    region = serializers.SerializerMethodField()
     repo_url = serializers.CharField()
-
-    def get_region(self, tmpl):
-        return tmpl.enabled_regions
 
 
 class BuildConfigPreviewSLZ(serializers.Serializer):

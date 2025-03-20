@@ -283,7 +283,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     """BkApp resource slz in camel-case format"""
 
     build = BuildInputSLZ(allow_null=True, default=None)
-    processes = serializers.ListField(child=ProcessInputSLZ())
+    processes = serializers.ListField(child=ProcessInputSLZ(), allow_empty=False)
     configuration = ConfigurationInputSLZ(required=False)
     addons = serializers.ListField(child=AddonInputSLZ(), required=False, allow_empty=True)
     mounts = serializers.ListField(child=MountInputSLZ(), required=False, allow_empty=True)

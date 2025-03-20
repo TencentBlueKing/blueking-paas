@@ -49,6 +49,7 @@ class AppDescV2Builder:
         module_desc = {
             "is_default": is_default,
             "language": language,
+            "processes": processes or {"web": {"command": "echo 'hello world'"}},
         }
         if source_dir:
             module_desc["source_dir"] = source_dir
@@ -56,8 +57,6 @@ class AppDescV2Builder:
             module_desc["services"] = services
         if env_variables:
             module_desc["env_variables"] = env_variables
-        if processes:
-            module_desc["processes"] = processes
         return module_desc
 
 
@@ -137,11 +136,18 @@ class AppDescV3Builder:
     def make_module(
         module_name: str, is_default: bool = True, language: str = "python", module_spec: Optional[Dict] = None
     ):
+        if module_spec is None:
+            module_spec = {}
+
+        # 如果 processes 不存在或为空列表，设置默认值
+        if "processes" not in module_spec or not module_spec["processes"]:
+            module_spec["processes"] = [{"name": "web", "replicas": 1}]
+
         return {
             "name": module_name,
             "isDefault": is_default,
             "language": language,
-            "spec": module_spec or {"processes": []},
+            "spec": module_spec,
         }
 
 
@@ -154,9 +160,7 @@ class AppDescV3Decorator:
             for module_desc in app_desc["modules"]:
                 if module_desc["name"] == module_name:
                     raise ValueError(f"module already exists: name={module_name}")
-            app_desc["modules"].append(
-                AppDescV3Builder.make_module(module_name, is_default, language, module_spec or {"processes": []})
-            )
+            app_desc["modules"].append(AppDescV3Builder.make_module(module_name, is_default, language, module_spec))
 
         return apply
 

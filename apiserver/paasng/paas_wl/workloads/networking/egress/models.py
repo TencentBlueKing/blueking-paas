@@ -49,7 +49,7 @@ class RegionClusterState(AuditedModel):
     tenant_id = tenant_id_field_factory()
 
     def to_labels(self) -> Dict:
-        """To kubernetes lables. The labels will be patched into all kubernetes nodes and also
+        """To kubernetes labels. The labels will be patched into all kubernetes nodes and also
         exists in app's node_selector if the app was bind with current state.
         """
         return {self.name: "1"}

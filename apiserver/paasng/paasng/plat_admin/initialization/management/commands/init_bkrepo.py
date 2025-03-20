@@ -20,10 +20,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from blue_krill.storages.blobstore.bkrepo import BKGenericRepo, BKRepoManager, RepositoryType, RequestError
+from blue_krill.storages.blobstore.bkrepo import BKRepoManager, RepositoryType, RequestError
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,6 @@ BUILTIN_REPOS = [
     Repo(name="maven", type=RepositoryType.MAVEN, public=True),
     Repo(name="generic", type=RepositoryType.GENERIC, public=True),
 ]
-
-BUILTIN_APP_TMPLS = {
-    assets_path / "dj_auth_template_blueapps_dj2.tar.gz": "open/dj_auth_template_blueapps_dj2.tar.gz",
-    assets_path / "node-js-bk-magic-vue-spa.tar.gz": "open/node-js-bk-magic-vue-spa.tar.gz",
-    assets_path / "dj_with_hello_world_dj2.tar.gz": "open/dj_with_hello_world_dj2.tar.gz",
-}
 
 
 @contextmanager
@@ -95,6 +90,9 @@ class Command(BaseCommand):
         parser.add_argument("--addons-username", dest="addons_username", required=True)
         parser.add_argument("--addons-password", dest="addons_password", required=True)
         parser.add_argument("--addons-project", dest="addons_project", required=False, default="bksaas-addons")
+        parser.add_argument(
+            "--addons-project-name", dest="addons_project_name", required=False, default="bksaas-addons"
+        )
         parser.add_argument("--lesscode-username", dest="lesscode_username", required=True)
         parser.add_argument("--lesscode-password", dest="lesscode_password", required=True)
 
@@ -109,6 +107,7 @@ class Command(BaseCommand):
         addons_username,
         addons_password,
         addons_project,
+        addons_project_name,
         lesscode_username,
         lesscode_password,
         **kwargs,
@@ -127,20 +126,23 @@ class Command(BaseCommand):
         manager = self.get_manager(super_username, super_password)
         # 创建项目
         # 创建 PaaS3.0 项目
-        logger.info("即将创建 bkrepo 项目: %s", self.bkpaas_project)
+        logger.info("即将创建 bkrepo 项目: %s", self.bkpaas_project_name)
         with allow_resource_exists():
-            dry_run or manager.create_project(self.bkpaas_project)
+            dry_run or manager.create_project(self.bkpaas_project_name)
 
         # 创建增强服务项目
-        logger.info("即将创建 bkrepo 项目: %s", addons_project)
+        logger.info("即将创建 bkrepo 项目: %s", addons_project_name)
         with allow_resource_exists():
-            dry_run or manager.create_project(addons_project)
+            dry_run or manager.create_project(addons_project_name)
 
         # 创建用户
         # 创建 PaaS3.0 用户
         logger.info("即将创建 bkrepo 用户: %s", bkpaas3_username)
         dry_run or manager.create_user_to_project(
-            username=bkpaas3_username, password=bkpaas3_password, association_users=[], project=self.bkpaas_project
+            username=bkpaas3_username,
+            password=bkpaas3_password,
+            association_users=[],
+            project=self.bkpaas_project,
         )
         # 创建增强服务用户
         logger.info("即将创建 bkrepo 用户: %s", addons_username)
@@ -169,14 +171,6 @@ class Command(BaseCommand):
             repo="npm",
         )
 
-        tmpls_repo = self.get_tmpls_repo(bkpaas3_username, bkpaas3_password)
-        for filepath, key in BUILTIN_APP_TMPLS.items():
-            if filepath.exists():
-                logger.info("即将上传开发框架模板至 %s", key)
-                dry_run or tmpls_repo.upload_file(Path(filepath), key, allow_overwrite=True)
-            else:
-                logger.warning("源码模板不存在! 请检查 %s", filepath)
-
         logger.info("初始化 bkrepo 成功")
 
     @staticmethod
@@ -186,19 +180,13 @@ class Command(BaseCommand):
             endpoint_url=config["ENDPOINT"],
             username=username,
             password=password,
-        )
-
-    @staticmethod
-    def get_tmpls_repo(username: str, password: str):
-        config = settings.BLOBSTORE_BKREPO_CONFIG
-        return BKGenericRepo(
-            bucket=settings.BLOBSTORE_BUCKET_TEMPLATES,
-            project=config["PROJECT"],
-            endpoint_url=config["ENDPOINT"],
-            username=username,
-            password=password,
+            tenant_id=OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else None,
         )
 
     @property
     def bkpaas_project(self):
         return settings.BLOBSTORE_BKREPO_CONFIG["PROJECT"]
+
+    @property
+    def bkpaas_project_name(self):
+        return settings.BLOBSTORE_BKREPO_PROJECT_NAME

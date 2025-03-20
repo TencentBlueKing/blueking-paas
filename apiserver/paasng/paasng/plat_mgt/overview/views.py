@@ -16,14 +16,22 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import List
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.infras.cluster.models import ClusterAllocationPolicy
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.infras.bk_user.client import BkUserClient
+from paasng.infras.bk_user.entities import Tenant
+from paasng.plat_mgt.overview.serializers import TenantSetupStatusOutputSLZ
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +41,53 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    lookup_url_kwarg = "tenant_id"
-
     @swagger_auto_schema(
         tags=["plat_mgt.overview"],
         operation_description="获取租户配置情况",
-        responses={status.HTTP_200_OK: ""},
+        responses={status.HTTP_200_OK: TenantSetupStatusOutputSLZ(many=True)},
     )
-    def retrieve(self, request, cluster_name, *args, **kwargs):
-        return Response(data={})
+    def list_tenant_setup_statuses(self, request, *args, **kwargs):
+        tenants = self._get_tenants()
+        addons_services = mixed_service_mgr.list()
+        tenant_ids = [tenant.id for tenant in tenants]
+
+        # 集群分配策略
+        cluster_allocation_policy_tenant_ids = set(
+            ClusterAllocationPolicy.objects.filter(tenant_id__in=tenant_ids).values("tenant_id", flat=True)
+        )
+        # 增强服务绑定策略
+        service_binding_policy_tenant_service_ids = {
+            (p.tenant_id, p.service_id) for p in ServiceBindingPolicy.objects.filter(tenant_id__in=tenant_ids)
+        }
+        # 增强服务绑定策略（带优先级）
+        service_binding_precedence_policy_tenant_service_ids = {
+            (p.tenant_id, p.service_id)
+            for p in ServiceBindingPrecedencePolicy.objects.filter(tenant_id__in=tenant_ids)
+        }
+
+        resp_data = [
+            {
+                "tenant_id": tenant.id,
+                "tenant_name": tenant.name,
+                "cluster_status": {
+                    "allocated": tenant.id in cluster_allocation_policy_tenant_ids,
+                },
+                "addons_service_statuses": [
+                    {
+                        "id": svc.uuid,
+                        "name": svc.name,
+                        "binding": (tenant.id, svc.uuid) in service_binding_policy_tenant_service_ids
+                        or (tenant.id, svc.uuid) in service_binding_precedence_policy_tenant_service_ids,
+                    }
+                    for svc in addons_services
+                ],
+            }
+            for tenant in tenants
+        ]
+
+        return Response(data=TenantSetupStatusOutputSLZ(resp_data, many=True).data)
+
+    def _get_tenants(self) -> List[Tenant]:
+        # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的租户列表
+        user_tenant_id = get_tenant(self.request.user).id
+        return BkUserClient(user_tenant_id).list_tenants()

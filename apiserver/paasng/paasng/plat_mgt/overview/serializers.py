@@ -15,14 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import path
+from rest_framework import serializers
 
-from . import views
 
-urlpatterns = [
-    path(
-        "api/plat_mgt/overview/tenants/setup_status/",
-        views.PlatMgtOverviewViewSet.as_view({"get": "list_tenant_setup_statuses"}),
-        name="plat_mgt.overview.tenant.list_setup_status",
-    ),
-]
+class ClusterSetupStatusSLZ(serializers.Serializer):
+    """集群配置状态"""
+
+    allocated = serializers.BooleanField(help_text="是否已分配")
+
+
+class AddonsServiceSetupStatusSLZ(serializers.Serializer):
+    """增强服务配置状态"""
+
+    id = serializers.CharField(help_text="增强服务 ID")
+    name = serializers.CharField(help_text="增强服务名称")
+    binding = serializers.BooleanField(help_text="是否已绑定")
+
+
+class TenantSetupStatusOutputSLZ(serializers.Serializer):
+    """租户配置状态"""
+
+    tenant_id = serializers.CharField(help_text="租户 ID")
+    tenant_name = serializers.CharField(help_text="租户名称")
+    cluster_status = ClusterSetupStatusSLZ(help_text="集群配置状态")
+    addons_service_statuses = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceSetupStatusSLZ())

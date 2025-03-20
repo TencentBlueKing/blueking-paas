@@ -115,7 +115,6 @@ def create_market_config(
     # Create market related data after application created, to avoid market related data be covered
     confirm_required_when_publish = app_specs.confirm_required_when_publish
     return MarketConfig.objects.create(
-        region=application.region,
         application=application,
         # 即使启用应用市场服务, 但新创建App时, 应用推广信息未填写, 因此设置为 False, 后续由开发者在应用推广页面重新打开
         enabled=False,

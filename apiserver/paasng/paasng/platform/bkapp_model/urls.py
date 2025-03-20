@@ -21,11 +21,6 @@ from . import views
 
 urlpatterns = [
     re_path(
-        make_app_pattern(r"/manifest_ext/$", include_envs=True),
-        views.CNativeAppManifestExtViewset.as_view({"get": "retrieve"}),
-        name="api.cnative.retrieve_manifest_ext",
-    ),
-    re_path(
         make_app_pattern(r"/bkapp_model/manifests/current/$", include_envs=False),
         views.BkAppModelManifestsViewset.as_view({"get": "retrieve", "put": "replace"}),
         name="api.bkapp_model.current_manifests",

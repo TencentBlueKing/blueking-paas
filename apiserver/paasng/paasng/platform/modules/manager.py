@@ -62,7 +62,6 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
 from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
 from paasng.platform.templates.models import Template
 from paasng.utils.addons import ReplaceableFunction
@@ -92,10 +91,9 @@ class ModuleBuildpackPlaner:
         """获取构建模板代码需要的构建工具"""
         try:
             required_buildpacks = TemplateRuntimeManager(
-                region=self.module.region, tmpl_name=self.module.source_init_template
+                self.module.source_init_template
             ).get_template_required_buildpacks(bp_stack_name=bp_stack_name)
-        # django_legacy 等迁移模板未配 region
-        except (Template.DoesNotExist, TmplRegionNotSupported):
+        except Template.DoesNotExist:
             required_buildpacks = []
 
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
@@ -424,7 +422,7 @@ def initialize_module(
     build_config = bkapp_spec["build_config"] if bkapp_spec else None
     if not build_config:
         if module_spec.templated_source_enabled:
-            tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
+            tmpl_mgr = TemplateRuntimeManager(tmpl_name=module.source_init_template)
             build_config = entities.BuildConfig(
                 build_method=tmpl_mgr.template.runtime_type, tag_options=ImageTagOptions()
             )
@@ -529,10 +527,9 @@ class DefaultServicesBinder:
     def find_services_from_template(self) -> PresetServiceSpecs:
         """find default services defined in module template"""
         try:
-            tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
+            tmpl_mgr = TemplateRuntimeManager(self.module.source_init_template)
             return tmpl_mgr.get_preset_services_config()
-        # django_legacy 等迁移模板未配 region
-        except (Template.DoesNotExist, TmplRegionNotSupported):
+        except Template.DoesNotExist:
             return {}
 
     def _bind(self, services: PresetServiceSpecs):

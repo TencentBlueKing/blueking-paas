@@ -469,16 +469,6 @@ const actions = {
   },
 
   /**
-     * 获取云原生应用ext
-     *
-     * @param {Object} params 请求参数：appCode, moduleId
-     */
-  getManifestExt({}, { appCode, moduleId, env }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
-    return http.get(url, config);
-  },
-
-  /**
    * 获取进程是否开启自动扩缩容
    * @param {Object} params 请求参数：appCode, moduleId, env
    */

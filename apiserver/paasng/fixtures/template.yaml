@@ -12,14 +12,12 @@
     language: Python
     market_ready: false
     preset_services_config: {}
-    blob_url:
-      default: bkrepo://bkpaas3-apps-tmpls/open/dj_with_hello_world_dj2.tar.gz
-    enabled_regions:
-      - default
+    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/dj_with_hello_world_dj2.tar.gz'
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
+    is_hidden: false
 - model: templates.template
   pk: 2
   fields:
@@ -35,14 +33,12 @@
     market_ready: true
     preset_services_config:
       mysql: {}
-    blob_url:
-      default: bkrepo://bkpaas3-apps-tmpls/open/dj_auth_template_blueapps_dj2.tar.gz
-    enabled_regions:
-      - default
+    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/dj_auth_template_blueapps_dj2.tar.gz'
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
+    is_hidden: false
 - model: templates.template
   pk: 3
   fields:
@@ -57,15 +53,13 @@
     language: NodeJS
     market_ready: true
     preset_services_config: {}
-    blob_url:
-      default: bkrepo://bkpaas3-apps-tmpls/open/node-js-bk-magic-vue-spa.tar.gz
-    enabled_regions:
-      - default
+    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/node-js-bk-magic-vue-spa.tar.gz'
     required_buildpacks: []
     processes:
       web: npm run server
     tags: []
     repo_url: ''
+    is_hidden: false
 - model: templates.template
   pk: 4
   fields:
@@ -80,12 +74,12 @@
     language: Python
     market_ready: true
     preset_services_config: {}
-    blob_url: {}
-    enabled_regions: []
+    blob_url: ''
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
+    is_hidden: true
 - model: templates.template
   pk: 5
   fields:
@@ -102,14 +96,13 @@
     preset_services_config:
       mysql: {}
       rabbitmq: {}
-    blob_url: {}
-    enabled_regions:
-      - default
+    blob_url: ''
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
     runtime_type: buildpack
+    is_hidden: false
 - model: templates.template
   pk: 6
   fields:
@@ -125,11 +118,9 @@
     market_ready: True
     preset_services_config:
       mysql: {}
-    blob_url:
-      default: bkrepo://bkpaas3-apps-tmpls/open/golang-gin-v2.tar.gz
-    enabled_regions:
-      - default
+    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/golang-gin-v2.tar.gz'
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
+    is_hidden: false

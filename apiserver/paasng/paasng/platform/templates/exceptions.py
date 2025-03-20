@@ -22,7 +22,3 @@ class BaseTemplateError(Exception):
 
 class TmplNotExists(BaseTemplateError):
     """指定类型的模板不存在"""
-
-
-class TmplRegionNotSupported(BaseTemplateError):
-    """模板存在，但是指定的版本不可用"""

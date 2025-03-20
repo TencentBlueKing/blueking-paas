@@ -41,11 +41,7 @@ class UnavailableDeploymentTotalMetric:
             return v
 
         dt = now()
-        gauge_family = GaugeMetricFamily(
-            name=cls.name,
-            documentation=cls.description,
-            labels=["region", "cluster_name"],
-        )
+        gauge_family = GaugeMetricFamily(name=cls.name, documentation=cls.description, labels=["cluster_name"])
         for cluster in Cluster.objects.all():
             try:
                 client = get_client_by_cluster_name(cluster_name=cluster.name)
@@ -60,9 +56,7 @@ class UnavailableDeploymentTotalMetric:
                 continue
 
             gauge_family.add_metric(
-                labels=[cluster.region, cluster.name],
-                value=len(unavailable_deployments),
-                timestamp=dt.timestamp(),
+                labels=[cluster.name], value=len(unavailable_deployments), timestamp=dt.timestamp()
             )
         cache.set(cache_key, gauge_family, timeout=60 * 5)
         return gauge_family
@@ -70,8 +64,4 @@ class UnavailableDeploymentTotalMetric:
     @classmethod
     def describe_metric(cls) -> GaugeMetricFamily:
         """描述 metric"""
-        return GaugeMetricFamily(
-            name=cls.name,
-            documentation=cls.description,
-            labels=["region", "cluster_name"],
-        )
+        return GaugeMetricFamily(name=cls.name, documentation=cls.description, labels=["cluster_name"])

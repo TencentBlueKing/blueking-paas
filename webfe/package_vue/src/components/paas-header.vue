@@ -274,7 +274,7 @@ export default {
         { paths: ['/developer-center/app', '/sandbox'], active: 'appDevelopment' },
         { paths: ['/plugin-center'], active: 'pluginDevelopment' },
         { paths: ['/developer-center/service'], active: 'tools' },
-        { paths: ['/developer-center/platform'], active: 'platformManagement' },
+        { paths: ['/plat-mgt'], active: 'platformManagement' },
       ];
       // 默认高亮
       let active = 'homePage';

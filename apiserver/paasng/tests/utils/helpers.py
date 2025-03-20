@@ -73,7 +73,6 @@ def initialize_application(application, *args, **kwargs):
 
     # Disable market config by default
     MarketConfig.objects.create(
-        region=application.region,
         application=application,
         enabled=False,
         source_module=module,

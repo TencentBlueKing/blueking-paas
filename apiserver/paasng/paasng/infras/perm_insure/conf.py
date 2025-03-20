@@ -78,7 +78,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "StreamViewSet",
     "VoidViewset",
     "TemplateViewSet",
-    "RegionTemplateViewSet",
+    "TemplateDetailedViewSet",
     "ChangelogViewSet",
     "ResQuotaPlanOptionsView",
     "DistributorsViewSet",

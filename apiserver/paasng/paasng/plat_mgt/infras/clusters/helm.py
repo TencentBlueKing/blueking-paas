@@ -44,7 +44,7 @@ class HelmClient:
     def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
         """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
         for rel in self.list_releases(namespace):
-            if rel.name == name:
+            if rel.chart.name == name:
                 return rel
 
         return None
@@ -56,9 +56,10 @@ class HelmClient:
         release_version_map: Dict[str, int] = {}
         for s in secrets:
             labels = s.metadata.labels
-            release_name, version = labels.get("name"), int(labels.get("version", 0))
-            # 忽略异常数据
-            if not (release_name and version):
+            try:
+                release_name, version = labels["name"], int(labels["version"])
+            except Exception:
+                # 忽略异常数据
                 continue
 
             if release_name not in release_version_map or version > release_version_map[release_name]:

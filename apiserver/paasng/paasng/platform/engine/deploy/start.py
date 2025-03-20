@@ -74,7 +74,6 @@ def initialize_deployment(
         bkapp_revision_id = model_resource.revision.id
 
     deployment = Deployment.objects.create(
-        region=module.region,
         operator=operator,
         app_environment=env,
         source_type=module.source_type,

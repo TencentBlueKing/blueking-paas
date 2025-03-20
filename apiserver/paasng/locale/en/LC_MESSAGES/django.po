@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-18 11:38+0800\n"
+"POT-Creation-Date: 2025-03-20 11:38+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2234,51 +2234,39 @@ msgstr "OAuth display information format must be Dict"
 msgid "OAuth 展示信息不支持字段 {}"
 msgstr "OAuth display information does not support the field {}"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:36
+#: paasng/plat_admin/admin42/serializers/templates.py:34
 msgid "预设增强服务配置必须为 Dict 格式"
 msgstr "Preset enhanced service configuration must be in Dict format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:42
+#: paasng/plat_admin/admin42/serializers/templates.py:40
 msgid "构建工具配置必须为 List[str] 格式"
 msgstr "Build tool configuration must be in List[str] format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:45
+#: paasng/plat_admin/admin42/serializers/templates.py:43
 msgid "针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"
 msgstr ""
 "When configuring required_buildpacks for different images, the default value "
 "__default__ must be set"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:48
+#: paasng/plat_admin/admin42/serializers/templates.py:46
 msgid "构建工具配置必须为 Dict[str, List[str]] 格式"
 msgstr "Build tool configuration must be in Dict[str, List[str]] format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:50
+#: paasng/plat_admin/admin42/serializers/templates.py:48
 msgid "构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"
 msgstr "Build tools must be in List[str] or Dict[str, List[str]] format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:55
+#: paasng/plat_admin/admin42/serializers/templates.py:53
 msgid "进程配置必须为 Dict 格式"
 msgstr "Process configuration must be in Dict format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:60
+#: paasng/plat_admin/admin42/serializers/templates.py:58
 msgid "标签必须为 List 格式"
 msgstr "Tags must be in List format"
 
-#: paasng/plat_admin/admin42/serializers/templates.py:66
-msgid "允许被使用的版本必须为 List 格式"
-msgstr "Allowed versions must be in List format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:70
-msgid "Region {} 不受支持"
-msgstr "Region {} is not supported"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:74
-msgid "二进制包存储配置必须为 Dict 格式"
-msgstr "Binary package storage configuration must be in Dict format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:79
-msgid "Region {} 不存在对应的二进制包存储路径"
-msgstr "Region {} does not have a corresponding binary package storage path"
+#: paasng/plat_admin/admin42/serializers/templates.py:63
+msgid "二进制包存储配置必须为有效的地址字符串"
+msgstr "The value of the binary package storage configuration must be a valid address string"
 
 #: paasng/plat_admin/admin42/utils/__init__.py:35
 #, python-brace-format
@@ -3396,31 +3384,31 @@ msgstr "No known reason, please contact the administrator"
 msgid "已确认后的应用无法回滚"
 msgstr "APP that have been confirmed cannot be rolled back"
 
-#: paasng/platform/modules/manager.py:375
-#: paasng/platform/modules/manager.py:413
+#: paasng/platform/modules/manager.py:373
+#: paasng/platform/modules/manager.py:411
 msgid "服务暂时不可用，请稍候再试"
 msgstr "Service is temporarily unavailable, please try again later"
 
-#: paasng/platform/modules/manager.py:378
-#: paasng/platform/modules/manager.py:449
+#: paasng/platform/modules/manager.py:376
+#: paasng/platform/modules/manager.py:447
 msgid "绑定初始增强服务失败，请稍候再试"
 msgstr "Failed to bind the initial Add-ons, please try again later"
 
-#: paasng/platform/modules/manager.py:383
-#: paasng/platform/modules/manager.py:439
-#: paasng/platform/modules/manager.py:443
+#: paasng/platform/modules/manager.py:381
+#: paasng/platform/modules/manager.py:437
+#: paasng/platform/modules/manager.py:441
 msgid "绑定初始运行环境失败，请稍候再试"
 msgstr "Failed to bind the initial runtime environment, please try again later"
 
-#: paasng/platform/modules/manager.py:419
+#: paasng/platform/modules/manager.py:417
 msgid "代码初始化过程失败，请稍候再试"
 msgstr "Code initialization process failed, please wait and try again"
 
-#: paasng/platform/modules/manager.py:446
+#: paasng/platform/modules/manager.py:444
 msgid "配置镜像 Registry 失败，请稍候再试"
 msgstr "Failed to configure mirror Registry, please try again later"
 
-#: paasng/platform/modules/manager.py:453
+#: paasng/platform/modules/manager.py:451
 msgid "初始化应用模型失败, 请稍候再试"
 msgstr "Failed to initialize the application model. Please try again later."
 
@@ -3467,7 +3455,7 @@ msgstr ""
 "half-corner ligatures (-), length no more than 16"
 
 #: paasng/platform/modules/serializers.py:157
-#: paasng/platform/templates/models.py:44
+#: paasng/platform/templates/models.py:37
 msgid "模板名称"
 msgstr "Template name"
 
@@ -3800,59 +3788,65 @@ msgstr "Normal Application"
 msgid "插件模板"
 msgstr "Plugin Template"
 
-#: paasng/platform/templates/models.py:45
+#: paasng/platform/templates/models.py:38
 msgid "模板类型"
 msgstr "Template Type"
 
-#: paasng/platform/templates/models.py:46
+#: paasng/platform/templates/models.py:39
 msgid "展示用名称"
 msgstr "Display Name"
 
-#: paasng/platform/templates/models.py:47
+#: paasng/platform/templates/models.py:40
 msgid "模板描述"
 msgstr "Template Description"
 
-#: paasng/platform/templates/models.py:48
+#: paasng/platform/templates/models.py:41
 msgid "开发语言"
 msgstr "Programming Language"
 
-#: paasng/platform/templates/models.py:49
+#: paasng/platform/templates/models.py:42
 msgid "能否发布到应用集市"
 msgstr "Can be published to the App Marketplace"
 
-#: paasng/platform/templates/models.py:50
+#: paasng/platform/templates/models.py:43
 msgid "预设增强服务配置"
 msgstr "Preset Enhanced Service Configuration"
 
-#: paasng/platform/templates/models.py:51
-msgid "不同版本二进制包存储路径"
+#: paasng/platform/templates/models.py:47
+#, fuzzy
+#| msgid "不同版本二进制包存储路径"
+msgid "二进制包存储路径"
 msgstr "Storage Path for Binary Packages of Different Versions"
 
-#: paasng/platform/templates/models.py:52
-msgid "允许被使用的版本"
-msgstr "Allowed Versions"
-
-#: paasng/platform/templates/models.py:53
+#: paasng/platform/templates/models.py:49
 msgid "必须的构建工具"
 msgstr "Required Build Tools"
 
-#: paasng/platform/templates/models.py:54
+#: paasng/platform/templates/models.py:50
 msgid "进程配置"
 msgstr "Process Configuration"
 
-#: paasng/platform/templates/models.py:55
+#: paasng/platform/templates/models.py:51
 msgid "标签"
 msgstr "Tags"
 
-#: paasng/platform/templates/models.py:56
+#: paasng/platform/templates/models.py:52
 msgid "代码仓库信息"
 msgstr "Code Repository Information"
 
-#: paasng/platform/templates/models.py:57
+#: paasng/platform/templates/models.py:53
 msgid "运行时类型"
 msgstr "Runtime Type"
 
-#: paasng/platform/templates/views.py:58
+#: paasng/platform/templates/models.py:55
+msgid "是否隐藏"
+msgstr "Is Hidden"
+
+#: paasng/platform/templates/models.py:55
+msgid "被隐藏的模板不会出现在创建应用时的列表中"
+msgstr "hidden templates will not appear in the list when creating new applications"
+
+#: paasng/platform/templates/views.py:56
 #, python-brace-format
 msgid "模板名称: {tmpl_name}"
 msgstr "Template Name: {tmpl_name}"

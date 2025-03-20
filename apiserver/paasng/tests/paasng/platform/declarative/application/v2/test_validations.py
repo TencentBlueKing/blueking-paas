@@ -34,8 +34,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 @pytest.fixture(autouse=True)
 def tag(bk_app):
     """A tag fixture for testing"""
-    parent = Tag.objects.create(name="parent test", region=bk_app.region)
-    return Tag.objects.create(name="test", region=bk_app.region, parent=parent)
+    parent = Tag.objects.create(name="parent test")
+    return Tag.objects.create(name="test", parent=parent)
 
 
 def get_app_description(app_json: Dict) -> ApplicationDesc:

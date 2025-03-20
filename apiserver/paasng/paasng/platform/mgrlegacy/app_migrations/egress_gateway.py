@@ -41,13 +41,11 @@ class EgressGatewayMigration(BaseMigration):
             try:
                 wl_app = engine_app.to_wl_obj()
                 cluster = get_cluster_by_app(wl_app)
-                state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
+                state = RegionClusterState.objects.filter(cluster_name=cluster.name).latest()
                 RCStateAppBinding.objects.create(app=wl_app, state=state, tenant_id=cluster.tenant_id)
             except ObjectDoesNotExist:
                 self.add_log(
-                    _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
-                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=engine_app.region)
-                    )
+                    _("{env} 环境绑定出口 IP 异常, 详情: 找不到集群或集群状态信息").format(env=env.environment)
                 )
             except IntegrityError:
                 self.add_log(_("{env} 环境绑定出口IP异常, 详情: 不能重复绑定").format(env=env.environment))

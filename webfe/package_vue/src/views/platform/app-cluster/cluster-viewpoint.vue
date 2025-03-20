@@ -100,6 +100,7 @@
               +{{ row.featureTagIndex < 0 ? row.feature.length : row.feature.length - row.featureTagIndex }}
             </span>
           </div>
+          <span v-else>--</span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -130,13 +131,14 @@
         :width="localLanguage === 'en' ? 200 : 160"
       >
         <template slot-scope="{ row }">
-          <!-- <bk-button
+          <bk-button
             theme="primary"
             text
             class="mr10"
+            @click="editCluter(row)"
           >
             {{ $t('编辑') }}
-          </bk-button> -->
+          </bk-button>
           <bk-popconfirm
             width="276"
             trigger="click"
@@ -322,7 +324,7 @@ export default {
               directives: [
                 {
                   name: 'copy',
-                  value: data.bound_app_module_envs.map((v) => v.app_code).join(),
+                  value: JSON.stringify(data.bound_app_module_envs, null, 2),
                 },
               ],
             }),
@@ -337,8 +339,13 @@ export default {
         this.resizeObserver = new ResizeObserver((entries) => {
           this.calculateVisibleTags();
         });
-        this.resizeObserver.observe(document.querySelector('.tenant-column'));
-        this.resizeObserver.observe(document.querySelector('.feature-column'));
+        const tenantColumn = document.querySelector('.tenant-column');
+        const featureColumn = document.querySelector('.feature-column');
+        if (tenantColumn === null || featureColumn === null) {
+          return;
+        }
+        this.resizeObserver.observe(tenantColumn);
+        this.resizeObserver.observe(featureColumn);
       });
     },
     // 计算当前td可展示的tags
@@ -347,6 +354,9 @@ export default {
         const tenantParentDom = document.querySelector('.available-tenants-tags');
         const featureParentDom = document.querySelector('.feature-tags');
         const pageDom = document.querySelector('.tenant-viewpoint-container');
+        if (tenantParentDom === null || featureParentDom === null || pageDom === null) {
+          return;
+        }
         const { width: tenantParentWidth } = tenantParentDom.getBoundingClientRect();
         const { width: featureParentWidth } = featureParentDom.getBoundingClientRect();
 
@@ -396,6 +406,18 @@ export default {
       const { width } = tagDom.getBoundingClientRect();
       parentDom.removeChild(tagDom);
       return width;
+    },
+    editCluter(row) {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: row.name,
+          step: 1,
+        },
+      });
     },
   },
 };

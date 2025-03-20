@@ -134,5 +134,61 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
       return http.get(url);
     },
+    /**
+     * 获取 BCS API 访问地址模板
+     */
+    getClusterServerUrlTmpl({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/cluster_server_url_tmpl/`;
+      return http.get(url);
+    },
+    /**
+     * 获取BCS项目数据
+     */
+    getBcsProjects({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/projects/`;
+      return http.get(url);
+    },
+    /**
+     * 获取BCS集群数据
+     */
+    getBcsClusters({}, { projectId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/bcs/projects/${projectId}/clusters/`;
+      return http.get(url);
+    },
+    /**
+     * 新建集群
+     */
+    createCluster({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/`;
+      return http.post(url, data);
+    },
+    /**
+     * 更新集群
+     */
+    updateCluster({}, { clusterName, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 更新或安装集群组件
+     */
+    updateComponent({}, { clusterName, componentName, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
+      return http.post(url, data);
+    },
+    /**
+     * 对比待更新组件版本
+     */
+    getDiffVersion({}, { clusterName, componentName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/operations/diff_version/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群特性可启用项
+     */
+    getClusterFeatureFlags({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
+      return http.get(url);
+    },
   },
 };

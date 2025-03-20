@@ -11,7 +11,12 @@
       <!-- 集群列表 -->
       <div class="top-tool">
         <div class="left flex-row">
-          <!-- <bk-button :theme="'primary'">{{ $t('添加集群') }}</bk-button> -->
+          <bk-button
+            :theme="'primary'"
+            @click="addCluter"
+          >
+            {{ $t('添加集群') }}
+          </bk-button>
           <!-- 二期视角切换 -->
         </div>
         <bk-input
@@ -82,6 +87,17 @@ export default {
     // 前端搜索
     handleSearch() {
       this.$refs.clusterRef?.fuzzySearch(this.searchValue);
+    },
+    addCluter() {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'add',
+        },
+        query: {
+          step: 1,
+        },
+      });
     },
   },
 };

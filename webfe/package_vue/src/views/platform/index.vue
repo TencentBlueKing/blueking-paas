@@ -45,6 +45,10 @@ export default {
   },
   computed: {
     title() {
+      const { name, path } = this.$route;
+      if (name === 'clusterCreateEdit') {
+        return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
+      }
       return this.$route.meta.title;
     },
     panels() {
@@ -91,14 +95,23 @@ export default {
       this.active = this.routeTabActive || defaultActive;
       this.handleTabChange(this.active);
     },
+    checkIfEndsWithAddOrEdit(url) {
+      return url.endsWith('/add') || url.endsWith('/edit');
+    },
     handleTabChange(active) {
       const { path, query } = this.$route;
-      this.$router.push({
-        path,
-        query: {
+      let newQuery = {};
+      if (this.checkIfEndsWithAddOrEdit(path)) {
+        newQuery = { ...query };
+      } else {
+        newQuery = {
           ...(active === 'list' && query),
           active,
-        },
+        };
+      }
+      this.$router.push({
+        path,
+        query: newQuery,
       });
       this.active = active;
     },
@@ -117,6 +130,7 @@ export default {
     background: #fff;
     border-right: 1px solid rgb(220, 222, 229);
     height: 100%;
+    z-index: 999;
   }
   .right-content {
     overflow: auto;

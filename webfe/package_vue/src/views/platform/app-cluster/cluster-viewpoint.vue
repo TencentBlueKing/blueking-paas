@@ -178,8 +178,8 @@
     </bk-table>
 
     <DeleteClusterDialog
-      :show.sync="delDilaogConfig.isShow"
-      :config="delDilaogConfig"
+      :show.sync="delDialogConfig.isShow"
+      :config="delDialogConfig"
       @refresh="getClusterList"
     />
   </div>
@@ -202,7 +202,7 @@ export default {
       resizeObserver: null,
       syncNodeName: '',
       allocationState: {},
-      delDilaogConfig: {
+      delDialogConfig: {
         isShow: false,
         row: {},
       },
@@ -295,8 +295,8 @@ export default {
         this.showDelAlertInfo(this.allocationState, row.name);
       } else {
         // 删除集群
-        this.delDilaogConfig.isShow = true;
-        this.delDilaogConfig.row = row;
+        this.delDialogConfig.isShow = true;
+        this.delDialogConfig.row = row;
       }
     },
     // 无法删除集群info提示
@@ -311,9 +311,9 @@ export default {
           h('div', { class: 'sub-info' }, `${i18n.t('集群（{n}）正在被以下租户、应用使用，无法删除', { n: name })}：`),
           h('div', [
             `1. ${i18n.t('被')}`,
-            ...data.available_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
+            ...data.allocated_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
             i18n.t('等'),
-            h('span', { class: 'count' }, data.available_tenant_ids.length),
+            h('span', { class: 'count' }, data.allocated_tenant_ids.length),
             i18n.t('个租户使用，请先在集群配置页面，解除租户与集群的分配关系。'),
           ]),
           h('div', [

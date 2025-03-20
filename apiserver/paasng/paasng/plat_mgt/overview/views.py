@@ -15,9 +15,30 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+import logging
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-]
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paasng.infras.accounts.permissions.constants import PlatMgtAction
+from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+
+logger = logging.getLogger(__name__)
+
+
+class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
+    """平台管理概览相关 API"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    lookup_url_kwarg = "tenant_id"
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.overview"],
+        operation_description="获取租户配置情况",
+        responses={status.HTTP_200_OK: ""},
+    )
+    def retrieve(self, request, cluster_name, *args, **kwargs):
+        return Response(data={})

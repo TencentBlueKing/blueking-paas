@@ -224,9 +224,9 @@ export default {
     /**
      * 获取蓝鲸插件模板信息
      */
-    getPluginTmpls({}, {}, config = {}) {
+    getPluginTmpls({}) {
       const url = `${BACKEND_URL}/api/bkapps/plugin/tmpls/`;
-      return http.get(url, config);
+      return http.get(url);
     },
   },
 };

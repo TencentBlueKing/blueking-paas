@@ -29,6 +29,7 @@ from django.utils.translation import get_language
 
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, UserApplicationFilter
@@ -64,6 +65,7 @@ class UniSimpleApp:
     creator: str
     type: str
     tenant_id: str
+    app_tenant_mode: str
     developers: Optional[List[str]] = None
     _db_object: Optional[Any] = None
 
@@ -88,6 +90,7 @@ class UniSimpleApp:
             logo_url=app.get_logo_url(),
             developers=app.get_developers() if include_developers_info else None,
             tenant_id=app.tenant_id,
+            app_tenant_mode=app.app_tenant_mode,
             _db_object=app,
         )
 
@@ -119,6 +122,7 @@ class UniSimpleApp:
             type=ApplicationType.DEFAULT.value,
             # PaaS2.0 的应用都是非多租户模式下的应用
             tenant_id=DEFAULT_TENANT_ID,
+            app_tenant_mode=AppTenantMode.GLOBAL,
             _db_object=app,
         )
 

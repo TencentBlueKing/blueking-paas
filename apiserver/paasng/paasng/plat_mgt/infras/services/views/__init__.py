@@ -14,3 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+from .binding_policies import BindingPolicyViewSet
+from .plans import PlanViewSet
+from .services import ServiceViewSet
+
+__all__ = ["BindingPolicyViewSet", "PlanViewSet", "ServiceViewSet"]

@@ -20,15 +20,16 @@ from .binding_policies import (
     PolicyCombinationConfigOutputSLZ,
     PolicyCombinationConfigUpsertSLZ,
 )
-from .services import (
+from .plans import (
     BasePlanObjSLZ,
     PlanUpsertInputSLZ,
     PlanWithSvcSLZ,
     PreCreatedInstanceSLZ,
 )
+from .services import ServiceListOutputSLZ
 
 __all__ = [
-    # services
+    # plans
     "PlanWithSvcSLZ",
     "PlanUpsertInputSLZ",
     "BasePlanObjSLZ",
@@ -37,4 +38,6 @@ __all__ = [
     "DeletePolicyCombinationSLZ",
     "PolicyCombinationConfigUpsertSLZ",
     "PolicyCombinationConfigOutputSLZ",
+    # services
+    "ServiceListOutputSLZ",
 ]

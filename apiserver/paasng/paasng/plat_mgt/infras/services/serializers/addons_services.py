@@ -15,9 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from rest_framework import serializers
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-]
+
+class ServiceListOutputSLZ(serializers.Serializer):
+    """增强服务列表"""
+
+    id = serializers.CharField(help_text="唯一 ID", source="uuid")
+    name = serializers.CharField(help_text="名称")
+    display_name = serializers.CharField(help_text="展示用名称")

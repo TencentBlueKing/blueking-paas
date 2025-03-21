@@ -15,9 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import path
+
+from . import views
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
+    path(
+        "api/plat_mgt/overview/tenant_config_statuses/",
+        views.PlatMgtOverviewViewSet.as_view({"get": "list_tenant_config_statuses"}),
+        name="plat_mgt.overview.tenant_config_status.list",
+    ),
 ]

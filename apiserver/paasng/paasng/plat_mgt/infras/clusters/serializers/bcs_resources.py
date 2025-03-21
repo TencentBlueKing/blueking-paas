@@ -38,4 +38,6 @@ class BCSClusterListOutputSLZ(serializers.Serializer):
 
 
 class BCSClusterServerUrlTmplRetrieveOutputSLZ(serializers.Serializer):
+    """BCS 集群 Server URL 模板"""
+
     url_tmpl = serializers.CharField(help_text="集群 Server URL 模板")

@@ -27,7 +27,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.infras.services.serializers import ServiceListOutputSLZ
 
 
-class ServiceViewSet(viewsets.GenericViewSet):
+class AddonsServiceViewSet(viewsets.GenericViewSet):
     """（平台管理）增强服务相关 API"""
 
     # TODO: 租户管理员也应该可以获取方案列表

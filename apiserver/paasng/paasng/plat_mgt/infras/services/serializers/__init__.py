@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from .addons_services import ServiceListOutputSLZ
 from .binding_policies import (
     DeletePolicyCombinationSLZ,
     PolicyCombinationConfigOutputSLZ,
@@ -26,7 +27,6 @@ from .plans import (
     PlanWithSvcSLZ,
     PreCreatedInstanceSLZ,
 )
-from .services import ServiceListOutputSLZ
 
 __all__ = [
     # plans
@@ -38,6 +38,6 @@ __all__ = [
     "DeletePolicyCombinationSLZ",
     "PolicyCombinationConfigUpsertSLZ",
     "PolicyCombinationConfigOutputSLZ",
-    # services
+    # addons_services
     "ServiceListOutputSLZ",
 ]

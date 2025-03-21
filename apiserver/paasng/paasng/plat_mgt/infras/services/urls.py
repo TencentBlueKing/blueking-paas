@@ -22,7 +22,7 @@ from paasng.plat_mgt.infras.services import views
 urlpatterns = [
     path(
         "api/plat_mgt/infras/services/",
-        views.ServiceViewSet.as_view({"get": "list"}),
+        views.AddonsServiceViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.services.list",
     ),
     path(

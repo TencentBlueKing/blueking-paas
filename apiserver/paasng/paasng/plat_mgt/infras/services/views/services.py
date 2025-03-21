@@ -38,6 +38,6 @@ class ServiceViewSet(viewsets.GenericViewSet):
         operation_description="增强服务列表",
         responses={status.HTTP_200_OK: ServiceListOutputSLZ(many=True)},
     )
-    def list(self, request, service_id, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         addons_services = mixed_service_mgr.list()
         return Response(data=ServiceListOutputSLZ(addons_services, many=True).data)

@@ -21,6 +21,6 @@ from rest_framework import serializers
 class ServiceListOutputSLZ(serializers.Serializer):
     """增强服务列表"""
 
-    uuid = serializers.CharField(help_text="唯一 ID")
+    id = serializers.CharField(help_text="唯一 ID", source="uuid")
     name = serializers.CharField(help_text="名称")
     display_name = serializers.CharField(help_text="展示用名称")

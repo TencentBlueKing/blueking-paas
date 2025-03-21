@@ -38,4 +38,4 @@ class TenantConfigStatusOutputSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="租户 ID")
     tenant_name = serializers.CharField(help_text="租户名称")
     cluster = ClusterConfigStatusSLZ(help_text="集群配置状态")
-    addons_service = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceConfigStatusSLZ())
+    addons_services = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceConfigStatusSLZ())

@@ -72,7 +72,7 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
                 "cluster": {
                     "allocated": tenant.id in cluster_allocation_policy_tenant_ids,
                 },
-                "addons_service": [
+                "addons_services": [
                     {
                         "id": svc.uuid,
                         "name": svc.name,

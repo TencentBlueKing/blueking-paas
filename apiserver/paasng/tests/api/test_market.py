@@ -43,8 +43,8 @@ def existed_app(bk_app):
 @pytest.fixture()
 def tag(bk_app):
     """A tag fixture for testing"""
-    parent = Tag.objects.create(name="parent test", region=bk_app.region)
-    return Tag.objects.create(name="test", region=bk_app.region, parent=parent)
+    parent = Tag.objects.create(name="parent test")
+    return Tag.objects.create(name="test", parent=parent)
 
 
 @pytest.fixture()

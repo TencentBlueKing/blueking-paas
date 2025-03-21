@@ -1,14 +1,21 @@
 import i18n from '@/language/i18n.js';
 
 const platformManagement = () =>
-  import(/* webpackChunkName: 'app-migration-info' */ '@/views/platform')
+  import(/* webpackChunkName: 'platform-management' */ '@/views/platform')
     .then((module) => module)
     .catch((error) => {
       window.showDeployTip(error);
     });
 
 const platformAppCluster = () =>
-  import(/* webpackChunkName: 'app-migration-info' */ '@/views/platform/app-cluster')
+  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const clusterCreateEdit = () =>
+  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/app-cluster/cluster-create-edit')
     .then((module) => module)
     .catch((error) => {
       window.showDeployTip(error);
@@ -16,7 +23,7 @@ const platformAppCluster = () =>
 
 export const platformRouters = [
   {
-    path: '/developer-center/platform/',
+    path: '/plat-mgt/',
     name: 'platformManagement',
     component: platformManagement,
     redirect: {
@@ -35,6 +42,21 @@ export const platformRouters = [
           ],
         },
       },
+      {
+        path: 'app-cluster/:type(edit|add)',
+        name: 'clusterCreateEdit',
+        component: clusterCreateEdit,
+        meta: {
+          title: i18n.t('添加集群'),
+          supportBack: true,
+          backRoute: {
+            name: 'platformAppCluster',
+            query: {
+              active: 'list',
+            }
+          }
+        },
+      }
     ],
   },
 ];

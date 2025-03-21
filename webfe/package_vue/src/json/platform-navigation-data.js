@@ -26,7 +26,7 @@ export default [
     name: 'platformAppCluster',
     label: i18n.t('应用集群'),
     iconfontName: 'wenjianzhuanhuan',
-    matchRouters: ['platformAppCluster'],
+    matchRouters: ['platformAppCluster', 'clusterCreateEdit'],
     destRoute: {
       name: 'platformAppCluster',
     },

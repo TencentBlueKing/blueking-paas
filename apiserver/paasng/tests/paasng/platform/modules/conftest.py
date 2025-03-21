@@ -29,18 +29,18 @@ def image_name():
 
 @pytest.fixture()
 def buildpack(bk_module):
-    buildpack = G(AppBuildPack, name="x", region=bk_module.region, language=bk_module.language)
+    buildpack = G(AppBuildPack, name="x", language=bk_module.language)
     return buildpack
 
 
 @pytest.fixture()
 def slugbuilder(bk_module, buildpack, image_name):
-    slugbuilder = G(AppSlugBuilder, name=image_name, region=bk_module.region)
+    slugbuilder = G(AppSlugBuilder, name=image_name)
     slugbuilder.buildpacks.add(buildpack)
     return slugbuilder
 
 
 @pytest.fixture()
 def slugrunner(bk_module, image_name):
-    slugrunner = G(AppSlugRunner, name=image_name, region=bk_module.region)
+    slugrunner = G(AppSlugRunner, name=image_name)
     return slugrunner

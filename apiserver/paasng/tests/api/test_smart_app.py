@@ -41,8 +41,8 @@ SMART_APP_V3_PATH = Path(__file__).resolve().parent / "assets" / "smart_app_v3"
 def _setup_fixtures(mock_wl_services_in_creation):
     """Set fixtures for testings"""
     # Create default tags
-    parent_tag = Tag.objects.create(name="demo parent", region=settings.DEFAULT_REGION_NAME)
-    Tag.objects.create(name="demo", region=settings.DEFAULT_REGION_NAME, parent=parent_tag)
+    parent_tag = Tag.objects.create(name="demo parent")
+    Tag.objects.create(name="demo", parent=parent_tag)
 
 
 @pytest.fixture(autouse=True)
@@ -56,9 +56,10 @@ def _mock_dispatch_smart_app():
     #
     # Disable parallel processing to let unittest pass.
 
-    with mock.patch("paasng.platform.smart_app.services.dispatch._PARALLEL_PATCHING", new=False), mock.patch(
-        "moby_distribution.ImageRef.push"
-    ) as mock_push:
+    with (
+        mock.patch("paasng.platform.smart_app.services.dispatch._PARALLEL_PATCHING", new=False),
+        mock.patch("moby_distribution.ImageRef.push") as mock_push,
+    ):
         mock_push().config.digest.replace.return_value = ""
         yield
 
@@ -79,7 +80,7 @@ class TestCreateSMartApp:
         tarball_path = make_smart_tarball(tmp_path, _desc_updater, version="v2")
         with open(tarball_path, "rb") as file:
             response = api_client.post("/api/bkapps/s-mart/", format="multipart", data={"package": file})
-        assert response.status_code == 200, f'error: {response.json()["detail"]}'
+        assert response.status_code == 200, f"error: {response.json()['detail']}"
 
         assert response.json()["app_description"]["name"]
         assert response.json()["app_description"]["code"] == app_code
@@ -89,7 +90,7 @@ class TestCreateSMartApp:
             "/api/bkapps/s-mart/confirm/",
             data={"code": app_code, "name": app_code},
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
 
         # Verify app info
         app = Application.objects.get(code=app_code)
@@ -109,7 +110,7 @@ class TestCreateSMartApp:
                 format="multipart",
                 data={"package": file, "app_tenant_mode": "single"},
             )
-        assert response.status_code == 200, f'error: {response.json()["detail"]}'
+        assert response.status_code == 200, f"error: {response.json()['detail']}"
 
         new_app_code = response.json()["app_description"]["code"]
         assert new_app_code.startswith(f"{bk_app.code}-")
@@ -119,7 +120,7 @@ class TestCreateSMartApp:
             "/api/bkapps/s-mart/confirm/",
             data={"code": new_app_code, "name": random_name},
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
 
         # Verify app info
         app = Application.objects.get(code=new_app_code)
@@ -135,7 +136,6 @@ class TestUpdateSMartApp:
         SMartAppExtraInfo.objects.create(original_code=bk_cnative_app.code, app=bk_cnative_app)
         # AppDeclarativeController.perform_update(desc) 需要 MarketConfig
         MarketConfig.objects.create(
-            region=bk_cnative_app.region,
             application=bk_cnative_app,
             enabled=False,
             source_url_type=1,

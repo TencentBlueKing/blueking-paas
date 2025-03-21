@@ -2,57 +2,59 @@
   <div class="default-component-details">
     <!-- 默认组件详情样式 -->
     <DetailsRow
-      :label-width="80"
-      :label="`${$t('组件介绍')}：`"
-      :value="introduceMap[data?.name] || '--'"
+      :label-width="labelWidth"
+      :label="removePrefix('组件介绍')"
+      :value="$t(introduceMap[data?.name]) || '--'"
     />
     <DetailsRow
-      :label-width="80"
+      :label-width="labelWidth"
       :is-full="true"
       :align="'flex-start'"
     >
-      <template slot="label">{{ `${$t('组件配置')}：` }}</template>
+      <template slot="label">{{ removePrefix('组件配置') }}</template>
       <div slot="value">
         <div
           class="config"
           v-if="isBkIngressNginx"
         >
           <DetailsRow
-            :label-width="80"
+            :label-width="configLabelWidth"
             :label="`${$t('访问方式')}：`"
-            :value="accessMethod"
+            :value="accessMethod ?? '--'"
           />
-          <template v-if="accessMethod === 'nodePort'">
-            <DetailsRow
-              :label-width="80"
-              :label="`HTTP ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.http"
-            />
-            <DetailsRow
-              :label-width="80"
-              :label="`HTTPS ${$t('端口')}：`"
-              :value="values?.service?.nodePorts?.https"
-            />
-          </template>
-          <template v-else>
-            <!-- hostNerwork -->
-            <DetailsRow
-              :label-width="80"
-              :label="`${$t('节点标签')}：`"
-              :align="'flex-start'"
-            >
-              <div slot="value">
-                <span v-if="!values.nodeSelector?.length">--</span>
-                <span
-                  v-else
-                  v-for="(val, key) in values.nodeSelector"
-                  class="tag"
-                  :key="key"
-                >
-                  {{ key }} = {{ val }}
-                </span>
-              </div>
-            </DetailsRow>
+          <template v-if="accessMethod !== null">
+            <template v-if="accessMethod === 'nodePort'">
+              <DetailsRow
+                :label-width="configLabelWidth"
+                :label="`HTTP ${$t('端口')}：`"
+                :value="values?.service?.nodePorts?.http || '--'"
+              />
+              <DetailsRow
+                :label-width="configLabelWidth"
+                :label="`HTTPS ${$t('端口')}：`"
+                :value="values?.service?.nodePorts?.https || '--'"
+              />
+            </template>
+            <template v-else>
+              <!-- hostNetwork -->
+              <DetailsRow
+                :label-width="configLabelWidth"
+                :label="`${$t('节点标签')}：`"
+                :align="'flex-start'"
+              >
+                <div slot="value">
+                  <span v-if="!values.nodeSelector?.length">--</span>
+                  <span
+                    v-else
+                    v-for="(val, key) in values.nodeSelector"
+                    class="tag"
+                    :key="key"
+                  >
+                    {{ key }} = {{ val }}
+                  </span>
+                </div>
+              </DetailsRow>
+            </template>
           </template>
         </div>
         <template v-else>
@@ -70,24 +72,28 @@
       </div>
     </DetailsRow>
     <DetailsRow
-      :label-width="80"
+      :label-width="labelWidth"
       :is-full="true"
       :align="'flex-start'"
     >
-      <template slot="label">{{ `${$t('组件状态')}：` }}</template>
+      <template slot="label">{{ removePrefix('组件状态') }}</template>
       <div
         slot="value"
         class="status-wrapper"
       >
-        <i
-          class="paasng-icon paasng-check-circle-shape"
-          v-if="data?.status === 'installed'"
-        ></i>
-        <i
-          class="paasng-icon paasng-unfinished"
-          v-else
-        ></i>
-        <span>{{ localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--' }}</span>
+        <IconStatus
+          v-if="data?.status !== 'installing'"
+          :icon-class="statusMap[data?.status]?.iconClass"
+          :icon-color="statusMap[data?.status]?.color"
+          :label="localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--'"
+        />
+        <template v-else>
+          <round-loading
+            size="mini"
+            class="mr5"
+          />
+          <span>{{ localLanguage === 'en' ? data?.status : COMPONENT_STATUS[data?.status] || '--' }}</span>
+        </template>
         <bk-button
           v-if="data?.status === 'installed'"
           :text="true"
@@ -117,6 +123,7 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
+import IconStatus from '@/components/icon-status';
 import EditorSideslider from '@/components/editor-sideslider';
 import DetailComponentsSideslider from './detail-components-sideslider.vue';
 import { COMPONENT_STATUS } from '@/common/constants';
@@ -136,18 +143,38 @@ export default {
     DetailsRow,
     EditorSideslider,
     DetailComponentsSideslider,
+    IconStatus,
   },
   data() {
     return {
       COMPONENT_STATUS,
+      statusMap: {
+        not_installed: {
+          color: '#c4c6cc',
+          iconClass: 'paasng-time-filled',
+        },
+        installed: {
+          color: '#18c0a1',
+          iconClass: 'paasng-check-circle-shape',
+        },
+        installation_failed: {
+          color: '#ea3636',
+          iconClass: 'paasng-close-circle-shape',
+        },
+      },
       isEditorSideslider: false,
       isShowDetail: false,
       // 与其他组件展示不同
       specialComponent: 'bk-ingress-nginx',
       introduceMap: {
-        'bk-ingress-nginx': this.$t('为应用提供负载均等功能。'),
-        'bkpaas-app-operator': this.$t('云原生应用的控制引擎，必须安装后才能部署应用。'),
-        'bcs-general-pod-autoscaler': this.$t('Saas 服务水平扩缩容组件，支持基于资源使用情况调整服务副本数量。'),
+        'bk-ingress-nginx':
+          'Nginx Ingress 控制器，基于 Nginx 实现 HTTP/HTTPS 流量路由、负载均衡、自定义域名、URL 路径规则等功能。',
+        'bkapp-log-collection':
+          '将应用的各类日志采集到 ElasticSearch 集群，以支持后续查询标准输出、预定义的结构化、Nginx 接入层等日志。',
+        'bkpaas-app-operator':
+          '云原生应用的关键基建，是开发者中心基于 k8s 能力实现的 operator，承担着云原生应用相关资源的管理，调度等职责。',
+        'bcs-general-pod-autoscaler':
+          '蓝鲸容器管理平台（BCS）提供的增强型 Pod 水平扩缩容组件，支持按各类指标对应用集成副本数量进行扩缩容。',
       },
     };
   },
@@ -159,13 +186,22 @@ export default {
       return this.detailData?.values || {};
     },
     accessMethod() {
-      return this.values?.hostNetwork ? 'hostNerwork' : 'nodePort';
+      if (typeof this.values?.hostNetwork === 'boolean') {
+        return this.values.hostNetwork ? 'hostNetwork' : 'nodePort';
+      }
+      return null;
     },
     valuesData() {
       return JSON.stringify(this.values, null, 2);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 80 : 70;
+    },
+    configLabelWidth() {
+      return this.localLanguage === 'en' ? 100 : 80;
     },
   },
   methods: {
@@ -176,6 +212,13 @@ export default {
     // 查看values
     handleViewValues() {
       this.isEditorSideslider = true;
+    },
+    // 英文环境下去掉组件前缀
+    removePrefix(str, prefix = '组件') {
+      if (this.localLanguage === 'en') {
+        return `${this.$t(str.slice(prefix.length))}：`;
+      }
+      return `${this.$t(str)}：`;
     },
   },
 };
@@ -194,8 +237,8 @@ export default {
     .paasng-check-circle-shape {
       color: #18c0a1;
     }
-    .paasng-unfinished {
-      color: #f59500;
+    .paasng-time-filled {
+      color: #c4c6cc;
     }
   }
   i.paasng-file-5 {

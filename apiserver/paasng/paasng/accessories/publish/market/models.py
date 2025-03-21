@@ -66,11 +66,6 @@ class Tag(models.Model):
     index = models.IntegerField("排序", default=0, help_text="显示排序字段")
     enabled = models.BooleanField("是否可选", default=True, help_text="创建应用时是否可选择该分类")
 
-    # The field is used to identify specific tags that are only available in certain regions,
-    # but this distinction is no longer necessary. Therefore, this field is deprecated and should
-    # not be used anymore.
-    region = models.CharField("部署环境", max_length=32, help_text="部署区域")
-
     objects = TagManager()
 
     class Meta:

@@ -49,17 +49,17 @@ class TestModuleBuildConfigViewSet:
 
     @pytest.fixture()
     def buildpack_x(self, settings):
-        buildpack = G(AppBuildPack, name="x", region=settings.DEFAULT_REGION_NAME, language="Python")
+        buildpack = G(AppBuildPack, name="x", language="Python")
         return buildpack
 
     @pytest.fixture()
     def buildpack_y(self, settings):
-        buildpack = G(AppBuildPack, name="y", region=settings.DEFAULT_REGION_NAME, language="Python")
+        buildpack = G(AppBuildPack, name="y", language="Python")
         return buildpack
 
     @pytest.fixture()
     def buildpack_z(self, settings):
-        buildpack = G(AppBuildPack, name="z", region=settings.DEFAULT_REGION_NAME, language="Python")
+        buildpack = G(AppBuildPack, name="z", language="Python")
         return buildpack
 
     @pytest.fixture()
@@ -67,7 +67,6 @@ class TestModuleBuildConfigViewSet:
         slugbuilder = G(
             AppSlugBuilder,
             name=bp_stack_name,
-            region=settings.DEFAULT_REGION_NAME,
             image="example.com/foo",
             tag="bar",
             is_hidden=False,
@@ -79,7 +78,7 @@ class TestModuleBuildConfigViewSet:
 
     @pytest.fixture()
     def slugrunner(self, settings, bp_stack_name):
-        slugrunner = G(AppSlugRunner, name=bp_stack_name, region=settings.DEFAULT_REGION_NAME, is_hidden=False)
+        slugrunner = G(AppSlugRunner, name=bp_stack_name, is_hidden=False)
         return slugrunner
 
     def test_retrieve_legacy_bp(self, api_client, bk_app, bk_module):

@@ -7,12 +7,6 @@
       <span>{{ $t('创建应用') }}</span>
     </div>
     <div class="tab-box">
-      <!-- <li
-        :class="['tab-item', { 'active': appType === 'default' }]"
-        @click="handleToggleType('default')"
-      >
-        {{ $t('普通应用') }}
-      </li> -->
       <li
         :class="['tab-item', { active: appType === 'cloud' }]"
         @click="handleToggleType('cloud')"
@@ -26,12 +20,8 @@
         {{ $t('外链应用') }}
       </li>
     </div>
-    <create-default-app
-      v-if="appType === 'default'"
-      :key="appType"
-    />
     <create-cloud-app
-      v-else-if="appType === 'cloud'"
+      v-if="appType === 'cloud'"
       key="cloud"
       ref="cloud"
     />
@@ -44,7 +34,6 @@
 </template>
 
 <script>
-import createDefaultApp from './default';
 import createExternalApp from './external';
 import createCloudApp from './cloud';
 
@@ -57,7 +46,6 @@ const queryMap = {
 
 export default {
   components: {
-    createDefaultApp,
     createExternalApp,
     createCloudApp,
   },

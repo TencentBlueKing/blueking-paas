@@ -122,6 +122,11 @@ class LocalServiceObj(ServiceObj):
             qs = qs.filter(is_active=is_active)
         return [LocalPlanObj.from_db(p).with_service(self) for p in qs]
 
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        """Return all plans under the specified tenant"""
+        all_plans = self.get_plans(is_active=is_active)
+        return [plan for plan in all_plans if (plan.tenant_id == tenant_id)]
+
 
 class LocalEngineAppInstanceRel(EngineAppInstanceRel):
     """A relationship between EngineApp and Provisioned instance"""

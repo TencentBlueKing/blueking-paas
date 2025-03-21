@@ -30,8 +30,8 @@ class ServiceHubConfig(AppConfig):
         from .remote.collector import initialize_remote_services
         from .remote.store import get_remote_store
 
-        # TODO 移除启动获取增强服务的逻辑
         try:
             initialize_remote_services(get_remote_store())
+
         except ImproperlyConfigured as e:
             logger.info(f"skip remote services setup: {e}")

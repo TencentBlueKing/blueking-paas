@@ -1198,14 +1198,14 @@ reference = "pypi-tencent-mirror"
 
 [[package]]
 name = "paas-service"
-version = "2.0.1"
+version = "2.0.2"
 description = "A Django application for developing BK-PaaS add-on services."
 optional = false
 python-versions = ">=3.8,<3.12"
 groups = ["main"]
 files = [
-    {file = "paas_service-2.0.1-py3-none-any.whl", hash = "sha256:ab6d2584d3bc3ac21c3453fa0660b5c8e1d955860429c0c3d0adeec5b802f0c7"},
-    {file = "paas_service-2.0.1.tar.gz", hash = "sha256:1d68dd06e53293689f3bd612d20174392d7b03937ffdf6881991d35caef16852"},
+    {file = "paas_service-2.0.2-py3-none-any.whl", hash = "sha256:e8eb800eb49709e8b2a99109db436d5f55da7c02ff8033e1e0341aba1553e54f"},
+    {file = "paas_service-2.0.2.tar.gz", hash = "sha256:f2d073d5f834c0455e5d55f25d938b7dc406059e9097ece556ce1c04bda6a7b0"},
 ]
 
 [package.dependencies]
@@ -2330,4 +2330,4 @@ reference = "pypi-tencent-mirror"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "016af7bbb83683a96f9d40015003626209e325ccc36eba4b4fb43f9aba0d37f1"
+content-hash = "9e14e64ad8d7c82bff5b644919545cd5d4d03b29a99c53ad2438d288412e9dd5"

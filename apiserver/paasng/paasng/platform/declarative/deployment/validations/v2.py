@@ -71,7 +71,9 @@ class DeploymentDescSLZ(serializers.Serializer):
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     source_dir = serializers.CharField(help_text="源码目录", default="")
     env_variables = serializers.ListField(child=EnvVariableSLZ(), required=False)
-    processes = serializers.DictField(help_text="key: 进程名称, value: 进程信息", default=dict, child=ProcessSLZ())
+    processes = serializers.DictField(
+        help_text="key: 进程名称, value: 进程信息", default=dict, child=ProcessSLZ(), allow_empty=False
+    )
     svc_discovery = SvcDiscConfigSLZ(help_text="应用所需服务发现配置", default=NOTSET)
     scripts = serializers.DictField(help_text="key: 脚本名称, value: 脚本指令内容", default=NOTSET)
     bkmonitor = BluekingMonitorSLZ(help_text="SaaS 监控采集配置", required=False, source="bk_monitor")

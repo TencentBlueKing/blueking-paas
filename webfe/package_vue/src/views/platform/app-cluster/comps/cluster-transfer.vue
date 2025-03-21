@@ -22,7 +22,11 @@
           class="title"
           v-bk-overflow-tips
         >
-          {{ $t('可选集群({n})', { n: sourceLength }) }}
+          {{
+            curTenantData.type === 'plan'
+              ? $t('可选方案({n})', { n: sourceLength })
+              : $t('可选集群({n})', { n: sourceLength })
+          }}
         </label>
         <div class="add-all">
           <span
@@ -41,7 +45,11 @@
           class="title"
           v-bk-overflow-tips
         >
-          {{ $t('已选集群({n})', { n: targetLength }) }}
+          {{
+            curTenantData.type === 'plan'
+              ? $t('已选方案({n})', { n: targetLength })
+              : $t('已选集群({n})', { n: targetLength })
+          }}
         </label>
         <div class="remove-all">
           <span
@@ -101,6 +109,11 @@ export default {
       targetList: [],
       targetValueList: [],
     };
+  },
+  computed: {
+    curTenantData() {
+      return this.$store.state.tenant.curTenantData;
+    },
   },
   created() {
     this.targetList.push(...this.defaultTargetList);

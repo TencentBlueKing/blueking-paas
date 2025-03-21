@@ -1,7 +1,13 @@
 <template>
   <div class="right-main platform-enhanced-services">
-    <ServiceConfig v-if="queueActive === 'config'" />
-    <ServicePlan v-else />
+    <ServiceConfig
+      v-if="queueActive === 'config'"
+      :tenants="tenants"
+    />
+    <ServicePlan
+      v-else
+      :tenants="tenants"
+    />
   </div>
 </template>
 
@@ -14,9 +20,31 @@ export default {
     ServiceConfig,
     ServicePlan,
   },
+  data() {
+    return {
+      tenants: [],
+      isLoading: false,
+    };
+  },
   computed: {
     queueActive() {
       return this.$route.query.active;
+    },
+  },
+  created() {
+    this.getTenants();
+  },
+  methods: {
+    async getTenants() {
+      this.isLoading = true;
+      try {
+        const res = await this.$store.dispatch('tenant/getTenants');
+        this.tenants = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
 };

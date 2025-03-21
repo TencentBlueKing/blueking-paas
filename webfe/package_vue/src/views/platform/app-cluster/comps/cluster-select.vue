@@ -46,7 +46,7 @@
         <ClusterTransfer
           ref="clusterTransfer"
           :list="availableClusters"
-          :default-target-list="editData"
+          :default-target-list="editData ?? []"
           @change="transferChange"
         />
       </bk-option>

@@ -190,4 +190,6 @@ export default {
   支持在集群列表页面继续配置: 'Support continuing configuration on the cluster list page',
   '离开（稍后配置）': 'Leave (Config Later)',
   '后续的配置：组件配置、组件安装、集群特性': 'Subsequent configurations: Component Configuration, Component Installation, Cluster Features',
+  '可选方案({n})': 'Optional Plan ({n})',
+  '已选方案({n})': 'Selected Plan ({n})',
 };

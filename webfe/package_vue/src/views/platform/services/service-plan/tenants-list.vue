@@ -57,8 +57,11 @@ export default {
     },
   },
   watch: {
-    tenants(newVal) {
-      this.actvieId = newVal[0] && newVal[0]?.id;
+    tenants: {
+      handler(newList) {
+        this.actvieId = newList[0] && newList[0]?.id;
+      },
+      immediate: true,
     },
   },
   methods: {

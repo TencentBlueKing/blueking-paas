@@ -8,7 +8,7 @@
     >
       <bk-form-item
         v-if="!hasEnv"
-        :label="$t('集群')"
+        :label="$t(labelText)"
         :required="true"
         :property="'cluster'"
         :error-display-type="'normal'"
@@ -22,7 +22,7 @@
       <!-- 统一分配-按环境 -->
       <template v-else>
         <bk-form-item
-          :label="$t('集群')"
+          :label="$t(labelText)"
           :required="true"
           :property="'stagCluster'"
         >
@@ -52,7 +52,7 @@
     </bk-form>
     <div class="tip flex-row">
       <i class="bk-icon icon-info mr5"></i>
-      <p>{{ $t('如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。') }}</p>
+      <p>{{ $t(tips) }}</p>
     </div>
   </div>
 </template>
@@ -74,6 +74,14 @@ export default {
     data: {
       type: Object,
       default: () => ({}),
+    },
+    labelText: {
+      type: String,
+      default: '集群',
+    },
+    tips: {
+      type: String,
+      default: '如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。',
     },
   },
   components: {

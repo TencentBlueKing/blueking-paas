@@ -156,6 +156,12 @@ export default {
     PlanSideslider,
     PlanDetailSideslider,
   },
+  props: {
+    tenants: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       searchValue: '',
@@ -163,8 +169,6 @@ export default {
       isTenantLoading: false,
       // 方案
       planList: [],
-      // 租户
-      tenants: [],
       // 服务
       platformServices: [],
       // 当期高亮的租户id
@@ -184,7 +188,6 @@ export default {
     };
   },
   created() {
-    this.getTenants();
     this.getPlans();
   },
   computed: {
@@ -205,22 +208,17 @@ export default {
       });
     },
   },
+  watch: {
+    tenants: {
+      handler(newList) {
+        this.handleChange(newList[0]?.id);
+      },
+      immediate: true,
+    },
+  },
   methods: {
     handleChange(tenantId) {
       this.curTenantId = tenantId;
-    },
-    // 获取所有租户
-    async getTenants() {
-      this.isTenantLoading = true;
-      try {
-        const res = await this.$store.dispatch('tenant/getTenants');
-        this.tenants = res;
-        this.curTenantId = res[0]?.id || '';
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.isTenantLoading = false;
-      }
     },
     // 获取全量服务方案
     async getPlans() {

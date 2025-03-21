@@ -18,24 +18,24 @@
 from rest_framework import serializers
 
 
-class ClusterSetupStatusSLZ(serializers.Serializer):
+class ClusterConfigStatusSLZ(serializers.Serializer):
     """集群配置状态"""
 
     allocated = serializers.BooleanField(help_text="是否已分配")
 
 
-class AddonsServiceSetupStatusSLZ(serializers.Serializer):
+class AddonsServiceConfigStatusSLZ(serializers.Serializer):
     """增强服务配置状态"""
 
-    id = serializers.CharField(help_text="增强服务 ID")
-    name = serializers.CharField(help_text="增强服务名称")
-    binding = serializers.BooleanField(help_text="是否已绑定")
+    id = serializers.CharField(help_text="ID")
+    name = serializers.CharField(help_text="名称")
+    bind = serializers.BooleanField(help_text="是否已绑定")
 
 
-class TenantSetupStatusOutputSLZ(serializers.Serializer):
+class TenantConfigStatusOutputSLZ(serializers.Serializer):
     """租户配置状态"""
 
     tenant_id = serializers.CharField(help_text="租户 ID")
     tenant_name = serializers.CharField(help_text="租户名称")
-    cluster_status = ClusterSetupStatusSLZ(help_text="集群配置状态")
-    addons_service_statuses = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceSetupStatusSLZ())
+    cluster = ClusterConfigStatusSLZ(help_text="集群配置状态")
+    addons_service = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceConfigStatusSLZ())

@@ -21,8 +21,8 @@ from . import views
 
 urlpatterns = [
     path(
-        "api/plat_mgt/overview/tenants/setup_status/",
-        views.PlatMgtOverviewViewSet.as_view({"get": "list_tenant_setup_statuses"}),
-        name="plat_mgt.overview.tenant.list_setup_status",
+        "api/plat_mgt/overview/tenant_config_statuses/",
+        views.PlatMgtOverviewViewSet.as_view({"get": "list_tenant_config_statuses"}),
+        name="plat_mgt.overview.tenant_config_status.list",
     ),
 ]

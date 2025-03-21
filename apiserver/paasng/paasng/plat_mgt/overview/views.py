@@ -31,7 +31,7 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bk_user.client import BkUserClient
 from paasng.infras.bk_user.entities import Tenant
-from paasng.plat_mgt.overview.serializers import TenantSetupStatusOutputSLZ
+from paasng.plat_mgt.overview.serializers import TenantConfigStatusOutputSLZ
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +44,16 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.overview"],
         operation_description="获取租户配置情况",
-        responses={status.HTTP_200_OK: TenantSetupStatusOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: TenantConfigStatusOutputSLZ(many=True)},
     )
-    def list_tenant_setup_statuses(self, request, *args, **kwargs):
+    def list_tenant_config_statuses(self, request, *args, **kwargs):
         tenants = self._get_tenants()
         addons_services = mixed_service_mgr.list()
         tenant_ids = [tenant.id for tenant in tenants]
 
         # 集群分配策略
         cluster_allocation_policy_tenant_ids = set(
-            ClusterAllocationPolicy.objects.filter(tenant_id__in=tenant_ids).values("tenant_id", flat=True)
+            ClusterAllocationPolicy.objects.filter(tenant_id__in=tenant_ids).values_list("tenant_id", flat=True)
         )
         # 增强服务绑定策略
         service_binding_policy_tenant_service_ids = {
@@ -69,14 +69,14 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
             {
                 "tenant_id": tenant.id,
                 "tenant_name": tenant.name,
-                "cluster_status": {
+                "cluster": {
                     "allocated": tenant.id in cluster_allocation_policy_tenant_ids,
                 },
-                "addons_service_statuses": [
+                "addons_service": [
                     {
                         "id": svc.uuid,
                         "name": svc.name,
-                        "binding": (tenant.id, svc.uuid) in service_binding_policy_tenant_service_ids
+                        "bind": (tenant.id, svc.uuid) in service_binding_policy_tenant_service_ids
                         or (tenant.id, svc.uuid) in service_binding_precedence_policy_tenant_service_ids,
                     }
                     for svc in addons_services
@@ -85,7 +85,7 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
             for tenant in tenants
         ]
 
-        return Response(data=TenantSetupStatusOutputSLZ(resp_data, many=True).data)
+        return Response(data=TenantConfigStatusOutputSLZ(resp_data, many=True).data)
 
     def _get_tenants(self) -> List[Tenant]:
         # FIXME: (多租户) 根据平台/租户管理员身份，返回不同的租户列表

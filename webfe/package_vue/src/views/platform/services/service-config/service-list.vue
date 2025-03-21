@@ -26,19 +26,19 @@
             class="tag"
             v-if="item.category_id === 1"
           >
-            {{ $t('存储') }}
+            {{ $t('数据存储') }}
           </span>
           <span
             class="tag"
             v-else-if="item.category_id === 2"
           >
-            {{ $t('监控') }}
+            {{ $t('监控检测') }}
           </span>
           <span
             class="tag"
             v-if="item.origin"
           >
-            {{ item.origin === 'local' ? $t('本地') : $t('远程') }}
+            {{ item.origin === 'local' ? $t('本地增强服务') : $t('远程增强服务') }}
           </span>
           <span class="tag">
             {{ item.is_visible ? $t('可见') : $t('不可见') }}
@@ -95,6 +95,9 @@ export default {
       .tag-list .tag {
         background: #fff;
       }
+      .logo-wrapper {
+        background: #fff;
+      }
     }
     &.not-visible {
       .title {
@@ -117,13 +120,12 @@ export default {
       justify-content: center;
       width: 40px;
       height: 40px;
+      background: #f5f7fa;
       border-radius: 2px;
       .logo {
-        width: 100%;
-        height: 100%;
+        width: 24px;
+        height: 24px;
         display: block;
-        /* 实际项目中替换为图标资源 */
-        background: #ddd;
       }
     }
 

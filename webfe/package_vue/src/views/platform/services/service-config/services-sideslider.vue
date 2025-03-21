@@ -137,7 +137,7 @@ export default {
         { key: 'regions', name: 'region_in' },
         { key: 'cluster_names', name: 'cluster_in' },
       ],
-      label: '特性',
+      label: '方案',
       tips: '如果配置多个方案：开发者启用增强服务时需要根据 “方案名称” 选择具体的增强服务方案；如开发者未选择任何值，则默认使用已选列表中的第一个方案。',
     };
   },

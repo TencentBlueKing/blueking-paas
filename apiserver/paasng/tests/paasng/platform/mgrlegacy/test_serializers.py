@@ -52,32 +52,20 @@ class TestLegacyAppSLZ:
         }
 
     def test_serializer(self, base_data):
-        """测试序列化时只包含 Meta.fields 中定义的字段"""
+        """测试反序列化时只包含 Meta.fields 中定义的字段"""
 
-        # 创建实例对象而不是直接序列化数据
-        serializer = LegacyAppSLZ(base_data)
+        # 反序列化
+        serializer = LegacyAppSLZ(data=base_data)
 
-        # 使用 Meta.fields 进行序列化
-        serialized_data = serializer.data
+        # 验证反序列化结果
+        assert serializer.is_valid(), serializer.errors
 
-        # 验证只包含 Meta.fields 中定义的字段
-        expected_fields = set(LegacyAppSLZ.Meta.fields)
-        actual_fields = set(serialized_data.keys())
+        # 获取反序列化结果的字段
+        meta_fields = set(LegacyAppSLZ.Meta.fields)
+        serialized_fields = set(serializer.data.keys())
 
-        # 检查实际输出的字段是否是 Meta.fields 的子集
-        assert actual_fields.issubset(expected_fields), f"Found unexpected fields: {actual_fields - expected_fields}"
-
-        # 检查 Meta.fields 中的字段是否都在输出结果中
-        assert expected_fields.issubset(actual_fields), f"Missing expected fields: {expected_fields - actual_fields}"
-
-        # 检查特定字段是否包含在输出中（在 Meta.fields 中）
-        assert "code" in serialized_data
-        assert "name" in serialized_data
-
-        # 检查特定字段是否被排除在输出外（不在 Meta.fields 中）
-        excluded_fields = set(base_data.keys()) - set(LegacyAppSLZ.Meta.fields)
-        for field in excluded_fields:
-            assert field not in serialized_data, f"Field {field} should be excluded"
+        ## 验证反序列化结果只包含 Meta.fields 中定义的字段
+        assert serialized_fields == meta_fields
 
 
 class TestLegacyAppManager:

@@ -15,9 +15,27 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from rest_framework import serializers
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-]
+
+class ClusterConfigStatusSLZ(serializers.Serializer):
+    """集群配置状态"""
+
+    allocated = serializers.BooleanField(help_text="是否已分配")
+
+
+class AddonsServiceConfigStatusSLZ(serializers.Serializer):
+    """增强服务配置状态"""
+
+    id = serializers.CharField(help_text="ID")
+    name = serializers.CharField(help_text="名称")
+    bind = serializers.BooleanField(help_text="是否已绑定")
+
+
+class TenantConfigStatusOutputSLZ(serializers.Serializer):
+    """租户配置状态"""
+
+    tenant_id = serializers.CharField(help_text="租户 ID")
+    tenant_name = serializers.CharField(help_text="租户名称")
+    cluster = ClusterConfigStatusSLZ(help_text="集群配置状态")
+    addons_services = serializers.ListField(help_text="增强服务配置状态", child=AddonsServiceConfigStatusSLZ())

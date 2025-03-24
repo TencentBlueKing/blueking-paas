@@ -61,7 +61,20 @@ class LegacyAppSLZ(serializers.Serializer):
     legacy_url = serializers.CharField(help_text="PaaS2.0上的访问地址")
 
     class Meta:
-        fields = "__all__"
+        fields = (
+            "legacy_app_id",
+            "code",
+            "name",
+            "logo",
+            "tag",
+            "language",
+            "is_prod_deployed",
+            "has_prod_deployed_before_migration",
+            "created",
+            "migration_finished_date",
+            "stag_exposed_link",
+            "prod_exposed_link",
+        )
 
 
 class LegacyAppStateSLZ(serializers.Serializer):

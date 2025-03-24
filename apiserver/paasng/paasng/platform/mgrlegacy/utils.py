@@ -172,12 +172,10 @@ class LegacyAppManager:
         }
 
     def get_stag_exposed_link(self):
-        # 保证序列化时存在该字段
-        return ""
+        return getattr(self.legacy_app, "stag_exposed_link", "")
 
     def get_prod_exposed_link(self):
-        # 保证序列化时存在该字段
-        return ""
+        return getattr(self.legacy_app, "prod_exposed_link", "")
 
     def get_language(self):
         """将桌面的开发语言转换成v3上的开发语言, 两者大小写有些出入"""

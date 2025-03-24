@@ -30,10 +30,10 @@ from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
     ids=["empty_processes", "missing_processes"],
 )
 class TestBkAppSpecInputSLZ:
-    """测试BkAppSpecInputSLZ序列化器"""
+    """测试 BkAppSpecInputSLZ 序列化器"""
 
     def test_processes_validation(self, test_data, error_keyword):
-        """测试processes字段验证：不能为空列表且为必填字段"""
+        """测试 processes 字段验证：不能为空列表且为必填字段"""
         # 初始化序列化器
         serializer = BkAppSpecInputSLZ(data=test_data)
 

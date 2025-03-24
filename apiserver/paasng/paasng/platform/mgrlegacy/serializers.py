@@ -54,25 +54,14 @@ class LegacyAppSLZ(serializers.Serializer):
     is_active = serializers.BooleanField(help_text="latest_migration_id是否是活动状态")
     is_prod_deployed = serializers.BooleanField(help_text="正式环境已上线，且没有下架")
     has_prod_deployed_before_migration = serializers.BooleanField(help_text="迁移前正式环境上线过")
-    stag_exposed_link = serializers.CharField(help_text="app测试环境地址", required=False, default="")
+    stag_exposed_link = serializers.CharField(help_text="app测试环境地址")
     prod_exposed_link = serializers.CharField(help_text="app正式环境地址")
     region = serializers.CharField(help_text="版本")
     migration_finished_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", help_text="迁移完成时间")
     legacy_url = serializers.CharField(help_text="PaaS2.0上的访问地址")
 
     class Meta:
-        fields = (
-            "legacy_app_id",
-            "code",
-            "name",
-            "logo",
-            "tag",
-            "language",
-            "is_prod_deployed",
-            "has_prod_deployed_before_migration",
-            "created",
-            "migration_finished_date",
-        )
+        fields = "__all__"
 
 
 class LegacyAppStateSLZ(serializers.Serializer):

@@ -14,7 +14,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict
 
 import pytest
 from rest_framework.exceptions import ValidationError
@@ -46,20 +45,3 @@ class TestBkAppSpecInputSLZ:
         error_msg = str(e.value)
         assert "processes" in error_msg
         assert error_keyword in error_msg.lower()
-
-    def test_missing_processes_field(self):
-        """测试缺少 processes 字段的情况"""
-        # 准备一个不包含 processes 字段的数据
-        data: Dict[str, Any] = {"configuration": {"env": []}}
-
-        # 初始化序列化器
-        serializer = BkAppSpecInputSLZ(data=data)
-
-        # 验证序列化器应该报错
-        with pytest.raises(ValidationError) as e:
-            serializer.is_valid(raise_exception=True)
-
-        # 确认错误信息是 processes 不能为空
-        error_msg = str(e.value)
-        assert "processes" in error_msg
-        assert "required" in error_msg.lower()

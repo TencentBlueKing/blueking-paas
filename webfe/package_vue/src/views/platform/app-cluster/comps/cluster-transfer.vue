@@ -97,15 +97,26 @@ export default {
     return {
       sourceLength: 0,
       targetLength: 0,
-      sourceList: this.list,
+      sourceList: [],
       targetList: [],
       targetValueList: [],
     };
   },
   created() {
     this.targetList.push(...this.defaultTargetList);
+    this.sourceList = this.sortByTargetOrder(this.list, this.targetList);
   },
   methods: {
+    sortByTargetOrder(source, target) {
+      const orderMap = new Map(target.map((name, index) => [name, index]));
+      const inTarget = [];
+      const notInTarget = [];
+      source.forEach((item) => {
+        (orderMap.has(item.name) ? inTarget : notInTarget).push(item);
+      });
+      inTarget.sort((a, b) => orderMap.get(a.name) - orderMap.get(b.name));
+      return [...inTarget, ...notInTarget];
+    },
     handleChange(sourceList, targetList, targetValueList) {
       this.sourceLength = sourceList.length;
       this.targetLength = targetList.length;
@@ -140,6 +151,9 @@ export default {
   /deep/ .source-list,
   /deep/ .target-list {
     min-width: auto !important;
+  }
+  /deep/ .source-list .content {
+    padding-bottom: 46px;
   }
   /deep/ .target-list {
     .content li:first-child .default {

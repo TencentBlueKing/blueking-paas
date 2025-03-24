@@ -39,6 +39,7 @@ from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from tests.paas_wl.utils.wl_app import create_wl_app
 from tests.utils.basic import generate_random_string
+from tests.utils.mocks.helm import StubHelmClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -610,7 +611,21 @@ class TestRetrieveClusterDefaultFeatureFlags:
 class TestRetrieveClusterStatus:
     """获取集群状态"""
 
-    # TODO（多租户）支持获取集群配置 & 组件状态
+    @pytest.fixture(autouse=True)
+    def _patch_helm_client(self):
+        with patch("paasng.plat_mgt.infras.clusters.views.clusters.HelmClient", new=StubHelmClient):
+            yield
+
+    def test_retrieve(self, init_default_cluster, plat_mgt_api_client):
+        resp = plat_mgt_api_client.get(
+            reverse(
+                "plat_mgt.infras.cluster.status",
+                kwargs={"cluster_name": init_default_cluster.name},
+            )
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        assert resp.json() == {"base": True, "component": False, "feature": True}
 
 
 class TestRetrieveClusterUsage:

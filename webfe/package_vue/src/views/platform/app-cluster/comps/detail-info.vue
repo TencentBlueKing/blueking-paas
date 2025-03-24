@@ -1,10 +1,18 @@
 <template>
   <div class="cluster-detail-info">
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="view-title">{{ $t('基本信息') }}</div>
     <DetailsRow
       v-for="(val, key) in baseInfoKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
       :align="key === 'api_servers' ? 'flex-start' : 'center'"
     >
       <template slot="label">{{ `${val}：` }}</template>
@@ -20,23 +28,25 @@
           ></span>
         </div>
         <template v-else-if="key === 'api_servers'">
-          <template v-if="!data[key]">--</template>
+          <template v-if="!displayInfoData[key]">--</template>
           <div
             v-else
-            v-for="item in data[key]"
-            key="item"
+            v-for="item in displayInfoData[key]"
+            :key="item"
           >
             {{ item }}
           </div>
         </template>
-        <template v-else>{{ data[key] || '--' }}</template>
+        <template v-else>
+          {{ key === 'cluster_source' ? clusterSourceMap[displayInfoData[key]] : displayInfoData[key] || '--' }}
+        </template>
       </template>
     </DetailsRow>
     <div class="view-title">{{ $t('ElasticSearch 集群信息') }}</div>
     <DetailsRow
       v-for="(val, key) in configKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
     >
       <template slot="label">{{ `${val}：` }}</template>
       <template slot="value">
@@ -45,9 +55,7 @@
           class="dot-wrapper"
           v-if="key === 'password'"
         >
-          <template v-if="!data.elastic_search_config?.password">--</template>
           <span
-            v-else
             v-for="i in 7"
             class="dot"
             :key="i"
@@ -56,11 +64,11 @@
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
     </DetailsRow>
-    <div class="view-title">{{ $t('可用租户') }}</div>
+    <div class="view-title">{{ $t('租户信息') }}</div>
     <DetailsRow
       v-for="(val, key) in tenantKeys"
       :key="key"
-      :label-width="100"
+      :label-width="labelWidth"
       :align="'flex-start'"
       :label="`${val}：`"
     >
@@ -116,13 +124,49 @@ export default {
       tenantKeys: {
         available_tenant_ids: this.$t('可用租户'),
       },
+      clusterSourceMap: {
+        bcs: this.$t('BCS 集群'),
+        native_k8s: this.$t('K8S 集群（不推荐，无法使用访问控制台等功能）'),
+      },
     };
+  },
+  computed: {
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 150 : 100;
+    },
+    displayInfoData() {
+      return {
+        ...this.data,
+        bcs_project_name: this.data.bcs_project_name || this.data.bcs_project_id,
+        bcs_cluster_name: this.data.bcs_cluster_name || this.data.bcs_cluster_id,
+        bk_biz_name: this.data.bk_biz_name || this.data.bk_biz_id,
+      };
+    },
+  },
+  methods: {
+    handleEdit() {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step: 1,
+          alone: true,
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .cluster-detail-info {
+  position: relative;
   .dot-wrapper {
     display: flex;
     align-items: center;
@@ -144,7 +188,7 @@ export default {
   color: #313238;
   line-height: 22px;
   margin-top: 24px;
-  &:first-child {
+  &:first-of-type {
     margin-top: 0;
   }
 }

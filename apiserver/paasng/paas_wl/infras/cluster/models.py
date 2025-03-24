@@ -47,7 +47,6 @@ class ClusterManager(models.Manager):
     @transaction.atomic(using="workloads")
     def register_cluster(
         self,
-        region: str,
         name: str,
         type: str = ClusterType.NORMAL,
         is_default: bool = False,
@@ -80,16 +79,17 @@ class ClusterManager(models.Manager):
         :param token_type: token type, use `SERVICE_ACCOUNT` by default
         :param token_value: value of token
         """
-        default_cluster_qs = self.filter(region=region, is_default=True)
+        # FIXME（多租户）多租户初始化时，需要重新整理这里的逻辑
+        default_cluster_qs = self.filter(is_default=True)
 
         if not default_cluster_qs.exists() and not is_default:
-            raise NoDefaultClusterError("This region has not define a default cluster.")
+            raise NoDefaultClusterError("Not define default cluster.")
         elif default_cluster_qs.filter(name=name).exists() and not is_default:
             raise SwitchDefaultClusterError(
                 "Can't change default cluster by calling `register_cluster`, please use `switch_default_cluster`"
             )
         elif default_cluster_qs.exclude(name=name).exists() and is_default:
-            raise DuplicatedDefaultClusterError("This region should have one and only one default cluster.")
+            raise DuplicatedDefaultClusterError("Should have one and only one default cluster.")
 
         validate_ingress_config(ingress_config)
 
@@ -115,20 +115,20 @@ class ClusterManager(models.Manager):
         defaults = {k: v for k, v in defaults.items() if v is not None}
 
         if pk:
-            cluster, _ = self.update_or_create(pk=pk, name=name, region=region, defaults=defaults)
+            cluster, _ = self.update_or_create(pk=pk, name=name, defaults=defaults)
         else:
-            cluster, _ = self.update_or_create(name=name, region=region, defaults=defaults)
+            cluster, _ = self.update_or_create(name=name, defaults=defaults)
         return cluster
 
     @transaction.atomic(using="workloads")
-    def switch_default_cluster(self, region: str, cluster_name: str) -> "Cluster":
+    def switch_default_cluster(self, cluster_name: str) -> "Cluster":
         """Switch the default cluster to the cluster called `cluster_name`.
 
         :raise SwitchDefaultClusterException: if the cluster called `cluster_name` is already the default cluster.
         """
         try:
-            prep_default_cluster = self.select_for_update().get(region=region, name=cluster_name)
-            curr_default_cluster = self.select_for_update().get(region=region, is_default=True)
+            prep_default_cluster = self.select_for_update().get(name=cluster_name)
+            curr_default_cluster = self.select_for_update().get(is_default=True)
         except self.model.DoesNotExist:
             raise SwitchDefaultClusterError("Can't switch default cluster to a not-existed cluster.")
 
@@ -150,7 +150,6 @@ IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=Ing
 class Cluster(UuidAuditedModel):
     """应用集群"""
 
-    region = models.CharField(help_text="可用区域", max_length=32, db_index=True)
     available_tenant_ids = models.JSONField(help_text="可用的租户 ID 列表", default=list)
 
     name = models.CharField(help_text="集群名称", max_length=32, unique=True)
@@ -197,7 +196,7 @@ class Cluster(UuidAuditedModel):
     objects = ClusterManager()
 
     def __str__(self):
-        return f"{self.__class__.__name__}(name={self.name}, tenant={self.tenant_id}, region={self.region})"
+        return f"{self.__class__.__name__}(name={self.name}, tenant={self.tenant_id})"
 
     @property
     def bcs_project_id(self) -> Optional[str]:

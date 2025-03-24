@@ -131,8 +131,9 @@ class TestRetrieveClusterComponent:
 class TestUpsertClusterComponent:
     @pytest.fixture(autouse=True)
     def _patch_bcs_user_client(self):
-        with patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient", new=StubBCSUserClient), patch(
-            "paasng.plat_mgt.infras.clusters.views.components.ensure_k8s_namespace", return_value=None
+        with (
+            patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient", new=StubBCSUserClient),
+            patch("paasng.plat_mgt.infras.clusters.views.components.ensure_k8s_namespace", return_value=None),
         ):
             yield
 

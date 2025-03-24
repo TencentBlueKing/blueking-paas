@@ -54,7 +54,6 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
         model = Cluster
         fields = [
             "uuid",
-            "region",
             "name",
             "type",
             "is_default",
@@ -86,7 +85,6 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
     """Serializer for registering Cluster"""
 
     name = serializers.CharField(required=True)
-    region = serializers.CharField(required=True)
     type = serializers.CharField(required=True)
     is_default = serializers.BooleanField(required=False, default=False)
     # optional field

@@ -17,103 +17,19 @@
 
 import cattr
 import pytest
-from blue_krill.contextlib import nullcontext as does_not_raise
-from django.db.utils import IntegrityError
-from django.utils.crypto import get_random_string
 
-from paas_wl.infras.cluster.constants import ClusterTokenType
 from paas_wl.infras.cluster.entities import Domain, IngressConfig, PortMap
-from paas_wl.infras.cluster.exceptions import (
-    DuplicatedDefaultClusterError,
-    NoDefaultClusterError,
-    SwitchDefaultClusterError,
-)
 from paas_wl.infras.cluster.models import Cluster
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 
-@pytest.fixture()
-def region():
-    return get_random_string(12)
-
-
-@pytest.fixture()
-def default_cluster_creator(example_cluster_config):
-    def creator(region: str):
-        return Cluster.objects.register_cluster(
-            region=region, name=get_random_string(12), is_default=True, **example_cluster_config
-        )
-
-    return creator
-
-
-class TestCluster:
-    @pytest.mark.parametrize(
-        ("is_default", "expectation"),
-        [
-            (True, does_not_raise()),
-            (False, pytest.raises(NoDefaultClusterError)),
-        ],
-    )
-    def test_register(self, region, is_default, expectation, example_cluster_config):
-        name = get_random_string(12)
-        with expectation:
-            Cluster.objects.register_cluster(region=region, name=name, is_default=is_default, **example_cluster_config)
-
-    def test_use_register_cluster_to_change_default_cluster(
-        self, region, default_cluster_creator, example_cluster_config
-    ):
-        cluster = default_cluster_creator(region=region)
-
-        with pytest.raises(SwitchDefaultClusterError):
-            Cluster.objects.register_cluster(
-                region=region, name=cluster.name, is_default=False, **example_cluster_config
-            )
-
-    def test_register_duplicated_default_cluster(self, region, default_cluster_creator):
-        default_cluster_creator(region)
-        with pytest.raises(DuplicatedDefaultClusterError):
-            default_cluster_creator(region)
-
-    def test_register_duplicated_cluster_name(self, example_cluster_config):
-        region1 = get_random_string(12)
-        region2 = get_random_string(12)
-        name = get_random_string(12)
-
-        Cluster.objects.register_cluster(region=region1, name=name, is_default=True, **example_cluster_config)
-        with pytest.raises(IntegrityError):
-            Cluster.objects.register_cluster(region=region2, name=name, is_default=True, **example_cluster_config)
-
-    @pytest.mark.parametrize(
-        ("name1", "name2", "target_cluster", "expectation"),
-        [
-            ("default-cluster", "custom-cluster", "default-cluster", pytest.raises(SwitchDefaultClusterError)),
-            ("default-cluster", "custom-cluster", "custom-cluster", does_not_raise()),
-        ],
-    )
-    def test_switch_default_cluster(self, region, example_cluster_config, name1, name2, target_cluster, expectation):
-        Cluster.objects.register_cluster(region=region, name=name1, is_default=True, **example_cluster_config)
-        Cluster.objects.register_cluster(region=region, name=name2, is_default=False, **example_cluster_config)
-
-        with expectation:
-            Cluster.objects.switch_default_cluster(region=region, cluster_name=target_cluster)
-
-    def test_token(self, region, example_cluster_config):
-        Cluster.objects.register_cluster(
-            region=region, name="default-cluster", is_default=True, token_value="foo_token", **example_cluster_config
-        )
-        cluster = Cluster.objects.get(name="default-cluster")
-        assert cluster.token_type == ClusterTokenType.SERVICE_ACCOUNT
-        assert cluster.token_value == "foo_token"
-
-
 class TestIngressConfigField:
-    def test_port_map(self, region):
+    def test_port_map(self):
         ingress_config = {
             "port_map": {"http": "81", "https": "8081"},
         }
-        c: Cluster = Cluster.objects.create(region=region, name="dft", is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(name="dft", is_default=True, ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert isinstance(c.ingress_config.port_map, PortMap)
@@ -128,9 +44,9 @@ class TestIngressConfigField:
         assert c.ingress_config.port_map.http == 80
         assert c.ingress_config.port_map.get_port_num("https") == 443
 
-    def test_domains(self, region):
+    def test_domains(self):
         ingress_config = {"app_root_domains": ["foo.com", {"name": "bar.com"}, {"name": "baz.com", "reserved": True}]}
-        c: Cluster = Cluster.objects.create(region=region, name="dft", is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(name="dft", is_default=True, ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert len(c.ingress_config.app_root_domains) == 3

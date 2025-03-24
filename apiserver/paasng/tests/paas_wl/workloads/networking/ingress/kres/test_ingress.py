@@ -65,7 +65,7 @@ class TestProcessIngress:
         service_kmodel.save(service)
         return service_kmodel.list_by_app(bk_stag_wl_app)[0]
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_normal(self, bk_stag_wl_app, service):
         domains = [PIngressDomain(host="foo.com")]
         ingress = ProcessIngress(
@@ -85,7 +85,7 @@ class TestProcessIngress:
         assert item.server_snippet == "server"
         assert item.annotations == {"foo": "bar"}
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_paths(self, bk_stag_wl_app, service):
         """Multiple hosts with paths"""
         domains = [

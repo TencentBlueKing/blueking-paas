@@ -29,12 +29,15 @@ def _setup_mocks():
     - Mock cluster ingress config with fixed domains
     - Mock ProcessManager which depends on `workloads` module
     """
-    with cluster_ingress_config(
-        {
-            "sub_path_domains": [],
-            "app_root_domains": [{"name": "bkapps.example.com"}],
-        }
-    ), mock.patch("paas_wl.bk_app.processes.processes.ProcessManager.sync_processes_specs"):
+    with (
+        cluster_ingress_config(
+            {
+                "sub_path_domains": [],
+                "app_root_domains": [{"name": "bkapps.example.com"}],
+            }
+        ),
+        mock.patch("paas_wl.bk_app.processes.processes.ProcessManager.sync_processes_specs"),
+    ):
         yield
 
 

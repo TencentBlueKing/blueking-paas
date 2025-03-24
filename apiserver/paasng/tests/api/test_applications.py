@@ -467,7 +467,7 @@ class TestCreateBkPlugin:
         settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
         response = self._send_creation_request(api_client, source_init_template)
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         assert response.json()["application"]["is_plugin_app"] is True
         # TODO: Update tests when bk_plugin supports multiple languages
         assert response.json()["application"]["modules"][0]["language"] == language
@@ -542,7 +542,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "custom_image"
@@ -582,7 +582,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
@@ -607,7 +607,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "dockerfile"
@@ -636,7 +636,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         application = Application.objects.get(code=f"uta-{random_suffix}")
         assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
 
@@ -672,7 +672,7 @@ class TestCreateApplicationWithTenantParams:
             data = self.build_create_params(app_tenant_mode=request_tenant_mode.value)
         response = api_client.post("/api/bkapps/cloud-native/", data=data)
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["app_tenant_mode"] == AppTenantMode.GLOBAL
         assert app_data["app_tenant_id"] == ""
@@ -712,7 +712,7 @@ class TestCreateApplicationWithTenantParams:
             assert response.status_code == 400
             return
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["app_tenant_mode"] == expected[0]
         assert app_data["app_tenant_id"] == expected[1]

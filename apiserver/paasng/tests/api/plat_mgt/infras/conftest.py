@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 
 from paas_wl.infras.cluster.constants import ClusterComponentName, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
@@ -33,7 +32,6 @@ from tests.utils.basic import generate_random_string
 def init_default_cluster() -> Cluster:
     """默认租户集群（即使是多租户，一般也不共享）"""
     cluster = Cluster.objects.create(
-        region=settings.DEFAULT_REGION_NAME,
         tenant_id=DEFAULT_TENANT_ID,
         name=f"cluster-default-{generate_random_string(8)}",
         description="default tenant cluster",
@@ -109,7 +107,6 @@ def init_default_cluster() -> Cluster:
 def init_system_cluster() -> Cluster:
     """多租户模式下的运营租户集群（可多租户共享）"""
     cluster = Cluster.objects.create(
-        region=settings.DEFAULT_REGION_NAME,
         tenant_id=OP_TYPE_TENANT_ID,
         name=f"cluster-system-{generate_random_string(8)}",
         description="op tenant cluster",

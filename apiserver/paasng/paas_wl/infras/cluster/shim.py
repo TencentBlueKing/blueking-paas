@@ -29,11 +29,7 @@ if TYPE_CHECKING:
 
 
 def get_exposed_url_type(application: "Application", cluster_name: str | None = None) -> ExposedURLType:
-    """Get the exposed url type.
-
-    :param region: The region. If given, use the region's default cluster.
-    :param cluster_name: The name of cluster. If given, other arguments are ignored.
-    """
+    """Get the exposed url type."""
     if cluster_name:
         cluster = Cluster.objects.get(name=cluster_name)
     else:

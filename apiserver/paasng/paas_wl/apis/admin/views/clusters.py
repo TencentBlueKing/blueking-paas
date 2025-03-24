@@ -62,9 +62,8 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     pagination_class = None
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["region", "name", "is_default"]
-    ordering = ("-region",)
-    ordering_fields = ("region", "created", "updated")
+    search_fields = ["name", "is_default"]
+    ordering_fields = ("created", "updated")
 
     @swagger_auto_schema(request_body=ClusterRegisterRequestSLZ)
     def update_or_create(self, request, pk: Optional[str] = None):
@@ -89,13 +88,11 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
 
     def set_as_default(self, request, pk):
         cluster = self.get_object()
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=Cluster.objects.get(region=cluster.region, is_default=True).name
-        )
+        data_before = DataDetail(type=DataType.RAW_DATA, data=Cluster.objects.get(is_default=True).name)
         result_code = ResultCode.FAILURE
 
         try:
-            Cluster.objects.switch_default_cluster(region=cluster.region, cluster_name=cluster.name)
+            Cluster.objects.switch_default_cluster(cluster_name=cluster.name)
             result_code = ResultCode.SUCCESS
         except SwitchDefaultClusterError as e:
             raise error_codes.SWITCH_DEFAULT_CLUSTER_FAILED.f(str(e))

@@ -43,8 +43,7 @@ def i18n(cls_or_languages: Optional[List[str]] = None) -> Callable[[SerializerTy
 
 
 @overload
-def i18n(cls_or_languages: SerializerType) -> SerializerType:
-    ...
+def i18n(cls_or_languages: SerializerType) -> SerializerType: ...
 
 
 def i18n(
@@ -120,7 +119,7 @@ class I18NExtend:
         # languages: What languages does this Field support
         self.languages = list(kwargs.pop("languages", (lang[0] for lang in settings.LANGUAGES)))
         assert base_field.source is None, (
-            "The `source` argument is not meaningful for I18NField." "Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful for I18NField.Remove `source=` from the field declaration."
         )
         self.kwargs = kwargs
         self._base_field = base_field
@@ -238,7 +237,7 @@ class FallbackMixin(_Base):
         self._i18n_field_name = None  # type: ignore
         source = kwargs.pop("source", None)
         assert source is None, (
-            "The `source` argument is not meaningful FallbackCharField." "Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful FallbackCharField.Remove `source=` from the field declaration."
         )
         super().__init__(**kwargs)
 

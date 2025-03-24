@@ -18,6 +18,7 @@
 """
 A command for Query  relationship between PreCreatedInstance and Application(Module, Env)
 """
+
 import json
 from typing import Dict, Optional
 

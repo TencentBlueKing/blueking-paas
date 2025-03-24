@@ -56,9 +56,9 @@ class TestGetExposedUrlType:
         bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
         bk_module.save()
         assert get_exposed_url_type(bk_module.application.code, bk_module.name) == ExposedURLType.SUBDOMAIN
-        assert (
-            get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN
-        ), "test default module"
+        assert get_exposed_url_type(bk_module.application.code, None) == ExposedURLType.SUBDOMAIN, (
+            "test default module"
+        )
 
 
 def test_default_preallocated_urls_empty(bk_stag_env):

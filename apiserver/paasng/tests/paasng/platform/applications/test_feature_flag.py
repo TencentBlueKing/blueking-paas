@@ -121,7 +121,8 @@ class TestGetDefaultFeatureFlags:
             # Make user access control switch enable by default
             config["enabled_feature_flags"] = enabled_feature_flags
 
-        with override_region_configs(bk_app.region, update_region_hook), mock.patch.object(
-            Application, "engine_enabled", mock.PropertyMock(return_value=engine_enabled)
+        with (
+            override_region_configs(bk_app.region, update_region_hook),
+            mock.patch.object(Application, "engine_enabled", mock.PropertyMock(return_value=engine_enabled)),
         ):
             assert get_default_feature_flags(bk_app) == default_feature_flags

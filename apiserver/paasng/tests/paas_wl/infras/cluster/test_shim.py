@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.shim import Cluster, EnvClusterService
@@ -38,9 +37,8 @@ class TestEnvClusterService:
             name="default",
             is_default=True,
             exposed_url_type=ExposedURLType.SUBDOMAIN.value,
-            region=settings.DEFAULT_REGION_NAME,
         )
-        G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
+        G(Cluster, name="extra-1", is_default=False)
 
     def test_empty_cluster_field(self, bk_stag_env):
         wl_app = bk_stag_env.wl_app

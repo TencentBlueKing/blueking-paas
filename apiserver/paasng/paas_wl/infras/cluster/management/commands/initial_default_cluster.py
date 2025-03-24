@@ -34,7 +34,6 @@ env = Env()
 
 @dataclass
 class ClusterData:
-    region: str
     name: str
     is_default: bool = False
     description: Optional[str] = None
@@ -67,7 +66,6 @@ class Command(BaseCommand):
     def render_data(self) -> InitialClusterData:
         try:
             data = {
-                "region": env.str("PAAS_WL_CLUSTER_REGION", "default"),
                 "name": "default-main",
                 "description": "默认应用集群",
                 "is_default": True,

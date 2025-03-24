@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""high level scheduler functions related with app
-"""
+"""high level scheduler functions related with app"""
+
 import logging
 from typing import TYPE_CHECKING
 

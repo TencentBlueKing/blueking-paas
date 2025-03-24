@@ -20,7 +20,6 @@ from textwrap import dedent, indent
 
 import pytest
 import yaml
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.models import Cluster
@@ -130,10 +129,9 @@ class TestAppNewModuleUseRightCluster:
         get_desc_handler(yaml_content).handle_app(bk_user)
 
         # Create a new cluster and make it the new default
-        region = settings.DEFAULT_REGION_NAME
-        old_default_cluster = Cluster.objects.get(region=region, is_default=True)
-        new_cluster = G(Cluster, name=generate_random_string(6), region=region, is_default=False)
-        Cluster.objects.switch_default_cluster(region, new_cluster.name)
+        old_default_cluster = Cluster.objects.get(is_default=True)
+        new_cluster = G(Cluster, name=generate_random_string(6), is_default=False)
+        Cluster.objects.switch_default_cluster(new_cluster.name)
 
         # Create a new module called "new" by handle the modified YAML again
         yaml_content_new_module = yaml_content + indent(
@@ -151,9 +149,9 @@ class TestAppNewModuleUseRightCluster:
         new_module_clusters = get_module_clusters(app.get_module("new"))
         new_module_cluster = list(new_module_clusters.values())[0]
         assert new_module_cluster.name == old_default_cluster.name
-        assert (
-            get_module_clusters(app.get_default_module()) == new_module_clusters
-        ), "The new module should use the same cluster as the default one."
+        assert get_module_clusters(app.get_default_module()) == new_module_clusters, (
+            "The new module should use the same cluster as the default one."
+        )
 
 
 def test_app_data_to_desc(random_name):

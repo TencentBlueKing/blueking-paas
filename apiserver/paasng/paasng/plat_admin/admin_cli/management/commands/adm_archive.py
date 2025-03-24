@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """An admin tool that helps archive applications."""
+
 from typing import List
 
 from django.core.management.base import BaseCommand

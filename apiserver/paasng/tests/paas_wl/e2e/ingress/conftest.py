@@ -43,7 +43,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        return Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        return Cluster.objects.get(is_default=True)
 
 
 @pytest.fixture(scope="session")

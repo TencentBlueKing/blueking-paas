@@ -83,6 +83,6 @@ class Command(BaseCommand):
                 binder.bind_image(slugrunner, slugbuilder)
 
             for bp in buildpacks:
-                print(f"binding buildpack {bp.name}[{bp.pk}] " f"to module {module.application.code}[{module.name}]")
+                print(f"binding buildpack {bp.name}[{bp.pk}] to module {module.application.code}[{module.name}]")
                 if not dry_run:
                     binder.bind_buildpack(bp)

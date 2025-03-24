@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
@@ -42,9 +41,8 @@ class TestEnvClusterService:
             name="default",
             is_default=True,
             exposed_url_type=ExposedURLType.SUBDOMAIN.value,
-            region=settings.DEFAULT_REGION_NAME,
         )
-        G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
+        G(Cluster, name="extra-1", is_default=False)
 
     def test_empty_cluster_field(self, bk_stag_env):
         wl_app = bk_stag_env.wl_app
@@ -76,11 +74,11 @@ class TestClusterAllocator:
     @pytest.fixture(autouse=True)
     def _setup(self):
         Cluster.objects.all().delete()
-        G(Cluster, name="default-sz1", is_default=True, region="default", tenant_id="default")
-        G(Cluster, name="default-sz0", is_default=False, region="default", tenant_id="default")
-        G(Cluster, name="tencent-gz0", is_default=True, region="tencent", tenant_id="tencent")
-        G(Cluster, name="blueking-sh0", is_default=True, region="blueking", tenant_id="default")
-        G(Cluster, name="blueking-sz0", is_default=False, region="blueking", tenant_id="default")
+        G(Cluster, name="default-sz1", is_default=True, tenant_id="default")
+        G(Cluster, name="default-sz0", is_default=False, tenant_id="default")
+        G(Cluster, name="tencent-gz0", is_default=True, tenant_id="tencent")
+        G(Cluster, name="blueking-sh0", is_default=True, tenant_id="default")
+        G(Cluster, name="blueking-sz0", is_default=False, tenant_id="default")
 
     @pytest.fixture
     def _uniform_policy(self):

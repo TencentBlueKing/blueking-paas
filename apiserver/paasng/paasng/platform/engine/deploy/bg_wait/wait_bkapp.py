@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Wait for BkApp's reconciliation cycle to be stable"""
+
 import datetime
 import logging
 import time

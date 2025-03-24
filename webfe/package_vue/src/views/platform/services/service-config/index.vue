@@ -4,6 +4,7 @@
     <ServiceList
       ref="servicesRef"
       :services="services"
+      :loading="isServiceLoading"
       @change="serviceChange"
     />
     <div class="config-content card-style">
@@ -189,6 +190,7 @@ export default {
       ],
       searchValue: '',
       isTableLoading: false,
+      isServiceLoading: true,
       // 所有服务
       services: [],
       bindingPolicies: [],
@@ -273,10 +275,14 @@ export default {
         });
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.isContentLoading = false;
+        this.isServiceLoading = false;
       }
     },
     // 获取服务下的绑定方案
     async getBindingPolicies(serviceId) {
+      this.isTableLoading = true;
       try {
         const response = await this.$store.dispatch('tenant/getBindingPolicies', { serviceId });
 
@@ -323,6 +329,8 @@ export default {
         });
       } catch (error) {
         this.catchErrorHandler(error);
+      } finally {
+        this.isTableLoading = false;
       }
     },
     // 获取id对应的name

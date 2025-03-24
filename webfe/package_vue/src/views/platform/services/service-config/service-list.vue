@@ -1,6 +1,17 @@
 <template>
   <div class="service-list">
+    <section
+      class="custom-service-loader"
+      v-if="loading"
+    >
+      <div
+        v-for="i in 6"
+        :key="i"
+        class="loader-item"
+      ></div>
+    </section>
     <div
+      v-else
       v-for="item in services"
       :key="item.id"
       class="list-item"
@@ -52,6 +63,10 @@
 <script>
 export default {
   props: {
+    loading: {
+      type: Boolean,
+      default: false,
+    },
     services: {
       type: Array,
       default: () => [],
@@ -77,6 +92,13 @@ export default {
   padding: 12px;
   flex-shrink: 0;
   width: 280px;
+  .custom-service-loader {
+    .loader-item {
+      height: 56px;
+      margin-bottom: 8px;
+      background-color: #fff;
+    }
+  }
 
   .list-item {
     display: flex;
@@ -92,8 +114,11 @@ export default {
     &.active {
       border: 1px solid #3a84ff;
       background: #f0f5ff;
-      .tag-list .tag {
-        background: #fff;
+      .tag-list {
+        opacity: 1 !important;
+        .tag {
+          background: #fff;
+        }
       }
       .logo-wrapper {
         background: #fff;

@@ -495,14 +495,20 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         return data
 
 
-class AppModuleEnvSLZ(serializers.Serializer):
-    app_code = serializers.CharField(help_text="应用 Code")
-    module_name = serializers.CharField(help_text="模块名称")
-    environment = serializers.CharField(help_text="部署环境")
+class ClusterStatusRetrieveOutputSLZ(serializers.Serializer):
+    base = serializers.BooleanField(help_text="基础配置")
+    component = serializers.BooleanField(help_text="组件配置")
+    feature = serializers.BooleanField(help_text="集群特性")
 
 
 class ClusterDefaultFeatureFlagsRetrieveOutputSLZ(serializers.Serializer):
     feature_flags = serializers.JSONField(help_text="特性标志")
+
+
+class AppModuleEnvSLZ(serializers.Serializer):
+    app_code = serializers.CharField(help_text="应用 Code")
+    module_name = serializers.CharField(help_text="模块名称")
+    environment = serializers.CharField(help_text="部署环境")
 
 
 class ClusterUsageRetrieveOutputSLZ(serializers.Serializer):

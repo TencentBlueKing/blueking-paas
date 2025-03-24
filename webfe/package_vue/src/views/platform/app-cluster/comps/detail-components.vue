@@ -3,10 +3,19 @@
     class="detail-components-container"
     v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
   >
+    <!-- 安装信息编辑 -->
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit(2)"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="view-title">{{ $t('安装信息') }}</div>
     <DetailsRow
       v-for="(val, key) in installInfoKeys"
-      :label-width="126"
+      :label-width="labelWidth"
       :align="'flex-start'"
       :key="key"
     >
@@ -26,7 +35,7 @@
       </template>
       <template slot="value">
         <div v-if="key === 'app_domains'">
-          <template v-if="!data[key]">--</template>
+          <template v-if="!data[key]?.length">--</template>
           <div
             v-else
             v-for="(item, i) in data[key]"
@@ -36,11 +45,22 @@
           </div>
         </div>
         <span v-else>
-          {{ (key === 'exposed_url_type' ? pathMap[data[key]] : data[key]) || '--' }}
+          {{ (key === 'app_address_type' ? pathMap[data[key]] : data[key]) || '--' }}
         </span>
       </template>
     </DetailsRow>
-    <div class="view-title">{{ $t('组件详情') }}</div>
+    <div class="view-title comps-details">
+      {{ $t('组件详情') }}
+      <!-- 组件安装编辑 -->
+      <bk-button
+        v-if="componentList.length"
+        theme="primary"
+        :outline="true"
+        @click="handleEdit(3)"
+      >
+        {{ $t('管理') }}
+      </bk-button>
+    </div>
     <bk-exception
       v-if="!componentList.length"
       class="exception-wrap-item exception-part"
@@ -55,6 +75,7 @@
       type="card"
       ext-cls="components-tab-cls"
       @tab-change="handleTabChange"
+      :key="tabKey"
     >
       <bk-tab-panel
         v-for="(panel, index) in componentList"
@@ -71,7 +92,11 @@
             v-if="panel.status === 'installed'"
           ></i>
           <i
-            class="paasng-icon paasng-unfinished"
+            class="paasng-icon paasng-close-circle-shape"
+            v-else-if="panel.status === 'installation_failed'"
+          ></i>
+          <i
+            class="paasng-icon paasng-time-filled"
             v-else
           ></i>
           <span class="panel-name">{{ panel.name }}</span>
@@ -114,7 +139,7 @@ export default {
       installInfoKeys: {
         component_preferred_namespace: this.$t('命名空间'),
         component_image_registry: this.$t('镜像仓库'),
-        exposed_url_type: this.$t('应用访问类型'),
+        app_address_type: this.$t('应用访问类型'),
         app_domains: this.$t('应用域名'),
       },
       componentDetail: {},
@@ -123,6 +148,7 @@ export default {
         subdomain: this.$t('子域名'),
       },
       firstLoad: false,
+      tabKey: 0,
     };
   },
   created() {
@@ -131,6 +157,12 @@ export default {
   computed: {
     curActiveTabData() {
       return this.componentList.find((v) => v.name === this.tabActive) ?? {};
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 150 : 120;
     },
   },
   watch: {
@@ -173,6 +205,7 @@ export default {
         if (this.firstLoad) {
           this.handleTabChange(this.componentList[0]?.name);
         }
+        this.tabKey += 1;
       } catch (e) {
         this.reset();
         this.catchErrorHandler(e);
@@ -205,12 +238,26 @@ export default {
         this.cardLoading = false;
       }
     },
+    handleEdit(step) {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step,
+          alone: true,
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .detail-components-container {
+  position: relative;
   .tab-panel-wrapper {
     i {
       font-size: 14px;
@@ -219,8 +266,11 @@ export default {
     .paasng-check-circle-shape {
       color: #18c0a1;
     }
-    .paasng-unfinished {
-      color: #f59500;
+    .paasng-time-filled {
+      color: #c4c6cc;
+    }
+    .paasng-close-circle-shape {
+      color: #ea3636;
     }
   }
   .view-title {
@@ -229,8 +279,18 @@ export default {
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
+    }
+    &.comps-details {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 24px;
+      border-top: 1px solid #dcdee5;
+    }
+    .bk-primary {
+      font-weight: 400;
     }
   }
   .paasng-info-line {
@@ -240,6 +300,7 @@ export default {
   .components-tab-cls {
     /deep/ .bk-tab-section {
       background: #f5f7fa;
+      padding: 12px 16px 16px 16px !important;
     }
     /deep/ .bk-tab-label-wrapper i.bk-tab-scroll-controller {
       border: none;

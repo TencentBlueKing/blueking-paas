@@ -26,15 +26,14 @@ from paasng.platform.modules.constants import APP_CATEGORY
 from paasng.platform.modules.entities import BuildConfig
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
-from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.models import Template
 
 logger = logging.getLogger(__name__)
 
 
-def retrieve_template_build_config(region: str, template: Template) -> BuildConfig:
-    """根据传入的 region 和 template 构造根据该模板创建应用时会使用的 BuildConfig 对象"""
-    mgr = TemplateRuntimeManager(region=region, tmpl_name=template.name)
+def retrieve_template_build_config(template: Template) -> BuildConfig:
+    """根据传入的 template 构造根据该模板创建应用时会使用的 BuildConfig 对象"""
+    mgr = TemplateRuntimeManager(tmpl_name=template.name)
     if template.runtime_type == RuntimeType.DOCKERFILE:
         return mgr.get_docker_build_config()
 
@@ -57,13 +56,13 @@ def retrieve_template_build_config(region: str, template: Template) -> BuildConf
 
 
 class TemplateRuntimeManager:
-    """模板的运行时管理器"""
+    """模板的运行时管理器
 
-    def __init__(self, region: str, tmpl_name: str):
-        self.region = region
+    :param tmpl_name: 模板名称，通常为 dj2_with_examples 之类的代号。
+    """
+
+    def __init__(self, tmpl_name: str):
         self.template = Template.objects.get(name=tmpl_name)
-        if region not in self.template.enabled_regions:
-            raise TmplRegionNotSupported
 
     def get_preset_services_config(self) -> Dict[str, Dict]:
         """获取预设增强服务配置"""
@@ -83,8 +82,7 @@ class TemplateRuntimeManager:
         """获取构建模板代码需要的构建工具"""
         try:
             required_buildpacks = self.get_template_required_buildpacks(bp_stack_name=bp_stack_name)
-        # django_legacy 等迁移模板未配 region
-        except (Template.DoesNotExist, TmplRegionNotSupported):
+        except Template.DoesNotExist:
             required_buildpacks = []
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
         if language_bp:

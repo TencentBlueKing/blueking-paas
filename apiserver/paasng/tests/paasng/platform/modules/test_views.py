@@ -121,7 +121,7 @@ class TestModuleRuntimeViewSetV2:
                 "buildpacks_id": [buildpack.id],
             },
         )
-        new_bp = G(AppBuildPack, name="x", region=bk_module.region, language=bk_module.language)
+        new_bp = G(AppBuildPack, name="x", language=bk_module.language)
         slugbuilder.buildpacks.add(new_bp)
 
         response = api_client.post(
@@ -156,7 +156,7 @@ class TestModuleRuntimeViewSetV2:
                 "buildpacks_id": [buildpack.id],
             },
         )
-        new_bp = G(AppBuildPack, name="x", region=bk_module.region, language=bk_module.language)
+        new_bp = G(AppBuildPack, name="x", language=bk_module.language)
         slugbuilder.buildpacks.add(new_bp)
 
         manager = ModuleRuntimeManager(bk_module)

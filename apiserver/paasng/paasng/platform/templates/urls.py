@@ -20,21 +20,22 @@ from paasng.utils.basic import re_path
 from . import views
 
 urlpatterns = [
-    # 获取指定 Region 可用 SaaS 模板列表
+    # 获取指定类型的应用模板列表
     re_path(
         r"^api/bkapps/(?P<tpl_type>[^/]+)/tmpls/$",
         views.TemplateViewSet.as_view({"get": "list_tmpls"}),
         name="api.templates.list_tmpls",
     ),
-    # 获取指定 Region 可用 SaaS 模板列表
+    # 获取指定类型的模板列表（新）
     re_path(
-        r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/$",
-        views.RegionTemplateViewSet.as_view({"get": "list"}),
+        r"^api/tmpls/(?P<tpl_type>[^/]+)/$",
+        views.TemplateDetailedViewSet.as_view({"get": "list"}),
         name="api.templates.list",
     ),
+    # 按类型和名字获取某个模板的详情
     re_path(
-        r"^api/tmpls/(?P<tpl_type>[^/]+)/region/(?P<region>[^/]+)/template/(?P<tpl_name>[^/]+)$",
-        views.RegionTemplateViewSet.as_view({"get": "retrieve"}),
+        r"^api/tmpls/(?P<tpl_type>[^/]+)/template/(?P<tpl_name>[^/]+)$",
+        views.TemplateDetailedViewSet.as_view({"get": "retrieve"}),
         name="api.templates.detail",
     ),
 ]

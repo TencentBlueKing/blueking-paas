@@ -40,7 +40,6 @@ class TestDeployStepPicker:
                 image="dummy-image",
                 tag="latest",
                 name=f"dummy+image+{i}",
-                region=bk_deployment.app_environment.module.region,
             )
             builders.append(AppSlugBuilder.objects.create(**params))
             runners.append(AppSlugRunner.objects.create(**params))

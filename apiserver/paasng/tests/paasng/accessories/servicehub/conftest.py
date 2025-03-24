@@ -18,7 +18,6 @@
 from unittest import mock
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -55,9 +54,7 @@ def _faked_remote_services():
 
 @pytest.fixture()
 def local_service():
-    service = G(
-        Service, name="mysql", category=G(ServiceCategory), region=settings.DEFAULT_REGION_NAME, logo_b64="dummy"
-    )
+    service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     # Create some plans
     G(Plan, name=generate_random_string(), service=service)
     G(Plan, name=generate_random_string(), service=service)

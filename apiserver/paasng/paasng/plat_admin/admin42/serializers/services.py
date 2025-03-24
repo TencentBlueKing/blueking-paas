@@ -27,7 +27,6 @@ from paasng.utils.i18n import to_translated_field
 
 class ServiceObjSLZ(serializers.Serializer):
     uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    region = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     name = serializers.CharField()
     category_id = serializers.IntegerField()
@@ -72,7 +71,6 @@ class PlanObjSLZ(serializers.Serializer):
     service_id = serializers.CharField(source="service.uuid", read_only=True)
 
     uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    region = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     name = serializers.CharField()
     description = serializers.CharField()
     config = serializers.JSONField(required=False, default=dict)
@@ -82,7 +80,6 @@ class PlanObjSLZ(serializers.Serializer):
 
 class PlanSLZ(serializers.ModelSerializer):
     service_name = serializers.CharField(source="service.name", read_only=True)
-    region = serializers.CharField(source="service.region", read_only=True)
 
     class Meta:
         model = Plan

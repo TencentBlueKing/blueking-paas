@@ -322,14 +322,7 @@ class TestSysAddonsAPIViewSet:
     def service(self, bk_app):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(
-            Service,
-            name="mysql",
-            category=category,
-            region=bk_app.region,
-            logo_b64="dummy",
-            config={},
-        )
+        svc = G(Service, name="mysql", category=category, logo_b64="dummy", config={})
         # Create default plans
         G(Plan, name="plan-1", service=svc)
         return svc

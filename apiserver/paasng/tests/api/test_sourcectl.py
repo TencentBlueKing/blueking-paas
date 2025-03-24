@@ -19,7 +19,6 @@ import logging
 from unittest import mock
 
 import pytest
-from django.conf import settings
 from django.test.utils import override_settings
 from django.urls import reverse
 
@@ -46,7 +45,7 @@ def svn_account(bk_user):
 
 class TestSvnAPI:
     def test_reset_account_error(self, mocked_call_api, api_client, bk_user, svn_account):
-        data = {"verification_code": "000000", "region": settings.DEFAULT_REGION_NAME}
+        data = {"verification_code": "000000"}
         with override_settings(ENABLE_VERIFICATION_CODE=True):
             response = api_client.put(
                 reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
@@ -60,10 +59,7 @@ class TestSvnAPI:
         }
 
     def test_reset_account_skip_verification_code(self, mocked_call_api, api_client, bk_user, svn_account):
-        data = {"region": settings.DEFAULT_REGION_NAME}
         with override_settings(ENABLE_VERIFICATION_CODE=False):
-            response = api_client.put(
-                reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), data
-            )
+            response = api_client.put(reverse("api.sourcectl.bksvn.accounts.reset", kwargs={"id": svn_account.id}), {})
 
         assert response.status_code == 200

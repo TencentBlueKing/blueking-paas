@@ -2,6 +2,7 @@
   <bk-sideslider
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
+    show-mask
     width="960"
   >
     <div slot="header">
@@ -17,7 +18,7 @@
       <div class="view-title">{{ $t('基本信息') }}</div>
       <DetailsRow
         v-for="(val, key) in baseInfoMap"
-        :label-width="100"
+        :label-width="labelWidth"
         :key="key"
       >
         <template slot="label">
@@ -31,7 +32,7 @@
       <div class="view-title">{{ $t('部署信息') }}</div>
       <DetailsRow
         v-for="(val, key) in deployedMap"
-        :label-width="100"
+        :label-width="labelWidth"
         :key="key"
       >
         <template slot="label">
@@ -88,7 +89,7 @@
             <!-- JSON格式预览 -->
             <vue-json-pretty
               :data="row.conditions"
-              :deep="1"
+              :deep="0"
               :show-length="true"
               :highlight-mouseover-node="true"
             />
@@ -129,7 +130,7 @@ export default {
         releaseName: this.$t('Release 名称'),
         namespace: this.$t('命名空间'),
         releaseVersion: this.$t('版本号'),
-        chartName: 'Chart',
+        chartName: `Chart ${this.$t('名称')}`,
         chartVersion: `Chart ${this.$t('版本')}`,
         app_version: `APP ${this.$t('版本')}`,
       },
@@ -159,6 +160,12 @@ export default {
         releaseName: release.name,
         releaseVersion: release.version,
       };
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 120 : 100;
     },
   },
 };
@@ -198,7 +205,7 @@ export default {
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
     }
   }

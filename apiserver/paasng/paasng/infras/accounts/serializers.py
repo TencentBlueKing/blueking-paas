@@ -21,6 +21,7 @@ from typing import List
 from rest_framework import serializers
 
 from paasng.core.region.models import Region
+from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import UserField, VerificationCodeField
@@ -85,7 +86,7 @@ class AllRegionSpecsSLZ:
         data = {}
         for region in self.regions:
             languages = defaultdict(list)
-            for tmpl in Template.objects.filter_by_region(region.name):
+            for tmpl in Template.objects.filter(type=TemplateType.NORMAL, is_hidden=False):
                 languages[tmpl.language].append(TmplSLZ(tmpl).data)
 
             data.update(

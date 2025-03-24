@@ -100,6 +100,7 @@
               +{{ row.featureTagIndex < 0 ? row.feature.length : row.feature.length - row.featureTagIndex }}
             </span>
           </div>
+          <span v-else>--</span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -130,13 +131,14 @@
         :width="localLanguage === 'en' ? 200 : 160"
       >
         <template slot-scope="{ row }">
-          <!-- <bk-button
+          <bk-button
             theme="primary"
             text
             class="mr10"
+            @click="editCluter(row)"
           >
             {{ $t('编辑') }}
-          </bk-button> -->
+          </bk-button>
           <bk-popconfirm
             width="276"
             trigger="click"
@@ -176,8 +178,8 @@
     </bk-table>
 
     <DeleteClusterDialog
-      :show.sync="delDilaogConfig.isShow"
-      :config="delDilaogConfig"
+      :show.sync="delDialogConfig.isShow"
+      :config="delDialogConfig"
       @refresh="getClusterList"
     />
   </div>
@@ -200,7 +202,7 @@ export default {
       resizeObserver: null,
       syncNodeName: '',
       allocationState: {},
-      delDilaogConfig: {
+      delDialogConfig: {
         isShow: false,
         row: {},
       },
@@ -293,8 +295,8 @@ export default {
         this.showDelAlertInfo(this.allocationState, row.name);
       } else {
         // 删除集群
-        this.delDilaogConfig.isShow = true;
-        this.delDilaogConfig.row = row;
+        this.delDialogConfig.isShow = true;
+        this.delDialogConfig.row = row;
       }
     },
     // 无法删除集群info提示
@@ -309,9 +311,9 @@ export default {
           h('div', { class: 'sub-info' }, `${i18n.t('集群（{n}）正在被以下租户、应用使用，无法删除', { n: name })}：`),
           h('div', [
             `1. ${i18n.t('被')}`,
-            ...data.available_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
+            ...data.allocated_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
             i18n.t('等'),
-            h('span', { class: 'count' }, data.available_tenant_ids.length),
+            h('span', { class: 'count' }, data.allocated_tenant_ids.length),
             i18n.t('个租户使用，请先在集群配置页面，解除租户与集群的分配关系。'),
           ]),
           h('div', [
@@ -322,7 +324,7 @@ export default {
               directives: [
                 {
                   name: 'copy',
-                  value: data.bound_app_module_envs.map((v) => v.app_code).join(),
+                  value: JSON.stringify(data.bound_app_module_envs, null, 2),
                 },
               ],
             }),
@@ -337,8 +339,13 @@ export default {
         this.resizeObserver = new ResizeObserver((entries) => {
           this.calculateVisibleTags();
         });
-        this.resizeObserver.observe(document.querySelector('.tenant-column'));
-        this.resizeObserver.observe(document.querySelector('.feature-column'));
+        const tenantColumn = document.querySelector('.tenant-column');
+        const featureColumn = document.querySelector('.feature-column');
+        if (tenantColumn === null || featureColumn === null) {
+          return;
+        }
+        this.resizeObserver.observe(tenantColumn);
+        this.resizeObserver.observe(featureColumn);
       });
     },
     // 计算当前td可展示的tags
@@ -347,6 +354,9 @@ export default {
         const tenantParentDom = document.querySelector('.available-tenants-tags');
         const featureParentDom = document.querySelector('.feature-tags');
         const pageDom = document.querySelector('.tenant-viewpoint-container');
+        if (tenantParentDom === null || featureParentDom === null || pageDom === null) {
+          return;
+        }
         const { width: tenantParentWidth } = tenantParentDom.getBoundingClientRect();
         const { width: featureParentWidth } = featureParentDom.getBoundingClientRect();
 
@@ -396,6 +406,18 @@ export default {
       const { width } = tagDom.getBoundingClientRect();
       parentDom.removeChild(tagDom);
       return width;
+    },
+    editCluter(row) {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: row.name,
+          step: 1,
+        },
+      });
     },
   },
 };

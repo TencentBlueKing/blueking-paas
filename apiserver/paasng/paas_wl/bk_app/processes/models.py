@@ -169,7 +169,6 @@ class ProcessSpecManager:
 
             return ProcessSpec(
                 type=proc_type,
-                region=self.wl_app.region,
                 name=process.name,
                 engine_app_id=self.wl_app.pk,
                 target_replicas=target_replicas,

@@ -150,7 +150,12 @@ export default {
       try {
         const res = await this.$store.dispatch('tenant/getClusterList');
         this.tenantList = res;
-        this.switchDetails(this.active || res[0]?.name);
+        const { clusterId } = this.$route.params;
+        if (clusterId) {
+          this.switchDetails(clusterId);
+        } else {
+          this.switchDetails(this.active || res[0]?.name);
+        }
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -183,6 +188,11 @@ export default {
   height: 100%;
   display: flex;
   margin-top: 16px;
+  /deep/ .clustertab-edit-btn-cls {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
   /deep/ .bk-resize-layout {
     gap: 16px;
     border: none;
@@ -340,6 +350,7 @@ export default {
     }
     /deep/ .bk-tab-section {
       border: none;
+      padding: 16px 24px;
     }
   }
 }

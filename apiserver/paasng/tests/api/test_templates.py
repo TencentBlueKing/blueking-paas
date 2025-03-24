@@ -35,25 +35,25 @@ def image_name():
 
 @pytest.fixture()
 def py_buildpack():
-    buildpack = G(AppBuildPack, name="python", region=settings.DEFAULT_REGION_NAME, language="Python")
+    buildpack = G(AppBuildPack, name="python", language="Python")
     return buildpack
 
 
 @pytest.fixture()
 def nodejs_buildpack():
-    buildpack = G(AppBuildPack, name="nodejs", region=settings.DEFAULT_REGION_NAME, language="NodeJS")
+    buildpack = G(AppBuildPack, name="nodejs", language="NodeJS")
     return buildpack
 
 
 @pytest.fixture()
 def extra_buildpack():
-    buildpack = G(AppBuildPack, name="extra", region=settings.DEFAULT_REGION_NAME)
+    buildpack = G(AppBuildPack, name="extra")
     return buildpack
 
 
 @pytest.fixture()
 def slugbuilder(py_buildpack, nodejs_buildpack, extra_buildpack, image_name):
-    slugbuilder = G(AppSlugBuilder, name=image_name, region=settings.DEFAULT_REGION_NAME, is_default=True)
+    slugbuilder = G(AppSlugBuilder, name=image_name, is_default=True)
     slugbuilder.buildpacks.add(py_buildpack)
     slugbuilder.buildpacks.add(nodejs_buildpack)
     slugbuilder.buildpacks.add(extra_buildpack)
@@ -62,7 +62,7 @@ def slugbuilder(py_buildpack, nodejs_buildpack, extra_buildpack, image_name):
 
 @pytest.fixture()
 def slugrunner(image_name):
-    slugrunner = G(AppSlugRunner, name=image_name, region=settings.DEFAULT_REGION_NAME, is_default=True)
+    slugrunner = G(AppSlugRunner, name=image_name, is_default=True)
     return slugrunner
 
 
@@ -79,8 +79,7 @@ def _init_tmpls():
             "language": "Python",
             "market_ready": True,
             "preset_services_config": {"mysql": {}},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": ["extra"],
             "tags": [],
             "repo_url": "http://github.com/blueking/dummy_tmpl",
@@ -98,8 +97,7 @@ def _init_tmpls():
             "language": "NodeJS",
             "market_ready": True,
             "preset_services_config": {"mysql": {}},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": [],
             "tags": [],
             "repo_url": "http://github.com/blueking/dummy_tmpl",
@@ -107,29 +105,25 @@ def _init_tmpls():
     )
 
 
-class TestRegionTemplateViewSet:
+class TestTemplateDetailedViewSet:
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("region", "result_count"),
-        [
-            (settings.DEFAULT_REGION_NAME, 2),
-            ("region-not-exist", 0),
-        ],
-    )
-    def test_list(self, api_client, region, result_count):
-        url = reverse("api.templates.list", kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=region))
+    def test_list(self, api_client):
+        url = reverse("api.templates.list", kwargs=dict(tpl_type=TemplateType.NORMAL.value))
         response = api_client.get(url)
-        assert len(response.data) >= result_count
+        assert len(response.data) == 2
 
     @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
         ("tpl_name", "expected_buildpacks"),
-        [("python", [{"name": "extra"}, {"name": "python"}]), ("nodejs", [{"name": "nodejs"}])],
+        [
+            ("python", [{"name": "extra"}, {"name": "python"}]),
+            ("nodejs", [{"name": "nodejs"}]),
+        ],
     )
     def test_retrieve(self, request, api_client, slugbuilder, slugrunner, image_name, tpl_name, expected_buildpacks):
         url = reverse(
             "api.templates.detail",
-            kwargs=dict(tpl_type=TemplateType.NORMAL.value, region=settings.DEFAULT_REGION_NAME, tpl_name=tpl_name),
+            kwargs=dict(tpl_type=TemplateType.NORMAL.value, tpl_name=tpl_name),
         )
         response = api_client.get(url)
         assert response.status_code == 200

@@ -1,5 +1,13 @@
 <template>
   <div class="detail-feature-container">
+    <bk-button
+      class="clustertab-edit-btn-cls"
+      theme="primary"
+      :outline="true"
+      @click="handleEdit"
+    >
+      {{ $t('编辑') }}
+    </bk-button>
     <div class="detail-title">{{ $t('集群特性') }}</div>
     <div class="header">
       <div class="label">{{ $t('集群特性') }}</div>
@@ -8,19 +16,19 @@
     <ul class="feature">
       <li
         class="item"
-        v-for="(val, key) in featureMap"
-        :key="key"
+        v-for="(item, index) in featureMaps"
+        :key="index"
       >
         <div
           class="label"
           v-bk-overflow-tips
         >
-          {{ val }}
+          {{ item.name }}
         </div>
         <div class="value">
           <i
             class="paasng-icon paasng-correct"
-            v-if="data.feature_flags?.[key]"
+            v-if="data.feature_flags?.[item.key]"
           ></i>
           <i
             class="paasng-icon paasng-icon-close"
@@ -31,7 +39,7 @@
     </ul>
     <div class="detail-title">{{ $t('高级设置') }}</div>
     <DetailsRow
-      :label-width="168"
+      :label-width="175"
       :is-full="true"
       :align="'flex-start'"
     >
@@ -52,14 +60,14 @@
       </div>
     </DetailsRow>
     <DetailsRow
-      :label-width="168"
+      :label-width="175"
       :is-full="true"
       :align="'flex-start'"
     >
       <template slot="label">{{ `${$t('容忍度（tolerations）')}：` }}</template>
       <div
         slot="value"
-        class="toleration"
+        :class="['toleration', { mt5: Object.keys(data.tolerations)?.length }]"
       >
         <template v-if="!data.tolerations || Object.keys(data.tolerations).length === 0">--</template>
         <div
@@ -96,28 +104,48 @@ export default {
   },
   data() {
     return {
-      featureMap: {
-        ENABLE_BCS_EGRESS: this.$t('支持提供出口 IP'),
-        ENABLE_MOUNT_LOG_TO_HOST: this.$t('允许挂载日志到主机'),
-        INGRESS_USE_REGEX: this.$t('Ingress 路径是否使用正则表达式'),
-        ENABLE_BK_LOG_COLLECTOR: this.$t('使用蓝鲸日志平台方案采集日志'),
-        ENABLE_BK_MONITOR: this.$t('使用蓝鲸监控获取资源使用指标'),
-        ENABLE_AUTOSCALING: this.$t('支持自动扩缩容'),
-      },
+      featureMaps: [],
     };
+  },
+  created() {
+    this.getClusterFeatureFlags();
+  },
+  methods: {
+    async getClusterFeatureFlags() {
+      try {
+        const res = await this.$store.dispatch('tenant/getClusterFeatureFlags');
+        this.featureMaps = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    handleEdit() {
+      this.$router.push({
+        name: 'clusterCreateEdit',
+        params: {
+          type: 'edit',
+        },
+        query: {
+          id: this.data.name,
+          step: 4,
+          alone: true,
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .detail-feature-container {
+  position: relative;
   .detail-title {
     font-weight: 700;
     font-size: 14px;
     color: #313238;
     line-height: 22px;
     margin: 24px 0 12px 0;
-    &:first-child {
+    &:first-of-type {
       margin-top: 0;
     }
   }

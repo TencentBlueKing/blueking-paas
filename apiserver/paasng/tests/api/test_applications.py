@@ -36,6 +36,7 @@ from paasng.accessories.publish.sync_market.handlers import (
 )
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
@@ -329,19 +330,22 @@ class TestApplicationCreateWithoutEngine:
 
     @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
     @pytest.mark.parametrize(
-        ("profile_regions", "region", "creation_success"),
+        ("region", "user_is_admin", "creation_success"),
         [
-            (["r1"], "r1", True),
-            (["r1", "r2"], "r1", True),
-            (["r1"], "r2", False),
+            ("r1", False, True),
+            ("r1", True, True),
+            ("r2", False, False),
+            ("r2", True, True),
         ],
     )
-    def test_region_permission_control(self, bk_user, api_client, url, profile_regions, region, creation_success):
+    def test_region_permission_control(self, bk_user, api_client, url, region, user_is_admin, creation_success):
         """When user has or doesn't have permission, test application creation."""
+        # "r1" is the default region
         with configure_regions(["r1", "r2"]):
+            role = SiteRole.ADMIN if user_is_admin else SiteRole.USER
             user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.enable_regions = ";".join(profile_regions)
-            user_profile.save()
+            user_profile.role = role.value
+            user_profile.save(update_fields=["role"])
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(

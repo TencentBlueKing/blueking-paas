@@ -36,12 +36,10 @@ class UserProfileBulkCreateFormSLZ(serializers.Serializer):
     role = serializers.ChoiceField(choices=SiteRole.get_choices())
     provider_type = serializers.ChoiceField(choices=PROVIDER_TYPE_CHCOISE)
     username_list = serializers.ListField(child=serializers.CharField())
-    enable_regions = serializers.ListField(child=serializers.CharField(), default=None, min_length=1)
 
 
 class UserProfileUpdateFormSLZ(serializers.Serializer):
     role = serializers.ChoiceField(choices=SiteRole.get_choices())
-    enable_regions = serializers.ListField(child=serializers.CharField(), default=None, min_length=1)
     user = UserField()
 
 
@@ -54,7 +52,3 @@ class UserProfileSLZ(serializers.Serializer):
     user = UserField()
     role = serializers.ChoiceField(choices=SiteRole.get_choices())
     updated = serializers.DateTimeField(read_only=True)
-    enable_regions = serializers.SerializerMethodField()
-
-    def get_enable_regions(self, value):
-        return [region.name for region in value.enable_regions]

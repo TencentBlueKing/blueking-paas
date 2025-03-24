@@ -121,12 +121,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                 },
@@ -138,12 +136,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c2.foo.com", reserved=False)]),
                     ),
                 },
@@ -155,14 +151,12 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             sub_path_domains=[Domain(name="c1.foo.com", reserved=False)],
                         ),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             app_root_domains=[Domain(name="c2.foo.com", reserved=False)],
                         ),
@@ -176,12 +170,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(app_root_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             sub_path_domains=[Domain(name="c2.foo.com", reserved=False)],
                             app_root_domains=[Domain(name="c2.foo.com", reserved=False)],

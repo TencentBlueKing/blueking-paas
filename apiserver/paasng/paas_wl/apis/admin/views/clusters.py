@@ -40,7 +40,6 @@ from paas_wl.apis.admin.serializers.clusters import (
     GetClusterComponentStatusSLZ,
     ReadonlyClusterSLZ,
 )
-from paas_wl.infras.cluster.exceptions import SwitchDefaultClusterError
 from paas_wl.infras.cluster.models import APIServer, Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
@@ -48,7 +47,7 @@ from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 logger = logging.getLogger(__name__)
@@ -85,28 +84,6 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
             data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
         )
         return Response(data=ReadonlyClusterSLZ(cluster).data)
-
-    def set_as_default(self, request, pk):
-        cluster = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=Cluster.objects.get(is_default=True).name)
-        result_code = ResultCode.FAILURE
-
-        try:
-            Cluster.objects.switch_default_cluster(cluster_name=cluster.name)
-            result_code = ResultCode.SUCCESS
-        except SwitchDefaultClusterError as e:
-            raise error_codes.SWITCH_DEFAULT_CLUSTER_FAILED.f(str(e))
-        finally:
-            add_admin_audit_record(
-                user=request.user.pk,
-                operation=OperationEnum.SWITCH_DEFAULT_CLUSTER,
-                target=OperationTarget.CLUSTER,
-                attribute=cluster.name,
-                result_code=result_code,
-                data_before=data_before,
-                data_after=DataDetail(type=DataType.RAW_DATA, data=cluster.name),
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(request_body=APIServerSLZ)
     def bind_api_server(self, request, pk):

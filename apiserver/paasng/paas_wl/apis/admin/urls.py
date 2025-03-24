@@ -115,11 +115,6 @@ urlpatterns = [
         name="wl_api.cluster.api_servers",
     ),
     path(
-        "wl_api/platform/clusters/<str:pk>/set_default/",
-        clusters.ClusterViewSet.as_view({"post": "set_as_default"}),
-        name="wl_api.cluster.set_default",
-    ),
-    path(
         "wl_api/platform/clusters/<str:pk>/api_servers/<str:api_server_id>",
         clusters.ClusterViewSet.as_view({"delete": "unbind_api_server"}),
         name="wl_api.cluster.api_server_by_id",

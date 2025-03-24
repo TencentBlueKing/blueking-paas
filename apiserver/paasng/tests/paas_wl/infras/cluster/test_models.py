@@ -29,7 +29,7 @@ class TestIngressConfigField:
         ingress_config = {
             "port_map": {"http": "81", "https": "8081"},
         }
-        c: Cluster = Cluster.objects.create(name="dft", is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(name="dft", ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert isinstance(c.ingress_config.port_map, PortMap)
@@ -46,7 +46,7 @@ class TestIngressConfigField:
 
     def test_domains(self):
         ingress_config = {"app_root_domains": ["foo.com", {"name": "bar.com"}, {"name": "baz.com", "reserved": True}]}
-        c: Cluster = Cluster.objects.create(name="dft", is_default=True, ingress_config=ingress_config)
+        c: Cluster = Cluster.objects.create(name="dft", ingress_config=ingress_config)
         c.refresh_from_db()
         assert isinstance(c.ingress_config, IngressConfig)
         assert len(c.ingress_config.app_root_domains) == 3

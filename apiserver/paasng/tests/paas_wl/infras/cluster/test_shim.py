@@ -32,13 +32,8 @@ class TestEnvClusterService:
     def _setup(self):
         """setup clusters and wl_apps"""
         Cluster.objects.all().delete()
-        G(
-            Cluster,
-            name="default",
-            is_default=True,
-            exposed_url_type=ExposedURLType.SUBDOMAIN.value,
-        )
-        G(Cluster, name="extra-1", is_default=False)
+        G(Cluster, name="default", exposed_url_type=ExposedURLType.SUBDOMAIN.value)
+        G(Cluster, name="extra-1")
 
     def test_empty_cluster_field(self, bk_stag_env):
         wl_app = bk_stag_env.wl_app

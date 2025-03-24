@@ -84,7 +84,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
     :return: Whether the CRDs are successfully configured
     """
     with django_db_blocker.unblock():
-        cluster = Cluster.objects.get(is_default=True)
+        cluster = Cluster.objects.first()
         client = get_client_by_cluster_name(cluster.name)
         version = VersionApi(client).get_code()
 
@@ -129,7 +129,7 @@ def _skip_when_no_crds(request, crds_is_configured):
 
 @pytest.fixture()
 def k8s_client():
-    cluster = Cluster.objects.get(is_default=True)
+    cluster = Cluster.objects.first()
     client = get_client_by_cluster_name(cluster.name)
     return client
 
@@ -142,7 +142,7 @@ def k8s_version(k8s_client):
 @pytest.fixture(scope="module")
 def namespace_maker(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        cluster = Cluster.objects.get(is_default=True)
+        cluster = Cluster.objects.first()
         k8s_client = get_client_by_cluster_name(cluster.name)
         k8s_version = VersionApi(k8s_client).get_code()
 

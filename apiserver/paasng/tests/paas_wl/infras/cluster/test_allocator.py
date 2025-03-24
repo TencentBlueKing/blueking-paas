@@ -36,13 +36,8 @@ class TestEnvClusterService:
     def _setup(self):
         """setup clusters and wl_apps"""
         Cluster.objects.all().delete()
-        G(
-            Cluster,
-            name="default",
-            is_default=True,
-            exposed_url_type=ExposedURLType.SUBDOMAIN.value,
-        )
-        G(Cluster, name="extra-1", is_default=False)
+        G(Cluster, name="default", exposed_url_type=ExposedURLType.SUBDOMAIN.value)
+        G(Cluster, name="extra-1")
 
     def test_empty_cluster_field(self, bk_stag_env):
         wl_app = bk_stag_env.wl_app
@@ -74,11 +69,11 @@ class TestClusterAllocator:
     @pytest.fixture(autouse=True)
     def _setup(self):
         Cluster.objects.all().delete()
-        G(Cluster, name="default-sz1", is_default=True, tenant_id="default")
-        G(Cluster, name="default-sz0", is_default=False, tenant_id="default")
-        G(Cluster, name="tencent-gz0", is_default=True, tenant_id="tencent")
-        G(Cluster, name="blueking-sh0", is_default=True, tenant_id="default")
-        G(Cluster, name="blueking-sz0", is_default=False, tenant_id="default")
+        G(Cluster, name="default-sz1", tenant_id="default")
+        G(Cluster, name="default-sz0", tenant_id="default")
+        G(Cluster, name="tencent-gz0", tenant_id="tencent")
+        G(Cluster, name="blueking-sh0", tenant_id="default")
+        G(Cluster, name="blueking-sz0", tenant_id="default")
 
     @pytest.fixture
     def _uniform_policy(self):

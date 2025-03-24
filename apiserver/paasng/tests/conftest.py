@@ -35,7 +35,9 @@ from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
+from paas_wl.infras.cluster.entities import AllocationPolicy
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAllocationPolicy
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
@@ -144,9 +146,18 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
 
     with django_db_blocker.unblock(), transaction.atomic():
         Cluster.objects.all().delete()
+        APIServer.objects.all().delete()
+        ClusterAllocationPolicy.objects.all().delete()
+
         cluster, apiserver = build_default_cluster()
         cluster.save()
         apiserver.save()
+
+        ClusterAllocationPolicy.objects.create(
+            type=ClusterAllocationPolicyType.UNIFORM,
+            allocation_policy=AllocationPolicy(env_specific=False, clusters=[cluster.name]),
+            tenant_id=cluster.tenant_id,
+        )
 
 
 def pytest_sessionstart(session):

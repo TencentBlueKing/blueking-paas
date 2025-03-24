@@ -17,7 +17,6 @@
 
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
@@ -145,8 +144,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         with transaction.atomic(using="workloads"):
             # 创建集群
             cluster = Cluster.objects.create(
-                # 集群分划属性
-                region=settings.DEFAULT_REGION_NAME,
                 tenant_id=cur_tenant_id,
                 available_tenant_ids=data["available_tenant_ids"],
                 # 集群基本属性

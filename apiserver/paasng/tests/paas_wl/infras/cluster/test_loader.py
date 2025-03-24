@@ -33,7 +33,6 @@ def cluster_creator(ca_data, cert_data, key_data):
         cluster = Cluster.objects.register_cluster(
             name=cluster_name,
             region=settings.DEFAULT_REGION_NAME,
-            is_default=not Cluster.objects.filter(region=settings.DEFAULT_REGION_NAME).exists(),
             ca_data=ca_data,
             cert_data=cert_data,
             key_data=key_data,

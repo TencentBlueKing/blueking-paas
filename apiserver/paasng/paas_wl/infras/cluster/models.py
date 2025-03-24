@@ -29,11 +29,6 @@ from paas_wl.infras.cluster.constants import (
     ClusterType,
 )
 from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy, IngressConfig
-from paas_wl.infras.cluster.exceptions import (
-    DuplicatedDefaultClusterError,
-    NoDefaultClusterError,
-    SwitchDefaultClusterError,
-)
 from paas_wl.infras.cluster.validators import validate_ingress_config
 from paas_wl.utils.models import UuidAuditedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -49,7 +44,6 @@ class ClusterManager(models.Manager):
         self,
         name: str,
         type: str = ClusterType.NORMAL,
-        is_default: bool = False,
         description: Optional[str] = None,
         exposed_url_type: int = ExposedURLType.SUBPATH.value,
         ingress_config: Optional[Dict] = None,
@@ -80,22 +74,11 @@ class ClusterManager(models.Manager):
         :param token_value: value of token
         """
         # FIXME（多租户）多租户初始化时，需要重新整理这里的逻辑
-        default_cluster_qs = self.filter(is_default=True)
-
-        if not default_cluster_qs.exists() and not is_default:
-            raise NoDefaultClusterError("Not define default cluster.")
-        elif default_cluster_qs.filter(name=name).exists() and not is_default:
-            raise SwitchDefaultClusterError(
-                "Can't change default cluster by calling `register_cluster`, please use `switch_default_cluster`"
-            )
-        elif default_cluster_qs.exclude(name=name).exists() and is_default:
-            raise DuplicatedDefaultClusterError("Should have one and only one default cluster.")
 
         validate_ingress_config(ingress_config)
 
         defaults: Dict[str, Any] = {
             "type": type,
-            "is_default": is_default,
             "description": description,
             "exposed_url_type": exposed_url_type,
             "ingress_config": ingress_config,
@@ -120,29 +103,6 @@ class ClusterManager(models.Manager):
             cluster, _ = self.update_or_create(name=name, defaults=defaults)
         return cluster
 
-    @transaction.atomic(using="workloads")
-    def switch_default_cluster(self, cluster_name: str) -> "Cluster":
-        """Switch the default cluster to the cluster called `cluster_name`.
-
-        :raise SwitchDefaultClusterException: if the cluster called `cluster_name` is already the default cluster.
-        """
-        try:
-            prep_default_cluster = self.select_for_update().get(name=cluster_name)
-            curr_default_cluster = self.select_for_update().get(is_default=True)
-        except self.model.DoesNotExist:
-            raise SwitchDefaultClusterError("Can't switch default cluster to a not-existed cluster.")
-
-        if prep_default_cluster.name == curr_default_cluster.name:
-            raise SwitchDefaultClusterError("The cluster is already the default cluster.")
-
-        curr_default_cluster.is_default = False
-        prep_default_cluster.is_default = True
-
-        curr_default_cluster.save()
-        prep_default_cluster.save()
-
-        return prep_default_cluster
-
 
 IngressConfigField = make_json_field(cls_name="IngressConfigField", py_model=IngressConfig)
 
@@ -155,9 +115,6 @@ class Cluster(UuidAuditedModel):
     name = models.CharField(help_text="集群名称", max_length=32, unique=True)
     type = models.CharField(max_length=32, help_text="集群类型", default=ClusterType.NORMAL)
     description = models.TextField(help_text="集群描述", blank=True)
-    is_default = models.BooleanField(
-        help_text="是否为默认集群（deprecated，后续由分配策略替代）", default=False, null=True
-    )
 
     exposed_url_type = models.IntegerField(help_text="应用的访问地址类型", default=ExposedURLType.SUBPATH.value)
     ingress_config: IngressConfig = IngressConfigField(help_text="ingress 配置")

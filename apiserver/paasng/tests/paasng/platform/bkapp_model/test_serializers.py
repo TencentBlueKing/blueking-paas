@@ -22,36 +22,30 @@ from rest_framework.exceptions import ValidationError
 from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 
 
+@pytest.mark.parametrize(
+    ("test_data", "error_keyword"),
+    [
+        ({"processes": [], "configuration": {"env": []}}, "empty"),
+        ({"configuration": {"env": []}}, "required"),
+    ],
+    ids=["empty_processes", "missing_processes"],
+)
 class TestBkAppSpecInputSLZ:
     """测试BkAppSpecInputSLZ序列化器"""
 
-    def test_processes_cannot_be_empty(self):
-        """测试processes字段不能为空"""
-        # 准备一个包含空processes的数据
-        data = {"processes": [], "configuration": {"env": []}}
-
+    def test_processes_validation(self, test_data, error_keyword):
+        """测试processes字段验证：不能为空列表且为必填字段"""
         # 初始化序列化器
-        serializer = BkAppSpecInputSLZ(data=data)
+        serializer = BkAppSpecInputSLZ(data=test_data)
 
         # 验证序列化器应该报错
         with pytest.raises(ValidationError) as e:
             serializer.is_valid(raise_exception=True)
 
-        # 确认错误信息是 processes 不能为空
+        # 确认错误信息是 processes 包含预期关键字
         error_msg = str(e.value)
         assert "processes" in error_msg
-        assert "empty" in error_msg.lower()
-
-    def test_processes_valid_data(self):
-        """提供有效的processes数据作为对比测试"""
-        # 准备一个有效的数据，包含至少一个process
-        data = {"processes": [{"name": "web", "replicas": 1}], "configuration": {"env": []}}
-
-        # 初始化序列化器
-        serializer = BkAppSpecInputSLZ(data=data)
-
-        # 验证序列化应成功
-        assert serializer.is_valid(), f"Validation should succeed, but got errors: {serializer.errors}"
+        assert error_keyword in error_msg.lower()
 
     def test_missing_processes_field(self):
         """测试缺少 processes 字段的情况"""

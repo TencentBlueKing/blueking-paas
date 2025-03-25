@@ -34,7 +34,7 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
   id = "bk-buildpack-go"
-  version = "v191"
+  version = "v205"
 
 
 [[buildpacks]]
@@ -72,7 +72,7 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 [[order]]
   [[order.group]]
     id = "bk-buildpack-go"
-    version = "v191"
+    version = "v205"
 
 
 [[order]]

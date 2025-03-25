@@ -116,6 +116,8 @@ class TestLegacyAppManager:
                 patch.object(manager, "has_prod_deployed_before_migration", return_value=False),
                 patch.object(manager, "region", return_value="default"),
                 patch.object(manager, "get_migration_finished_date", return_value=None),
+                patch.object(manager, "get_stag_exposed_link", return_value=""),
+                patch.object(manager, "get_prod_exposed_link", return_value=""),
             ):
                 yield manager
 

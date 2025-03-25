@@ -138,6 +138,8 @@ export default {
       componentDetails: {},
       // 组件安装/更新按钮loading
       componentBtnLoadings: {},
+      // 组件 Release 版本
+      componentReleaseVersions: {},
       // 必要组件
       requiredComponents: [],
       // 可选组件
@@ -266,6 +268,8 @@ export default {
           componentName,
         });
         this.$set(this.componentDetails, componentName, ret);
+        // 存储获取到的 release 初始版本
+        this.$set(this.componentReleaseVersions, componentName, ret.release.version)
 
         // 状态为 installing 轮询接口
         if (ret.status === 'installing') {
@@ -297,7 +301,11 @@ export default {
           componentName,
         });
         this.$set(this.componentDetails, componentName, ret);
-        if (['installation_failed', 'installed'].includes(ret.status)) {
+        // 目前页面上获取到的版本
+        const initialReleaseVersion = this.componentReleaseVersions[componentName];
+        // 如果版本相同，说明 release 未实际下发，需继续轮询
+        // 等版本不一致时，说明是已经下发，此时检查状态判断是否需要结束轮询才是有意义的
+        if (initialReleaseVersion !== ret.release.version && ['installation_failed', 'installed'].includes(ret.status)) {
           // 结束轮询
           this.$set(this.componentBtnLoadings, componentName, false);
         } else {

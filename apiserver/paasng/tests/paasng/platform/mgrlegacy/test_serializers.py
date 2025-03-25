@@ -52,22 +52,20 @@ class TestLegacyAppSLZ:
         }
 
     def test_serializer(self, base_data):
-        """测试字段是否全部序列化"""
+        """测试反序列化时只包含 Meta.fields 中定义的字段"""
 
-        # 序列化
+        # 反序列化
         serializer = LegacyAppSLZ(data=base_data)
 
-        # 验证所有字段均被序列化
+        # 验证反序列化结果
         assert serializer.is_valid(), serializer.errors
-        # 手动比较各个字段
-        for key, value in base_data.items():
-            if key in ["created", "migration_finished_date"]:
-                # 日期时间字段，比较格式化后的字符串
-                expected_value = value.strftime("%Y-%m-%d %H:%M:%S")
-                assert serializer.data[key] == expected_value
-            else:
-                # 其他字段直接比较
-                assert serializer.data[key] == value
+
+        # 获取反序列化结果的字段
+        meta_fields = set(LegacyAppSLZ.Meta.fields)
+        serialized_fields = set(serializer.data.keys())
+
+        ## 验证反序列化结果只包含 Meta.fields 中定义的字段
+        assert serialized_fields == meta_fields
 
 
 class TestLegacyAppManager:

@@ -56,7 +56,6 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
             "uuid",
             "name",
             "type",
-            "is_default",
             "description",
             "ingress_config",
             "annotations",

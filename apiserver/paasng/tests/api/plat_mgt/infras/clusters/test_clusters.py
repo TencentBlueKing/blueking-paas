@@ -631,9 +631,15 @@ class TestRetrieveClusterStatus:
 class TestRetrieveClusterUsage:
     """获取集群使用情况"""
 
-    def test_retrieve_usage(self, bk_cnative_app, init_system_cluster, init_default_cluster, plat_mgt_api_client):
+    def test_retrieve_usage(
+        self,
+        bk_cnative_app,
+        init_system_cluster,
+        init_default_shared_cluster,
+        plat_mgt_api_client,
+    ):
         data = {
-            "tenant_id": DEFAULT_TENANT_ID,
+            "tenant_id": OP_TYPE_TENANT_ID,
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
@@ -642,7 +648,7 @@ class TestRetrieveClusterUsage:
                         "env_specific": True,
                         "env_clusters": {
                             AppEnvironment.STAGING: [init_system_cluster.name],
-                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_shared_cluster.name],
                         },
                     },
                 },
@@ -671,7 +677,7 @@ class TestRetrieveClusterUsage:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json() == {
             "available_tenant_ids": ["system", "default"],
-            "allocated_tenant_ids": ["default"],
+            "allocated_tenant_ids": ["system"],
             "bound_app_module_envs": [
                 {
                     "app_code": app_code,

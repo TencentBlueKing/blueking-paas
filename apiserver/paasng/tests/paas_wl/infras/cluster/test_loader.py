@@ -19,7 +19,6 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 import pytest
-from django.conf import settings
 
 from paas_wl.infras.cluster.loaders import DBConfigLoader, LegacyKubeConfigLoader
 from paas_wl.infras.cluster.models import APIServer, Cluster
@@ -32,7 +31,6 @@ def cluster_creator(ca_data, cert_data, key_data):
     def get_or_create(cluster_name: str, servers: List[Dict], token_value: Optional[str] = None):
         cluster = Cluster.objects.register_cluster(
             name=cluster_name,
-            region=settings.DEFAULT_REGION_NAME,
             ca_data=ca_data,
             cert_data=cert_data,
             key_data=key_data,

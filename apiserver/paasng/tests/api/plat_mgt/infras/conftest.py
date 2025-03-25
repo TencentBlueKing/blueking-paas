@@ -29,8 +29,13 @@ from tests.utils.basic import generate_random_string
 
 
 @pytest.fixture
+def random_tenant_id() -> str:
+    return generate_random_string(12)
+
+
+@pytest.fixture
 def init_default_cluster() -> Cluster:
-    """默认租户集群（即使是多租户，一般也不共享）"""
+    """默认租户集群（不共享）"""
     cluster = Cluster.objects.create(
         tenant_id=DEFAULT_TENANT_ID,
         name=f"cluster-default-{generate_random_string(8)}",
@@ -104,7 +109,82 @@ def init_default_cluster() -> Cluster:
 
 
 @pytest.fixture
-def init_system_cluster() -> Cluster:
+def init_default_shared_cluster(random_tenant_id) -> Cluster:
+    """默认租户集群，可共享的集群"""
+    cluster = Cluster.objects.create(
+        tenant_id=DEFAULT_TENANT_ID,
+        name=f"cluster-default-shared-{generate_random_string(8)}",
+        description="default tenant shared cluster",
+        ingress_config=IngressConfig(
+            sub_path_domains=[
+                Domain(
+                    name="bkapps.example.com",
+                    reserved=False,
+                    https_enabled=False,
+                )
+            ],
+            frontend_ingress_ip="127.0.0.21",
+        ),
+        annotations={
+            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_cluster_id": "BCS-K8S-20000",
+            "bk_biz_id": "54321",
+        },
+        token_value="masked",
+        feature_flags={
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST: False,
+            ClusterFeatureFlag.INGRESS_USE_REGEX: True,
+            ClusterFeatureFlag.ENABLE_BK_MONITOR: True,
+            ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR: True,
+            ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
+            ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
+        },
+        available_tenant_ids=[OP_TYPE_TENANT_ID, DEFAULT_TENANT_ID, random_tenant_id],
+    )
+    # ApiServers
+    APIServer.objects.create(
+        cluster=cluster,
+        host="http://bcs-api.example.com/clusters/BCS-K8S-20000",
+        tenant_id=cluster.tenant_id,
+    )
+    # ES 配置
+    ClusterElasticSearchConfig.objects.create(
+        cluster=cluster,
+        scheme="http",
+        host="127.0.0.31",
+        port=9300,
+        username="blueking",
+        password="blueking",
+        tenant_id=cluster.tenant_id,
+    )
+    # 节点信息
+    nodes_name = ["127.0.0.41", "127.0.0.42", "127.0.0.43"]
+    nodes_digest = get_digest_of_nodes_name(nodes_name)
+    RegionClusterState.objects.create(
+        cluster_name=cluster.name,
+        name=f"eng-cstate-{nodes_digest[:8]}-1",
+        nodes_digest=nodes_digest,
+        nodes_name=nodes_name,
+        tenant_id=cluster.tenant_id,
+    )
+    # 集群组件
+    components = [
+        ClusterComponent(
+            cluster=cluster,
+            name=comp_name,
+            required=bool(comp_name != ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER),
+        )
+        for comp_name in ClusterComponentName.get_values()
+    ]
+    ClusterComponent.objects.bulk_create(components)
+    # 新添加集群后，需要刷新配置池
+    invalidate_global_configuration_pool()
+
+    return cluster
+
+
+@pytest.fixture
+def init_system_cluster(random_tenant_id) -> Cluster:
     """多租户模式下的运营租户集群（可多租户共享）"""
     cluster = Cluster.objects.create(
         tenant_id=OP_TYPE_TENANT_ID,
@@ -132,7 +212,7 @@ def init_system_cluster() -> Cluster:
             ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
             ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
         },
-        available_tenant_ids=[OP_TYPE_TENANT_ID, DEFAULT_TENANT_ID],
+        available_tenant_ids=[OP_TYPE_TENANT_ID, DEFAULT_TENANT_ID, random_tenant_id],
     )
     # ApiServers
     APIServer.objects.bulk_create(

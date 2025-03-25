@@ -17,6 +17,7 @@
 
 import logging
 
+from django.conf import settings
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -30,7 +31,6 @@ from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
-from paasng.core.region.models import get_region
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -194,7 +194,8 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def allow_modifications(region) -> bool:
         """Whether modifying custom_domain is allowed"""
-        return get_region(region).allow_user_modify_custom_domain
+        # 仅默认 region 可以修改自定义域名，其他 region 则只能由管理员在后台管理页面修改
+        return region == settings.DEFAULT_REGION_NAME
 
 
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):

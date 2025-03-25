@@ -104,11 +104,6 @@ class RegionMobileConfig:
             setattr(self, k, v)
 
 
-@dataclass
-class RegionMulModulesConfig:
-    creation_allowed: bool
-
-
 class SvcCategoriesLoader(Protocol):
     """The loader for loading service categories"""
 
@@ -135,9 +130,7 @@ class Region:
     name: str
     display_name: str
     basic_info: RegionBasicInfo
-    mul_modules_config: RegionMulModulesConfig
     enabled_feature_flags: Set[str] = field(default_factory=set)
-    allow_user_modify_custom_domain: bool = True
     module_mobile_config: Optional[RegionMobileConfig] = None
     provide_env_vars_platform: Optional[bool] = True
 

@@ -168,7 +168,7 @@
                     >
                       <bk-input
                         v-model="e.address.url"
-                        :placeholder="domainInputPlaceholderText"
+                        :placeholder="$t('请输入有效域名')"
                         class="url-input-cls"
                       >
                         <template slot="prepend">
@@ -313,7 +313,7 @@
                   </section>
                 </div>
                 <div v-else>--</div>
-                <div :class="['line', { 'show-last-line': (entryList.length === $index + 1) }]"></div>
+                <div :class="['line', { 'show-last-line': entryList.length === $index + 1 }]"></div>
               </div>
             </div>
           </template>
@@ -350,7 +350,7 @@
         <div class="tl">
           <p>{{ $t('设定后：') }}</p>
           <div class="flex-row mt5">
-            <p>1. </p>
+            <p>1.</p>
             <p class="pl10">
               {{ $t('应用短地址') }}{{ $t('（') }}{{ $route.params.id }}
               {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{ $t('）') }} {{ $t('指向到应用') }}
@@ -426,7 +426,6 @@ export default {
       tableIndex: '',
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
-      domainConfig: {},
       placeholderText: '',
       rules: {
         url: [
@@ -437,14 +436,10 @@ export default {
           },
           {
             validator: (value) => {
-              const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
-              // eslint-disable-next-line no-useless-escape
-              const domainReg = new RegExp(`^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(${validDomainsPart})$`);
+              const domainReg = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*$/;
               return domainReg.test(value);
             },
-            message: () => (this.placeholderText
-              ? `${this.$t('请输入有效域名，并以这些后缀结尾：')}${this.placeholderText}`
-              : `${this.$t('请输入有效域名')}`),
+            message: () => `${this.$t('请输入有效域名')}`,
             trigger: 'blur',
           },
         ],
@@ -516,14 +511,6 @@ export default {
     defaultIp() {
       return this.defaultItem.frontend_ingress_ip;
     },
-    // 域名规则placeholder
-    domainInputPlaceholderText() {
-      if (this.domainConfig?.valid_domain_suffixes?.length) {
-        this.placeholderText = this.domainConfig.valid_domain_suffixes.join(',');
-        return this.$t('请输入有效域名，并以这些后缀结尾：') + this.placeholderText;
-      }
-      return this.$t('请输入有效域名');
-    },
     // 根据数据提示不同内容
     accessControlText() {
       const textData = { user_access_control: this.$t('用户限制'), ip_access_control: this.$t('IP限制') };
@@ -562,7 +549,6 @@ export default {
       try {
         const { region } = this.curAppInfo.application;
         const res = await this.$store.dispatch('getAppRegion', region);
-        this.domainConfig = res.module_custom_domain;
         this.canUpdateSubDomain = res.entrance_config.manually_upgrade_to_subdomain_allowed;
       } catch (e) {
         this.$paasMessage({
@@ -712,7 +698,9 @@ export default {
 
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
-      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(e => e.environment === env && e.module === payload.name) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
+      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(
+        (e) => e.environment === env && e.module === payload.name
+      ) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.mouseEnter = true;
@@ -728,7 +716,7 @@ export default {
 
     // 设置为主模块
     handleSetDefault(payload) {
-      this.curClickAppModule = this.curAppModuleList.find(e => e.name === payload.name) || {}; // 当前点击的模块的所有信息
+      this.curClickAppModule = this.curAppModuleList.find((e) => e.name === payload.name) || {}; // 当前点击的模块的所有信息
       this.domainDialog.visiable = true;
       this.domainDialog.moduleName = payload.name;
       this.domainDialog.title = this.$t(`是否设定${payload.name}模块为主模块`);
@@ -744,14 +732,14 @@ export default {
           this.tipIndex++;
           // 判断ip是否一致
           const firstIp = this.defaultItem?.frontend_ingress_ip || '';
-          this.isIpConsistent = (res || []).every(item => firstIp === item.frontend_ingress_ip);
+          this.isIpConsistent = (res || []).every((item) => firstIp === item.frontend_ingress_ip);
         },
         (res) => {
           this.$paasMessage({
             theme: 'error',
             message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
           });
-        },
+        }
       );
     },
 
@@ -776,7 +764,9 @@ export default {
     async handleSubmit(index, envIndex, payload, envType) {
       this.curInputIndex = envIndex;
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
-      const readDataLength = (payload?.envs[envType] || []).filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
+      const readDataLength = (payload?.envs[envType] || []).filter(
+        (e, readIndex) => !e.isEdit && readIndex <= envIndex
+      ).length;
       const validateFromIndex = envIndex - readDataLength; // 当前点击保存的输入框下标
       await this.$refs.urlInfoForm[validateFromIndex].validate(); // 校验
       const curUrlParams = {

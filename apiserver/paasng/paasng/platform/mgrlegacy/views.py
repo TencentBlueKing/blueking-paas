@@ -47,6 +47,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
+from paasng.platform.mgrlegacy.models import WlAppBackupRel
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
@@ -372,8 +373,11 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         用于直接从集群中获取应用进程信息(不依赖应用进程 db 数据)
         """
         wl_app = self._get_wl_app()
-        processes_info = get_processes_info(wl_app)
 
+        if not wl_app:
+            return Response({})
+
+        processes_info = get_processes_info(wl_app)
         data = {
             "processes": {
                 "items": processes_info.processes,
@@ -383,9 +387,8 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "items": [inst for proc in processes_info.processes for inst in proc.instances],
                 "metadata": {"resource_version": processes_info.rv_inst},
             },
-            "process_packages": ProcessManager(self.get_env_via_path()).list_processes_specs(),
+            "process_packages": ProcessManager(self.get_env_via_path()).list_processes_specs_for_legacy(),
         }
-
         return Response(ListProcessesSLZ(data).data)
 
     def update(self, request, *args, **kwargs):
@@ -393,11 +396,14 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         用于直接向集群中下发管理应用进程的命令(不涉及查询和更新应用进程的 db 数据)
         """
+        wl_app = self._get_wl_app()
+
+        if not wl_app:
+            raise wl_error_codes.PROCESS_OPERATE_FAILED.f("no process found")
+
         slz = UpdateProcessSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
-
-        wl_app = self._get_wl_app()
 
         process_type = validated_data["process_type"]
         operate_type = validated_data["operate_type"]
@@ -418,8 +424,12 @@ class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def _get_wl_app(self):
-        return WlAppBackupManager(self.get_env_via_path()).get()
+    def _get_wl_app(self) -> WlApp | None:
+        try:
+            return WlAppBackupManager(self.get_env_via_path()).get()
+        except WlAppBackupRel.DoesNotExist:
+            # 用户可能会在未确认迁移时新建模块, 而这些模块是新模块, 没有对应的 WlAppBackupRel
+            return None
 
 
 class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

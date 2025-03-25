@@ -162,12 +162,20 @@ class LegacyAppManager:
             "latest_migration_id": self.get_latest_migration_id(),
             "finished_migration": self.is_finished_migration(),
             "is_active": self.is_active(),
-            "migration_finished_date": self.get_migration_finished_date(),
             "is_prod_deployed": self.legacy_app_proxy.is_prod_deployed(),  # 用于展示是否已上架
             "has_prod_deployed_before_migration": self.has_prod_deployed_before_migration(),  # 用于控制迁移完成回滚
+            "stag_exposed_link": self.get_stag_exposed_link(),
+            "prod_exposed_link": self.get_prod_exposed_link(),
             "region": self.region(),
+            "migration_finished_date": self.get_migration_finished_date(),
             "legacy_url": self.legacy_app_proxy.legacy_url(),
         }
+
+    def get_stag_exposed_link(self):
+        return getattr(self.legacy_app, "stag_exposed_link", "")
+
+    def get_prod_exposed_link(self):
+        return getattr(self.legacy_app, "prod_exposed_link", "")
 
     def get_language(self):
         """将桌面的开发语言转换成v3上的开发语言, 两者大小写有些出入"""

@@ -73,6 +73,7 @@ class UniversalAppSLZ(serializers.Serializer):
     logo_url = serializers.CharField(help_text="应用 logo 图片地址", allow_null=True)
     developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表", allow_null=True)
     tenant_id = serializers.CharField(help_text="所属租户")
+    app_tenant_mode = serializers.CharField(help_text="租户类型")
 
 
 class ContactInfoSLZ(serializers.Serializer):

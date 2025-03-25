@@ -27,6 +27,8 @@ import (
 	"github.com/buildpacks/lifecycle/launch"
 	"github.com/pkg/errors"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -44,19 +46,18 @@ type Process struct {
 type metaProcesses []launch.Process
 
 // Run launches the given launch.Process list and app desc.
-func Run(mdProcesses metaProcesses, desc *appdesc.AppDesc) error {
+func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 	processes, err := symlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
-
-	if releaseHook := desc.Module.Scripts.PreReleaseHook; releaseHook != "" {
-		if err = runPreReleaseHook(releaseHook, desc.Module.ProcEnvs); err != nil {
+	if releaseHook := desc.GetPreReleaseHook(); releaseHook != "" {
+		if err = runPreReleaseHook(releaseHook, desc.GetEnvs()); err != nil {
 			return errors.Wrap(err, "run pre release hook")
 		}
 	}
 
-	if err = reloadProcesses(processes, desc.Module.ProcEnvs); err != nil {
+	if err = reloadProcesses(processes, desc.GetEnvs()); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
@@ -112,18 +113,23 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 
 	cmd.Env = os.Environ()
 	for _, env := range runEnvs {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Key, env.Value))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
 	return cmd.Run()
 }
 
 func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
-	if conf, err := MakeSupervisorConf(processes, procEnvs...); err != nil {
-		return err
-	} else {
-		return NewSupervisorCtl().Reload(conf)
+	procs := []base.Process{}
+	for _, proc := range processes {
+		procs = append(procs,
+			base.Process{ProcType: proc.ProcType, CommandPath: proc.CommandPath})
 	}
+	ctl, err := procctrl.NewProcessController()
+	if err != nil {
+		return errors.Wrap(err, "reload processes")
+	}
+	return ctl.Reload(procs, procEnvs...)
 }
 
 // validateProcessType func copy from github.com/buildpacks/lifecycle

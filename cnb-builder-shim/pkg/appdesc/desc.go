@@ -27,41 +27,87 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Process ...
-type Process struct {
-	Command string `yaml:"command"`
-}
+// AppDescVersion 描述文件版本
+type AppDescVersion string
 
-// Env ...
-type Env struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
-}
+const (
+	appSpecVersion2 AppDescVersion = "2"
+	appSpecVersion3 AppDescVersion = "3"
+)
 
-// AppDesc ...
-type AppDesc struct {
+// LegacyAppSpecVersion ...
+type LegacyAppSpecVersion struct {
 	SpecVersion string `yaml:"spec_version"`
-	Module      struct {
-		Processes map[string]Process `yaml:"processes"`
-		Scripts   struct {
-			PreReleaseHook string `yaml:"pre_release_hook"`
-		} `yaml:"scripts"`
-		ProcEnvs []Env `yaml:"env_variables"`
-	} `yaml:"module"`
+}
+
+// AppSpecVersion ...
+type AppSpecVersion struct {
+	SpecVersion string `yaml:"specVersion"`
+}
+
+// GetAppSpecVersion ...
+func GetAppSpecVersion(data []byte) (AppDescVersion, error) {
+	// 尝试通过 AppSpecVersionLegacy 解析
+	specLegacy := new(LegacyAppSpecVersion)
+	if err := yaml.Unmarshal(data, &specLegacy); err != nil {
+		return "", err
+	}
+
+	switch specLegacy.SpecVersion {
+	case "2":
+		return appSpecVersion2, nil
+	case "":
+		// skip
+	default:
+		return "", errors.Errorf("invalid legacy spec version: %s", specLegacy.SpecVersion)
+	}
+
+	// 通过 AppSpecVersion 解析
+	var specVersion AppSpecVersion
+	if err := yaml.Unmarshal(data, &specVersion); err != nil {
+		return "", err
+	}
+
+	switch specVersion.SpecVersion {
+	case "3":
+		return appSpecVersion3, nil
+	default:
+		return "", errors.Errorf("invalid spec version: %s", specVersion.SpecVersion)
+	}
+
+}
+
+// CreateAppSpec creates a new AppDesc instance based on the given AppDescVersion
+func CreateAppSpec(appSpecVersion AppDescVersion) (AppDesc, error) {
+	switch appSpecVersion {
+	case appSpecVersion2:
+		return new(AppDescV2), nil
+	case appSpecVersion3:
+		return new(AppDescV3), nil
+	default:
+		return nil, errors.New("invalid app spec version")
+	}
 }
 
 // UnmarshalToAppDesc reads from the given app_desc.yaml and unmarshals it into an AppDesc struct.
-func UnmarshalToAppDesc(descFilePath string) (*AppDesc, error) {
+// Compatible with v2 and v3 versions of app_desc.yaml
+func UnmarshalToAppDesc(descFilePath string) (AppDesc, error) {
 	yamlFile, err := os.ReadFile(descFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read app desc file")
 	}
+	appSpecVersion, err := GetAppSpecVersion(yamlFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal app spec versions")
+	}
+	desc, err := CreateAppSpec(appSpecVersion)
+	if err != nil {
+		return nil, err
+	}
 
-	desc := new(AppDesc)
 	if err = yaml.Unmarshal(yamlFile, desc); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal app desc")
 	}
-
 	return desc, nil
 }
 
@@ -76,8 +122,8 @@ func TransformToProcfile(descFilePath string) (string, error) {
 	}
 
 	lines := []string{}
-	for pType, p := range desc.Module.Processes {
-		lines = append(lines, fmt.Sprintf("%s: %s", pType, p.Command))
+	for _, p := range desc.GetProcesses() {
+		lines = append(lines, fmt.Sprintf("%s: %s", p.Name, p.ProcCommand))
 	}
 
 	return strings.Join(lines, "\n"), nil

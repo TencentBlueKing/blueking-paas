@@ -16,23 +16,26 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package subcmd
+package appdesc
 
-import (
-	"github.com/spf13/cobra"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
-)
-
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "process status.",
-	Long:  "Get status of all processes.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return launch.NewSupervisorCtl().Status()
-	},
+// Process ...
+type Process struct {
+	Name        string
+	ProcCommand string
 }
 
-func init() {
-	rootCmd.AddCommand(statusCmd)
+// Env ...
+type Env struct {
+	Name  string
+	Value string
+}
+
+// AppDesc ...
+type AppDesc interface {
+	// GetProcesses ...
+	GetProcesses() []Process
+	// GetPreReleaseHook ...
+	GetPreReleaseHook() string
+	// GetEnvs ...
+	GetEnvs() []Env
 }

@@ -15,24 +15,38 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-
-package main
+package rpc
 
 import (
-	"os"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/kolo/xmlrpc"
+	"github.com/pkg/errors"
 )
 
-var logger = logging.Default()
+// Client 是 supervisord 客户端
+type Client struct {
+	rpcClient *xmlrpc.Client
+}
 
-func main() {
-	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init config failed")
-		os.Exit(1)
+// NewClient 新建 RPC 客户端
+func NewClient(rpcAddress string) (*Client, error) {
+	rpcClient, err := xmlrpc.NewClient(rpcAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{rpcClient: rpcClient}, nil
+}
+
+// 请求 rpc 方法接口并验证 bool 类型返回
+func (c *Client) callMethodWithCheck(method string, args ...interface{}) error {
+	var result bool
+	err := c.rpcClient.Call(method, args, &result)
+	if err != nil {
+		return errors.Wrapf(err, "supervisord call method %s failed", method)
 	}
 
-	subcmd.Execute()
+	// 若返回值为 false 则返回错误
+	if !result {
+		return errors.New("supervisord return false")
+	}
+	return nil
 }

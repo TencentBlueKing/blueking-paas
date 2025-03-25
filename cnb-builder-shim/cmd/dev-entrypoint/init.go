@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -168,6 +169,11 @@ func initializeSourceCode() error {
 	case config.GIT:
 		return fmt.Errorf("TODO: clone git from revision")
 	}
+
+	// 初始化版本控制器
+	if err = vcs.New(workspace).Prepare(); err != nil {
+		return errors.Wrap(err, "version controller preparing")
+	}
 	return nil
 }
 
@@ -177,7 +183,7 @@ func ensureWorkspace(workspace string) (err error) {
 	if _, err = os.Stat(workspace); os.IsNotExist(err) {
 		// 文件夹不存在，创建文件夹
 		logger.Info("create workspace directory")
-		if err := os.MkdirAll(workspace, 0750); err != nil {
+		if err = os.MkdirAll(workspace, 0750); err != nil {
 			return errors.Wrap(err, "create workspace directory")
 		}
 		return nil

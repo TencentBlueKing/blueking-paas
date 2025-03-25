@@ -16,23 +16,41 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package rpc
 
 import (
-	"os"
-
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"bytes"
+	"context"
+	"github.com/pkg/errors"
+	"os/exec"
+	"time"
 )
 
-var logger = logging.Default()
+// Server 是 supervisord 服务端
+type Server struct {
+	config ServerConfig
+}
 
-func main() {
-	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init config failed")
-		os.Exit(1)
+// ServerConfig 服务端配置
+type ServerConfig struct {
+	ConfigPath string // Supervisord 启动配置路径
+}
+
+// NewServer 用于创建一个新的 Supervisord Server
+func NewServer(configPath string) *Server {
+	return &Server{config: ServerConfig{ConfigPath: configPath}}
+}
+
+// Start 使用 command 显式启动 Supervisord Server
+func (s *Server) Start() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return errors.New(stderr.String())
 	}
-
-	subcmd.Execute()
+	return nil
 }

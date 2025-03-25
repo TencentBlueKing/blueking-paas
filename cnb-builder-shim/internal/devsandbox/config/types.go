@@ -25,7 +25,7 @@ type SourceCodeConfig struct {
 type CORSConfig struct {
 	// 允许的来源
 	AllowOrigins []string
-	// 允许的HTTP方法
+	// 允许的 HTTP 方法
 	AllowMethods []string
 	// 允许的请求头
 	AllowHeaders []string
@@ -47,4 +47,6 @@ type Config struct {
 	SourceCode SourceCodeConfig
 	// 服务配置
 	Service ServiceConfig
+	// 模块配置
+	ModuleName string
 }

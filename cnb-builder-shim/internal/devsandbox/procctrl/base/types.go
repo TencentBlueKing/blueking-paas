@@ -16,23 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package base
 
-import (
-	"os"
+// Process 进程描述
+type Process struct {
+	ProcType    string
+	CommandPath string
+}
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-)
-
-var logger = logging.Default()
-
-func main() {
-	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init config failed")
-		os.Exit(1)
-	}
-
-	subcmd.Execute()
+// ProcessConf is a process config
+type ProcessConf struct {
+	Process
+	ProcLogFile string
 }

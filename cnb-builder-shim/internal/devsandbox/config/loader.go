@@ -48,14 +48,17 @@ func loadCORSConfigFromEnv() (CORSConfig, error) {
 		AllowCredentials: allowCredentials,
 	}, nil
 }
+
 func loadServiceConfigFromEnv() (ServiceConfig, error) {
 	corsConfig, err := loadCORSConfigFromEnv()
 	if err != nil {
 		return ServiceConfig{}, err
 	}
-	return ServiceConfig{
-		CORS: corsConfig,
-	}, nil
+	return ServiceConfig{CORS: corsConfig}, nil
+}
+
+func loadModuleNameFromEnv() (string, error) {
+	return utils.EnvOrDefault("BKPAAS_APP_MODULE_NAME", ""), nil
 }
 
 func loadConfigFromEnv() (*Config, error) {
@@ -68,9 +71,15 @@ func loadConfigFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	moduleName, err := loadModuleNameFromEnv()
+	if err != nil {
+		return nil, err
+	}
 	return &Config{
 		SourceCode: sourceCodeConfig,
 		Service:    serviceConfig,
+		ModuleName: moduleName,
 	}, nil
 }
 

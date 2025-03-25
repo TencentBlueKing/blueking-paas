@@ -16,23 +16,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package main
+package vcs_test
 
 import (
-	"os"
+	"testing"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/subcmd"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-var logger = logging.Default()
-
-func main() {
-	if err := config.InitConfig(); err != nil {
-		logger.Error(err, "Init config failed")
-		os.Exit(1)
-	}
-
-	subcmd.Execute()
+func TestVCS(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "VCS Suite")
 }

@@ -42,7 +42,7 @@ urlpatterns = [
     ),
     # 集群分配策略相关
     path(
-        "api/plat_mgt/infras/cluster_allocation_policy_condition_types/",
+        "api/plat_mgt/infras/service_binding_policy_condition_types/",
         views.BindingPolicyViewSet.as_view({"get": "list_condition_types"}),
         name="plat_mgt.infras.binding-policiey.list_condition_types",
     ),

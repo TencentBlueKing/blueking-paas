@@ -86,7 +86,6 @@ class ClusterRegisterRequestSLZ(serializers.Serializer):
 
     name = serializers.CharField(required=True)
     type = serializers.CharField(required=True)
-    is_default = serializers.BooleanField(required=False, default=False)
     # optional field
     description = serializers.CharField(required=False, default="")
     exposed_url_type = serializers.ChoiceField(choices=ExposedURLType.get_choices())

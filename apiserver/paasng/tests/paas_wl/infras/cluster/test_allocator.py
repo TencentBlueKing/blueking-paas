@@ -21,48 +21,13 @@ from django_dynamic_fixture import G
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
-from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator, EnvClusterService
+from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.modules.constants import ExposedURLType
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),
     pytest.mark.usefixtures("_with_wl_apps"),
 ]
-
-
-class TestEnvClusterService:
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        """setup clusters and wl_apps"""
-        Cluster.objects.all().delete()
-        G(Cluster, name="default", exposed_url_type=ExposedURLType.SUBDOMAIN.value)
-        G(Cluster, name="extra-1")
-
-    def test_empty_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = ""
-        latest_config.save()
-        wl_app.refresh_from_db()
-        assert EnvClusterService(bk_stag_env).get_cluster().name == "default"
-
-    def test_valid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = "extra-1"
-        latest_config.save()
-        wl_app.refresh_from_db()
-        assert EnvClusterService(bk_stag_env).get_cluster().name == "extra-1"
-
-    def test_invalid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = "invalid"
-        latest_config.save()
-        wl_app.refresh_from_db()
-        with pytest.raises(Cluster.DoesNotExist):
-            EnvClusterService(bk_stag_env).get_cluster()
 
 
 class TestClusterAllocator:

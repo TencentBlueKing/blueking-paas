@@ -34,16 +34,17 @@ from tests.paasng.platform.sourcectl.packages.utils import gen_tar
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def get_desc_handler(yaml_content: str) -> DescriptionHandler:
+def get_desc_handler(yaml_content: str, random_tenant_id: str) -> DescriptionHandler:
     meta_info = yaml.safe_load(yaml_content)
-    meta_info["tenant"] = {"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": "test_id"}
+    meta_info["tenant"] = {"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": random_tenant_id}
     handler = _get_desc_handler(meta_info)
     assert isinstance(handler, AppDescriptionHandler)
     return handler
 
 
 class TestAppDescriptionHandler:
-    def test_app_normal(self, random_name, bk_user, one_px_png):
+    @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
+    def test_app_normal(self, random_name, bk_user, one_px_png, random_tenant_id):
         yaml_content = dedent(
             f"""
         spec_version: 2
@@ -60,7 +61,7 @@ class TestAppDescriptionHandler:
         """
         )
 
-        application = get_desc_handler(yaml_content).handle_app(bk_user)
+        application = get_desc_handler(yaml_content, random_tenant_id).handle_app(bk_user)
 
         assert application is not None
         assert Application.objects.filter(code=random_name).exists()
@@ -69,7 +70,8 @@ class TestAppDescriptionHandler:
         assert logo_content[19] == 144
         assert logo_content[23] == 144
 
-    def test_app_from_stat(self, random_name, bk_user, one_px_png):
+    @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
+    def test_app_from_stat(self, random_name, bk_user, one_px_png, random_tenant_id):
         yaml_content = dedent(
             f"""
         spec_version: 2
@@ -94,7 +96,7 @@ class TestAppDescriptionHandler:
                 },
             )
             stat = SourcePackageStatReader(file_path).read()
-            application = get_desc_handler(yaml.dump(stat.meta_info)).handle_app(bk_user)
+            application = get_desc_handler(yaml.dump(stat.meta_info), random_tenant_id).handle_app(bk_user)
 
             assert application is not None
             assert Application.objects.filter(code=random_name).exists()
@@ -104,7 +106,8 @@ class TestAppDescriptionHandler:
             assert logo_content[23] == 144
 
 
-def test_app_data_to_desc(random_name):
+@pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
+def test_app_data_to_desc(random_name, random_tenant_id):
     app_data = dedent(
         f"""
     spec_version: 2
@@ -119,7 +122,7 @@ def test_app_data_to_desc(random_name):
     """
     )
 
-    desc = get_desc_handler(app_data).app_desc
+    desc = get_desc_handler(app_data, random_tenant_id).app_desc
     assert desc.name_zh_cn == random_name
     assert desc.code == random_name
     plugin = desc.get_plugin(AppDescPluginType.APP_VERSION)

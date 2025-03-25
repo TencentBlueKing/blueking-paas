@@ -76,7 +76,7 @@ class TestListClusters:
 class TestRetrieveCluster:
     """获取集群详情"""
 
-    def test_retrieve(self, init_system_cluster, plat_mgt_api_client):
+    def test_retrieve(self, init_system_cluster, plat_mgt_api_client, random_tenant_id):
         resp = plat_mgt_api_client.get(
             reverse(
                 "plat_mgt.infras.cluster.retrieve_update_destroy",
@@ -109,7 +109,7 @@ class TestRetrieveCluster:
                 "port": 9200,
                 "username": "blueking",
             },
-            "available_tenant_ids": ["system", "default"],
+            "available_tenant_ids": ["system", "default", random_tenant_id],
             "app_address_type": "subdomain",
             "app_domains": [
                 {
@@ -132,7 +132,7 @@ class TestRetrieveCluster:
             },
         }
 
-    def test_retrieve_bcs_cluster(self, init_default_cluster, plat_mgt_api_client):
+    def test_retrieve_bcs_cluster(self, init_default_cluster, plat_mgt_api_client, random_tenant_id):
         resp = plat_mgt_api_client.get(
             reverse(
                 "plat_mgt.infras.cluster.retrieve_update_destroy",
@@ -636,6 +636,7 @@ class TestRetrieveClusterUsage:
         bk_cnative_app,
         init_system_cluster,
         init_default_shared_cluster,
+        random_tenant_id,
         plat_mgt_api_client,
     ):
         data = {
@@ -676,7 +677,7 @@ class TestRetrieveClusterUsage:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json() == {
-            "available_tenant_ids": ["system", "default"],
+            "available_tenant_ids": ["system", "default", random_tenant_id],
             "allocated_tenant_ids": ["system"],
             "bound_app_module_envs": [
                 {

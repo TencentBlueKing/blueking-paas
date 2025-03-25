@@ -149,7 +149,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
         )
-        return Response(UserProfileSLZ(profile).data, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountFeatureFlagManageView(GenericTemplateView):

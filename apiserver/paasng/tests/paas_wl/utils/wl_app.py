@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import random
-from typing import Dict, Optional
+from typing import Dict
 
 from bkpaas_auth.models import User
 from django.conf import settings
@@ -65,7 +65,7 @@ def create_wl_app(
     return wl_app
 
 
-def create_wl_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
+def create_wl_instance(app: WlApp, force_instance_info: Dict | None = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -85,9 +85,7 @@ def create_wl_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -
     return Instance(**instance_info)
 
 
-def create_wl_release(
-    wl_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
-) -> Release:
+def create_wl_release(wl_app: WlApp, build_params: Dict | None = None, release_params: Dict | None = None) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),
         "app": wl_app,

@@ -38,7 +38,6 @@ class TestClusterAllocator:
 
     @pytest.fixture(autouse=True)
     def _setup(self, random_tenant_id):
-        Cluster.objects.all().delete()
         G(Cluster, name="random-sz1", tenant_id=random_tenant_id)
         G(Cluster, name="random-sz0", tenant_id=random_tenant_id)
         G(Cluster, name="tencent-gz0", tenant_id="tencent")

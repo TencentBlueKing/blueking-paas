@@ -23,7 +23,7 @@ from rest_framework import exceptions, serializers
 
 class PortMapSLZ(serializers.Serializer):
     http = serializers.IntegerField(default=80, help_text="http 协议暴露端口")
-    https = serializers.IntegerField(default=443, help_text="HTTPS 协议暴露端口")
+    https = serializers.IntegerField(default=443, help_text="https 协议暴露端口")
 
 
 class DomainSLZ(serializers.Serializer):

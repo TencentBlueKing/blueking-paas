@@ -18,7 +18,13 @@
 from unittest import mock
 
 import pytest
+from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
+from paas_wl.infras.cluster.entities import AllocationPolicy
+from paas_wl.infras.cluster.models import ClusterAllocationPolicy
+from tests.utils.basic import generate_random_string
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.mocks.cluster import cluster_ingress_config
 
 
@@ -41,7 +47,7 @@ def _setup_mocks():
         yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def one_px_png():
     """The binary content of an one pixel png format picture"""
     return (
@@ -49,4 +55,19 @@ def one_px_png():
         b"\x00\x01sRGB\x01\xd9\xc9,\x7f\x00\x00\x00\tpHYs\x00\x00\x00'\x00\x00\x00'\x01*\t\x91O\x00\x00\x00\x03PLTE"
         b"\x00\x00\x00\xa7z=\xda\x00\x00\x00\x01tRNS\x00@\xe6\xd8f\x00\x00\x00\nIDATx\x9cc`\x00\x00\x00\x02\x00\x01H"
         b"\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+
+@pytest.fixture
+def random_tenant_id() -> str:
+    return generate_random_string(12)
+
+
+@pytest.fixture
+def _setup_random_tenant_cluster_allocation_policy(random_tenant_id):
+    G(
+        ClusterAllocationPolicy,
+        type=ClusterAllocationPolicyType.UNIFORM,
+        allocation_policy=AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
+        tenant_id=random_tenant_id,
     )

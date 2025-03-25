@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import Tuple
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -24,6 +25,7 @@ from pydantic import ValidationError as PDValidationError
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from semver import VersionInfo
 
 from paas_wl.infras.cluster.models import Cluster, ClusterComponent
 from paas_wl.utils.basic import to_error_string
@@ -123,38 +125,8 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterComponentDiffVersionOutputSLZ()},
     )
     def diff_version(self, request, cluster_name, component_name, *args, **kwargs):
-        # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
-        cluster = Cluster.objects.filter(name=cluster_name).first()
-        if not cluster:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群不支持对比组件版本"))
-
-        cluster_component = ClusterComponent.objects.filter(cluster=cluster, name=component_name).first()
-        if not cluster_component:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        cur_version, latest_version = None, None
-        if release := HelmClient(cluster_name).get_release(component_name):
-            cur_version = release.chart.version
-
-        bcs_client = BCSUserClient(
-            get_tenant(request.user).id,
-            request.user.username,
-            request.COOKIES.get(settings.BK_COOKIE_NAME),
-        )
-        try:
-            chart_versions = bcs_client.get_chart_versions(
-                cluster.bcs_project_id, cluster_component.repository, component_name
-            )
-        except BCSGatewayServiceError:
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("获取组件版本信息失败，请确认操作人是否有权限"))
-
-        if chart_versions:
-            # API 返回是按时间逆序，因此第一个就是最新版本
-            latest_version = chart_versions[0].version
-
+        cluster, component = self._get_cluster_and_component(cluster_name, component_name)
+        cur_version, latest_version = self._get_component_cur_and_latest_version(request, cluster, component)
         resp_data = {"current_version": cur_version, "latest_version": latest_version}
         return Response(data=ClusterComponentDiffVersionOutputSLZ(resp_data).data)
 
@@ -165,18 +137,27 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def upsert(self, request, cluster_name, component_name, *args, **kwargs):
-        # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
-        cluster = Cluster.objects.filter(name=cluster_name).first()
-        if not cluster:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        cluster, component = self._get_cluster_and_component(cluster_name, component_name)
+        cur_version, latest_version = self._get_component_cur_and_latest_version(request, cluster, component)
 
         if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("非 BCS 集群需要手动更新组件"))
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("非 BCS 集群需要手动更新组件"))
 
-        cluster_component = ClusterComponent.objects.filter(cluster=cluster, name=component_name).first()
-        if not cluster_component:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not latest_version:
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("无法获取组件最新版本信息"))
 
+        # 如果目前集群中已经有部署的版本，则检查是否为跨大版本更新
+        if cur_version:
+            try:
+                cur_ver_info = VersionInfo.parse(cur_version)
+                latest_ver_info = VersionInfo.parse(latest_version)
+            except (TypeError, ValueError):
+                raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("版本号解析异常"))
+
+            if cur_ver_info.major != latest_ver_info.major:
+                raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("不支持跨大版本更新，需要到集群中手动操作"))
+
+        # 组件配置校验
         slz = ClusterComponentUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -200,10 +181,10 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             values_constructor = get_values_constructor_cls(component_name)(cluster)
             values = values_constructor.construct(data["values"])
         except PDValidationError as e:
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(to_error_string(e))
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(to_error_string(e))
         except Exception:
             logger.exception("failed to construct values for cluster %s component %s", cluster_name, component_name)
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(_("配置异常，请联系管理员处理"))
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("配置异常，请联系管理员处理"))
 
         # 调用 BCS API 下发组件（Helm Chart)
         bcs_client = BCSUserClient(
@@ -213,19 +194,63 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         )
         try:
             # bcs upgrade 接口默认带上 --install 参数，因此调用时无需区分是新建还是更新
-            bcs_client.upgrade_release_to_latest_chart_version(
+            bcs_client.upgrade_release(
                 cluster.bcs_project_id,
                 cluster.bcs_cluster_id,
                 namespace,
                 release_name,
-                cluster_component.repository,
+                component.repository,
                 component_name,
+                latest_version,
                 values,
             )
         except HelmChartNotFound as e:
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(str(e))
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(str(e))
         except BCSGatewayServiceError as e:
             logger.exception("failed to upgrade cluster %s component %s", cluster_name, component_name)
-            raise error_codes.CANNOT_UPDATE_CLUSTER_COMPONENT.f(str(e))
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(str(e))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _get_cluster_and_component(self, cluster_name, component_name) -> Tuple[Cluster, ClusterComponent]:
+        """获取集群和组件对象"""
+        # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
+        cluster = Cluster.objects.filter(name=cluster_name).first()
+        if not cluster:
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("指定集群不存在"))
+
+        component = ClusterComponent.objects.filter(cluster=cluster, name=component_name).first()
+        if not component:
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("指定集群组件不存在"))
+
+        return cluster, component
+
+    def _get_component_cur_and_latest_version(
+        self, request, cluster: Cluster, component: ClusterComponent
+    ) -> Tuple[str | None, str | None]:
+        """获取组件在集群中的当前版本 & 可选的最新版本"""
+        cur_version, latest_version = None, None
+        if release := HelmClient(cluster.name).get_release(component.name):
+            cur_version = release.chart.version
+
+        # 非 BCS 集群无法获取组件版本信息
+        if not (cluster.bcs_project_id and cluster.bcs_cluster_id):
+            return cur_version, latest_version
+
+        bcs_client = BCSUserClient(
+            get_tenant(request.user).id,
+            request.user.username,
+            request.COOKIES.get(settings.BK_COOKIE_NAME),
+        )
+        try:
+            chart_versions = bcs_client.get_chart_versions(
+                cluster.bcs_project_id, component.repository, component.name
+            )
+        except BCSGatewayServiceError:
+            raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(_("获取组件版本信息失败，请确认操作人是否有权限"))
+
+        if chart_versions:
+            # API 返回是按时间逆序，因此第一个就是最新版本
+            latest_version = chart_versions[0].version
+
+        return cur_version, latest_version

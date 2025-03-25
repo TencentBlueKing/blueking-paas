@@ -40,6 +40,12 @@ urlpatterns = [
         views.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.services.plans.detail",
     ),
+    # 集群分配策略相关
+    path(
+        "api/plat_mgt/infras/cluster_allocation_policy_condition_types/",
+        views.BindingPolicyViewSet.as_view({"get": "list_condition_types"}),
+        name="plat_mgt.infras.binding-policiey.list_condition_types",
+    ),
     path(
         "api/plat_mgt/infras/services/<str:service_id>/binding-policies/",
         views.BindingPolicyViewSet.as_view({"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}),

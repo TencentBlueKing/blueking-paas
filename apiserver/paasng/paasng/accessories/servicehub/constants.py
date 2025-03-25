@@ -17,7 +17,7 @@
 
 import uuid
 
-from blue_krill.data_types.enum import IntStructuredEnum, StrStructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 
 # 需要在平台侧完全隐藏的字段名称，用户无法在产品上查看该字段内容，只能通过环境变量查看
 SERVICE_SENSITIVE_FIELDS: dict = {}
@@ -72,7 +72,7 @@ class PrecedencePolicyCondType(StrStructuredEnum):
     """The type of precedence policy condition"""
 
     # Test if the region is in the given list
-    REGION_IN = "region_in"
+    REGION_IN = EnumField("region_in", label="Region.in")
 
     # Test if the cluster is in the given list
-    CLUSTER_IN = "cluster_in"
+    CLUSTER_IN = EnumField("cluster_in", label="Cluster.in")

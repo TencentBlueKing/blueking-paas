@@ -27,7 +27,7 @@ from paas_wl.bk_app.dev_sandbox.names import (
     get_dev_sandbox_service_name,
 )
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

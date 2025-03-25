@@ -36,10 +36,10 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name, inval
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paasng.platform.applications.models import ModuleEnvironment
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
 from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 logger = logging.getLogger(__name__)
 

@@ -25,7 +25,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngre
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
 from paasng.accessories.dev_sandbox.utils import generate_password
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 
 @pytest.fixture()

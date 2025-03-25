@@ -23,7 +23,7 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import create_pending_wl_apps
 
 CNATIVE_CLUSTER_NAME = get_random_string(6)

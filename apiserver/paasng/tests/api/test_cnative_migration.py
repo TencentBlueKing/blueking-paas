@@ -32,8 +32,8 @@ from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManag
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, ProcessDetails
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.bk_app.processes.test_controllers import make_process
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 

@@ -25,7 +25,7 @@ from paasng.platform.mgrlegacy.migrate import migrate_default_to_cnative, rollba
 from paasng.platform.mgrlegacy.task_data import MIGRATE_TO_CNATIVE_CLASSES_LIST
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import CNATIVE_CLUSTER_NAME
 

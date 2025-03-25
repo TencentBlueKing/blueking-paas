@@ -30,10 +30,10 @@ from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.workloads.networking.ingress.entities import PIngressDomain, PServicePortPair
 from paas_wl.workloads.networking.ingress.kres_entities.ingress import ProcessIngress
 from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessService, service_kmodel
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 
 @pytest.fixture(scope="session")

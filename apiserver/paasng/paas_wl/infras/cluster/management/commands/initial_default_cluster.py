@@ -35,7 +35,6 @@ env = Env()
 @dataclass
 class ClusterData:
     name: str
-    is_default: bool = False
     description: Optional[str] = None
     ingress_config: Optional[Dict] = None
     annotations: Optional[Dict] = None
@@ -68,7 +67,6 @@ class Command(BaseCommand):
             data = {
                 "name": "default-main",
                 "description": "默认应用集群",
-                "is_default": True,
                 "ingress_config": {
                     "default_ingress_domain_tmpl": "%s." + env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", ""),
                     "frontend_ingress_ip": env.str("PAAS_WL_CLUSTER_FRONTEND_INGRESS_IP", ""),

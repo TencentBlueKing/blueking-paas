@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-20 11:38+0800\n"
+"POT-Creation-Date: 2025-03-24 11:38+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -334,13 +334,17 @@ msgstr "Blueking Business ID"
 
 #: paas_wl/infras/cluster/constants.py:82
 msgid "跳过内置镜像凭证注入"
-msgstr ""
+msgstr "Skip inject builtin image credentials"
 
-#: paas_wl/infras/cluster/constants.py:89
+#: paas_wl/infras/cluster/constants.py:85
+msgid "Ingress 类名"
+msgstr "Ingress Class Name"
+
+#: paas_wl/infras/cluster/constants.py:91
 msgid "统一分配"
 msgstr "Uniform allocation"
 
-#: paas_wl/infras/cluster/constants.py:90
+#: paas_wl/infras/cluster/constants.py:92
 msgid "按规则分配"
 msgstr "Allocate according to rules"
 
@@ -2266,7 +2270,9 @@ msgstr "Tags must be in List format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:63
 msgid "二进制包存储配置必须为有效的地址字符串"
-msgstr "The value of the binary package storage configuration must be a valid address string"
+msgstr ""
+"The value of the binary package storage configuration must be a valid "
+"address string"
 
 #: paasng/plat_admin/admin42/utils/__init__.py:35
 #, python-brace-format
@@ -2309,80 +2315,82 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:320
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:315
 msgid "BCS 集群必须提供项目，集群，业务信息"
 msgstr "BCS clusters must provide project, cluster, and business information."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:324
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:319
 msgid "BCS 集群必须提供且仅提供一个 API Server"
 msgstr "BCS clusters must provide and only provide one API Server."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:327
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:322
 msgid "API 地址类型为 BCS 网关时，API Server 中必须包含 BCS 集群 ID"
-msgstr "When the API address type is BCS Gateway, the API Server must contain the BCS cluster ID"
+msgstr ""
+"When the API address type is BCS Gateway, the API Server must contain the "
+"BCS cluster ID"
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:330
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:325
 msgid "原生 K8S 集群不支持使用 BCS 网关作为 API 地址类型"
 msgstr "Native K8S clusters do not support the use of BCS gateway as the API address type"
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:335
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:330
 msgid "API Server 地址必须以 http 或 https 开头"
 msgstr "The API Server address must start with http or https"
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:342
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:479
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:337
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:474
 msgid "集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"
 msgstr ""
 "When the cluster authentication method is set to certificate, CA "
 "certificate, certificate, and private key must all be provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:345
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:340
 msgid "集群认证方式为 Token 时，Token 必须提供"
 msgstr ""
 "When the cluster authentication method is set to Token, the Token must be "
 "provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:349
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:485
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:344
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:480
 msgid "集群所属租户 ID {} 不在可用租户 ID 列表中"
 msgstr ""
 "The tenant ID {} of the cluster is not in the list of available tenant IDs."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:353
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:348
 msgid "集群名称 {} 已被使用"
 msgstr "The cluster name {} is already in use."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:400
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:395
 msgid "运算符为 Equal 时，值（value）必须提供"
 msgstr "When the operator is Equal, a value must be provided."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:432
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:427
 msgid "集群名称不可修改"
 msgstr "The cluster name cannot be modified."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:441
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:436
 msgid "当前集群已被租户 {} 分配，无法变更可用租户"
 msgstr ""
 "The current cluster has already been assigned to tenant {}, and the "
 "available tenant cannot be changed."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:447
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:442
 msgid "特性标志必须为字典"
 msgstr "Feature flags must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:457
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:452
 msgid "特性标志的值必须为布尔值"
 msgstr "The value of the feature flag must be a boolean."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:463
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:458
 msgid "节点选择器必须为字典"
 msgstr "Node selectors must be in dictionary format."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:467
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:462
 msgid "节点选择器 key 必须为字符串"
 msgstr "The key of the node selector must be a string."
 
-#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:469
+#: paasng/plat_mgt/infras/clusters/serializers/clusters.py:464
 msgid "节点选择器 value 必须为字符串"
 msgstr "The value of the node selector must be a string."
 
@@ -2410,26 +2418,42 @@ msgstr "At least configure two allocation rules"
 msgid "最后一条分配规则必须是 else 条件"
 msgstr "The last assignment rule must be an else condition"
 
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:139
-#: paasng/plat_mgt/infras/clusters/views/clusters.py:222
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:143
+#: paasng/plat_mgt/infras/clusters/views/clusters.py:226
 msgid "集群连通性测试失败，请检查 Server，Token 等配置是否准确"
-msgstr "The cluster connectivity test failed. Please check whether the Server, Token and other configurations are correct."
+msgstr ""
+"The cluster connectivity test failed. Please check whether the Server, Token "
+"and other configurations are correct."
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:132
-msgid "非 BCS 集群不支持对比组件版本"
-msgstr "Non-BCS clusters do not support comparing component versions"
+#: paasng/plat_mgt/infras/clusters/views/components.py:144
+msgid "无法获取组件最新版本信息"
+msgstr "Unable to get component latest version info"
 
 #: paasng/plat_mgt/infras/clusters/views/components.py:152
-msgid "获取组件版本信息失败，请确认操作人是否有权限"
-msgstr "Failed to get component version information. Please confirm whether the operator has permission."
+msgid "版本号解析异常"
+msgstr "Unable to parse component version"
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:174
-msgid "非 BCS 集群需要手动更新组件"
-msgstr "Non-BCS clusters require manual component updates"
+#: paasng/plat_mgt/infras/clusters/views/components.py:155
+msgid "不支持跨大版本更新，需要到集群中手动操作"
+msgstr "Don't support cross-version updates and requires manual operations in the cluster."
 
-#: paasng/plat_mgt/infras/clusters/views/components.py:206
+#: paasng/plat_mgt/infras/clusters/views/components.py:184
 msgid "配置异常，请联系管理员处理"
 msgstr "Configuration exception, please contact the administrator"
+
+#: paasng/plat_mgt/infras/clusters/views/components.py:217
+msgid "指定集群不存在"
+msgstr "Cluster not exist"
+
+#: paasng/plat_mgt/infras/clusters/views/components.py:221
+msgid "指定集群组件不存在"
+msgstr "Cluster component not exist"
+
+#: paasng/plat_mgt/infras/clusters/views/components.py:243
+msgid "获取组件版本信息失败，请确认操作人是否有权限"
+msgstr ""
+"Failed to get component version information. Please confirm whether the "
+"operator has permission."
 
 #: paasng/platform/applications/constants.py:98
 msgid "开启出口 IP 管理"
@@ -2586,15 +2610,15 @@ msgstr "BkApp config info"
 msgid "用户没有权限在 {} 下创建应用"
 msgstr "User does not have permission to create APP under {}"
 
-#: paasng/platform/declarative/application/controller.py:146
+#: paasng/platform/declarative/application/controller.py:145
 msgid "你没有权限操作当前应用"
 msgstr "You do not have permission to operate the current APP"
 
-#: paasng/platform/declarative/application/controller.py:200
+#: paasng/platform/declarative/application/controller.py:199
 msgid "未定义主模块, 请检查 app_desc.yaml."
 msgstr "default module not defined, please check app_desc.yaml."
 
-#: paasng/platform/declarative/application/controller.py:217
+#: paasng/platform/declarative/application/controller.py:216
 #, python-brace-format
 msgid ""
 "目标 {new_default_module_name} 模块未满足应用市场服务开启条件，切换主模块会导"
@@ -3236,33 +3260,33 @@ msgid "生产环境部署成功"
 msgstr "Successful deployment in prod env"
 
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:48
-#, python-brace-format
-msgid "{env} 环境绑定出口IP异常, 详情: {detail}"
-msgstr "{env} environment binding exit IP exception, details: {detail}"
+msgid "{env} 环境绑定出口 IP 异常, 详情: 找不到集群或集群状态信息"
+msgstr ""
+"{env} environment binding exit IP exception, details: cannot found cluster status info"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:53
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:51
 #, python-brace-format
 msgid "{env} 环境绑定出口IP异常, 详情: 不能重复绑定"
 msgstr ""
 "{env} environment binding exit IP exception, details: cannot be repeatedly "
 "bound"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:55
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:53
 #, python-brace-format
 msgid "{env} 环境绑定出口IP异常"
 msgstr "{env} environment binding exit IP exception"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:76
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:74
 #, python-brace-format
 msgid "{env} 环境未获取过网关信息"
 msgstr "{env} The environment has not obtained gateway information."
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:78
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:76
 #, python-brace-format
 msgid "{env} 环境解绑出口IP异常"
 msgstr "{env} environment unbinding exit IP exception"
 
-#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:81
+#: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:79
 msgid "绑定出口 IP "
 msgstr "Binding Egress IP "
 
@@ -3873,28 +3897,28 @@ msgstr "Already under review, please do not repeat your APP"
 msgid "提交申请成功"
 msgstr "Submitted successfully"
 
-#: paasng/settings/__init__.py:877
+#: paasng/settings/__init__.py:882
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing old permission center URL, recommended to switch to BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:881
+#: paasng/settings/__init__.py:886
 msgid "蓝鲸权限中心的应用ID"
 msgstr "BlueKing permission center APP ID"
 
-#: paasng/settings/__init__.py:885
+#: paasng/settings/__init__.py:890
 msgid "蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"
 msgstr ""
 "BlueKing permission center intranet access URL, recommended to switch to "
 "BKPAAS_IAM_URL"
 
-#: paasng/settings/__init__.py:887
+#: paasng/settings/__init__.py:892
 msgid "蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL"
 msgstr ""
 "BlueKing configuration platform access URL, recommended to switch to "
 "BKPAAS_CC_URL"
 
-#: paasng/settings/__init__.py:888
+#: paasng/settings/__init__.py:893
 msgid "蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL"
 msgstr ""
 "BlueKing job platform access URL, recommended to switch to BKPAAS_JOB_URL"

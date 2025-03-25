@@ -20,6 +20,7 @@ from .binding_policies import (
     DeletePolicyCombinationSLZ,
     PolicyCombinationConfigOutputSLZ,
     PolicyCombinationConfigUpsertSLZ,
+    PrecedencePolicyCondTypeOutputSLZ,
 )
 from .plans import (
     BasePlanObjSLZ,
@@ -38,6 +39,7 @@ __all__ = [
     "DeletePolicyCombinationSLZ",
     "PolicyCombinationConfigUpsertSLZ",
     "PolicyCombinationConfigOutputSLZ",
+    "PrecedencePolicyCondTypeOutputSLZ",
     # addons_services
     "ServiceListOutputSLZ",
 ]

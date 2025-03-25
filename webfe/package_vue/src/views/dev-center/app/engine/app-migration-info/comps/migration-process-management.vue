@@ -121,8 +121,11 @@
                 <img
                   src="/static/images/btn_loading.gif"
                   class="loading"
+                />
+                <span
+                  class="pl10"
+                  style="white-space: nowrap"
                 >
-                <span class="pl10" style="white-space: nowrap;">
                   <span v-if="isStarting(row)">{{ $t('启动中...') }}</span>
                   <span v-else>{{ $t('停止中...') }}</span>
                 </span>
@@ -139,7 +142,10 @@
                     trigger="click"
                     @confirm="handleUpdateProcess('stop')"
                   >
-                    <div class="round-wrapper" @click="handleProcessOperation(row)">
+                    <div
+                      class="round-wrapper"
+                      @click="handleProcessOperation(row)"
+                    >
                       <div class="square-icon"></div>
                     </div>
                   </bk-popconfirm>
@@ -153,7 +159,8 @@
                     >
                       <i
                         class="paasng-icon paasng-play-circle-shape start"
-                        @click="handleProcessOperation(row)"></i>
+                        @click="handleProcessOperation(row)"
+                      ></i>
                     </bk-popconfirm>
                   </div>
                 </div>
@@ -162,10 +169,19 @@
                   theme="light"
                   ext-cls="more-operations"
                   placement="bottom"
-                  :tippy-options="{ 'hideOnClick': false }">
+                  :tippy-options="{ hideOnClick: false }"
+                >
                   <i class="paasng-icon paasng-ellipsis more"></i>
-                  <div slot="content" style="white-space: normal;">
-                    <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
+                  <div
+                    slot="content"
+                    style="white-space: normal"
+                  >
+                    <div
+                      class="option"
+                      @click="handleExpansionAndContraction(row)"
+                    >
+                      {{ $t('扩缩容') }}
+                    </div>
                   </div>
                 </bk-popover>
               </div>
@@ -180,8 +196,7 @@
       v-model="scalingDialogConfig.visiable"
       :data="scalingData"
       @get-process-list="getProcessesList"
-    >
-    </scaling-dialog>
+    ></scaling-dialog>
   </div>
 </template>
 
@@ -252,7 +267,8 @@ export default {
             curProcess = process;
           }
         });
-        if (curProcess && !this.pollingId) { // 轮询
+        if (curProcess && !this.pollingId) {
+          // 轮询
           this.pollingProcesses(curProcess.type);
         }
       } catch (e) {
@@ -266,6 +282,9 @@ export default {
     },
     // 进程数据处理
     formatProcesses(processesData) {
+      if (!Object.keys(processesData).length) {
+        return [];
+      }
       // processes 进程数据
       // instances 实例数据
       const processes = processesData.processes.items;
@@ -273,7 +292,7 @@ export default {
       const packages = processesData.process_packages;
 
       processes.forEach((processeItem) => {
-        const packageInfo = packages.find(item => item.name === processeItem.type);
+        const packageInfo = packages.find((item) => item.name === processeItem.type) || {};
         processeItem.instancesList = [];
         processeItem.autoscaling = packageInfo.autoscaling;
         // 普通扩缩容
@@ -294,7 +313,7 @@ export default {
     // 轮询进程列表
     pollingProcesses(processType) {
       this.pollingId = setInterval(() => {
-        const curProcess = this.allProcesses.find(process => process.type === processType) || {};
+        const curProcess = this.allProcesses.find((process) => process.type === processType) || {};
         // 正常状态停止轮询
         if (this.isNormalStatus(curProcess)) {
           this.stopPolling();
@@ -310,7 +329,7 @@ export default {
     },
     // 当前操作进程信息
     handleProcessOperation(row) {
-      this.curUpdateProcess = row;    // 当前点击的进程
+      this.curUpdateProcess = row; // 当前点击的进程
     },
     // 当前进程是否为正常状态
     isNormalStatus(row) {
@@ -372,6 +391,7 @@ export default {
         autoscaling: row.autoscaling || false,
         success: row.success,
         maxReplicas: row.max_replicas,
+        scalingConfig: row.scaling_config,
       };
     },
     /**
@@ -482,14 +502,14 @@ export default {
     cursor: pointer;
   }
   .start {
-    color: #2DCB56;
+    color: #2dcb56;
     font-size: 20px;
   }
   .detail {
-    color: #979BA5;
+    color: #979ba5;
 
     &:hover {
-      color: #63656E;
+      color: #63656e;
     }
   }
 }

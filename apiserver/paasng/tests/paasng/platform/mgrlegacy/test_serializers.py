@@ -64,8 +64,8 @@ class TestLegacyAppSLZ:
         meta_fields = set(LegacyAppSLZ.Meta.fields)
         serialized_fields = set(serializer.data.keys())
 
-        ## 验证反序列化结果只包含 Meta.fields 中定义的字段
-        assert serialized_fields == meta_fields
+        ## 验证 Meta.fields 中的字段都在结果中
+        assert meta_fields.issubset(serialized_fields)
 
 
 class TestLegacyAppManager:

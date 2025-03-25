@@ -180,7 +180,6 @@ export default {
       try {
         const { region } = this.curAppInfo.application;
         const res = await this.$store.dispatch('fetchRegionInfo', region);
-        // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
         // 添加增强服务

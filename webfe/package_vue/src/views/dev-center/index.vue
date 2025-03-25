@@ -789,18 +789,6 @@ export default {
       });
     },
 
-    async fetchRegionInfo(region, item) {
-      try {
-        const res = await this.$store.dispatch('fetchRegionInfo', region);
-        this.$set(item, 'creation_allowed', res.mul_modules_config.creation_allowed);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || this.$t('接口异常'),
-        });
-      }
-    },
-
     toModule(appItem, subModule) {
       this.$router.push({
         name: 'appSummary',

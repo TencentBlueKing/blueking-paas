@@ -17,6 +17,7 @@
         :key="item.id"
         :class="['item', { actvie: actvieId === item.id }]"
         @click="switchTenant(item)"
+        v-bk-overflow-tips
       >
         {{ item.name }}
       </li>
@@ -87,10 +88,13 @@ export default {
     .item {
       line-height: 32px;
       height: 32px;
-      padding: 0 8px;
+      padding: 0 24px;
       font-size: 12px;
       color: #4d4f56;
       cursor: pointer;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
       &.actvie {
         background: #e1ecff;
         color: #3a84ff;

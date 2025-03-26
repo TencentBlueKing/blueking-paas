@@ -32,7 +32,6 @@
         <bk-table-column
           :label="$t('方案名称')"
           prop="name"
-          :width="150"
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
@@ -63,7 +62,7 @@
         <bk-table-column
           :label="$t('所属服务')"
           prop="service_name"
-          :width="100"
+          :width="120"
           show-overflow-tooltip
           :render-header="$renderHeader"
         ></bk-table-column>

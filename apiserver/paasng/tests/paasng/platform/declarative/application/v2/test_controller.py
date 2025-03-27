@@ -19,7 +19,6 @@ from typing import Dict
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
-from django.conf import settings
 from django.utils.translation import override
 from django_dynamic_fixture import G
 
@@ -280,7 +279,7 @@ class TestServicesField:
         service_names = ["mysql", "rabbitmq"]
         for name in service_names:
             # Create service object
-            svc = G(Service, name=name, category=category, region=settings.DEFAULT_REGION_NAME, logo_b64="dummy")
+            svc = G(Service, name=name, category=category, logo_b64="dummy")
             # Create default plans
             G(Plan, name="plan-1", service=svc, config="{}", is_active=True)
             G(Plan, name="plan-2", service=svc, config="{}", is_active=True)

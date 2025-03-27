@@ -311,18 +311,22 @@ class ClusterViewSet(viewsets.GenericViewSet):
         is_component_ready = bool(cluster.ingress_config.app_root_domains or cluster.ingress_config.sub_path_domains)
         # 只有通过上一步的检查，才去逐个检查必要组件的状态，避免低性能的获取 Helm Release Secrets 操作
         if is_component_ready:
-            release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
+            try:
+                release_map = {r.chart.name: r for r in HelmClient(cluster_name).list_releases()}
+            except Exception as e:
+                logger.warning("list helm releases error: %s", e)
+                is_component_ready = False
+            else:
+                for comp in ClusterComponent.objects.filter(cluster=cluster):
+                    # 非必须组件，不影响集群状态
+                    if not comp.required:
+                        continue
 
-            for comp in ClusterComponent.objects.filter(cluster=cluster):
-                # 非必须组件，不影响集群状态
-                if not comp.required:
-                    continue
-
-                rel = release_map.get(comp.name)
-                # 必要组件在集群中不存在，或者状态不是已安装，则认为集群组件为就绪
-                if not rel or rel.deploy_result.status != HelmChartDeployStatus.DEPLOYED:
-                    is_component_ready = False
-                    break
+                    rel = release_map.get(comp.name)
+                    # 必要组件在集群中不存在，或者状态不是已安装，则认为集群组件为就绪
+                    if not rel or rel.deploy_result.status != HelmChartDeployStatus.DEPLOYED:
+                        is_component_ready = False
+                        break
 
         state = {
             # 能够获取到集群的时候，基础配置已经是 OK 的

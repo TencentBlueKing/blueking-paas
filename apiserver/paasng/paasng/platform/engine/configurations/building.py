@@ -64,7 +64,8 @@ class SlugbuilderInfo:
     def from_module(cls, module: "Module") -> "SlugbuilderInfo":
         """根据模块获取支持的构建环境"""
         manager = ModuleRuntimeManager(module)
-        buildpacks = manager.list_buildpacks()  # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
+        # buildpack 和 slugbuilder 的约束由配置入口去处理,不再进行检查
+        buildpacks = manager.list_buildpacks()
         environments = {}
         slugbuilder = manager.get_slug_builder(raise_exception=False)
         use_cnb = False

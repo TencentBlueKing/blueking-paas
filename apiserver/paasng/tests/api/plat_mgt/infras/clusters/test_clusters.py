@@ -145,7 +145,7 @@ class TestRetrieveCluster:
             "name": init_default_cluster.name,
             "description": "default tenant cluster",
             "cluster_source": "bcs",
-            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_project_id": "abcdef012345",
             "bcs_cluster_id": "BCS-K8S-00000",
             "bk_biz_id": "12345",
             "bcs_project_name": "",
@@ -207,7 +207,7 @@ class TestCreateCluster:
             "name": cluster_name,
             "description": "test_bcs_cluster",
             "cluster_source": "bcs",
-            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_project_id": "abcdef012345",
             "bcs_cluster_id": "BCS-K8S-00000",
             "bk_biz_id": "12345",
             "api_address_type": "bcs_gateway",
@@ -237,7 +237,7 @@ class TestCreateCluster:
         assert cluster is not None
 
         assert cluster.annotations == {
-            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_project_id": "abcdef012345",
             "bcs_cluster_id": "BCS-K8S-00000",
             "bk_biz_id": "12345",
         }

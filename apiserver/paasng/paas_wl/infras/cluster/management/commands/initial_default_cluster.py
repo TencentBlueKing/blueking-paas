@@ -18,7 +18,7 @@
 import logging
 import os
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from django.core.management.base import BaseCommand
 from environ import Env
@@ -35,17 +35,17 @@ env = Env()
 @dataclass
 class ClusterData:
     name: str
-    description: Optional[str] = None
-    ingress_config: Optional[Dict] = None
-    annotations: Optional[Dict] = None
-    ca_data: Optional[str] = None
-    cert_data: Optional[str] = None
-    key_data: Optional[str] = None
-    token_type: Optional[ClusterTokenType] = None
-    token_value: Optional[str] = None
-    default_node_selector: Optional[Dict] = None
-    default_tolerations: Optional[List] = None
-    feature_flags: Optional[Dict] = None
+    description: str | None = None
+    ingress_config: Dict | None = None
+    annotations: Dict | None = None
+    ca_data: str | None = None
+    cert_data: str | None = None
+    key_data: str | None = None
+    token_type: ClusterTokenType | None = None
+    token_value: str | None = None
+    default_node_selector: Dict | None = None
+    default_tolerations: List | None = None
+    feature_flags: Dict | None = None
 
 
 @dataclass

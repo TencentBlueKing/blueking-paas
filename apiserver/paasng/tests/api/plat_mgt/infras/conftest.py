@@ -35,7 +35,7 @@ def random_tenant_id() -> str:
 
 @pytest.fixture
 def init_default_cluster() -> Cluster:
-    """默认租户集群（不共享）"""
+    """默认租户集群（不共享给其他租户）"""
     cluster = Cluster.objects.create(
         tenant_id=DEFAULT_TENANT_ID,
         name=f"cluster-default-{generate_random_string(8)}",
@@ -51,7 +51,7 @@ def init_default_cluster() -> Cluster:
             frontend_ingress_ip="127.0.0.1",
         ),
         annotations={
-            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_project_id": "abcdef012345",
             "bcs_cluster_id": "BCS-K8S-00000",
             "bk_biz_id": "12345",
         },
@@ -110,7 +110,7 @@ def init_default_cluster() -> Cluster:
 
 @pytest.fixture
 def init_default_shared_cluster(random_tenant_id) -> Cluster:
-    """默认租户集群，可共享的集群"""
+    """默认租户集群，可共享给其他租户的集群"""
     cluster = Cluster.objects.create(
         tenant_id=DEFAULT_TENANT_ID,
         name=f"cluster-default-shared-{generate_random_string(8)}",
@@ -126,7 +126,7 @@ def init_default_shared_cluster(random_tenant_id) -> Cluster:
             frontend_ingress_ip="127.0.0.21",
         ),
         annotations={
-            "bcs_project_id": "8470abd6fe455ca",
+            "bcs_project_id": "abcdef012345",
             "bcs_cluster_id": "BCS-K8S-20000",
             "bk_biz_id": "54321",
         },

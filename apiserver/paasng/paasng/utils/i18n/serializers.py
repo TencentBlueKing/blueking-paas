@@ -119,7 +119,7 @@ class I18NExtend:
         # languages: What languages does this Field support
         self.languages = list(kwargs.pop("languages", (lang[0] for lang in settings.LANGUAGES)))
         assert base_field.source is None, (
-            "The `source` argument is not meaningful for I18NField.Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful for I18NField. Remove `source=` from the field declaration."
         )
         self.kwargs = kwargs
         self._base_field = base_field

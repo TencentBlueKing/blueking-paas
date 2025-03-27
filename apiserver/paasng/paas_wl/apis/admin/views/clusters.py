@@ -61,7 +61,7 @@ class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     pagination_class = None
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["name", "is_default"]
+    search_fields = ["name"]
     ordering_fields = ("created", "updated")
 
     @swagger_auto_schema(request_body=ClusterRegisterRequestSLZ)

@@ -19,8 +19,8 @@ from django.conf import settings
 from rest_framework import permissions
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
+from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, User, UserProfile
-from tests.api.test_applications import SiteRole
 
 
 def user_has_feature(key: AccountFeatureFlagConst):
@@ -34,14 +34,15 @@ def user_has_feature(key: AccountFeatureFlagConst):
 
 
 def user_can_create_in_region(user: User, region: str) -> bool:
-    """Check if an user can create application or module in the specified region.
+    """Check if a user can create application or module in the specified region.
 
     Restrictions:
 
     - any user can perform creations in the default region
-    - only admin user can perform creations in nondefault region
+    - only admin user can perform creations in non default region
     """
     if region == settings.DEFAULT_REGION_NAME:
         return True
+
     user_profile = UserProfile.objects.get_profile(user)
     return user_profile.role in {SiteRole.ADMIN.value, SiteRole.SUPER_USER.value}

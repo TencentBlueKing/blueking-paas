@@ -148,12 +148,10 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """
     for proc_type in procfile:
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(
-                f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
-            )
+            raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize procfile data and return

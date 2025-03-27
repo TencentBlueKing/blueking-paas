@@ -20,6 +20,7 @@
 "Specification" describes an application. It includes many aspects, such as "was able to create new modules"、
 "has enabled engine service" etc.
 """
+
 import logging
 from abc import ABC
 from typing import Any, Dict, Type

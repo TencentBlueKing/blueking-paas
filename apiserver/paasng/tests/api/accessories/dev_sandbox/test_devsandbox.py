@@ -71,18 +71,23 @@ class TestCreateDevSandbox:
         ]
         mock_version_service.list_alternative_versions.return_value = mock_alternative_versions
 
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.serializers.get_version_service",
-            return_value=mock_version_service,
-        ), mock.patch(
-            "paasng.accessories.dev_sandbox.views.upload_source_code",
-            return_value="https://bkrepo.example.com/helloworld.zip",
-        ), mock.patch(
-            "paasng.accessories.dev_sandbox.views.get_env_variables",
-            return_value={"FOO": "BAR"},
-        ), mock.patch(
-            "paasng.accessories.dev_sandbox.views.DevSandboxController.deploy",
-            return_value=None,
+        with (
+            mock.patch(
+                "paasng.accessories.dev_sandbox.serializers.get_version_service",
+                return_value=mock_version_service,
+            ),
+            mock.patch(
+                "paasng.accessories.dev_sandbox.views.upload_source_code",
+                return_value="https://bkrepo.example.com/helloworld.zip",
+            ),
+            mock.patch(
+                "paasng.accessories.dev_sandbox.views.get_env_variables",
+                return_value={"FOO": "BAR"},
+            ),
+            mock.patch(
+                "paasng.accessories.dev_sandbox.views.DevSandboxController.deploy",
+                return_value=None,
+            ),
         ):
             yield
 

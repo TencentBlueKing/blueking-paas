@@ -180,18 +180,23 @@ class TestPluginApi:
         release_strategy.itsm_detail = ItsmDetail(fields=[], sn="222", ticket_url="http://222")
         release_strategy.save()
         url = f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/{release_strategy.release.id}/strategy/"
-        with mock.patch(
-            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.create_ticket",
-            return_value=ItsmDetail(fields=[], sn="1111", ticket_url="http://1111"),
-        ), mock.patch(
-            "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.get_ticket_status",
-            return_value={"ticket_url": "https://xxxx", "current_status": itsm_ticket_status},
-        ), mock.patch(
-            "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
-            return_value=["admin"],
-        ), mock.patch(
-            "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils._get_leader_by_user",
-            return_value=[],
+        with (
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.create_ticket",
+                return_value=ItsmDetail(fields=[], sn="1111", ticket_url="http://1111"),
+            ),
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.itsm_adaptor.client.ItsmClient.get_ticket_status",
+                return_value={"ticket_url": "https://xxxx", "current_status": itsm_ticket_status},
+            ),
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.fetch_role_members",
+                return_value=["admin"],
+            ),
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.itsm_adaptor.utils._get_leader_by_user",
+                return_value=[],
+            ),
         ):
             resp = api_client.post(
                 url,

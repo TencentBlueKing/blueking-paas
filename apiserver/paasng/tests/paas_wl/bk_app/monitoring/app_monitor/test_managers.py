@@ -114,7 +114,7 @@ class TestAppMonitorController:
         return G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_wl_app)
 
     @pytest.mark.usefixtures("_setup_crd")
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_normal(self, monitor, bk_stag_wl_app):
         controller = make_bk_monitor_controller(bk_stag_wl_app)
         assert controller.app_monitor is not None

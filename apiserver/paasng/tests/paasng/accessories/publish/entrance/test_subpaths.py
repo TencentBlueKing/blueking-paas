@@ -48,9 +48,10 @@ class TestModuleEnvSubpaths:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         # Enable USE_LEGACY_SUB_PATH_PATTERN by default
-        with cluster_ingress_config(
-            {"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}
-        ), override_settings(USE_LEGACY_SUB_PATH_PATTERN=True):
+        with (
+            cluster_ingress_config({"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}),
+            override_settings(USE_LEGACY_SUB_PATH_PATTERN=True),
+        ):
             yield
 
     def test_prod_default(self, bk_module):

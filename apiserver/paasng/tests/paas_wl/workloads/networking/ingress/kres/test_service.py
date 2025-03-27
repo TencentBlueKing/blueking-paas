@@ -34,7 +34,7 @@ class TestProcessService:
             release_params={"version": 5},
         )
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_integrated(self, bk_stag_wl_app):
         items = service_kmodel.list_by_app(bk_stag_wl_app)
         assert len(items) == 0
@@ -60,7 +60,7 @@ class TestProcessService:
         with pytest.raises(AppEntityNotFound):
             service_kmodel.get(bk_stag_wl_app, "non-existed-service")
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_get_normal(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
@@ -83,7 +83,7 @@ class TestProcessService:
         with pytest.raises(AppEntityNotFound):
             service_kmodel.update(service, update_method="patch")
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_update(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,
@@ -98,7 +98,7 @@ class TestProcessService:
         service_new = service_kmodel.get(bk_stag_wl_app, service.name)
         assert service_new.ports[0].target_port == 8080
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_update_with_less_ports(self, bk_stag_wl_app):
         service = ProcessService(
             app=bk_stag_wl_app,

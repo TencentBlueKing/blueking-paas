@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Permission related utilities
-"""
+"""Permission related utilities"""
+
 from typing import Dict, List, Sequence
 
 from paasng.infras.accounts.models import AccountFeatureFlag, User

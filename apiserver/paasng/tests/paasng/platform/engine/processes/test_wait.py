@@ -52,9 +52,10 @@ def metadata():
 def poller_mocker():
     @contextmanager
     def core(poller, processes: "List[Process]", last_processes: "Optional[List[Process]]" = None):
-        with mock.patch.object(poller, "_get_last_processes") as last, mock.patch.object(
-            poller, "_get_current_processes"
-        ) as current:
+        with (
+            mock.patch.object(poller, "_get_last_processes") as last,
+            mock.patch.object(poller, "_get_current_processes") as current,
+        ):
             current.return_value = processes
             last.return_value = last_processes if last_processes else processes
             yield

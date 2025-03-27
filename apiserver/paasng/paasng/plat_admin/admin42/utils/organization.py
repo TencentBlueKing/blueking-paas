@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""用户组织架构相关
-"""
+"""用户组织架构相关"""
+
 from dataclasses import dataclass
 
 from paasng.infras.bk_components.tof import (

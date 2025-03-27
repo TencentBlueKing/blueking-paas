@@ -84,7 +84,7 @@ class LessCodeClient:
             raise LessCodeGatewayServiceError(f"create lesscode app error, detail: {e}")
 
         if resp.get("code") != 0:
-            logger.exception(f'create lesscode app error, message:{resp["message"]} \n data: {data}')
+            logger.exception(f"create lesscode app error, message:{resp['message']} \n data: {data}")
             raise LessCodeApiError(resp["message"])
 
         return True
@@ -101,7 +101,7 @@ class LessCodeClient:
             return ""
 
         if resp.get("code") != 0:
-            logger.exception(f'create lesscode app error, message:{resp["message"]} \n params: {params}')
+            logger.exception(f"create lesscode app error, message:{resp['message']} \n params: {params}")
             return ""
 
         address_path = resp.get("data", {}).get("linkUrl")

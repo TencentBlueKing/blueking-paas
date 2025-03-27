@@ -46,9 +46,11 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture()
 def git_client(bk_module):
     """A fixture used to mock Git repo dependency"""
-    with mock.patch.object(bk_module, "get_source_obj"), mock.patch.object(
-        GitProject, "parse_from_repo_url"
-    ) as get_backends, mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient") as client:
+    with (
+        mock.patch.object(bk_module, "get_source_obj"),
+        mock.patch.object(GitProject, "parse_from_repo_url") as get_backends,
+        mock.patch("paasng.platform.sourcectl.controllers.gitlab.GitLabApiClient") as client,
+    ):
         get_backends.return_value = GitProject(name="baz", namespace="bar", type="dft_gitlab")
         yield client()
 

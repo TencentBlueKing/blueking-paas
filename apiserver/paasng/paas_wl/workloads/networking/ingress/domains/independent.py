@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Utilities for managing independent domains"""
+
 import contextlib
 import copy
 import logging

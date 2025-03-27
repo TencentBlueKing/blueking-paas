@@ -32,16 +32,17 @@ from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManag
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, ProcessDetails
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.bk_app.processes.test_controllers import make_process
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestMigrateCNativeMigrationViewSet:
     def test_migrate(self, api_client, bk_app):
-        with mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task, mock.patch(
-            "paasng.platform.mgrlegacy.views.CNativeMigrationViewSet._can_migrate_or_raise"
+        with (
+            mock.patch("paasng.platform.mgrlegacy.tasks.migrate_default_to_cnative.delay") as mock_task,
+            mock.patch("paasng.platform.mgrlegacy.views.CNativeMigrationViewSet._can_migrate_or_raise"),
         ):
             mock_task.return_value = None
 
@@ -279,7 +280,7 @@ class TestChecklistInfoViewSet:
     def _set_default_cluster(self, settings, bk_app):
         # Create the second cluster
         cluster_name = get_random_string(6)
-        G(Cluster, name=cluster_name, region=bk_app.region)
+        G(Cluster, name=cluster_name)
         settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = cluster_name
 
     @pytest.fixture(autouse=True)

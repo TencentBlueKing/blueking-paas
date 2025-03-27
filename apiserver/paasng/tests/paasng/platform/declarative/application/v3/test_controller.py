@@ -65,7 +65,7 @@ def tag(bk_app):
 @pytest.fixture(autouse=True)
 def app_tenant():
     """Fixture providing tenant information for application creation"""
-    return AppTenantConf(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="test_tenant_id")
+    return AppTenantConf(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="default")
 
 
 @pytest.fixture(autouse=True)

@@ -39,7 +39,7 @@ def _setup_fixtures():
 class TestDistributors:
     def test_list(self, api_client):
         response = api_client.get("/api/bk_plugin_distributors/")
-        assert response.status_code == 200, f'error: {response.json()["detail"]}'
+        assert response.status_code == 200, f"error: {response.json()['detail']}"
         assert len(response.json()) == 2
 
 
@@ -55,7 +55,7 @@ class TestDistributorRels:
         response = api_client.put(
             f"/api/bk_plugins/{bk_plugin_app.code}/distributors/", {"distributors": ["sample-dis-1", "sample-dis-2"]}
         )
-        assert response.status_code == 200, f'error: {response.json()["detail"]}'
+        assert response.status_code == 200, f"error: {response.json()['detail']}"
         assert len(response.json()) == 2
 
     def test_integrated(self, bk_plugin_app, api_client):

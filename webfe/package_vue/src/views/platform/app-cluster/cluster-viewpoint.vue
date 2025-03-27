@@ -5,7 +5,6 @@
       :outer-border="false"
       :header-border="false"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-      :row-class-name="handleRowClassName"
     >
       <bk-table-column
         :label="$t('集群名称')"
@@ -419,10 +418,6 @@ export default {
         },
       });
     },
-    // 是否配置完成，未配置完成添加指定样式
-    handleRowClassName({ row }) {
-      return this.clustersStatus[row.name]?.hasIcon ? 'cell-not-config-complete' : '';
-    },
   },
 };
 </script>
@@ -451,9 +446,6 @@ export default {
     cursor: pointer;
   }
   /deep/ .bk-table-body-wrapper {
-    .cell-not-config-complete {
-      background-color: #fdf4e8;
-    }
     .cluster-name-column .cell {
       display: flex;
       align-items: center;

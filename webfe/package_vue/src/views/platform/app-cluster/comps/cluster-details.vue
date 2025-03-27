@@ -38,7 +38,7 @@
           <li
             v-for="item in displayTenantList"
             :key="item.name"
-            :class="['item', { active: activeName === item.name }, { undone: clustersStatus[item.name]?.hasIcon }]"
+            :class="['item', { active: activeName === item.name }]"
             @click="switchDetails(item.name)"
           >
             {{ item.name }}
@@ -278,9 +278,6 @@ export default {
             border-left: 4px solid #3a84ff;
             transform: translateY(-50%);
           }
-        }
-        &.undone {
-          background: #fdf4e8;
         }
       }
       .header-item {

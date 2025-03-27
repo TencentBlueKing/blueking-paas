@@ -296,7 +296,7 @@ export default {
         const ret = await this.$store.dispatch('tenant/getClustersStatus', {
           clusterName,
         });
-        const hasIcon = !ret.base || !ret.component || !ret.feature;
+        const hasIcon = !ret.basic || !ret.component || !ret.feature;
         this.$store.commit('tenant/updateClustersStatus', {
           clusterName,
           status: {
@@ -310,7 +310,7 @@ export default {
         this.$store.commit('tenant/updateClustersStatus', {
           clusterName,
           status: {
-            base: false,
+            basic: false,
             component: false,
             feature: false,
             hasIcon: true,

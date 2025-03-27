@@ -123,7 +123,7 @@ export default {
         { name: 'tenant', icon: 'user2' },
       ],
       panels: [
-        { name: 'DetailInfo', label: this.$t('集群信息'), key: 'base' },
+        { name: 'DetailInfo', label: this.$t('集群信息'), key: 'basic' },
         { name: 'DetailComponents', label: this.$t('集群组件'), key: 'component' },
         { name: 'DetailFeature', label: this.$t('集群特性'), key: 'feature' },
       ],

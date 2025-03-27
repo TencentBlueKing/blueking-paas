@@ -328,7 +328,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         state = {
             # 能够获取到集群的时候，基础配置已经是 OK 的
             # 注：创建/更新集群，都会检查集群的连通性，因此本 API 不做检查
-            "base": True,
+            "basic": True,
             # 集群组件配置 & 集群组件状态
             "component": is_component_ready,
             # 集群特性配置（默认是空，如果不为空，则说明已配置）

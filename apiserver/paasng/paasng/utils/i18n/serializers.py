@@ -237,7 +237,7 @@ class FallbackMixin(_Base):
         self._i18n_field_name = None  # type: ignore
         source = kwargs.pop("source", None)
         assert source is None, (
-            "The `source` argument is not meaningful FallbackCharField.Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful FallbackCharField. Remove `source=` from the field declaration."
         )
         super().__init__(**kwargs)
 

@@ -625,7 +625,7 @@ class TestRetrieveClusterStatus:
         )
         assert resp.status_code == status.HTTP_200_OK
 
-        assert resp.json() == {"base": True, "component": False, "feature": True}
+        assert resp.json() == {"basic": True, "component": False, "feature": True}
 
 
 class TestRetrieveClusterUsage:

@@ -18,7 +18,8 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
+from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ, ProcServiceInputSLZ
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH
 
 
 @pytest.mark.parametrize(
@@ -45,3 +46,27 @@ class TestBkAppSpecInputSLZ:
         error_msg = str(e.value)
         assert "processes" in error_msg
         assert error_keyword in error_msg.lower()
+
+
+class TestProcServiceInputSLZ:
+    """测试 ProcServiceInputSLZ 序列化器"""
+
+    @pytest.mark.parametrize(
+        ("name", "is_valid"),
+        [
+            # Invalid cases
+            ("test_name", False),
+            ("TestName", False),
+            ("a" * (PROC_TYPE_MAX_LENGTH + 1), False),
+            # Valid case
+            ("valid-name", True),
+        ],
+    )
+    def test_service_name_validation(self, name, is_valid):
+        """测试服务名称验证，包括下划线约束、模式匹配和长度限制"""
+        serializer = ProcServiceInputSLZ(data={"name": name, "targetPort": 8000, "protocol": "TCP", "port": 80})
+
+        assert serializer.is_valid(raise_exception=False) == is_valid
+
+        if not is_valid:
+            assert "name" in serializer.errors

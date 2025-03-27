@@ -51,11 +51,33 @@ class EnvVariableSLZ(serializers.Serializer):
     )
 
 
+class ProcServiceSLZ(serializers.Serializer):
+    name = serializers.CharField(help_text="服务名称")
+    protocol = serializers.ChoiceField(choices=["TCP", "UDP"], help_text="服务协议", required=False, default="TCP")
+    target_port = serializers.IntegerField(help_text="Service 关联的容器内的端口号")
+    port = serializers.IntegerField(help_text="Service 暴露的端口号")
+
+    def validate_name(self, value):
+        if "_" in value:
+            raise ValidationError(f"Invalid service name: {value}, must not contain underscore")
+        if not PROC_TYPE_PATTERN.match(value):
+            raise ValidationError(f"Invalid service name: {value}, must match pattern {PROC_TYPE_PATTERN.pattern}")
+
+        if len(value) > PROC_TYPE_MAX_LENGTH:
+            raise ValidationError(
+                f"Invalid service name: {value}, cannot be longer than {PROC_TYPE_MAX_LENGTH} characters"
+            )
+        return value
+
+
 class ProcessSLZ(serializers.Serializer):
     command = serializers.CharField(help_text="进程启动指令")
     replicas = serializers.IntegerField(default=NOTSET, help_text="进程副本数", allow_null=True)
     plan = serializers.CharField(help_text="资源方案名称", required=False, allow_blank=True, allow_null=True)
     probes = ProbeSetSLZ(default=None, help_text="探针集合", required=False)
+    services = serializers.ListField(
+        child=ProcServiceSLZ(), help_text="进程依赖的服务名称列表", required=False, default=[]
+    )
 
 
 class BluekingMonitorSLZ(serializers.Serializer):

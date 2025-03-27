@@ -28,6 +28,7 @@
 前端过滤（可选方案）：
     [JS-XSS](https://github.com/leizongmin/js-xss)
 """
+
 import copy
 
 from bleach.sanitizer import BleachSanitizerFilter, Cleaner

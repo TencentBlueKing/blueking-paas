@@ -70,7 +70,7 @@ class TestGetSourcePackagePath:
         # not use module in engine app
         assert (
             get_source_package_path(deployment)
-            == f'{bk_module.region}/home/{bk_module.get_envs("prod").engine_app.name}:trunk:1000/tar'
+            == f"{bk_module.region}/home/{bk_module.get_envs('prod').engine_app.name}:trunk:1000/tar"
         )
 
     def test_for_git(self, bk_module):
@@ -88,7 +88,7 @@ class TestGetSourcePackagePath:
         # not use module in engine app
         assert (
             get_source_package_path(deployment)
-            == f'{bk_module.region}/home/{bk_module.get_envs("prod").engine_app.name}:dev:6f3bfa8adf8be3/tar'
+            == f"{bk_module.region}/home/{bk_module.get_envs('prod').engine_app.name}:dev:6f3bfa8adf8be3/tar"
         )
 
 
@@ -98,8 +98,9 @@ class TestDownloadSourceToDir:
 
     @pytest.fixture(autouse=True)
     def _mocked_ctl(self):
-        with mock.patch("paasng.platform.engine.utils.source.get_repo_controller"), mock.patch(
-            "paasng.platform.engine.utils.source.PackageController"
+        with (
+            mock.patch("paasng.platform.engine.utils.source.get_repo_controller"),
+            mock.patch("paasng.platform.engine.utils.source.PackageController"),
         ):
             yield
 

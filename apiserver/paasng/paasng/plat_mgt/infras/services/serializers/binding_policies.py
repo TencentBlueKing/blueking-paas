@@ -79,3 +79,8 @@ class PolicyCombinationConfigOutputSLZ(serializers.Serializer):
 
 class DeletePolicyCombinationSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
+
+
+class PrecedencePolicyCondTypeOutputSLZ(serializers.Serializer):
+    key = serializers.CharField(help_text="条件标识")
+    name = serializers.CharField(help_text="条件名称")

@@ -104,9 +104,10 @@ class TestGitClient:
     def test_list_refs(self, client, refs, expected):
         """测试 git show-ref"""
 
-        with patch.object(client, "run") as mock_run, patch(
-            "paasng.platform.sourcectl.git.client.GitClient._get_commit_info"
-        ) as mock_commit_info:
+        with (
+            patch.object(client, "run") as mock_run,
+            patch("paasng.platform.sourcectl.git.client.GitClient._get_commit_info") as mock_commit_info,
+        ):
             mock_run.return_value = "\n".join(refs)
             mock_commit_info.return_value = {"time": "2019-01-01 00:00:00", "message": "fake"}
 

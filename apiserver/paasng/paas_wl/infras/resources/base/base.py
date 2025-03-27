@@ -123,7 +123,7 @@ def get_client_by_cluster_name(cluster_name: str) -> EnhancedApiClient:
 
     if cluster_name not in get_all_cluster_names():
         # if the context which user want to use do not exist, raise a ValueError
-        raise ValueError(f'context "{cluster_name}" not found in settings, ' f"all context: {get_all_cluster_names()}")
+        raise ValueError(f'context "{cluster_name}" not found in settings, all context: {get_all_cluster_names()}')
 
     ep_pool = get_global_configuration_pool()[cluster_name]
     return EnhancedApiClient(ep_pool=ep_pool)

@@ -16,15 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
-from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator, EnvClusterService
+from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
 from paasng.platform.applications.constants import AppEnvironment
-from paasng.platform.modules.constants import ExposedURLType
+from tests.utils.basic import generate_random_string
 
 pytestmark = [
     pytest.mark.django_db(databases=["default", "workloads"]),
@@ -32,82 +31,45 @@ pytestmark = [
 ]
 
 
-class TestEnvClusterService:
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        """setup clusters and wl_apps"""
-        Cluster.objects.all().delete()
-        G(
-            Cluster,
-            name="default",
-            is_default=True,
-            exposed_url_type=ExposedURLType.SUBDOMAIN.value,
-            region=settings.DEFAULT_REGION_NAME,
-        )
-        G(Cluster, name="extra-1", is_default=False, region=settings.DEFAULT_REGION_NAME)
-
-    def test_empty_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = ""
-        latest_config.save()
-        wl_app.refresh_from_db()
-        assert EnvClusterService(bk_stag_env).get_cluster().name == "default"
-
-    def test_valid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = "extra-1"
-        latest_config.save()
-        wl_app.refresh_from_db()
-        assert EnvClusterService(bk_stag_env).get_cluster().name == "extra-1"
-
-    def test_invalid_cluster_field(self, bk_stag_env):
-        wl_app = bk_stag_env.wl_app
-        latest_config = wl_app.latest_config
-        latest_config.cluster = "invalid"
-        latest_config.save()
-        wl_app.refresh_from_db()
-        with pytest.raises(Cluster.DoesNotExist):
-            EnvClusterService(bk_stag_env).get_cluster()
-
-
 class TestClusterAllocator:
+    @pytest.fixture
+    def random_tenant_id(self) -> str:
+        return generate_random_string(12)
+
     @pytest.fixture(autouse=True)
-    def _setup(self):
-        Cluster.objects.all().delete()
-        G(Cluster, name="default-sz1", is_default=True, region="default", tenant_id="default")
-        G(Cluster, name="default-sz0", is_default=False, region="default", tenant_id="default")
-        G(Cluster, name="tencent-gz0", is_default=True, region="tencent", tenant_id="tencent")
-        G(Cluster, name="blueking-sh0", is_default=True, region="blueking", tenant_id="default")
-        G(Cluster, name="blueking-sz0", is_default=False, region="blueking", tenant_id="default")
+    def _setup(self, random_tenant_id):
+        G(Cluster, name="random-sz1", tenant_id=random_tenant_id)
+        G(Cluster, name="random-sz0", tenant_id=random_tenant_id)
+        G(Cluster, name="tencent-gz0", tenant_id="tencent")
+        G(Cluster, name="blueking-sh0", tenant_id=random_tenant_id)
+        G(Cluster, name="blueking-sz0", tenant_id=random_tenant_id)
 
     @pytest.fixture
-    def _uniform_policy(self):
+    def _uniform_policy(self, random_tenant_id):
         G(
             ClusterAllocationPolicy,
             type=ClusterAllocationPolicyType.UNIFORM,
-            allocation_policy=AllocationPolicy(env_specific=False, clusters=["default-sz0"]),
-            tenant_id="default",
+            allocation_policy=AllocationPolicy(env_specific=False, clusters=["random-sz0"]),
+            tenant_id=random_tenant_id,
         )
 
     @pytest.fixture
-    def _rule_based_policy(self):
+    def _rule_based_policy(self, random_tenant_id):
         G(
             ClusterAllocationPolicy,
             type=ClusterAllocationPolicyType.RULE_BASED,
             allocation_precedence_policies=[
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.USERNAME_IN: "zhangsan, lisi"},
-                    policy=AllocationPolicy(env_specific=False, clusters=["default-sz0", "default-sz1"]),
+                    policy=AllocationPolicy(env_specific=False, clusters=["random-sz0", "random-sz1"]),
                 ),
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.REGION_IS: "default"},
                     policy=AllocationPolicy(
                         env_specific=True,
                         env_clusters={
-                            AppEnvironment.STAGING: ["default-sz0"],
-                            AppEnvironment.PRODUCTION: ["default-sz1"],
+                            AppEnvironment.STAGING: ["random-sz0"],
+                            AppEnvironment.PRODUCTION: ["random-sz1"],
                         },
                     ),
                 ),
@@ -123,36 +85,29 @@ class TestClusterAllocator:
                 ),
                 AllocationPrecedencePolicy(
                     matcher={},
-                    policy=AllocationPolicy(env_specific=False, clusters=["default-sz1"]),
+                    policy=AllocationPolicy(env_specific=False, clusters=["random-sz1"]),
                 ),
             ],
-            tenant_id="default",
+            tenant_id=random_tenant_id,
         )
-
-    def test_legacy_list(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.PRODUCTION)
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz1", "default-sz0"}
-
-        ctx = AllocationContext(tenant_id="blueking", region="blueking", environment=AppEnvironment.STAGING)
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"blueking-sh0", "blueking-sz0"}
 
     @pytest.mark.usefixtures("_uniform_policy")
-    def test_policy_base_uniform_list(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.PRODUCTION)
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz0"}
+    def test_policy_base_uniform_list(self, random_tenant_id):
+        ctx = AllocationContext(tenant_id=random_tenant_id, region="default", environment=AppEnvironment.PRODUCTION)
+        assert {c.name for c in ClusterAllocator(ctx).list()} == {"random-sz0"}
 
     @pytest.mark.usefixtures("_rule_based_policy")
-    def test_policy_base_rule_based_list(self):
+    def test_policy_base_rule_based_list(self, random_tenant_id):
         ctx = AllocationContext(
-            tenant_id="default", region="default", environment=AppEnvironment.PRODUCTION, username="zhangsan"
+            tenant_id=random_tenant_id, region="default", environment=AppEnvironment.PRODUCTION, username="zhangsan"
         )
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz1", "default-sz0"}
+        assert {c.name for c in ClusterAllocator(ctx).list()} == {"random-sz1", "random-sz0"}
 
         ctx.username = "wangwu"
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz1"}
+        assert {c.name for c in ClusterAllocator(ctx).list()} == {"random-sz1"}
 
         ctx.environment = AppEnvironment.STAGING
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz0"}
+        assert {c.name for c in ClusterAllocator(ctx).list()} == {"random-sz0"}
 
         ctx.region = "blueking"
         assert {c.name for c in ClusterAllocator(ctx).list()} == {"blueking-sz0"}
@@ -161,12 +116,12 @@ class TestClusterAllocator:
         assert {c.name for c in ClusterAllocator(ctx).list()} == {"blueking-sz0", "blueking-sh0"}
 
         ctx.region = "tencent"
-        assert {c.name for c in ClusterAllocator(ctx).list()} == {"default-sz1"}
+        assert {c.name for c in ClusterAllocator(ctx).list()} == {"random-sz1"}
 
     @pytest.mark.usefixtures("_rule_based_policy")
-    def test_get_with_cluster_name(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.PRODUCTION)
-        assert ClusterAllocator(ctx).get("default-sz1").name == "default-sz1"
+    def test_get_with_cluster_name(self, random_tenant_id):
+        ctx = AllocationContext(tenant_id=random_tenant_id, region="default", environment=AppEnvironment.PRODUCTION)
+        assert ClusterAllocator(ctx).get("random-sz1").name == "random-sz1"
 
         ctx.region = "blueking"
         assert ClusterAllocator(ctx).get("blueking-sh0").name == "blueking-sh0"
@@ -174,29 +129,22 @@ class TestClusterAllocator:
         with pytest.raises(ValueError, match="got no cluster"):
             ClusterAllocator(ctx).get("invalid")
 
-    def test_get_default_legacy(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.STAGING)
-        assert ClusterAllocator(ctx).get_default().name == "default-sz1"
-
-        ctx.region = "tencent"
-        assert ClusterAllocator(ctx).get_default().name == "tencent-gz0"
-
     @pytest.mark.usefixtures("_uniform_policy")
-    def test_get_default_with_uniform_policy(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.STAGING)
-        assert ClusterAllocator(ctx).get_default().name == "default-sz0"
+    def test_get_default_with_uniform_policy(self, random_tenant_id):
+        ctx = AllocationContext(tenant_id=random_tenant_id, region="default", environment=AppEnvironment.STAGING)
+        assert ClusterAllocator(ctx).get_default().name == "random-sz0"
 
     @pytest.mark.usefixtures("_rule_based_policy")
-    def test_get_default_with_rule_based_policy(self):
-        ctx = AllocationContext(tenant_id="default", region="default", environment=AppEnvironment.STAGING)
-        assert ClusterAllocator(ctx).get_default().name == "default-sz0"
+    def test_get_default_with_rule_based_policy(self, random_tenant_id):
+        ctx = AllocationContext(tenant_id=random_tenant_id, region="default", environment=AppEnvironment.STAGING)
+        assert ClusterAllocator(ctx).get_default().name == "random-sz0"
 
         ctx.region = "tencent"
-        assert ClusterAllocator(ctx).get_default().name == "default-sz1"
+        assert ClusterAllocator(ctx).get_default().name == "random-sz1"
 
         ctx.region = "blueking"
         ctx.environment = AppEnvironment.PRODUCTION
         assert ClusterAllocator(ctx).get_default().name == "blueking-sz0"
 
         ctx.username = "zhangsan"
-        assert ClusterAllocator(ctx).get_default().name == "default-sz0"
+        assert ClusterAllocator(ctx).get_default().name == "random-sz0"

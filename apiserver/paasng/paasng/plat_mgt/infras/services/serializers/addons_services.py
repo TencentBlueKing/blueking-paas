@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.encrypt_cmd import ReEncryptCommand
+from rest_framework import serializers
 
 
-class Command(ReEncryptCommand):
-    help = "cluster 存量数据加密迁移"
+class ServiceListOutputSLZ(serializers.Serializer):
+    """增强服务列表"""
 
-    app_label = "cluster"
+    id = serializers.CharField(help_text="唯一 ID", source="uuid")
+    name = serializers.CharField(help_text="名称")
+    display_name = serializers.CharField(help_text="展示用名称")

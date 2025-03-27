@@ -42,6 +42,11 @@
             @click="switchDetails(item.name)"
           >
             {{ item.name }}
+            <i
+              v-if="clustersStatus[item.name]?.hasIcon"
+              class="paasng-icon paasng-unfinished"
+              v-bk-tooltips="$t('集群配置未完成')"
+            ></i>
           </li>
         </ul>
       </div>
@@ -59,12 +64,23 @@
           :active.sync="tabActive"
           type="card"
           ext-cls="cluster-details-tab"
+          :key="`${activeName}-${Object.values(curClustersStatus).join('-')}`"
         >
           <bk-tab-panel
             v-for="(panel, index) in panels"
             v-bind="panel"
             :key="index"
-          ></bk-tab-panel>
+          >
+            <template slot="label">
+              <span>{{ panel.label }}</span>
+              <template v-if="Object.keys(curClustersStatus)?.length && curClustersStatus?.hasIcon">
+                <i
+                  v-if="!curClustersStatus?.[panel.key]"
+                  class="paasng-icon paasng-unfinished"
+                ></i>
+              </template>
+            </template>
+          </bk-tab-panel>
           <div v-bkloading="{ isLoading: contentLoading, zIndex: 10 }">
             <!-- 详情 -->
             <keep-alive>
@@ -84,6 +100,7 @@
 import DetailInfo from './detail-info.vue';
 import DetailComponents from './detail-components.vue';
 import DetailFeature from './detail-feature.vue';
+import { mapState } from 'vuex';
 export default {
   name: 'ClusterDetails',
   components: {
@@ -106,19 +123,24 @@ export default {
         { name: 'tenant', icon: 'user2' },
       ],
       panels: [
-        { name: 'DetailInfo', label: this.$t('集群信息') },
-        { name: 'DetailComponents', label: this.$t('集群组件') },
-        { name: 'DetailFeature', label: this.$t('集群特性') },
+        { name: 'DetailInfo', label: this.$t('集群信息'), key: 'basic' },
+        { name: 'DetailComponents', label: this.$t('集群组件'), key: 'component' },
+        { name: 'DetailFeature', label: this.$t('集群特性'), key: 'feature' },
       ],
       searchValue: '',
       leftLoading: false,
       contentLoading: false,
       tenantList: [],
       curDetailData: {},
-      componentKey: 0,
     };
   },
   computed: {
+    ...mapState('tenant', {
+      clustersStatus: (state) => state.clustersStatus,
+    }),
+    curClustersStatus() {
+      return this.clustersStatus[this.activeName] ?? {};
+    },
     // 字段模糊搜索
     displayTenantList() {
       const lowerCaseSearchTerm = this.searchValue.toLocaleLowerCase();
@@ -140,7 +162,6 @@ export default {
     },
     switchDetails(name) {
       this.activeName = name || '';
-      this.componentKey += 1;
       this.getClusterDetails();
     },
     // 获取集群列表
@@ -156,6 +177,10 @@ export default {
         } else {
           this.switchDetails(this.active || res[0]?.name);
         }
+        setTimeout(() => {
+          // 获取集群状态
+          this.$emit('get-status', res);
+        }, 200);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -188,6 +213,12 @@ export default {
   height: 100%;
   display: flex;
   margin-top: 16px;
+  i.paasng-unfinished {
+    margin-left: 5px;
+    font-size: 14px;
+    color: #f8b64f;
+    transform: translateY(0);
+  }
   /deep/ .clustertab-edit-btn-cls {
     position: absolute;
     right: 0;

@@ -18,6 +18,7 @@
 """
 A command for importing environment variables(or so called config vars) to a Blueking Application
 """
+
 import argparse
 
 from django.core.files.base import ContentFile

@@ -257,8 +257,9 @@ export default {
       maxReplicasNum = this.data.maxReplicas;
       // 自动调节
       if (this.autoscaling) {
-        this.scalingConfig.minReplicas = this.data.min_replicas;
-        this.scalingConfig.maxReplicas = this.data.max_replicas;
+        const { scalingConfig = {} } = this.data;
+        this.scalingConfig.minReplicas = scalingConfig.min_replicas;
+        this.scalingConfig.maxReplicas = scalingConfig.max_replicas;
       }
     },
     // 扩缩容校验
@@ -271,7 +272,7 @@ export default {
           },
           (validator) => {
             console.error(validator);
-          },
+          }
         );
       }
     },
@@ -281,7 +282,7 @@ export default {
       if (this.curTargetReplicas === this.processPlan.targetReplicas) {
         this.handleCancel();
         return;
-      };
+      }
       this.processConfigDialog.isLoading = true;
       const { appCode, moduleId, env, type } = this.data;
       const patchData = {

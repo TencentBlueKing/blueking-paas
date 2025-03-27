@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Resource Definition of `DomainGroupMapping` kind"""
+
 from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, validator

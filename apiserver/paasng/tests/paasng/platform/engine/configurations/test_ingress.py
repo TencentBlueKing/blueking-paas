@@ -39,11 +39,12 @@ class TestAppDefaultSubpaths:
             {"sub_path_domains": [{"name": "long-example.com"}, {"name": "example.com"}]},
             IngressConfig,
         )
-        with mock.patch(
-            "paasng.platform.engine.configurations.ingress.ModuleEnvSubpaths.get_ingress_config"
-        ) as get_ingress_config, mock.patch(
-            "paasng.accessories.publish.entrance.preallocated.get_module_clusters"
-        ) as get_module_clusters:
+        with (
+            mock.patch(
+                "paasng.platform.engine.configurations.ingress.ModuleEnvSubpaths.get_ingress_config"
+            ) as get_ingress_config,
+            mock.patch("paasng.accessories.publish.entrance.preallocated.get_module_clusters") as get_module_clusters,
+        ):
             get_ingress_config.return_value = dummy_ingress_config
             get_module_clusters.return_value = {
                 AppEnvName.STAG: mock.MagicMock(ingress_config=dummy_ingress_config),

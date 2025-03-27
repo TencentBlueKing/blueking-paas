@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import random
-from typing import Dict, Optional
+from typing import Dict
 
 from bkpaas_auth.models import User
 from django.conf import settings
@@ -25,15 +25,17 @@ from django.utils.crypto import get_random_string
 from paas_wl.bk_app.applications.models import Build, Release, WlApp
 from paas_wl.bk_app.applications.models.config import Config
 from paas_wl.bk_app.processes.kres_entities import Instance
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.auth import create_user
 
 
 def create_wl_app(
-    force_app_info: Optional[Dict] = None,
-    paas_app_code: Optional[str] = None,
-    environment: Optional[str] = None,
-    owner: Optional[User] = None,
-    cluster_name: Optional[str] = None,
+    force_app_info: Dict | None = None,
+    paas_app_code: str | None = None,
+    environment: str | None = None,
+    owner: User | None = None,
+    cluster_name: str | None = None,
+    tenant_id: str | None = DEFAULT_TENANT_ID,
 ) -> WlApp:
     default_environment = random.choice(["stag", "prod"])
     default_app_name = "app-" + get_random_string(length=12).lower()
@@ -42,6 +44,7 @@ def create_wl_app(
         "name": default_app_name,
         "structure": {"web": 1, "worker": 1},
         "owner": str(owner or create_user(username="somebody")),
+        "tenant_id": tenant_id,
     }
 
     if force_app_info:
@@ -62,7 +65,7 @@ def create_wl_app(
     return wl_app
 
 
-def create_wl_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -> Instance:
+def create_wl_instance(app: WlApp, force_instance_info: Dict | None = None) -> Instance:
     app_name = "bkapp-" + get_random_string(length=12).lower() + "-" + random.choice(["stag", "prod"])
     instance_info = {
         "app": app,
@@ -82,9 +85,7 @@ def create_wl_instance(app: WlApp, force_instance_info: Optional[Dict] = None) -
     return Instance(**instance_info)
 
 
-def create_wl_release(
-    wl_app: WlApp, build_params: Optional[Dict] = None, release_params: Optional[Dict] = None
-) -> Release:
+def create_wl_release(wl_app: WlApp, build_params: Dict | None = None, release_params: Dict | None = None) -> Release:
     default_build_params = {
         "owner": create_user(username="somebody"),
         "app": wl_app,

@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-import time
 from contextlib import contextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler as Scheduler
@@ -34,7 +33,7 @@ from paasng.accessories.servicehub.models import (
 from paasng.accessories.servicehub.remote.collector import fetch_all_remote_services
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.core.core.storages.redisdb import get_default_redis
-from paasng.core.tenant.user import get_default_tenant_id_for_init
+from paasng.core.tenant.user import get_init_tenant_id
 
 logger = logging.getLogger(__name__)
 scheduler = Scheduler()
@@ -57,22 +56,25 @@ def redis_lock(lock_key: str, timeout: int = 300):
     :param timeout: 锁自动释放的超时时间（秒），预防死锁
     """
     redis_conn = get_default_redis()
-    lock_token = str(time.time())
+    lock = redis_conn.lock(
+        name=lock_key,
+        timeout=timeout,
+        blocking_timeout=0,  # 非阻塞模式，立即返回
+        thread_local=False,
+    )
 
-    # 尝试获取锁（带超时时间）
-    acquired = redis_conn.set(lock_key, lock_token, nx=True, ex=timeout)
+    acquired = lock.acquire()
     try:
         if acquired:
-            yield True
+            logger.debug("Successfully acquired lock for %s", lock_key)
         else:
             logger.debug("Failed to acquire lock for %s", lock_key)
-            yield False
+            yield acquired
     finally:
         # 只有当前进程持有的锁才释放
         if acquired:
-            current_token = redis_conn.get(lock_key)
-            if current_token and current_token.decode() == lock_token:
-                redis_conn.delete(lock_key)
+            lock.release()
+            logger.debug("Released lock for %s", lock_key)
 
 
 def _handel_single_service_default_policy(service, default_tenant_id):
@@ -149,7 +151,7 @@ def init_service_default_policy_job():
 
         logger.info("Starting service policy initialization process.")
 
-        default_tenant_id = get_default_tenant_id_for_init()
+        default_tenant_id = get_init_tenant_id()
         for service in mixed_service_mgr.list():
             _handel_single_service_default_policy(service, default_tenant_id)
 

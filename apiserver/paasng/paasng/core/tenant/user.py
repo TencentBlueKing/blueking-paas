@@ -29,7 +29,7 @@ DEFAULT_TENANT_ID = "default"
 OP_TYPE_TENANT_ID = "system"
 
 
-def get_default_tenant_id_for_init() -> str:
+def get_init_tenant_id() -> str:
     """获取系统初始化使用的默认租户ID
 
     :return: 根据多租户模式配置返回对应租户ID

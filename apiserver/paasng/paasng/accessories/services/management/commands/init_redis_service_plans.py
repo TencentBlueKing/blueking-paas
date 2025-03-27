@@ -3,7 +3,7 @@ import json
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.services.models import Plan, Service
-from paasng.core.tenant.user import get_default_tenant_id_for_init
+from paasng.core.tenant.user import get_init_tenant_id
 
 
 class Command(BaseCommand):
@@ -21,7 +21,7 @@ class Command(BaseCommand):
             return
 
         # 根据是否启用多租户来确认 Plan 所属的租户
-        tenant_id = get_default_tenant_id_for_init()
+        tenant_id = get_init_tenant_id()
         success_count = 0
         try:
             for config in self.PLAN_CONFIGS:

@@ -64,7 +64,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.tenant.user import get_default_tenant_id_for_init
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -124,7 +124,7 @@ class RemotePlanObj(PlanObj):
             config = {}
         # Configure a default tenant_id for the planObj when the remote service is not upgraded.
         # NOTE: If the remote service is not upgraded to support multi-tenancy, the planObj must be under the default tenant.
-        default_tenant_id = get_default_tenant_id_for_init()
+        default_tenant_id = get_init_tenant_id()
         tenant_id = data.pop("tenant_id", default_tenant_id)
         return cattrs.structure(
             {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
@@ -319,7 +319,7 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         svc_obj = self.get_service()
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
-        default_tenant_id = get_default_tenant_id_for_init()
+        default_tenant_id = get_init_tenant_id()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
@@ -413,7 +413,7 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             return None
         svc_obj = self.mgr.get(str(self.db_obj.service_id))
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
-        default_tenant_id = get_default_tenant_id_for_init()
+        default_tenant_id = get_init_tenant_id()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],

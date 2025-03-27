@@ -60,6 +60,7 @@ export default {
   特性: 'Features',
   节点: 'Nodes',
   同步节点: 'Sync Nodes',
+  集群配置未完成: 'Cluster Configuration Incomplete',
   '确认同步节点？': 'Confirm Sync Nodes?',
   '同步集群节点到开发者中心，以便应用开启出口 IP 时能绑定到集群所有节点上。': 'Sync cluster nodes to the developer center, so when the application enables the egress IP, it can bind to all nodes in the cluster.',
   无法删除集群: 'Cannot Delete Cluster',

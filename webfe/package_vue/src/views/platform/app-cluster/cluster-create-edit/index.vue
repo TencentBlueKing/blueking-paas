@@ -188,6 +188,7 @@ export default {
               theme: 'success',
               message: this.$t('更新组件配置成功'),
             });
+            this.getClustersStatus(this.queryClusterId);
             if (!this.isDetailSingleStepEdit) {
               this.setStep(3);
             } else {
@@ -201,6 +202,7 @@ export default {
               theme: 'success',
               message: this.$t('集群添加成功'),
             });
+            this.getClustersStatus(this.queryClusterId);
             // 返回集群列表
             this.back();
           });
@@ -247,6 +249,7 @@ export default {
           theme: 'success',
           message: this.$t('集群更新成功'),
         });
+        this.getClustersStatus(this.queryClusterId);
         if (!this.isDetailSingleStepEdit) {
           this.setStep(2);
         } else {
@@ -285,6 +288,34 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.detailsLoading = false;
+      }
+    },
+    // 获取集群状态
+    async getClustersStatus(clusterName) {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClustersStatus', {
+          clusterName,
+        });
+        const hasIcon = !ret.base || !ret.component || !ret.feature;
+        this.$store.commit('tenant/updateClustersStatus', {
+          clusterName,
+          status: {
+            ...ret,
+            hasIcon,
+          },
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+        // 接口错误，统一为未配置
+        this.$store.commit('tenant/updateClustersStatus', {
+          clusterName,
+          status: {
+            base: false,
+            component: false,
+            feature: false,
+            hasIcon: true,
+          },
+        });
       }
     },
   },

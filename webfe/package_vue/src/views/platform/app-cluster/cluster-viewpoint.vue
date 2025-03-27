@@ -5,6 +5,7 @@
       :outer-border="false"
       :header-border="false"
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+      :row-class-name="handleRowClassName"
     >
       <bk-table-column
         :label="$t('集群名称')"
@@ -12,6 +13,7 @@
         width="160"
         show-overflow-tooltip
         :render-header="$renderHeader"
+        class-name="cluster-name-column"
       >
         <template slot-scope="{ row }">
           <a
@@ -21,6 +23,11 @@
           >
             {{ row.name }}
           </a>
+          <i
+            v-if="clustersStatus[row.name]?.hasIcon"
+            v-bk-tooltips="$t('集群配置未完成')"
+            class="paasng-icon paasng-unfinished"
+          ></i>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -195,6 +202,7 @@
 <script>
 import DeleteClusterDialog from './comps/delete-cluster-dialog.vue';
 import DeleteClusterAlertDialog from './comps/delete-cluster-alert-dialog.vue';
+import { mapState } from 'vuex';
 
 export default {
   name: 'TenantViewpoint',
@@ -225,6 +233,9 @@ export default {
     };
   },
   computed: {
+    ...mapState('tenant', {
+      clustersStatus: (state) => state.clustersStatus,
+    }),
     localLanguage() {
       return this.$store.state.localLanguage;
     },
@@ -268,6 +279,8 @@ export default {
           };
         });
         this.displayClusterList = this.tenantList;
+        // 获取集群列表状态
+        this.$emit('get-status', res);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -406,6 +419,10 @@ export default {
         },
       });
     },
+    // 是否配置完成，未配置完成添加指定样式
+    handleRowClassName({ row }) {
+      return this.clustersStatus[row.name]?.hasIcon ? 'cell-not-config-complete' : '';
+    },
   },
 };
 </script>
@@ -413,9 +430,14 @@ export default {
 <style lang="scss" scoped>
 .tenant-viewpoint-container {
   margin-top: 16px;
+  i.paasng-unfinished {
+    margin-left: 5px;
+    font-size: 14px;
+    color: #f8b64f;
+    transform: translateY(0);
+  }
   .name-link {
     display: inline-block;
-    width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -427,6 +449,15 @@ export default {
     display: none;
     color: #3a84ff;
     cursor: pointer;
+  }
+  /deep/ .bk-table-body-wrapper {
+    .cell-not-config-complete {
+      background-color: #fdf4e8;
+    }
+    .cluster-name-column .cell {
+      display: flex;
+      align-items: center;
+    }
   }
   /deep/ .bk-table-row.hover-row .paasng-general-copy {
     display: inline-block;

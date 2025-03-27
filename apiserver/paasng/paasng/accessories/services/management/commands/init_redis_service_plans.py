@@ -1,10 +1,9 @@
 import json
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from paasng.accessories.services.models import Plan, Service
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.core.tenant.user import get_default_tenant_id_for_init
 
 
 class Command(BaseCommand):
@@ -16,12 +15,13 @@ class Command(BaseCommand):
     ]
 
     def handle(self, *args, **kwargs):
-        if not (svc := Service.objects.filter(name="redis").first()):
+        svc = Service.objects.filter(name="redis").first()
+        if not svc:
             self.stdout.write(self.style.WARNING("redis service not exists, skip init plan"))
             return
 
         # 根据是否启用多租户来确认 Plan 所属的租户
-        tenant_id = OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
+        tenant_id = get_default_tenant_id_for_init()
         success_count = 0
         try:
             for config in self.PLAN_CONFIGS:

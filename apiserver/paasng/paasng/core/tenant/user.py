@@ -29,6 +29,18 @@ DEFAULT_TENANT_ID = "default"
 OP_TYPE_TENANT_ID = "system"
 
 
+def get_default_tenant_id_for_init() -> str:
+    """获取系统初始化使用的默认租户ID
+
+    :return: 根据多租户模式配置返回对应租户ID
+        - 多租户模式启用时返回系统操作租户（OP_TYPE_TENANT_ID）
+        - 非多租户模式返回默认租户（DEFAULT_TENANT_ID）
+
+    NOTE：该函数专门用于平台初次安装时，初始化集群、增强服务等需要租户关联的内置资源。常规业务逻辑请勿直接使用该函数，应根据实际租户上下文获取
+    """
+    return OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
+
+
 @define
 class Tenant:
     """A simple tenant type.

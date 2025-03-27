@@ -25,7 +25,6 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List
 
 import arrow
 import cattrs
-from django.conf import settings
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
@@ -65,7 +64,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.core.tenant.user import get_default_tenant_id_for_init
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -125,7 +124,7 @@ class RemotePlanObj(PlanObj):
             config = {}
         # Configure a default tenant_id for the planObj when the remote service is not upgraded.
         # NOTE: If the remote service is not upgraded to support multi-tenancy, the planObj must be under the default tenant.
-        default_tenant_id = OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
+        default_tenant_id = get_default_tenant_id_for_init()
         tenant_id = data.pop("tenant_id", default_tenant_id)
         return cattrs.structure(
             {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
@@ -320,11 +319,12 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         svc_obj = self.get_service()
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
+        default_tenant_id = get_default_tenant_id_for_init()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
-            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -413,12 +413,12 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             return None
         svc_obj = self.mgr.get(str(self.db_obj.service_id))
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
-
+        default_tenant_id = get_default_tenant_id_for_init()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
-            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )

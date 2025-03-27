@@ -33,10 +33,8 @@ def ensure_builtin_user():
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     # This user only acts as a holder for the sourcectl private token, so no specific
     # role is required.
-    profile, _ = UserProfile.objects.update_or_create(
-        user=user_id, defaults={"role": SiteRole.USER.value, "enable_regions": settings.DEFAULT_REGION_NAME}
-    )
-    profile.refresh_from_db(fields=["role", "enable_regions"])
+    profile, _ = UserProfile.objects.update_or_create(user=user_id, defaults={"role": SiteRole.USER.value})
+    profile.refresh_from_db(fields=["role"])
 
     # 关联源码管理的 private_token
     PrivateTokenHolder.objects.update_or_create(

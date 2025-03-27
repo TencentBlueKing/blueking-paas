@@ -78,7 +78,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         provider_type = ProviderType(serializer.validated_data["provider_type"])
         role = serializer.validated_data["role"]
-        enable_regions = ";".join(serializer.validated_data["enable_regions"])
 
         if provider_type not in [ProviderType.DATABASE, settings.USER_TYPE]:
             raise NotImplementedError(f"不支持创建ProviderType类型为 {provider_type} 的用户")
@@ -91,9 +90,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
                 raise RuntimeError("Creating database user is not allowed")
 
             user_id = user_id_encoder.encode(provider_type, username)
-            obj, _ = UserProfile.objects.update_or_create(
-                user=user_id, defaults={"role": role, "enable_regions": enable_regions}
-            )
+            obj, _ = UserProfile.objects.update_or_create(user=user_id, defaults={"role": role})
             obj.refresh_from_db()
             results.append(obj)
 
@@ -120,7 +117,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         profile = UserProfile.objects.get(user=user_id)
         data_before = DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data)
         profile.role = data["role"]
-        profile.enable_regions = ";".join(data["enable_regions"])
         profile.save()
 
         profile.refresh_from_db()

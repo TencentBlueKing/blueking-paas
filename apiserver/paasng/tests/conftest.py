@@ -77,9 +77,6 @@ from tests.utils.mocks.cluster import _cluster_service_allow_nonexisting_wl_apps
 
 logger = logging.getLogger(__name__)
 
-# The default region for testing
-DEFAULT_REGION = settings.DEFAULT_REGION_NAME
-
 svn_lock_fn = Path(__file__).parent / ".svn"
 atexit.register(lambda: svn_lock_fn.unlink(missing_ok=True))
 
@@ -106,7 +103,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True, scope="session")
 def _configure_default_region():
-    with configure_regions([DEFAULT_REGION]):
+    with configure_regions([settings.DEFAULT_REGION_NAME]):
         yield
 
 

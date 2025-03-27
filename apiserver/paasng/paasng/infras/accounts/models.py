@@ -33,7 +33,7 @@ from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
 from paasng.infras.accounts.oauth.models import Project, Scope
 from paasng.infras.accounts.oauth.utils import get_backend
-from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
 
 class User(AbstractBaseUser):
@@ -112,7 +112,6 @@ class UserProfile(TimestampedModel):
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
     feature_flags = models.TextField(null=True, blank=True)
-    enable_regions = RegionListField()
 
     objects = UserProfileManager()
 

@@ -18,6 +18,7 @@
 """
 rabbitmq provider
 """
+
 from typing import Dict
 
 import requests

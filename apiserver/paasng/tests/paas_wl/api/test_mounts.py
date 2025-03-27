@@ -123,11 +123,7 @@ def mounts(bk_app, bk_module):
 
 class TestVolumeMountViewSet:
     def test_list(self, api_client, bk_app, bk_module, mounts):
-        url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules"
-            f"/{bk_module.name}/mres/volume_mounts/?limit=10&offset=0"
-        )
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/?limit=10&offset=0"
         response = api_client.get(url)
         assert response.status_code == 200
         assert response.data["count"] == 15
@@ -144,7 +140,7 @@ class TestVolumeMountViewSet:
         assert len(response.data["results"]) == 0
 
     def test_create_configmap(self, api_client, bk_app, bk_module):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "_global_",
             "configmap_source": {"source_config_data": {"configmap_z": "configmap_z_data"}},
@@ -166,7 +162,7 @@ class TestVolumeMountViewSet:
         assert source.data == {"configmap_z": "configmap_z_data"}
 
     def test_create_pvc(self, api_client, bk_app, bk_module, pvc_source):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": "stag",
             "mount_path": "/path/",
@@ -187,7 +183,7 @@ class TestVolumeMountViewSet:
         assert source.storage_size == pvc_source.storage_size
 
     def test_create_with_source_name(self, api_client, bk_app, bk_module, pvc_source):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         request_body = {
             "environment_name": pvc_source.environment_name,
             "mount_path": "/path/",
@@ -266,14 +262,13 @@ class TestVolumeMountViewSet:
         ],
     )
     def test_create_error(self, api_client, bk_app, bk_module, mount_configmap, request_body_error):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/"
         response = api_client.post(url, request_body_error)
         assert response.status_code == 400
 
     def test_update_configmap(self, api_client, bk_app, bk_module, mount_configmap):
         url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
         )
         body = MountSLZ(mount_configmap).data
         body["configmap_source"] = {
@@ -305,8 +300,7 @@ class TestVolumeMountViewSet:
 
     def test_destroy_configmap(self, api_client, bk_app, bk_module, mount_configmap):
         url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_configmap.id}/"
         )
         response = api_client.delete(url)
         mount_query = Mount.objects.filter(id=mount_configmap.id)
@@ -314,7 +308,7 @@ class TestVolumeMountViewSet:
         assert not mount_query.exists()
 
     def test_update_pvc(self, api_client, bk_app, bk_module, mount_pvc, pvc_source_update):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
         body = MountSLZ(mount_pvc).data
         body["name"] = "mount-pvc-test"
         body["source_name"] = pvc_source_update.name
@@ -326,7 +320,7 @@ class TestVolumeMountViewSet:
         assert mount_updated.source_config.persistentStorage.name == pvc_source_update.name
 
     def test_destroy_pvc(self, api_client, bk_app, bk_module, mount_pvc):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{mount_pvc.id}/"
         response = api_client.delete(url)
         mount_query = Mount.objects.filter(id=mount_pvc.id)
         assert response.status_code == 204
@@ -335,9 +329,7 @@ class TestVolumeMountViewSet:
     def test_destroy_error(self, api_client, bk_app, bk_module, mount_configmap):
         # 删除不存在的 mount
         non_existent_id = 999999999
-        url = (
-            "/api/bkapps/applications/" f"{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
-        )
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/mres/volume_mounts/{non_existent_id}/"
         response = api_client.delete(url)
         mount_query = Mount.objects.filter(id=mount_configmap.id)
         assert response.status_code == 404
@@ -372,19 +364,19 @@ class TestMountSourceViewSet:
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_list(self, api_client, bk_app):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/?source_type=ConfigMap"
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/?source_type=ConfigMap"
         response = api_client.get(url)
         assert response.status_code == 200
         assert len(response.data) == 2
 
-        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage"
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage"
         response = api_client.get(url)
         assert response.status_code == 200
         assert len(response.data) == 1
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_create(self, api_client, bk_app):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"
         request_body = {
             "environment_name": "prod",
             "source_type": "PersistentStorage",
@@ -409,7 +401,7 @@ class TestMountSourceViewSet:
     @pytest.mark.usefixtures("_mount_sources")
     def test_create_with_invalid_storage_size(self, api_client, bk_app):
         """验证预发布环境仅支持 1G 的持久存储"""
-        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"
         request_body = {
             "environment_name": "stag",
             "source_type": "PersistentStorage",
@@ -422,7 +414,7 @@ class TestMountSourceViewSet:
 
     @pytest.mark.usefixtures("_mount_sources")
     def test_update(self, api_client, bk_app):
-        url = "/api/bkapps/applications/" f"{bk_app.code}/mres/mount_sources/"
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"
         request_body = {
             "source_name": "pvc",
             "source_type": "PersistentStorage",
@@ -435,8 +427,7 @@ class TestMountSourceViewSet:
     @pytest.mark.usefixtures("_mount_sources")
     def test_destroy(self, api_client, bk_app, bk_prod_wl_app, bk_stag_wl_app):
         url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"
+            f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"
         )
         response = api_client.delete(url)
         assert response.status_code == 204
@@ -445,8 +436,7 @@ class TestMountSourceViewSet:
     def test_destroy_with_bound(self, api_client, bk_module, bk_app, bk_prod_wl_app, bk_stag_wl_app):
         """验证不能删除已经被挂载卷绑定的资源"""
         url = (
-            "/api/bkapps/applications/"
-            f"{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"
+            f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/?source_type=PersistentStorage&source_name=pvc"
         )
         MountManager.new(
             app_code=bk_app.code,

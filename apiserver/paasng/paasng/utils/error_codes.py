@@ -39,6 +39,7 @@ class ErrorCodes:
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))
     # 模块
+    CANNOT_CREATE_MODULE = ErrorCode(_("模块创建失败"))
     CANNOT_SET_DEFAULT = ErrorCode(_("设置默认访问模块失败"))
     CANNOT_DELETE_MODULE = ErrorCode(_("删除模块失败"))
     CREATE_MODULE_QUOTA_EXCEEDED = ErrorCode(_("模块创建数量已达到配额上限"))
@@ -190,7 +191,7 @@ class ErrorCodes:
     CANNOT_UPDATE_CLUSTER = ErrorCode(_("无法更新应用集群"))
     CANNOT_DELETE_CLUSTER = ErrorCode(_("无法删除应用集群"))
     # 集群组件
-    CANNOT_UPDATE_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
+    CANNOT_UPSERT_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
 
     # dev sandbox
     DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))

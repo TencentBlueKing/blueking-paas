@@ -41,9 +41,9 @@ class FakeMiddleware:
 
 @pytest.fixture(autouse=True)
 def _mock_bkpaas_auth_middlewares():
-    with mock.patch("bkpaas_auth.middlewares.CookieLoginMiddleware", new=FakeMiddleware), mock.patch(
-        "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware", new=FakeMiddleware
-    ), mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware), mock.patch(
-        "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware
+    with (
+        mock.patch("bkpaas_auth.middlewares.CookieLoginMiddleware", new=FakeMiddleware),
+        mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware", new=FakeMiddleware),
+        mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware),
     ):
         yield

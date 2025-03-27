@@ -23,9 +23,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
-from past.builtins import basestring
-
-from paasng.core.region.models import Region, RegionList, filter_region_by_name
 
 RE_APP_CODE = re.compile(r"^[a-z0-9-]{1,16}$")
 RE_APP_SEARCH = re.compile("[\u4300-\u9fa5\\w_\\-\\d]{1,20}")
@@ -60,30 +57,6 @@ class ReservedWordValidator:
     def __call__(self, value):
         value = force_str(value)
         self.validator(value)
-
-
-@deconstructible
-class RegionListValidator:
-    def __call__(self, value):
-        if isinstance(value, basestring):
-            if not self.is_formatted_string(value):
-                raise ValidationError("please supply valid string as 'ieod;tencent;clouds'")
-            return value
-
-        if isinstance(value, RegionList) and all(isinstance(x, Region) for x in value):
-            region_names = ";".join([x.name for x in value])
-            return region_names
-        raise ValidationError("please supply valid RegionList")
-
-    @staticmethod
-    def is_formatted_string(value):
-        try:
-            region_list = filter_region_by_name(value.split(";"))
-        except Exception:
-            return False
-        else:
-            # make sure region not repeat
-            return len(region_list) == len(set(region_list)) == len(value.split(";"))
 
 
 @deconstructible
@@ -148,12 +121,10 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """
     for proc_type in procfile:
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(
-                f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
-            )
+            raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize procfile data and return

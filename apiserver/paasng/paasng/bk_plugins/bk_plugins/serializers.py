@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Serializers for bk_plugins"""
+
 from rest_framework import serializers
 
 from .models import BkPluginDistributor, BkPluginProfile, BkPluginTag

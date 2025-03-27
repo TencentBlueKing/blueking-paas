@@ -25,7 +25,8 @@ export default {
   namespaced: true,
   state: {
     availableClusters: {},
-    curTenantData: {}
+    curTenantData: {},
+    clustersStatus: {},
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -33,6 +34,12 @@ export default {
     },
     updateTenantData(state, data) {
       state.curTenantData = data;
+    },
+    updateClustersStatus(state, { clusterName, status }) {
+      state.clustersStatus = {
+        ...state.clustersStatus,
+        [clusterName]: status,
+      };
     },
   },
   actions: {
@@ -97,6 +104,13 @@ export default {
      */
     getClusterAllocationState({}, { clusterName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/allocation_state/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群状态
+     */
+    getClustersStatus({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/status/`;
       return http.get(url);
     },
     /**

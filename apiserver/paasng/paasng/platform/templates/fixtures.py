@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Fixtures are utils for writing common files for app templates
-"""
+"""Fixtures are utils for writing common files for app templates"""
+
 from django.template import Context, Engine
 from unipath import Path
 

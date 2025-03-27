@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """This module provides manual relational queries"""
+
 from typing import Optional, Type, Union, overload
 
 from paasng.platform.applications.models import ModuleEnvironment
@@ -28,12 +29,10 @@ class ModuleAttrFromID:
     key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleAttrFromID":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleAttrFromID": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> Module:
-        ...
+    def __get__(self, instance: object, owner: Type) -> Module: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleAttrFromID", Module]:
         """Read module value
@@ -54,12 +53,10 @@ class ModuleEnvAttrFromID:
     key_field = "environment_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromID":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromID": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
-        ...
+    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromID", ModuleEnvironment]:
         """Read environment value
@@ -84,12 +81,10 @@ class ModuleEnvAttrFromName:
     module_key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromName":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromName": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
-        ...
+    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromName", ModuleEnvironment]:
         """Read environment value

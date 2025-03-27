@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Preconditions for doing something"""
+
 import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass

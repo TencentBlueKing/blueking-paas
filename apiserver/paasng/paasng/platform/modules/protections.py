@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Preconditions for publish Application/Module"""
+
 from django.utils.translation import gettext as _
 
 from paas_wl.workloads.networking.entrance.shim import LiveEnvAddresses

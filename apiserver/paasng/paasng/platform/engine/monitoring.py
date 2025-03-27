@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Utils for monitoring engine related stuff
-"""
+"""Utils for monitoring engine related stuff"""
+
 import datetime
 import logging
 from typing import Optional

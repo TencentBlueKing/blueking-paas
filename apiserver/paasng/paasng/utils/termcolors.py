@@ -92,8 +92,8 @@ def make_style(fg: Optional[str] = None, bg: Optional[str] = None, opts: tuple =
 def pick_color(color: str = "black", position: str = "fg"):
     position_code = "38" if position == "fg" else "48"
     if color.startswith("#"):
-        return f"\x1B[{position_code};{_pick_color_by_rgb(color)}"
-    return f"\x1B[{position_code};{_pick_color_by_code(color)}"
+        return f"\x1b[{position_code};{_pick_color_by_rgb(color)}"
+    return f"\x1b[{position_code};{_pick_color_by_code(color)}"
 
 
 def no_color(text):

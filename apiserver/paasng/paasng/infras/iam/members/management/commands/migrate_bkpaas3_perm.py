@@ -102,7 +102,7 @@ class Command(BaseCommand):
             end_at = start_at + PRE_LINE_LIMIT
             end_at = end_at if end_at < self.total_count else self.total_count
             print(
-                f"{start_at+1} - {end_at}:".rjust(11),
+                f"{start_at + 1} - {end_at}:".rjust(11),
                 " ".join([app["code"] for app in self.applications[start_at:end_at]]),
             )
 

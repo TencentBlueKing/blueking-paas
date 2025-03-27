@@ -14,8 +14,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Use a separate module to avoid circular imports
-"""
+"""Use a separate module to avoid circular imports"""
+
 from collections import OrderedDict
 from typing import Callable, Dict
 

@@ -19,7 +19,6 @@ from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -39,9 +38,6 @@ class ClusterManageView(GenericTemplateView):
 
         kwargs.update(
             {
-                "region_list": [
-                    {"value": region.name, "text": region.display_name} for region in get_all_regions().values()
-                ],
                 "cluster_type_list": [
                     {"value": value, "text": display_name} for value, display_name in ClusterType.get_choices()
                 ],

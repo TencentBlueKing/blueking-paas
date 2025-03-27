@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""清理源码包的脚本
-"""
+"""清理源码包的脚本"""
+
 import logging
 
 from django.core.management.base import BaseCommand

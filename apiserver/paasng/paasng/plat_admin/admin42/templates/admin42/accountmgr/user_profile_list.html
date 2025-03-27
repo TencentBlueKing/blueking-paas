@@ -31,15 +31,6 @@
                     </bk-option>
                 </bk-select>
             </bk-form-item>
-            <bk-form-item label="已开启的 region" ext-cls="select-custom" ext-popover-cls="select-popover-custom" >
-                <bk-select multiple display-tag style="width: 250px;" v-model="form.enable_regions">
-                    <bk-option v-for="region in allRegionList"
-                        :key="region"
-                        :id="region"
-                        :name="region">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
         </bk-form>
     </bk-dialog>
 
@@ -72,13 +63,6 @@
         <bk-table-column label="角色">
             <template slot-scope="props">
                 <span>$[ getRoleName(props.row.role) ]</span>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="已开启的 region">
-            <template slot-scope="props">
-                <bk-tag v-for="region in props.row.enable_regions" :key="region">
-                    $[ region ]
-                </bk-tag>
             </template>
         </bk-table-column>
         <bk-table-column label="操作">
@@ -153,7 +137,6 @@
                         role: 2,
                         provider_type: '2',
                         visible: false,
-                        enable_regions: [],
                     },
                     userProfileList: userProfileList,
                     SITE_ROLE,
@@ -188,7 +171,6 @@
                     this.form.usernameList = undefined
                     this.form.role = 2
                     this.form.provider_type = '2'
-                    this.form.enable_regions = []
                 },
 
                 showEditDialog: function (row) {
@@ -197,7 +179,6 @@
                     this.form.usernameList = row.user.username
                     this.form.role = row.role
                     this.form.provider_type = row.user.provider_type
-                    this.form.enable_regions = row.enable_regions
                 },
 
                 handleSwitcher: function (row) {
@@ -243,16 +224,11 @@
                 },
 
                 bulkCreate: function () {
-                    if (this.form.enable_regions.length === 0) {
-                        this.$bkMessage({message: "至少设置 1 个 region", limit: 1, theme: 'error'})
-                        return
-                    }
                     this.$http.post(URLRouter.bulk_create,
                         {
                             username_list: this.form.usernameList,
                             provider_type: this.form.provider_type,
                             role: this.form.role,
-                            enable_regions: this.form.enable_regions,
                         }
                     ).then(() => {
                         this.refreshPage()
@@ -266,15 +242,10 @@
                         theme: 'primary',
                         confirmFn: async () => {
                             try {
-                                if (this.form.enable_regions.length === 0) {
-                                    this.$bkMessage({ message: "至少设置 1 个 region", limit: 1, theme: 'error' })
-                                    return
-                                }
                                 await this.$http.put(URLRouter.update, {
                                     username: this.form.usernameList,
                                     provider_type: this.form.provider_type,
                                     role: this.form.role,
-                                    enable_regions: this.form.enable_regions,
                                 })
                                 this.refreshPage()
                                 this.form.visible = false
@@ -292,15 +263,10 @@
                         row.banned = true
                         return
                     }
-                    if (row.enable_regions.length === 0) {
-                        this.$bkMessage({message: "至少设置 1 个 region", limit: 1, theme: 'error'})
-                        return
-                    }
                     this.$http.put(URLRouter.update, {
                         username: row.user.username,
                         provider_type: row.user.provider_type,
                         role: row.role,
-                        enable_regions: row.enable_regions,
                     }).then(() => {
                         this.refreshPage()
                     })

@@ -23,7 +23,7 @@ from rest_framework import exceptions, serializers
 
 class PortMapSLZ(serializers.Serializer):
     http = serializers.IntegerField(default=80, help_text="http 协议暴露端口")
-    https = serializers.IntegerField(default=443, help_text="HTTPS 协议暴露端口")
+    https = serializers.IntegerField(default=443, help_text="https 协议暴露端口")
 
 
 class DomainSLZ(serializers.Serializer):
@@ -71,7 +71,6 @@ class ClusterSLZ(serializers.Serializer):
 
     name = serializers.CharField()
     type = serializers.CharField()
-    is_default = serializers.BooleanField()
     bcs_cluster_id = serializers.CharField()
     support_bcs_metrics = serializers.BooleanField(default=False)
     ingress_config = IngressConfigSLZ()

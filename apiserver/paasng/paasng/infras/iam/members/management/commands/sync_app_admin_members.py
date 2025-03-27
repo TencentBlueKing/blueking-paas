@@ -128,9 +128,7 @@ class Command(BaseCommand):
 
         print(f"---------------- sync {self.total_count} applications administrator finished! ----------------")
         print(
-            f"-- success: {len(self.success_records)} "
-            f"failed: {len(self.failed_records)} "
-            f"unchanged: {unchanged_cnt} --"
+            f"-- success: {len(self.success_records)} failed: {len(self.failed_records)} unchanged: {unchanged_cnt} --"
         )
 
     def _sync_single(self, idx: int, app_code: str) -> Tuple[List, bool]:

@@ -104,7 +104,7 @@ class TestGetUniqueID:
         # Base62Handler.encode(1000) is 'rs', so reserve length of uid is 16 - 3 = 13
         assert gen_unique_id(uid) == f"some-some-som-{Base36Handler.encode(latest_id)}"
         # 14 + len("-rs") is 17
-        assert gen_unique_id(uid, max_length=20) == f"some-some-some-{Base36Handler.encode(latest_id+1)}"
+        assert gen_unique_id(uid, max_length=20) == f"some-some-some-{Base36Handler.encode(latest_id + 1)}"
 
         # the length of six "some" is 24
         uid = "somesomesomesomesomesome"

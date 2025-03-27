@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Preconditions for Modify Application/Module"""
+
 from contextlib import contextmanager
 from enum import Enum
 from typing import Dict, List, Type

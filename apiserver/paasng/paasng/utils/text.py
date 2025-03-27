@@ -20,7 +20,7 @@ import re
 import uuid
 from typing import Collection
 
-UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789"
+UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789"
 
 
 # From oauthlib.common
@@ -39,11 +39,13 @@ def generate_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
 RE_TAG = re.compile("<.*?>")
 
 
-def strip_html_tags(s: str, reserved_tags: Collection[str] = []) -> str:  # noqa: B006
+def strip_html_tags(s: str, reserved_tags: Collection[str] | None = None) -> str:  # noqa: B006
     """Remove all HTML tags in string except those matching `reserved_tags`.
 
     :param reserved_tags: Tags were reserved from removing, default to []
     """
+    reserved_tags = reserved_tags or []
+
     performed_tag_pairs = []
     # Replace reserved tags with random uuid string
     for tag in reserved_tags:

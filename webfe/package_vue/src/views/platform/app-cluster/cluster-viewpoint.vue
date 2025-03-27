@@ -177,6 +177,13 @@
       </bk-table-column>
     </bk-table>
 
+    <!-- 删除集群告警提示 -->
+    <DeleteClusterAlertDialog
+      :show.sync="delPromptDialog.isShow"
+      :cluster-name="delPromptDialog.name"
+      :config="delPromptDialog.row"
+    />
+
     <DeleteClusterDialog
       :show.sync="delDialogConfig.isShow"
       :config="delDialogConfig"
@@ -186,13 +193,14 @@
 </template>
 
 <script>
-import i18n from '@/language/i18n.js';
 import DeleteClusterDialog from './comps/delete-cluster-dialog.vue';
+import DeleteClusterAlertDialog from './comps/delete-cluster-alert-dialog.vue';
 
 export default {
   name: 'TenantViewpoint',
   components: {
     DeleteClusterDialog,
+    DeleteClusterAlertDialog,
   },
   data() {
     return {
@@ -205,6 +213,14 @@ export default {
       delDialogConfig: {
         isShow: false,
         row: {},
+      },
+      delPromptDialog: {
+        isShow: false,
+        name: '',
+        row: {
+          allocated_tenant_ids: [],
+          bound_app_module_envs: [],
+        },
       },
     };
   },
@@ -301,38 +317,9 @@ export default {
     },
     // 无法删除集群info提示
     showDelAlertInfo(data, name) {
-      const h = this.$createElement;
-      this.$bkInfo({
-        width: 480,
-        type: 'warning',
-        extCls: 'cluster-alert-info-cls',
-        title: this.$t('无法删除集群'),
-        subHeader: h('div', { class: 'del-alert-info-content' }, [
-          h('div', { class: 'sub-info' }, `${i18n.t('集群（{n}）正在被以下租户、应用使用，无法删除', { n: name })}：`),
-          h('div', [
-            `1. ${i18n.t('被')}`,
-            ...data.allocated_tenant_ids.slice(0, 2).map((item) => h('span', { class: 'tag' }, item)),
-            i18n.t('等'),
-            h('span', { class: 'count' }, data.allocated_tenant_ids.length),
-            i18n.t('个租户使用，请先在集群配置页面，解除租户与集群的分配关系。'),
-          ]),
-          h('div', [
-            `2. ${i18n.t('Bound-by')}`,
-            h('span', { class: 'count' }, data.bound_app_module_envs.length),
-            h('i', {
-              class: `paasng-icon paasng-general-copy ${!data.bound_app_module_envs.length ? 'hide' : ''}`,
-              directives: [
-                {
-                  name: 'copy',
-                  value: JSON.stringify(data.bound_app_module_envs, null, 2),
-                },
-              ],
-            }),
-            i18n.t('个应用模块绑定'),
-          ]),
-        ]),
-        maskClose: true,
-      });
+      this.delPromptDialog.isShow = true;
+      this.delPromptDialog.row = data;
+      this.delPromptDialog.name = name;
     },
     handleResizeObserver() {
       this.$nextTick(() => {
@@ -504,43 +491,6 @@ export default {
     .n {
       color: #313238;
     }
-  }
-}
-.del-alert-info-content {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 12px;
-  border-radius: 2px;
-  line-height: 22px;
-  color: #4d4f56;
-  background: #f5f6fa;
-  .sub-info {
-    margin-bottom: 8px;
-  }
-  .tag {
-    display: inline-block;
-    height: 22px;
-    line-height: 22px;
-    padding: 0 8px;
-    background: #fafbfd;
-    border: 1px solid #dcdee5;
-    border-radius: 2px;
-    margin-right: 4px;
-    &:last-child {
-      margin-right: 0;
-    }
-    &:first-child {
-      margin-left: 4px;
-    }
-  }
-  .count {
-    color: #eb3131;
-    font-weight: 700;
-    padding: 0 3px;
-  }
-  i {
-    color: #3a84ff;
-    cursor: pointer;
   }
 }
 </style>

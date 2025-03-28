@@ -15,6 +15,7 @@
       >
         <ClusterSelect
           key="not"
+          :placeholder="labelText"
           :edit-data="allocationPolicy?.clusters"
           @change="clusterSelectChange"
         />
@@ -31,6 +32,7 @@
             :has-label="true"
             :label="$t('预发布环境')"
             :env="'stag'"
+            :placeholder="labelText"
             :edit-data="allocationPolicy?.env_clusters?.stag"
             @change="envClusterSelectChange"
           />
@@ -44,6 +46,7 @@
             :has-label="true"
             :label="$t('生产环境')"
             :env="'prod'"
+            :placeholder="labelText"
             :edit-data="allocationPolicy?.env_clusters?.prod"
             @change="envClusterSelectChange"
           />

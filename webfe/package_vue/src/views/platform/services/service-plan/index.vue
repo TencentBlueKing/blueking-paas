@@ -5,7 +5,10 @@
       :loading="isTenantLoading"
       @change="handleChange"
     />
-    <div class="plan-content card-style">
+    <div
+      class="plan-content card-style"
+      ref="contentRef"
+    >
       <div class="flex-row justify-content-between">
         <bk-button
           :theme="'primary'"
@@ -26,6 +29,7 @@
         :data="searchPlans"
         dark-header
         size="small"
+        :max-height="tableHeight"
         class="plan-table-cls"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       >
@@ -184,10 +188,20 @@ export default {
         row: {},
         active: '',
       },
+      resizeObserver: null,
+      tableHeight: 500,
     };
   },
   created() {
     this.getPlans();
+  },
+  mounted() {
+    this.initResizeObserver();
+  },
+  beforeDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   computed: {
     // 当前租户下的方案
@@ -280,6 +294,22 @@ export default {
       this.planDetailsConfig.isShow = true;
       this.planDetailsConfig.row = row;
       this.planDetailsConfig.active = active;
+    },
+    initResizeObserver() {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        window.requestAnimationFrame(() => {
+          // 使用 requestAnimationFrame 延迟更新
+          for (let entry of entries) {
+            if (entry.target === this.$refs.contentRef) {
+              const height = entry.contentRect.height;
+              this.tableHeight = height - 50;
+            }
+          }
+        });
+      });
+      if (this.$refs.contentRef) {
+        this.resizeObserver.observe(this.$refs.contentRef);
+      }
     },
   },
 };

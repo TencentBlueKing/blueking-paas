@@ -54,7 +54,7 @@
           ></bk-switcher>
         </bk-form-item>
         <bk-form-item
-          :label="$t('方案配置')"
+          :label="$t('配置')"
           :required="true"
           property="config"
         >
@@ -140,7 +140,7 @@ export default {
       formItems: Object.freeze([
         {
           property: 'name',
-          label: '方案名称',
+          label: '名称',
           type: 'input',
           required: true,
           rules: [
@@ -166,7 +166,7 @@ export default {
         },
         {
           property: 'description',
-          label: '方案简介',
+          label: '简介',
           type: 'input',
           required: true,
           rules: [

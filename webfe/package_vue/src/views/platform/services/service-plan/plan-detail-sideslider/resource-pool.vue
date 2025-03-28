@@ -122,6 +122,7 @@ export default {
         row: {},
         type: 'add',
         planId: '',
+        service: '',
       },
       // 当前方案下的资源池
       instances: [],
@@ -131,11 +132,15 @@ export default {
     this.getPreCreatedInstances();
   },
   methods: {
+    formatServiceName() {
+      return `${this.data?.service_name?.toLocaleUpperCase()}_`;
+    },
     // 添加实例
     addInstances() {
       this.dialogConfig.isShow = true;
       this.dialogConfig.type = 'add';
       this.dialogConfig.planId = this.data?.uuid;
+      this.dialogConfig.service = this.formatServiceName();
     },
     // 获取方案下的资源池
     async getPreCreatedInstances(isOperate = false) {
@@ -166,6 +171,7 @@ export default {
         row,
         type: 'edit',
         planId: row.plan,
+        service: this.formatServiceName(),
       };
     },
     // 删除

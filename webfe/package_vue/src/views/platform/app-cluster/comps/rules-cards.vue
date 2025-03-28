@@ -62,6 +62,7 @@
         <ClusterSelect
           @change="clusterSelectChange"
           key="not"
+          :placeholder="labelText"
           :edit-data="data?.clusters"
           class="cluster-select-cls"
         />
@@ -78,6 +79,7 @@
             :has-label="true"
             :label="$t('预发布环境')"
             :env="'stag'"
+            :placeholder="labelText"
             class="cluster-select-cls"
             :edit-data="data?.envClusters?.stag"
             @change="envClusterSelectChange"
@@ -92,6 +94,7 @@
             :has-label="true"
             :label="$t('生产环境')"
             :env="'prod'"
+            :placeholder="labelText"
             class="cluster-select-cls"
             :edit-data="data?.envClusters?.prod"
             @change="envClusterSelectChange"

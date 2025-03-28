@@ -179,6 +179,7 @@ export default {
         line-height: 16px;
         padding: 0 4px;
         margin-right: 4px;
+        font-size: 10px !important;
         &:last-child {
           margin-right: 0;
         }

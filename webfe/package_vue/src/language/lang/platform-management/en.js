@@ -216,4 +216,5 @@ export default {
   已分配: 'Allocated',
   可回收复用: 'Recyclable and Reusable',
   确认删除服务配置: 'Confirm Service Configuration Deletion',
+  '实例配置将以环境变量方式注入至应用运行时环境（每个配置项将添加 {n} 前缀，且会转换成全大写字母）': 'Instance configurations will be injected into the application runtime environment as environment variables (each configuration item will be prefixed with {n} and converted to uppercase letters)',
 };

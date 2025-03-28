@@ -53,5 +53,8 @@ export default {
 <style lang="scss" scoped>
 .platform-enhanced-services {
   height: 100%;
+  /deep/ .vjs-tree {
+    font-size: 12px;
+  }
 }
 </style>

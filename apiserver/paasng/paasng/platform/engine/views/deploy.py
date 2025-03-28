@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import re
 from dataclasses import asdict
 from typing import Dict, Optional
 
@@ -235,9 +236,14 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """导出部署日志"""
         deployment = _get_deployment(self.get_module_via_path(), uuid)
         logs = get_all_logs(deployment)
+
+        # 过滤ANSI转义序列
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        filtered_logs = ansi_escape.sub("", logs)
+
         filename = f"{code}-{module_name}-{uuid}.log"
 
-        response = HttpResponse(logs, content_type="text/plain")
+        response = HttpResponse(filtered_logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response

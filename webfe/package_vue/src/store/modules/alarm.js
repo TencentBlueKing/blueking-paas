@@ -131,7 +131,7 @@ export default {
     getAlarmStrategies({}, { appCode }, config = {}) {
       // `${BACKEND_URL}/api/monitor/applications/{bk_app.code}/alarm_strategies/?${json2Query(params)}`
       const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/alarm_strategies/`;
-      return http.post(url, config);
+      return http.get(url, config);
     },
 
     /**

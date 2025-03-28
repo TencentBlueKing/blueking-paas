@@ -312,3 +312,19 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
 
     class Meta:
         unique_together = ("tenant_id", "service_id", "priority")
+
+
+class DefaultPolicyCreationRecord(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware.
+    默认租户下增强服务默认绑定策略创建记录
+
+    功能说明：
+    1. 记录默认租户下增强服务的策略初始化状态
+    2. 当默认租户的增强服务创建 plan 后，平台会自动创建绑定策略（仅执行一次）
+    3. 用户手动删除已创建的策略后，由于本表中已经有初始化记录保证不会重复初始化
+    """
+
+    service_id = models.UUIDField(verbose_name="增强服务 ID", unique=True)
+    # See `ServiceType` in constants
+    service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+    finished_at = models.DateTimeField(verbose_name="完成时间", null=True, blank=True)

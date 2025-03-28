@@ -64,7 +64,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -123,7 +123,9 @@ class RemotePlanObj(PlanObj):
         if config == "不支持":
             config = {}
         # Configure a default tenant_id for the planObj when the remote service is not upgraded.
-        tenant_id = data.pop("tenant_id", DEFAULT_TENANT_ID)
+        # NOTE: If the remote service is not upgraded to support multi-tenancy, the planObj must be under the default tenant.
+        default_tenant_id = get_init_tenant_id()
+        tenant_id = data.pop("tenant_id", default_tenant_id)
         return cattrs.structure(
             {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
         )
@@ -163,6 +165,10 @@ class RemoteServiceObj(ServiceObj):
 
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         return [plan.with_service(self) for plan in self.plans if (plan.is_active == is_active or is_active is NOTSET)]
+
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        all_plans = self.get_plans(is_active=is_active)
+        return [plan for plan in all_plans if (plan.tenant_id == tenant_id)]
 
     def supports_inst_config(self) -> bool:
         """Check if current service supports Feature: InstanceConfig"""
@@ -313,11 +319,12 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         svc_obj = self.get_service()
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
+        default_tenant_id = get_init_tenant_id()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
-            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -406,12 +413,12 @@ class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
             return None
         svc_obj = self.mgr.get(str(self.db_obj.service_id))
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
-
+        default_tenant_id = get_init_tenant_id()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
-            tenant_id=instance_data.get("tenant_id", DEFAULT_TENANT_ID),
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )

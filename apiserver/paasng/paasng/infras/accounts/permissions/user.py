@@ -33,13 +33,19 @@ def user_has_feature(key: AccountFeatureFlagConst):
     return Permission
 
 
-def user_can_create_in_region(user: User, region: str) -> bool:
-    """Check if a user can create application or module in the specified region.
+def user_can_operate_in_region(user: User, region: str) -> bool:
+    """校验用户对指定版本的操作权限，主要应用于：
+    - 应用创建
+    - 模块创建
+    - 自定义访问地址管理
 
-    Restrictions:
+    :param user: 待校验的用户对象
+    :param region: 目标区域名称
+    :return: 是否具有操作权限
 
-    - any user can perform creations in the default region
-    - only admin user can perform creations in non default region
+    权限规则：
+    - 默认版本（DEFAULT_REGION_NAME）：所有用户都可以操作
+    - 非默认版本：仅允许管理员操作
     """
     if region == settings.DEFAULT_REGION_NAME:
         return True

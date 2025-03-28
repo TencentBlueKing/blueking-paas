@@ -40,7 +40,7 @@ from paasng.infras.accounts.permissions.application import (
     application_perm_class,
     check_application_perm,
 )
-from paasng.infras.accounts.permissions.user import user_can_create_in_region
+from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
@@ -323,7 +323,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _ensure_allow_create_module(self, application: Application):
         """检查当前应用是否允许继续创建模块"""
-        if not user_can_create_in_region(self.request.user, application.region):
+        if not user_can_operate_in_region(self.request.user, application.region):
             raise error_codes.CANNOT_CREATE_MODULE.f(_("当前应用所属的版本不允许创建新模块"))
 
         if not AppSpecs(application).can_create_extra_modules:

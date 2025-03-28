@@ -95,6 +95,12 @@ class ProcServiceSLZ(serializers.Serializer):
 
         return value
 
+    def validate_name(self, value):
+        """Validate service name doesn't contain underscores"""
+        if "_" in value:
+            raise ValidationError("Service names cannot contain underscores")
+        return value
+
 
 class ExecProbeActionSLZ(serializers.Serializer):
     command = serializers.ListField(help_text="探活命令", child=serializers.CharField(max_length=48), max_length=12)
@@ -242,6 +248,7 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
     def validate(self, data):
         data = super().validate(data)
         self._validate_exposed_types(data["proc_specs"])
+        self._validate_process_names(data["proc_specs"])
         return data
 
     def _validate_exposed_types(self, proc_specs):
@@ -266,6 +273,12 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
                     raise ValidationError(f"exposed_type {exposed_type_name} is duplicated in one app module")
 
                 exposed_types.add(exposed_type_name)
+
+    def _validate_process_names(self, proc_specs):
+        """Validate that process names don't contain underscores."""
+        for proc in proc_specs:
+            if "_" in proc["name"]:
+                raise ValidationError("Process names cannot contain underscores.")
 
 
 class ModuleDeployHookSLZ(serializers.Serializer):

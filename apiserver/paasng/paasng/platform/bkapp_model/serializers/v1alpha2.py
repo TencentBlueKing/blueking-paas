@@ -185,11 +185,26 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
-    name = serializers.CharField()
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")
     port = serializers.IntegerField(min_value=1, max_value=65535, allow_null=True, default=None)
+
+    def validate_name(self, value):
+        """validate whether service name contains underscore"""
+        if "_" in value:
+            raise serializers.ValidationError(
+                f"Invalid service name: {value}, underscore '_' is not allowed in service names"
+            )
+        if not PROC_TYPE_PATTERN.match(value):
+            raise ValidationError(f"Invalid service name: {value}, must match pattern {PROC_TYPE_PATTERN.pattern}")
+
+        if len(value) > PROC_TYPE_MAX_LENGTH:
+            raise ValidationError(
+                f"Invalid service name: {value}, cannot be longer than {PROC_TYPE_MAX_LENGTH} characters"
+            )
+        return value
 
     def validate_targetPort(self, value):  # noqa: N802
         """validate whether targetPort is a valid number or str '$PORT'"""

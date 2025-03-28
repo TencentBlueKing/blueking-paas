@@ -58,3 +58,39 @@ class TestValidations:
         )
         with pytest.raises(DescriptionValidationError, match=r"processes.web.probes.liveness"):
             get_deployment_description(module_desc)
+
+
+class TestServiceNameValidations:
+    """Test suite for service name validations"""
+
+    @pytest.mark.parametrize(
+        ("service_name", "is_valid", "error_pattern"),
+        [
+            # Invalid cases
+            ("invalid_name", False, r"Invalid service name.*must not contain underscore"),
+            ("InvalidName", False, r"Invalid service name.*must match pattern"),
+            ("a" * 64, False, r"Invalid service name.*cannot be longer than"),
+            # Valid case
+            ("valid-name-1", True, None),
+        ],
+    )
+    def test_service_name_validation(self, service_name, is_valid, error_pattern):
+        """Test service name validation with various inputs"""
+        module_name = f"ut{generate_random_string(length=10)}"
+
+        service_config = {"name": service_name, "protocol": "TCP", "target_port": 8000, "port": 80}
+
+        module_desc = builder.make_module_desc(
+            module_name,
+            is_default=True,
+            processes={"web": {"command": "python manage.py runserver", "services": [service_config]}},
+        )
+
+        if is_valid:
+            # Should not raise any exception
+            result = validate_desc(DeploymentDescSLZ, module_desc)
+            assert result is not None
+        else:
+            # Should raise exception with matching error message
+            with pytest.raises(DescriptionValidationError, match=error_pattern):
+                validate_desc(DeploymentDescSLZ, module_desc)

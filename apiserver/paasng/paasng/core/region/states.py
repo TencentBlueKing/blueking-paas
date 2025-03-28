@@ -26,7 +26,6 @@ from paasng.core.region.models import (
     Region,
     RegionBasicInfo,
     RegionMobileConfig,
-    RegionMulModulesConfig,
     register_region,
 )
 from paasng.utils.basic import ChoicesEnum
@@ -57,9 +56,7 @@ def load_regions_from_settings():
             display_name=display_name,
             basic_info=cattrs.structure(cfg.pop("basic_info"), RegionBasicInfo),
             module_mobile_config=module_mobile_config,
-            mul_modules_config=RegionMulModulesConfig(**cfg.pop("mul_modules_config")),
             enabled_feature_flags=set(cfg.pop("enabled_feature_flags", [])),
-            allow_user_modify_custom_domain=cfg.pop("allow_user_modify_custom_domain", True),
             provide_env_vars_platform=cfg.pop("provide_env_vars_platform", None),
         )
         register_region(region)

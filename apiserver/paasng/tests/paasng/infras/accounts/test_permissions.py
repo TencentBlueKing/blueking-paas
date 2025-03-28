@@ -18,7 +18,7 @@ import pytest
 
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
-from paasng.infras.accounts.permissions.user import user_can_create_in_region
+from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from tests.utils.helpers import configure_regions
 
 pytestmark = pytest.mark.django_db(databases=["default"])
@@ -33,12 +33,12 @@ pytestmark = pytest.mark.django_db(databases=["default"])
         (True, True, True),
     ],
 )
-def test_user_can_create_in_region(bk_user, is_admin, r1_expected, r2_expected):
+def test_user_can_operate_in_region(bk_user, is_admin, r1_expected, r2_expected):
     with configure_regions(["r1", "r2"]):
         user_profile = UserProfile.objects.get_profile(bk_user)
         role = SiteRole.ADMIN if is_admin else SiteRole.USER
         user_profile.role = role.value
         user_profile.save(update_fields=["role"])
 
-        assert user_can_create_in_region(bk_user, "r1") is r1_expected
-        assert user_can_create_in_region(bk_user, "r2") is r2_expected
+        assert user_can_operate_in_region(bk_user, "r1") is r1_expected
+        assert user_can_operate_in_region(bk_user, "r2") is r2_expected

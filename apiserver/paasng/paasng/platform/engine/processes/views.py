@@ -68,14 +68,15 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _get_webconsole_command(self, module: "Module", runtime_type: str, is_cnb_runtime: bool):
         """获取进入 webconsole 的默认命令"""
         if runtime_type == RuntimeType.BUILDPACK:
-            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
-            # 但是在流水线中单独构建的镜像，还是使用的原来的 heroku buildpack，而不是 CNB buildpack，没有 launcher 命令
-            if module.application.is_smart_app or not is_cnb_runtime:
-                return "bash"
-
             # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-            return "launcher bash"
+            if is_cnb_runtime:
+                return "launcher bash"
+
+            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
+            # 部分旧的 Smart 打包方式仍是 slug-pilot, 没有 launcher
+            if module.application.is_smart_app:
+                return "bash"
 
         # 如果不是 buildpack 构建类型，直接使用 sh 命令
         return "sh"

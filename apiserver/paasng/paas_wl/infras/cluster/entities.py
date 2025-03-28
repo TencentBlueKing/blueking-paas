@@ -21,10 +21,13 @@ from typing import Dict, List, Optional
 
 from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
+from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.constants import AppEnvName
 
 logger = logging.getLogger(__name__)
 
@@ -178,15 +181,28 @@ class AllocationContext:
 
     用于描述集群分配的上下文信息，包括租户 ID、可用区域、部署环境等。
     供集群分配器 ClusterAllocator 使用，建议优先使用 from_xxx 方法创建。
+
+    :param tenant_id: 租户 ID
+    :param region: 应用版本
+    :param environment: 部署环境
+    :param username: 操作人，非必选
     """
 
     tenant_id: str
-    # 可用区域
     region: str
-    # 部署环境
     environment: str
-    # 操作人
     username: str | None = None
+
+    @classmethod
+    def create_for_future_system_apps(cls):
+        """Create a special context that is often used when the platform attempts to retrieve
+        the cluster for an system application that has not been deployed.
+
+        NOTE: The values used in this context are based on assumptions and past experiences,
+        which could result in an incorrect cluster when the applications are deployed in the future.
+        """
+        tenant_id = OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
+        return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
 
     @classmethod
     def from_module_env(cls, module_env: ModuleEnvironment) -> "AllocationContext":

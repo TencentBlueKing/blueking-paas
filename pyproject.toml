@@ -3,6 +3,7 @@ name = "Blueking PaaS"
 version = "1.0.0"
 description = "Tencent Blueking PaaS platform(https://bk.tencent.com/)"
 authors = ["blueking <blueking@tencent.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"

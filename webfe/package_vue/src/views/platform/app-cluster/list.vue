@@ -32,6 +32,7 @@
         v-if="buttonActive === 'cluster'"
         ref="clusterRef"
         @toggle="handleToggleDetails"
+        @get-status="getClusterListStatus"
       />
       <!-- 二期租户视角 -->
     </div>
@@ -39,6 +40,7 @@
       v-else
       :active="curClusterDetailName"
       @toggle="handleToggleDetails"
+      @get-status="getClusterListStatus"
     />
   </div>
 </template>
@@ -46,6 +48,7 @@
 <script>
 import ClusterViewpoint from './cluster-viewpoint.vue';
 import ClusterDetails from './comps/cluster-details.vue';
+import { mapState } from 'vuex';
 export default {
   name: 'ClusterList',
   components: {
@@ -64,6 +67,9 @@ export default {
     };
   },
   computed: {
+    ...mapState('tenant', {
+      clustersStatus: (state) => state.clustersStatus,
+    }),
     isExpandDetails() {
       return this.$route.query?.type === 'detail';
     },
@@ -98,6 +104,42 @@ export default {
           step: 1,
         },
       });
+    },
+    async getClusterListStatus(clusters) {
+      // 判断是否已存入 state 中
+      if (Object.keys(this.clustersStatus)?.length > 0) {
+        return;
+      }
+      const statusPromises = clusters.map((cluster) => this.getClustersStatus(cluster.name));
+      Promise.all(statusPromises);
+    },
+    // 获取集群状态
+    async getClustersStatus(clusterName) {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClustersStatus', {
+          clusterName,
+        });
+        const hasIcon = !ret.basic || !ret.component || !ret.feature;
+        this.$store.commit('tenant/updateClustersStatus', {
+          clusterName,
+          status: {
+            ...ret,
+            hasIcon,
+          },
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+        // 接口错误，统一为未配置
+        this.$store.commit('tenant/updateClustersStatus', {
+          clusterName,
+          status: {
+            basic: false,
+            component: false,
+            feature: false,
+            hasIcon: true,
+          },
+        });
+      }
     },
   },
 };

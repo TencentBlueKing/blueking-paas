@@ -316,8 +316,8 @@ class PluginRepoInitializer:
                 dedent(
                     f"""
             [user]
-                email = {settings.PLUGIN_REPO_CONF['email']}
-                name = {settings.PLUGIN_REPO_CONF['username']}
+                email = {settings.PLUGIN_REPO_CONF["email"]}
+                name = {settings.PLUGIN_REPO_CONF["username"]}
             """
                 )
             )

@@ -124,7 +124,7 @@ class AppOperationReportNotifier:
                             "module_name": module_name,
                             "environment": AppEnvironment.get_choice_label(env_name),
                             "res_summary": f"{mem_quota}G / {cpu_quota} 核",
-                            "cpu_usage_avg": f"{round(env_res_summary['cpu_usage_avg']*100, 2)}%",
+                            "cpu_usage_avg": f"{round(env_res_summary['cpu_usage_avg'] * 100, 2)}%",
                             "latest_deployed_at": humanize.naturaltime(
                                 time_now - arrow.get(env_deploy_summary["latest_deployed_at"])
                             ),

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Utils for legacy platform"""
+
 import re
 from typing import Any, List, Optional
 

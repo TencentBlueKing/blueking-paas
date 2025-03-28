@@ -283,6 +283,6 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
         prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"
         if path.startswith(prefix):
-            return f"/api/v1/{path[len(prefix):]}"
+            return f"/api/v1/{path[len(prefix) :]}"
 
         raise error_codes.CLOUDAPI_PATH_ERROR

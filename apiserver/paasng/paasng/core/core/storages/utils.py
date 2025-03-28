@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """sqlalchemy db manager"""
+
 import logging
 import urllib.parse
 from contextlib import contextmanager
@@ -53,17 +54,13 @@ class DummyObject(LazyObject):
 
 class DBManagerProtocol(Protocol):
     @property
-    def engine(self) -> Engine:
-        ...
+    def engine(self) -> Engine: ...
 
-    def get_model(self, table_name: str):
-        ...
+    def get_model(self, table_name: str): ...
 
-    def get_scoped_session(self):
-        ...
+    def get_scoped_session(self): ...
 
-    def session_scope(self):
-        ...
+    def session_scope(self): ...
 
 
 class DummyDB:

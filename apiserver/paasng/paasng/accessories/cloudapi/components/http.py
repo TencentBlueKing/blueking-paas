@@ -23,6 +23,7 @@ Rules:
 2. GET带参数，HEAD不带参数
 3. 所有请求 json out，如果resp.json报错, 则是接口问题
 """
+
 import logging
 from typing import Tuple, Union
 

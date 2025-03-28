@@ -33,6 +33,7 @@ from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessSe
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 
 @pytest.fixture(scope="session")
@@ -43,7 +44,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        return Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        return Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture(scope="session")

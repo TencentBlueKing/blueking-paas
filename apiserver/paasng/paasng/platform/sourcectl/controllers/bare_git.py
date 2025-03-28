@@ -62,8 +62,7 @@ class BareGitRepoController:
         # 当前 BareGit 只支持 basic auth
         o = urlparse(repo_url)
         repo_url_with_auth = (
-            f"{o.scheme}://{quote(holder.basic_auth.username)}:"
-            f"{quote(holder.basic_auth.password)}@{o.netloc}{o.path}"
+            f"{o.scheme}://{quote(holder.basic_auth.username)}:{quote(holder.basic_auth.password)}@{o.netloc}{o.path}"
         )
         return cls(repo_url=repo_url_with_auth, repo_obj=repo_obj)
 

@@ -28,7 +28,7 @@ from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bcs import entities
 from paasng.infras.bcs.apigw.client import Client
 from paasng.infras.bcs.apigw.client import Group as BCSGroup
-from paasng.infras.bcs.exceptions import BCSApiError, BCSGatewayServiceError, HelmChartNotFound
+from paasng.infras.bcs.exceptions import BCSApiError, BCSGatewayServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -177,35 +177,6 @@ class BCSUserClient:
         with wrap_request_exc():
             resp = self.client.upgrade_release(path_params=path_params, data=data)
             self._validate_resp(resp)
-
-    def upgrade_release_to_latest_chart_version(
-        self,
-        project_id: str,
-        cluster_id: str,
-        namespace: str,
-        release_name: str,
-        repository: str,
-        chart_name: str,
-        values: Dict[str, Any],
-    ):
-        """更新集群中的 helm release，使用最新的 chart 版本"""
-        chart_versions = self.get_chart_versions(project_id, repository, chart_name)
-        if not chart_versions:
-            raise HelmChartNotFound(f"chart {chart_name} not found in repo {repository}")
-
-        # API 返回是按时间逆序，因此第一个就是最新版本
-        latest_version = chart_versions[0].version
-
-        self.upgrade_release(
-            project_id=project_id,
-            cluster_id=cluster_id,
-            namespace=namespace,
-            release_name=release_name,
-            repository=repository,
-            chart_name=chart_name,
-            chart_version=latest_version,
-            values=values,
-        )
 
     @staticmethod
     def _validate_resp(resp: Dict[str, Any]):

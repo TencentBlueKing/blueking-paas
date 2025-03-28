@@ -30,13 +30,14 @@ class TestModificationsNotAllowed:
     def test_normal_app(self, bk_app):
         modifications_not_allowed(bk_app)
 
-    def test_desc_app(self, random_name, bk_user):
+    @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
+    def test_desc_app(self, random_name, random_tenant_id, bk_user):
         get_desc_handler(
             dict(
                 spec_version=2,
                 app=dict(bk_app_code=random_name, bk_app_name=random_name),
                 modules={random_name: {"is_default": True, "language": "python"}},
-                tenant={"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": "test_tenant_id"},
+                tenant={"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": random_tenant_id},
             )
         ).handle_app(bk_user)
         app = Application.objects.get(code=random_name)

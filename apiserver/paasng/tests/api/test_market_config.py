@@ -87,9 +87,9 @@ def test_create_then_release(
             },
         )
 
-    assert (
-        response.status_code == 201
-    ), f"status code invalid: {response.status_code}, response content: {response.data}"
+    assert response.status_code == 201, (
+        f"status code invalid: {response.status_code}, response content: {response.data}"
+    )
     pk = response.json()["application"]["id"]
     application = Application.objects.get(pk=pk)
 

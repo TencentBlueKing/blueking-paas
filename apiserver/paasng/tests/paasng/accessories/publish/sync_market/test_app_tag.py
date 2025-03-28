@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""测试从桌面同步应用分类
-"""
+"""测试从桌面同步应用分类"""
+
 import pytest
 
 from paasng.accessories.publish.market.models import Tag

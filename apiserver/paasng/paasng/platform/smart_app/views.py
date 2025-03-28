@@ -38,7 +38,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
@@ -90,13 +90,6 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         """上传一个 S-Mart 源码包，并将其暂存起来"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 SMart 应用"))
-
-        def get_region(app_desc):
-            user_profile = UserProfile.objects.get_profile(self.request.user)
-            enable_regions = [r.name for r in user_profile.enable_regions]
-            if not app_desc.region or app_desc.region not in enable_regions:
-                return enable_regions[0]
-            return app_desc.region
 
         slz = PackageStashRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

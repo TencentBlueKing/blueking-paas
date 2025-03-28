@@ -18,7 +18,7 @@
 import logging
 import os
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from django.core.management.base import BaseCommand
 from environ import Env
@@ -34,20 +34,18 @@ env = Env()
 
 @dataclass
 class ClusterData:
-    region: str
     name: str
-    is_default: bool = False
-    description: Optional[str] = None
-    ingress_config: Optional[Dict] = None
-    annotations: Optional[Dict] = None
-    ca_data: Optional[str] = None
-    cert_data: Optional[str] = None
-    key_data: Optional[str] = None
-    token_type: Optional[ClusterTokenType] = None
-    token_value: Optional[str] = None
-    default_node_selector: Optional[Dict] = None
-    default_tolerations: Optional[List] = None
-    feature_flags: Optional[Dict] = None
+    description: str | None = None
+    ingress_config: Dict | None = None
+    annotations: Dict | None = None
+    ca_data: str | None = None
+    cert_data: str | None = None
+    key_data: str | None = None
+    token_type: ClusterTokenType | None = None
+    token_value: str | None = None
+    default_node_selector: Dict | None = None
+    default_tolerations: List | None = None
+    feature_flags: Dict | None = None
 
 
 @dataclass
@@ -67,10 +65,8 @@ class Command(BaseCommand):
     def render_data(self) -> InitialClusterData:
         try:
             data = {
-                "region": env.str("PAAS_WL_CLUSTER_REGION", "default"),
                 "name": "default-main",
                 "description": "默认应用集群",
-                "is_default": True,
                 "ingress_config": {
                     "default_ingress_domain_tmpl": "%s." + env.str("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", ""),
                     "frontend_ingress_ip": env.str("PAAS_WL_CLUSTER_FRONTEND_INGRESS_IP", ""),

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Base functions for deploy steps"""
+
 import logging
 from typing import Dict, Optional, Type
 

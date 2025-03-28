@@ -51,11 +51,14 @@ class TestDefaultBuildProcessExecutor:
 
         bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
         # TODO: Too much mocks, both tests and codes need refactor
-        with mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"), mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"):
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
+            ),
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"),
+        ):
             bpe.execute({"image": ""})
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"
 

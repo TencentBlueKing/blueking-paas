@@ -17,29 +17,38 @@
 
 from django.urls import path
 
-from paasng.plat_mgt.infras.services.views import binding_policies, services
+from paasng.plat_mgt.infras.services import views
 
 urlpatterns = [
     path(
+        "api/plat_mgt/infras/services/",
+        views.AddonsServiceViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.services.list",
+    ),
+    path(
         "api/plat_mgt/infras/plans/",
-        services.PlanViewSet.as_view({"get": "list_all"}),
+        views.PlanViewSet.as_view({"get": "list_all"}),
         name="plat_mgt.infras.services.plans.list_all",
     ),
     path(
         "api/plat_mgt/infras/services/<str:service_id>/plans/",
-        services.PlanViewSet.as_view({"post": "create", "get": "list"}),
+        views.PlanViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.services.plans.bulk",
     ),
     path(
         "api/plat_mgt/infras/services/<str:service_id>/plans/<str:plan_id>/",
-        services.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+        views.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.services.plans.detail",
+    ),
+    # 集群分配策略相关
+    path(
+        "api/plat_mgt/infras/service_binding_policy_condition_types/",
+        views.BindingPolicyViewSet.as_view({"get": "list_condition_types"}),
+        name="plat_mgt.infras.binding-policiey.list_condition_types",
     ),
     path(
         "api/plat_mgt/infras/services/<str:service_id>/binding-policies/",
-        binding_policies.BindingPolicyViewSet.as_view(
-            {"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}
-        ),
+        views.BindingPolicyViewSet.as_view({"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}),
         name="plat_mgt.infras.services.binding-policies.detail",
     ),
 ]

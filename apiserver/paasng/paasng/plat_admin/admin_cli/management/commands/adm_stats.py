@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """An admin tool that helps viewing platform and application stats."""
+
 import logging
 from enum import Enum
 from operator import attrgetter
@@ -45,7 +46,7 @@ class Command(BaseCommand, CommandBasicMixin):
         if options["type"] == CommandType.RES_MAPPER_V1.value:
             self.handle_res_mapper_v1(options)
         else:
-            self.exit_with_error(f'Invalid command type: {options["type"]}')
+            self.exit_with_error(f"Invalid command type: {options['type']}")
 
     def handle_res_mapper_v1(self, options):
         """Print applications that still use resource mapper "v1" version."""

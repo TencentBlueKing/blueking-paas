@@ -24,6 +24,7 @@ from paasng.accessories.servicehub.binding_policy.manager import (
     PolicyCombinationManager,
     list_policy_combination_configs,
 )
+from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
@@ -31,6 +32,7 @@ from paasng.plat_mgt.infras.services.serializers import (
     DeletePolicyCombinationSLZ,
     PolicyCombinationConfigOutputSLZ,
     PolicyCombinationConfigUpsertSLZ,
+    PrecedencePolicyCondTypeOutputSLZ,
 )
 
 
@@ -81,3 +83,12 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         mgr = PolicyCombinationManager(service, data.get("tenant_id"))
         mgr.clean()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.binding_policies"],
+        operation_description="获取方案绑定分配策略条件",
+        responses={status.HTTP_200_OK: PrecedencePolicyCondTypeOutputSLZ()},
+    )
+    def list_condition_types(self, request, *args, **kwargs):
+        cond_types = [{"key": k, "name": n} for k, n in PrecedencePolicyCondType.get_django_choices()]
+        return Response(data=PrecedencePolicyCondTypeOutputSLZ(cond_types, many=True).data)

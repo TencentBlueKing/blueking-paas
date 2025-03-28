@@ -20,6 +20,7 @@
 import logging
 from typing import Dict, List, Optional
 
+from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
@@ -31,7 +32,7 @@ from paasng.accessories.publish.market.signals import product_create_or_update_b
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
-from paasng.infras.accounts.models import User, UserProfile
+from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -84,11 +85,7 @@ class AppDeclarativeController:
     @atomic
     def perform_create(self, desc: ApplicationDesc) -> Application:
         """Create application by given input data"""
-        allowed_regions = self.get_allowed_regions()
-        if not desc.region:
-            desc.region = allowed_regions[0]
-        elif desc.region not in allowed_regions:
-            raise DescriptionValidationError({"region": _("用户没有权限在 {} 下创建应用").format(desc.region)})
+        desc.region = self._validate_region(desc.region)
 
         application = Application.objects.create(
             owner=self.user.pk,
@@ -127,19 +124,12 @@ class AppDeclarativeController:
         self.save_description(desc, application, is_creation=True)
         return application
 
-    def get_allowed_regions(self) -> List[str]:
-        """Return all allowed regions for current user"""
-        user_profile = UserProfile.objects.get_profile(self.user)
-        return [r.name for r in user_profile.enable_regions]
-
     @atomic
     def perform_update(self, desc: ApplicationDesc) -> Application:
         """Update application by given input data"""
         # Permission check
         application = Application.objects.get(code=desc.code)
-        # Set region field if omitted
-        if not desc.region:
-            desc.region = application.region
+        desc.region = self._validate_region(desc.region)
 
         if not user_has_app_action_perm(self.user, application, AppAction.BASIC_DEVELOP):
             raise DescriptionValidationError({APP_CODE_FIELD: _("你没有权限操作当前应用")})
@@ -331,6 +321,13 @@ class AppDeclarativeController:
             is_creation=is_creation,
             tenant_id=application.tenant_id,
         )
+
+    @staticmethod
+    def _validate_region(region: str | None) -> str:
+        """Validate the value of the region field, it can only be None or the default region."""
+        if region and region != settings.DEFAULT_REGION_NAME:
+            raise DescriptionValidationError({"region": _("不允许使用非默认版本")})
+        return settings.DEFAULT_REGION_NAME
 
 
 def flatten_dependency_tree(dependency_tree: Dict[str, List[str]]) -> List[str]:

@@ -39,9 +39,8 @@ def mock_reader():
                 items=instances, metadata=ResourceField({"resourceVersion": "1"})
             )
 
-    with mock.patch(
-        "paas_wl.bk_app.processes.readers.ProcessReader.list_by_app_with_meta"
-    ) as list_processes, mock.patch(
-        "paas_wl.bk_app.processes.readers.InstanceReader.list_by_app_with_meta"
-    ) as list_instances:
+    with (
+        mock.patch("paas_wl.bk_app.processes.readers.ProcessReader.list_by_app_with_meta") as list_processes,
+        mock.patch("paas_wl.bk_app.processes.readers.InstanceReader.list_by_app_with_meta") as list_instances,
+    ):
         yield setter(list_processes, list_instances)

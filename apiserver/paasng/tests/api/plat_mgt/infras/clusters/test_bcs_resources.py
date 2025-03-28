@@ -27,65 +27,68 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class TestBCSResourceViewSet:
     @pytest.fixture(autouse=True)
     def _patch_bcs_api(self):
-        with patch(
-            "paasng.infras.bcs.client.Client.api.list_auth_projects",
-            return_value={
-                "code": 0,
-                "data": {
-                    "total": 2,
-                    "results": [
+        with (
+            patch(
+                "paasng.infras.bcs.client.Client.api.list_auth_projects",
+                return_value={
+                    "code": 0,
+                    "data": {
+                        "total": 2,
+                        "results": [
+                            {
+                                "projectID": "a9c54c3cb7854e3ea54499281f608c0b",
+                                "projectCode": "blueking",
+                                "name": "蓝鲸",
+                                "description": "蓝鲸",
+                                "isOffline": True,
+                                "businessID": "100",
+                                "businessName": "蓝鲸",
+                            },
+                            {
+                                "projectID": "bb876f1246be4c079406d5992d1bf24c",
+                                "projectCode": "blueking-paas",
+                                "name": "蓝鲸 PaaS",
+                                "description": "蓝鲸 PaaS",
+                                "isOffline": False,
+                                "businessID": "101",
+                                "businessName": "蓝鲸 PaaS",
+                            },
+                        ],
+                    },
+                },
+            ),
+            patch(
+                "paasng.infras.bcs.client.Client.api.list_project_clusters",
+                return_value={
+                    "code": 0,
+                    "data": [
                         {
-                            "projectID": "a9c54c3cb7854e3ea54499281f608c0b",
-                            "projectCode": "blueking",
-                            "name": "蓝鲸",
-                            "description": "蓝鲸",
-                            "isOffline": True,
-                            "businessID": "100",
-                            "businessName": "蓝鲸",
+                            "clusterID": "BCS-K8S-00000",
+                            "clusterName": "蓝鲸集群",
+                            "environment": "prod",
+                            "is_shared": False,
                         },
                         {
-                            "projectID": "bb876f1246be4c079406d5992d1bf24c",
-                            "projectCode": "blueking-paas",
-                            "name": "蓝鲸 PaaS",
-                            "description": "蓝鲸 PaaS",
-                            "isOffline": False,
-                            "businessID": "101",
-                            "businessName": "蓝鲸 PaaS",
+                            "clusterID": "BCS-K8S-20000",
+                            "clusterName": "测试集群",
+                            "environment": "debug",
+                            "is_shared": False,
+                        },
+                        {
+                            "clusterID": "BCS-K8S-40000",
+                            "clusterName": "正式集群",
+                            "environment": "prod",
+                            "is_shared": False,
+                        },
+                        {
+                            "clusterID": "BCS-K8S-49999",
+                            "clusterName": "共享集群",
+                            "environment": "prod",
+                            "is_shared": True,
                         },
                     ],
                 },
-            },
-        ), patch(
-            "paasng.infras.bcs.client.Client.api.list_project_clusters",
-            return_value={
-                "code": 0,
-                "data": [
-                    {
-                        "clusterID": "BCS-K8S-00000",
-                        "clusterName": "蓝鲸集群",
-                        "environment": "prod",
-                        "is_shared": False,
-                    },
-                    {
-                        "clusterID": "BCS-K8S-20000",
-                        "clusterName": "测试集群",
-                        "environment": "debug",
-                        "is_shared": False,
-                    },
-                    {
-                        "clusterID": "BCS-K8S-40000",
-                        "clusterName": "正式集群",
-                        "environment": "prod",
-                        "is_shared": False,
-                    },
-                    {
-                        "clusterID": "BCS-K8S-49999",
-                        "clusterName": "共享集群",
-                        "environment": "prod",
-                        "is_shared": True,
-                    },
-                ],
-            },
+            ),
         ):
             yield
 

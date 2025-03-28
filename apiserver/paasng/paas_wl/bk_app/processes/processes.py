@@ -234,6 +234,14 @@ class ProcessManager:
 
         return self._list_default_specs(target_status)
 
+    def list_processes_specs_for_legacy(self) -> List[Dict]:
+        """Get specs of current app's all processes
+
+        NOTE: 仅用于云原生应用未确认迁移时, 返回旧的进程信息
+        不能直接使用 list_processes_specs 的原因是, self.wl_app.type 已是 WlAppType.CLOUD_NATIVE
+        """
+        return self._list_default_specs()
+
     def list_processes(self) -> List[Process]:
         """Query all running processes.
 

@@ -15,20 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import pytest
+from django.urls import path
 
-from paas_wl.infras.cluster.models import Cluster
-from tests.utils.encrypt_cmd_base import BaseTestEnctrypMigrationCmd
+from . import views
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-@pytest.mark.parametrize("model_name", ["Cluster", ""])
-class TestCommand(BaseTestEnctrypMigrationCmd):
-    @pytest.fixture(autouse=True)
-    def command_name(self):
-        return "encryption_migration_cluster"
-
-    @pytest.fixture(autouse=True)
-    def app_models(self):
-        return [Cluster]
+urlpatterns = [
+    path(
+        "api/plat_mgt/overview/tenant_config_statuses/",
+        views.PlatMgtOverviewViewSet.as_view({"get": "list_tenant_config_statuses"}),
+        name="plat_mgt.overview.tenant_config_status.list",
+    ),
+]

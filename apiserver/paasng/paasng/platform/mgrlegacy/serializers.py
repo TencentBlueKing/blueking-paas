@@ -72,6 +72,8 @@ class LegacyAppSLZ(serializers.Serializer):
             "has_prod_deployed_before_migration",
             "created",
             "migration_finished_date",
+            "stag_exposed_link",
+            "prod_exposed_link",
         )
 
 

@@ -58,7 +58,7 @@ class TestInitServiceDefaultPolicyJob:
 
         with patch(
             "paasng.platform.scheduler.jobs._handel_single_service_default_policy"
-        ) as mock_handler, patch.object(logger, "debug") as mock_debug_log:
+        ) as mock_handler, patch.object(logger, "info") as mock_debug_log:
             init_service_default_policy_job()
 
             # 验证处理逻辑未被调用

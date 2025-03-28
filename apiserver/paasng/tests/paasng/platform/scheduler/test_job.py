@@ -5,7 +5,7 @@ import pytest
 from django.test import override_settings
 
 from paasng.core.tenant.user import OP_TYPE_TENANT_ID
-from paasng.platform.scheduler.jobs import init_service_default_policy_job, logger
+from paasng.platform.scheduler.jobs import init_service_default_policy_job, logger, redis_lock
 
 
 @pytest.fixture
@@ -81,3 +81,22 @@ class TestInitServiceDefaultPolicyJob:
 
             # 验证锁释放逻辑
             mock_lock.__exit__.assert_called_once()
+
+    def test_lock_normal_release(self):
+        """测试锁正常获取和释放流程"""
+        mock_redis = MagicMock()
+        mock_redis.lock.return_value = MagicMock(acquire=MagicMock(return_value=True), release=MagicMock())
+
+        # 使用真实上下文管理器逻辑
+        with patch("paasng.platform.scheduler.jobs.get_default_redis", return_value=mock_redis):
+            lock_key = "test:normal:lock"
+            with redis_lock(lock_key) as acquired:
+                # 验证成功获取锁
+                assert acquired is True
+                # 验证锁参数设置正确
+                mock_redis.lock.assert_called_once_with(
+                    name=lock_key, timeout=300, blocking_timeout=0, thread_local=False
+                )
+
+            # 验证锁释放
+            mock_redis.lock.return_value.release.assert_called_once()

@@ -73,10 +73,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
             if is_cnb_runtime:
                 return "launcher bash"
 
-            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
-            # 部分旧的 Smart 打包方式仍是 slug-pilot, 没有 launcher
-            if module.application.is_smart_app:
-                return "bash"
+            return "bash"
 
         # 如果不是 buildpack 构建类型，直接使用 sh 命令
         return "sh"

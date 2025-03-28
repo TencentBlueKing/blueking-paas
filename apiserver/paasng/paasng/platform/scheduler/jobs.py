@@ -69,7 +69,7 @@ def redis_lock(lock_key: str, timeout: int = 300):
             logger.debug("Successfully acquired lock for %s", lock_key)
         else:
             logger.debug("Failed to acquire lock for %s", lock_key)
-            yield acquired
+        yield acquired
     finally:
         # 只有当前进程持有的锁才释放
         if acquired:
@@ -146,7 +146,7 @@ def init_service_default_policy_job():
     lock_key = "lock:init_service_default_policy"
     with redis_lock(lock_key) as acquired:
         if not acquired:
-            logger.debug("Another instance is handling service policy initialization, skip.")
+            logger.info("Another instance is handling service policy initialization, skip.")
             return
 
         logger.info("Starting service policy initialization process.")

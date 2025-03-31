@@ -18,7 +18,7 @@ import logging
 from typing import Callable, Iterable, List, Tuple
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.checks import Error, register
 from django.urls import URLPattern, URLResolver
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSetMixin
@@ -41,26 +41,33 @@ def is_admin42_permission(perm_cls) -> bool:
     return getattr(perm_cls, "perm_action", False) and perm_cls.perm_action in ADMIN42_ACTIONS
 
 
-def ensure_views_perm_configured():
+@register()
+def check_views_perm_configured(app_configs, **kwargs) -> List[Error]:
     """Check if all views have configured permissions properly.
 
-    :raise ImproperlyConfigured: When a view function doesn't configure permission properly.
+    This is a custom Django check function, for more details, see also:
+    <https://docs.djangoproject.com/en/5.1/topics/checks/>
+
+    :return: The error list, it's empty when every view function configures their
+        permissions properly.
     """
+    errors = []
     for url, view_func in list_view_funcs():
         is_admin42 = is_admin42_url(url) or is_admin42_view_func(view_func)
 
         if hasattr(view_func, "cls"):
             # A DRF style view function
-            check_drf_view_perm(view_func, is_admin42)
+            errors.extend(check_drf_view_perm(view_func, is_admin42))
         elif hasattr(view_func, "view_class"):
             # A normal Django view
-            check_django_view_perm(view_func, is_admin42)
+            errors.extend(check_django_view_perm(view_func, is_admin42))
         else:
             # Function-based views
             name = view_func.__name__
             if name in INSURE_CHECKING_EXCLUDED_VIEWS:
                 continue
-            raise ValueError(f"Unknown view type: {view_func}")
+            errors.append(Error(f"Found unsupported view type: {view_func}", hint="Use DRF view instead."))
+    return errors
 
 
 def list_view_funcs() -> Iterable[Tuple[str, Callable]]:
@@ -82,22 +89,22 @@ def list_view_funcs() -> Iterable[Tuple[str, Callable]]:
     yield from list_urls(urlconf.urlpatterns)
 
 
-def check_drf_view_perm(view_func, is_admin42: bool):
+def check_drf_view_perm(view_func, is_admin42: bool) -> List[Error]:
     """Check if a DRF view function has configured permission properly.
 
-    :raise ImproperlyConfigured: When the permission is not configured properly.
+    :return: The error list.
     """
     view_cls = view_func.cls
     # Skip if the view class is marked as excluded
     if view_cls.__name__ in INSURE_CHECKING_EXCLUDED_VIEWS:
-        return
+        return []
 
     if issubclass(view_cls, ViewSetMixin):
         # Some viewset doesn't configure `permission_classes`, them are protected by
         # decorators instead, make the check pass when all methods have been protected.
         unprotected_actions = get_unprotected_actions(view_func)
         if view_func.actions and not unprotected_actions:
-            return
+            return []
     elif issubclass(view_cls, APIView):
         # When the view class is a DRF APIView, only check the `permission_classes` property.
         pass
@@ -109,17 +116,26 @@ def check_drf_view_perm(view_func, is_admin42: bool):
     # When the view class is admin42 view, it should contain site_perm_class in permission_classes
     if is_admin42:  # noqa: SIM102
         if not any(is_admin42_permission(p) for p in enabled_perm):
-            raise ImproperlyConfigured(
-                f"The view class {view_cls} has no site_perm_class configured in permission_classes"
-            )
+            return [
+                Error(
+                    f"The view class {view_cls} has no site_perm_class configured in permission_classes.",
+                    hint="Add site_perm_class to the permission_classes",
+                )
+            ]
 
     if not enabled_perm or (len(enabled_perm) == 1 and enabled_perm[0].__name__ == "IsAuthenticated"):
         name = view_cls if not unprotected_actions else f"{view_cls} - {unprotected_actions!r}"
-        raise ImproperlyConfigured(
-            "The view class {} has no extra permission_classes configured other than "
-            "`IsAuthenticated`, this may be a bug and lead to a permission leak error, add "
-            "the view name to `perm_insure.conf.INSURE_CHECKING_EXCLUDED_VIEWS` if this is intended.".format(name)
-        )
+        return [
+            Error(
+                "The view class {} has no extra permission_classes configured other than "
+                "`IsAuthenticated`, this may be a bug and lead to a permission leak error.".format(name),
+                hint=(
+                    "Configure the permission_classes or add the view name to "
+                    "`perm_insure.conf.INSURE_CHECKING_EXCLUDED_VIEWS` if this is intended."
+                ),
+            )
+        ]
+    return []
 
 
 def get_unprotected_actions(view_func) -> List[str]:
@@ -144,20 +160,23 @@ def get_unprotected_actions(view_func) -> List[str]:
     return result
 
 
-def check_django_view_perm(view_func, is_admin42: bool):
+def check_django_view_perm(view_func, is_admin42: bool) -> List[Error]:
     """Check if a django view function has configured permission properly.
 
-    :raise ImproperlyConfigured: When the permission is not configured properly.
+    :return: The error list.
     """
     name = view_func.view_class.__name__
 
     if is_admin42:
-        raise ImproperlyConfigured(
-            f"The view class {name} is a pure Django view, which is not supported in admin42, use DRF view instead."
-        )
+        return [
+            Error(
+                f"The view class {name} is a pure Django view, which is not supported in admin42, use DRF view instead.",
+                hint="For admin view functions, stop using Django view and use DRF view instead.",
+            )
+        ]
 
     if name in INSURE_CHECKING_EXCLUDED_VIEWS:
-        return
+        return []
 
     # TODO: implement the check for Django views is the future
-    raise ImproperlyConfigured("Check for Django views is not implemented yet.")
+    return [Error("Check for Django views is not implemented yet.", hint="Use DRF view instead.")]

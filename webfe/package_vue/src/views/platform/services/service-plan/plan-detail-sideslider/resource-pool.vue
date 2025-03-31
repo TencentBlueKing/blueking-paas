@@ -23,6 +23,7 @@
         <div slot-scope="{ row }">
           <!-- JSON格式预览 -->
           <vue-json-pretty
+            class="paas-vue-json-pretty-cls"
             :data="row.jsonData"
             :deep="Object.keys(row.jsonData)?.length ? 1 : 0"
             :show-length="true"

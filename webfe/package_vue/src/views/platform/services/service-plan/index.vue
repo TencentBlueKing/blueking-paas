@@ -56,6 +56,7 @@
           <div slot-scope="{ row }">
             <!-- JSON格式预览 -->
             <vue-json-pretty
+              class="paas-vue-json-pretty-cls"
               :data="row.config"
               :deep="Object.keys(row.config)?.length ? 1 : 0"
               :show-length="true"

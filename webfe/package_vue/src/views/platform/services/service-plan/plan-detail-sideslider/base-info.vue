@@ -16,6 +16,7 @@
         :key="val"
         :label-width="80"
         :label="`${val}：`"
+        :class="key"
       >
         <div
           v-if="key === 'config'"
@@ -23,6 +24,7 @@
           class="json-pretty"
         >
           <vue-json-pretty
+            class="paas-vue-json-pretty-cls"
             :data="data[key]"
             :show-length="true"
             :expanded="Object.keys(data[key])?.length"
@@ -291,6 +293,9 @@ export default {
 <style lang="scss" scoped>
 .plan-base-info-container {
   position: relative;
+  /deep/ .details-row.config .value {
+    width: 100%;
+  }
   .json-pretty {
     padding: 8px;
     background: #f5f7fa;

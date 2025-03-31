@@ -20,6 +20,7 @@ import pytest
 from django.utils.timezone import now
 from django_dynamic_fixture import G
 
+from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import (
     DefaultPolicyCreationRecord,
@@ -34,53 +35,53 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def default_tenant_id():
+def init_tenant_id():
     return OP_TYPE_TENANT_ID
 
 
 @pytest.fixture()
-def local_service(default_tenant_id):
+def local_service(init_tenant_id):
     service = G(Service, name="test-service", category=G(ServiceCategory), logo_b64="dummy")
-    G(Plan, name="plan-1", service=service, tenant_id=default_tenant_id)
-    G(Plan, name="plan-2", service=service, tenant_id=default_tenant_id)
+    G(Plan, name="plan-1", service=service, tenant_id=init_tenant_id)
+    G(Plan, name="plan-2", service=service, tenant_id=init_tenant_id)
     return mixed_service_mgr.get(service.uuid)
 
 
 class TestServiceDefaultPolicyInitialization:
-    def test_skip_existing_policy(self, local_service, default_tenant_id):
-        """测试已存在策略时跳过初始化"""
+    def test_skip_existing_policy(self, local_service, init_tenant_id):
+        """测试已存在初始化记录则跳过初始化"""
         DefaultPolicyCreationRecord.objects.create(
-            service_id=local_service.uuid, service_type="local", finished_at=now()
+            service_id=local_service.uuid, service_type=ServiceType.LOCAL, finished_at=now()
         )
 
-        _handel_single_service_default_policy(local_service, default_tenant_id)
-        # 验证没有新策略被创建
+        _handel_single_service_default_policy(local_service, init_tenant_id)
+        # 验证没有新的分配策略被创建
         assert not ServiceBindingPolicy.objects.filter(service_id=local_service.uuid).exists()
         assert not ServiceBindingPrecedencePolicy.objects.filter(service_id=local_service.uuid).exists()
 
-    def test_create_new_policy(self, local_service, default_tenant_id):
+    def test_create_new_policy(self, local_service, init_tenant_id):
         """测试新策略创建流程"""
-        _handel_single_service_default_policy(local_service, default_tenant_id)
+        _handel_single_service_default_policy(local_service, init_tenant_id)
 
-        # 验证策略记录创建
-        record = DefaultPolicyCreationRecord.objects.get(service_id=local_service.uuid)
-        assert record is not None
-
-        # 验证实际策略创建
+        # 初始化记录已创建
+        assert DefaultPolicyCreationRecord.objects.filter(service_id=local_service.uuid).exists()
+        # 分配策略已创建
         assert ServiceBindingPolicy.objects.filter(service_id=local_service.uuid).exists()
 
-    def test_skip_when_has_existing_policies(self, local_service, default_tenant_id):
-        """测试已有策略时跳过初始化"""
+    def test_skip_when_has_existing_policies(self, local_service, init_tenant_id):
+        """测试已有策略时跳过初始化并自动创建初始化记录"""
         # 预先创建其他策略
         ServiceBindingPolicy.objects.create(
             service_id=local_service.uuid,
-            service_type="local",
+            service_type=ServiceType.LOCAL,
         )
 
-        _handel_single_service_default_policy(local_service, default_tenant_id)
+        _handel_single_service_default_policy(local_service, init_tenant_id)
 
-        # 验证没有重复创建记录
-        assert DefaultPolicyCreationRecord.objects.filter(service_id=local_service.uuid).count() == 1
+        # 验证没有重复创建分配记录
+        assert ServiceBindingPolicy.objects.filter(service_id=local_service.uuid).count() == 1
+        # 验证已经默认添加了初始化记录
+        assert DefaultPolicyCreationRecord.objects.filter(service_id=local_service.uuid).exists()
 
 
 class TestRedisLockBehavior:

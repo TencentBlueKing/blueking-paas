@@ -57,14 +57,13 @@
           :required="true"
         >
           <div class="json-editor-wrapper">
-            <VueJsonEditor
+            <JsonEditorVue
+              class="pt-json-editor-custom-cls"
+              ref="jsonEditor"
               style="width: 100%; height: 100%"
               v-model="valuesJson"
-              :mode="'code'"
-              :modes="['code', 'tree', 'text']"
-              :expanded-on-start="true"
-              @json-change="handleJsonUpdate"
-              @has-error="handleError"
+              :debounce="20"
+              :mode="'text'"
             />
           </div>
         </bk-form-item>
@@ -74,11 +73,12 @@
 </template>
 
 <script>
-import VueJsonEditor from 'vue-json-editor';
+import JsonEditorVue from 'json-editor-vue';
+import { validateJson } from '../../validators';
 export default {
   name: 'SandboxDialog',
   components: {
-    VueJsonEditor,
+    JsonEditorVue,
   },
   props: {
     show: {
@@ -98,7 +98,6 @@ export default {
       },
       valuesJson: {},
       dialogLoading: false,
-      hasJsonFlag: true,
     };
   },
   computed: {
@@ -137,12 +136,16 @@ export default {
       this.$refs.formRef
         ?.validate()
         .then(() => {
-          if (!this.hasJsonFlag) return;
-          // this.dialogLoading = true;
+          // 基础JSON校验
+          const validateResult = validateJson(this.valuesJson);
+          if (!validateResult) {
+            return;
+          }
+          this.dialogLoading = true;
           const params = {
             plan: this.data.planId,
             // 实例配置：JSON格式
-            credentials: JSON.stringify(this.valuesJson),
+            credentials: typeof this.valuesJson === 'object' ? JSON.stringify(this.valuesJson) : this.valuesJson,
             // 可回收复用：：开启：{config: {recycle:true} } / 停用：{}
             config: this.formData.recyclable ? { recycle: true } : {},
           };
@@ -155,16 +158,6 @@ export default {
         .catch((e) => {
           console.warn(e);
         });
-    },
-    // json 更新
-    handleJsonUpdate(updatedJson) {
-      this.valuesJson = updatedJson;
-      this.hasJsonFlag = true;
-    },
-    // json 编辑错误
-    handleError(errorMessage) {
-      this.hasJsonFlag = false;
-      console.warn('JSON 校验失败:', errorMessage);
     },
     // 添加资源池
     async addResourcePool(data) {
@@ -218,9 +211,9 @@ export default {
   }
   .json-editor-wrapper {
     height: 350px;
-    /deep/ .jsoneditor-vue {
-      height: 100%;
-    }
+  }
+  .pt-json-editor-custom-cls .jse-main .jse-message.jse-error {
+    display: none;
   }
 }
 </style>

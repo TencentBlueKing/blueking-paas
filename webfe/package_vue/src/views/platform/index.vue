@@ -147,6 +147,9 @@ export default {
 }
 </style>
 <style lang="scss">
+.pt-json-editor-custom-cls .jse-main .jse-message.jse-error {
+  display: none;
+}
 .platform-content {
   .border-tag,
   .tag {

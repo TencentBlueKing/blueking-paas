@@ -60,14 +60,13 @@
         >
           <!-- JSON编辑器 -->
           <div class="editor-wrapper">
-            <VueJsonEditor
+            <JsonEditorVue
+              class="pt-json-editor-custom-cls"
+              ref="jsonEditor"
               style="width: 100%; height: 100%"
               v-model="valuesJson"
+              :debounce="20"
               :mode="'code'"
-              :modes="['code', 'tree', 'text']"
-              :expanded-on-start="true"
-              @json-change="handleJsonUpdate"
-              @has-error="handleError"
             />
           </div>
         </bk-form-item>
@@ -94,11 +93,12 @@
 </template>
 
 <script>
-import VueJsonEditor from 'vue-json-editor';
+import JsonEditorVue from 'json-editor-vue';
+import { validateJson } from '../validators';
 export default {
   name: 'EditAddSideslider',
   components: {
-    VueJsonEditor,
+    JsonEditorVue,
   },
   props: {
     show: {
@@ -180,8 +180,6 @@ export default {
         { property: 'is_active', label: '可见', type: 'switcher', required: true },
       ]),
       valuesJson: {},
-      // Editor校验
-      hasJsonFlag: true,
     };
   },
   computed: {
@@ -211,7 +209,6 @@ export default {
         config: {},
       };
       this.valuesJson = {};
-      this.hasJsonFlag = true;
       this.saveLoading = false;
     },
     shown() {
@@ -238,15 +235,16 @@ export default {
     submitData() {
       this.$refs.formRef?.validate().then(
         () => {
-          // Editor 校验不通过
-          if (!this.hasJsonFlag) {
+          // JSON校验
+          const validateResult = validateJson(this.valuesJson, this.$refs.jsonEditor?.jsonEditor);
+          if (!validateResult) {
             return;
           }
           this.saveLoading = true;
           const params = {
             ...this.formData,
             tenant_id: this.tenantId,
-            config: this.valuesJson,
+            config: typeof this.valuesJson === 'string' ? JSON.parse(this.valuesJson) : this.valuesJson,
           };
           delete params.service_name;
           const id = this.services.find((v) => v.name === this.formData.service_name)?.uuid;
@@ -304,16 +302,6 @@ export default {
       } finally {
         this.saveLoading = false;
       }
-    },
-    // json 更新
-    handleJsonUpdate(updatedJson) {
-      this.valuesJson = updatedJson;
-      this.hasJsonFlag = true;
-    },
-    // json 编辑错误
-    handleError(errorMessage) {
-      this.hasJsonFlag = false;
-      console.warn('JSON 校验失败:', errorMessage);
     },
   },
 };

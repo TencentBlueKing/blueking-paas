@@ -45,7 +45,7 @@ python manage.py smart_tool -f '${S-Mart包的路径}'
 # --service [增强服务名称, redis 增强服务的名称是 "default:redis"]
 # -f        [描述实例配置的 yaml 文件路径]
 
-python manage.py import_pre_created_instance --service "default:redis" -f ${实例配置文件路径}
+python manage.py import_pre_created_instance --service "redis" -f ${实例配置文件路径}
 ```
 
 ### 资源池实例配置文件格式

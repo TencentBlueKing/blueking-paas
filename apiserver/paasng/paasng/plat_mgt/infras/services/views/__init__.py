@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .addons_services import AddonsServiceViewSet
-from .binding_policies import BindingPolicyViewSet
+from .binding_policies import BindingPolicyViewSet, CategoryViewSet, ProviderViewSet
 from .plans import PlanViewSet
 
-__all__ = ["BindingPolicyViewSet", "PlanViewSet", "AddonsServiceViewSet"]
+__all__ = ["BindingPolicyViewSet", "PlanViewSet", "AddonsServiceViewSet", "CategoryViewSet", "ProviderViewSet"]

@@ -146,9 +146,14 @@ def get_preallocated_address(
         return ""
 
     def _get_default_cluster(app_code: str, environment: AppEnvName) -> Cluster:
-        app: Application = Application.objects.filter(code=app_code).first()
-        if not app:
-            raise ValueError(f"application {app_code} not found")
+        """Get the cluster for the given application and environment"""
+        try:
+            app = Application.objects.get(code=app_code)
+        except Application.DoesNotExist:
+            # The application has not been deployed yet, but we still need to return an address
+            # because other apps might depend on this non-existent application. Therefore, we will
+            # attempt to get a cluster anyway, even if the result might be incorrect.
+            return ClusterAllocator(AllocationContext.create_for_future_system_apps()).get_default()
 
         ctx = AllocationContext(tenant_id=app.tenant_id, region=app.region, environment=environment)
         return ClusterAllocator(ctx).get_default()

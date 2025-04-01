@@ -125,6 +125,6 @@ class ProviderViewSet(viewsets.GenericViewSet):
         tags=["plat-mgt.infras.provider"],
         operation_description="增强服务提供商",
     )
-    def list(self, request, service_id, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         provider_choices = {"provider_choices": get_provider_choices()}
         return Response(data=provider_choices)

@@ -51,4 +51,14 @@ urlpatterns = [
         views.BindingPolicyViewSet.as_view({"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}),
         name="plat_mgt.infras.services.binding-policies.detail",
     ),
+    path(
+        "api/plat_mgt/infras/services/category/",
+        views.CategoryViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.services.category.list",
+    ),
+    path(
+        "api/plat_mgt/infras/services/provider_choices/",
+        views.ProviderViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.services.provider_choices.list",
+    ),
 ]

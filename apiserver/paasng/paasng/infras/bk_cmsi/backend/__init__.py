@@ -14,17 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from paasng.utils.addons import PlugableAppConfig
-
-
-class AppsConfig(PlugableAppConfig):
-    name = "paasng.infras.accounts"
-    default = True
-
-    def ready(self):
-        super().ready()
-        # Patch get_user function when project/app is ready to make auth system works
-        from bkpaas_auth.monkey import patch_middleware_get_user
-
-        patch_middleware_get_user()

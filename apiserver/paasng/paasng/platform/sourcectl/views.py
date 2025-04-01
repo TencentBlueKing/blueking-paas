@@ -34,10 +34,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from svn.common import SvnException
 
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.bk_cmsi.client import BkNotificationService
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
@@ -65,7 +67,6 @@ from paasng.platform.sourcectl.svn.client import RepoProvider
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
-from paasng.utils.notifier import get_notification_backend
 
 #############
 # API Views #
@@ -112,9 +113,10 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         message = _("您的蓝鲸开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。").format(
             account=account, password=password
         )
-        noti_backend = get_notification_backend()
 
-        result = noti_backend.wecom.send([user.username], message, _("蓝鲸平台"))
+        user_tenant_id = get_tenant(user).id
+        bk_notify = BkNotificationService(user_tenant_id)
+        result = bk_notify.send_wecom([user.username], message, _("蓝鲸平台"))
 
         if not result:
             raise error_codes.ERROR_SENDING_NOTIFICATION

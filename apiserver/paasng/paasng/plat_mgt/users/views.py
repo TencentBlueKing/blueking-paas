@@ -20,7 +20,6 @@ import logging
 from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings as django_settings
 from django.db.transaction import atomic
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -49,11 +48,6 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
     # 需要平台管理权限才能访问
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    @swagger_auto_schema(
-        tags=["plat_mgt.users"],
-        operation_description="获取平台管理员列表",
-        responses={status.HTTP_200_OK: PlatMgtAdminReadSLZ(many=True)},
-    )
     def list(self, request, *args, **kwargs):
         """获取平台管理员列表"""
         admin_profiles = UserProfile.objects.filter(
@@ -94,8 +88,17 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
 
         user_id = user_id_encoder.encode(USER_TYPE, username)
 
+        data_before = PlatMgtAdminReadSLZ.from_profile(UserProfile.objects.get(user=user_id)).data
+
         # 删除用户
         UserProfile.objects.filter(user=user_id).delete()
+
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PLAT_USER,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -106,22 +109,11 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     schema = None
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    @swagger_auto_schema(
-        tags=["plat_mgt.users"],
-        operation_description="获取用户特性列表",
-        responses={status.HTTP_200_OK: AccountFeatureFlagReadSLZ(many=True)},
-    )
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
         return Response(AccountFeatureFlagReadSLZ(feature_flags, many=True, context={"request": request}).data)
 
-    @swagger_auto_schema(
-        tags=["plat_mgt.users"],
-        operation_description="更新或创建用户特性",
-        request_body=AccountFeatureFlagWriteSLZ,
-        responses={status.HTTP_204_NO_CONTENT: ""},
-    )
     def update_or_create(self, request):
         """更新或创建用户特性"""
         slz = AccountFeatureFlagWriteSLZ(data=request.data)
@@ -134,26 +126,52 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
         user_id = user_id_encoder.encode(USER_TYPE, username)
 
-        # Save data with proper field mapping (name=feature, effect=is_effect)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
+        )
+
         AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
+
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
+            target=OperationTarget.PLAT_USER,
+            attribute=username,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
+            ),
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        tags=["plat_mgt.users"],
-        operation_description="删除用户特性",
-        request_body=AccountFeatureFlagWriteSLZ,
-        responses={status.HTTP_204_NO_CONTENT: ""},
-    )
     def destroy(self, request, username=None, feature=None, *args, **kwargs):
         """删除用户特性"""
         if not username or not feature:
             return Response({"detail": "Username and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         user_id = user_id_encoder.encode(USER_TYPE, username)
+        data_before = DataDetail(
+            type=DataType.RAW_DATA,
+            data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
+        )
 
         # 删除用户特性
         AccountFeatureFlag.objects.filter(user=user_id, name=feature).delete()
+
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PLAT_USER,
+            attribute=username,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
+            ),
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

@@ -27,6 +27,7 @@ active_provider_maps = {
     "pool": ResourcePoolProvider,
 }
 
+# mysql、rabbitmq 已经迁移为远程增强服务，sentry 尽在特定版本提供服务
 deprecated_provider_maps = {
     "mysql": MySQLProvider,
     "rabbitmq": RabbitMQProvider,

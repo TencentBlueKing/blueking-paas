@@ -19,6 +19,7 @@
 validations/*.py 负责从 app_desc.yaml 转换出 ApplicationDesc 对象.
 serializers.py 负责序列化/反序列化 ApplicationDesc 对象
 """
+
 from rest_framework import serializers
 
 from paasng.platform.declarative.application.validations.v2 import MarketSLZ, ModuleDescriptionSLZ

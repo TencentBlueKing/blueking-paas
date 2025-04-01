@@ -32,14 +32,10 @@ class AppAddOnTemplate(UuidAuditedModel):
     [multi-tenancy] This model is not tenant-aware.
     """
 
-    region = models.CharField(max_length=32)
-    name = models.CharField("模版名", max_length=64)
+    name = models.CharField("模版名", max_length=64, unique=True)
     spec = models.TextField("资源内容")
     enabled = models.BooleanField("资源启用", default=True)
     type = models.IntegerField("挂件类型", default=AppAddOnType.SIMPLE_SIDECAR.value)
-
-    class Meta:
-        unique_together = ("region", "name")
 
     @property
     def digest(self) -> str:

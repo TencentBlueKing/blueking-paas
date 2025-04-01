@@ -30,7 +30,6 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.infras.accounts.models import UserProfile
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
@@ -64,7 +63,7 @@ def tag(bk_app):
 @pytest.fixture(autouse=True)
 def app_tenant():
     """Fixture providing tenant information for application creation"""
-    return AppTenantConf(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="test_tenant_id")
+    return AppTenantConf(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="default")
 
 
 @pytest.fixture(autouse=True)
@@ -119,27 +118,23 @@ class TestAppDeclarativeControllerCreation:
             get_app_description(app_json)
 
     @pytest.mark.parametrize(
-        ("profile_regions", "region", "is_success"),
+        ("region", "has_error"),
         [
-            (["r1"], "r1", True),
-            (["r1"], "r2", False),
-            (["r1"], None, True),
+            (None, False),
+            ("r1", False),
+            # nondefault region is not supported and should raise an error
+            ("r2", True),
         ],
     )
     @pytest.mark.usefixtures("mock_wl_services_in_creation")
-    def test_region_perm_check(
-        self, bk_user, random_name, profile_regions, region, is_success, declarative_controller
-    ):
+    def test_region_perm_check(self, bk_user, random_name, region, has_error, declarative_controller):
         with configure_regions(["r1", "r2"]):
-            # Update user enabled regions
-            user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.enable_regions = ";".join(profile_regions)
-            user_profile.save()
-
             app_json = builder.make_app_desc(
-                random_name, decorator.with_module("default", True), decorator.with_region(region)
+                random_name,
+                decorator.with_module("default", True),
+                *([decorator.with_region(region)] if region is not None else []),
             )
-            if not is_success:
+            if has_error:
                 with pytest.raises(DescriptionValidationError) as exc_info:
                     declarative_controller.perform_action(get_app_description(app_json))
                 assert "region" in exc_info.value.detail

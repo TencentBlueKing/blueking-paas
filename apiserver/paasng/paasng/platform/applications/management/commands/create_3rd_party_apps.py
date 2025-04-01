@@ -21,6 +21,7 @@ import os
 from dataclasses import dataclass
 
 import yaml
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError as DjangoIntegrityError
@@ -36,6 +37,7 @@ from paasng.accessories.publish.sync_market.handlers import (
 from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -70,16 +72,36 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--source", type=str, dest="source")
         parser.add_argument("--app_codes", type=str, dest="third_app_init_codes")
-        parser.add_argument("--tenant_mode", type=str, dest="tenant_mode", default=AppTenantMode.GLOBAL)
-        parser.add_argument("--tenant_id", type=str, dest="tenant_id", default="")
+        parser.add_argument(
+            "--app_tenant_mode",
+            type=str,
+            dest="app_tenant_mode",
+            required=False,
+            default=AppTenantMode.GLOBAL,
+            choices=AppTenantMode.get_values(),
+            help="租户类型，可选值：global, single",
+        )
+        parser.add_argument("--app_tenant_id", type=str, dest="app_tenant_id", required=False, default="")
         parser.add_argument("--override", type=str2bool, dest="override", default=False)
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
-    def handle(self, source, third_app_init_codes, tenant_mode, tenant_id, override, dry_run, *args, **options):
+    def handle(
+        self, source, third_app_init_codes, app_tenant_mode, app_tenant_id, override, dry_run, *args, **options
+    ):
         """批量创建第三方应用"""
+        # 参数有效性校验
+        if app_tenant_mode == AppTenantMode.GLOBAL:
+            if app_tenant_id:
+                raise ValueError(
+                    f"当 app_tenant_mode 为 {AppTenantMode.GLOBAL} 时，app_tenant_id 必须为空，当前值为 {app_tenant_id}"
+                )
+        elif not app_tenant_id:
+            raise ValueError(f"当 app_tenant_mode 为 {app_tenant_mode} 时，app_tenant_id 不能为空")
+
+        tenant_id = self._get_tenant_id(app_tenant_mode, app_tenant_id)
+
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
-
             for app in apps:
                 desc = Simple3rdAppDesc(**app)
                 if dry_run:
@@ -102,7 +124,7 @@ class Command(BaseCommand):
                 logger.info("going to create App according to desc: %s", f"{desc.name} - {desc.code}")
                 already_in_paas2 = bool(legacy_app)
                 with atomic():
-                    self.create_3rd_app(desc, already_in_paas2, tenant_mode, tenant_id)
+                    self.create_3rd_app(desc, already_in_paas2, app_tenant_mode, app_tenant_id, tenant_id)
 
     def get_app_secret_key(self, code: str) -> str:
         session = console_db.get_scoped_session()
@@ -111,14 +133,21 @@ class Command(BaseCommand):
             return legacy_app.auth_token
         return ""
 
-    def create_oauth_client_by_code(self, code: str, tenant_mode: str, tenant_id: str):
+    def create_oauth_client_by_code(self, code: str, app_tenant_mode: str, app_tenant_id: str):
         secret_key = self.get_app_secret_key(code)
         # secret_key 不存在，则生成一个新的
         if not secret_key:
-            create_oauth2_client(code, tenant_mode, tenant_id)
+            create_oauth2_client(code, app_tenant_mode, app_tenant_id)
             logger.info("create oauth app(code:%s) with a new randomly generated key", code)
 
-    def create_3rd_app(self, app_desc: Simple3rdAppDesc, already_in_paas2: bool, tenant_mode: str, tenant_id: str):
+    def create_3rd_app(
+        self,
+        app_desc: Simple3rdAppDesc,
+        already_in_paas2: bool,
+        app_tenant_mode: str,
+        app_tenant_id: str,
+        tenant_id: str,
+    ):
         try:
             application, created = Application.objects.update_or_create(
                 code=app_desc.code,
@@ -129,6 +158,9 @@ class Command(BaseCommand):
                     "type": ApplicationType.ENGINELESS_APP,
                     "owner": app_desc.creator,
                     "creator": app_desc.creator,
+                    "app_tenant_mode": app_tenant_mode,
+                    "app_tenant_id": app_tenant_id,
+                    "tenant_id": tenant_id,
                 },
             )
         except DjangoIntegrityError:
@@ -158,7 +190,7 @@ class Command(BaseCommand):
 
         if created:
             module = create_default_module(application)
-            self.create_oauth_client_by_code(app_desc.code, tenant_mode, tenant_id)
+            self.create_oauth_client_by_code(app_desc.code, app_tenant_mode, app_tenant_id)
         else:
             module = application.get_default_module()
 
@@ -209,3 +241,11 @@ class Command(BaseCommand):
         sync_external_url_to_market(application=application)
         # 同步市场配置到蓝鲸应用市场
         market_config_update_handler(sender=market_config, instance=market_config, created=False)
+
+    def _get_tenant_id(self, app_tenant_mode, app_tenant_id):
+        """所属租户（tenant_id）是开发者中心自身的逻辑，为减少用户理解成本，可从已有参数中获取"""
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return DEFAULT_TENANT_ID
+        if app_tenant_mode == AppTenantMode.GLOBAL:
+            return OP_TYPE_TENANT_ID
+        return app_tenant_id

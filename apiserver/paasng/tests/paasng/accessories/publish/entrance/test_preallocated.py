@@ -113,6 +113,13 @@ class TestGetPreallocatedAddress:
                 get_preallocated_address("test-code", preferred_url_type=preferred_url_type).prod == expected_address
             )
 
+    def test_nonexistent_app_code(self):
+        """Test when the application code does not exist in the database yet."""
+        with cluster_ingress_config(replaced_config={"app_root_domains": [{"name": "example.com"}]}):
+            addrs = get_preallocated_address("nonexistent-code")
+            assert addrs.stag == "http://stag-dot-nonexistent-code.example.com"
+            assert addrs.prod == "http://nonexistent-code.example.com"
+
     @pytest.mark.parametrize(
         ("clusters", "stag_address", "prod_address"),
         [
@@ -121,12 +128,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                 },
@@ -138,12 +143,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(sub_path_domains=[Domain(name="c2.foo.com", reserved=False)]),
                     ),
                 },
@@ -155,14 +158,12 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             sub_path_domains=[Domain(name="c1.foo.com", reserved=False)],
                         ),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             app_root_domains=[Domain(name="c2.foo.com", reserved=False)],
                         ),
@@ -176,12 +177,10 @@ class TestGetPreallocatedAddress:
                 {
                     AppEnvName.STAG: Cluster(
                         name="c1",
-                        is_default=False,
                         ingress_config=IngressConfig(app_root_domains=[Domain(name="c1.foo.com", reserved=False)]),
                     ),
                     AppEnvName.PROD: Cluster(
                         name="c2",
-                        is_default=False,
                         ingress_config=IngressConfig(
                             sub_path_domains=[Domain(name="c2.foo.com", reserved=False)],
                             app_root_domains=[Domain(name="c2.foo.com", reserved=False)],

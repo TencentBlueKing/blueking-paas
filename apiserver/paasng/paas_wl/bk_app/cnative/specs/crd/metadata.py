@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Kubernetes API related utilities"""
+
 from typing import Dict
 
 from pydantic import BaseModel, Field

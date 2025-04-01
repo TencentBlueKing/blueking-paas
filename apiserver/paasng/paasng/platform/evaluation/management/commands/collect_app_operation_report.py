@@ -28,6 +28,7 @@ Examples:
     # 采集全量应用 + 异步执行
     python manage.py collect_app_operation_report --all --async
 """
+
 from django.core.management.base import BaseCommand
 
 from paasng.platform.evaluation.tasks import collect_and_update_app_operation_reports

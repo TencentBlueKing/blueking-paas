@@ -30,8 +30,9 @@ from paas_wl.workloads.networking.entrance import serializers as slzs
 from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ, DomainSLZ, validate_domain_payload
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
-from paasng.core.region.models import get_region
+from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
@@ -84,7 +85,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         - 【客户端】`https_enabled` 暂不暴露给给用户
         """
         application = self.get_application()
-        if not self.allow_modifications(application.region):
+        if not self.allow_modifications(request.user, application.region):
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.format(
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
@@ -121,7 +122,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """更新一个独立域名的域名与路径信息"""
         application = self.get_application()
         domain = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
-        if not self.allow_modifications(application.region):
+        if not self.allow_modifications(request.user, application.region):
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.format(
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
@@ -151,7 +152,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         """通过 ID 删除一个独立域名"""
         application = self.get_application()
         domain = get_object_or_404(self.get_queryset(), pk=self.kwargs["id"])
-        if not self.allow_modifications(application.region):
+        if not self.allow_modifications(request.user, application.region):
             raise error_codes.DELETE_CUSTOM_DOMAIN_FAILED.format(
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
@@ -192,9 +193,9 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(slzs.CustomDomainsConfigSLZ(results, many=True).data)
 
     @staticmethod
-    def allow_modifications(region) -> bool:
+    def allow_modifications(user: User, region: str) -> bool:
         """Whether modifying custom_domain is allowed"""
-        return get_region(region).allow_user_modify_custom_domain
+        return user_can_operate_in_region(user, region)
 
 
 class AppEntranceViewSet(ViewSet, ApplicationCodeInPathMixin):

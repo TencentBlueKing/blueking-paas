@@ -83,7 +83,7 @@ def sha256_checksum(file_path):
         if searched_obj:
             return searched_obj.group()
     raise RuntimeError(
-        ("Can not calculate sha256sum of file %s, no available command " "found(sha256sum|gsha256sum)") % file_path
+        ("Can not calculate sha256sum of file %s, no available command found(sha256sum|gsha256sum)") % file_path
     )
 
 

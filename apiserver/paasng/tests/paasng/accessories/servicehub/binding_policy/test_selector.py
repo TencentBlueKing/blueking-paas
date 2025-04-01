@@ -144,7 +144,7 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
     @pytest.fixture()
     def random_cluster(self, bk_app):
         cluster_name = get_random_string(6)
-        return G(Cluster, name=cluster_name, region=bk_app.region)
+        return G(Cluster, name=cluster_name)
 
     def test_static_with_cluster_in_matches(self, service_obj, bk_prod_env, plan1, plan2):
         cluster_name = EnvClusterService(bk_prod_env).get_cluster_name()

@@ -27,6 +27,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts import serializers
 from paasng.infras.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
@@ -317,11 +318,7 @@ class RegionSpecsViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def retrieve(self, request):
-        # TODO: 当前存在漏洞，如果用户没有创建某 region 应用的权限，但他又是这个 region 下应用的开发者。那么当他进入该应用后，
-        # 点击创建新模块页面，访问 specs 接口时，不会返回对应 region 的相关信息（因为没权限），最终会导致前端页面报错。
-        #
-        # Region 的创建应用权限和管理某个 Region 下应用（创建模块）权限等没有细化。
-        user_profile = UserProfile.objects.get_profile(self.request.user)
-        regions = user_profile.enable_regions
+        """获取当前所有 region（版本）的配置详情。"""
+        regions = list(get_all_regions().values())
         all_spec_slz = AllRegionSpecsSLZ(regions)
         return Response(all_spec_slz.serialize())

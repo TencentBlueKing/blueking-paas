@@ -40,7 +40,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 region = settings.DEFAULT_REGION_NAME
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestCommand:
     @pytest.fixture(autouse=True)
     def _skip_if(self, k8s_version):
@@ -139,12 +139,14 @@ class TestProcessHandler:
     def worker_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
 
-    @pytest.mark.mock_get_structured_app()
+    @pytest.mark.mock_get_structured_app
     def test_deploy_processes(self, wl_app, web_process):
         handler = ProcessesHandler.new_by_app(wl_app)
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki:
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+        ):
             ks.get.side_effect = AppEntityNotFound()
             ki.get.side_effect = AppEntityNotFound()
 
@@ -171,9 +173,10 @@ class TestProcessHandler:
 
     def test_scale_process(self, wl_app):
         handler = ProcessesHandler.new_by_app(wl_app)
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks:
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+        ):
             proc_config = get_mapper_proc_config_latest(wl_app, "worker")
             handler.scale(proc_config, 3)
 
@@ -192,10 +195,11 @@ class TestProcessHandler:
         d_body = make_dataclass("DBody", [("spec", d_spec)])
         kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg),
         ):
             proc_config = get_mapper_proc_config_latest(wl_app, "worker")
             handler.shutdown(proc_config)
@@ -217,10 +221,11 @@ class TestProcessHandler:
         d_body = make_dataclass("DBody", [("spec", d_spec)])
         kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg),
         ):
             # Make ingress point to web service
             faked_ingress = Mock()

@@ -55,6 +55,6 @@ class Command(BaseCommand):
         binder = SlugbuilderBinder(slugbuilder)
 
         for bp in buildpacks:
-            print(f"binding buildpack {bp.name}[{bp.pk}] to slugbuilder " f"{slugbuilder.name}[{slugbuilder.pk}]")
+            print(f"binding buildpack {bp.name}[{bp.pk}] to slugbuilder {slugbuilder.name}[{slugbuilder.pk}]")
             if not dry_run:
                 binder.bind_buildpack(bp)

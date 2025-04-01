@@ -27,14 +27,16 @@ from django.utils import timezone
 from django_dynamic_fixture import G
 from rest_framework.test import APIClient
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag
-from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag
+from paas_wl.infras.cluster.entities import AllocationPolicy
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
     prepare_change_application_name,
 )
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
@@ -61,7 +63,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest.fixture
 def another_user(request):
     """Generate a random user"""
     user = create_user()
@@ -328,19 +330,22 @@ class TestApplicationCreateWithoutEngine:
 
     @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
     @pytest.mark.parametrize(
-        ("profile_regions", "region", "creation_success"),
+        ("region", "user_is_admin", "creation_success"),
         [
-            (["r1"], "r1", True),
-            (["r1", "r2"], "r1", True),
-            (["r1"], "r2", False),
+            ("r1", False, True),
+            ("r1", True, True),
+            ("r2", False, False),
+            ("r2", True, True),
         ],
     )
-    def test_region_permission_control(self, bk_user, api_client, url, profile_regions, region, creation_success):
+    def test_region_permission_control(self, bk_user, api_client, url, region, user_is_admin, creation_success):
         """When user has or doesn't have permission, test application creation."""
+        # "r1" is the default region
         with configure_regions(["r1", "r2"]):
+            role = SiteRole.ADMIN if user_is_admin else SiteRole.USER
             user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.enable_regions = ";".join(profile_regions)
-            user_profile.save()
+            user_profile.role = role.value
+            user_profile.save(update_fields=["role"])
 
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
@@ -360,12 +365,25 @@ class TestApplicationCreateWithoutEngine:
 class TestApplicationUpdate:
     """Test update application API"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def _mock_change_app_name_action(self):
         # skip change app name to console
         prepare_change_application_name.disconnect(on_change_application_name)
         yield
         prepare_change_application_name.connect(on_change_application_name)
+
+    @pytest.fixture
+    def random_tenant_id(self) -> str:
+        return generate_random_string(12)
+
+    @pytest.fixture
+    def _setup_random_tenant_cluster_allocation_policy(self, random_tenant_id):
+        G(
+            ClusterAllocationPolicy,
+            type=ClusterAllocationPolicyType.UNIFORM,
+            allocation_policy=AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
+            tenant_id=random_tenant_id,
+        )
 
     @pytest.mark.usefixtures("_register_app_core_data")
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
@@ -387,13 +405,14 @@ class TestApplicationUpdate:
         assert f"应用名称 为 {random_name} 的应用已存在" in response.json()["detail"]
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
-    def test_desc_app(self, api_client, bk_user, random_name):
+    @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
+    def test_desc_app(self, api_client, bk_user, random_name, random_tenant_id):
         get_desc_handler(
             dict(
                 spec_version=2,
                 app={"bk_app_code": random_name, "bk_app_name": random_name},
                 modules={random_name: {"is_default": True, "language": "python"}},
-                tenant={"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": "test_tenant_id"},
+                tenant={"app_tenant_mode": AppTenantMode.GLOBAL, "app_tenant_id": "", "tenant_id": random_tenant_id},
             )
         ).handle_app(bk_user)
         app = Application.objects.get(code=random_name)
@@ -467,7 +486,7 @@ class TestCreateBkPlugin:
         settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
         response = self._send_creation_request(api_client, source_init_template)
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         assert response.json()["application"]["is_plugin_app"] is True
         # TODO: Update tests when bk_plugin supports multiple languages
         assert response.json()["application"]["modules"][0]["language"] == language
@@ -542,7 +561,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "custom_image"
@@ -582,7 +601,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
@@ -607,7 +626,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["type"] == "cloud_native"
         assert app_data["modules"][0]["web_config"]["build_method"] == "dockerfile"
@@ -636,7 +655,7 @@ class TestCreateCloudNativeApp:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         application = Application.objects.get(code=f"uta-{random_suffix}")
         assert application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_COLLECTOR)
 
@@ -645,6 +664,17 @@ class TestCreateCloudNativeApp:
 @pytest.mark.usefixtures("mock_initialize_vcs_with_template")
 class TestCreateApplicationWithTenantParams:
     """Test application creation with different tenant parameters and settings."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_tenant_cluster_allocation_policy(self):
+        for tenant_id in ["foo_tenant", DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID]:
+            ClusterAllocationPolicy.objects.get_or_create(
+                tenant_id=tenant_id,
+                defaults={
+                    "type": ClusterAllocationPolicyType.UNIFORM,
+                    "allocation_policy": AllocationPolicy(env_specific=False, clusters=[CLUSTER_NAME_FOR_TESTING]),
+                },
+            )
 
     # cases start: when multi-tenant mode is disabled
 
@@ -667,12 +697,12 @@ class TestCreateApplicationWithTenantParams:
         user = create_user(tenant_id=user_tenant)
         api_client.force_authenticate(user=user)
         if request_tenant_mode is None:
-            data = self.build_create_params()
+            data = self._build_create_params()
         else:
-            data = self.build_create_params(app_tenant_mode=request_tenant_mode.value)
+            data = self._build_create_params(app_tenant_mode=request_tenant_mode.value)
         response = api_client.post("/api/bkapps/cloud-native/", data=data)
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["app_tenant_mode"] == AppTenantMode.GLOBAL
         assert app_data["app_tenant_id"] == ""
@@ -703,23 +733,23 @@ class TestCreateApplicationWithTenantParams:
         user = create_user(tenant_id=user_tenant)
         api_client.force_authenticate(user=user)
         if request_tenant_mode is None:
-            data = self.build_create_params()
+            data = self._build_create_params()
         else:
-            data = self.build_create_params(app_tenant_mode=request_tenant_mode.value)
+            data = self._build_create_params(app_tenant_mode=request_tenant_mode.value)
         response = api_client.post("/api/bkapps/cloud-native/", data=data)
 
         if expected is None:
             assert response.status_code == 400
             return
 
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
         assert app_data["app_tenant_mode"] == expected[0]
         assert app_data["app_tenant_id"] == expected[1]
 
         assert Application.objects.get(code=app_data["code"]).tenant_id == user_tenant
 
-    def build_create_params(self, **kwargs):
+    def _build_create_params(self, **kwargs):
         """The default parameters for creating an application."""
         random_suffix = generate_random_string(length=6)
         return {

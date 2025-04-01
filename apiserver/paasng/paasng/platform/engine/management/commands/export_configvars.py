@@ -18,6 +18,7 @@
 """
 A command for exporting environment variables(or so called config vars) to a Blueking Application
 """
+
 import argparse
 import sys
 

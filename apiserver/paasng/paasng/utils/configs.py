@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Utilities for project configs"""
+
 import os
 from typing import Any, Optional, Type
 

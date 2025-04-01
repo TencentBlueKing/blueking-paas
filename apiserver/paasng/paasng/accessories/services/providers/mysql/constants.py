@@ -22,6 +22,6 @@ class MySQLAuthTypeEnum(IntStructuredEnum):
     REVOKE = 2
 
 
-GRANT_SQL_FMT = "grant all privileges on `{db_name}`.* " "to `{db_user}`@`{auth_ip}` " 'identified by "{db_password}";'
+GRANT_SQL_FMT = 'grant all privileges on `{db_name}`.* to `{db_user}`@`{auth_ip}` identified by "{db_password}";'
 
 REVOKE_SQL_FMT = "revoke all privileges on `{db_name}`.* from `{db_user}`@{auth_ip};"

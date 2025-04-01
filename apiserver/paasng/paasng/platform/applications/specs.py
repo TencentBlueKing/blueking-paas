@@ -20,6 +20,7 @@
 "Specification" describes an application. It includes many aspects, such as "was able to create new modules"、
 "has enabled engine service" etc.
 """
+
 import logging
 from abc import ABC
 from typing import Any, Dict, Type
@@ -58,8 +59,6 @@ class AppSpecs:
     @property
     def can_create_extra_modules(self) -> bool:
         """Whether an application can create new modules"""
-        if not self.region.mul_modules_config.creation_allowed:
-            return False
         # S-mart 应用、插件应用，不允许新增模块
         if self.application.is_smart_app or self.application.is_plugin_app:
             return False

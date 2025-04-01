@@ -17,7 +17,6 @@
 
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
@@ -145,8 +144,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         with transaction.atomic(using="workloads"):
             # 创建集群
             cluster = Cluster.objects.create(
-                # 集群分划属性
-                region=settings.DEFAULT_REGION_NAME,
                 tenant_id=cur_tenant_id,
                 available_tenant_ids=data["available_tenant_ids"],
                 # 集群基本属性
@@ -331,7 +328,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         state = {
             # 能够获取到集群的时候，基础配置已经是 OK 的
             # 注：创建/更新集群，都会检查集群的连通性，因此本 API 不做检查
-            "base": True,
+            "basic": True,
             # 集群组件配置 & 集群组件状态
             "component": is_component_ready,
             # 集群特性配置（默认是空，如果不为空，则说明已配置）

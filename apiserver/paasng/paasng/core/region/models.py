@@ -21,20 +21,11 @@ from typing import Dict, List, Optional, Protocol, Set
 
 from django.conf import settings
 
-from .exceptions import RegionDoesNotExists, RegionDuplicated
-
 __all_regions: "OrderedDict[str, Region]" = OrderedDict()
 
 
 def get_all_regions() -> Dict[str, "Region"]:
     return __all_regions
-
-
-def filter_region_by_name(name_list):
-    region_list = []
-    for name in name_list:
-        region_list.append(get_region(name))
-    return region_list
 
 
 def register_region(region: "Region"):
@@ -47,28 +38,6 @@ def get_region(name: str):
     :param str name: region name, such as 'ieod'
     """
     return get_all_regions()[name]
-
-
-class RegionList(list):
-    def __str__(self):
-        return str(";".join([x.name for x in self]))
-
-    def has_region_by_name(self, region_name):
-        try:
-            self.get_region_by_name(region_name)
-        except Exception:
-            return False
-        else:
-            return True
-
-    def get_region_by_name(self, region_name):
-        regions = [x for x in self if x.name == region_name]
-        if len(regions) > 1:
-            raise RegionDuplicated("Region request more than 1")
-        elif len(regions) == 0:
-            raise RegionDoesNotExists("Region request does not exist")
-
-        return regions[0]
 
 
 @dataclass
@@ -104,11 +73,6 @@ class RegionMobileConfig:
             setattr(self, k, v)
 
 
-@dataclass
-class RegionMulModulesConfig:
-    creation_allowed: bool
-
-
 class SvcCategoriesLoader(Protocol):
     """The loader for loading service categories"""
 
@@ -135,9 +99,7 @@ class Region:
     name: str
     display_name: str
     basic_info: RegionBasicInfo
-    mul_modules_config: RegionMulModulesConfig
     enabled_feature_flags: Set[str] = field(default_factory=set)
-    allow_user_modify_custom_domain: bool = True
     module_mobile_config: Optional[RegionMobileConfig] = None
     provide_env_vars_platform: Optional[bool] = True
 

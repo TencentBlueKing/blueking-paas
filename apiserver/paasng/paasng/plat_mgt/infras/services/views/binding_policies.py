@@ -126,5 +126,6 @@ class ProviderViewSet(viewsets.GenericViewSet):
         operation_description="增强服务提供商",
     )
     def list(self, request, *args, **kwargs):
-        provider_choices = {"provider_choices": get_provider_choices()}
-        return Response(data=provider_choices)
+        choices = get_provider_choices()
+        pool_choices = {"provider_choices": {key: value for key, value in choices.items() if key.endswith("pool")}}
+        return Response(data=pool_choices)

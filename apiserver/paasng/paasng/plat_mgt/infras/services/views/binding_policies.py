@@ -27,7 +27,7 @@ from paasng.accessories.servicehub.binding_policy.manager import (
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.services.models import ServiceCategory
-from paasng.accessories.services.providers import get_provider_choices
+from paasng.accessories.services.providers import get_active_provider_choices
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.infras.services.serializers import (
@@ -126,6 +126,5 @@ class ProviderViewSet(viewsets.GenericViewSet):
         operation_description="增强服务提供商",
     )
     def list(self, request, *args, **kwargs):
-        choices = get_provider_choices()
-        pool_choices = {"provider_choices": {key: value for key, value in choices.items() if key.endswith("pool")}}
-        return Response(data=pool_choices)
+        provider_choices = {"provider_choices": get_active_provider_choices()}
+        return Response(data=provider_choices)

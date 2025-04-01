@@ -23,12 +23,17 @@ from .mysql.provider import MySQLProvider
 from .rabbitmq.provider import RabbitMQProvider
 from .sentry.provider import SentryProvider
 
-provider_maps: Dict[str, Type[BaseProvider]] = {
+active_provider_maps = {
+    "pool": ResourcePoolProvider,
+}
+
+deprecated_provider_maps = {
     "mysql": MySQLProvider,
     "rabbitmq": RabbitMQProvider,
     "sentry": SentryProvider,
-    "pool": ResourcePoolProvider,
 }
+
+provider_maps: Dict[str, Type[BaseProvider]] = {**active_provider_maps, **deprecated_provider_maps}
 
 plan_schema_maps: Dict[str, Dict] = {
     "mysql": schemas.MySQLConfigSchema.schema(),
@@ -55,6 +60,10 @@ def get_provider_cls_by_provider_name(name: str) -> Type[BaseProvider]:
 
 def get_provider_choices() -> Dict[str, str]:
     return {name: cls.display_name for name, cls in provider_maps.items()}
+
+
+def get_active_provider_choices() -> Dict[str, str]:
+    return {name: cls.display_name for name, cls in active_provider_maps.items()}
 
 
 def get_plan_schema_by_provider_name(name: str) -> Dict:

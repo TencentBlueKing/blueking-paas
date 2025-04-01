@@ -48,8 +48,8 @@ class ServiceCategory(models.Model):
 
 
 class ServiceManager(models.Manager):
-    def get_by_natural_key(self, region, name):
-        return self.get(region=region, name=name)
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 class Service(UuidAuditedModel):
@@ -58,8 +58,7 @@ class Service(UuidAuditedModel):
     [multi-tenancy] This model is not tenant-aware.
     """
 
-    region = models.CharField(max_length=32)
-    name = models.CharField(verbose_name="服务名称", max_length=64)
+    name = models.CharField(verbose_name="服务名称", max_length=64, unique=True)
     display_name = TranslatedFieldWithFallback(models.CharField(verbose_name="服务全称", max_length=128))
     logo = ImageField(storage=service_logo_storage, upload_to="service-logo", verbose_name="服务logo", null=True)
     logo_b64 = models.TextField(verbose_name="服务 logo 的地址, 支持base64格式", null=True, blank=True)
@@ -77,14 +76,11 @@ class Service(UuidAuditedModel):
 
     objects = ServiceManager()
 
-    class Meta:
-        unique_together = ("region", "name")
-
     def natural_key(self):
-        return (self.region, self.name)
+        return (self.name,)
 
     def __str__(self):
-        return "{name}-{region}".format(name=self.name, region=self.region)
+        return self.name
 
     def _get_service_vendor_instance(self, plan: "Plan") -> "BaseProvider":
         from paasng.accessories.services.providers import get_provider_cls_by_provider_name
@@ -225,9 +221,7 @@ class Plan(UuidAuditedModel):
         return False
 
     def __str__(self):
-        return "{name}-{service}-{region}".format(
-            name=self.name, service=self.service.name, region=self.service.region
-        )
+        return "{name}-{service}".format(name=self.name, service=self.service.name)
 
     def get_config(self) -> Dict:
         config = json.loads(self.config)

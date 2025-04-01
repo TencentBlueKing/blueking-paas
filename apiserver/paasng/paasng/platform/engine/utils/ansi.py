@@ -14,58 +14,99 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from enum import IntEnum
 
-def strip_ansi(text) -> str:  # noqa: C901, PLR0912
+
+class ANSIParserState(IntEnum):
+    DEFAULT = 0
+    ESCAPED = 1
+    IN_CSI = 2
+    START_OSC = 3
+    IN_OSC = 4
+    IGNORE_NEXT = 5
+
+
+# 特殊字符常量
+esc, bell = "\x1b", "\x07"
+
+
+def strip_ansi(text: str) -> str:  # noqa: C901, PLR0912
     """
-    Remove ANSI escape sequences from string.
+    Strip ANSI escape sequences from a string.
+
+    see also: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_codes
+
+    This function logic is rewritten from https://github.com/gabe565/ansi2txt/blob/main/pkg/ansi2txt/writer.go
     """
-
-    # 定义状态常量
-    (state_default, state_escaped, state_in_csi, state_start_osc, state_in_osc, state_ignore_next) = range(6)
-
-    # 特殊字符常量
-    esc, bell = "\x1b", "\x07"
 
     result = []
-    state = state_default
+    state = ANSIParserState.DEFAULT
 
     for char in text:
-        if state == state_default:
+        if state == ANSIParserState.DEFAULT:
             if char == esc:
-                state = state_escaped
+                state = ANSIParserState.ESCAPED
             elif char != bell:
                 result.append(char)
 
-        elif state == state_escaped:
+        elif state == ANSIParserState.ESCAPED:
             if char == "[":
-                state = state_in_csi
+                state = ANSIParserState.IN_CSI
             elif char == "]":
-                state = state_start_osc
-            elif char in "%()0356#":
-                state = state_ignore_next
-            elif char in (bell + "ABCDEHIJKMNOSTZU" + "csu" + "1278<=>"):
-                state = state_default
+                state = ANSIParserState.START_OSC
+            elif char in {"%", "(", ")", "0", "3", "5", "6", "#"}:
+                state = ANSIParserState.IGNORE_NEXT
+            elif char in {
+                bell,
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "H",
+                "I",
+                "J",
+                "K",
+                "M",
+                "N",
+                "O",
+                "S",
+                "T",
+                "Z",
+                "U",
+                "c",
+                "s",
+                "u",
+                "1",
+                "2",
+                "7",
+                "8",
+                "<",
+                "=",
+                ">",
+            }:
+                state = ANSIParserState.DEFAULT
             else:
                 result.append(esc + char)
-                state = state_default
+                state = ANSIParserState.DEFAULT
 
-        elif state == state_in_csi:
-            if char not in ";?0123456789":
-                state = state_default
+        elif state == ANSIParserState.IN_CSI:
+            if char not in {";", "?", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}:
+                state = ANSIParserState.DEFAULT
 
-        elif state == state_start_osc:
-            if char in "0123456789":
-                state = state_in_osc
+        elif state == ANSIParserState.START_OSC:
+            if char in {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}:
+                state = ANSIParserState.IN_OSC
             else:
-                state = state_default
+                state = ANSIParserState.DEFAULT
 
-        elif state == state_in_osc:
+        elif state == ANSIParserState.IN_OSC:
             if char == bell:
-                state = state_default
+                state = ANSIParserState.DEFAULT
             elif char == esc:
-                state = state_ignore_next
+                state = ANSIParserState.IGNORE_NEXT
 
-        elif state == state_ignore_next:
-            state = state_default
+        elif state == ANSIParserState.IGNORE_NEXT:
+            state = ANSIParserState.DEFAULT
 
     return "".join(result)

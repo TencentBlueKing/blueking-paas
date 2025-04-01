@@ -496,7 +496,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
 
 
 class ClusterStatusRetrieveOutputSLZ(serializers.Serializer):
-    base = serializers.BooleanField(help_text="基础配置")
+    basic = serializers.BooleanField(help_text="基础配置")
     component = serializers.BooleanField(help_text="组件配置")
     feature = serializers.BooleanField(help_text="集群特性")
 

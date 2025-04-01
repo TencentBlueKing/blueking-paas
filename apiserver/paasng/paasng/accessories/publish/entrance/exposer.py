@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Manage logics related with how to expose an application"""
+
 import logging
 from typing import Dict, Optional
 

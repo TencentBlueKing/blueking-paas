@@ -285,7 +285,7 @@ ensure-runtimes() {
 }
 
 ensure-init-data() {
-    python manage.py loaddata fixtures/* -e templates.template
+    python manage.py loaddata fixtures/smart_advisor.yaml
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     python manage.py create_authed_app_user --bk_app_code=bk_dataweb  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
@@ -298,6 +298,10 @@ ensure-init-data() {
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
     # 将开发者中心注册到通知中心
     python manage.py register_to_bk_notice
+    # 初始化本地 redis 增强服务
+    python manage.py loaddata fixtures/services.yaml
+    # 初始化本地 redis 增强服务的 Plan
+    python manage.py init_redis_service_plans
 }
 
 ensure-runtime-steps() {

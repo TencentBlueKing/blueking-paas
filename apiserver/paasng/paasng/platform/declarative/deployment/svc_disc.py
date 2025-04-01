@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Service discovery module"""
+
 import base64
 import json
 import logging

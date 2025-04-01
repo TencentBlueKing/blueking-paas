@@ -36,10 +36,10 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name, inval
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paasng.platform.applications.models import ModuleEnvironment
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
 from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ def crds_is_configured(django_db_setup, django_db_blocker):
     :return: Whether the CRDs are successfully configured
     """
     with django_db_blocker.unblock():
-        cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
         client = get_client_by_cluster_name(cluster.name)
         version = VersionApi(client).get_code()
 
@@ -128,8 +128,8 @@ def _skip_when_no_crds(request, crds_is_configured):
 
 
 @pytest.fixture()
-def k8s_client(settings):
-    cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+def k8s_client():
+    cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
     client = get_client_by_cluster_name(cluster.name)
     return client
 
@@ -142,7 +142,7 @@ def k8s_version(k8s_client):
 @pytest.fixture(scope="module")
 def namespace_maker(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        cluster = Cluster.objects.get(is_default=True, region=settings.DEFAULT_REGION_NAME)
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
         k8s_client = get_client_by_cluster_name(cluster.name)
         k8s_version = VersionApi(k8s_client).get_code()
 

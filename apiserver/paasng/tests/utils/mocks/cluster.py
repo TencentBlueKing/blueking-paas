@@ -29,7 +29,7 @@ from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.entities import IngressConfig
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 logger = logging.getLogger(__name__)
 

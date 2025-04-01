@@ -23,7 +23,7 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
 from paasng.platform.modules.constants import APP_CATEGORY
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import create_pending_wl_apps
 
 CNATIVE_CLUSTER_NAME = get_random_string(6)
@@ -48,9 +48,9 @@ def rollback_process(bk_app):
 def _set_default_cluster(settings, bk_app):
     # 考虑 tests/paas_wl/conftest.py 中的 create_default_cluster(), 这里加上存在性判断
     if not Cluster.objects.filter(name=CLUSTER_NAME_FOR_TESTING).exists():
-        G(Cluster, name=CLUSTER_NAME_FOR_TESTING, region=bk_app.region)
+        G(Cluster, name=CLUSTER_NAME_FOR_TESTING)
 
-    G(Cluster, name=CNATIVE_CLUSTER_NAME, region=bk_app.region)
+    G(Cluster, name=CNATIVE_CLUSTER_NAME)
     settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = CNATIVE_CLUSTER_NAME
 
 

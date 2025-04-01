@@ -19,6 +19,7 @@
 classes & methods in this file should be used in new module
 remaining for old data
 """
+
 from typing import AnyStr
 
 from blue_krill.encrypt.legacy import legacy_decrypt, legacy_encrypt

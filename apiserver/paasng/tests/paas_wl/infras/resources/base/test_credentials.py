@@ -31,7 +31,7 @@ from paas_wl.workloads.images.utils import make_image_pull_secret_name
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestImageCredentialsHandler:
     @pytest.fixture()
     def kube_res_name(self, wl_app):

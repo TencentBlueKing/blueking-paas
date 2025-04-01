@@ -1,38 +1,10 @@
 [tool.poetry]
-name = "svc_rabbitmq"
 version = "1.0.0"
-description = ""
-authors = ["blueking <blueking@tencent.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-django = "4.2.17"
-pymysql = "1.1.1"
-gunicorn = "22.0.0"
-paas-service = "2.0.1"
-djangorestframework = "3.15.2"
-requests = "2.32.3"
-gevent = "24.2.1"
-cryptography = "43.0.3"
-sentry-sdk = "0.19.4"
-jsonfield = "3.1.0"
-whitenoise = "5.3.0"
-django-q = "1.3.9"
-django-redis = "5.2.0"
-arrow = "1.3.0"
-asn1crypto = "1.5.1"
-blue-krill = "2.0.7"
-django-picklefield = "3.0.1"
-python-dateutil = "2.8.2"
-prometheus_client = "0.14.1"
-AMQPStorm = "2.10.4"
-pydantic = "1.10.15"
-django-prometheus = "2.2.0"
-django-environ = "0.8.1"
-urllib3 = "1.26.20"
-pyjwt = "2.4.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 flake8 = "*"
 pytest-django = "*"
 pytest = "*"
@@ -43,8 +15,42 @@ ipdb = {version = "^0.13.2", allow-prereleases = true}
 [[tool.poetry.source]]
 name = "pypi-tencent-mirror"
 url = "https://mirrors.tencent.com/pypi/simple/"
-default = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "svc_rabbitmq"
+description = ""
+# classifieres is dynamic because we want to create Python classifiers automatically
+dynamic = ["classifiers"]
+authors = [{name = "blueking", email = "blueking@tencent.com"}]
+requires-python = '>=3.11,<3.12'
+dependencies = [
+    'django (==4.2.17)',
+    'pymysql (==1.1.1)',
+    'gunicorn (==22.0.0)',
+    'paas-service (==2.0.2)',
+    'djangorestframework (==3.15.2)',
+    'requests (==2.32.3)',
+    'gevent (==24.2.1)',
+    'cryptography (==43.0.3)',
+    'sentry-sdk (==0.19.4)',
+    'jsonfield (==3.1.0)',
+    'whitenoise (==5.3.0)',
+    'django-q (==1.3.9)',
+    'django-redis (==5.2.0)',
+    'arrow (==1.3.0)',
+    'asn1crypto (==1.5.1)',
+    'blue-krill (==2.0.7)',
+    'django-picklefield (==3.0.1)',
+    'python-dateutil (==2.8.2)',
+    'prometheus_client (==0.14.1)',
+    'AMQPStorm (==2.10.4)',
+    'pydantic (==1.10.15)',
+    'django-prometheus (==2.2.0)',
+    'django-environ (==0.8.1)',
+    'urllib3 (==1.26.20)',
+    'pyjwt (==2.4.0)'
+]

@@ -26,6 +26,8 @@ from paasng.accessories.servicehub.binding_policy.manager import (
 )
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.services.models import ServiceCategory
+from paasng.accessories.services.providers import get_active_provider_choices
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.infras.services.serializers import (
@@ -92,3 +94,37 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
     def list_condition_types(self, request, *args, **kwargs):
         cond_types = [{"key": k, "name": n} for k, n in PrecedencePolicyCondType.get_django_choices()]
         return Response(data=PrecedencePolicyCondTypeOutputSLZ(cond_types, many=True).data)
+
+
+class CategoryViewSet(viewsets.GenericViewSet):
+    """（平台管理员）增强服务类别"""
+
+    # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.category"],
+        operation_description="增强服务类别列表",
+    )
+    def list(self, request, *args, **kwargs):
+        category_list = {
+            "category_list": [
+                {"value": category.id, "text": category.name} for category in ServiceCategory.objects.all()
+            ]
+        }
+        return Response(data=category_list)
+
+
+class ProviderViewSet(viewsets.GenericViewSet):
+    """（平台管理员）增强服务提供商"""
+
+    # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.provider"],
+        operation_description="增强服务提供商",
+    )
+    def list(self, request, *args, **kwargs):
+        provider_choices = {"provider_choices": get_active_provider_choices()}
+        return Response(data=provider_choices)

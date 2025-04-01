@@ -146,8 +146,9 @@ class BaseTransformer(Generic[AET]):
         self.gvk_config = gvk_config
         if self.api_version and self.api_version not in self.gvk_config.available_apiversions:
             raise APIServerVersionIncompatible(
-                "APIServer does not support requested api_version, kind: {}, api_version: {}, "
-                "gvk_config: {}".format(self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config)
+                "APIServer does not support requested api_version, kind: {}, api_version: {}, gvk_config: {}".format(
+                    self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config
+                )
             )
 
     def get_apiversion(self) -> str:

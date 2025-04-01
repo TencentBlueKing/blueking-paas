@@ -55,8 +55,6 @@ def build_default_cluster():
     """Build a default cluster using configurations in the settings."""
     cluster = Cluster(
         name=CLUSTER_NAME_FOR_TESTING,
-        region=settings.DEFAULT_REGION_NAME,
-        is_default=True,
         ingress_config=cattr.structure(
             {
                 "app_root_domains": [{"name": "example.com"}],

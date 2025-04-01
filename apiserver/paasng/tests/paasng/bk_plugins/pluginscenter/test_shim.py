@@ -27,8 +27,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import PluginRepoInitializer
 pytestmark = pytest.mark.django_db
 
 
-class SentinelException(Exception):
-    ...
+class SentinelException(Exception): ...
 
 
 def set_plugin_repository(repository: str):
@@ -87,9 +86,13 @@ class TestInitPlugin:
     def test_iam_exception(self, plugin, plugin_repo_initializer, mocked_create_instance):
         """测试调用 IAM 接口异常的情景"""
         plugin_repo_initializer.create_project.side_effect = set_plugin_repository("foo")
-        with mock.patch("paasng.bk_plugins.pluginscenter.shim.add_repo_member"), mock.patch(
-            "paasng.bk_plugins.pluginscenter.shim.setup_builtin_grade_manager", side_effect=SentinelException
-        ), pytest.raises(SentinelException):
+        with (
+            mock.patch("paasng.bk_plugins.pluginscenter.shim.add_repo_member"),
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.shim.setup_builtin_grade_manager", side_effect=SentinelException
+            ),
+            pytest.raises(SentinelException),
+        ):
             init_plugin_in_view(plugin, "")
         assert plugin.repository == "foo"
         assert plugin_repo_initializer.delete_project.called

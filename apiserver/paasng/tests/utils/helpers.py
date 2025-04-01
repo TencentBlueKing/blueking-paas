@@ -325,7 +325,10 @@ def override_region_configs(region: str, update_conf_func: Callable):
 
 @contextmanager
 def configure_regions(regions: List[str]):
-    """Configure multi regions with default template"""
+    """Configure multi regions with default template.
+
+    :param regions: A list of region names, the first item will be set as the default region.
+    """
     new_region_configs: Dict[str, List] = {"regions": []}
     for region in regions:
         config = copy.deepcopy(settings.DEFAULT_REGION_TEMPLATE)
@@ -346,7 +349,7 @@ def configure_regions(regions: List[str]):
             value["data"][region] = _tmpl_value
         region_aware_changes[name] = value
 
-    with override_settings(REGION_CONFIGS=new_region_configs, DEFAULT_REGION=regions[0], **region_aware_changes):
+    with override_settings(REGION_CONFIGS=new_region_configs, DEFAULT_REGION_NAME=regions[0], **region_aware_changes):
         load_regions_from_settings()
         yield
 

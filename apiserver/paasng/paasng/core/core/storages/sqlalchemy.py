@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Connect to legacy database of PaaS
-"""
+"""Connect to legacy database of PaaS"""
+
 from typing import Any, Dict
 
 from django.conf import settings

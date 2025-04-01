@@ -23,7 +23,7 @@ from rest_framework import status
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
 from tests.utils.basic import generate_random_string
 
@@ -34,14 +34,16 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestClusterAllocationPolicyViewSet:
     @pytest.fixture
-    def init_policies(self, init_system_cluster, init_default_cluster) -> List[ClusterAllocationPolicy]:
+    def init_policies(
+        self, init_system_cluster, init_default_shared_cluster, random_tenant_id
+    ) -> List[ClusterAllocationPolicy]:
         manual_policy = ClusterAllocationPolicy.objects.create(
             tenant_id=OP_TYPE_TENANT_ID,
             type=ClusterAllocationPolicyType.UNIFORM,
             allocation_policy=AllocationPolicy(env_specific=False, clusters=[init_system_cluster.name]),
         )
         rule_policy = ClusterAllocationPolicy.objects.create(
-            tenant_id=DEFAULT_TENANT_ID,
+            tenant_id=random_tenant_id,
             type=ClusterAllocationPolicyType.RULE_BASED,
             allocation_precedence_policies=[
                 AllocationPrecedencePolicy(
@@ -50,7 +52,7 @@ class TestClusterAllocationPolicyViewSet:
                         env_specific=True,
                         env_clusters={
                             AppEnvironment.STAGING: [init_system_cluster.name],
-                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_system_cluster.name, init_default_shared_cluster.name],
                         },
                     ),
                 ),
@@ -62,23 +64,23 @@ class TestClusterAllocationPolicyViewSet:
         resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"))
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_create_allocation_policy(self, plat_mgt_api_client, init_default_cluster):
+    def test_create_allocation_policy(self, plat_mgt_api_client, init_system_cluster, random_tenant_id):
         data = {
-            "tenant_id": DEFAULT_TENANT_ID,
+            "tenant_id": random_tenant_id,
             "type": ClusterAllocationPolicyType.UNIFORM,
             "allocation_policy": {
                 "env_specific": False,
-                "clusters": [init_default_cluster.name],
+                "clusters": [init_system_cluster.name],
             },
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster_allocation_policy.list_create"), data=data)
         assert resp.status_code == status.HTTP_201_CREATED
 
     def test_create_allocation_precedence_policies_policy(
-        self, plat_mgt_api_client, init_system_cluster, init_default_cluster
+        self, plat_mgt_api_client, init_system_cluster, init_default_shared_cluster, random_tenant_id
     ):
         data = {
-            "tenant_id": DEFAULT_TENANT_ID,
+            "tenant_id": random_tenant_id,
             "type": ClusterAllocationPolicyType.RULE_BASED,
             "allocation_precedence_policies": [
                 {
@@ -89,8 +91,8 @@ class TestClusterAllocationPolicyViewSet:
                     "policy": {
                         "env_specific": True,
                         "env_clusters": {
-                            AppEnvironment.STAGING: [init_default_cluster.name],
-                            AppEnvironment.PRODUCTION: [init_default_cluster.name, init_system_cluster.name],
+                            AppEnvironment.STAGING: [init_default_shared_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_default_shared_cluster.name, init_system_cluster.name],
                         },
                     },
                 },
@@ -113,7 +115,7 @@ class TestClusterAllocationPolicyViewSet:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert f"集群名 {init_default_cluster.name} 不存在或不可用" in resp.json()["detail"]
 
-    def test_update_policy(self, init_policies, init_system_cluster, init_default_cluster, plat_mgt_api_client):
+    def test_update_policy(self, init_policies, init_system_cluster, init_default_shared_cluster, plat_mgt_api_client):
         data = {
             # 虽然指定要修改 tenant_id，但是不会生效的
             "tenant_id": OP_TYPE_TENANT_ID,
@@ -127,8 +129,8 @@ class TestClusterAllocationPolicyViewSet:
                     "policy": {
                         "env_specific": True,
                         "env_clusters": {
-                            AppEnvironment.STAGING: [init_default_cluster.name],
-                            AppEnvironment.PRODUCTION: [init_default_cluster.name, init_system_cluster.name],
+                            AppEnvironment.STAGING: [init_default_shared_cluster.name],
+                            AppEnvironment.PRODUCTION: [init_default_shared_cluster.name, init_system_cluster.name],
                         },
                     },
                 },

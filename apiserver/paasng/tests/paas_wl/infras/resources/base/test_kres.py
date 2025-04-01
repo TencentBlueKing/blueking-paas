@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Tests for Kubernetes resources utils
-"""
+"""Tests for Kubernetes resources utils"""
+
 import math
 import time
 from textwrap import dedent
@@ -112,7 +112,7 @@ class TestNameBasedOps:
         assert obj.metadata.annotations["age"] == "4"
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestBatchOps:
     def test_create_watch_stream(self, k8s_client, wl_app):
         # Create a pod to generate event
@@ -229,8 +229,9 @@ class TestKNamespace:
         cli = KNamespace(k8s_client)
         time_started = time.time()
         namespace = resource_name
-        with pytest.raises(CreateServiceAccountTimeout), mock.patch.object(
-            KNamespace, "default_sa_exists", return_value=False
+        with (
+            pytest.raises(CreateServiceAccountTimeout),
+            mock.patch.object(KNamespace, "default_sa_exists", return_value=False),
         ):
             assert cli.wait_for_default_sa(namespace, timeout=2, check_period=0.1)
 
@@ -251,7 +252,7 @@ class TestKNamespace:
         KNamespace(k8s_client).delete(namespace)
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestKPod:
     def test_wait_for_status_no_resource(self, k8s_client):
         time_started = time.time()

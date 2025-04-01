@@ -61,7 +61,8 @@ class ClusterAllocator:
         if policy := ClusterAllocationPolicy.objects.filter(tenant_id=self.ctx.tenant_id).first():
             return self._policy_base_list(policy)
 
-        return self._legacy_region_base_list()
+        # 未配置策略，返回空集合
+        return Cluster.objects.none()
 
     def _policy_base_list(self, policy: ClusterAllocationPolicy) -> QuerySet[Cluster]:
         """根据策略获取集群列表"""
@@ -97,11 +98,3 @@ class ClusterAllocator:
             return policy.env_clusters.get(self.ctx.environment)
 
         return policy.clusters
-
-    def _legacy_region_base_list(self) -> QuerySet[Cluster]:
-        """按 Region 获取集群列表"""
-        if not self.ctx.region:
-            raise ValueError("region is required for legacy list cluster")
-
-        # 把默认集群排到前面去
-        return Cluster.objects.filter(region=self.ctx.region).order_by("-is_default")

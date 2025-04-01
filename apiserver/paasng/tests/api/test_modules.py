@@ -94,9 +94,10 @@ class TestModuleCreation:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        with mock.patch.object(
-            IntegratedSvnAppRepoConnector, "sync_templated_sources"
-        ) as mocked_sync, override_settings(ENABLE_BK_LESSCODE=False):
+        with (
+            mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync,
+            override_settings(ENABLE_BK_LESSCODE=False),
+        ):
             # Mock return value of syncing template
             mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 
@@ -151,7 +152,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "custom_image"
         assert module_data["web_config"]["artifact_type"] == "none"
@@ -192,7 +193,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "buildpack"
         assert module_data["web_config"]["artifact_type"] == "image"
@@ -219,7 +220,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "dockerfile"
         assert module_data["web_config"]["artifact_type"] == "image"

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Egress(cluster outgoing traffic) related module"""
+
 import logging
 from typing import List, TypedDict
 

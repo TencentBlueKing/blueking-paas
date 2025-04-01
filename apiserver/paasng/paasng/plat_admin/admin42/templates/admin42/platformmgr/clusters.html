@@ -33,17 +33,10 @@
             </template>
         </bk-table-column>
         <bk-table-column label="集群名称" prop="name" width="100"></bk-table-column>
-        <bk-table-column label="所属区域" prop="region" width="100"></bk-table-column>
         <bk-table-column label="集群类型" prop="type" width="100">
             <template slot-scope="props">
                 <span v-if="props.row.type == 'normal'">普通</span>
                 <span v-if="props.row.type == 'virtual'">虚拟</span>
-            </template>
-        </bk-table-column>
-        <bk-table-column label="默认集群" width="100">
-            <template slot-scope="props">
-                <span v-if="props.row.is_default">✅</span>
-                <span v-else>❌</span>
             </template>
         </bk-table-column>
         <bk-table-column label="集群 ID" width="150">
@@ -90,9 +83,6 @@
                     :disabled="!editMode"
                 >同步节点信息
                 </bk-button>
-                <bk-button class="ml5" theme="primary" text @click="setAsDefault(props.row)" :disabled="!editMode">
-                    设为默认集群
-                </bk-button>
             </template>
         </bk-table-column>
     </bk-table>
@@ -107,16 +97,6 @@
     >
         <div slot="header">应用集群详情</div>
         <bk-form :label-width="140" :model="readOnlyDialog.form">
-            <bk-form-item label="所属区域">
-                <bk-select v-model="readOnlyDialog.form.region" disabled="true">
-                    <bk-option
-                        v-for="region in regionList"
-                        :key="region.value"
-                        :id="region.value"
-                        :name="region.text">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
             <bk-form-item label="集群名称">
                 <bk-input v-model="readOnlyDialog.form.name" disabled="true"></bk-input>
             </bk-form-item>
@@ -129,9 +109,6 @@
                         :name="type.text">
                     </bk-option>
                 </bk-select>
-            </bk-form-item>
-            <bk-form-item label="默认集群">
-                <bk-switcher v-model="readOnlyDialog.form.is_default" disabled="true"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="集群描述">
                 <bk-input v-model="readOnlyDialog.form.description" disabled="true"></bk-input>
@@ -261,16 +238,6 @@
             $[ dialog.type === 'create'?'添加':'编辑' ]应用集群
         </div>
         <bk-form :label-width="140" :model="dialog.form">
-            <bk-form-item label="所属区域" :required="true" :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
-                <bk-select v-model="dialog.form.region" :disabled="dialog.type !== 'create'">
-                    <bk-option
-                        v-for="region in regionList"
-                        :key="region.value"
-                        :id="region.value"
-                        :name="region.text">
-                    </bk-option>
-                </bk-select>
-            </bk-form-item>
             <bk-form-item label="集群名称" required :desc="dialog.type !== 'create'?'集群创建后不可变更':''">
                 <bk-input v-model="dialog.form.name" :disabled="dialog.type !== 'create'"></bk-input>
             </bk-form-item>
@@ -283,9 +250,6 @@
                         :name="type.text">
                     </bk-option>
                 </bk-select>
-            </bk-form-item>
-            <bk-form-item label="默认集群" required :desc="dialog.type !== 'create'?'不支持通过编辑切换默认集群':''">
-                <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type !== 'create'"></bk-switcher>
             </bk-form-item>
             <bk-form-item label="集群描述" required>
                 <bk-input v-model="dialog.form.description"></bk-input>
@@ -429,7 +393,6 @@
 {% block main_script %}
 <script>
     /* beautify preserve:start */
-    const regionList = {{ region_list | to_json }}
     const clusterTypeList = {{ cluster_type_list | to_json }}
     const featureFlagList = {{ feature_flag_list | to_json }}
     /* beautify preserve:end */
@@ -451,7 +414,6 @@
         create: decodeURI("{% url 'wl_api.clusters' %}"),
         list: decodeURI("{% url 'wl_api.clusters' %}"),
         detail: decodeURI("{% url 'wl_api.cluster_by_id' '${cluster_id}' %}"),
-        setAsDefault: decodeURI("{% url 'wl_api.cluster.set_default' '${cluster_id}' %}"),
         genNodeState: decodeURI("{% url 'wl_api.cluster.node_state' '${cluster_name}' %}"),
         apiServer: {
             upsert: decodeURI("{% url 'wl_api.cluster.api_servers' '${cluster_id}' %}"),
@@ -471,10 +433,8 @@
                         visible: false,
                         form: {
                             uuid: '',
-                            region: '',
                             name: '',
                             type: '',
-                            is_default: false,
                             exposed_url_type: 1,
                             description: '',
                             ingress_config: {
@@ -564,10 +524,8 @@
                     this.dialog.row = undefined
 
                     this.dialog.form.uuid = undefined
-                    this.dialog.form.region = regionList[0].value
                     this.dialog.form.name = undefined
                     this.dialog.form.type = clusterTypeList[0].value
-                    this.dialog.form.is_default = false
                     this.dialog.form.description = undefined
                     this.dialog.form.exposed_url_type = 1
                     this.dialog.form.ingress_config = {port_map: {}, sub_path_domains: [], app_root_domains: []}
@@ -612,13 +570,6 @@
                     let url = URLRouter.genNodeState.replace('${cluster_name}', clusterName)
                     this.$http.post(url).then(resp => {
                         this.$bkMessage({theme: 'success', message: `更新集群 [ ${clusterName} ] 节点成功`})
-                        this.fetchClusterList()
-                    })
-                },
-                setAsDefault: function (row) {
-                    let url = URLRouter.setAsDefault.replace("${cluster_id}", row.uuid);
-                    this.$http.post(url).then(resp => {
-                        this.$bkMessage({theme: 'success', message: `成功设置集群 [ ${row.name} ] 为默认集群`})
                         this.fetchClusterList()
                     })
                 },

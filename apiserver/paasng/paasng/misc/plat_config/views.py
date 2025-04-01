@@ -71,5 +71,7 @@ class FrontendFeatureViewSet(ViewSet):
             "BK_LESSCODE_APP": settings.ENABLE_BK_LESSCODE,
             # 开启了多租户，则应用不能申请 ESB API
             "ESB_API": not settings.ENABLE_MULTI_TENANT_MODE,
+            # 是否开启多租户模式
+            "MULTI_TENANT_MODE": settings.ENABLE_MULTI_TENANT_MODE,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

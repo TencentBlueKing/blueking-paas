@@ -98,7 +98,7 @@ class BkCmsiEsbClient:
 def make_bk_cmsi_client(tenant_id: str, stage: str = "prod") -> BkCmsiBackend:
     """创建消息通知服务客户端工厂函数
 
-    :param tenant_id: 租户ID
+    :param tenant_id: 租户ID。多租户模式下，消息的接收人必须在该租户下
     :param stage: 网关环境，默认为正式环境
     """
     # 多租户模式下使用 API网关 API

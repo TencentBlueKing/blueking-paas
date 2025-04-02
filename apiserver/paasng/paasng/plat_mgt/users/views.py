@@ -17,8 +17,6 @@
 
 import logging
 
-from bkpaas_auth.core.encoder import user_id_encoder
-from django.conf import settings as django_settings
 from django.db.transaction import atomic
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -39,7 +37,6 @@ from paasng.plat_mgt.users.serializers import (
 )
 
 logger = logging.getLogger(__name__)
-USER_TYPE = getattr(django_settings, "USER_TYPE", "default")
 
 
 class PlatMgtAdminViewSet(viewsets.GenericViewSet):
@@ -53,54 +50,70 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         admin_profiles = UserProfile.objects.filter(
             role__in=[SiteRole.ADMIN.value, SiteRole.SUPER_USER.value],
         ).order_by("-created")
-        slz = PlatMgtAdminReadSLZ.from_profiles(admin_profiles)
+        slz = PlatMgtAdminReadSLZ(admin_profiles, many=True)
         return Response(slz.data)
 
     @atomic
     def bulk_create(self, request, *args, **kwargs):
         """批量创建平台管理员"""
-        slz = PlatMgtAdminWriteSLZ(data=request.data, context={"for_bulk_create": True})
+        slz = PlatMgtAdminWriteSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        provider_type = USER_TYPE
         role = SiteRole.ADMIN.value
 
+        # 获取验证后的用户ID列表
+        user_ids = slz.validated_data["username_list"]
+
+        # 获取创建前的数据 - 查询数据库中已存在的用户
+        existing_profiles = UserProfile.objects.filter(user__in=user_ids)
+        before_data = list(PlatMgtAdminReadSLZ(existing_profiles, many=True).data)
+
         created_profiles = []
-        for username in slz.data["username_list"]:
-            user_id = user_id_encoder.encode(provider_type, username)
-            obj, _ = UserProfile.objects.update_or_create(user=user_id, defaults={"role": role})
+        for userid in slz.data["username_list"]:
+            obj, _ = UserProfile.objects.update_or_create(user=userid, defaults={"role": role})
             obj.refresh_from_db()
             created_profiles.append(obj)
 
-        results_serializer = PlatMgtAdminReadSLZ.from_profiles(created_profiles)
+        # 获取创建后的数据
+        results_serializer = PlatMgtAdminReadSLZ(created_profiles, many=True)
+        after_data = list(results_serializer.data)
 
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=list(results_serializer.data)),
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
         return Response(results_serializer.data)
 
-    def destroy(self, request, username, *args, **kwargs):
+    def destroy(self, request, userid, *args, **kwargs):
         """删除平台管理员"""
-        if not username:
-            return Response({"detail": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not userid:
+            return Response({"detail": "Userid is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_id = user_id_encoder.encode(USER_TYPE, username)
+        try:
+            # 获取删除前的用户信息
+            before_query = UserProfile.objects.filter(user=userid)
+            before_data = list(PlatMgtAdminReadSLZ(before_query, many=True).data)
 
-        data_before = PlatMgtAdminReadSLZ.from_profile(UserProfile.objects.get(user=user_id)).data
+            # 删除用户
+            UserProfile.objects.filter(user=userid).delete()
 
-        # 删除用户
-        UserProfile.objects.filter(user=user_id).delete()
+            # 尝试获取删除后的用户信息
+            after_query = UserProfile.objects.filter(user=userid)
+            after_data = list(PlatMgtAdminReadSLZ(after_query, many=True).data)
 
-        add_admin_audit_record(
-            user=self.request.user.pk,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-        )
+            add_admin_audit_record(
+                user=self.request.user.pk,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.PLAT_USER,
+                data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+                data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except UserProfile.DoesNotExist:
+            return Response({"detail": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
@@ -114,66 +127,65 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         feature_flags = AccountFeatureFlag.objects.all()
         return Response(AccountFeatureFlagReadSLZ(feature_flags, many=True, context={"request": request}).data)
 
+    @atomic
     def update_or_create(self, request):
         """更新或创建用户特性"""
         slz = AccountFeatureFlagWriteSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        username = data.get("username")
+        userid = data.get("userid")
         feature = data.get("feature")
         is_effect = data.get("isEffect", False)
 
-        user_id = user_id_encoder.encode(USER_TYPE, username)
+        # 获取更新或创建前的用户特性
+        before_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+        before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
 
-        data_before = DataDetail(
-            type=DataType.RAW_DATA,
-            data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
-        )
+        AccountFeatureFlag.objects.update_or_create(user=userid, name=feature, defaults={"effect": is_effect})
 
-        AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
+        # 获取更新或创建后的用户特性
+        after_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+        after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
             target=OperationTarget.PLAT_USER,
-            attribute=username,
-            data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
-            ),
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def destroy(self, request, username=None, feature=None, *args, **kwargs):
+    def destroy(self, request, userid=None, feature=None, *args, **kwargs):
         """删除用户特性"""
-        if not username or not feature:
-            return Response({"detail": "Username and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not userid or not feature:
+            return Response({"detail": "userid and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_id = user_id_encoder.encode(USER_TYPE, username)
-        data_before = DataDetail(
-            type=DataType.RAW_DATA,
-            data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
-        )
+        try:
+            # 获取删除前的用户特性
+            before_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+            before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
 
-        # 删除用户特性
-        AccountFeatureFlag.objects.filter(user=user_id, name=feature).delete()
+            # 删除用户特性
+            AccountFeatureFlag.objects.filter(user=userid, name=feature).delete()
 
-        add_admin_audit_record(
-            user=self.request.user.pk,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.PLAT_USER,
-            attribute=username,
-            data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=AccountFeatureFlagReadSLZ(AccountFeatureFlag.objects.filter(user=user_id)).data,
-            ),
-        )
+            # 尝试获取删除后的用户特性
+            after_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+            after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            add_admin_audit_record(
+                user=self.request.user.pk,
+                operation=OperationEnum.DELETE,
+                target=OperationTarget.PLAT_USER,
+                data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+                data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            )
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except AccountFeatureFlag.DoesNotExist:
+            return Response({"detail": "User feature flag not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class SystemAPIUserViewSet(viewsets.GenericViewSet):

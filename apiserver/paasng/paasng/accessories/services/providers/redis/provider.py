@@ -82,7 +82,7 @@ class RedisProvider(BaseProvider):
                 instance.acquire()
 
                 return InstanceData(
-                    credentials=instance.credentials,
+                    credentials=json.loads(instance.credentials),
                     config={
                         "__pk__": instance.pk,
                         **instance.config,

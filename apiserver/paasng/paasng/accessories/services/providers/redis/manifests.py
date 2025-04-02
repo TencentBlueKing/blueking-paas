@@ -214,7 +214,7 @@ def get_external_clb_service_manifest(plan_config: RedisPlanConfig, instance_con
         "kind": "Service",
         "metadata": {
             "name": f"{generate_redis_name()}-external-clb-service",
-            "annotations": {"service.kubernetes.io/tencent-cloud-loadbalancer-type": instance_config.clb_id},
+            "annotations": {"service.kubernetes.io/tke-existed-lbid": instance_config.clb_id},
         },
         "spec": {
             "ports": [

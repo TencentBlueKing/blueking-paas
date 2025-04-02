@@ -429,7 +429,11 @@ class PreCreatedInstanceView(GenericTemplateView):
 
     def get_queryset(self):
         return Plan.objects.filter(
-            service__in=[service for service in Service.objects.all() if service.config.get("provider_name") == "pool"]
+            service__in=[
+                service
+                for service in Service.objects.all()
+                if service.config.get("provider_name") in {"pool", "cnative_redis"}
+            ]
         )
 
     def get_context_data(self, **kwargs):

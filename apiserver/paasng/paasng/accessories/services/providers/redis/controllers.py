@@ -74,7 +74,7 @@ class RedisInstanceController:
         """创建 Redis 服务"""
         manifest = get_external_clb_service_manifest(self.plan_config, self.instance_config)
         KService(self.client).create(
-            name=f"{generate_redis_name()}--external-clb-service", body=manifest, namespace=self.namespace
+            name=f"{generate_redis_name()}-external-clb-service", body=manifest, namespace=self.namespace
         )
 
     def _deploy_redis_password_secret(self):

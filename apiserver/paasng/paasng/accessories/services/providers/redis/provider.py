@@ -72,7 +72,9 @@ class RedisProvider(BaseProvider):
             try:
                 # 创建唯一的 namespace
                 preferred_name = str(params.get("engine_app_name"))
-                namespace = gen_unique_id(preferred_name, namespace="svc-redis")
+                uid = gen_unique_id(preferred_name, namespace="svc-redis")
+                # 为了 namespace 更具可读性，添加前缀
+                namespace = f"svc-redis-{uid}"
                 # 尝试申请资源
                 self._apply_external_resource(instance, namespace)
 

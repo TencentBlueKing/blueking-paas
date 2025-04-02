@@ -29,7 +29,6 @@ from bkpaas_auth import get_user_by_user_id
 from cattr._compat import is_bare as _is_bare
 from cattr._compat import is_mapping as _is_mapping
 from cattr._compat import is_sequence as _is_sequence
-from django.conf import settings
 from django.core.files import File
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
@@ -38,9 +37,7 @@ from imagekit.models import ProcessedImageField as OrigProcessedImageField
 from imagekit.utils import suggest_extension
 from jsonfield import JSONField
 
-from paasng.core.region.models import RegionList, filter_region_by_name, get_region
 from paasng.core.region.states import RegionType
-from paasng.utils.validators import RegionListValidator
 
 
 def is_mapping(type: Any) -> bool:
@@ -170,40 +167,6 @@ class SimpleUserIDWrapper(str):
     @property
     def username(self):
         return get_user_by_user_id(self, username_only=True).username
-
-
-class RegionListField(models.CharField):
-    """Field for storing region list
-    receive region object list or 'ieod;tencent;clouds'
-    return region object list
-    save as 'ieod;tencent;clouds'
-    """
-
-    description = "DB field for storing region list"
-
-    def __init__(self, *args, **kwargs):
-        kwargs["default"] = self._default_value
-        kwargs["max_length"] = 128
-        kwargs["blank"] = True
-        kwargs["null"] = True
-        kwargs["validators"] = [
-            RegionListValidator(),
-        ]
-        kwargs.setdefault("db_index", False)
-        super().__init__(*args, **kwargs)
-
-    @staticmethod
-    def _default_value() -> RegionList:
-        return RegionList([get_region(settings.DEFAULT_REGION_NAME)])
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        return self.get_prep_value(value)
-
-    def from_db_value(self, value, expression, connection):
-        if value is None:
-            return value
-
-        return RegionList(filter_region_by_name(value.split(";")))
 
 
 class TimestampedModel(models.Model):

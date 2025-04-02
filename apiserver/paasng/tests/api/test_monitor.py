@@ -79,7 +79,7 @@ class TestListAlertsView:
 class TestAlarmStrategiesView:
     @mock.patch("paasng.infras.bkmonitorv3.client.BkMonitorClient", new=StubBKMonitorClient)
     def test_list_alarm_strategies(self, api_client, bk_app, bk_monitor_space):
-        resp = api_client.post(
+        resp = api_client.get(
             f"/api/monitor/applications/{bk_app.code}/alarm_strategies/",
         )
         alarm_strategies = resp.data["strategy_config_list"]

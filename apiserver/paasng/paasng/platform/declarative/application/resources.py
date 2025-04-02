@@ -106,6 +106,8 @@ class ApplicationDesc(BaseModel):
     code: str
     name_zh_cn: str
     name_en: str
+    # The region field is deprecated and does not have any real effect. Its value must be the
+    # default region if it is set.
     region: Optional[str] = None
     market: Optional[MarketDesc] = None
     modules: Dict[str, ModuleDesc] = Field(default_factory=dict, description="该应用的模块")

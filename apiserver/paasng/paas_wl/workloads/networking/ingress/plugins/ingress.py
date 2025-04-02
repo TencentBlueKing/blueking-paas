@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Ingress plugins which provide extra server snippet to app's ingress configs"""
+
 import logging
 from abc import ABC
 from textwrap import dedent

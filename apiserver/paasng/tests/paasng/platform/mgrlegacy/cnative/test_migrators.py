@@ -30,7 +30,7 @@ from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.docker.models import get_or_create_repo_obj
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import CNATIVE_CLUSTER_NAME
 

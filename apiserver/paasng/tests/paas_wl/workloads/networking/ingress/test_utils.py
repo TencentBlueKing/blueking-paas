@@ -67,9 +67,12 @@ class TestGetMainProcessServiceName:
 
     def test_none(self, bk_stag_wl_app):
         patch_mgr = Mock(return_value=[])
-        with patch(
-            "paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app", patch_mgr
-        ), pytest.raises(AppEntityNotFound):
+        with (
+            patch(
+                "paas_wl.workloads.networking.ingress.kres_entities.service.AppEntityManager.list_by_app", patch_mgr
+            ),
+            pytest.raises(AppEntityNotFound),
+        ):
             assert not get_main_process_service_name(bk_stag_wl_app)
         assert patch_mgr.called
 

@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                 ('user', paasng.utils.models.BkUserField(blank=True, db_index=True, max_length=64, null=True, unique=True)),
                 ('role', models.IntegerField(default=2)),
                 ('feature_flags', models.TextField(blank=True, null=True)),
-                ('enable_regions', paasng.utils.models.RegionListField(blank=True, default=paasng.utils.models.RegionListField._default_value, max_length=128, null=True, validators=[paasng.utils.validators.RegionListValidator()])),
+                ('enable_regions', models.CharField(max_length=128, blank=True, null=True)),
             ],
             options={
                 'abstract': False,

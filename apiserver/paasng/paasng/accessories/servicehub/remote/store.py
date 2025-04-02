@@ -114,7 +114,7 @@ class MemoryStore(StoreMixin):
             if legacy_svc:
                 legacy_config = self._map_id_to_config[service["uuid"]]
                 if legacy_config["name"] != source_config.name:
-                    raise ValueError(f'Service uuid={service["uuid"]} with a different source name already exists')
+                    raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
 
             self._map_id_to_service[service["uuid"]] = service
             self._map_id_to_config[service["uuid"]] = source_config
@@ -182,7 +182,7 @@ class RedisStore(StoreMixin):
             legacy_config = redis_client.get(config_key)
             # 如果新的配置项中的服务名 与 缓存中服务名不一致，则不更新，服务的其他配置发生变更可更新
             if legacy_config and _loads(legacy_config)["name"] != config["name"]:
-                raise ValueError(f'Service uuid={service["uuid"]} with a different source name already exists')
+                raise ValueError(f"Service uuid={service['uuid']} with a different source name already exists")
 
             pipe = redis_client.pipeline()
             pipe.set(info_key, _dumps(service), self.expires)

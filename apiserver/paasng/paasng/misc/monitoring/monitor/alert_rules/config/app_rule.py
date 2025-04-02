@@ -100,14 +100,11 @@ class RuleConfig(Protocol):
     alert_rule_display_name: Optional[str]
 
     @classmethod
-    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> "RuleConfig":
-        ...
+    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> "RuleConfig": ...
 
-    def to_alert_rule_obj(self) -> AppAlertRule:
-        ...
+    def to_alert_rule_obj(self) -> AppAlertRule: ...
 
-    def to_dict(self) -> Dict:
-        ...
+    def to_dict(self) -> Dict: ...
 
     def is_valid(self) -> bool:
         """规则配置是否有效"""
@@ -189,9 +186,7 @@ class AppScopedRuleConfig:
 
     def is_valid(self) -> bool:
         """规则配置是否有效"""
-        if self.metric_labels:
-            return True
-        return False
+        return bool(self.metric_labels)
 
 
 @define

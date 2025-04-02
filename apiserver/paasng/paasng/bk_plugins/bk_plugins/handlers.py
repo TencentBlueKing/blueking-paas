@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """Handlers triggered by Django signals(events)"""
+
 import logging
 
 from django.dispatch import receiver

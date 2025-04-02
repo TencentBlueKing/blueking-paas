@@ -19,12 +19,10 @@ from typing import Any, Dict, List, Optional, Type
 
 import cattr
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.declarative.application.resources import DisplayOptions
 from paasng.platform.declarative.deployment.resources import ProcfileProc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
@@ -74,63 +72,6 @@ class UniConfigSLZ(serializers.Serializer):
     app = serializers.JSONField(required=False, default={}, help_text="App-related config fields")
     modules = serializers.JSONField(required=False, default={}, help_text="Modules-related config fields")
     module = serializers.JSONField(required=False, default={}, help_text="Deploy-related config fields")
-
-
-# Serializers for S-Mart App
-
-
-class DesktopOptionsSLZ(serializers.Serializer):
-    """Serializer for validating application's market display options"""
-
-    width = serializers.IntegerField(help_text="窗口宽度", required=False, default=1280)
-    height = serializers.IntegerField(help_text="窗口高度", required=False, default=600)
-    is_max = serializers.BooleanField(default=False, source="is_win_maximize", help_text="是否最大化")
-    is_display = serializers.BooleanField(default=True, source="visible", help_text="是否在桌面展示")
-
-    @classmethod
-    def gen_default_value(cls) -> DisplayOptions:
-        """Generate default `DisplayOptions` object"""
-        attrs = serializers.Serializer.to_internal_value(cls(), {})
-        return DisplayOptions(**attrs)
-
-    def to_internal_value(self, data) -> DisplayOptions:
-        attrs = super().to_internal_value(data)
-        return DisplayOptions(**attrs)
-
-
-class ContainerSpecSLZ(serializers.Serializer):
-    """Serializer for validating application's container specification"""
-
-    memory = serializers.IntegerField(help_text="内存容量, 单位 Mi", default=1024)
-
-    def to_internal_value(self, data):
-        attrs = super().to_internal_value(data)
-        memory = attrs.pop("memory", 1024)
-        if memory > 2048:
-            return settings.ULTIMATE_PROC_SPEC_PLAN
-        if memory > 1024:
-            return settings.PREMIUM_PROC_SPEC_PLAN
-        else:
-            return settings.DEFAULT_PROC_SPEC_PLAN
-
-
-class LibrarySLZ(serializers.Serializer):
-    """Serializer for validating applications's libraries"""
-
-    name = serializers.CharField(help_text="依赖库名称", required=True)
-    version = serializers.CharField(help_text="依赖库版本", required=True)
-
-
-class LegacyEnvVariableSLZ(serializers.Serializer):
-    """Legacy env variable serializer, only allow keys which starts with 'BK_APP_'"""
-
-    key = serializers.RegexField(
-        r"^BKAPP_[A-Z0-9_]+$",
-        max_length=50,
-        required=True,
-        error_messages={"invalid": _('格式错误，只能以 "BKAPP_" 开头，由大写字母、数字与下划线组成，长度不超过 50。')},
-    )
-    value = serializers.CharField(required=True, max_length=1000)
 
 
 def validate_procfile_procs(data: Dict[str, str]) -> List[ProcfileProc]:

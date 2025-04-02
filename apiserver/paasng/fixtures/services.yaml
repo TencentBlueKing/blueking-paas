@@ -14,7 +14,6 @@
   fields:
     created: 1970-01-01 00:00:00+00:00
     updated: 1970-01-01 00:00:00+00:00
-    region: default
     name: redis
     display_name_zh_cn: Redis
     logo: ""
@@ -33,27 +32,4 @@
     config: '{"specifications":[{"recommended_value":"","name":"type","display_name":"\u7c7b\u578b","description":"\u7c7b\u578b"}],"provider_name":"pool"}'
     is_active: true
     is_visible: true
-- model: services.plan
-  pk: 3be9551a-893e-41dc-b760-db5c2fd5466e
-  fields:
-    created: 1970-01-01 00:00:00+00:00
-    updated: 1970-01-01 00:00:00+00:00
-    service:
-      - default
-      - redis
-    name: 1exclusive
-    description: "\u5171\u4EAB\u5B9E\u4F8B"
-    config: "{\"specifications\":{\"type\":\"\u72EC\u5360\u5B9E\u4F8B\"}}"
-    is_active: true
-- model: services.plan
-  pk: e145ce49-0b9e-442f-b810-c45a338b9ff3
-  fields:
-    created: 1970-01-01 00:00:00+00:00
-    updated: 1970-01-01 00:00:00+00:00
-    service:
-      - default
-      - redis
-    name: 0shared
-    description: "\u72EC\u5360"
-    config: "{\"specifications\":{\"type\":\"\u5171\u4EAB\u5B9E\u4F8B\"}}"
-    is_active: true
+

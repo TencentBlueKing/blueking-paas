@@ -136,7 +136,7 @@ def fetch_all_remote_services() -> Generator[FetchResult, None, None]:
     try:
         remote_svc_configs = settings.SERVICE_REMOTE_ENDPOINTS
     except AttributeError:
-        raise ImproperlyConfigured("Can't initialize remote services, " "SERVICE_REMOTE_ENDPOINTS is not configured")
+        raise ImproperlyConfigured("Can't initialize remote services, SERVICE_REMOTE_ENDPOINTS is not configured")
     if not isinstance(remote_svc_configs, list):
         raise ImproperlyConfigured("SERVICE_REMOTE_ENDPOINTS must be list type")
 

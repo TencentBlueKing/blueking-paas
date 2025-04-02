@@ -22,8 +22,8 @@ import pytest
 from django.test.utils import override_settings
 from django.urls import reverse
 
+from paasng.infras.bk_cmsi.client import BkNotificationService
 from paasng.platform.sourcectl.models import SvnAccount
-from paasng.utils.notification_plugins import BaseComponentAPIPlugin
 from tests.utils.basic import generate_random_string
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture()
 def mocked_call_api():
-    with mock.patch.object(BaseComponentAPIPlugin, "_call_api") as mocked_call:
+    with mock.patch.object(BkNotificationService, "send_wecom") as mocked_call:
         mocked_call.return_value = True
         yield mocked_call
 

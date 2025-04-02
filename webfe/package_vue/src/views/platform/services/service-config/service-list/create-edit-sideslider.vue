@@ -17,7 +17,7 @@
     >
       <div class="main">
         <bk-form
-          :label-width="80"
+          :label-width="labelWidth"
           :model="formData"
           :rules="rules"
           ref="formRef"
@@ -248,6 +248,12 @@ export default {
     },
     isEdit() {
       return this.type === 'edit';
+    },
+    localLanguage() {
+      return this.$store.state.localLanguage;
+    },
+    labelWidth() {
+      return this.localLanguage === 'en' ? 120 : 80;
     },
   },
   methods: {

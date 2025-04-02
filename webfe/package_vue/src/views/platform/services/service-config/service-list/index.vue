@@ -31,6 +31,7 @@
           </div>
           <!-- 新增服务 -->
           <i
+            v-bk-tooltips="$t('新增服务')"
             class="paasng-icon paasng-plus-thick"
             v-if="key === 'local'"
             @click.stop="showSideslider({}, 'new')"

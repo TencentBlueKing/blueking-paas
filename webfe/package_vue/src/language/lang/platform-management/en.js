@@ -217,4 +217,12 @@ export default {
   可回收复用: 'Recyclable and Reusable',
   确认删除服务配置: 'Confirm Service Configuration Deletion',
   '实例配置将以环境变量方式注入至应用运行时环境（每个配置项将添加 {n} 前缀，且会转换成全大写字母）': 'Instance configurations will be injected into the application runtime environment as environment variables (each configuration item will be prefixed with {n} and converted to uppercase letters)',
+  编辑方案: 'Edit Plan',
+  新增服务: 'Add Service',
+  服务名称: 'Service Name',
+  服务介绍: 'Service Introduction',
+  供应商: 'Provider',
+  '服务 ID': 'Service ID',
+  确认删除服务: 'Confirm Service Deletion',
+  请选择方案: 'Please Select Plan',
 };

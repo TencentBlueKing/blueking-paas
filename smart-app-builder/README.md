@@ -23,9 +23,10 @@ make build-pind-image
 执行以下命令，构建 S-Mart 包
 
 ```
-# 设置本地文件目录
-export $APP_PATH='/data/home/app'
-export $SMART_PATH='/data/home/smart'
+# 设置本地文件目录变量
+export APP_PATH='/data/home/app'
+export SMART_PATH='/data/home/smart'
+
 # 运行构建命令
 docker run -it --rm  --privileged \
     -e SOURCE_GET_URL=file:///podman/source \
@@ -37,7 +38,7 @@ docker run -it --rm  --privileged \
 ```
 
 参数说明：
-- `APP_PATH`: 当前主机上的源码存储目录。该目录将被挂载至容器内的 `/podman/source` 路径。为确保容器内用户 `podman（UID=1000，GID=1000）` 具有读写权限，可以执行 `chown -R 1000:1000 ${LOCAL_APP_PATH}`, 修改目录归属。
+- `APP_PATH`: 当前主机上的源码存储目录。该目录将被挂载至容器内的 `/podman/source` 路径。为确保容器内用户 `podman（UID=1000，GID=1000）` 具有读写权限，可以执行 `chown -R 1000:1000 ${APP_PATH}`, 修改目录归属。
 - `SMART_PATH`: 当前主机上 S-Mart 构建产物的存储目录。该目录将挂载至容器内的 `/podman/dest` 路径。需确保容器用户 `podman（UID=1000，GID=1000）` 具有读写权限。执行构建命令后，会在该目录下生成名为 `{app_code}.tgz` 的 S-Mart 包。
 - `SOURCE_GET_URL`：源码目录的获取路径。由于 podman 采用了 rootless 模式运行，若 `SOURCE_GET_URL` 设置为本地文件目录(如示例中的 `/podman/source` )，则必须确保该目录对 `podman` 用户具有读写权限。
 - `DEST_PUT_URL`: S-Mart 包的生成路径。同样地，`podman` 用户需要对目录具有读写权限(如示例中的 `/podman/dest`)。
@@ -55,9 +56,10 @@ make build-dind-image
 执行以下命令，构建 S-Mart 包
 
 ```
-# 设置本地文件目录
-export $APP_PATH='/data/home/app'
-export $SMART_PATH='/data/home/smart'
+# 设置本地文件目录变量
+export APP_PATH='/data/home/app'
+export SMART_PATH='/data/home/smart'
+
 # 运行构建命令
 docker run -it --rm  --privileged \
     -e SOURCE_GET_URL=file:///tmp/source \

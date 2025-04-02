@@ -116,7 +116,7 @@ func (r *runtimeHandler) runBuilder(buildPlan *plan.BuildPlan, runImage string) 
 
 		// 2. 构建运行命令参数
 		args := buildRunArgs(step, moduleSrcTGZ, runImage)
-		r.logger.Info("module name", step.BuildModuleName, "run args", args)
+		r.logger.Info("build", "module name", step.BuildModuleName, "run args", args)
 
 		// 3. 运行构建命令, 并打印输出
 		cmd := r.cmdProvider.RunImage(config.G.CNBBuilderImage, args...)

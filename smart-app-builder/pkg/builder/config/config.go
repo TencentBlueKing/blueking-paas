@@ -42,8 +42,8 @@ func SetGlobalConfig() {
 	G.RuntimeWorkspace = G.GetString("RUNTIME_WORKSPACE")
 	G.DaemonSockFile = G.GetString("DAEMON_SOCK")
 
-	G.SetDefault("CNB_BUILDER_IMAGE", "bk-builder-heroku-bionic:v1.0.2")
-	G.CNBBuilderImage = G.GetString("CNB_BUILDER_IMAGE")
+	G.SetDefault("BUILDER_SHIM_IMAGE", "bk-builder-heroku-bionic:v1.0.2")
+	G.CNBBuilderImage = G.GetString("BUILDER_SHIM_IMAGE")
 	G.CNBRunImageTAR = G.GetString("CNB_RUN_IMAGE_TAR")
 	G.CNBRunImage = G.GetString("CNB_RUN_IMAGE")
 

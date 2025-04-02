@@ -219,6 +219,41 @@ export default {
       return http.get(url);
     },
     /**
+     * 获取服务分类
+     */
+    getServicesCategory({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/category/`;
+      return http.get(url);
+    },
+    /**
+     * 获取供应商
+     */
+    getServicesProviderChoices({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/provider_choices/`;
+      return http.get(url);
+    },
+    /**
+     * 新建服务
+     */
+    addPlatformService({}, { data }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      return http.post(url, data);
+    },
+    /**
+     * 编辑服务
+     */
+    updatePlatformService({}, { serviceId, data }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除本地服务
+     */
+    deletePlatformService({}, { serviceId }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      return http.delete(url);
+    },
+    /**
      * 添加方案
      */
     addPlan({}, { id, data }) {

@@ -27,7 +27,7 @@
             class="paas-vue-json-pretty-cls"
             :data="data[key]"
             :show-length="true"
-            :expanded="Object.keys(data[key])?.length"
+            :expanded="Object.keys(data[key] ?? {})?.length"
             :highlight-mouseover-node="true"
           />
         </div>

@@ -142,6 +142,7 @@ export default {
     background: #f5f7fa;
     .content-area {
       flex: 1;
+      min-height: 0;
     }
   }
 }

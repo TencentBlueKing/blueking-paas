@@ -1,12 +1,12 @@
 <template>
   <div class="service-config-container">
     <!-- 服务列表 -->
-    <ServiceList
-      ref="servicesRef"
-      :services="services"
-      :loading="isServiceLoading"
-      @change="serviceChange"
-    />
+    <section class="all-services">
+      <ServiceList
+        ref="servicesRef"
+        @change="serviceChange"
+      />
+    </section>
     <div class="config-content card-style">
       <div class="top-box flex-row">
         <SwitchDisplay
@@ -169,7 +169,7 @@
 </template>
 
 <script>
-import ServiceList from './service-list.vue';
+import ServiceList from './service-list';
 import SwitchDisplay from '../../app-cluster/comps/switch-display.vue';
 import ServicesSideslider from './services-sideslider.vue';
 export default {
@@ -190,7 +190,6 @@ export default {
       ],
       searchValue: '',
       isTableLoading: false,
-      isServiceLoading: true,
       // 所有服务
       services: [],
       bindingPolicies: [],
@@ -215,9 +214,6 @@ export default {
       const filteredTable = this.bindingPolicies.filter(filterCondition);
       return this.searchValue ? this.filterByKeyword(filteredTable) : filteredTable;
     },
-  },
-  created() {
-    this.getPlatformServices();
   },
   methods: {
     // 是否配置，未配置添加指定样式
@@ -263,21 +259,6 @@ export default {
         this.$store.commit('tenant/updateAvailableClusters', res);
       } catch (e) {
         this.catchErrorHandler(e);
-      }
-    },
-    // 获取服务列表
-    async getPlatformServices() {
-      try {
-        const res = await this.$store.dispatch('tenant/getPlatformServices');
-        this.services = res || [];
-        this.$nextTick(() => {
-          this.$refs.servicesRef?.handleSelected(res[0] || {});
-        });
-      } catch (e) {
-        this.catchErrorHandler(e);
-      } finally {
-        this.isContentLoading = false;
-        this.isServiceLoading = false;
       }
     },
     // 获取服务下的绑定方案
@@ -438,6 +419,9 @@ export default {
 .service-config-container {
   height: 100%;
   display: flex;
+  .all-services {
+    height: 100%;
+  }
   .config-content {
     flex: 1;
     min-width: 0;

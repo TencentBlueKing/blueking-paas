@@ -58,6 +58,9 @@
         :required="true"
         :property="'cluster'"
         :error-display-type="'normal'"
+        :desc="$t(tips)"
+        desc-type="icon"
+        :desc-icon="isCluster ? '' : 'icon-info-circle'"
       >
         <ClusterSelect
           @change="clusterSelectChange"
@@ -73,6 +76,9 @@
           :label="$t(labelText)"
           :required="true"
           :property="'stagCluster'"
+          :desc="$t(tips)"
+          desc-type="icon"
+          :desc-icon="isCluster ? '' : 'icon-info-circle'"
         >
           <ClusterSelect
             key="stag"
@@ -102,7 +108,10 @@
         </bk-form-item>
       </template>
     </bk-form>
-    <div class="tip flex-row">
+    <div
+      class="tip flex-row"
+      v-if="isCluster"
+    >
       <i class="bk-icon icon-info mr5"></i>
       <p>{{ $t(tips) }}</p>
     </div>
@@ -251,6 +260,9 @@ export default {
       const lowerCaseName = name.toLocaleLowerCase();
       const endsWithIn = lowerCaseName.endsWith('_in') || lowerCaseName.endsWith('.in');
       return this.$t(endsWithIn ? '请输入，多个值以英文逗号连接' : '请输入');
+    },
+    isCluster() {
+      return this.labelText === '集群';
     },
   },
   methods: {

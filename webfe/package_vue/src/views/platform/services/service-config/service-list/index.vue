@@ -54,7 +54,10 @@
             <!-- 中间内容区域 -->
             <div class="content">
               <div class="title">
-                <div class="text">
+                <div
+                  class="text"
+                  v-bk-overflow-tips
+                >
                   {{ item.display_name }}
                   <span class="short-name">({{ item.name }})</span>
                 </div>
@@ -118,6 +121,12 @@ export default {
   components: {
     CreateEditSideslider,
   },
+  props: {
+    isInit: {
+      type: Boolean,
+      default: true,
+    },
+  },
   data() {
     return {
       // 所有服务
@@ -147,17 +156,31 @@ export default {
           remote.push(item);
         }
       });
-      const sortByVisibility = (a, b) => {
-        return b.is_visible - a.is_visible;
+
+      // 排序函数（is_visible优先，name次级）
+      const sortByVisibilityAndName = (a, b) => {
+        if (b.is_visible !== a.is_visible) {
+          return b.is_visible - a.is_visible;
+        }
+        return a.name.localeCompare(b.name);
       };
+
       return {
-        remote: remote.sort(sortByVisibility),
-        local: local.sort(sortByVisibility),
+        remote: [...remote].sort(sortByVisibilityAndName),
+        local: [...local].sort(sortByVisibilityAndName),
       };
     },
   },
-  created() {
-    this.getPlatformServices();
+  watch: {
+    isInit: {
+      handler(newVal) {
+        // 服务配置-租户接口响应后再获取服务
+        if (newVal) {
+          this.getPlatformServices();
+        }
+      },
+      immediate: true,
+    },
   },
   methods: {
     // 服务切换
@@ -246,6 +269,8 @@ export default {
     margin-bottom: 8px;
     background: #dcdee5;
     border-radius: 4px;
+    color: #313238;
+    font-weight: 500;
     cursor: pointer;
     i {
       cursor: pointer;

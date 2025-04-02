@@ -3,6 +3,7 @@
     <ServiceConfig
       v-if="queueActive === 'config'"
       :tenants="tenants"
+      :is-init="isInit"
     />
     <ServicePlan
       v-else
@@ -24,6 +25,7 @@ export default {
     return {
       tenants: [],
       isLoading: false,
+      isInit: false,
     };
   },
   computed: {
@@ -44,6 +46,7 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
+        this.isInit = true;
       }
     },
   },

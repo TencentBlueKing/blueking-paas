@@ -3,12 +3,13 @@
     <!-- 服务列表 -->
     <section class="all-services">
       <ServiceList
+        v-bind="$attrs"
         ref="servicesRef"
         @change="serviceChange"
       />
     </section>
     <div class="config-content card-style">
-      <div class="top-box flex-row">
+      <div class="top-box flex-row justify-content-between">
         <SwitchDisplay
           class="mr10"
           :list="filterList"
@@ -203,15 +204,9 @@ export default {
   },
   computed: {
     displayBindingPolicies() {
-      // 气泡按钮过滤 配置/未配置
-      const filterCondition =
-        this.filterValue === 'all'
-          ? () => true
-          : this.filterValue === 'notConfigured'
-          ? (item) => !item.isConfig
-          : (item) => item.isConfig;
-
-      const filteredTable = this.bindingPolicies.filter(filterCondition);
+      // 1. 按气泡按钮过滤（配置/未配置/全部）
+      const filteredTable = this.filterBindingPolicies(this.bindingPolicies);
+      // 2. 按关键词搜索（如果存在搜索值）
       return this.searchValue ? this.filterByKeyword(filteredTable) : filteredTable;
     },
   },
@@ -220,10 +215,23 @@ export default {
     isConfigured({ row }) {
       return !row.isConfig ? 'cell-not-configured' : '';
     },
+    /**
+     * 根据 filterValue 过滤策略列表
+     */
+    filterBindingPolicies(policies) {
+      switch (this.filterValue) {
+        case 'notConfigured':
+          return policies.filter((item) => !item.isConfig);
+        case 'configured':
+          return policies.filter((item) => item.isConfig);
+        default:
+          return policies;
+      }
+    },
     // 关键字搜索
     filterByKeyword(list) {
       const lowerCaseKeyword = this.searchValue.toLocaleLowerCase();
-      return list.filter((item) => item.tenant_id.toLocaleLowerCase().includes(lowerCaseKeyword));
+      return list.filter((item) => item.tenant_id.toLocaleLowerCase()?.includes(lowerCaseKeyword));
     },
     handlerChange(data) {
       this.filterValue = data.name;
@@ -275,7 +283,7 @@ export default {
           const policy = tenantPolicyMap[tenant.id];
           // 处理未配置情况
           if (!policy) {
-            notConfiguredCount++;
+            notConfiguredCount += 1;
             return {
               ...tenant,
               allocation_precedence_policies: [],
@@ -295,24 +303,24 @@ export default {
             displayPolicies: [...sortedPolicies, allocation_policy],
           };
         });
-        // 计算过滤统计
-        const totalCount = this.tenants.length;
-        const configuredCount = totalCount - notConfiguredCount;
-
-        this.filterList.forEach((filter) => {
-          const { name } = filter;
-          filter.count =
-            {
-              all: totalCount,
-              notConfigured: notConfiguredCount,
-              configured: configuredCount,
-            }[name] ?? configuredCount; // 使用 nullish 操作符处理默认情况
-        });
+        // 更新过滤统计
+        this.updateFilterCounts(this.tenants.length, notConfiguredCount);
       } catch (error) {
         this.catchErrorHandler(error);
       } finally {
         this.isTableLoading = false;
       }
+    },
+    updateFilterCounts(totalCount, notConfiguredCount) {
+      const configuredCount = totalCount - notConfiguredCount;
+      this.filterList.forEach((filter) => {
+        filter.count =
+          {
+            all: totalCount,
+            notConfigured: notConfiguredCount,
+            configured: configuredCount,
+          }[filter.name] ?? configuredCount;
+      });
     },
     // 获取id对应的name
     getPlanNames(ids) {

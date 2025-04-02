@@ -1,28 +1,45 @@
 <template>
   <div class="service-plan-container">
-    <TenantsList
-      :tenants="tenants"
-      :loading="isTenantLoading"
-      @change="handleChange"
-    />
+    <section class="all-services">
+      <ServiceList
+        ref="servicesRef"
+        @change="serviceChange"
+      />
+    </section>
     <div
       class="plan-content card-style"
       ref="contentRef"
     >
-      <div class="flex-row justify-content-between">
-        <bk-button
-          :theme="'primary'"
-          class="mr10"
-          @click="showSideslider('add')"
-        >
-          {{ $t('添加方案') }}
-        </bk-button>
+      <div class="top-bar flex-row justify-content-between">
+        <div class="flex-row left">
+          <bk-button
+            :theme="'primary'"
+            class="mr10 flex-shrink-0"
+            @click="showSideslider('add')"
+          >
+            {{ $t('添加方案') }}
+          </bk-button>
+          <div
+            class="capsule-tab-wrapper"
+            v-if="tabData.length"
+          >
+            <CapsuleButtonTab
+              v-model="curTenantId"
+              :panels="tabData"
+            >
+              <template slot-scope="{ option }">
+                {{ `${option.label} (${tenantPlanCountMap[option.name] ?? 0})` }}
+              </template>
+            </CapsuleButtonTab>
+          </div>
+        </div>
         <bk-input
-          style="width: 480px"
+          style="width: 350px"
+          class="ml10 flex-shrink-0"
           :clearable="true"
           v-model="searchValue"
           :right-icon="'bk-icon icon-search'"
-          :placeholder="$t('搜索方案名称、所属服务')"
+          :placeholder="$t('搜索方案名称')"
         ></bk-input>
       </div>
       <bk-table
@@ -147,18 +164,20 @@
 </template>
 
 <script>
-import TenantsList from './tenants-list.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import PlanSideslider from './plan-sideslider.vue';
 import PlanDetailSideslider from './plan-detail-sideslider';
+import CapsuleButtonTab from '@/components/capsule-button-tab';
+import ServiceList from '../service-config/service-list';
 export default {
   name: 'ServicePlan',
   components: {
-    TenantsList,
     VueJsonPretty,
     PlanSideslider,
     PlanDetailSideslider,
+    CapsuleButtonTab,
+    ServiceList,
   },
   props: {
     tenants: {
@@ -170,7 +189,6 @@ export default {
     return {
       searchValue: '',
       isTableLoading: false,
-      isTenantLoading: false,
       // 方案
       planList: [],
       // 服务
@@ -191,6 +209,8 @@ export default {
       },
       resizeObserver: null,
       tableHeight: 500,
+      tenantPlanCountMap: {},
+      activeServiceId: '',
     };
   },
   created() {
@@ -209,41 +229,51 @@ export default {
     displayPlans() {
       return this.planList.filter((item) => item.tenant_id === this.curTenantId);
     },
-    // 字段搜索
+    // 字段搜索、服务名、租户类型过滤
     searchPlans() {
-      const lowerCaseSearchTerm = this.searchValue.toLocaleLowerCase();
-      if (!lowerCaseSearchTerm) {
-        return this.displayPlans;
-      }
-      return this.displayPlans.filter((item) => {
-        const nameValue = item.name.toLocaleLowerCase();
-        const serviceValue = item.service_name.toLocaleLowerCase();
-        return nameValue.includes(lowerCaseSearchTerm) || serviceValue.includes(lowerCaseSearchTerm);
+      const { searchValue, activeServiceId, activeType, displayPlans = [] } = this;
+      const lowerCaseSearchTerm = searchValue?.toLocaleLowerCase() || '';
+      return displayPlans
+        .filter((item) => !activeServiceId || item.service_id === activeServiceId)
+        .filter((item) => !activeType || item.type === activeType)
+        .filter((item) => !lowerCaseSearchTerm || (item.name?.toLocaleLowerCase() || '').includes(lowerCaseSearchTerm));
+    },
+    tabData() {
+      return this.tenants.map((item) => {
+        return {
+          name: item.id,
+          label: item.name,
+        };
       });
     },
   },
   watch: {
     tenants: {
       handler(newList) {
-        this.handleChange(newList[0]?.id);
+        this.curTenantId = newList[0]?.id;
       },
       immediate: true,
     },
   },
   methods: {
-    handleChange(tenantId) {
-      this.curTenantId = tenantId;
-    },
     // 获取全量服务方案
     async getPlans() {
       this.isTableLoading = true;
       try {
         const res = await this.$store.dispatch('tenant/getPlans');
         this.planList = res;
+        // 计算租户下的方案数量
+        this.tenantPlanCountMap = res.reduce((acc, item) => {
+          const tenantId = item.tenant_id;
+          acc[tenantId] = (acc[tenantId] || 0) + 1;
+          return acc;
+        }, {});
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
-        this.isTableLoading = false;
+        setTimeout(() => {
+          this.isTableLoading = false;
+        }, 20);
       }
     },
     // 方案-所属服务
@@ -312,6 +342,10 @@ export default {
         this.resizeObserver.observe(this.$refs.contentRef);
       }
     },
+    // 切换服务
+    serviceChange(data) {
+      this.activeServiceId = data.uuid;
+    },
   },
 };
 </script>
@@ -326,6 +360,15 @@ export default {
     padding: 16px;
     .plan-table-cls {
       margin-top: 12px;
+    }
+    .top-bar {
+      .left {
+        flex: 1;
+        min-width: 0;
+      }
+      .capsule-tab-wrapper {
+        min-width: 0;
+      }
     }
   }
 }

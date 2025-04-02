@@ -87,7 +87,7 @@ class BkCmsiEsbClient:
             logging.exception("call bk_cmsi api error, method: %s, params: %s", method, params)
             return False
 
-        # ESB 不管调用成员与否，状态码都会返回 200，需要通过 result 字段判断是否成功
+        # ESB 不管调用成功与否，状态码都会返回 200，需要通过 result 字段判断是否成功
         if result.get("result"):
             return True
 
@@ -96,16 +96,15 @@ class BkCmsiEsbClient:
 
 
 def make_bk_cmsi_client(tenant_id: str, stage: str = "prod") -> BkCmsiBackend:
-    """创建消息通知服务客户端工厂函数
+    """按是否为多租户模式选择对应消息通知 API
 
     :param tenant_id: 租户ID。多租户模式下，消息的接收人必须在该租户下
     :param stage: 网关环境，默认为正式环境
     """
-    # 多租户模式下使用 API网关 API
+    # NOTE：先不添加单独的配置项来判断消息通知是否使用 API 网关的 API ，目前 APIGW 上的 bk-cmsi 网关是专门为多租户定制
     if settings.ENABLE_MULTI_TENANT_MODE:
         return BkCmsiApiGwClient(tenant_id, stage)
     else:
-        # 非多租户模式下使用 ESB API
         return BkCmsiEsbClient()
 
 
@@ -163,7 +162,7 @@ class BkNotificationService:
         :param title: 通知标题
         """
         if not receivers:
-            logger.error("The receivers of sending rtx is empty, skipped")
+            logger.error("The receivers of sending WeCom is empty, skipped")
             return False
 
         params = {

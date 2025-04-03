@@ -185,7 +185,7 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
-    name = serializers.CharField()
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")

@@ -29,6 +29,7 @@ from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeN
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -73,7 +74,7 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 
 class ProcServiceSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="服务名称")
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH, help_text="服务名称")
     target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value

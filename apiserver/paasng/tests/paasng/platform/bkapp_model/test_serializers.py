@@ -18,9 +18,7 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.bkapp_model.serializers.serializers import ModuleProcessSpecsInputSLZ
-from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ, ProcServiceInputSLZ
-from paasng.utils.validators import PROC_TYPE_MAX_LENGTH
+from paasng.platform.bkapp_model.serializers.v1alpha2 import BkAppSpecInputSLZ
 
 
 @pytest.mark.parametrize(
@@ -47,92 +45,3 @@ class TestBkAppSpecInputSLZ:
         error_msg = str(e.value)
         assert "processes" in error_msg
         assert error_keyword in error_msg.lower()
-
-
-class TestProcServiceInputSLZ:
-    """测试 ProcServiceInputSLZ 序列化器"""
-
-    @pytest.mark.parametrize(
-        ("name", "is_valid"),
-        [
-            # Invalid cases
-            ("test_name", False),
-            ("TestName", False),
-            ("a" * (PROC_TYPE_MAX_LENGTH + 1), False),
-            # Valid case
-            ("valid-name", True),
-        ],
-    )
-    def test_service_name_validation(self, name, is_valid):
-        """测试服务名称验证，包括下划线约束、模式匹配和长度限制"""
-        serializer = ProcServiceInputSLZ(data={"name": name, "targetPort": 8000, "protocol": "TCP", "port": 80})
-
-        assert serializer.is_valid(raise_exception=False) == is_valid
-
-        if not is_valid:
-            assert "name" in serializer.errors
-
-
-class TestProcessNameValidation:
-    """测试包含下划线和不包含下划线的进程名称验证"""
-
-    @pytest.mark.parametrize(
-        ("process_name", "is_valid", "expected_error"),
-        [
-            ("web_server", False, "Process names cannot contain underscores"),
-            ("webserver", True, None),
-        ],
-        ids=["name_with_underscore", "name_without_underscore"],
-    )
-    def test_process_name_validation(self, process_name, is_valid, expected_error):
-        data = {
-            "proc_specs": [
-                {
-                    "name": process_name,
-                    "command": ["python", "manage.py", "runserver"],
-                    "args": [],
-                }
-            ]
-        }
-
-        serializer = ModuleProcessSpecsInputSLZ(data=data)
-
-        if is_valid:
-            assert serializer.is_valid()
-        else:
-            with pytest.raises(ValidationError) as exc:
-                serializer.is_valid(raise_exception=True)
-            assert expected_error in str(exc.value)
-
-
-class TestServiceNameInProcessSpec:
-    """测试在 proc_specs 中 services.name 的下划线验证"""
-
-    @pytest.mark.parametrize(
-        ("service_name", "is_valid", "expected_error"),
-        [
-            ("service_name", False, "Service names cannot contain underscores"),
-            ("service-name", True, None),
-        ],
-        ids=["service_with_underscore", "service_without_underscore"],
-    )
-    def test_service_name_in_process_spec(self, service_name, is_valid, expected_error):
-        data = {
-            "proc_specs": [
-                {
-                    "name": "web",
-                    "command": ["python", "manage.py", "runserver"],
-                    "args": [],
-                    "services": [{"name": service_name, "target_port": 8000, "protocol": "TCP", "port": 80}],
-                }
-            ]
-        }
-
-        serializer = ModuleProcessSpecsInputSLZ(data=data)
-
-        if is_valid:
-            assert serializer.is_valid()
-        else:
-            with pytest.raises(ValidationError) as exc:
-                serializer.is_valid(raise_exception=True)
-            assert expected_error in str(exc.value)

@@ -169,7 +169,7 @@ class MonitoringSLZ(serializers.Serializer):
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
-    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH, help_text="进程名称")
+    name = serializers.CharField(help_text="进程名称")
 
     image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
     command = serializers.ListSerializer(

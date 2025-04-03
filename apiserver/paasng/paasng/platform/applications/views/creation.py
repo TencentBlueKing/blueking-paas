@@ -38,7 +38,7 @@ from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.infras.accounts.permissions.user import user_can_create_in_region
+from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import (
@@ -313,7 +313,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         return Response(CreationOptionsOutputSLZ(resp_data).data)
 
     def _validate_create_region_application_perm(self, region: str):
-        if not user_can_create_in_region(self.request.user, region):
+        if not user_can_operate_in_region(self.request.user, region):
             raise error_codes.CANNOT_CREATE_APP.f(_("无法在所指定的 region 中创建应用"))
 
     def _get_cluster_entrance_https_enabled(

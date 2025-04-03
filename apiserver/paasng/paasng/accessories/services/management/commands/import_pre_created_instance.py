@@ -32,7 +32,7 @@ def _get_service_choices():
     choices = []
     for svc in Service.objects.all():
         if svc.provider_name == "pool":
-            choices.append(f"{svc.region}:{svc.name}")
+            choices.append(svc.name)
     return choices
 
 
@@ -57,8 +57,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, service_name: str, file_, **options):
-        region, name = service_name.split(":")
-        svc = Service.objects.get_by_natural_key(region, name)
+        svc = Service.objects.get_by_natural_key(service_name)
 
         with file_ as fh:
             data = list(yaml.safe_load_all(fh))

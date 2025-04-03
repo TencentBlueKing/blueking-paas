@@ -682,7 +682,7 @@ BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 # 权限中心的用户组授权是异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
 # 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
 # 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
-IAM_PERM_EFFECTIVE_TIMEDELTA = 5 * 60
+IAM_PERM_EFFECTIVE_TIMEDELTA = settings.get("BK_IAM_PERM_EFFECTIVE_TIMEDELTA", 5 * 60)
 
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
@@ -943,9 +943,6 @@ DEFAULT_REGION_TEMPLATE = {
             },
         },
     },
-    "mul_modules_config": {"creation_allowed": True},
-    # 是否允许用户添加独立域名(自定义访问地址)，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-    "allow_user_modify_custom_domain": True,
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,

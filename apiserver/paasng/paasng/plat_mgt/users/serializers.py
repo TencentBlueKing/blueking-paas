@@ -81,10 +81,15 @@ class AccountFeatureFlagWriteSLZ(serializers.Serializer):
 class SystemAPIUserReadSLZ(serializers.Serializer):
     """系统 API 用户序列化器"""
 
+    user = serializers.CharField(source="name", help_text="用户 ID")
+    bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
+    role = serializers.CharField(help_text="权限")
+    created = serializers.DateTimeField(help_text="添加时间")
+
 
 class SystemAPIUserWriteSLZ(serializers.Serializer):
     """系统 API 用户创建序列化器"""
 
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
     username = serializers.CharField(help_text="用户名")
-    permission = serializers.CharField(help_text="权限")
+    role = serializers.CharField(help_text="权限")

@@ -1445,11 +1445,11 @@ export default {
     successInfo(typeText) {
       const h = this.$createElement;
       const tips = this.isCustomImage
-        ? this.$t('您已{t}环境变量，变更将在下次部署时生效', { t: typeText })
-        : this.$t(
-            '您已{t}环境变量，变更将在下次部署时生效部署时，您可以选择 “已构建镜像” 以跳过构建阶段，直接进行部署',
-            { t: typeText }
-          );
+        ? h('div', null, this.$t('您已{t}环境变量，变更将在下次部署时生效', { t: typeText }))
+        : h('div', null, [
+            h('p', null, this.$t('您已{t}环境变量，变更将在下次部署时生效。', { t: typeText })),
+            this.$t('在下一次部署时，您可以选择 “已构建镜像”，跳过构建阶段，直接进行部署操作。'),
+          ]);
       this.$bkInfo({
         type: 'success',
         title: this.$t('环境变量{t}成功', { t: typeText }),
@@ -1457,7 +1457,7 @@ export default {
         width: 480,
         okText: this.isCustomImage ? this.$t('确定') : this.$t('去部署'),
         cancelText: this.$t('关闭'),
-        subHeader: h('div', [h('div', { class: ['tips'] }, tips)]),
+        subHeader: h('div', [h('div', { class: ['tips'] }, [tips])]),
         confirmFn: () => {
           // 镜像应用不展示去部署
           if (this.isCustomImage) {
@@ -2044,6 +2044,7 @@ a.is-disabled {
     padding: 12px 16px;
     background: #f5f7fa;
     border-radius: 2px;
+    line-height: 22px;
   }
 }
 </style>

@@ -2983,5 +2983,6 @@ export default {
   关闭: 'Close',
   '环境变量{t}成功': 'Env Variables {t} Success',
   '您已{t}环境变量，变更将在下次部署时生效': 'You have {t} the environment variable, and the changes will take effect during the next deployment',
-  '您已{t}环境变量，变更将在下次部署时生效部署时，您可以选择 “已构建镜像” 以跳过构建阶段，直接进行部署': 'You have {t} the environment variable, and the changes will take effect during the next deployment. You can choose "Pre-built Image" to skip the build phase and proceed directly to deployment',
+  '您已{t}环境变量，变更将在下次部署时生效。': 'You have {t} the environment variable, and the changes will take effect in the next deployment.',
+  '在下一次部署时，您可以选择 “已构建镜像”，跳过构建阶段，直接进行部署操作。': 'In the next deployment, you can choose "Pre-built Image" to skip the build phase and proceed directly to deployment.',
 };

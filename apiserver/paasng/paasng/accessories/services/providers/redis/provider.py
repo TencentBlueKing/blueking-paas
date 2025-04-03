@@ -45,17 +45,16 @@ class RedisProvider(BaseProvider):
 
     def _acquire_pre_created_instance(self) -> "PreCreatedInstance":
         """获取一个预创建实例（不立即标记为已分配）"""
-        with transaction.atomic():
-            instance: Optional[PreCreatedInstance] = (
-                PreCreatedInstance.objects.select_for_update()
-                .filter(plan=self.plan, is_allocated=False)
-                .order_by("created")
-                .first()
-            )
-            if instance is None:
-                raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
-            # 不再这里调用 acquire()
-            return instance
+        instance: Optional[PreCreatedInstance] = (
+            PreCreatedInstance.objects.select_for_update()
+            .filter(plan=self.plan, is_allocated=False)
+            .order_by("created")
+            .first()
+        )
+        if instance is None:
+            raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
+        # 不再这里调用 acquire()
+        return instance
 
     def _apply_external_resource(self, instance: PreCreatedInstance, namespace: str):
         """Redis 资源申请"""
@@ -81,12 +80,19 @@ class RedisProvider(BaseProvider):
                 # 只有资源申请成功后才标记实例为已分配
                 instance.acquire()
 
+                # 将 clb_id 和 cluster_name 从 credentials 中移除
+                # 用户不可见
+                credentials = json.loads(instance.credentials)
+                credentials.pop("clb_id", None)
+                credentials.pop("cluster_name", None)
+
                 return InstanceData(
                     credentials=json.loads(instance.credentials),
                     config={
                         "__pk__": instance.pk,
                         **instance.config,
                         "namespace": namespace,
+                        "original_credentials": json.loads(instance.credentials),
                     },
                 )
             except Exception as e:
@@ -99,8 +105,9 @@ class RedisProvider(BaseProvider):
         if not instance_data.config:
             return
         namespace = str(instance_data.config.get("namespace"))
+        original_credentials = instance_data.config.get("original_credentials", {})
         plan_config = RedisPlanConfig(**json.loads(self.plan.config))
-        instance_config = RedisInstanceConfig(**instance_data.credentials)
+        instance_config = RedisInstanceConfig(**original_credentials)
         controller = RedisInstanceController(plan_config, instance_config, namespace)
         controller.delete()
 

@@ -120,15 +120,15 @@ class ApplicationServicesManageViewSet(GenericViewSet):
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("当前环境不存在未分配的增强服务实例"))
 
         rel.provision()
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.PROVISION_INSTANCE,
-            target=OperationTarget.APP,
-            app_code=code,
-            module_name=module_name,
-            environment=environment,
-            data_after=self._gen_service_data_detail(rel),
-        )
+        # add_admin_audit_record(
+        #     user=request.user.pk,
+        #     operation=OperationEnum.PROVISION_INSTANCE,
+        #     target=OperationTarget.APP,
+        #     app_code=code,
+        #     module_name=module_name,
+        #     environment=environment,
+        #     data_after=self._gen_service_data_detail(rel),
+        # )
         return Response(status=status.HTTP_201_CREATED)
 
     @atomic

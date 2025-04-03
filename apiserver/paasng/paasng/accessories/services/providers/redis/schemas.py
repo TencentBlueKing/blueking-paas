@@ -36,5 +36,5 @@ class RedisInstanceConfig(BaseModel):
     cluster_name: str
     clb_id: str
     host: str
-    port: str
+    port: int
     password: str

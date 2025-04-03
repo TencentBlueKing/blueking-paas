@@ -207,7 +207,7 @@ def get_external_clb_service_manifest(plan_config: RedisPlanConfig, instance_con
     }
     # 如果是主从架构，只有 master 节点才会暴露到外部
     if plan_config.kind == "RedisReplication":
-        selector_labels["role"] = "master"
+        selector_labels["redis-role"] = "master"
 
     body = {
         "apiVersion": "v1",

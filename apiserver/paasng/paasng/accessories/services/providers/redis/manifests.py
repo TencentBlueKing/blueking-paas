@@ -21,7 +21,13 @@ from typing import List, Union
 from django.conf import settings
 
 from paas_wl.bk_app.addons_services.redis import crds
-from paas_wl.bk_app.addons_services.redis.constants import ApiVersion
+from paas_wl.bk_app.addons_services.redis.constants import (
+    DEFAULT_REDIS_EXPORTER_IMAGE,
+    DEFAULT_REDIS_PORT,
+    DEFAULT_REDIS_REPOSITORY,
+    REDIS_EXPORTER_PORT_NAME,
+    ApiVersion,
+)
 
 from .schemas import RedisInstanceConfig, RedisPlanConfig
 
@@ -46,7 +52,7 @@ class RedisVersionManifestConstructor(ManifestConstructor):
         self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         redis_version = plan_config.redis_version
-        model_res.spec.kubernetesConfig.image = f"quay.io/opstree/redis:{redis_version}"
+        model_res.spec.kubernetesConfig.image = f"{DEFAULT_REDIS_REPOSITORY}:{redis_version}"
 
 
 class PasswordManifestConstructor(ManifestConstructor):
@@ -67,7 +73,7 @@ class MonitorManifestConstructor(ManifestConstructor):
         monitor = plan_config.monitor
         if monitor:
             model_res.spec.redisExporter = crds.RedisExporter(
-                enabled=True, image="quay.io/opstree/redis-exporter:v1.44.0", resources=self._get_default_resources()
+                enabled=True, image=DEFAULT_REDIS_EXPORTER_IMAGE, resources=self._get_default_resources()
             )
 
     def _get_default_resources(self) -> crds.ResourceRequirements:
@@ -89,7 +95,7 @@ class ResourceManifestConstructor(ManifestConstructor):
         """根据内存限制自动计算合理的资源请求和限制
 
         Args:
-            memory_limit: 必须是 2Gi/4Gi/8Gi 之一
+            memory_limit: 必须是 2Gi/4Gi/8Gi
 
         Returns:
             符合Kubernetes最佳实践的ResourceRequirements
@@ -119,7 +125,7 @@ class PersistentStorageManifestConstructor(ManifestConstructor):
     ):
         if plan_config.persistent_storage:
             storage_spec = crds.StorageSpec(
-                storageSpec=crds.VolumeClaimTemplate(
+                volumeClaimTemplate=crds.VolumeClaimTemplate(
                     spec=crds.VolumeClaimSpec(
                         accessModes=["ReadWriteOnce"],
                         storageClassName=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
@@ -150,7 +156,7 @@ def create_redis_base_resource(redis_type: str, name: str):
 
 
 def generate_redis_name():
-    return "redis"
+    return "svc-redis"
 
 
 def get_redis_resource(plan_config: RedisPlanConfig) -> crds.RedisReplicationResource:
@@ -182,8 +188,8 @@ def get_redis_password_secret_manifest(password: str) -> dict:
 
 def get_service_monitor_manifest() -> dict:
     endpoint = {
+        "port": REDIS_EXPORTER_PORT_NAME,
         "interval": "30s",
-        "port": "redis-exporter",
         "scrapeTimeout": "10s",
     }
     match_labels = {"app": generate_redis_name()}
@@ -219,9 +225,9 @@ def get_external_clb_service_manifest(plan_config: RedisPlanConfig, instance_con
         "spec": {
             "ports": [
                 {
-                    "name": "edis-client",
+                    "name": "redis-client",
                     "port": instance_config.port,
-                    "targetPort": 6379,
+                    "targetPort": DEFAULT_REDIS_PORT,
                     "protocol": "TCP",
                 }
             ],

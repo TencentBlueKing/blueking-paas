@@ -16,6 +16,27 @@
 # to the current version of the project delivered to anyone in the future.
 from blue_krill.data_types.enum import StrStructuredEnum
 
+# Redis 相关配置
+# Redis 默认端口
+DEFAULT_REDIS_PORT = 6379
+# Redis 默认镜像仓库
+DEFAULT_REDIS_REPOSITORY = "quay.io/opstree/redis"
+# Redis 默认镜像 TAG
+DEFAULT_REDIS_TAG = "v7.0.12"
+
+# Redis 暴露指标默认镜像
+DEFAULT_REDIS_EXPORTER_IMAGE = "quay.io/opstree/redis-exporter:v1.44.0"
+# Redis 暴露指标默认端口
+REDIS_EXPORTER_PORT = 9121
+# Redis 暴露指标默认名称
+REDIS_EXPORTER_PORT_NAME = "redis-exporter"
+
+# 持久存储默认大小
+DEFAULT_PERSISTENT_STORAGE_SIZE = "10Gi"
+
+# Redis 集群默认大小
+DEFAULT_CLUSTER_SIZE = 3
+
 
 class ApiVersion(StrStructuredEnum):
     """Redis CRD API versions"""

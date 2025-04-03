@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 
 from paas_wl.utils.text import DNS_SAFE_PATTERN
 
-from .constants import ApiVersion
+from .constants import *
 
 
 class ObjectMetadata(BaseModel):
@@ -52,14 +52,14 @@ class RedisSecret(BaseModel):
 class KubernetesConfig(BaseModel):
     # Redis Image 与 Operator Version 版本兼容性参考：
     # https://github.com/OT-CONTAINER-KIT/redis-operator?tab=readme-ov-file#image-compatibility
-    image: str = "quay.io/opstree/redis:v7.0.12"
+    image: str = f"{DEFAULT_REDIS_REPOSITORY}:{DEFAULT_REDIS_TAG}"
     imagePullPolicy: str = "IfNotPresent"
     resources: Optional[ResourceRequirements] = None
     redisSecret: Optional[RedisSecret] = None
 
 
 class Storage(BaseModel):
-    storage: str = "10Gi"
+    storage: str = DEFAULT_PERSISTENT_STORAGE_SIZE
 
 
 class StorageResourceRequests(BaseModel):
@@ -77,7 +77,7 @@ class VolumeClaimTemplate(BaseModel):
 
 
 class StorageSpec(BaseModel):
-    storageSpec: VolumeClaimTemplate
+    volumeClaimTemplate: VolumeClaimTemplate
 
 
 class RedisExporterEnvVar(BaseModel):
@@ -89,14 +89,14 @@ class RedisExporter(BaseModel):
     enabled: bool = False
     # Exporter Image 与 Operator Version 版本兼容性参考：
     # https://github.com/OT-CONTAINER-KIT/redis-operator?tab=readme-ov-file#image-compatibility
-    image: str = "quay.io/opstree/redis-exporter:v1.44.0"
+    image: str = DEFAULT_REDIS_EXPORTER_IMAGE
     imagePullPolicy: str = "IfNotPresent"
     resources: Optional[ResourceRequirements] = None
     env: Optional[List[RedisExporterEnvVar]] = None
 
 
 class RedisReplicationSpec(BaseModel):
-    clusterSize: int = 3
+    clusterSize: int = DEFAULT_CLUSTER_SIZE
     kubernetesConfig: KubernetesConfig = Field(default_factory=KubernetesConfig)
     redisExporter: Optional[RedisExporter] = None
     storage: Optional[StorageSpec] = None

@@ -14,8 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-DEFAULT_REDIS_PORT = 6379
-REDIS_EXPORTER_PORT = 9121
-DEFAULT_REDIS_EXPORTER_IMAGE = "quay.io/opstree/redis-exporter:v1.44.0"
-DEFAULT_REDIS_IMAGE = "quay.io/opstree/redis"

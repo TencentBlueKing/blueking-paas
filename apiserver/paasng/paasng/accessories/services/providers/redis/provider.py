@@ -87,7 +87,7 @@ class RedisProvider(BaseProvider):
                 credentials.pop("cluster_name", None)
 
                 return InstanceData(
-                    credentials=json.loads(instance.credentials),
+                    credentials=credentials,
                     config={
                         "__pk__": instance.pk,
                         **instance.config,
@@ -129,14 +129,6 @@ class RedisProvider(BaseProvider):
 
         if not instance_data.config:
             return
-
         pk = instance_data.config.get("__pk__")
-        if not pk:
-            logger.warning("`__pk__` missing, recreating PreCreatedInstance")
-            PreCreatedInstance.objects.create(
-                plan=self.plan,
-                credentials=json.dumps(instance_data.credentials),
-                config=instance_data.config,
-                tenant_id=self.plan.tenant_id,
-            )
-            return
+        if pk:
+            PreCreatedInstance.objects.get(pk=pk).release()

@@ -612,7 +612,7 @@ export default {
 
     // 是否是smartApp
     isSmartApp() {
-      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
+      return this.curAppModule?.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
     },
 
     availableBranch() {
@@ -712,9 +712,11 @@ export default {
   watch: {
     show: {
       handler(value) {
+        // 镜像来源、镜像拉取策略默认值
+        const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         if (!value) return;
         this.deployAppDialog.visiable = !!value;
-        this.buttonActive = 'branch';
+        this.buttonActive = activeImageSource || 'branch';
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -731,9 +733,11 @@ export default {
         this.getModuleRuntimeOverview();
         // 获取当前模块部署信息
         this.getModuleReleaseInfo();
-        // 上次选择的镜像拉取策略
-        if (this.lastSelectedImagePullStrategy) {
-          this.imagePullStrategy = this.lastSelectedImagePullStrategy;
+        // 外界传递镜像拉取策略，上次选择的镜像拉取策略，否则为默认值
+        this.imagePullStrategy = activeImagePullPolicy || this.lastSelectedImagePullStrategy || 'IfNotPresent';
+        // 已构建镜像，获取下拉列表
+        if (activeImageSource) {
+          this.handleSelected({ value: 'image', label: this.$t('已构建镜像') });
         }
       },
       immediate: true,

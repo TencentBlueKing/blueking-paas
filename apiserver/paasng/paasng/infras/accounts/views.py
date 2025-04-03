@@ -28,6 +28,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts import serializers
 from paasng.infras.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
@@ -38,13 +39,13 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
+from paasng.infras.bk_cmsi.client import BkNotificationService
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
-from paasng.utils.notifier import get_notification_backend
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +92,13 @@ class UserVerificationGenerationView(APIView):
             raise error_codes.NOTIFICATION_DISABLED.f(_("暂不支持发送验证码"))
 
         verifier = make_verifier(request.session, request.data.get("func"))
-        noti_backend = get_notification_backend()
-
         message = _("您的蓝鲸验证码是：{verification_code}，请妥善保管。").format(
             verification_code=verifier.set_current_code()
         )
 
-        result = noti_backend.wecom.send([request.user.username], message, _("蓝鲸平台"))
+        user_tenant_id = get_tenant(request.user).id
+        bk_notify = BkNotificationService(user_tenant_id)
+        result = bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
 
         if not result:
             raise error_codes.ERROR_SENDING_NOTIFICATION

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import logging
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import arrow
 import humanize
@@ -25,11 +25,12 @@ from django.db.models import QuerySet
 from django.template import loader
 from django.utils import timezone
 
+from paasng.core.tenant.user import get_init_tenant_id
+from paasng.infras.bk_cmsi.client import BkNotificationService
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.evaluation.constants import EmailReceiverType, OperationIssueType
 from paasng.platform.evaluation.models import AppOperationReport, IdleAppNotificationMuteRule
 from paasng.utils import dictx
-from paasng.utils.notifier import get_notification_backend
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class AppOperationReportNotifier:
         reports: QuerySet[AppOperationReport],
         receiver_type: EmailReceiverType,
         receivers: List[str],
+        tenant_id: Optional[str] = None,
     ):
         if not reports.exists():
             logger.info("no issue reports, skip notification...")
@@ -65,7 +67,11 @@ class AppOperationReportNotifier:
             logger.info("no title or content, skip notification...")
             return
 
-        get_notification_backend().mail.send(receivers, content, title)
+        # 如果没有指定租户ID，则使用初始化租户ID
+        if not tenant_id:
+            tenant_id = get_init_tenant_id()
+        bk_notify = BkNotificationService(tenant_id)
+        bk_notify.send_mail(receivers, content, title)
 
     def _gen_plat_admin_email_title_and_content(self, reports: QuerySet[AppOperationReport]) -> Tuple[str, str]:
         title = "蓝鲸开发者中心 - 应用运营异常关注通知"

@@ -15,16 +15,36 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.notifier import DummyUserNotificationPlugin, UserNotificationBackend
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-class TestUserNotificationBackend:
-    def test_normal(self):
-        backend = UserNotificationBackend()
-        _plugin = DummyUserNotificationPlugin()
-        backend.register("dummy1", _plugin)
-        assert backend.dummy1 is _plugin
+class Group(OperationGroup):
+    # 发送邮件
+    send_mail = bind_property(
+        Operation,
+        name="v1_send_mail",
+        method="POST",
+        path="/v1/send_mail/",
+    )
+    # 发送短信
+    send_sms = bind_property(
+        Operation,
+        name="v1_send_sms",
+        method="POST",
+        path="/v1/send_sms/",
+    )
+    # 发送微信
+    send_weixin = bind_property(
+        Operation,
+        name="v1_send_weixin",
+        method="POST",
+        path="/v1/send_weixin/",
+    )
 
-        # non-existed plugin name
-        assert isinstance(backend.non_existed_plugin, DummyUserNotificationPlugin)
-        assert backend.dummy2 is not _plugin
+
+class Client(APIGatewayClient):
+    """蓝鲸消息通知 API"""
+
+    _api_name = "bk-cmsi"
+
+    api = bind_property(Group, name="api")

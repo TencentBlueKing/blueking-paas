@@ -29,6 +29,7 @@ from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeN
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
+from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -73,7 +74,7 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 
 class ProcServiceSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="服务名称")
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH, help_text="服务名称")
     target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value
@@ -93,12 +94,6 @@ class ProcServiceSLZ(serializers.Serializer):
         if target_port < 1 or target_port > 65535:
             raise ValidationError(f"invalid target_port: {value}")
 
-        return value
-
-    def validate_name(self, value):
-        """Validate service name doesn't contain underscores"""
-        if "_" in value:
-            raise ValidationError("Service names cannot contain underscores")
         return value
 
 
@@ -174,7 +169,7 @@ class MonitoringSLZ(serializers.Serializer):
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
-    name = serializers.CharField(help_text="进程名称")
+    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH, help_text="进程名称")
 
     image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
     command = serializers.ListSerializer(
@@ -248,7 +243,6 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
     def validate(self, data):
         data = super().validate(data)
         self._validate_exposed_types(data["proc_specs"])
-        self._validate_process_names(data["proc_specs"])
         return data
 
     def _validate_exposed_types(self, proc_specs):
@@ -273,12 +267,6 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
                     raise ValidationError(f"exposed_type {exposed_type_name} is duplicated in one app module")
 
                 exposed_types.add(exposed_type_name)
-
-    def _validate_process_names(self, proc_specs):
-        """Validate that process names don't contain underscores."""
-        for proc in proc_specs:
-            if "_" in proc["name"]:
-                raise ValidationError("Process names cannot contain underscores.")
 
 
 class ModuleDeployHookSLZ(serializers.Serializer):

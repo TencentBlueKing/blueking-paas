@@ -33,7 +33,7 @@ from .schemas import RedisInstanceConfig, RedisPlanConfig
 
 
 class ManifestConstructor(ABC):
-    """Construct the manifest for bk_app model, it is usually only responsible for a small part of the manifest."""
+    """Construct the manifest for redis model, it is usually only responsible for a small part of the manifest."""
 
     @abstractmethod
     def apply_to(
@@ -56,7 +56,7 @@ class RedisVersionManifestConstructor(ManifestConstructor):
 
 
 class PasswordManifestConstructor(ManifestConstructor):
-    """Construct the redis version."""
+    """Construct the redis password."""
 
     def apply_to(
         self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
@@ -93,12 +93,9 @@ class ResourceManifestConstructor(ManifestConstructor):
 
     def _get_resources(self, memory_limit: str) -> crds.ResourceRequirements:
         """根据内存限制自动计算合理的资源请求和限制
+        规则：内存请求为限制的一半，每 GB 内存配 0.5c CPU Limits, 0.25c CPU Requests
 
-        Args:
-            memory_limit: 必须是 2Gi/4Gi/8Gi
-
-        Returns:
-            符合Kubernetes最佳实践的ResourceRequirements
+        :param memory_limit: 内存限制
         """
         mem_int = int(memory_limit.removesuffix("Gi"))
 

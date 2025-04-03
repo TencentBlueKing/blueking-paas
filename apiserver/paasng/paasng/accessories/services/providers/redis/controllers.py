@@ -78,10 +78,12 @@ class RedisInstanceController:
         )
 
     def _deploy_redis_password_secret(self):
+        """创建 Redis 密码 Secret"""
         manifest = get_redis_password_secret_manifest(self.instance_config.password)
         KSecret(self.client).create(name="redis-secret", body=manifest, namespace=self.namespace)
 
     def _deploy_redis_resource(self):
+        """创建 Redis 实例资源(Redis CRD Instance)"""
         manifest = get_redis_resource(self.plan_config).to_deployable()
         self.KRedis(self.client, api_version=manifest["apiVersion"]).create(
             name=generate_redis_name(), body=manifest, namespace=self.namespace

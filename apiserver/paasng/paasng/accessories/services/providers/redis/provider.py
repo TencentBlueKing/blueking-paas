@@ -53,7 +53,6 @@ class RedisProvider(BaseProvider):
         )
         if instance is None:
             raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
-        # 不再这里调用 acquire()
         return instance
 
     def _apply_external_resource(self, instance: PreCreatedInstance, namespace: str):

@@ -21,10 +21,12 @@ from . import schemas
 from .base import BaseProvider, ResourcePoolProvider
 from .mysql.provider import MySQLProvider
 from .rabbitmq.provider import RabbitMQProvider
+from .redis.provider import RedisProvider
 from .sentry.provider import SentryProvider
 
 active_provider_maps = {
     "pool": ResourcePoolProvider,
+    "cnative_redis": RedisProvider,
 }
 
 # mysql、rabbitmq 已经迁移为远程增强服务，sentry 尽在特定版本提供服务

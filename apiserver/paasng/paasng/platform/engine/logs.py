@@ -20,6 +20,7 @@ from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.applications.models.misc import OutputStream
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.output import RedisWithModelStream, StreamChannel
 
 
@@ -152,4 +153,4 @@ def serialize_stream_logs(output_stream: OutputStream) -> List[str]:
 
 def polish_line(line: str) -> str:
     """Return the line with special characters removed"""
-    return line.replace("\x1b[1G", "")
+    return strip_ansi(line)

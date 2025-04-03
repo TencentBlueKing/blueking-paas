@@ -59,6 +59,7 @@ from paasng.platform.engine.serializers import (
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
+from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
@@ -237,7 +238,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         logs = get_all_logs(deployment)
         filename = f"{code}-{module_name}-{uuid}.log"
 
-        response = HttpResponse(logs, content_type="text/plain")
+        # 过滤ANSI转义序列
+        response = HttpResponse(strip_ansi(logs), content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response

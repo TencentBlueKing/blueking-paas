@@ -264,6 +264,9 @@
             :searchable="true"
             @change="handleChangeTags"
             :loading="isTagLoading"
+            enable-scroll-load
+            :scroll-loading="scrollLoadingOptions"
+            @scroll-end="handleScrollToBottom"
           >
             <bk-option
               v-for="option in imageTagList"
@@ -271,14 +274,6 @@
               :key="option.id"
               :name="option.tag"
             />
-            <div
-              slot="extension"
-              @click="handleNext"
-              style="cursor: pointer"
-              v-if="isShowNext"
-            >
-              {{ $t('下一页') }}
-            </div>
           </bk-select>
         </div>
       </div>
@@ -588,6 +583,10 @@ export default {
       },
       commitsList: [],
       moduleReleaseInfo: null,
+      scrollLoadingOptions: {
+        size: 'mini',
+        isLoading: false,
+      },
     };
   },
   computed: {
@@ -1126,6 +1125,7 @@ export default {
     async getImageTagList() {
       try {
         this.isTagLoading = true;
+        this.scrollLoadingOptions.isLoading = true;
         const res = await this.$store.dispatch('deploy/getImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -1145,6 +1145,7 @@ export default {
         });
       } finally {
         this.isTagLoading = false;
+        this.scrollLoadingOptions.isLoading = false;
       }
     },
 
@@ -1215,7 +1216,7 @@ export default {
       this.handleCloseProcessWatch();
     },
 
-    handleNext() {
+    handleScrollToBottom() {
       if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
       this.pagination.limit += 10;
       this.getImageTagList();

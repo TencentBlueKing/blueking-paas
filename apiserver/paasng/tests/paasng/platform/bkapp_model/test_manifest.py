@@ -19,9 +19,12 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.cnative.specs.constants import (
+    BKAPP_TENANT_ID_ANNO_KEY,
+    TENANT_GUARD_ANNO_KEY,
     ApiVersion,
     MountEnvName,
     VolumeSourceType,
@@ -497,6 +500,14 @@ def test_get_manifest(bk_module):
     manifest = get_manifest(bk_module)
     assert len(manifest) > 0
     assert manifest[0]["kind"] == "BkApp"
+    assert manifest[0]["metadata"]["annotations"][BKAPP_TENANT_ID_ANNO_KEY] == bk_module.application.app_tenant_id
+
+
+@pytest.mark.parametrize(("enable_multi_tenant_mode", "expected"), [(True, "true"), (False, "false")])
+def test_get_tenant_guard(bk_module, enable_multi_tenant_mode, expected):
+    with override_settings(ENABLE_MULTI_TENANT_MODE=enable_multi_tenant_mode):
+        manifest = get_manifest(bk_module)
+        assert manifest[0]["metadata"]["annotations"][TENANT_GUARD_ANNO_KEY] == expected
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

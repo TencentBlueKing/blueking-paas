@@ -39,6 +39,7 @@ type PlatformConfig struct {
 type IngressPluginConfig struct {
 	AccessControl *AccessControlConfig `json:"accessControl,omitempty"`
 	PaaSAnalysis  *PaaSAnalysisConfig  `json:"paasAnalysis,omitempty"`
+	TenantGuard   *TenantGuardConfig   `json:"tenantGuard,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
@@ -50,6 +51,12 @@ type AccessControlConfig struct {
 // PaaSAnalysisConfig contains the config for controlling ingress snippet about PA(paas-analysis) module
 type PaaSAnalysisConfig struct {
 	// Is PA enabled on the current cluster?
+	Enabled bool `json:"enabled"`
+}
+
+// TenantGuardConfig contains the config for controlling ingress snippet about TenantGuard
+type TenantGuardConfig struct {
+	// Enabled true if TenantGuard is enabled
 	Enabled bool `json:"enabled"`
 }
 

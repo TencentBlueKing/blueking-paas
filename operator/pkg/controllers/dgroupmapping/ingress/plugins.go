@@ -34,7 +34,8 @@ import (
 var (
 	registeredIngressPlugins []NginxIngressPlugin
 	accessControlTemplate    *template.Template
-	paasAnalysisTempalte     *template.Template
+	paasAnalysisTemplate     *template.Template
+	tenantGuardTemplate      *template.Template
 )
 
 // NginxIngressPlugin ...
@@ -115,10 +116,47 @@ func (p *PaasAnalysisPlugin) MakeConfigurationSnippet(bkapp *paasv1alpha2.BkApp,
 	}
 
 	var tpl bytes.Buffer
-	if err = paasAnalysisTempalte.ExecuteTemplate(&tpl, "pa", struct {
+	if err = paasAnalysisTemplate.ExecuteTemplate(&tpl, "pa", struct {
 		PaaSAnalysisSiteID int64
 	}{
 		siteId,
+	}); err != nil {
+		return ""
+	}
+	return tpl.String()
+}
+
+// TenantGuardPlugin tenant-guard module for ingress
+type TenantGuardPlugin struct{}
+
+// MakeServerSnippet return server snippet for tenant_guard module
+func (t *TenantGuardPlugin) MakeServerSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
+	return ""
+}
+
+// MakeConfigurationSnippet return configuration snippet for tenant_guard module
+func (t *TenantGuardPlugin) MakeConfigurationSnippet(bkapp *paasv1alpha2.BkApp, domains []Domain) string {
+	if bkapp == nil || bkapp.Annotations == nil {
+		return ""
+	}
+
+	// 未配置 anno key 或值非法时跳过注入 Tenant Guard 的 snippet
+	if v, ok := bkapp.Annotations[paasv1alpha2.TenantGuardAnnoKey]; !ok {
+		return ""
+	} else if enableTenantGuard, _ := strconv.ParseBool(v); !enableTenantGuard {
+		return ""
+	}
+
+	info, err := applications.GetBkAppInfo(bkapp)
+	if err != nil || info.TenantID == "" {
+		return ""
+	}
+
+	var tpl bytes.Buffer
+	if err = tenantGuardTemplate.ExecuteTemplate(&tpl, "tg", struct {
+		applications.BluekingAppInfo
+	}{
+		*info,
 	}); err != nil {
 		return ""
 	}
@@ -145,7 +183,7 @@ func init() {
 		panic(errors.Wrap(err, "failed to new access control template"))
 	}
 
-	paasAnalysisTempalte, err = template.New("pa").
+	paasAnalysisTemplate, err = template.New("pa").
 		Parse(dedent.Dedent(`
         # Blow content was configured by paas-analysis plugin, do not edit
         
@@ -155,6 +193,22 @@ func init() {
         # content of paas-analysis plugin ends`))
 	if err != nil {
 		panic(errors.Wrap(err, "failed to new paas-analysis template"))
+	}
+
+	tenantGuardTemplate, err = template.New("tg").
+		Parse(dedent.Dedent(`
+        # Blow content was configured by tenant-guard plugin, do not edit
+
+        set $bkapp_app_code '{{ .Region }}-{{ .WlAppName }}';
+        set $bkapp_bk_app_code '{{ .AppCode }}';
+        set $bkapp_env_name '{{ .Environment }}';
+        set $bkapp_app_tenant_id '{{ .TenantID }}';
+        
+        access_by_lua_file $tenant_guard_path/main.lua;
+
+        # content of tenant-guard plugin ends`))
+	if err != nil {
+		panic(errors.Wrap(err, "failed to new tenant-guard template"))
 	}
 }
 

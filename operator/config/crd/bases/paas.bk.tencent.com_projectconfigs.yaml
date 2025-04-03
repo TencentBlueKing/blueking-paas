@@ -121,6 +121,16 @@ spec:
                 required:
                 - enabled
                 type: object
+              tenantGuard:
+                description: TenantGuardConfig contains the config for controlling
+                  ingress snippet about TenantGuard
+                properties:
+                  enabled:
+                    description: Enabled true if TenantGuard is enabled
+                    type: boolean
+                required:
+                - enabled
+                type: object
             type: object
           kind:
             description: |-

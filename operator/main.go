@@ -179,11 +179,25 @@ func initIngressPlugins() {
 	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	pluginCfg := cfgObj.IngressPlugin
+
+	if pluginCfg.AccessControl != nil && pluginCfg.TenantGuard != nil && pluginCfg.TenantGuard.Enabled {
+		// TODO 后续考虑通过一个 lua 模块, 同时支持 AccessControl 和 TenantGuard
+		setupLog.Error(nil, "AccessControl and TenantGuard can not be enabled at the same time.")
+		os.Exit(1)
+	}
+
 	if pluginCfg.AccessControl != nil {
 		setupLog.Info("[IngressPlugin] access control plugin enabled.")
 		dgmingress.RegistryPlugin(&dgmingress.AccessControlPlugin{Config: pluginCfg.AccessControl})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
+
+		if pluginCfg.TenantGuard != nil && pluginCfg.TenantGuard.Enabled {
+			setupLog.Info("[IngressPlugin] TenantGuard plugin enabled.")
+			dgmingress.RegistryPlugin(&dgmingress.TenantGuardPlugin{})
+		} else {
+			setupLog.Info("[IngressPlugin] Missing tenant guard config, disable tenant guard feature.")
+		}
 	}
 	if pluginCfg.PaaSAnalysis != nil && pluginCfg.PaaSAnalysis.Enabled {
 		// PA 无需额外配置, 可以总是启用该插件

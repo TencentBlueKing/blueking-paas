@@ -30,6 +30,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
+    BKAPP_TENANT_ID_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
@@ -38,6 +39,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    TENANT_GUARD_ANNO_KEY,
     USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -129,6 +131,16 @@ class AccessControlManifestConstructor(ManifestConstructor):
             model_res.metadata.annotations[ACCESS_CONTROL_ANNO_KEY] = "true"
 
 
+class TenantGuardManifestConstructor(ManifestConstructor):
+    """Construct the tenant-guard part."""
+
+    def apply_to(self, model_res: crd.BkAppResource, module: Module):
+        if settings.ENABLE_MULTI_TENANT_MODE:
+            model_res.metadata.annotations[TENANT_GUARD_ANNO_KEY] = "true"
+        else:
+            model_res.metadata.annotations[TENANT_GUARD_ANNO_KEY] = "false"
+
+
 class BuiltinAnnotsManifestConstructor(ManifestConstructor):
     """Construct the built-in annotations."""
 
@@ -141,6 +153,7 @@ class BuiltinAnnotsManifestConstructor(ManifestConstructor):
                 BKAPP_NAME_ANNO_KEY: application.name,
                 BKAPP_CODE_ANNO_KEY: application.code,
                 MODULE_NAME_ANNO_KEY: module.name,
+                BKAPP_TENANT_ID_ANNO_KEY: application.app_tenant_id,
             }
         )
 
@@ -453,6 +466,7 @@ def get_bkapp_resource(module: Module) -> crd.BkAppResource:
         BuiltinAnnotsManifestConstructor(),
         AddonsManifestConstructor(),
         AccessControlManifestConstructor(),
+        TenantGuardManifestConstructor(),
         ProcessesManifestConstructor(),
         HooksManifestConstructor(),
         BuildConfigManifestConstructor(),

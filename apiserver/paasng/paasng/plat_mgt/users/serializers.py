@@ -20,6 +20,8 @@ from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from rest_framework import serializers
 
+from paasng.infras.accounts.constants import AccountFeatureFlag
+
 
 class PlatMgtAdminReadSLZ(serializers.Serializer):
     """平台管理员序列化器"""
@@ -59,8 +61,14 @@ class AccountFeatureFlagReadSLZ(serializers.Serializer):
     feature = serializers.CharField(source="name")
     isEffect = serializers.BooleanField(source="effect")
     created = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
-    # TODO 获取用户特性的默认值
-    default_feature = serializers.BooleanField(default=False, read_only=True)
+    default_feature = serializers.SerializerMethodField()
+
+    def get_default_feature(self, obj):
+        """根据特性名称获取其默认配置值"""
+        # 从 AccountFeatureFlag 获取所有特性的默认值
+        default_flags = AccountFeatureFlag.get_default_flags()
+        # 使用特性名称(obj.name)从默认值中获取对应的配置
+        return default_flags.get(obj.name, False)
 
 
 class AccountFeatureFlagWriteSLZ(serializers.Serializer):

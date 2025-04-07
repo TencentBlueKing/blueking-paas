@@ -1,5 +1,11 @@
 <template>
   <div class="capsule-tab-container">
+    <div
+      class="tab-label-text"
+      v-if="label && panels.length === 1"
+    >
+      {{ label }}
+    </div>
     <!-- 根据tab，封装的胶囊tab切换 -->
     <bk-tab
       v-model:active="localValue"
@@ -34,6 +40,10 @@ export default {
       required: true,
       default: () => [],
     },
+    label: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -58,11 +68,18 @@ export default {
 
 <style lang="scss" scoped>
 .capsule-tab-container {
+  display: flex;
+  align-items: center;
   height: 32px;
   padding: 4px;
   background-color: #f0f1f5;
   border-radius: 2px;
+  .tab-label-text {
+    margin: 0 8px 0 4px;
+  }
   ::v-deep .custom-capsule-tab-cls {
+    flex: 1;
+    min-width: 0;
     .bk-tab-header {
       height: 24px !important;
       border-radius: 0 !important;

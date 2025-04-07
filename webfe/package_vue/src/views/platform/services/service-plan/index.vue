@@ -26,9 +26,10 @@
             <CapsuleButtonTab
               v-model="curTenantId"
               :panels="tabData"
+              :label="$t('租户')"
             >
               <template slot-scope="{ option }">
-                {{ `${option.label} (${tenantPlanCountMap[option.name] ?? 0})` }}
+                {{ option.label }}
               </template>
             </CapsuleButtonTab>
           </div>
@@ -209,7 +210,6 @@ export default {
       },
       resizeObserver: null,
       tableHeight: 500,
-      tenantPlanCountMap: {},
       activeServiceId: '',
     };
   },
@@ -262,12 +262,6 @@ export default {
       try {
         const res = await this.$store.dispatch('tenant/getPlans');
         this.planList = res;
-        // 计算租户下的方案数量
-        this.tenantPlanCountMap = res.reduce((acc, item) => {
-          const tenantId = item.tenant_id;
-          acc[tenantId] = (acc[tenantId] || 0) + 1;
-          return acc;
-        }, {});
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

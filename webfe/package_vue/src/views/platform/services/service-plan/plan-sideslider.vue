@@ -66,7 +66,7 @@
               style="width: 100%; height: 100%"
               v-model="valuesJson"
               :debounce="20"
-              :mode="'code'"
+              :mode="'text'"
             />
           </div>
         </bk-form-item>

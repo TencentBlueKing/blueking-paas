@@ -71,9 +71,10 @@
               ></bk-option>
             </bk-select>
           </bk-form-item>
+          <!-- 远程不展示 -->
           <bk-form-item
+            v-if="formData.origin === 'local'"
             :label="$t('供应商')"
-            :required="true"
             :property="'provider_name'"
             :error-display-type="'normal'"
           >
@@ -223,7 +224,6 @@ export default {
         name: [...requiredRules],
         display_name: [...requiredRules],
         category_id: [...requiredRules],
-        provider_name: [...requiredRules],
         description: [...requiredRules],
         instance_tutorial: [
           {

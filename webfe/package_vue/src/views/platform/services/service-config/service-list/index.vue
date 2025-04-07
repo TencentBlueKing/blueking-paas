@@ -27,7 +27,12 @@
               :class="{ expand: expand[key] }"
             ></i>
             {{ key === 'local' ? $t('本地增强服务') : $t('远程增强服务') }}
-            <span class="count">（{{ $t(service.length) }}）</span>
+            <span
+              class="count"
+              v-if="service.length"
+            >
+              （{{ $t(service.length) }}）
+            </span>
           </div>
           <!-- 新增服务 -->
           <i

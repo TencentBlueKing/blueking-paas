@@ -148,8 +148,17 @@ export default {
 }
 </style>
 <style lang="scss">
-.pt-json-editor-custom-cls .jse-main .jse-message.jse-error {
-  display: none;
+.pt-json-editor-custom-cls {
+  .jse-main .jse-message.jse-error {
+    display: none;
+  }
+  // 隐藏模式切换
+  .jse-menu {
+    button.jse-group-button,
+    .jse-separator {
+      display: none;
+    }
+  }
 }
 .platform-content {
   .border-tag,

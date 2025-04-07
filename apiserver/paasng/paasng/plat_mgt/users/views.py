@@ -127,7 +127,6 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
 class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     """用户特性管理 API"""
 
-    schema = None
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     def list(self, request):

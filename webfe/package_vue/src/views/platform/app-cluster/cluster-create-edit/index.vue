@@ -49,7 +49,7 @@
           <template v-if="isDetailSingleStepEdit">{{ $t('保存') }}</template>
           <!-- 按步骤新建/编辑 -->
           <template v-else>
-            {{ curStep === 1 ? $t('保存并下一步') : curStep === steps.length ? $t('保存') : $t('下一步') }}
+            {{ curStep === 1 || curStep === steps.length ? $t('保存') : $t('下一步') }}
           </template>
         </bk-button>
       </span>
@@ -213,6 +213,35 @@ export default {
         console.warn(e);
       }
     },
+    showSuccessInfo(data) {
+      const h = this.$createElement;
+      this.$bkInfo({
+        type: 'success',
+        width: 480,
+        maskClose: false,
+        title: this.$t('集群添加成功'),
+        okText: this.$t('继续配置'),
+        cancelText: this.$t('离开（稍后配置）'),
+        subHeader: h(
+          'div',
+          {
+            class: ['cluster-success-info-cls'],
+          },
+          [
+            h('p', { class: 'tip-text' }, this.$t('后续的配置：组件配置、组件安装、集群特性')),
+            h('p', { class: 'tip-text' }, this.$t('支持在集群列表页面继续配置')),
+          ]
+        ),
+        confirmFn: () => {
+          // 集群新建完成，添加id参数
+          this.$router.push({ query: { id: data?.name } });
+          this.setStep(2);
+        },
+        cancelFn: () => {
+          this.back();
+        },
+      });
+    },
     // 新建集群
     async createCluster(data) {
       this.nextBtnLodaing = true;
@@ -220,13 +249,8 @@ export default {
         await this.$store.dispatch('tenant/createCluster', {
           data,
         });
-        // 集群新建完成，添加id参数
-        this.$router.push({ query: { id: data.name } });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('新建成功'),
-        });
-        this.setStep(2);
+        // 新建集群-成功后给出Info提示
+        this.showSuccessInfo(data);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -323,6 +347,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.cluster-success-info-cls {
+  text-align: left;
+  font-size: 14px;
+  padding: 8px 16px;
+  color: #4d4f56;
+  background: #f5f6fa;
+  border-radius: 2px;
+  .tip-text {
+    line-height: 22px;
+  }
+}
 .cluster-create-edit {
   position: relative;
   padding: 24px;

@@ -185,4 +185,9 @@ export default {
   '集群 API 地址类型': '集群 API 地址类型',
   '通过 BCS 提供的网关操作集群，格式如：https://bcs-api.bk.example.com/clusters/BCS-K8S-00000/': '通过 BCS 提供的网关操作集群，格式如：https://bcs-api.bk.example.com/clusters/BCS-K8S-00000/',
   '可通过 IP + Port 或 Service 名称访问，如：https://127.0.0.1:8443，https://kubernetes.default.svc.cluster.local 等': '可通过 IP + Port 或 Service 名称访问，如：https://127.0.0.1:8443，https://kubernetes.default.svc.cluster.local 等',
+  集群添加成功: '集群添加成功',
+  继续配置: '继续配置',
+  支持在集群列表页面继续配置: '支持在集群列表页面继续配置',
+  '离开（稍后配置）': '离开（稍后配置）',
+  '后续的配置：组件配置、组件安装、集群特性': '后续的配置：组件配置、组件安装、集群特性',
 };

@@ -15,81 +15,37 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import pytest
+
 from paasng.platform.engine.utils.ansi import bell, esc, strip_ansi
 
 
-def test_strip_ansi_empty_string():
-    """测试空字符串应保持不变。"""
-    assert strip_ansi("") == ""
-
-
-def test_strip_ansi_plain_text():
-    """测试没有 ANSI 转义序列的普通文本应保持不变。"""
-    plain_text = "Hello, world!"
-    assert strip_ansi(plain_text) == plain_text
-
-
-def test_strip_ansi_color_codes():
-    """测试移除基本的 ANSI 颜色代码。"""
-    colored_text = f"{esc}[31mRed text{esc}[0m"
-    assert strip_ansi(colored_text) == "Red text"
-
-
-def test_strip_ansi_multiple_codes():
-    """测试移除字符串中的多个 ANSI 代码。"""
-    text = f"{esc}[1mBold{esc}[0m {esc}[32mGreen{esc}[0m {esc}[4mUnderline{esc}[0m"
-    assert strip_ansi(text) == "Bold Green Underline"
-
-
-def test_strip_ansi_cursor_movement():
-    """测试移除光标移动代码。"""
-    text = f"Line 1{esc}[1ALine 2"
-    assert strip_ansi(text) == "Line 1Line 2"
-
-
-def test_strip_ansi_bell_character():
-    """测试移除 bell 字符。"""
-    text = f"Alert{bell}Message"
-    assert strip_ansi(text) == "AlertMessage"
-
-
-def test_strip_ansi_csi_sequences():
-    """测试移除 CSI（控制序列引导符）序列。"""
-    text = f"Text{esc}[1;31;42mColored{esc}[0m"
-    assert strip_ansi(text) == "TextColored"
-
-
-def test_strip_ansi_osc_sequences():
-    """测试移除 OSC（操作系统命令）序列。"""
-    text = f"{esc}]0;Window Title{bell}Terminal content"
-    assert strip_ansi(text) == "Terminal content"
-
-
-def test_strip_ansi_mixed_content():
-    """测试从混合内容中移除 ANSI 代码。"""
-    text = f"{esc}[1mBold{esc}[0m normal {esc}[31mred{esc}[0m\nNew{esc}[ALine"
-    assert strip_ansi(text) == "Bold normal red\nNewLine"
-
-
-def test_strip_ansi_alternative_characters():
-    """测试移除替代字符集命令。"""
-    text = f"Normal{esc}(0Special{esc}(BNormal"
-    assert strip_ansi(text) == "NormalSpecialNormal"
-
-
-def test_strip_ansi_preserve_non_ansi_escapes():
-    """测试保留非 ANSI 转义序列。"""
-    text = f"Preserve{esc}xThis"
-    assert strip_ansi(text) == f"Preserve{esc}xThis"
-
-
-def test_strip_ansi_edge_case_unfinished_escape():
-    """测试处理未完成的转义序列。"""
-    text = f"Unfinished{esc}"
-    assert strip_ansi(text) == "Unfinished"
-
-
-def test_strip_ansi_edge_case_only_escape():
-    """测试仅包含转义字符的情况。"""
-    text = f"{esc}"
-    assert strip_ansi(text) == ""
+@pytest.mark.parametrize(
+    ("input_text", "expected_output", "description"),
+    [
+        ("", "", "空字符串应保持不变"),
+        ("Hello, world!", "Hello, world!", "没有 ANSI 转义序列的普通文本应保持不变"),
+        (f"{esc}[31mRed text{esc}[0m", "Red text", "移除基本的 ANSI 颜色代码"),
+        (
+            f"{esc}[1mBold{esc}[0m {esc}[32mGreen{esc}[0m {esc}[4mUnderline{esc}[0m",
+            "Bold Green Underline",
+            "移除字符串中的多个 ANSI 代码",
+        ),
+        (f"Line 1{esc}[1ALine 2", "Line 1Line 2", "移除光标移动代码"),
+        (f"Alert{bell}Message", "AlertMessage", "移除 bell 字符"),
+        (f"Text{esc}[1;31;42mColored{esc}[0m", "TextColored", "移除 CSI（控制序列引导符）序列"),
+        (f"{esc}]0;Window Title{bell}Terminal content", "Terminal content", "移除 OSC（操作系统命令）序列"),
+        (
+            f"{esc}[1mBold{esc}[0m normal {esc}[31mred{esc}[0m\nNew{esc}[ALine",
+            "Bold normal red\nNewLine",
+            "从混合内容中移除 ANSI 代码",
+        ),
+        (f"Normal{esc}(0Special{esc}(BNormal", "NormalSpecialNormal", "移除替代字符集命令"),
+        (f"Preserve{esc}xThis", f"Preserve{esc}xThis", "保留非 ANSI 转义序列"),
+        (f"Unfinished{esc}", "Unfinished", "处理未完成的转义序列"),
+        (f"{esc}", "", "仅包含转义字符的情况"),
+    ],
+)
+def test_strip_ansi(input_text, expected_output, description):
+    """测试 strip_ansi 函数在各种情况下的表现。"""
+    assert strip_ansi(input_text) == expected_output

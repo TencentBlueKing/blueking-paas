@@ -46,13 +46,13 @@ class UnavailableDeploymentTotalMetric:
             try:
                 client = get_client_by_cluster_name(cluster_name=cluster.name)
             except ValueError:
-                logger.exception(f"configuration of cluster<{cluster.name}> is not ready")
+                logger.warning(f"configuration of cluster<{cluster.name}> is not ready")
                 continue
 
             try:
                 unavailable_deployments = list_unavailable_deployment(CoreDynamicClient(client))
             except Exception:
-                logger.exception(f"list unavailable deployments of cluster<{cluster.name}> ")
+                logger.warning(f"list unavailable deployments of cluster<{cluster.name}> ")
                 continue
 
             gauge_family.add_metric(

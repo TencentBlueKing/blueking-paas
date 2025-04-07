@@ -1,10 +1,23 @@
-# cloudnative-buildpacks/builders/heroku-builder
+# heroku-builder
 
-蓝鲸 SaaS Builder, 基于 [heroku-18](https://github.com/heroku/stack-images/tree/v23/heroku-18) 镜像, 底层镜像是 ubuntu:bionic.
+蓝鲸 SaaS Builder，用于将云原生应用从源代码构建成可运行镜像，基于 [heroku/base-images](https://github.com/heroku/base-images/tree/main) 项目。
 
-## 使用说明
+## 开发指南
 
-### 1. 构建基础镜像 (stack)
+### 名词解释
+
+- CNB Stack：基础镜像，用于构建 cnb builder / runner 等
+- CNB builder：构建器镜像，可使用若干 buildpack 将源代码构建成可运行镜像
+
+### 前置依赖
+
+构建 cnb builder 需要安装 [pack](https://buildpacks.io/docs/tools/pack/)
+
+### heroku-18（bionic）
+
+基础镜像：[heroku-18 / ubuntu-bionic](https://github.com/heroku/stack-images/tree/v23/heroku-18) 
+
+### 构建 cnb stack（基础镜像）
 
 ```bash
 ❯ make stack-bionic
@@ -12,9 +25,7 @@
 ❯ BUILD_IMAGE_NAME="build-heroku-bionic" STACK_BUILDER_TAG="latest" RUN_IMAGE_NAME="run-heroku-bionic" STACK_RUNNER_TAG="latest" make stack-bionic
 ```
 
-### 2. 构建 cnb builder
-
-前置依赖: 构建 cnb builder 需要安装 [pack](https://buildpacks.io/docs/tools/pack/)
+### 构建 cnb builder（构建阶段镜像）
 
 ```bash
 ❯ make builder-bionic

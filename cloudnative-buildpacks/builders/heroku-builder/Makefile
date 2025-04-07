@@ -1,7 +1,5 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-BUILDER_IMAGE_NAME ?= mirrors.tencent.com/bkpaas/builder-heroku-bionic
-BUILDER_TAG ?= latest
 
 ##@ Build
 .PHONY: stack-bionic
@@ -16,16 +14,6 @@ stack-jammy:  ## Build builder/runner stack (base on heroku-22) **experimental**
 	cd $(ROOT_DIR)/stack/ && docker buildx bake heroku-run-jammy -f docker-bake.hcl
 
 
-.PHONY: builder-bionic
-builder-bionic: stack-bionic buildpacks  ## Build cnb builder (base on heroku-18)
-	pack builder create $(BUILDER_IMAGE_NAME):$(BUILDER_TAG) --config ./heroku-18.toml --pull-policy=if-not-present
-
-
-.PHONY: builder-jammy
-builder-jammy: stack-jammy buildpacks  ## Build cnb builder (base on heroku-22) **experimental**
-	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:$(BUILDER_TAG) --config ./heroku-22.toml --pull-policy=if-not-present
-
-
 .PHONY: buildpacks
 buildpacks: ## Build cnb buildpacks
 	cd ../../buildpacks/bk-buildpack-python && make package
@@ -34,7 +22,17 @@ buildpacks: ## Build cnb buildpacks
 	cd ../../buildpacks/bk-buildpack-apt && make package
 
 
-##@ Test 
+.PHONY: builder-bionic
+builder-bionic: stack-bionic buildpacks  ## Build cnb builder (base on heroku-18)
+	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest --config ./heroku-18.toml --pull-policy=if-not-present
+
+
+.PHONY: builder-jammy
+builder-jammy: stack-jammy buildpacks  ## Build cnb builder (base on heroku-22) **experimental**
+	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:latest --config ./heroku-22.toml --pull-policy=if-not-present
+
+
+##@ Test
 .PHONY: integration
 integration:  ## Run Integration Test
 	echo "Not implemented yet..."

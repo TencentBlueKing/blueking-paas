@@ -25,7 +25,8 @@ import (
 )
 
 // MakeDetectorStep build the detector step
-// detector will generate group.toml(to groupPath) and plan.toml(to planPath) based on order.toml(in orderPath) and source code(in appDir)
+// detector will generate group.toml(to groupPath) and plan.toml(to planPath)
+// based on order.toml(in orderPath) and source code(in appDir)
 func MakeDetectorStep(
 	ctx context.Context,
 	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string, uid, gid uint32,

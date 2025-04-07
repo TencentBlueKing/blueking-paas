@@ -89,7 +89,6 @@ func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 		}
 
 		processes = append(processes, Process{ProcType: proc.Type, CommandPath: launch.ProcessPath(proc.Type)})
-
 	}
 
 	if err := os.MkdirAll(launch.ProcessDir, 0o755); err != nil {

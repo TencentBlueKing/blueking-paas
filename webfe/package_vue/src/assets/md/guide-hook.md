@@ -7,13 +7,16 @@
 你需要修改 `app_desc.yaml` 文件中的 `module.scripts` 字段，来创建一个部署前置钩子。一份示例文件如下所示：
 
 ```yaml
-spec_version: 2
+specVersion: 3
 module:
+  name: default
   language: Python
-  scripts:
-    pre_release_hook: "python manage.py migrate --no-input"
-  processes:
-	# ...已省略
+  spec:
+    processes:
+      # ...已省略
+    hooks:
+      preRelease:
+        procCommand: python manage.py migrate --no-input
 ```
 
 #### 注意事项
@@ -21,5 +24,3 @@ module:
 1. 平台在执行“部署前置”钩子命令时，会使用一个全新容器，而非复用构建阶段的已有容器，因此，在构建期间对本地文件的任何变更，**不会**在钩子命令的执行环境中生效。
 
 > 拓展阅读：[部署阶段钩子](DEPLOY_ORDER) | [构建阶段钩子](BUILD_PHASE_HOOK)
-
-

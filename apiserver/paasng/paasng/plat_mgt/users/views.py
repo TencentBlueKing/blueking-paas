@@ -17,6 +17,8 @@
 
 import logging
 
+from django.db.models import F, Value
+from django.db.models.functions import Coalesce
 from django.db.transaction import atomic
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -202,8 +204,9 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
-        # TODO: 这里的查询条件需要根据实际需求进行调整
-        sys_api_users = SysAPIClient.objects.all().values("authenticatedappasclient__bk_app_code")
+        sys_api_users = SysAPIClient.objects.annotate(
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
+        ).values("name", "bk_app_code", "role", "updated")
         slz = SystemAPIUserReadSLZ(sys_api_users, many=True)
         return Response(slz.data)
 
@@ -213,22 +216,27 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        username = data.get("username")
-        bk_app_code = data.get("bk_app_code")
-        role = data.get("role")
+        username, bk_app_code, role = data["username"], data["bk_app_code"], data["role"]
 
         # 获取创建或更新前的系统 API 用户
-        before_query = SysAPIClient.objects.filter(name=username, role=role)
+        before_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
+        )
         before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
 
         # 创建客户端
         client, _ = SysAPIClient.objects.get_or_create(name=username, defaults={"role": role})
 
         # 创建关系
-        AuthenticatedAppAsClient.objects.update_or_create(bk_app_code=bk_app_code, defaults={"client": client})
+        if bk_app_code:
+            AuthenticatedAppAsClient.objects.update_or_create(
+                client=client, bk_app_code=bk_app_code, defaults={"client": client}
+            )
 
         # 获取创建或更新后的系统 API 用户
-        after_query = SysAPIClient.objects.filter(name=username, role=role)
+        after_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
+        )
         after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
@@ -241,32 +249,40 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-        # return Response(status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, username=None, permission=None, *args, **kwargs):
+    def destroy(self, request, username=None, role=None, *args, **kwargs):
         """删除系统 API 用户"""
-        if not username or not permission:
-            return Response({"detail": "Username and permission are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not username or not role:
+            return Response({"detail": "Username and role are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            # 尝试获取删除前的系统 API 用户
-            before_query = SysAPIClient.objects.filter(name=username, role=permission)
-            before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
-
-            # 删除系统 API 用户
-            SysAPIClient.objects.filter(name=username, role=permission).delete()
-
-            # 尝试获取删除后的系统 API 用户
-            after_query = SysAPIClient.objects.filter(name=username, role=permission)
-            after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
-
-            add_admin_audit_record(
-                user=self.request.user.pk,
-                operation=OperationEnum.DELETE,
-                target=OperationTarget.PLAT_USER,
-                data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-                data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
-            )
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except SysAPIClient.DoesNotExist:
+        # 查找对应的 SysAPIClient
+        client_qs = SysAPIClient.objects.filter(name=username, role=role)
+        if not client_qs.exists():
             return Response({"detail": "System API user not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 尝试获取删除前的系统 API 用户
+        before_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
+        )
+        before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
+
+        client_ids = list(client_qs.values_list("id", flat=True))
+
+        # 删除关系
+        AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids).delete()
+        # 删除系统 API 用户
+        SysAPIClient.objects.filter(name=username, role=role).delete()
+
+        # 尝试获取删除后的系统 API 用户
+        after_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
+        )
+        after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
+
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PLAT_USER,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

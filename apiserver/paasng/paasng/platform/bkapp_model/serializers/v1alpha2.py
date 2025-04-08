@@ -32,7 +32,7 @@ from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
 from paasng.utils.validators import (
-    DNS_SAFE_MAX_LENGTH,
+    DNS_MAX_LENGTH,
     DNS_SAFE_PATTERN,
     PROC_TYPE_MAX_LENGTH,
     PROC_TYPE_PATTERN,
@@ -191,7 +191,7 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 class ProcServiceInputSLZ(serializers.Serializer):
     # name 字段会转换成 name k8s 资源名
-    name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_SAFE_MAX_LENGTH)
+    name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_MAX_LENGTH)
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")

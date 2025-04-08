@@ -88,7 +88,7 @@ def _mock_shim_apis():
     ],
 )
 @pytest.mark.usefixtures("_mock_shim_apis")
-def test_creat_api(sys_api_client, pd, plugin, data, status_code, error_msg):
+def test_create_api(sys_api_client, pd, plugin, data, status_code, error_msg):
     url = reverse("sys.api.plugins_center.bk_plugins.create", kwargs={"pd_id": pd.identifier})
     with (
         mock.patch("paasng.bk_plugins.pluginscenter.sys_apis.views.shim.setup_builtin_grade_manager"),

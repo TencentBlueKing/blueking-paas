@@ -13,14 +13,24 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-#
-from django.apps import AppConfig
+from unittest import mock
+
+import pytest
+from django.core.management import call_command
+from django.core.management.base import SystemCheckError
+
+from paasng.infras.perm_insure.views_perm import INSURE_CHECKING_EXCLUDED_VIEWS
 
 
-class PermInsureConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
-    name = "paasng.infras.perm_insure"
+class TestPermConfigured:
+    def test_drf_view_not_configured(self):
+        new_excluded = INSURE_CHECKING_EXCLUDED_VIEWS.copy()
+        # `ApplicationCreateViewSet` is a view that configures no extra permissions, when it
+        # is in the excluded list, a SystemCheckError should be raised.
+        new_excluded.remove("ApplicationCreateViewSet")
 
-    def ready(self):
-        # Register the Django check function
-        from .views_perm import check_views_perm_configured  # noqa: F401
+        with (
+            mock.patch("paasng.infras.perm_insure.views_perm.INSURE_CHECKING_EXCLUDED_VIEWS", new=new_excluded),
+            pytest.raises(SystemCheckError, match=r".*ApplicationCreateViewSet.*no extra permission_classes"),
+        ):
+            call_command("check")

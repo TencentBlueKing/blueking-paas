@@ -17,6 +17,7 @@
 
 from typing import List
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -31,7 +32,12 @@ from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
-from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
+from paasng.utils.validators import (
+    DNS_MAX_LENGTH,
+    DNS_SAFE_PATTERN,
+    PROC_TYPE_MAX_LENGTH,
+    PROC_TYPE_PATTERN,
+)
 
 from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
 
@@ -185,7 +191,15 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
-    name = serializers.CharField()
+    name = serializers.RegexField(
+        regex=DNS_SAFE_PATTERN,
+        max_length=DNS_MAX_LENGTH,
+        error_messages={
+            "invalid": _(
+                '服务名应仅包含小写字母，数字字符和连字符"-"，且必须以字母数字字符开头和结尾，最大长度不超过 63'
+            )
+        },
+    )
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")

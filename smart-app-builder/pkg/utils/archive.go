@@ -17,7 +17,7 @@ func ArchiveTGZ(sourceDir, destTGZ string) error {
 		return err
 	}
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	files, err := archives.FilesFromDisk(ctx, nil, lo.SliceToMap(entries, func(entry fs.DirEntry) (string, string) {
 		return filepath.Join(sourceDir, entry.Name()), ""
 	}))
@@ -40,7 +40,7 @@ func ArchiveTGZ(sourceDir, destTGZ string) error {
 		Archival:    archives.Tar{},
 	}
 
-	err = format.Archive(context.TODO(), out, files)
+	err = format.Archive(ctx, out, files)
 	if err != nil {
 		return err
 	}

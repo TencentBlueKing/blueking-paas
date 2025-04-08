@@ -91,7 +91,7 @@ smart-app-builder 支持通过环境变量设置 buildpacks , 可在启动容器
 
 #### bk-buildpack-nodejs
 - `NODEJS_BUILDPACK_VERSION`: bk-buildpack-nodejs 的版本。默认值 v163
-- `S3_DOMAI`: node 运行时版本的下载地址。默认值 https://bkpaas-runtimes-1252002024.file.myqcloud.com/nodejs/node/release/linux-x64/
+- `S3_DOMAIN`: node 运行时版本的下载地址。默认值 https://bkpaas-runtimes-1252002024.file.myqcloud.com/nodejs/node/release/linux-x64/
 - `NPM_REGISTRY`: npm 的下载地址。默认值 https://mirrors.tencent.com/npm/
 
 #### bk-buildpack-go

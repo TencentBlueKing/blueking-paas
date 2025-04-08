@@ -1,10 +1,10 @@
 package appdesc
 
 import (
-	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
+	"github.com/pkg/errors"
 
 	descv2 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v2"
 	descv3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v3"
@@ -44,5 +44,5 @@ func ParseAppDescYAML(yamlPath string) (AppDesc, error) {
 		return &configV3, nil
 	}
 
-	return nil, fmt.Errorf("spec version must be 2 or 3")
+	return nil, errors.New("spec version must be 2 or 3")
 }

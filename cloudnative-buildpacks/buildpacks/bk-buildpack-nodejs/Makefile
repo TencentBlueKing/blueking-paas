@@ -3,16 +3,18 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 NAME := bk-buildpack-nodejs
 VERSION := v163
 
+
 ##@ Build
 .PHONY: package
-package: package-heroku-buildpack ## package the buildpack
+package: package-heroku-buildpack ## 将 cnb buildpack 打包
 	cp shim/* cnb-buildpack/bin/
 	tar -xvf target/output/bk-buildpack-nodejs-${VERSION}.tar -C cnb-buildpack/target
-	pack buildpack package $(NAME)-$(VERSION).cnb -p cnb-buildpack/ -f file
+	tar -zcvf $(NAME)-$(VERSION).tgz cnb-buildpack
+
 
 .PHONY: package-heroku-buildpack
 package-heroku-buildpack: init-submodule ## 打包 heroku-buildpack
-	cd target && make pack version=v163
+	cd target && make pack version=$(VERSION)
 
 
 .PHONY: init-submodule

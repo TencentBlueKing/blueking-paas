@@ -15,7 +15,7 @@ stack-jammy:  ## Build builder/runner stack (base on heroku-22) **experimental**
 
 
 .PHONY: buildpacks
-buildpacks: ## Build cnb buildpacks
+buildpacks: ## package cnb buildpacks
 	cd ../../buildpacks/bk-buildpack-python && make package
 	cd ../../buildpacks/bk-buildpack-nodejs && make package
 	cd ../../buildpacks/bk-buildpack-go && make package
@@ -23,12 +23,12 @@ buildpacks: ## Build cnb buildpacks
 
 
 .PHONY: builder-bionic
-builder-bionic: stack-bionic buildpacks  ## Build cnb builder (base on heroku-18)
+builder-bionic: stack-bionic  ## Build cnb builder (base on heroku-18)
 	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest --config ./heroku-18.toml --pull-policy=if-not-present
 
 
 .PHONY: builder-jammy
-builder-jammy: stack-jammy buildpacks  ## Build cnb builder (base on heroku-22) **experimental**
+builder-jammy: stack-jammy  ## Build cnb builder (base on heroku-22) **experimental**
 	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:latest --config ./heroku-22.toml --pull-policy=if-not-present
 
 

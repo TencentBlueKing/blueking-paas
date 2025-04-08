@@ -469,6 +469,7 @@ class LocalPlanMgr(BasePlanMgr):
             description=plan_data["description"],
             is_active=plan_data["is_active"],
             config=plan_data["config"],
+            tenant_id=plan_data["tenant_id"],
         )
 
     def update_plan(self, service: ServiceObj, plan_id: str, plan_data: Dict):

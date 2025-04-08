@@ -31,8 +31,9 @@ from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
-from paasng.utils.text import DNS_SAFE_MAX_LENGTH, DNS_SAFE_PATTERN
 from paasng.utils.validators import (
+    DNS_SAFE_MAX_LENGTH,
+    DNS_SAFE_PATTERN,
     PROC_TYPE_MAX_LENGTH,
     PROC_TYPE_PATTERN,
 )

@@ -29,7 +29,7 @@ from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeN
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
-from paasng.utils.text import DNS_SAFE_MAX_LENGTH, DNS_SAFE_PATTERN
+from paasng.utils.validators import DNS_SAFE_MAX_LENGTH, DNS_SAFE_PATTERN
 
 
 class GetManifestInputSLZ(serializers.Serializer):

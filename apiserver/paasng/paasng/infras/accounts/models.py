@@ -29,6 +29,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
 from paasng.infras.accounts.oauth.models import Project, Scope
@@ -99,7 +101,8 @@ class UserProfileManager(models.Manager):
         except self.model.DoesNotExist:
             # Auto create user
             if settings.AUTO_CREATE_REGULAR_USER:
-                return self.create(user=user.pk, role=SiteRole.USER.value)
+                tenant_id = get_tenant(user).id
+                return self.create(user=user.pk, tenant_id=tenant_id, role=SiteRole.USER.value)
             raise
 
     def get_by_natural_key(self, user: str):
@@ -112,6 +115,8 @@ class UserProfile(TimestampedModel):
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
     feature_flags = models.TextField(null=True, blank=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = UserProfileManager()
 

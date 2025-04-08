@@ -69,10 +69,10 @@
                 <!-- 按环境分配 env_specific -->
                 <template v-if="row.allocation_policy?.env_plans">
                   <span class="tag">
-                    {{ $t('集群（预发布环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.stag)?.join(', ') }}
+                    {{ $t('方案（预发布环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.stag)?.join(', ') }}
                   </span>
                   <span class="tag">
-                    {{ $t('集群（生产环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.prod)?.join(', ') }}
+                    {{ $t('方案（生产环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.prod)?.join(', ') }}
                   </span>
                 </template>
                 <!-- 不按环境分配 -->
@@ -82,7 +82,7 @@
                     class="tag"
                     :key="item"
                   >
-                    {{ $t('集群') }}：{{ item }}
+                    {{ $t('方案') }}：{{ item }}
                   </span>
                 </template>
               </div>
@@ -337,7 +337,7 @@ export default {
         ? this.handleUniformAllocation(row.allocation_policy)
         : this.handleRuleBasedAllocation(row.displayPolicies);
     },
-    // 生成环境集群配置
+    // 生成环境方案配置
     generateEnvPlan(envPlans) {
       return envPlans
         ? {

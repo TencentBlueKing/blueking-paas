@@ -23,15 +23,12 @@
             class="capsule-tab-wrapper"
             v-if="tabData.length"
           >
-            <CapsuleButtonTab
+            <TenantSelect
               v-model="curTenantId"
               :panels="tabData"
               :label="$t('租户')"
-            >
-              <template slot-scope="{ option }">
-                {{ option.label }}
-              </template>
-            </CapsuleButtonTab>
+              :count-map="tenantPlanCountMap"
+            />
           </div>
         </div>
         <bk-input
@@ -94,6 +91,7 @@
           :width="80"
           show-overflow-tooltip
           :render-header="$renderHeader"
+          v-if="activeService.origin === 'local'"
         >
           <template slot-scope="{ row }">
             <bk-button
@@ -169,16 +167,16 @@ import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import PlanSideslider from './plan-sideslider.vue';
 import PlanDetailSideslider from './plan-detail-sideslider';
-import CapsuleButtonTab from '@/components/capsule-button-tab';
 import ServiceList from '../service-config/service-list';
+import TenantSelect from './tenant-select';
 export default {
   name: 'ServicePlan',
   components: {
     VueJsonPretty,
     PlanSideslider,
     PlanDetailSideslider,
-    CapsuleButtonTab,
     ServiceList,
+    TenantSelect,
   },
   props: {
     tenants: {
@@ -211,6 +209,8 @@ export default {
       resizeObserver: null,
       tableHeight: 500,
       activeServiceId: '',
+      activeService: {},
+      tenantPlanCountMap: {},
     };
   },
   created() {
@@ -262,6 +262,11 @@ export default {
       try {
         const res = await this.$store.dispatch('tenant/getPlans');
         this.planList = res;
+        this.tenantPlanCountMap = res.reduce((acc, item) => {
+          const tenantId = item.tenant_id;
+          acc[tenantId] = (acc[tenantId] || 0) + 1;
+          return acc;
+        }, {});
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -338,6 +343,7 @@ export default {
     },
     // 切换服务
     serviceChange(data) {
+      this.activeService = data;
       this.activeServiceId = data.uuid;
     },
   },

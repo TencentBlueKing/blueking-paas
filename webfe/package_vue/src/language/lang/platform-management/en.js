@@ -225,4 +225,5 @@ export default {
   '服务 ID': 'Service ID',
   确认删除服务: 'Confirm Service Deletion',
   请选择方案: 'Please Select Plan',
+  暂无已选方案: 'No Selected Plan Available',
 };

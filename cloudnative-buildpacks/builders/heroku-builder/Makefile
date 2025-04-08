@@ -1,5 +1,6 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+BUILDER_TAG ?= latest
 
 ##@ Build
 .PHONY: stack-bionic
@@ -24,12 +25,12 @@ buildpacks: ## package cnb buildpacks
 
 .PHONY: builder-bionic
 builder-bionic: stack-bionic  ## Build cnb builder (base on heroku-18)
-	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest --config ./heroku-18.toml --pull-policy=if-not-present
+	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-bionic:${BUILDER_TAG} --config ./heroku-18.toml --pull-policy=if-not-present
 
 
 .PHONY: builder-jammy
 builder-jammy: stack-jammy  ## Build cnb builder (base on heroku-22) **experimental**
-	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:latest --config ./heroku-22.toml --pull-policy=if-not-present
+	pack builder create mirrors.tencent.com/bkpaas/builder-heroku-jammy:${BUILDER_TAG} --config ./heroku-22.toml --pull-policy=if-not-present
 
 
 ##@ Test

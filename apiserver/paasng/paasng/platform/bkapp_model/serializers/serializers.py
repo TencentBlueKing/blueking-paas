@@ -74,8 +74,16 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 
 class ProcServiceSLZ(serializers.Serializer):
-    # name 字段会转化为 name k8s 资源名
-    name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_MAX_LENGTH, help_text="服务名称")
+    name = serializers.RegexField(
+        regex=DNS_SAFE_PATTERN,
+        max_length=DNS_MAX_LENGTH,
+        help_text="服务名称",
+        error_messages={
+            "invalid": _(
+                '服务名应仅包含小写字母，数字字符和连字符"-"，且必须以字母数字字符开头和结尾，最大长度不超过 63'
+            )
+        },
+    )
     target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value

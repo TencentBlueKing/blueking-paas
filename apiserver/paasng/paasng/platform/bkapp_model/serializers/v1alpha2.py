@@ -17,6 +17,7 @@
 
 from typing import List
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -190,8 +191,15 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
-    # name 字段会转换成 name k8s 资源名
-    name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_MAX_LENGTH)
+    name = serializers.RegexField(
+        regex=DNS_SAFE_PATTERN,
+        max_length=DNS_MAX_LENGTH,
+        error_messages={
+            "invalid": _(
+                '服务名应仅包含小写字母，数字字符和连字符"-"，且必须以字母数字字符开头和结尾，最大长度不超过 63'
+            )
+        },
+    )
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")

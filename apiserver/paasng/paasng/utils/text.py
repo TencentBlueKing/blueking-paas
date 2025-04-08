@@ -20,6 +20,11 @@ import re
 import uuid
 from typing import Collection
 
+# k8s 广泛使用的命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
+# 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+DNS_SAFE_PATTERN = re.compile(r"^[a-z]([-a-z0-9])*$")
+DNS_SAFE_MAX_LENGTH = 63
+
 UNICODE_ASCII_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789"
 
 

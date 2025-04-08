@@ -129,9 +129,3 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
 
     # Formalize procfile data and return
     return {k.lower(): v for k, v in procfile.items()}
-
-
-# 服务名称遵循 k8s 命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
-# 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
-SERVICE_NAME_PATTERN = re.compile(r"^[a-z]([-a-z0-9])*$")
-SERVICE_NAME_MAX_LENGTH = 63

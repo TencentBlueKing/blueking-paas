@@ -44,10 +44,10 @@ class PlanViewSet(viewsets.GenericViewSet):
     # TODO: 支持租户管理权限校验后，不能再全量返回所有策略，而是根据租户ID进行过滤
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    def get_service_and_plan(self, service_id, plan_id) -> Tuple[ServiceObj, PlanObj]:
+    def get_service_and_plan(self, service_id, plan_id, tenant_id) -> Tuple[ServiceObj, PlanObj]:
         """需要返回 service 和 plan 两个对象，不然 service 被垃圾回收后，plan 无法获取到 service 对象"""
         service = mixed_service_mgr.get(uuid=service_id)
-        plans = service.get_plans(is_active=NOTSET)
+        plans = service.get_plans_by_tenant_id(is_active=NOTSET, tenant_id=tenant_id)
         plan = next((plan for plan in plans if plan.uuid == plan_id), None)
         if not plan:
             raise Http404("PlanObjNotFound")
@@ -65,20 +65,10 @@ class PlanViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.plans"],
-        operation_description="增强服务方案列表",
-        responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
-    )
-    def list(self, request, service_id, *args, **kwargs):
-        service = mixed_service_mgr.get(uuid=service_id)
-        plans = service.get_plans(is_active=NOTSET)
-        return Response(data=PlanWithSvcSLZ(plans, many=True).data)
-
-    @swagger_auto_schema(
-        tags=["plat-mgt.infras.plans"],
         operation_description="租户下增强服务方案列表",
         responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
     )
-    def list_by_tenant(self, request, service_id, tenant_id, *args, **kwargs):
+    def list(self, request, service_id, tenant_id, *args, **kwargs):
         service = mixed_service_mgr.get(uuid=service_id)
         plans = service.get_plans_by_tenant_id(is_active=NOTSET, tenant_id=tenant_id)
         return Response(data=PlanWithSvcSLZ(plans, many=True).data)
@@ -88,8 +78,8 @@ class PlanViewSet(viewsets.GenericViewSet):
         operation_description="增强服务方案",
         responses={status.HTTP_200_OK: PlanWithSvcSLZ()},
     )
-    def retrieve(self, request, service_id, plan_id, *args, **kwargs):
-        service, plan = self.get_service_and_plan(service_id, plan_id)
+    def retrieve(self, request, service_id, tenant_id, plan_id, *args, **kwargs):
+        service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         return Response(data=PlanWithSvcSLZ(plan).data)
 
     @swagger_auto_schema(
@@ -98,10 +88,11 @@ class PlanViewSet(viewsets.GenericViewSet):
         request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_201_CREATED: ""},
     )
-    def create(self, request, service_id, *args, **kwargs):
+    def create(self, request, service_id, tenant_id, *args, **kwargs):
         slz = PlanUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        data["tenant_id"] = tenant_id
 
         service = mixed_service_mgr.get(uuid=service_id)
         try:
@@ -123,8 +114,8 @@ class PlanViewSet(viewsets.GenericViewSet):
         operation_description="删除增强服务方案",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def destroy(self, request, service_id, plan_id, *args, **kwargs):
-        service, plan = self.get_service_and_plan(service_id, plan_id)
+    def destroy(self, request, service_id, tenant_id, plan_id, *args, **kwargs):
+        service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
@@ -147,12 +138,13 @@ class PlanViewSet(viewsets.GenericViewSet):
         request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def update(self, request, service_id, plan_id, *args, **kwargs):
+    def update(self, request, service_id, tenant_id, plan_id, *args, **kwargs):
         slz = PlanUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+        data["tenant_id"] = tenant_id
 
-        service, plan = self.get_service_and_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
 
         try:
@@ -160,7 +152,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        service, plan = self.get_service_and_plan(service_id, plan_id)
+        service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,

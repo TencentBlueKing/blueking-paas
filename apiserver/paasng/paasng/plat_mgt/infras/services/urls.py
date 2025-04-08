@@ -31,17 +31,12 @@ urlpatterns = [
         name="plat_mgt.infras.services.plans.list_all",
     ),
     path(
-        "api/plat_mgt/infras/services/<str:service_id>/plans/",
-        views.PlanViewSet.as_view({"post": "create", "get": "list"}),
-        name="plat_mgt.infras.services.plans.bulk",
-    ),
-    path(
         "api/plat_mgt/infras/services/<str:service_id>/tenants/<str:tenant_id>/plans/",
-        views.PlanViewSet.as_view({"get": "list_by_tenant"}),
+        views.PlanViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.services.tenants.plans.bulk",
     ),
     path(
-        "api/plat_mgt/infras/services/<str:service_id>/plans/<str:plan_id>/",
+        "api/plat_mgt/infras/services/<str:service_id>/tenants/<str:tenant_id>/plans/<str:plan_id>/",
         views.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.services.plans.detail",
     ),

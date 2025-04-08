@@ -24,7 +24,6 @@ from paasng.accessories.services.models import PreCreatedInstance
 class BasePlanObjSLZ(serializers.Serializer):
     uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     name = serializers.CharField()
-    tenant_id = serializers.CharField(help_text="所属租户")
     description = serializers.CharField()
     config = serializers.JSONField(required=False, default=dict)
     is_active = serializers.BooleanField()
@@ -44,6 +43,8 @@ class PreCreatedInstanceSLZ(serializers.ModelSerializer):
 
 
 class PlanWithSvcSLZ(BasePlanObjSLZ):
+    tenant_id = serializers.CharField(help_text="所属租户")
+
     service_name = serializers.CharField(source="service.name", read_only=True)
     service_id = serializers.CharField(source="service.uuid", read_only=True)
     service_config = serializers.JSONField(source="service.config", default={}, read_only=True)

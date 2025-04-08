@@ -29,6 +29,7 @@ from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeN
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
+from paasng.utils.validators import DNS_MAX_LENGTH, DNS_SAFE_PATTERN
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -73,7 +74,8 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 
 class ProcServiceSLZ(serializers.Serializer):
-    name = serializers.CharField(help_text="服务名称")
+    # name 字段会转化为 name k8s 资源名
+    name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_MAX_LENGTH, help_text="服务名称")
     target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(
         help_text="协议", choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value

@@ -204,8 +204,9 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
         sys_api_users = SysAPIClient.objects.annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
-        ).values("name", "bk_app_code", "role", "updated")
+            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value("")),
+            private_token=Coalesce(F("clientprivatetoken__token"), Value("")),
+        ).values("name", "bk_app_code", "private_token", "role", "updated")
         slz = SystemAPIUserReadSLZ(sys_api_users, many=True)
         return Response(slz.data)
 

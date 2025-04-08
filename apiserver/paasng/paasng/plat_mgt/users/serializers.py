@@ -91,6 +91,7 @@ class SystemAPIUserReadSLZ(serializers.Serializer):
 
     username = serializers.CharField(source="name", help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
+    private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")
     updated = serializers.DateTimeField(help_text="添加时间")
 

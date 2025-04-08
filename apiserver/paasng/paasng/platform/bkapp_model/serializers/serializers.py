@@ -74,6 +74,7 @@ class ExposedTypeSLZ(serializers.Serializer):
 
 
 class ProcServiceSLZ(serializers.Serializer):
+    # name 字段会转化为 name k8s 资源名
     name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_SAFE_MAX_LENGTH, help_text="服务名称")
     target_port = IntegerOrCharField(help_text="目标容器端口")
     protocol = serializers.ChoiceField(

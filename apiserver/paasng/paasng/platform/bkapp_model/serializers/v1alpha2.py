@@ -189,6 +189,7 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
+    # name 字段会转换成 name k8s 资源名
     name = serializers.RegexField(regex=DNS_SAFE_PATTERN, max_length=DNS_SAFE_MAX_LENGTH)
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)

@@ -54,7 +54,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         return service, plan
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
         operation_description="全量增强服务方案列表",
         responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
     )
@@ -64,7 +64,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         return Response(data=PlanWithSvcSLZ(plans, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
         operation_description="增强服务方案列表",
         responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
     )
@@ -74,7 +74,17 @@ class PlanViewSet(viewsets.GenericViewSet):
         return Response(data=PlanWithSvcSLZ(plans, many=True).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
+        operation_description="租户下增强服务方案列表",
+        responses={status.HTTP_200_OK: PlanWithSvcSLZ(many=True)},
+    )
+    def list_by_tenant(self, request, service_id, tenant_id, *args, **kwargs):
+        service = mixed_service_mgr.get(uuid=service_id)
+        plans = service.get_plans_by_tenant_id(is_active=NOTSET, tenant_id=tenant_id)
+        return Response(data=PlanWithSvcSLZ(plans, many=True).data)
+
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.plans"],
         operation_description="增强服务方案",
         responses={status.HTTP_200_OK: PlanWithSvcSLZ()},
     )
@@ -83,7 +93,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         return Response(data=PlanWithSvcSLZ(plan).data)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
         operation_description="创建增强服务方案",
         request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_201_CREATED: ""},
@@ -109,7 +119,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
         operation_description="删除增强服务方案",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
@@ -132,7 +142,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        tags=["plat-mgt.infras.services"],
+        tags=["plat-mgt.infras.plans"],
         operation_description="更新增强服务方案",
         request_body=PlanUpsertInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},

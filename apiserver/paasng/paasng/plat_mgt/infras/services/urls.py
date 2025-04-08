@@ -36,6 +36,11 @@ urlpatterns = [
         name="plat_mgt.infras.services.plans.bulk",
     ),
     path(
+        "api/plat_mgt/infras/services/<str:service_id>/tenants/<str:tenant_id>/plans/",
+        views.PlanViewSet.as_view({"get": "list_by_tenant"}),
+        name="plat_mgt.infras.services.tenants.plans.bulk",
+    ),
+    path(
         "api/plat_mgt/infras/services/<str:service_id>/plans/<str:plan_id>/",
         views.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.services.plans.detail",

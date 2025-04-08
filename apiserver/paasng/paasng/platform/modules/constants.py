@@ -83,7 +83,7 @@ class DeployHookType(StrStructuredEnum):
 
 
 class BuildPackType(StrStructuredEnum):
-    # legacy heroku buildpack format, just a tarball
+    # heroku buildpack format, just a tarball
     TAR = EnumField("tar", label="tar")
 
     # oci-embedded is a virtual type, just used to enable user select buildpack embedded in builder image
@@ -112,5 +112,9 @@ class AppImageType(StrStructuredEnum):
     def get_builder_buildpack_type_map(cls) -> Dict["AppImageType", List["BuildPackType"]]:
         return {
             cls.LEGACY: [BuildPackType.TAR],
-            cls.CNB: [BuildPackType.OCI_IMAGE, BuildPackType.OCI_EMBEDDED, BuildPackType.OCI_FILE],
+            cls.CNB: [
+                BuildPackType.OCI_IMAGE,
+                BuildPackType.OCI_EMBEDDED,
+                BuildPackType.OCI_FILE,
+            ],
         }

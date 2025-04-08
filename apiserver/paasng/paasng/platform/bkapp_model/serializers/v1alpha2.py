@@ -31,7 +31,12 @@ from paasng.platform.bkapp_model.entities import Process, v1alpha2
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
-from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
+from paasng.utils.validators import (
+    PROC_TYPE_MAX_LENGTH,
+    PROC_TYPE_PATTERN,
+    SERVICE_NAME_MAX_LENGTH,
+    SERVICE_NAME_PATTERN,
+)
 
 from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
 
@@ -185,7 +190,7 @@ class ProbeSetInputSLZ(serializers.Serializer):
 
 
 class ProcServiceInputSLZ(serializers.Serializer):
-    name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
+    name = serializers.RegexField(regex=SERVICE_NAME_PATTERN, max_length=SERVICE_NAME_MAX_LENGTH)
     targetPort = IntegerOrCharField(source="target_port")
     protocol = serializers.ChoiceField(choices=NetworkProtocol.get_django_choices(), default=NetworkProtocol.TCP.value)
     exposedType = ExposedTypeSLZ(allow_null=True, default=None, source="exposed_type")

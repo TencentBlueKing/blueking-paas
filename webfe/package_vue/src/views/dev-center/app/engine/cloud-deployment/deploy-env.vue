@@ -1455,14 +1455,10 @@ export default {
         title: this.$t('环境变量{t}成功', { t: typeText }),
         extCls: `change-env-info-cls ${this.isCustomImage ? 'image-module' : ''}`,
         width: 480,
-        okText: this.isCustomImage ? this.$t('确定') : this.$t('去部署'),
+        okText: this.$t('去部署'),
         cancelText: this.$t('关闭'),
         subHeader: h('div', [h('div', { class: ['tips'] }, [tips])]),
         confirmFn: () => {
-          // 镜像应用不展示去部署
-          if (this.isCustomImage) {
-            return;
-          }
           // 跳转部署应用
           this.$router.push({
             name: 'cloudAppDeployManageStag',
@@ -2046,10 +2042,5 @@ a.is-disabled {
     border-radius: 2px;
     line-height: 22px;
   }
-}
-</style>
-<style lang="scss">
-.change-env-info-cls.image-module .bk-dialog-footer button:nth-of-type(2) {
-  display: none;
 }
 </style>

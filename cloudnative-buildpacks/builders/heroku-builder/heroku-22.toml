@@ -1,20 +1,5 @@
-description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, NodeJS, Go, Python, Ruby, Apache HTTPD, NGINX and Procfile"
+description = "Ubuntu bionic base image with buildpacks for Apt, Go, Python and NodeJS"
 
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/go:4.3.3"
-  version = "4.3.3"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/java-native-image:8.3.0"
-  version = "8.3.0"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/java:9.4.0"
-  version = "9.4.0"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/nodejs:1.6.0"
-  version = "1.6.0"
 
 [[buildpacks]]
   uri = "docker://gcr.io/paketo-buildpacks/procfile:5.6.1"
@@ -26,10 +11,12 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
   id = "bk-buildpack-python"
   version = "v213"
 
+
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-nodejs/cnb-buildpack"
   id = "bk-buildpack-nodejs"
   version = "v163"
+
 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
@@ -42,19 +29,15 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
   id = "bk-buildpack-apt"
   version = "v2"
 
+
 [lifecycle]
-  uri = "https://bkpaas-runtimes-1252002024.cos.ap-shanghai.myqcloud.com/buildpacks/lifecycle-v0.17.6%2Bblueking.linux.x86-64.tgz"
+uri = "https://bkpaas-runtimes-1252002024.cos.ap-shanghai.myqcloud.com/buildpacks/lifecycle-v0.17.6%2Bblueking.linux.x86-64.tgz"
+
 
 [[order]]
   [[order.group]]
     id = "bk-buildpack-apt"
     version = "v2"
-
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/go"
-    version = "4.3.3"
 
 
 [[order]]
@@ -77,25 +60,9 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [[order]]
   [[order.group]]
-    id = "paketo-buildpacks/java-native-image"
-    version = "8.3.0"
-
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/java"
-    version = "9.4.0"
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/nodejs"
-    version = "1.6.0"
-
-
-[[order]]
-  [[order.group]]
     id = "paketo-buildpacks/procfile"
     version = "5.6.1"
+
 
 [stack]
   id = "heroku-22"

@@ -16,29 +16,17 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package phase
+package buildpack
 
-import (
-	"context"
-	"os/exec"
-	"path/filepath"
+const (
+	// TypeTar tar 类型
+	TypeTar = "tar"
+	// TypeTgz tgz 类型
+	TypeTgz = "tgz"
+	// TypeOCIEmbedded oci 内嵌类型（builder 内置）
+	TypeOCIEmbedded = "oci-embedded"
+	// TypeOCIImage oci 镜像类型
+	TypeOCIImage = "oci-image"
+	// TypeOCIFile oci 文件类型
+	TypeOCIFile = "oci-file"
 )
-
-// MakeDetectorStep build the detector step
-// detector will generate group.toml(to groupPath) and plan.toml(to planPath)
-// based on order.toml(in orderPath) and source code(in appDir)
-func MakeDetectorStep(
-	ctx context.Context,
-	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string, uid, gid uint32,
-) Step {
-	args := []string{
-		"-app", appDir,
-		"-order", orderPath,
-		"-group", groupPath,
-		"-plan", planPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
-	return makeStep("Detect", "Detecting Buildpacks...", cmd, WithUser(uid, gid))
-}

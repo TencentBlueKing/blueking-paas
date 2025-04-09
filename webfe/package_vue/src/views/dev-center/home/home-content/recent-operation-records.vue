@@ -25,7 +25,10 @@
             v-for="item in records"
             :key="item.name"
           >
-            <div class="record-item" @click="toAppOverview(item)">
+            <div
+              class="record-item"
+              @click="toAppOverview(item)"
+            >
               <p
                 v-bk-overflow-tips
                 class="item-title"
@@ -41,7 +44,11 @@
                 class="item-content"
                 v-bk-overflow-tips
               >
-                {{ item.operate }}
+                <span v-if="platformFeature.MULTI_TENANT_MODE">
+                  <bk-user-display-name :user-id="item.operator"></bk-user-display-name>
+                  {{ formattedOperate(item.operate) }}
+                </span>
+                <template v-else>{{ item.operate }}</template>
               </p>
               <p class="time">
                 <i class="paasng-icon paasng-time"></i>
@@ -56,6 +63,8 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
+
 export default {
   name: 'RecentOperationRecords',
   props: {
@@ -73,6 +82,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['platformFeature']),
     curUserInfo() {
       return this.$store.state.curUserInfo;
     },
@@ -108,6 +118,9 @@ export default {
         name: row.application.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
         params: { id: row.application.code },
       });
+    },
+    formattedOperate(operate) {
+      return operate ? operate.split(' ').slice(1).join(' ') : '';
     },
   },
 };
@@ -161,11 +174,11 @@ export default {
     .item-title {
       margin-top: 5px;
       line-height: 22px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       .code {
         font-size: 14px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         cursor: pointer;
       }
     }

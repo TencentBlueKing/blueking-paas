@@ -1,6 +1,5 @@
 <template lang="html">
   <div class="right-main">
-
     <paas-content-loader
       class="app-container middle role-container shadow-card-style"
       :is-loading="loading"
@@ -44,13 +43,19 @@
             :label="$t('成员姓名')"
             :render-header="$renderHeader"
           >
-            <template #default="props">
+            <template slot-scope="{ row }">
               <div v-bk-overflow-tips>
                 <span
-                  v-if="props.row.user.avatar"
+                  v-if="row.user.avatar"
                   class="user-photo"
-                ><img :src="props.row.user.avatar"></span>
-                {{ props.row.user.username }}
+                >
+                  <img :src="row.user.avatar" />
+                </span>
+                <bk-user-display-name
+                  :user-id="row.user.username"
+                  v-if="platformFeature.MULTI_TENANT_MODE"
+                ></bk-user-display-name>
+                <span v-else>{{ row.user.username }}</span>
               </div>
             </template>
           </bk-table-column>
@@ -126,13 +131,13 @@
     >
       <div
         v-if="memberMgrConfig.showForm"
-        style="min-height: 130px;"
+        style="min-height: 130px"
       >
         <bk-alert
           v-if="memberMgrConfig.type === 'edit'"
           type="warning"
           :title="$t('更新后仅保留用户的新角色')"
-          style="margin-bottom: 15px;"
+          style="margin-bottom: 15px"
         />
         <bk-form
           :label-width="120"
@@ -182,13 +187,15 @@
                   v-if="perm[Object.keys(perm)[0]]"
                   class="available-right"
                 >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-check-1" />
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
+                  <i class="paasng-icon paasng-check-1" />
                 </a>
                 <a
                   v-else
                   class="not-available-right"
                 >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span><i class="paasng-icon paasng-close" />
+                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
+                  <i class="paasng-icon paasng-close" />
                 </a>
               </span>
             </div>
@@ -200,7 +207,7 @@
     <bk-dialog
       v-model="removeUserDialog.visiable"
       width="540"
-      :title=" `${$t('删除成员')} ${selectedMember.name}`"
+      :title="`${$t('删除成员')} ${selectedMember.name}`"
       :theme="'primary'"
       :mask-close="false"
       :loading="removeUserDialog.isLoading"
@@ -236,7 +243,11 @@
       :loading="permissionNoticeDialog.isLoading"
     >
       <div class="tc">
-        {{ $t('由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作') }}
+        {{
+          $t(
+            '由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作'
+          )
+        }}
       </div>
       <template #footer>
         <bk-button
@@ -256,6 +267,7 @@ import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import i18n from '@/language/i18n.js';
+import { mapState } from 'vuex';
 
 const ROLE_BACKEND_IDS = {
   administrator: 2,
@@ -369,12 +381,13 @@ export default {
     };
   },
   computed: {
+    ...mapState(['platformFeature']),
     currentRoleDesc() {
       return ROLE_DESC_MAP[this.roleName] || '';
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     'pagination.current'(value) {
@@ -410,7 +423,7 @@ export default {
     },
 
     updateValue(curVal) {
-      curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
+      curVal ? (this.personnelSelectorList = curVal) : (this.personnelSelectorList = '');
     },
 
     init() {
@@ -559,7 +572,8 @@ export default {
       const mgrType = this.memberMgrConfig.type;
       if (mgrType === 'edit') {
         return this.updateSave();
-      } if (mgrType === 'create') {
+      }
+      if (mgrType === 'create') {
         return this.createSave();
       }
     },
@@ -572,7 +586,11 @@ export default {
       };
       this.memberMgrConfig.isLoading = true;
       try {
-        await this.$store.dispatch('member/updateRole', { appCode: this.appCode, id: this.selectedMember.id, params: updateParam });
+        await this.$store.dispatch('member/updateRole', {
+          appCode: this.appCode,
+          id: this.selectedMember.id,
+          params: updateParam,
+        });
         this.closeMemberMgrModal();
         this.fetchMemberList();
         this.$paasMessage({
@@ -649,8 +667,9 @@ export default {
     },
     handleSearch() {
       if (this.keyword) {
-        this.memberListShow = this.memberList
-          .filter(apigw => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1);
+        this.memberListShow = this.memberList.filter(
+          (apigw) => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1
+        );
         this.memberListClone = [...this.memberListShow];
         this.pagination.count = this.memberListClone.length;
         if (this.memberListClone.length > 10) {
@@ -688,109 +707,109 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .role-container{
-      background: #fff;
-      width: calc(100% - 48px);
-      margin: 16px auto 30px;
-      padding: 16px 24px;
-    }
-    .content-wrapper {
-        margin-top: 16px;
-    }
-    .search-input {
-         width: 360px;
-         display: inline-block;
-    }
-    .user-photo {
-        margin: 5px 0;
-        display: inline-block;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        overflow: hidden;
-        border: solid 1px #eaeaea;
-        vertical-align: middle;
+.role-container {
+  background: #fff;
+  width: calc(100% - 48px);
+  margin: 16px auto 30px;
+  padding: 16px 24px;
+}
+.content-wrapper {
+  margin-top: 16px;
+}
+.search-input {
+  width: 360px;
+  display: inline-block;
+}
+.user-photo {
+  margin: 5px 0;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: solid 1px #eaeaea;
+  vertical-align: middle;
 
-        img {
-            width: 100%;
-            height: 100%;
-        }
-    }
+  img {
+    width: 100%;
+    height: 100%;
+  }
+}
 
-    .user-name {
-        display: inline-block;
-        padding-left: 10px;
-        font-size: 14px;
-        color: #333;
-        vertical-align: middle;
-    }
+.user-name {
+  display: inline-block;
+  padding-left: 10px;
+  font-size: 14px;
+  color: #333;
+  vertical-align: middle;
+}
 
-    .ps-pr {
-        padding-right: 15px;
-        color: #999;
-    }
+.ps-pr {
+  padding-right: 15px;
+  color: #999;
+}
 
-    .middle {
-        padding-top: 15px;
-    }
+.middle {
+  padding-top: 15px;
+}
 
-    .ps-rights-list {
-        line-height: 36px;
+.ps-rights-list {
+  line-height: 36px;
 
-        a {
-            margin-right: 7px;
-            padding: 6px 15px;
-            font-size: 13px;
-            line-height: 1;
-            border-radius: 14px;
-            color: #666;
-            cursor: default;
+  a {
+    margin-right: 7px;
+    padding: 6px 15px;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 14px;
+    color: #666;
+    cursor: default;
 
-            &.available-right {
-                border: 1px solid #3A84FF;
+    &.available-right {
+      border: 1px solid #3a84ff;
 
-                i {
-                    color: #3A84FF;
-                    transform: scale(.95);
-                }
-            }
-
-            &.not-available-right {
-                border: 1px solid #ddd;
-                color: #ddd;
-
-                i {
-                    transform: scale(.75);
-                }
-            }
-
-            i {
-                display: inline-block;
-                margin-left: 3px;
-            }
-        }
+      i {
+        color: #3a84ff;
+        transform: scale(0.95);
+      }
     }
 
-    .role-label {
-        display: inline-block;
-        background: #fafafa;
-        font-size: 12px;
-        border: 1px solid;
-        vertical-align: middle;
-        box-sizing: border-box;
-        overflow: hidden;
-        white-space: nowrap;
-        padding: 0 8px;
-        height: 21px;
-        line-height: 19px;
-        border-radius: 21px;
-        margin: 0px 8px;
-        border-color: #3c96ff;
-        color: #3c96ff;
+    &.not-available-right {
+      border: 1px solid #ddd;
+      color: #ddd;
+
+      i {
+        transform: scale(0.75);
+      }
     }
 
-    .app-container .header {
-      display: flex;
-      justify-content: space-between;
+    i {
+      display: inline-block;
+      margin-left: 3px;
     }
+  }
+}
+
+.role-label {
+  display: inline-block;
+  background: #fafafa;
+  font-size: 12px;
+  border: 1px solid;
+  vertical-align: middle;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0 8px;
+  height: 21px;
+  line-height: 19px;
+  border-radius: 21px;
+  margin: 0px 8px;
+  border-color: #3c96ff;
+  color: #3c96ff;
+}
+
+.app-container .header {
+  display: flex;
+  justify-content: space-between;
+}
 </style>

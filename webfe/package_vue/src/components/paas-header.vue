@@ -138,7 +138,11 @@
           :tippy-options="{ hideOnClick: false }"
         >
           <div class="header-user is-left ps-head-last">
-            {{ user.chineseName || user.username }}
+            <!-- 多租户展示 -->
+            <span v-if="platformFeature.MULTI_TENANT_MODE">
+              <bk-user-display-name :user-id="user.username"></bk-user-display-name>
+            </span>
+            <template v-else>{{ user.chineseName || user.username }}</template>
             <i class="bk-icon icon-down-shape" />
           </div>
           <template #content>
@@ -172,6 +176,7 @@ import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
 import logoSvg from '/static/images/logo.svg';
 import globalInput from './global-search/search-input.vue';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -202,18 +207,10 @@ export default {
     };
   },
   computed: {
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
+    ...mapState(['localLanguage', 'userFeature', 'platformConfig', 'platformFeature']),
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
       return this.transformNavData(nav);
-    },
-    platformConfig() {
-      return this.$store.state.platformConfig;
     },
     appName() {
       return this.platformConfig.i18n?.productName || this.$t('蓝鲸开发者中心');

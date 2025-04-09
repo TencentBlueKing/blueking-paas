@@ -19,6 +19,7 @@
       class="sideslider-content-cls"
       ref="sideslider"
       slot="content"
+      v-bkloading="{ isLoading: loading, zIndex: 10 }"
     >
       <div
         class="cluster-sideslider-main"
@@ -47,26 +48,28 @@
             </p>
           </bk-form-item>
         </bk-form>
-        <!-- 统一分配 -->
-        <UniformForm
-          v-if="isUniform"
-          ref="uniformForm"
-          :has-env="isAllocatedByEnv"
-          :data="data"
-          :is-edit="isEdit"
-          :label-text="label"
-          :tips="tips"
-          sideslider-type="plan"
-        />
-        <!-- 按规则分配 -->
-        <RuleBasedForm
-          v-else
-          ref="ruleBasedForm"
-          :types="conditionTypes"
-          :label-text="label"
-          :tips="tips"
-          sideslider-type="plan"
-        />
+        <template v-if="!loading">
+          <!-- 统一分配 -->
+          <UniformForm
+            v-if="isUniform"
+            ref="uniformForm"
+            :has-env="isAllocatedByEnv"
+            :data="data"
+            :is-edit="isEdit"
+            :label-text="label"
+            :tips="tips"
+            sideslider-type="plan"
+          />
+          <!-- 按规则分配 -->
+          <RuleBasedForm
+            v-else
+            ref="ruleBasedForm"
+            :types="conditionTypes"
+            :label-text="label"
+            :tips="tips"
+            sideslider-type="plan"
+          />
+        </template>
       </div>
       <div
         slot="footer"
@@ -116,6 +119,10 @@ export default {
     type: {
       type: String,
       default: 'new',
+    },
+    loading: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

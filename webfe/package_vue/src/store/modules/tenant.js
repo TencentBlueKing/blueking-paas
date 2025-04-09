@@ -281,6 +281,13 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/plans/`;
       return http.get(url);
     },
+     /**
+     * 获取租户下的服务-方案
+     */
+    getServicePlansUnderTenant({}, { tenantId, serviceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/`;
+      return http.get(url);
+    },
     /**
      * 获取方案下的资源池
      */

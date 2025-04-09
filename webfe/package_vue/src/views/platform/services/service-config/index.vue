@@ -162,8 +162,9 @@
     <!-- 编辑服务方案 -->
     <ServicesSideslider
       :show.sync="isShowSideslider"
-      :data="operationRow"
-      :type="sidesliderType"
+      :data="sidesliderConfig.row"
+      :type="sidesliderConfig.type"
+      :loading="sidesliderConfig.loading"
       @refresh="getBindingPolicies"
     />
   </div>
@@ -196,8 +197,11 @@ export default {
       bindingPolicies: [],
       plansMap: {},
       isShowSideslider: false,
-      operationRow: {},
-      sidesliderType: 'edit',
+      sidesliderConfig: {
+        row: {},
+        type: 'edit',
+        loading: false,
+      },
       // 当前服务id
       activeServiceId: '',
     };
@@ -254,7 +258,24 @@ export default {
         return 'else if';
       }
     },
-    // 获取服务下的方案
+    // 获取当前租户下服务-方案（select方案选择）
+    async getServicePlansUnderTenant(tenantId, serviceId) {
+      this.sidesliderConfig.loading = true;
+      try {
+        const res = await this.$store.dispatch('tenant/getServicePlansUnderTenant', {
+          tenantId,
+          serviceId,
+        });
+        // 方案下拉框数据
+        this.$store.commit('tenant/updateAvailableClusters', res);
+      } catch (e) {
+        this.catchErrorHandler(e);
+        this.$store.commit('tenant/updateAvailableClusters', []);
+      } finally {
+        this.sidesliderConfig.loading = false;
+      }
+    },
+    // 获取服务下的方案，table展示需要使用
     async getPlansUnderService(serviceId) {
       try {
         const res = await this.$store.dispatch('tenant/getPlansUnderService', {
@@ -263,8 +284,6 @@ export default {
         for (let index = 0; index < res.length; index++) {
           this.$set(this.plansMap, res[index].uuid, res[index].name);
         }
-        // 方案下拉框数据
-        this.$store.commit('tenant/updateAvailableClusters', res);
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -375,7 +394,8 @@ export default {
       });
     },
     // 编辑/新建配置方案侧栏
-    handlerEdit(row, type) {
+    async handlerEdit(row, type) {
+      this.getServicePlansUnderTenant(row.tenant_id, row.service_id);
       // 如果为规则分配 allocation_policy 为 else 数据项，统一分配数据也是 allocation_policy
       const isUniform = !row.allocation_precedence_policies.length;
       const config = this.generateAllocationConfig(row, isUniform);
@@ -392,8 +412,8 @@ export default {
       };
       // 设置侧栏需要的数据
       this.$store.commit('tenant/updateTenantData', commitData);
-      this.sidesliderType = type;
-      this.operationRow = row;
+      this.sidesliderConfig.row = row;
+      this.sidesliderConfig.type = type;
       this.isShowSideslider = true;
     },
     // 删除配置方案

@@ -35,12 +35,18 @@ from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIC
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
-    AccountFeatureFlagReadSLZ,
-    AccountFeatureFlagWriteSLZ,
-    PlatMgtAdminReadSLZ,
-    PlatMgtAdminWriteSLZ,
-    SystemAPIUserReadSLZ,
-    SystemAPIUserWriteSLZ,
+    BulkCreatePlatformAdminInputSLZ,
+    BulkCreatePlatformAdminOutputSLZ,
+    CreateSystemAPIUserInputSLZ,
+    CreateSystemAPIUserOutputSLZ,
+    DestroyPlatformAdminOutputSLZ,
+    DestroySystemAPIUserOutputSLZ,
+    DestroyUserFeatureFlagOutputSLZ,
+    ListPlatformAdminOutputSLZ,
+    ListSystemAPIUserOutputSLZ,
+    ListUserFeatureFlagOutputSLZ,
+    UpdateUserFeatureFlagInputSLZ,
+    UpdateUserFeatureFlagOutputSLZ,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +61,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取平台管理员列表",
-        responses={status.HTTP_200_OK: PlatMgtAdminReadSLZ(many=True)},
+        responses={status.HTTP_200_OK: ListPlatformAdminOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取平台管理员列表"""
@@ -66,19 +72,19 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             .order_by("-created")
             .values()
         )
-        slz = PlatMgtAdminReadSLZ(admin_profiles, many=True)
+        slz = ListPlatformAdminOutputSLZ(admin_profiles, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="批量创建平台管理员",
-        request_body=PlatMgtAdminWriteSLZ,
+        request_body=BulkCreatePlatformAdminInputSLZ,
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def bulk_create(self, request, *args, **kwargs):
         """批量创建平台管理员"""
-        slz = PlatMgtAdminWriteSLZ(data=request.data)
+        slz = BulkCreatePlatformAdminInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         role = SiteRole.ADMIN.value
 
@@ -88,7 +94,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
 
         # 获取创建前的数据 - 查询数据库中已存在的用户
         existing_profiles = UserProfile.objects.filter(user__in=user_ids)
-        before_data = list(PlatMgtAdminReadSLZ(existing_profiles, many=True).data)
+        before_data = list(BulkCreatePlatformAdminOutputSLZ(existing_profiles, many=True).data)
 
         created_profiles = []
         for userid in user_ids:
@@ -97,7 +103,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             created_profiles.append(obj)
 
         # 获取创建后的数据
-        results_serializer = PlatMgtAdminReadSLZ(created_profiles, many=True)
+        results_serializer = BulkCreatePlatformAdminOutputSLZ(created_profiles, many=True)
         after_data = list(results_serializer.data)
 
         add_admin_audit_record(
@@ -130,14 +136,14 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             if not before_query.exists():
                 return Response({"detail": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            before_data = list(PlatMgtAdminReadSLZ(before_query, many=True).data)
+            before_data = list(DestroyPlatformAdminOutputSLZ(before_query, many=True).data)
 
             # 删除用户
             UserProfile.objects.filter(user=userid).delete()
 
             # 尝试获取删除后的用户信息
             after_query = UserProfile.objects.filter(user=userid)
-            after_data = list(PlatMgtAdminReadSLZ(after_query, many=True).data)
+            after_data = list(DestroyPlatformAdminOutputSLZ(after_query, many=True).data)
 
             add_admin_audit_record(
                 user=self.request.user.pk,
@@ -161,24 +167,24 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取用户特性列表",
-        responses={status.HTTP_200_OK: AccountFeatureFlagReadSLZ(many=True)},
+        responses={status.HTTP_200_OK: ListUserFeatureFlagOutputSLZ(many=True)},
     )
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        slz = AccountFeatureFlagReadSLZ(feature_flags, many=True)
+        slz = ListUserFeatureFlagOutputSLZ(feature_flags, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="更新或创建用户特性",
-        request_body=AccountFeatureFlagWriteSLZ,
+        request_body=UpdateUserFeatureFlagInputSLZ,
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update_or_create(self, request):
         """更新或创建用户特性"""
-        slz = AccountFeatureFlagWriteSLZ(data=request.data)
+        slz = UpdateUserFeatureFlagInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -189,13 +195,13 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
         # 获取更新或创建前的用户特性
         before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-        before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
+        before_data = list(UpdateUserFeatureFlagOutputSLZ(before_query, many=True).data)
 
         AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
 
         # 获取更新或创建后的用户特性
         after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-        after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
+        after_data = list(UpdateUserFeatureFlagOutputSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -222,14 +228,14 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
             user_id = user_id_encoder.encode(settings.USER_TYPE, user)
             # 获取删除前的用户特性
             before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-            before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
+            before_data = list(DestroyUserFeatureFlagOutputSLZ(before_query, many=True).data)
 
             # 删除用户特性
             AccountFeatureFlag.objects.filter(user=user_id, name=feature).delete()
 
             # 尝试获取删除后的用户特性
             after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-            after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
+            after_data = list(DestroyUserFeatureFlagOutputSLZ(after_query, many=True).data)
 
             add_admin_audit_record(
                 user=self.request.user.pk,
@@ -252,7 +258,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取系统 API 用户列表",
-        responses={status.HTTP_200_OK: SystemAPIUserReadSLZ(many=True)},
+        responses={status.HTTP_200_OK: ListSystemAPIUserOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
@@ -260,19 +266,19 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value("")),
             private_token=Coalesce(F("clientprivatetoken__token"), Value("")),
         ).values("name", "bk_app_code", "private_token", "role", "updated")
-        slz = SystemAPIUserReadSLZ(sys_api_users, many=True)
+        slz = ListSystemAPIUserOutputSLZ(sys_api_users, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="创建或更新系统 API 用户",
-        request_body=SystemAPIUserWriteSLZ,
+        request_body=CreateSystemAPIUserInputSLZ,
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update_or_create(self, request, *args, **kwargs):
         """创建系统 API 用户"""
-        slz = SystemAPIUserWriteSLZ(data=request.data)
+        slz = CreateSystemAPIUserInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -282,7 +288,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
-        before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
+        before_data = list(CreateSystemAPIUserOutputSLZ(before_query, many=True).data)
 
         # 创建客户端
         client, _ = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
@@ -297,7 +303,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
-        after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
+        after_data = list(CreateSystemAPIUserOutputSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -328,7 +334,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
-        before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
+        before_data = list(DestroySystemAPIUserOutputSLZ(before_query, many=True).data)
 
         client_ids = list(client_qs.values_list("id", flat=True))
 
@@ -341,7 +347,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
-        after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
+        after_data = list(DestroySystemAPIUserOutputSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
             user=self.request.user.pk,

@@ -20,30 +20,41 @@ from rest_framework import serializers
 
 from paasng.infras.accounts.constants import AccountFeatureFlag
 
+# --------- 平台管理员相关序列化器 ---------
 
-class PlatMgtAdminReadSLZ(serializers.Serializer):
-    """平台管理员序列化器"""
 
+class PlatformAdminField(serializers.Serializer):
     user = serializers.CharField(source="user.username", help_text="用户 ID")
     created = serializers.DateTimeField(help_text="添加时间")
 
 
-class PlatMgtAdminWriteSLZ(serializers.Serializer):
-    """专用于批量创建平台管理员的序列化器"""
+class ListPlatformAdminOutputSLZ(PlatformAdminField):
+    """列出平台管理员序列化器"""
 
+
+class BulkCreatePlatformAdminInputSLZ(serializers.Serializer):
     user_list = serializers.ListField(child=serializers.CharField(), help_text="管理员用户名列表")
 
 
-class AccountFeatureFlagReadSLZ(serializers.Serializer):
-    """用户特性序列化器"""
+class BulkCreatePlatformAdminOutputSLZ(PlatformAdminField):
+    """列出平台管理员序列化器"""
 
+
+class DestroyPlatformAdminOutputSLZ(PlatformAdminField):
+    """列出平台管理员序列化器"""
+
+
+# --------- 用户特性相关序列化器 ---------
+
+
+class UserFeatureFlagField(serializers.Serializer):
     user = serializers.CharField(source="user.username", read_only=True)
     feature = serializers.CharField(source="name")
     isEffect = serializers.BooleanField(source="effect")
     created = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
-    default_feature = serializers.SerializerMethodField()
+    default_feature_flags = serializers.SerializerMethodField()
 
-    def get_default_feature(self, obj):
+    def get_default_feature_flags(self, obj):
         """根据特性名称获取其默认配置值"""
         # 从 AccountFeatureFlag 获取所有特性的默认值
         default_flags = AccountFeatureFlag.get_default_flags()
@@ -51,17 +62,28 @@ class AccountFeatureFlagReadSLZ(serializers.Serializer):
         return default_flags.get(obj.name, False)
 
 
-class AccountFeatureFlagWriteSLZ(serializers.Serializer):
-    """用户特性创建序列化器，专门用于处理创建和删除请求"""
+class ListUserFeatureFlagOutputSLZ(UserFeatureFlagField):
+    """列出用户特性序列化器"""
 
+
+class UpdateUserFeatureFlagOutputSLZ(UserFeatureFlagField):
+    """列出用户特性序列化器"""
+
+
+class UpdateUserFeatureFlagInputSLZ(serializers.Serializer):
     user = serializers.CharField(help_text="用户名称")
     feature = serializers.CharField(help_text="特性名称")
     isEffect = serializers.BooleanField(default=False, help_text="是否生效")
 
 
-class SystemAPIUserReadSLZ(serializers.Serializer):
-    """系统 API 用户序列化器"""
+class DestroyUserFeatureFlagOutputSLZ(UserFeatureFlagField):
+    """列出用户特性序列化器"""
 
+
+# --------- 系统 API 用户相关序列化器 ---------
+
+
+class SystemAPIUserField(serializers.Serializer):
     user = serializers.CharField(source="name", help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
     private_token = serializers.CharField(help_text="私钥", required=False)
@@ -69,9 +91,19 @@ class SystemAPIUserReadSLZ(serializers.Serializer):
     updated = serializers.DateTimeField(help_text="添加时间")
 
 
-class SystemAPIUserWriteSLZ(serializers.Serializer):
-    """系统 API 用户创建序列化器"""
+class ListSystemAPIUserOutputSLZ(SystemAPIUserField):
+    """列出系统 API 用户序列化器"""
 
+
+class CreateSystemAPIUserOutputSLZ(SystemAPIUserField):
+    """列出系统 API 用户序列化器"""
+
+
+class CreateSystemAPIUserInputSLZ(serializers.Serializer):
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False, allow_blank=True)
     user = serializers.CharField(help_text="用户名")
     role = serializers.CharField(help_text="权限")
+
+
+class DestroySystemAPIUserOutputSLZ(SystemAPIUserField):
+    """列出系统 API 用户序列化器"""

@@ -79,7 +79,7 @@ var _ = Describe("Test setupBuildpacks", func() {
 	})
 
 	It("test write order.toml successfully", func() {
-		err := setupBuildpacks(logging.Default(), "tgz apt https://example.com v;tgz bk-buildpack-python https://example.com v213", cnbDir)
+		err := setupBuildpacks(logging.Default(), "tar apt https://example.com v;ocr-embedded bk-buildpack-python blueking/python v213", cnbDir)
 		Expect(err).To(BeNil())
 
 		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
@@ -95,7 +95,7 @@ version = 'v213'
 	})
 
 	It("test skip wrong value", func() {
-		err := setupBuildpacks(logging.Default(), "tgz apt;tgz bk-buildpack-python https://example.com v213", cnbDir)
+		err := setupBuildpacks(logging.Default(), "tgz apt;ocr-embedded bk-buildpack-python blueking/python v213", cnbDir)
 		Expect(err).To(BeNil())
 
 		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))

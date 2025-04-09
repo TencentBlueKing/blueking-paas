@@ -41,6 +41,7 @@
           <ResourcePool
             v-else
             :data="data"
+            :tenant-id="tenantId"
             @change="changeInstancesLength"
             @operate="isRefresh = true"
           />
@@ -70,6 +71,10 @@ export default {
       default: () => ({}),
     },
     active: {
+      type: String,
+      default: '',
+    },
+    tenantId: {
       type: String,
       default: '',
     },

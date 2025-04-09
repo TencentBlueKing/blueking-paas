@@ -256,30 +256,23 @@ export default {
     /**
      * 添加方案
      */
-    addPlan({}, { id, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/`;
+    addPlan({}, { serviceId, tenantId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/`;
       return http.post(url, data);
     },
     /**
      * 修改方案
      */
-    modifyPlan({}, { id, planId, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/${planId}/`;
+    modifyPlan({}, { serviceId, tenantId, planId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
       return http.put(url, data);
     },
     /**
      * 删除方案
      */
-    deletePlan({}, { id, planId }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${id}/plans/${planId}/`;
+    deletePlan({}, { serviceId, tenantId, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
       return http.delete(url);
-    },
-    /**
-     * 获取服务下的方案
-     */
-    getPlansUnderService({}, { serviceId }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/plans/`;
-      return http.get(url);
     },
      /**
      * 获取租户下的服务-方案
@@ -291,8 +284,8 @@ export default {
     /**
      * 获取方案下的资源池
      */
-    getPreCreatedInstances({}, { serviceId, planId }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/plans/${planId}/`;
+    getPreCreatedInstances({}, { serviceId, tenantId, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/ `;
       return http.get(url);
     },
     /**

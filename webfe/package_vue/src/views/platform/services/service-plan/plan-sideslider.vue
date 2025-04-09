@@ -243,7 +243,6 @@ export default {
           this.saveLoading = true;
           const params = {
             ...this.formData,
-            tenant_id: this.tenantId,
             config: typeof this.valuesJson === 'string' ? JSON.parse(this.valuesJson) : this.valuesJson,
           };
           delete params.service_name;
@@ -263,10 +262,11 @@ export default {
       );
     },
     // 新建方案
-    async addPlan(id, data) {
+    async addPlan(serviceId, data) {
       try {
         await this.$store.dispatch('tenant/addPlan', {
-          id,
+          serviceId,
+          tenantId: this.tenantId, // 使用下拉框数据
           data,
         });
         this.$paasMessage({
@@ -283,10 +283,11 @@ export default {
       }
     },
     // 编辑方案
-    async modifyPlan(id, planId, data) {
+    async modifyPlan(serviceId, planId, data) {
       try {
         await this.$store.dispatch('tenant/modifyPlan', {
-          id,
+          serviceId,
+          tenantId: this.tenantId,
           planId,
           data,
         });

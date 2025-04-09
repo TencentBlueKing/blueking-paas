@@ -110,6 +110,10 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    tenantId: {
+      type: String,
+      default: '',
+    },
   },
   components: {
     VueJsonPretty,
@@ -153,6 +157,7 @@ export default {
       try {
         const ret = await this.$store.dispatch('tenant/getPreCreatedInstances', {
           serviceId: this.data?.service_id,
+          tenantId: this.tenantId,
           planId: this.data?.uuid,
         });
         this.instances = ret?.pre_created_instances?.map((item) => {

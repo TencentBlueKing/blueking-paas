@@ -204,6 +204,7 @@ export default {
       },
       // 当前服务id
       activeServiceId: '',
+      isInit: false,
     };
   },
   computed: {
@@ -241,12 +242,17 @@ export default {
       this.filterValue = data.name;
     },
     // 切换服务
-    serviceChange(data) {
+    async serviceChange(data) {
       this.activeServiceId = data.uuid;
       this.isTableLoading = true;
-      Promise.all([this.getBindingPolicies(data.uuid), this.getPlansUnderService(data.uuid)]).finally(() => {
+      if (!this.isInit) {
+        this.getPlans();
+      }
+      try {
+        await this.getBindingPolicies(data.uuid);
+      } finally {
         this.isTableLoading = false;
-      });
+      }
     },
     // 获取当前规则语句分支
     getConditionalType(arrayLength, currentIndex) {
@@ -275,12 +281,11 @@ export default {
         this.sidesliderConfig.loading = false;
       }
     },
-    // 获取服务下的方案，table展示需要使用
-    async getPlansUnderService(serviceId) {
+    // 获取所有服务方案
+    async getPlans() {
+      this.isInit = true;
       try {
-        const res = await this.$store.dispatch('tenant/getPlansUnderService', {
-          serviceId,
-        });
+        const res = await this.$store.dispatch('tenant/getPlans');
         for (let index = 0; index < res.length; index++) {
           this.$set(this.plansMap, res[index].uuid, res[index].name);
         }
@@ -395,7 +400,7 @@ export default {
     },
     // 编辑/新建配置方案侧栏
     async handlerEdit(row, type) {
-      this.getServicePlansUnderTenant(row.tenant_id, row.service_id);
+      this.getServicePlansUnderTenant(row.tenant_id, this.activeServiceId);
       // 如果为规则分配 allocation_policy 为 else 数据项，统一分配数据也是 allocation_policy
       const isUniform = !row.allocation_precedence_policies.length;
       const config = this.generateAllocationConfig(row, isUniform);

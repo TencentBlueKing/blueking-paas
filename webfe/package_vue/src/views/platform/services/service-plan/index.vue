@@ -302,7 +302,8 @@ export default {
         confirmFn: async () => {
           try {
             await this.$store.dispatch('tenant/deletePlan', {
-              id: row.service_id,
+              serviceId: row.service_id,
+              tenantId: this.curTenantId,
               planId: row.uuid,
             });
             this.$paasMessage({

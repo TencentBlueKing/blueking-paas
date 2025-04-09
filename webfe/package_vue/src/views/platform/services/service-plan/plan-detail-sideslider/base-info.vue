@@ -236,10 +236,11 @@ export default {
       });
     },
     // 编辑方案
-    async modifyPlan(id, planId, data) {
+    async modifyPlan(serviceId, planId, data) {
       try {
         await this.$store.dispatch('tenant/modifyPlan', {
-          id,
+          serviceId,
+          tenantId: this.tenantId,
           planId,
           data,
         });
@@ -270,7 +271,6 @@ export default {
           this.saveLoading = true;
           const params = {
             ...this.formData,
-            tenant_id: this.tenantId,
             config: typeof this.valuesJson === 'string' ? JSON.parse(this.valuesJson) : this.valuesJson,
           };
           delete params.service_name;

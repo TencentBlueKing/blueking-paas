@@ -57,6 +57,8 @@ const (
 	EnvironmentKey = "bkapp.paas.bk.tencent.com/environment"
 	// WlAppNameKey 注解中存储当前 EngineApp 名称的键名
 	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
+	// BkAppTenantIDKey 注解中存储应用租户 ID 的键名
+	BkAppTenantIDKey = "bkapp.paas.bk.tencent.com/app-tenant-id"
 
 	// ProcServicesFeatureEnabledAnnoKey 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
 	// true 表示启用; false 或未设置该注解值, 表示不启用, 仍按旧的隐式调和逻辑处理 service, 即为每个 process 默认
@@ -99,6 +101,8 @@ const (
 	ProcessNameKey = "bkapp.paas.bk.tencent.com/process-name"
 	// AccessControlAnnoKey 注解中存储当前应用是否启用白名单功能的键名
 	AccessControlAnnoKey = "bkapp.paas.bk.tencent.com/access-control"
+	// TenantGuardAnnoKey 注解中存储当前应用是否启用租户门卫的键名
+	TenantGuardAnnoKey = "bkapp.paas.bk.tencent.com/tenant-guard"
 	// ImageCredentialsRefAnnoKey 注解中存储镜像凭证引用的键名
 	ImageCredentialsRefAnnoKey = "bkapp.paas.bk.tencent.com/image-credentials"
 	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名

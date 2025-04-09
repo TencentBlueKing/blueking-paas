@@ -29,6 +29,8 @@ DEFAULT_PROCESS_NAME = "web"
 
 # 注解中存储当前应用是否启用白名单功能的键名
 ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
+# 注解中存储当前应用是否启用租户门卫的键名
+TENANT_GUARD_ANNO_KEY = "bkapp.paas.bk.tencent.com/tenant-guard"
 # workloads 注入到 annotations 的部署ID字段
 BKPAAS_DEPLOY_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/bkpaas-deploy-id"
 # workloads 注入到 annotations 的增强服务信息字段
@@ -45,6 +47,8 @@ MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 # 注解中存储当前 WlApp 名称的键名
 WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
+# 注解中存储应用租户 ID
+BKAPP_TENANT_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/app-tenant-id"
 # 注解中存储镜像凭证引用的键名
 IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 # 注解中存储数据统计站点ID的键名

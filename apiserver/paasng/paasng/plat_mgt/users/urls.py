@@ -28,7 +28,7 @@ urlpatterns = [
         name="plat_mgt.users.userprofiles.bulk",
     ),
     path(
-        "api/plat_mgt/users/user_profiles/<str:userid>/",
+        "api/plat_mgt/users/user_profiles/<str:username>/",
         views.PlatMgtAdminViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.userprofiles.delete",
     ),
@@ -39,7 +39,7 @@ urlpatterns = [
         name="plat_mgt.users.account_feature_flags.bulk",
     ),
     path(
-        "api/plat_mgt/users/account_feature_flags/<str:userid>/<str:feature>/",
+        "api/plat_mgt/users/account_feature_flags/<str:username>/<str:feature>/",
         views.AccountFeatureFlagManageViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.account_feature_flags.delete",
     ),

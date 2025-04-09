@@ -17,6 +17,8 @@
 
 import logging
 
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from django.db.models import F, Value
 from django.db.models.functions import Coalesce
 from django.db.transaction import atomic
@@ -69,14 +71,15 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         role = SiteRole.ADMIN.value
 
         # 获取验证后的用户ID列表
-        user_ids = slz.validated_data["username_list"]
+        users = slz.validated_data["username_list"]
+        user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
 
         # 获取创建前的数据 - 查询数据库中已存在的用户
         existing_profiles = UserProfile.objects.filter(user__in=user_ids)
         before_data = list(PlatMgtAdminReadSLZ(existing_profiles, many=True).data)
 
         created_profiles = []
-        for userid in slz.data["username_list"]:
+        for userid in user_ids:
             obj, _ = UserProfile.objects.update_or_create(user=userid, defaults={"role": role})
             obj.refresh_from_db()
             created_profiles.append(obj)
@@ -94,14 +97,22 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         )
         return Response(results_serializer.data)
 
-    def destroy(self, request, userid, *args, **kwargs):
+    def destroy(self, request, username, *args, **kwargs):
         """删除平台管理员"""
-        if not userid:
+        if not username:
             return Response({"detail": "Userid is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # 将用户名编码为userid
+            userid = user_id_encoder.encode(settings.USER_TYPE, username)
+
             # 获取删除前的用户信息
             before_query = UserProfile.objects.filter(user=userid)
+
+            # 如果没有找到用户，返回404错误
+            if not before_query.exists():
+                return Response({"detail": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
             before_data = list(PlatMgtAdminReadSLZ(before_query, many=True).data)
 
             # 删除用户
@@ -120,8 +131,9 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             )
 
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except UserProfile.DoesNotExist:
-            return Response({"detail": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception:
+            logger.exception(f"Failed to delete user {username}")
+            return Response({"detail": "Failed to delete user"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
@@ -142,18 +154,19 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        userid = data.get("userid")
+        user = data.get("user")
         feature = data.get("feature")
         is_effect = data.get("isEffect", False)
+        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
 
         # 获取更新或创建前的用户特性
-        before_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+        before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
         before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
 
-        AccountFeatureFlag.objects.update_or_create(user=userid, name=feature, defaults={"effect": is_effect})
+        AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
 
         # 获取更新或创建后的用户特性
-        after_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+        after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
         after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
 
         add_admin_audit_record(
@@ -166,21 +179,23 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def destroy(self, request, userid=None, feature=None, *args, **kwargs):
+    def destroy(self, request, username=None, feature=None, *args, **kwargs):
         """删除用户特性"""
-        if not userid or not feature:
-            return Response({"detail": "userid and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not username or not feature:
+            return Response({"detail": "username and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # 将用户名编码为 userid
+            user_id = user_id_encoder.encode(settings.USER_TYPE, username)
             # 获取删除前的用户特性
-            before_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+            before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
             before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
 
             # 删除用户特性
-            AccountFeatureFlag.objects.filter(user=userid, name=feature).delete()
+            AccountFeatureFlag.objects.filter(user=user_id, name=feature).delete()
 
             # 尝试获取删除后的用户特性
-            after_query = AccountFeatureFlag.objects.filter(user=userid, name=feature)
+            after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
             after_data = list(AccountFeatureFlagReadSLZ(after_query, many=True).data)
 
             add_admin_audit_record(

@@ -135,10 +135,9 @@ class TenantGuardManifestConstructor(ManifestConstructor):
     """Construct the tenant-guard part."""
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
-        if settings.ENABLE_MULTI_TENANT_MODE:
-            model_res.metadata.annotations[TENANT_GUARD_ANNO_KEY] = "true"
-        else:
-            model_res.metadata.annotations[TENANT_GUARD_ANNO_KEY] = "false"
+        model_res.metadata.annotations[TENANT_GUARD_ANNO_KEY] = (
+            "true" if settings.ENABLE_MULTI_TENANT_MODE else "false"
+        )
 
 
 class BuiltinAnnotsManifestConstructor(ManifestConstructor):

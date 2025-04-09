@@ -181,7 +181,9 @@ func initIngressPlugins() {
 	pluginCfg := cfgObj.IngressPlugin
 
 	if pluginCfg.AccessControl != nil && pluginCfg.TenantGuard != nil && pluginCfg.TenantGuard.Enabled {
-		// TODO 后续考虑通过一个 lua 模块, 同时支持 AccessControl 和 TenantGuard
+		// 由于 AccessControl 和 TenantGuard 这两个 lua 插件都是通过 access_by_lua_file 指令进行设置,
+		// 而一个作用域只能有一个 access_by_lua_file, 因此, 两个插件不能同时启用.
+		// TODO 后续考虑通过一个 lua 插件模块, 同时支持 AccessControl 和 TenantGuard
 		setupLog.Error(nil, "AccessControl and TenantGuard can not be enabled at the same time.")
 		os.Exit(1)
 	}

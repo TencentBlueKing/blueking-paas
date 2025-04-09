@@ -54,7 +54,8 @@ type PaaSAnalysisConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
-// TenantGuardConfig contains the config for controlling ingress snippet about TenantGuard
+// TenantGuardConfig contains the config for controlling ingress snippet about TenantGuard.
+// If TenantGuard is enabled, tenantGuardTemplate will be rendered in ingress.
 type TenantGuardConfig struct {
 	// Enabled true if TenantGuard is enabled
 	Enabled bool `json:"enabled"`

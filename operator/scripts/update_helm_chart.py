@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import argparse
 import difflib
 import os
@@ -187,6 +188,8 @@ content_patch_conf = {
                     redisConfigKey: {{ .Values.controller.ingressPlugin.accessControl.redisConfigKey | quote }}
                   paasAnalysis:
                     enabled: {{ .Values.controller.ingressPlugin.paasAnalysis.enabled }}
+                  tenantGuard:
+                    enabled: {{ .Values.controller.ingressPlugin.tenantGuard.enabled }}
                 """,  # noqa: E501
             ),
             wrap_multiline_str(
@@ -201,6 +204,10 @@ content_patch_conf = {
                   {{- if .Values.paasAnalysis.enabled }}
                   paasAnalysis:
                     enabled: {{ .Values.paasAnalysis.enabled }}
+                  {{- end }}
+                  {{- if .Values.tenantGuard.enabled }}
+                  tenantGuard:
+                    enabled: {{ .Values.tenantGuard.enabled }}
                   {{- end }}
                 {{- else }}
                 ingressPlugin: {}

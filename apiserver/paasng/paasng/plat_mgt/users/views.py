@@ -22,6 +22,7 @@ from django.conf import settings
 from django.db.models import F, Value
 from django.db.models.functions import Coalesce
 from django.db.transaction import atomic
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -51,6 +52,11 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
     # 需要平台管理权限才能访问
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="获取平台管理员列表",
+        responses={status.HTTP_200_OK: PlatMgtAdminReadSLZ(many=True)},
+    )
     def list(self, request, *args, **kwargs):
         """获取平台管理员列表"""
         admin_profiles = (
@@ -64,6 +70,12 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         return Response(slz.data)
 
     @atomic
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="批量创建平台管理员",
+        request_body=PlatMgtAdminWriteSLZ,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def bulk_create(self, request, *args, **kwargs):
         """批量创建平台管理员"""
         slz = PlatMgtAdminWriteSLZ(data=request.data)
@@ -95,8 +107,13 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
             data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
-        return Response(results_serializer.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="删除平台管理员",
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def destroy(self, request, user, *args, **kwargs):
         """删除平台管理员"""
         if not user:
@@ -141,6 +158,11 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="获取用户特性列表",
+        responses={status.HTTP_200_OK: AccountFeatureFlagReadSLZ(many=True)},
+    )
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
@@ -148,6 +170,12 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         return Response(slz.data)
 
     @atomic
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="更新或创建用户特性",
+        request_body=AccountFeatureFlagWriteSLZ,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def update_or_create(self, request):
         """更新或创建用户特性"""
         slz = AccountFeatureFlagWriteSLZ(data=request.data)
@@ -179,6 +207,11 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="删除用户特性",
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def destroy(self, request, user=None, feature=None, *args, **kwargs):
         """删除用户特性"""
         if not user or not feature:
@@ -216,6 +249,11 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="获取系统 API 用户列表",
+        responses={status.HTTP_200_OK: SystemAPIUserReadSLZ(many=True)},
+    )
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
         sys_api_users = SysAPIClient.objects.annotate(
@@ -225,6 +263,13 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         slz = SystemAPIUserReadSLZ(sys_api_users, many=True)
         return Response(slz.data)
 
+    @atomic
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="创建或更新系统 API 用户",
+        request_body=SystemAPIUserWriteSLZ,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def update_or_create(self, request, *args, **kwargs):
         """创建系统 API 用户"""
         slz = SystemAPIUserWriteSLZ(data=request.data)
@@ -264,6 +309,11 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="删除系统 API 用户",
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def destroy(self, request, user=None, role=None, *args, **kwargs):
         """删除系统 API 用户"""
         if not user or not role:

@@ -45,12 +45,12 @@ class TestPlatMgtAdminViewSet:
         data = {"user_list": users}
 
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_200_OK
+        assert rsp.status_code == status.HTTP_204_NO_CONTENT
 
-        # 验证创建的管理员在响应中
-        created_users = [admin["user"] for admin in rsp.data]
-        for username in users:
-            assert username in created_users
+        # 验证已在数据库中写入
+        user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+        for user_id in user_ids:
+            assert UserProfile.objects.filter(user=user_id).exists()
 
     def test_destroy_admin(self, plat_mgt_api_client):
         """测试删除平台管理员"""
@@ -64,7 +64,7 @@ class TestPlatMgtAdminViewSet:
         # 使用API创建管理员
         create_data = {"user_list": [user]}
         create_response = plat_mgt_api_client.post(bulk_url, create_data, format="json")
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_204_NO_CONTENT
 
         # 确认该管理员已被成功创建
         admin_list = plat_mgt_api_client.get(bulk_url).data

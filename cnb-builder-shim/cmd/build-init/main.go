@@ -267,7 +267,7 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 		// tar bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205
 		items := strings.SplitN(bp, " ", 4)
 		if len(items) != 4 {
-			logger.V(2).Info("Invalid buildpack config", "bp", bp)
+			logger.Info("Invalid buildpack config", "bp", bp)
 			continue
 		}
 
@@ -277,14 +277,17 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 		// 注：不支持下载 tar 是避免下载到 slug-pilot 使用的，历史版本的 buildpack
 		if bpType == buildpack.TypeTgz {
 			destDir := path.Join(cnbDir, bpName, bpVersion)
-			// 如果目标目录已经存在，则不能下载并覆盖（避免覆盖到 builder 内置的 buildpack）
+			// 如果目标目录已经存在，则先清理再下载远程 buildpack（覆盖）
 			if _, err := os.Stat(destDir); err == nil {
-				logger.V(2).Info("The target dir already exists and can‘t be overwritten with the remote buildpack")
-				continue
+				logger.Info("Overwritten directory with remote buildpack", "destDir", destDir)
+
+				if err = os.RemoveAll(destDir); err != nil {
+					return errors.Wrapf(err, "failed to remove dir %s", destDir)
+				}
 			}
 
-			// 下载远程 buildpack 并转存到指定目录
-			logger.V(2).Info("Downloading remote buildpack...", "url", bpUrl, "destDir", destDir)
+			// 下载远程 buildpack 并解压到指定目录
+			logger.Info("Downloading remote buildpack...", "url", bpUrl, "destDir", destDir)
 			if err := http.NewFetcher(logger).Fetch(bpUrl, destDir); err != nil {
 				return err
 			}

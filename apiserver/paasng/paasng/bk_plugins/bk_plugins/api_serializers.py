@@ -89,6 +89,10 @@ class PluginReleaseVersionSLZ(serializers.Serializer):
     source_version_name = serializers.CharField(help_text="代码分支名/tag名")
     source_hash = serializers.CharField(help_text="代码提交哈希")
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginReleaseVersionSLZ__bk_plugins"
+
 
 class DeployPluginRequestSLZ(serializers.Serializer):
     """插件部署操作的请求体格式"""
@@ -106,6 +110,10 @@ class DeployStepSLZ(serializers.Serializer):
     start_time = serializers.DateTimeField(help_text="开始时间", allow_null=True)
     complete_time = serializers.DateTimeField(help_text="结束时间", allow_null=True)
     status = serializers.CharField(help_text="执行状态", allow_null=True)
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginDeployStepSLZ__bk_plugins"
 
 
 class PluginDeployResponseSLZ(serializers.Serializer):
@@ -131,10 +139,18 @@ class PluginRoleSLZ(serializers.Serializer):
     # NOTE: 目前插件开发中心的角色ID与开发者中心的角色ID一致
     id = serializers.ChoiceField(help_text="角色ID", choices=ApplicationRole.get_choices())
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginRoleSLZ__bk_plugins"
+
 
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginMemberSLZ__bk_plugins"
 
 
 class PluginConfigSLZ(serializers.Serializer):

@@ -133,11 +133,19 @@ class PluginRoleSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="角色名称")
     id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginRoleSLZ__pluginscenter"
+
 
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
     avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginMemberSLZ__pluginscenter"
 
     def get_avatar(self, obj):
         return get_user_avatar(obj.username)

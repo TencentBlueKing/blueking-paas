@@ -336,7 +336,9 @@ class PluginMarketViewSet(viewsets.ViewSet):
         serializer.save()
         return Response(data={})
 
-    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.MarketCategorySLZ(many=True))
+    @swagger_auto_schema(
+        tags=["plugin-center"], responses={status.HTTP_200_OK: api_serializers.MarketCategorySLZ(many=True)}
+    )
     def list_category(self, request):
         """查看系统中所有的“插件分类（Plugin-Tag）”"""
         tags = BkPluginTag.objects.all()

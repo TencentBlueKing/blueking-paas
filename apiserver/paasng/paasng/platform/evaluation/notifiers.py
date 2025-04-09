@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import arrow
 import humanize
@@ -43,7 +43,7 @@ class AppOperationReportNotifier:
         reports: QuerySet[AppOperationReport],
         receiver_type: EmailReceiverType,
         receivers: List[str],
-        tenant_id: Optional[str] = None,
+        tenant_id: str | None = None,
     ):
         if not reports.exists():
             logger.info("no issue reports, skip notification...")

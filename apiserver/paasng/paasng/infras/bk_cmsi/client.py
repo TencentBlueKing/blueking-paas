@@ -21,9 +21,14 @@ from django.conf import settings
 from typing_extensions import Protocol
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
-from paasng.infras.bk_cmsi.backend.apigw import Client
-from paasng.infras.bk_cmsi.backend.apigw import Group as BkCmsiGroup
-from paasng.infras.bk_cmsi.backend.esb import get_client_by_username
+from paasng.infras.bk_cmsi.backends.apigw import Client
+from paasng.infras.bk_cmsi.backends.apigw import Group as BkCmsiGroup
+from paasng.infras.bk_cmsi.backends.esb import get_client_by_username
+from paasng.infras.bk_cmsi.exceptions import (
+    InvalidNotificationParams,
+    MethodNotDefinedError,
+    NotificationSendFailedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,7 @@ logger = logging.getLogger(__name__)
 class BkCmsiBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def call_api(self, *args, **kwargs) -> bool: ...
+    def call_api(self, method: str, params: Dict): ...
 
 
 class BkCmsiApiGwClient:
@@ -46,22 +51,23 @@ class BkCmsiApiGwClient:
         client.update_headers({API_HERDER_TENANT_ID: tenant_id})
         self.client: BkCmsiGroup = client.api
 
-    def call_api(self, method: str, params: Dict) -> bool:
+    def call_api(self, method: str, params: Dict):
+        """调用消息通知API
+
+        :raises MethodNotDefinedError: 当API方法未定义时
+        :raises NotificationSendFailedError: 当API调用失败时
+        """
         # 如果 API 网关上未注册该通知渠道，则跳过发送，不需要阻塞后续流程所以返回 True
         if not hasattr(self.client, method):
-            logger.warning(
-                "%s is not registered on API Gateway, skip sending notifications, params: %s", method, params
-            )
-            return True
+            raise MethodNotDefinedError(f"{method} is not registered on API Gateway")
 
         try:
             result = getattr(self.client, method)(json=params)
-        except (APIGatewayResponseError, ResponseError):
+        except (APIGatewayResponseError, ResponseError) as e:
             logging.exception("call bk_cmsi api error, method: %s, params: %s", method, params)
-            return False
+            raise NotificationSendFailedError(f"API request failed: {e}") from e
 
         logger.debug("call bk_cmsi api success, result:%s", result)
-        return True
 
 
 class BkCmsiEsbClient:
@@ -75,24 +81,24 @@ class BkCmsiEsbClient:
         )
         self.client = esb_client.api
 
-    def call_api(self, method: str, params: Dict) -> bool:
-        # 如果 ESB 上未注册该通知渠道，则跳过发送，不需要阻塞后续流程所以返回 True
+    def call_api(self, method: str, params: Dict):
+        """调用消息通知API
+
+        :raises MethodNotDefinedError: 当API方法未定义时
+        :raises NotificationSendFailedError: 当API调用失败时
+        """
         if not hasattr(self.client, method):
-            logger.warning("%s is not registered on ESB, skip sending notifications, params: %s", method, params)
-            return True
+            raise MethodNotDefinedError(f"{method} is not registered on ESB")
 
         try:
             result = getattr(self.client, method)(json=params)
-        except Exception:
-            logging.exception("call bk_cmsi api error, method: %s, params: %s", method, params)
-            return False
+        except Exception as e:
+            raise NotificationSendFailedError(f"API request failed: {e}") from e
 
         # ESB 不管调用成功与否，状态码都会返回 200，需要通过 result 字段判断是否成功
-        if result.get("result"):
-            return True
-
-        logger.error("call bk_cmsi api failed: %s, method: %s, params: %s", result, method, params)
-        return False
+        if not result.get("result"):
+            logger.error("Call bk_cmsi api returned failure, result: %s", result)
+            raise NotificationSendFailedError(f"API returned failure: {result.get('message', 'unknown error')}")
 
 
 def make_bk_cmsi_client(tenant_id: str, stage: str = "prod") -> BkCmsiBackend:
@@ -111,15 +117,37 @@ def make_bk_cmsi_client(tenant_id: str, stage: str = "prod") -> BkCmsiBackend:
 class BkNotificationService:
     """蓝鲸消息通知服务，包含以下通知渠道：
     - 邮件通知
-    - 企业微信通知（仅在特定版本支持，不支持的版本调用时会跳过调用并返回 True)
+    - 企业微信通知（仅在上云版支持)
     - 微信通知
     - 短信通知
+
+    通过 settings.BK_CMSI_ENABLED_METHODS 配置支持的通知渠道，例如：['send_mail', 'send_weixin']
+    未配置的渠道将仅记录日志但不真实发送通知
     """
 
     def __init__(self, tenant_id: str, stage: str = "prod"):
         self.client = make_bk_cmsi_client(tenant_id, stage)
+        # 从配置获取支持的通知方法列表，默认为空列表
+        self.enabled_methods = getattr(settings, "BK_CMSI_ENABLED_METHODS", [])
 
-    def send_mail(self, receivers: List[str], content: str, title: str) -> bool:
+    def safe_call_api(self, method: str, params: dict):
+        """统一处理发送通知的边界，以下 2 种情况并不抛出异常：
+        1. API 方法并未在 ESB 或者 API 网关上定义
+        2. 配置项中 BK_CMSI_ENABLED_METHODS 中未配置该方法
+        """
+        if method not in self.enabled_methods:
+            logger.warning("CMSI method %s is not enabled, skip: params:%s", method, params)
+            return
+
+        try:
+            self.client.call_api(method, params)
+        except MethodNotDefinedError:
+            logger.warning("CMSI %s is not registered, skip sending notifications, params: %s", method, params)
+            return
+        except Exception:
+            raise
+
+    def send_mail(self, receivers: List[str], content: str, title: str):
         """发送邮件通知
 
         :param receivers: 接收人列表
@@ -127,17 +155,16 @@ class BkNotificationService:
         :param title: 邮件主题
         """
         if not receivers:
-            logger.error("The receivers of sending mail is empty, skipped")
-            return False
+            raise InvalidNotificationParams("The receivers is empty")
 
         params = {
             "content": content,
             "title": title,
             "receiver__username": receivers,
         }
-        return self.client.call_api("send_mail", params)
+        return self.safe_call_api("send_mail", params)
 
-    def send_weixin(self, receivers: List[str], content: str, title: str) -> bool:
+    def send_weixin(self, receivers: List[str], content: str, title: str):
         """发送微信通知
 
         :param receivers: 接收人列表
@@ -145,45 +172,43 @@ class BkNotificationService:
         :param title: 通知头部文字
         """
         if not receivers:
-            logger.error("The receivers of sending weixin is empty, skipped")
-            return False
+            raise InvalidNotificationParams("The receivers is empty")
 
         params = {
             "data": {"heading": title, "message": content},
             "receiver__username": receivers,
         }
-        return self.client.call_api("send_weixin", params)
+        return self.safe_call_api("send_weixin", params)
 
-    def send_wecom(self, receivers: List[str], content: str, title: str) -> bool:
-        """发送 WeCom(企业微信) 通知，仅特定版本的 ESB API 支持
+    def send_wecom(self, receivers: List[str], content: str, title: str):
+        """发送 WeCom(企业微信) 通知
+        NOTE：目前仅上云版 ESB API 支持，其他版本调用会抛出 NotificationError 异常
 
         :param receivers: 接收人列表
         :param content: 通知内容正文
         :param title: 通知标题
         """
         if not receivers:
-            logger.error("The receivers of sending WeCom is empty, skipped")
-            return False
+            raise InvalidNotificationParams("The receivers is empty")
 
         params = {
             "content": content,
             "title": title,
             "receiver__username": receivers,
         }
-        return self.client.call_api("send_rtx", params)
+        return self.safe_call_api("send_rtx", params)
 
-    def send_sms(self, receivers: List[str], content: str) -> bool:
+    def send_sms(self, receivers: List[str], content: str):
         """发送短信通知
 
         :param receivers: 接收人列表
         :param content: 通知内容正文，如果是使用腾讯云等通道需要提前配置好通知模板
         """
         if not receivers:
-            logger.error("The receivers of sending SMS is empty, skipped")
-            return False
+            raise InvalidNotificationParams("The receivers is empty")
 
         params = {
             "receiver__username": receivers,
             "content": content,
         }
-        return self.client.call_api("send_sms", params)
+        return self.safe_call_api("send_sms", params)

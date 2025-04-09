@@ -40,6 +40,7 @@ from paasng.infras.accounts.permissions.global_site import user_has_site_action_
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.bk_cmsi.client import BkNotificationService
+from paasng.infras.bk_cmsi.exceptions import NotificationError
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -98,9 +99,9 @@ class UserVerificationGenerationView(APIView):
 
         user_tenant_id = get_tenant(request.user).id
         bk_notify = BkNotificationService(user_tenant_id)
-        result = bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
-
-        if not result:
+        try:
+            bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
+        except NotificationError:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return JsonResponse({}, status=status.HTTP_201_CREATED)

@@ -44,7 +44,7 @@ class Group(OperationGroup):
         method="POST",
         path="/api/c/compapi/v2/cmsi/send_weixin/",
     )
-    # 发送企业微信(仅 esb 有该通知渠道)
+    # 发送企业微信(，目前仅上云版 ESB 有该通知渠道)
     send_rtx = bind_property(
         Operation,
         name="send_rtx",

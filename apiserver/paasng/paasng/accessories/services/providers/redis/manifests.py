@@ -20,13 +20,14 @@ from typing import List, Union
 
 from django.conf import settings
 
-from paas_wl.bk_app.addons_services.redis import crds
+from paas_wl.bk_app.addons_services.redis import crd
 from paas_wl.bk_app.addons_services.redis.constants import (
     DEFAULT_REDIS_EXPORTER_IMAGE,
     DEFAULT_REDIS_PORT,
     DEFAULT_REDIS_REPOSITORY,
     REDIS_EXPORTER_PORT_NAME,
     ApiVersion,
+    RedisType,
 )
 
 from .schemas import RedisInstanceConfig, RedisPlanConfig
@@ -37,7 +38,7 @@ class ManifestConstructor(ABC):
 
     @abstractmethod
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         """Apply current constructor to the model resource object.
         :raise ManifestConstructorError: Unable to apply current constructor due to errors.
@@ -49,7 +50,7 @@ class RedisVersionManifestConstructor(ManifestConstructor):
     """Construct the redis version."""
 
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         redis_version = plan_config.redis_version
         model_res.spec.kubernetesConfig.image = f"{DEFAULT_REDIS_REPOSITORY}:{redis_version}"
@@ -59,25 +60,25 @@ class PasswordManifestConstructor(ManifestConstructor):
     """Construct the redis password."""
 
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
-        model_res.spec.kubernetesConfig.redisSecret = crds.RedisSecret(name="redis-secret", key="password")
+        model_res.spec.kubernetesConfig.redisSecret = crd.RedisSecret(name="redis-secret", key="password")
 
 
 class MonitorManifestConstructor(ManifestConstructor):
     """Construct the monitor config."""
 
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         monitor = plan_config.monitor
         if monitor:
-            model_res.spec.redisExporter = crds.RedisExporter(
+            model_res.spec.redisExporter = crd.RedisExporter(
                 enabled=True, image=DEFAULT_REDIS_EXPORTER_IMAGE, resources=self._get_default_resources()
             )
 
-    def _get_default_resources(self) -> crds.ResourceRequirements:
-        return crds.ResourceRequirements(
+    def _get_default_resources(self) -> crd.ResourceRequirements:
+        return crd.ResourceRequirements(
             requests={"cpu": "500m", "memory": "512Mi"}, limits={"cpu": "500m", "memory": "512Mi"}
         )
 
@@ -86,12 +87,12 @@ class ResourceManifestConstructor(ManifestConstructor):
     """Construct the resource config."""
 
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         memory_limit = plan_config.memory_size
         model_res.spec.kubernetesConfig.resources = self._get_resources(memory_limit)
 
-    def _get_resources(self, memory_limit: str) -> crds.ResourceRequirements:
+    def _get_resources(self, memory_limit: str) -> crd.ResourceRequirements:
         """根据内存限制自动计算合理的资源请求和限制
         规则：内存请求为限制的一半，每 GB 内存配 0.5c CPU Limits, 0.25c CPU Requests
 
@@ -99,7 +100,7 @@ class ResourceManifestConstructor(ManifestConstructor):
         """
         mem_int = int(memory_limit.removesuffix("Gi"))
 
-        return crds.ResourceRequirements(
+        return crd.ResourceRequirements(
             requests={
                 # 每 GB 内存配 0.25 CPU(cpu limits 的一半)
                 "cpu": f"{mem_int * 250}m",
@@ -118,45 +119,46 @@ class PersistentStorageManifestConstructor(ManifestConstructor):
     """Construct the persistent storage config."""
 
     def apply_to(
-        self, model_res: Union["crds.RedisResource", "crds.RedisReplicationResource"], plan_config: RedisPlanConfig
+        self, model_res: Union["crd.RedisResource", "crd.RedisReplicationResource"], plan_config: RedisPlanConfig
     ):
         if plan_config.persistent_storage:
-            storage_spec = crds.StorageSpec(
-                volumeClaimTemplate=crds.VolumeClaimTemplate(
-                    spec=crds.VolumeClaimSpec(
+            storage_spec = crd.StorageSpec(
+                volumeClaimTemplate=crd.VolumeClaimTemplate(
+                    spec=crd.VolumeClaimSpec(
                         accessModes=["ReadWriteOnce"],
                         storageClassName=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
-                        resources=crds.StorageResourceRequests(requests=crds.Storage(storage="10Gi")),
+                        resources=crd.StorageResourceRequests(requests=crd.Storage(storage="10Gi")),
                     )
                 )
             )
             model_res.spec.storage = storage_spec
 
 
-def create_redis_base_resource(redis_type: str, name: str):
-    metadata = crds.ObjectMetadata(name=name)
+def create_redis_base_resource(redis_type: str, name: str) -> Union[crd.RedisResource, crd.RedisReplicationResource]:
+    metadata = crd.ObjectMetadata(name=name)
 
-    if redis_type == "Redis":
-        return crds.RedisResource(
-            apiVersion=ApiVersion.V1BETA2.value,
-            metadata=metadata,
-            spec=crds.RedisSpec(),
-        )
-    elif redis_type == "RedisReplication":
-        return crds.RedisReplicationResource(
-            apiVersion=ApiVersion.V1BETA2.value,
-            metadata=metadata,
-            spec=crds.RedisReplicationSpec(),
-        )
-    else:
-        raise ValueError(f"Unsupported Redis type: {redis_type}")
+    match redis_type:
+        case RedisType.REDIS.value:
+            return crd.RedisResource(
+                apiVersion=ApiVersion.V1BETA2.value,
+                metadata=metadata,
+                spec=crd.RedisSpec(),
+            )
+        case RedisType.REDIS_REPLICATION.value:
+            return crd.RedisReplicationResource(
+                apiVersion=ApiVersion.V1BETA2.value,
+                metadata=metadata,
+                spec=crd.RedisReplicationSpec(),
+            )
+        case _:
+            raise ValueError(f"Unsupported Redis type: {redis_type}")
 
 
 def generate_redis_name():
     return "svc-redis"
 
 
-def get_redis_resource(plan_config: RedisPlanConfig) -> crds.RedisReplicationResource:
+def get_redis_resource(plan_config: RedisPlanConfig) -> Union["crd.RedisResource", "crd.RedisReplicationResource"]:
     builders: List[ManifestConstructor] = [
         RedisVersionManifestConstructor(),
         PasswordManifestConstructor(),
@@ -164,7 +166,7 @@ def get_redis_resource(plan_config: RedisPlanConfig) -> crds.RedisReplicationRes
         ResourceManifestConstructor(),
         PersistentStorageManifestConstructor(),
     ]
-    obj = create_redis_base_resource(plan_config.kind, generate_redis_name())
+    obj = create_redis_base_resource(plan_config.type, generate_redis_name())
     for builder in builders:
         builder.apply_to(obj, plan_config)
     return obj
@@ -209,7 +211,7 @@ def get_external_clb_service_manifest(plan_config: RedisPlanConfig, instance_con
         "app": generate_redis_name(),
     }
     # 如果是主从架构，只有 master 节点才会暴露到外部
-    if plan_config.kind == "RedisReplication":
+    if plan_config.type == RedisType.REDIS_REPLICATION.value:
         selector_labels["redis-role"] = "master"
 
     body = {

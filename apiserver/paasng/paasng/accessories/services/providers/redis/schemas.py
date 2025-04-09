@@ -22,7 +22,7 @@ from pydantic import BaseModel
 class RedisPlanConfig(BaseModel):
     """Redis 计划配置"""
 
-    kind: Literal["Redis", "RedisReplication"] = "Redis"
+    type: Literal["Redis", "RedisReplication"] = "Redis"
     redis_version: str
     persistent_storage: bool
     monitor: bool

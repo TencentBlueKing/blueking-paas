@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from paas_wl.bk_app.addons_services.redis.constants import RedisType
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.crd import KServiceMonitor, Redis, RedisReplication
 from paas_wl.infras.resources.base.kres import KNamespace, KSecret, KService
@@ -44,7 +45,7 @@ class RedisInstanceController:
         self.KRedis = self._get_redis_kresource()
 
     def _get_redis_kresource(self):
-        if self.plan_config.kind == "Redis":
+        if self.plan_config.type == RedisType.REDIS.value:
             return Redis
         return RedisReplication
 

@@ -43,25 +43,6 @@ class RedisProvider(BaseProvider):
         self.plan = config["__plan__"]
         self.recyclable = config.get("recyclable", False)
 
-    def _acquire_pre_created_instance(self) -> "PreCreatedInstance":
-        """获取一个预创建实例（不立即标记为已分配）"""
-        instance: Optional[PreCreatedInstance] = (
-            PreCreatedInstance.objects.select_for_update()
-            .filter(plan=self.plan, is_allocated=False)
-            .order_by("created")
-            .first()
-        )
-        if instance is None:
-            raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
-        return instance
-
-    def _apply_external_resource(self, instance: PreCreatedInstance, namespace: str):
-        """Redis 资源申请"""
-        plan_config = RedisPlanConfig(**json.loads(self.plan.config))
-        instance_config = RedisInstanceConfig(**json.loads(instance.credentials))
-        controller = RedisInstanceController(plan_config, instance_config, namespace)
-        controller.create()
-
     def create(self, params: Dict) -> InstanceData:
         """创建资源实例"""
         with transaction.atomic():
@@ -99,7 +80,44 @@ class RedisProvider(BaseProvider):
                 logger.exception("资源申请失败")
                 raise CreateRedisFailed(_("资源申请失败")) from e
 
-    def _release_external_resource(self, instance_data: InstanceData):
+    def delete(self, instance_data: InstanceData) -> None:
+        """如果实例可回收, 则将实例重新放回资源池."""
+        try:
+            # 销毁外部资源
+            self._destroy_external_resource(instance_data)
+        except Exception as e:
+            logger.exception("资源释放失败")
+            raise ReleaseRedisFailed(_("资源释放失败")) from e
+
+        if not self._should_recycle(instance_data):
+            return
+
+        if not instance_data.config:
+            return
+        pk = instance_data.config.get("__pk__")
+        if pk:
+            PreCreatedInstance.objects.get(pk=pk).release()
+
+    def _acquire_pre_created_instance(self) -> "PreCreatedInstance":
+        """获取一个预创建实例（不立即标记为已分配）"""
+        instance: Optional[PreCreatedInstance] = (
+            PreCreatedInstance.objects.select_for_update()
+            .filter(plan=self.plan, is_allocated=False)
+            .order_by("created")
+            .first()
+        )
+        if instance is None:
+            raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
+        return instance
+
+    def _apply_external_resource(self, instance: PreCreatedInstance, namespace: str):
+        """Redis 资源申请"""
+        plan_config = RedisPlanConfig(**json.loads(self.plan.config))
+        instance_config = RedisInstanceConfig(**json.loads(instance.credentials))
+        controller = RedisInstanceController(plan_config, instance_config, namespace)
+        controller.create()
+
+    def _destroy_external_resource(self, instance_data: InstanceData):
         """Redis 资源释放"""
         if not instance_data.config:
             return
@@ -113,21 +131,3 @@ class RedisProvider(BaseProvider):
     def _should_recycle(self, instance_data: InstanceData) -> bool:
         """判断是否应该回收资源"""
         return self.recyclable or getattr(instance_data, "config", {}).get("recyclable", False)
-
-    def delete(self, instance_data: InstanceData) -> None:
-        """如果实例可回收, 则将实例重新放回资源池."""
-        try:
-            # 回收外部资源
-            self._release_external_resource(instance_data)
-        except Exception as e:
-            logger.exception("资源释放失败")
-            raise ReleaseRedisFailed(_("资源释放失败")) from e
-
-        if not self._should_recycle(instance_data):
-            return
-
-        if not instance_data.config:
-            return
-        pk = instance_data.config.get("__pk__")
-        if pk:
-            PreCreatedInstance.objects.get(pk=pk).release()

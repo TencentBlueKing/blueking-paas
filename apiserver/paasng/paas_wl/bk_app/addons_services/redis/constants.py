@@ -16,7 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 from blue_krill.data_types.enum import StrStructuredEnum
 
+# ---------------
 # Redis 相关配置
+# ---------------
+
 # Redis 默认端口
 DEFAULT_REDIS_PORT = 6379
 # Redis 默认镜像仓库
@@ -39,6 +42,13 @@ DEFAULT_CLUSTER_SIZE = 3
 
 
 class ApiVersion(StrStructuredEnum):
-    """Redis CRD API versions"""
+    """Redis CRD API version"""
 
     V1BETA2 = "redis.redis.opstreelabs.in/v1beta2"
+
+
+class RedisType(StrStructuredEnum):
+    """Redis 资源类型的枚举定义"""
+
+    REDIS = "Redis"
+    REDIS_REPLICATION = "RedisReplication"

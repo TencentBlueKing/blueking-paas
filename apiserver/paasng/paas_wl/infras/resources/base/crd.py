@@ -53,12 +53,14 @@ class BKLogConfig(BaseKresource):
 
 
 class Redis(BaseKresource):
-    """CRD: Redis"""
+    """Kubernetes CRD: Redis 单实例资源
+    用于定义和管理独立的 Redis 实例"""
 
     kind = "Redis"
 
 
 class RedisReplication(BaseKresource):
-    """CRD: RedisReplication"""
+    """Kubernetes CRD: Redis 主从复制集群
+    用于定义 Redis 主从复制架构"""
 
     kind = "RedisReplication"

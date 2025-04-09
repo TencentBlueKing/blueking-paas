@@ -109,7 +109,7 @@ class RedisSpec(BaseModel):
 
 
 class RedisReplicationResource(BaseModel):
-    """Redis resource"""
+    """RedisReplication resource"""
 
     apiVersion: str = ApiVersion.V1BETA2.value
     kind: Literal["RedisReplication"] = "RedisReplication"

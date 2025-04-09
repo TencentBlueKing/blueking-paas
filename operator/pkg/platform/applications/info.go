@@ -37,14 +37,14 @@ type BluekingAppInfo struct {
 	ModuleName  string
 	Environment string
 	WlAppName   string
-	TenantID    string
+	AppTenantID string
 }
 
 // GetBkAppInfo 获取蓝鲸应用元信息
 func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 	annotations := bkapp.GetAnnotations()
 
-	var region, appCode, appName, moduleName, environment, wlAppName, TenantID string
+	var region, appCode, appName, moduleName, environment, wlAppName, appTenantID string
 	var ok bool
 
 	if region, ok = annotations[paasv1alpha2.BkAppRegionKey]; !ok {
@@ -67,7 +67,7 @@ func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 		wlAppName = fmt.Sprintf("bkapp-%s-%s", appCode, environment)
 	}
 
-	TenantID = annotations[paasv1alpha2.BkAppTenantIDKey]
+	appTenantID = annotations[paasv1alpha2.BkAppTenantIDKey]
 
 	return &BluekingAppInfo{
 		region,
@@ -76,6 +76,6 @@ func GetBkAppInfo(bkapp *paasv1alpha2.BkApp) (*BluekingAppInfo, error) {
 		moduleName,
 		environment,
 		wlAppName,
-		TenantID,
+		appTenantID,
 	}, nil
 }

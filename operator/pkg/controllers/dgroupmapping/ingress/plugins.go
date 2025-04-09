@@ -148,7 +148,7 @@ func (t *TenantGuardPlugin) MakeConfigurationSnippet(bkapp *paasv1alpha2.BkApp, 
 	}
 
 	info, err := applications.GetBkAppInfo(bkapp)
-	if err != nil || info.TenantID == "" {
+	if err != nil || info.AppTenantID == "" {
 		return ""
 	}
 
@@ -202,7 +202,7 @@ func init() {
         set $bkapp_app_code '{{ .Region }}-{{ .WlAppName }}';
         set $bkapp_bk_app_code '{{ .AppCode }}';
         set $bkapp_env_name '{{ .Environment }}';
-        set $bkapp_app_tenant_id '{{ .TenantID }}';
+        set $bkapp_app_tenant_id '{{ .AppTenantID }}';
         
         access_by_lua_file $tenant_guard_path/main.lua;
 

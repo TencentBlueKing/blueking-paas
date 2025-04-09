@@ -71,7 +71,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         role = SiteRole.ADMIN.value
 
         # 获取验证后的用户ID列表
-        users = slz.validated_data["username_list"]
+        users = slz.validated_data["user_list"]
         user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
 
         # 获取创建前的数据 - 查询数据库中已存在的用户
@@ -97,14 +97,14 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
         )
         return Response(results_serializer.data)
 
-    def destroy(self, request, username, *args, **kwargs):
+    def destroy(self, request, user, *args, **kwargs):
         """删除平台管理员"""
-        if not username:
-            return Response({"detail": "Userid is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user:
+            return Response({"detail": "User is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # 将用户名编码为userid
-            userid = user_id_encoder.encode(settings.USER_TYPE, username)
+            userid = user_id_encoder.encode(settings.USER_TYPE, user)
 
             # 获取删除前的用户信息
             before_query = UserProfile.objects.filter(user=userid)
@@ -132,7 +132,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
 
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception:
-            logger.exception(f"Failed to delete user {username}")
+            logger.exception(f"Failed to delete user {user}")
             return Response({"detail": "Failed to delete user"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -179,14 +179,14 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def destroy(self, request, username=None, feature=None, *args, **kwargs):
+    def destroy(self, request, user=None, feature=None, *args, **kwargs):
         """删除用户特性"""
-        if not username or not feature:
-            return Response({"detail": "username and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user or not feature:
+            return Response({"detail": "user and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # 将用户名编码为 userid
-            user_id = user_id_encoder.encode(settings.USER_TYPE, username)
+            user_id = user_id_encoder.encode(settings.USER_TYPE, user)
             # 获取删除前的用户特性
             before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
             before_data = list(AccountFeatureFlagReadSLZ(before_query, many=True).data)
@@ -231,16 +231,16 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        username, bk_app_code, role = data["username"], data["bk_app_code"], data["role"]
+        user, bk_app_code, role = data["user"], data["bk_app_code"], data["role"]
 
         # 获取创建或更新前的系统 API 用户
-        before_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+        before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
         before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
 
         # 创建客户端
-        client, _ = SysAPIClient.objects.get_or_create(name=username, defaults={"role": role})
+        client, _ = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
 
         # 创建关系
         if bk_app_code:
@@ -249,7 +249,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
             )
 
         # 获取创建或更新后的系统 API 用户
-        after_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+        after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
         after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)
@@ -264,18 +264,18 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def destroy(self, request, username=None, role=None, *args, **kwargs):
+    def destroy(self, request, user=None, role=None, *args, **kwargs):
         """删除系统 API 用户"""
-        if not username or not role:
-            return Response({"detail": "Username and role are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user or not role:
+            return Response({"detail": "User and role are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # 查找对应的 SysAPIClient
-        client_qs = SysAPIClient.objects.filter(name=username, role=role)
+        client_qs = SysAPIClient.objects.filter(name=user, role=role)
         if not client_qs.exists():
             return Response({"detail": "System API user not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # 尝试获取删除前的系统 API 用户
-        before_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+        before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
         before_data = list(SystemAPIUserReadSLZ(before_query, many=True).data)
@@ -285,10 +285,10 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         # 删除关系
         AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids).delete()
         # 删除系统 API 用户
-        SysAPIClient.objects.filter(name=username, role=role).delete()
+        SysAPIClient.objects.filter(name=user, role=role).delete()
 
         # 尝试获取删除后的系统 API 用户
-        after_query = SysAPIClient.objects.filter(name=username, role=role).annotate(
+        after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
             bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
         )
         after_data = list(SystemAPIUserReadSLZ(after_query, many=True).data)

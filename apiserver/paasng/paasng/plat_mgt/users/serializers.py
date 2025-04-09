@@ -24,14 +24,14 @@ from paasng.infras.accounts.constants import AccountFeatureFlag
 class PlatMgtAdminReadSLZ(serializers.Serializer):
     """平台管理员序列化器"""
 
-    username = serializers.CharField(source="user.username", help_text="用户 ID")
+    user = serializers.CharField(source="user.username", help_text="用户 ID")
     created = serializers.DateTimeField(help_text="添加时间")
 
 
 class PlatMgtAdminWriteSLZ(serializers.Serializer):
     """专用于批量创建平台管理员的序列化器"""
 
-    username_list = serializers.ListField(child=serializers.CharField(), help_text="管理员用户名列表")
+    user_list = serializers.ListField(child=serializers.CharField(), help_text="管理员用户名列表")
 
 
 class AccountFeatureFlagReadSLZ(serializers.Serializer):
@@ -62,7 +62,7 @@ class AccountFeatureFlagWriteSLZ(serializers.Serializer):
 class SystemAPIUserReadSLZ(serializers.Serializer):
     """系统 API 用户序列化器"""
 
-    username = serializers.CharField(source="name", help_text="用户 ID")
+    user = serializers.CharField(source="name", help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
     private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")
@@ -73,5 +73,5 @@ class SystemAPIUserWriteSLZ(serializers.Serializer):
     """系统 API 用户创建序列化器"""
 
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False, allow_blank=True)
-    username = serializers.CharField(help_text="用户名")
+    user = serializers.CharField(help_text="用户名")
     role = serializers.CharField(help_text="权限")

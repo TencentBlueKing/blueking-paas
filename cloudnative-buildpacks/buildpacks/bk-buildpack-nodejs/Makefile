@@ -9,7 +9,7 @@ VERSION := v163
 package: package-heroku-buildpack ## 将 cnb buildpack 打包
 	cp shim/* cnb-buildpack/bin/
 	tar -xvf target/output/bk-buildpack-nodejs-${VERSION}.tar -C cnb-buildpack/target
-	tar -zcvf $(NAME)-$(VERSION).tgz cnb-buildpack
+	tar -zcvf $(NAME)-$(VERSION).tgz -C cnb-buildpack .
 
 
 .PHONY: package-heroku-buildpack

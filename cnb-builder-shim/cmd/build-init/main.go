@@ -276,7 +276,7 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 		// 目前按约定，仅支持下载 tgz 类型的 buildpack，其是适配云原生 builder 的
 		// 注：不支持下载 tar 是避免下载到 slug-pilot 使用的，历史版本的 buildpack
 		if bpType == buildpack.TypeTgz {
-			destDir := path.Join(cnbDir, bpName, bpVersion)
+			destDir := path.Join(cnbDir, "buildpacks", bpName, bpVersion)
 			// 如果目标目录已经存在，则先清理再下载远程 buildpack（覆盖）
 			if _, err := os.Stat(destDir); err == nil {
 				logger.Info("Overwritten directory with remote buildpack", "destDir", destDir)
@@ -287,7 +287,7 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 			}
 
 			// 下载远程 buildpack 并解压到指定目录
-			logger.Info("Downloading remote buildpack...", "url", bpUrl, "destDir", destDir)
+			logger.Info("Downloading remote buildpack...", "name", bpName)
 			if err := http.NewFetcher(logger).Fetch(bpUrl, destDir); err != nil {
 				return err
 			}

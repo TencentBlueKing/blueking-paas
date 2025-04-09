@@ -607,6 +607,10 @@ class DeployStepSLZ(DeployStepFrameSLZ):
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginDeployStepSLZ__engine"
+
 
 class DeployFramePhaseSLZ(serializers.Serializer):
     display_name = serializers.SerializerMethodField()

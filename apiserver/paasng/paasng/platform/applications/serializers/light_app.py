@@ -14,8 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.validators import Base64Validator
@@ -28,6 +30,9 @@ class LightAppCreateSLZ(serializers.Serializer):
     )
     app_tenant_mode = serializers.ChoiceField(
         help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
+    app_tenant_id = serializers.CharField(
+        required=False, default="", help_text="租户ID，全租户应用则租户 ID 为空字符串"
     )
     app_url = serializers.URLField(required=True, allow_blank=False, help_text="应用链接", source="external_url")
     developers = serializers.ListField(
@@ -54,6 +59,17 @@ class LightAppCreateSLZ(serializers.Serializer):
     introduction = serializers.CharField(required=False, default="-", help_text="应用的简介")
     width = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口宽度")
     height = serializers.IntegerField(required=False, default=None, help_text="应用在桌面打开窗口高度")
+
+    def validate(self, data):
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return data
+        # 多租户模式下需要校验租户相关字段
+        if data["app_tenant_mode"] == AppTenantMode.GLOBAL:
+            if data["app_tenant_id"]:
+                raise ValidationError(_("全租户应用的 app_tenant_id 必须为空"))
+        elif not data["app_tenant_id"]:
+            raise ValidationError(_("单租户应用必须设置 app_tenant_id"))
+        return data
 
 
 class LightAppDeleteSLZ(serializers.Serializer):

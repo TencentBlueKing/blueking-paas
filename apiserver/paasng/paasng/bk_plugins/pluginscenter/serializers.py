@@ -135,7 +135,7 @@ class PluginRoleSLZ(serializers.Serializer):
 
     class Meta:
         # Set a ref_name to avoid conflicts for drf-yasg
-        ref_name = "PluginRoleSLZ__plugins_center"
+        ref_name = "PluginRoleSLZ__pluginscenter"
 
 
 class PluginMemberSLZ(serializers.Serializer):
@@ -145,7 +145,7 @@ class PluginMemberSLZ(serializers.Serializer):
 
     class Meta:
         # Set a ref_name to avoid conflicts for drf-yasg
-        ref_name = "PluginMemberSLZ__plugins_center"
+        ref_name = "PluginMemberSLZ__pluginscenter"
 
     def get_avatar(self, obj):
         return get_user_avatar(obj.username)

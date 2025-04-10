@@ -19,8 +19,6 @@ import logging
 
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
-from django.db.models import F, Value
-from django.db.models.functions import Coalesce
 from django.db.transaction import atomic
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -31,28 +29,23 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
+from paasng.infras.sysapi_client.constants import ClientRole
+from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
-    BulkCreatePlatformAdminInputSLZ,
-    BulkCreatePlatformAdminOutputSLZ,
-    CreateSystemAPIUserInputSLZ,
-    CreateSystemAPIUserOutputSLZ,
-    DestroyPlatformAdminOutputSLZ,
-    DestroySystemAPIUserOutputSLZ,
-    DestroyUserFeatureFlagOutputSLZ,
-    ListPlatformAdminOutputSLZ,
-    ListSystemAPIUserOutputSLZ,
-    ListUserFeatureFlagOutputSLZ,
-    UpdateUserFeatureFlagInputSLZ,
-    UpdateUserFeatureFlagOutputSLZ,
+    BulkCreatePlatformManagerSLZ,
+    CreateSystemAPIUserSLZ,
+    PlatformManagerSLZ,
+    SystemAPIUserSLZ,
+    UpdateUserFeatureFlagSLZ,
+    UserFeatureFlagSLZ,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class PlatMgtAdminViewSet(viewsets.GenericViewSet):
+class PlatformManagerViewSet(viewsets.GenericViewSet):
     """平台管理员相关 API"""
 
     # 需要平台管理权限才能访问
@@ -61,7 +54,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取平台管理员列表",
-        responses={status.HTTP_200_OK: ListPlatformAdminOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: PlatformManagerSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取平台管理员列表"""
@@ -72,39 +65,56 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             .order_by("-created")
             .values()
         )
-        slz = ListPlatformAdminOutputSLZ(admin_profiles, many=True)
+        slz = PlatformManagerSLZ(admin_profiles, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="批量创建平台管理员",
-        request_body=BulkCreatePlatformAdminInputSLZ,
-        responses={status.HTTP_204_NO_CONTENT: None},
+        request_body=BulkCreatePlatformManagerSLZ,
+        responses={status.HTTP_201_CREATED: None},
     )
     def bulk_create(self, request, *args, **kwargs):
         """批量创建平台管理员"""
-        slz = BulkCreatePlatformAdminInputSLZ(data=request.data)
+        slz = BulkCreatePlatformManagerSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        role = SiteRole.ADMIN.value
+        users = slz.validated_data["users"]
 
-        # 获取验证后的用户ID列表
-        users = slz.validated_data["user_list"]
-        user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+        # 创建用户名到用户ID的映射
+        user_to_id = {user: user_id_encoder.encode(settings.USER_TYPE, user) for user in users}
+        user_ids = list(user_to_id.values())
 
         # 获取创建前的数据 - 查询数据库中已存在的用户
         existing_profiles = UserProfile.objects.filter(user__in=user_ids)
-        before_data = list(BulkCreatePlatformAdminOutputSLZ(existing_profiles, many=True).data)
+        existing_user_ids = set(existing_profiles.values_list("user", flat=True))
 
-        created_profiles = []
-        for userid in user_ids:
-            obj, _ = UserProfile.objects.update_or_create(user=userid, defaults={"role": role})
-            obj.refresh_from_db()
-            created_profiles.append(obj)
+        # 检查是否存在未登录过平台的用户, 如果存在则返回错误
+        non_existing_users = [user for user, user_id in user_to_id.items() if user_id not in existing_user_ids]
+        if non_existing_users:
+            return Response(
+                {"detail": f"user {', '.join(non_existing_users)} has not logged in to the platform yet"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # 获取创建后的数据
-        results_serializer = BulkCreatePlatformAdminOutputSLZ(created_profiles, many=True)
-        after_data = list(results_serializer.data)
+        # 准备审计数据并更新用户角色
+        role = SiteRole.ADMIN.value
+        before_data = []
+        profiles_to_update = []
+
+        id_to_name = {user_id: user for user, user_id in user_to_id.items()}
+
+        for profile in existing_profiles:
+            user = id_to_name.get(profile.user)
+            before_data.append({"user": user, "role": profile.role})
+            profile.role = role
+            profiles_to_update.append(profile)
+
+        # 批量更新用户角色
+        UserProfile.objects.bulk_update(profiles_to_update, ["role"])
+
+        # 构建更新后的审计数据
+        after_data = [{"user": user, "role": role} for user in users]
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -113,7 +123,7 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
             data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
             data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
@@ -122,41 +132,35 @@ class PlatMgtAdminViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, user, *args, **kwargs):
         """删除平台管理员"""
-        if not user:
-            return Response({"detail": "User is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # 将用户名编码为userid
+        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
 
-        try:
-            # 将用户名编码为userid
-            userid = user_id_encoder.encode(settings.USER_TYPE, user)
+        # 获取删除前的用户信息
+        userprofile = UserProfile.objects.filter(user=user_id).first()
+        if not userprofile:
+            return Response({"detail": f"User {user} not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # 获取删除前的用户信息
-            before_query = UserProfile.objects.filter(user=userid)
-
-            # 如果没有找到用户，返回404错误
-            if not before_query.exists():
-                return Response({"detail": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            before_data = list(DestroyPlatformAdminOutputSLZ(before_query, many=True).data)
-
-            # 删除用户
-            UserProfile.objects.filter(user=userid).delete()
-
-            # 尝试获取删除后的用户信息
-            after_query = UserProfile.objects.filter(user=userid)
-            after_data = list(DestroyPlatformAdminOutputSLZ(after_query, many=True).data)
-
-            add_admin_audit_record(
-                user=self.request.user.pk,
-                operation=OperationEnum.DELETE,
-                target=OperationTarget.PLAT_USER,
-                data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-                data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
-            )
-
+        # 如果用户的权限已经不是管理员权限，直接返回 204
+        if userprofile.role not in [SiteRole.ADMIN.value, SiteRole.SUPER_USER.value]:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception:
-            logger.exception(f"Failed to delete user {user}")
-            return Response({"detail": "Failed to delete user"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 构建审计数据
+        before_data = {"user": user, "role": userprofile.role}
+        after_data = {"user": user, "role": SiteRole.USER.value}
+
+        # 删除用户, 将权限更改为普通用户
+        userprofile.role = SiteRole.USER.value
+        userprofile.save(update_fields=["role"])
+
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PLAT_USER,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
@@ -167,41 +171,50 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取用户特性列表",
-        responses={status.HTTP_200_OK: ListUserFeatureFlagOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: UserFeatureFlagSLZ(many=True)},
     )
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        slz = ListUserFeatureFlagOutputSLZ(feature_flags, many=True)
+        slz = UserFeatureFlagSLZ(feature_flags, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="更新或创建用户特性",
-        request_body=UpdateUserFeatureFlagInputSLZ,
-        responses={status.HTTP_204_NO_CONTENT: None},
+        request_body=UpdateUserFeatureFlagSLZ,
+        responses={status.HTTP_201_CREATED: None},
     )
-    def update_or_create(self, request):
+    def upsert(self, request):
         """更新或创建用户特性"""
-        slz = UpdateUserFeatureFlagInputSLZ(data=request.data)
+        slz = UpdateUserFeatureFlagSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        user = data.get("user")
-        feature = data.get("feature")
-        is_effect = data.get("isEffect", False)
+        user, feature, is_effect = data["user"], data["feature"], data["is_effect"]
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
 
         # 获取更新或创建前的用户特性
-        before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-        before_data = list(UpdateUserFeatureFlagOutputSLZ(before_query, many=True).data)
+        feature_flag = AccountFeatureFlag.objects.filter(user=user_id, name=feature).first()
 
-        AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
+        # 构建审计数据
+        before_data = []
+        if feature_flag:
+            before_data = [{"user": user, "feature": feature, "is_effect": feature_flag.effect}]
 
-        # 获取更新或创建后的用户特性
-        after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-        after_data = list(UpdateUserFeatureFlagOutputSLZ(after_query, many=True).data)
+        # 更新或创建用户特性
+        if feature_flag:
+            # 更新特性
+            feature_flag.effect = is_effect
+            feature_flag.save(update_fields=["effect"])
+        else:
+            # 创建特性
+            feature_flag = AccountFeatureFlag(user=user_id, name=feature, effect=is_effect)
+            feature_flag.save()
+
+        # 构建更新后的审计数据
+        after_data = [{"user": user, "feature": feature, "is_effect": is_effect}]
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -211,7 +224,7 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
             data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
@@ -220,34 +233,34 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, user=None, feature=None, *args, **kwargs):
         """删除用户特性"""
-        if not user or not feature:
-            return Response({"detail": "user and feature are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 将用户名编码为 userid
+        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
+        # 查询db中是否存有该用户特性
+        feature_flag = AccountFeatureFlag.objects.filter(user=user_id, name=feature).first()
+        if not feature_flag:
+            return Response({"detail": "Feature flag not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 构建审计数据
+        before_data = [{"user": user, "feature": feature, "is_effect": feature_flag.effect}]
 
         try:
-            # 将用户名编码为 userid
-            user_id = user_id_encoder.encode(settings.USER_TYPE, user)
-            # 获取删除前的用户特性
-            before_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-            before_data = list(DestroyUserFeatureFlagOutputSLZ(before_query, many=True).data)
-
             # 删除用户特性
-            AccountFeatureFlag.objects.filter(user=user_id, name=feature).delete()
-
-            # 尝试获取删除后的用户特性
-            after_query = AccountFeatureFlag.objects.filter(user=user_id, name=feature)
-            after_data = list(DestroyUserFeatureFlagOutputSLZ(after_query, many=True).data)
-
-            add_admin_audit_record(
-                user=self.request.user.pk,
-                operation=OperationEnum.DELETE,
-                target=OperationTarget.PLAT_USER,
-                data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-                data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            feature_flag.delete()
+        except Exception:
+            logger.exception("Failed to delete user feature flag")
+            return Response(
+                {"detail": "Failed to delete user feature flag"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except AccountFeatureFlag.DoesNotExist:
-            return Response({"detail": "User feature flag not found"}, status=status.HTTP_404_NOT_FOUND)
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PLAT_USER,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SystemAPIUserViewSet(viewsets.GenericViewSet):
@@ -258,56 +271,152 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取系统 API 用户列表",
-        responses={status.HTTP_200_OK: ListSystemAPIUserOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: SystemAPIUserSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
-        sys_api_users = SysAPIClient.objects.annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value("")),
-            private_token=Coalesce(F("clientprivatetoken__token"), Value("")),
-        ).values("name", "bk_app_code", "private_token", "role", "updated")
-        slz = ListSystemAPIUserOutputSLZ(sys_api_users, many=True)
+        # 查询所有系统 API 客户端
+        sys_api_clients = SysAPIClient.objects.all()
+        # 获取客户端ID列表
+        client_ids = [client.id for client in sys_api_clients]
+        # 查询应用认证关系
+        app_clients = AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids)
+        app_code_map = {client.client: client.bk_app_code for client in app_clients}
+        # 查询私有令牌
+        private_tokens = ClientPrivateToken.objects.filter(client_id__in=client_ids)
+        token_map = {client.client: client.token for client in private_tokens}
+
+        # 组装数据
+        result = []
+        for client in sys_api_clients:
+            client_data = {
+                "name": client.name,
+                "bk_app_code": app_code_map.get(client.id, ""),
+                "private_token": token_map.get(client.id, ""),
+                "role": client.role,
+                "updated": client.updated,
+            }
+            result.append(client_data)
+
+        slz = SystemAPIUserSLZ(result, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
-        operation_description="创建或更新系统 API 用户",
-        request_body=CreateSystemAPIUserInputSLZ,
-        responses={status.HTTP_204_NO_CONTENT: None},
+        operation_description="创建系统 API 用户",
+        request_body=CreateSystemAPIUserSLZ,
+        responses={status.HTTP_201_CREATED: None},
     )
-    def update_or_create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         """创建系统 API 用户"""
-        slz = CreateSystemAPIUserInputSLZ(data=request.data)
+        slz = CreateSystemAPIUserSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         user, bk_app_code, role = data["user"], data["bk_app_code"], data["role"]
 
-        # 获取创建或更新前的系统 API 用户
-        before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
-        )
-        before_data = list(CreateSystemAPIUserOutputSLZ(before_query, many=True).data)
-
-        # 创建客户端
-        client, _ = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
-
-        # 创建关系
-        if bk_app_code:
-            AuthenticatedAppAsClient.objects.update_or_create(
-                client=client, bk_app_code=bk_app_code, defaults={"client": client}
+        # 验证role是否为ClientRole中的有效值
+        try:
+            role_int = int(role)
+            if role_int not in ClientRole.get_values():
+                return Response(
+                    {"detail": f"Invalid role: {role}. Must be one of {ClientRole.get_values()}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": f"Invalid role format: {role}. Must be an integer."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 获取创建或更新后的系统 API 用户
-        after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
-        )
-        after_data = list(CreateSystemAPIUserOutputSLZ(after_query, many=True).data)
+        # 获取创建前的系统 API 用户数据
+        existing_client = SysAPIClient.objects.filter(name=user).first()
+        before_data = []
+
+        if existing_client:
+            # 单独查询关联的应用
+            existing_app_client = AuthenticatedAppAsClient.objects.filter(client=existing_client).first()
+            existing_bk_app_code = existing_app_client.bk_app_code if existing_app_client else ""
+
+            before_data = [
+                {"user": existing_client.name, "bk_app_code": existing_bk_app_code, "role": existing_client.role}
+            ]
+
+        # 创建或更新客户端
+        client, created = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
+        # 如果不是新创建的客户端，则更新角色
+        if not created and client.role != role:
+            client.role = role
+            client.save(update_fields=["role"])
+
+        # 创建或更新应用关系
+        if bk_app_code:
+            AuthenticatedAppAsClient.objects.update_or_create(client=client, defaults={"bk_app_code": bk_app_code})
+
+        # 构建审计数据
+        after_data = [{"user": user, "bk_app_code": bk_app_code, "role": role}]
 
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
+            target=OperationTarget.PLAT_USER,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+        )
+
+        return Response(status=status.HTTP_201_CREATED)
+
+    @atomic
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="更新系统 API 用户的权限",
+        request_body=CreateSystemAPIUserSLZ,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def update(self, request, *args, **kwargs):
+        # 验证请求数据
+        slz = CreateSystemAPIUserSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        # 获取请求参数
+        user, role = data["user"], data["role"]
+
+        # 验证role是否为ClientRole中的有效值
+        try:
+            role_int = int(role)
+            if role_int not in ClientRole.get_values():
+                return Response(
+                    {"detail": f"Invalid role: {role}. Must be one of {ClientRole.get_values()}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": f"Invalid role format: {role}. Must be an integer."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 检查要更新的用户是否存在
+        client = SysAPIClient.objects.filter(name=user).first()
+        if not client:
+            return Response({"detail": f"System API user '{user}' not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 构建审计数据
+        existing_app_client = AuthenticatedAppAsClient.objects.filter(client=client).first()
+        existing_bk_app_code = existing_app_client.bk_app_code if existing_app_client else ""
+        before_data = [{"user": client.name, "bk_app_code": existing_bk_app_code, "role": client.role}]
+
+        # 更新角色
+        if client.role != role:
+            client.role = role
+            client.save(update_fields=["role"])
+
+        # 构建审计数据
+        after_data = [{"user": user, "bk_app_code": existing_bk_app_code, "role": role}]
+
+        # 记录审计日志
+        add_admin_audit_record(
+            user=self.request.user.pk,
+            operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
             data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
             data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
@@ -320,40 +429,27 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         operation_description="删除系统 API 用户",
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def destroy(self, request, user=None, role=None, *args, **kwargs):
+    @atomic
+    def destroy(self, request, user=None, *args, **kwargs):
         """删除系统 API 用户"""
-        if not user or not role:
-            return Response({"detail": "User and role are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 查找对应的 SysAPIClient
-        client_qs = SysAPIClient.objects.filter(name=user, role=role)
-        if not client_qs.exists():
+        client = SysAPIClient.objects.filter(name=user).first()
+        if not client:
             return Response({"detail": "System API user not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 尝试获取删除前的系统 API 用户
-        before_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
-        )
-        before_data = list(DestroySystemAPIUserOutputSLZ(before_query, many=True).data)
-
-        client_ids = list(client_qs.values_list("id", flat=True))
+        # 构建审计数据
+        app_client = AuthenticatedAppAsClient.objects.filter(client=client).first()
+        bk_app_code = app_client.bk_app_code if app_client else ""
+        before_data = [{"user": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
         # 删除关系
-        AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids).delete()
+        AuthenticatedAppAsClient.objects.filter(client=client).delete()
         # 删除系统 API 用户
-        SysAPIClient.objects.filter(name=user, role=role).delete()
-
-        # 尝试获取删除后的系统 API 用户
-        after_query = SysAPIClient.objects.filter(name=user, role=role).annotate(
-            bk_app_code=Coalesce(F("authenticatedappasclient__bk_app_code"), Value(""))
-        )
-        after_data = list(DestroySystemAPIUserOutputSLZ(after_query, many=True).data)
+        client.delete()
 
         add_admin_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.PLAT_USER,
             data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

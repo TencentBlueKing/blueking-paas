@@ -21,62 +21,76 @@ from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
 
+from paasng.infras.accounts.constants import AccountFeatureFlag as FeatureFlag
+from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
-from paasng.infras.sysapi_client.models import ClientPrivateToken, SysAPIClient
+from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
 
-class TestPlatMgtAdminViewSet:
+class TestPlatManagerViewSet:
     """平台管理员 API 测试"""
 
-    def test_list_admins(self, plat_mgt_api_client):
+    def test_list_manager(self, plat_mgt_api_client):
         """测试获取平台管理员列表"""
-        bulk_url = reverse("plat_mgt.users.userprofiles.bulk")
+        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
         rsp = plat_mgt_api_client.get(bulk_url)
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
-    def test_bulk_create_admins(self, plat_mgt_api_client):
+    def test_bulk_create_manager(self, plat_mgt_api_client):
         """测试批量创建平台管理员"""
-        bulk_url = reverse("plat_mgt.users.userprofiles.bulk")
+        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
         users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
-        data = {"user_list": users}
-
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_204_NO_CONTENT
-
-        # 验证已在数据库中写入
         user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+
+        # 首先为测试用户创建 UserProfile 记录，因为视图实现要求用户已登录过平台
         for user_id in user_ids:
-            assert UserProfile.objects.filter(user=user_id).exists()
+            UserProfile.objects.create(user=user_id, role=SiteRole.USER.value)
 
-    def test_destroy_admin(self, plat_mgt_api_client):
+        data = {"users": users}
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_201_CREATED
+
+        # 验证用户角色已更新为管理员
+        for user_id in user_ids:
+            profile = UserProfile.objects.get(user=user_id)
+            assert profile.role == SiteRole.ADMIN.value
+
+    def test_bulk_create_manager_nonexistent_users(self, plat_mgt_api_client):
+        """测试批量创建平台管理员 - 处理未登录用户的情况"""
+        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
+        users = [f"nonexistent_user_{generate_random_string(6)}" for _ in range(2)]
+
+        data = {"users": users}
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+
+        # 应当返回 400 错误，因为这些用户未登录过平台
+        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "has not logged in to the platform yet" in rsp.data["detail"]
+
+    def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""
-
-        # 先通过API创建一个测试管理员，而不是直接使用模型
-        # 创建管理员
-        bulk_url = reverse("plat_mgt.users.userprofiles.bulk")
+        # 先创建用户配置文件
         user = f"test_admin_{generate_random_string(6)}"
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
+        # 直接创建一个管理员角色的用户配置
+        UserProfile.objects.create(user=user_id, role=SiteRole.ADMIN.value)
 
-        # 使用API创建管理员
-        create_data = {"user_list": [user]}
-        create_response = plat_mgt_api_client.post(bulk_url, create_data, format="json")
-        assert create_response.status_code == status.HTTP_204_NO_CONTENT
+        # 确认该管理员已存在
+        profile = UserProfile.objects.get(user=user_id)
+        assert profile.role == SiteRole.ADMIN.value
 
-        # 确认该管理员已被成功创建
-        admin_list = plat_mgt_api_client.get(bulk_url).data
-        assert user in [item["user"] for item in admin_list]
-
-        # 现在尝试删除这个管理员
-        delete_url = reverse("plat_mgt.users.userprofiles.delete", kwargs={"user": user})
+        # 尝试删除这个管理员
+        delete_url = reverse("plat_mgt.users.user_profiles.delete", kwargs={"user": user})
         delete_rsp = plat_mgt_api_client.delete(delete_url)
         assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT
 
-        # 验证管理员已被删除
-        assert not UserProfile.objects.filter(user=user_id).exists()
+        # 验证管理员角色已被更改为普通用户，而不是删除
+        profile.refresh_from_db()
+        assert profile.role == SiteRole.USER.value
 
 
 class TestAccountFeatureFlagManageViewSet:
@@ -87,15 +101,15 @@ class TestAccountFeatureFlagManageViewSet:
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
-    def test_update_or_create_feature_flags(self, plat_mgt_api_client):
+    def test_upsert_feature_flags(self, plat_mgt_api_client):
         """测试创建或更新用户特性"""
         bulk_url = reverse("plat_mgt.users.account_feature_flags.bulk")
         user = f"test_user_{generate_random_string(6)}"
-        feature = "demo-feature"
-        data = {"user": user, "feature": feature, "isEffect": True}
+        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
+        data = {"user": user, "feature": feature, "is_effect": "true"}
 
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_204_NO_CONTENT
+        assert rsp.status_code == status.HTTP_201_CREATED
 
         # 验证已在数据库写入
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
@@ -105,10 +119,11 @@ class TestAccountFeatureFlagManageViewSet:
         """测试删除用户特性"""
         url_update = reverse("plat_mgt.users.account_feature_flags.bulk")
         user = f"test_user_{generate_random_string(6)}"
-        feature = "remove-this-feature"
-        data = {"user": user, "feature": feature, "isEffect": True}
+        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
+        data = {"user": user, "feature": feature, "is_effect": "true"}
 
-        plat_mgt_api_client.post(url_update, data, format="json")
+        rsp = plat_mgt_api_client.post(url_update, data, format="json")
+        assert rsp.status_code == status.HTTP_201_CREATED
 
         # 删除特性
         delete_url = reverse(
@@ -120,7 +135,7 @@ class TestAccountFeatureFlagManageViewSet:
 
         # 验证已被删除
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
-        assert not AccountFeatureFlag.objects.filter(user=user_id, name="remove-this-feature").exists()
+        assert not AccountFeatureFlag.objects.filter(user=user_id, name=feature).exists()
 
 
 class TestSystemAPIUserViewSet:
@@ -131,15 +146,38 @@ class TestSystemAPIUserViewSet:
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
-    def test_update_or_create_system_api_users(self, plat_mgt_api_client):
-        """测试创建或更新系统 API 用户"""
+    def test_create_system_api_users(self, plat_mgt_api_client):
+        """测试创建系统 API 用户"""
         bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
         user = f"test_sys_user_{generate_random_string(6)}"
         bk_app_code = "test_app"
         data = {"user": user, "bk_app_code": bk_app_code, "role": 50}
 
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_201_CREATED
+
+        sys_api_client = SysAPIClient.objects.filter(name=user, role=50).first()
+        assert sys_api_client
+        assert AuthenticatedAppAsClient.objects.filter(client=sys_api_client).exists()
+
+    def test_update_system_api_users(self, plat_mgt_api_client):
+        """测试更新系统 API 用户"""
+        bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
+        user = f"test_sys_user_{generate_random_string(6)}"
+        bk_app_code = "test_app"
+        data = {"user": user, "bk_app_code": bk_app_code, "role": 50}
+
+        # 先创建一个系统 API 用户
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_201_CREATED
+
+        data = {"user": user, "bk_app_code": bk_app_code, "role": 60}
+        rsp = plat_mgt_api_client.put(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_204_NO_CONTENT
+
+        # 验证数据库中的角色已更新
+        sys_api_client = SysAPIClient.objects.get(name=user)
+        assert sys_api_client.role == 60
 
     def test_destroy_system_api_users(self, plat_mgt_api_client):
         """测试删除系统 API 用户"""
@@ -148,12 +186,14 @@ class TestSystemAPIUserViewSet:
         user = f"test_sys_user_{generate_random_string(6)}"
         bk_app_code = "test_app"
         data = {"user": user, "bk_app_code": bk_app_code, "role": 50}
-        plat_mgt_api_client.post(bulk_url, data, format="json")
+
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_201_CREATED
 
         # 删除该用户
         delete_url = reverse(
             "plat_mgt.users.system_api_user.delete",
-            kwargs={"user": user, "role": 50},
+            kwargs={"user": user},
         )
         delete_rsp = plat_mgt_api_client.delete(delete_url)
         assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT

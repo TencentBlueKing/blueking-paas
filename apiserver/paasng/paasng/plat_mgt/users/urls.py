@@ -24,33 +24,33 @@ urlpatterns = [
     # 平台管理员
     path(
         "api/plat_mgt/users/user_profiles/",
-        views.PlatMgtAdminViewSet.as_view({"get": "list", "post": "bulk_create"}),
-        name="plat_mgt.users.userprofiles.bulk",
+        views.PlatformManagerViewSet.as_view({"get": "list", "post": "bulk_create"}),
+        name="plat_mgt.users.user_profiles.bulk",
     ),
     path(
         "api/plat_mgt/users/user_profiles/<str:user>/",
-        views.PlatMgtAdminViewSet.as_view({"delete": "destroy"}),
-        name="plat_mgt.users.userprofiles.delete",
+        views.PlatformManagerViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.users.user_profiles.delete",
     ),
     # 用户特性
     path(
         "api/plat_mgt/users/account_feature_flags/",
-        views.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
+        views.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "upsert"}),
         name="plat_mgt.users.account_feature_flags.bulk",
     ),
     path(
-        "api/plat_mgt/users/account_feature_flags/<str:user>/<str:feature>/",
+        "api/plat_mgt/users/<str:user>/account_feature_flags/<str:feature>/",
         views.AccountFeatureFlagManageViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.account_feature_flags.delete",
     ),
     # 系统 API 用户
     path(
         "api/plat_mgt/users/system_api_user/",
-        views.SystemAPIUserViewSet.as_view({"get": "list", "post": "update_or_create"}),
+        views.SystemAPIUserViewSet.as_view({"get": "list", "post": "create", "put": "update"}),
         name="plat_mgt.users.system_api_user.bulk",
     ),
     path(
-        "api/plat_mgt/users/system_api_user/<str:user>/<str:role>/",
+        "api/plat_mgt/users/system_api_user/<str:user>/",
         views.SystemAPIUserViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.system_api_user.delete",
     ),

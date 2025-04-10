@@ -20,6 +20,7 @@ import random
 from typing import Dict, List
 
 from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import User as RequestUser
 from blue_krill.models.fields import EncryptField
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, UserManager
@@ -29,6 +30,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
 from paasng.infras.accounts.oauth.models import Project, Scope
@@ -90,16 +93,21 @@ class User(AbstractBaseUser):
 class UserProfileManager(models.Manager):
     """Custom profile manager for user"""
 
-    def get_profile(self, user):
+    def get_profile(self, user: RequestUser):
+        """获取或创建用户基本信息，包含用户权限、特性等。
+
+        :param user: 通过 request.user 获取的用户信息
+        """
         if user.pk is None or not user.pk:
             raise ValueError("Must provide a real user, not an anonymous user!")
 
         try:
             return self.model.objects.get(user=user.pk)
         except self.model.DoesNotExist:
-            # Auto create user
+            # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
             if settings.AUTO_CREATE_REGULAR_USER:
-                return self.create(user=user.pk, role=SiteRole.USER.value)
+                tenant_id = get_tenant(user).id
+                return self.create(user=user.pk, tenant_id=tenant_id, role=SiteRole.USER.value)
             raise
 
     def get_by_natural_key(self, user: str):
@@ -112,6 +120,8 @@ class UserProfile(TimestampedModel):
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
     feature_flags = models.TextField(null=True, blank=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = UserProfileManager()
 

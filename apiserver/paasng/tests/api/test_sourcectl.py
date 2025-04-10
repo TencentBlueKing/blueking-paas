@@ -22,7 +22,7 @@ import pytest
 from django.test.utils import override_settings
 from django.urls import reverse
 
-from paasng.infras.bk_cmsi.client import BkNotificationService
+from paasng.infras.notifier.client import BkNotificationService
 from paasng.platform.sourcectl.models import SvnAccount
 from tests.utils.basic import generate_random_string
 

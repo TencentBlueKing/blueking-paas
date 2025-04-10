@@ -16,17 +16,17 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-class NotificationError(Exception):
+class BaseNotifierError(Exception):
     """消息通知服务异常基类"""
 
 
-class MethodNotDefinedError(NotificationError):
+class MethodNotDefinedError(BaseNotifierError):
     """API方法未定义异常"""
 
 
-class NotificationSendFailedError(NotificationError):
+class NotificationSendFailedError(BaseNotifierError):
     """消息发送失败异常"""
 
 
-class InvalidNotificationParams(NotificationError):
+class InvalidNotificationParams(BaseNotifierError):
     """无效的通知参数异常"""

@@ -21,10 +21,10 @@ from django.conf import settings
 from typing_extensions import Protocol
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
-from paasng.infras.bk_cmsi.backends.apigw import Client
-from paasng.infras.bk_cmsi.backends.apigw import Group as BkCmsiGroup
-from paasng.infras.bk_cmsi.backends.esb import get_client_by_username
-from paasng.infras.bk_cmsi.exceptions import (
+from paasng.infras.notifier.backends.apigw import Client
+from paasng.infras.notifier.backends.apigw import Group as BkCmsiGroup
+from paasng.infras.notifier.backends.esb import get_client_by_username
+from paasng.infras.notifier.exceptions import (
     InvalidNotificationParams,
     MethodNotDefinedError,
     NotificationSendFailedError,
@@ -182,7 +182,7 @@ class BkNotificationService:
 
     def send_wecom(self, receivers: List[str], content: str, title: str):
         """发送 WeCom(企业微信) 通知
-        NOTE：目前仅上云版 ESB API 支持，其他版本调用会抛出 NotificationError 异常
+        NOTE：目前仅上云版 ESB API 支持，其他版本调用会抛出 BaseNotifierError 异常
 
         :param receivers: 接收人列表
         :param content: 通知内容正文

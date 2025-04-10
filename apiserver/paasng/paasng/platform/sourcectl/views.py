@@ -39,9 +39,9 @@ from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.bk_cmsi.client import BkNotificationService
-from paasng.infras.bk_cmsi.exceptions import NotificationError
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.notifier.client import BkNotificationService
+from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -119,7 +119,7 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         bk_notify = BkNotificationService(user_tenant_id)
         try:
             bk_notify.send_wecom([user.username], message, _("蓝鲸平台"))
-        except NotificationError:
+        except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return {

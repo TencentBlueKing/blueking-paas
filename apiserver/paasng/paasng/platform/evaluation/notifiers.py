@@ -26,7 +26,7 @@ from django.template import loader
 from django.utils import timezone
 
 from paasng.core.tenant.user import get_init_tenant_id
-from paasng.infras.bk_cmsi.client import BkNotificationService
+from paasng.infras.notifier.client import BkNotificationService
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.evaluation.constants import EmailReceiverType, OperationIssueType
 from paasng.platform.evaluation.models import AppOperationReport, IdleAppNotificationMuteRule

@@ -39,9 +39,9 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
-from paasng.infras.bk_cmsi.client import BkNotificationService
-from paasng.infras.bk_cmsi.exceptions import NotificationError
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.notifier.client import BkNotificationService
+from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
@@ -101,7 +101,7 @@ class UserVerificationGenerationView(APIView):
         bk_notify = BkNotificationService(user_tenant_id)
         try:
             bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
-        except NotificationError:
+        except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return JsonResponse({}, status=status.HTTP_201_CREATED)

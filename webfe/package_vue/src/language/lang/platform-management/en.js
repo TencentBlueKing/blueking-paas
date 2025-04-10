@@ -226,4 +226,9 @@ export default {
   确认删除服务: 'Confirm Service Deletion',
   请选择方案: 'Please Select Plan',
   暂无已选方案: 'No Selected Plan Available',
+  搜索方案名称: 'Search Plan Name',
+  添加实例: 'Add Instance',
+  编辑实例: 'Edit Instance',
+  当前租户暂无可用方案: 'No Available Plans for the Current Tenant',
+  '1. 在 [服务方案] 中添加新方案': '1. Add a new plan in [Service Plans]',
 };

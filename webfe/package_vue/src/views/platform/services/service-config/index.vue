@@ -164,7 +164,6 @@
       :show.sync="isShowSideslider"
       :data="sidesliderConfig.row"
       :type="sidesliderConfig.type"
-      :loading="sidesliderConfig.loading"
       @refresh="getBindingPolicies"
     />
   </div>
@@ -200,7 +199,6 @@ export default {
       sidesliderConfig: {
         row: {},
         type: 'edit',
-        loading: false,
       },
       // 当前服务id
       activeServiceId: '',
@@ -266,7 +264,6 @@ export default {
     },
     // 获取当前租户下服务-方案（select方案选择）
     async getServicePlansUnderTenant(tenantId, serviceId) {
-      this.sidesliderConfig.loading = true;
       try {
         const res = await this.$store.dispatch('tenant/getServicePlansUnderTenant', {
           tenantId,
@@ -274,11 +271,11 @@ export default {
         });
         // 方案下拉框数据
         this.$store.commit('tenant/updateAvailableClusters', res);
+        return res;
       } catch (e) {
         this.catchErrorHandler(e);
         this.$store.commit('tenant/updateAvailableClusters', []);
-      } finally {
-        this.sidesliderConfig.loading = false;
+        return [];
       }
     },
     // 获取所有服务方案
@@ -400,7 +397,11 @@ export default {
     },
     // 编辑/新建配置方案侧栏
     async handlerEdit(row, type) {
-      this.getServicePlansUnderTenant(row.tenant_id, this.activeServiceId);
+      const plans = await this.getServicePlansUnderTenant(row.tenant_id, this.activeServiceId);
+      if (!plans.length) {
+        this.showNoPlanInfo(row.tenant_id);
+        return;
+      }
       // 如果为规则分配 allocation_policy 为 else 数据项，统一分配数据也是 allocation_policy
       const isUniform = !row.allocation_precedence_policies.length;
       const config = this.generateAllocationConfig(row, isUniform);
@@ -444,11 +445,47 @@ export default {
         },
       });
     },
+    // 无方案弹窗提示
+    showNoPlanInfo(tenantId) {
+      const h = this.$createElement;
+      // 如果没有集群，出现居中弹窗引导
+      this.$bkInfo({
+        type: 'warning',
+        width: 480,
+        title: this.$t('当前租户暂无可用方案'),
+        subHeader: h(
+          'div',
+          {
+            class: ['plan-info-header-cls'],
+          },
+          [
+            h('p', { class: 'tip-text mb5' }, `${this.$t('您可以')}：`),
+            h('p', { class: 'tip-text' }, this.$t('1. 在 [服务方案] 中添加新方案')),
+          ]
+        ),
+        okText: this.$t('前往添加'),
+        confirmFn: () => {
+          // 跳转服务方案
+          this.$router.push({ params: { tenantId }, query: { active: 'plan' } });
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+.plan-info-header-cls {
+  text-align: left;
+  font-size: 14px;
+  padding: 8px 16px;
+  color: #4d4f56;
+  background: #f5f6fa;
+  border-radius: 2px;
+  .tip-text {
+    line-height: 22px;
+  }
+}
 .service-config-container {
   height: 100%;
   display: flex;

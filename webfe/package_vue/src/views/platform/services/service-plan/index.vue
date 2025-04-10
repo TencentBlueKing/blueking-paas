@@ -250,7 +250,8 @@ export default {
   watch: {
     tenants: {
       handler(newList) {
-        this.curTenantId = newList[0]?.id;
+        const tenantId = this.$route.params?.tenantId;
+        this.curTenantId = tenantId || newList[0]?.id;
       },
       immediate: true,
     },

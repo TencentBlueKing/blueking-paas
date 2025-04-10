@@ -511,16 +511,8 @@ def build_logging_config(log_level: str, to_console: bool, file_directory: Optio
 
 LOGGING = build_logging_config(LOG_LEVEL, logging_to_console, logging_directory, LOGGING_FILE_FORMAT)
 
-# 通知插件
-NOTIFICATION_PLUGIN_CLASSES = settings.get(
-    "NOTIFICATION_PLUGIN_CLASSES",
-    {
-        "mail": "paasng.utils.notification_plugins.MailNotificationPlugin",
-        "sms": "paasng.utils.notification_plugins.SMSNotificationPlugin",
-        "wechat": "paasng.utils.notification_plugins.WeChatNotificationPlugin",
-    },
-)
-
+# 发送通知的渠道，如果没有配置，则仅记录日志并不调用发送通知的 API
+BK_CMSI_ENABLED_METHODS = settings.get("BK_CMSI_ENABLED_METHODS", ["send_mail", "send_sms", "send_weixin"])
 
 # ------------------------
 # Django 基础配置（自定义）

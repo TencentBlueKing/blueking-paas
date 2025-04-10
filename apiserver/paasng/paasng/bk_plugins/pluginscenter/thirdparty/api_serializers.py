@@ -114,6 +114,10 @@ class PluginReleaseVersionSLZ(serializers.Serializer):
     source_version_name = serializers.CharField(help_text="代码分支名/tag名")
     source_hash = serializers.CharField(help_text="代码提交哈希")
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginReleaseVersionSLZ__thirdparty"
+
 
 class PluginReleaseStageSLZ(serializers.Serializer):
     """插件发布版本-步骤的结构"""

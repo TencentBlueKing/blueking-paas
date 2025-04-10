@@ -141,18 +141,19 @@ class ProcessSpecManageViewSet(GenericViewSet):
             name=process_type,
             defaults=defaults,
         )
+        # 记录目前使用的 plan 名称（操作审计用）
+        cur_plan_name = process_spec.plan.name
 
         process_spec.plan = plan
         process_spec.save(update_fields=["plan", "updated"])
 
-        # 操作审计只记录更改到的方案的名字
-        defaults["plan"] = plan.name
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY_PLAN,
             target=OperationTarget.PROCESS,
-            attribute=wl_app.name,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=defaults),
+            attribute=f"{wl_app.name}:{process_type}",
+            data_before=DataDetail(type=DataType.RAW_DATA, data={"plan": cur_plan_name}),
+            data_after=DataDetail(type=DataType.RAW_DATA, data={"plan": plan.name}),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

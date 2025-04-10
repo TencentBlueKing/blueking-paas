@@ -34,7 +34,7 @@ urlpatterns = [
     path("api/monitor/user/alerts/", views.ListAlertsView.as_view({"post": "list_alerts_by_user"})),
     path(
         "api/monitor/applications/<slug:code>/alarm_strategies/",
-        views.ListAlarmStrategiesView.as_view({"post": "list"}),
+        views.ListAlarmStrategiesView.as_view({"get": "list"}),
     ),
     path(
         "api/monitor/applications/<slug:code>/dashboard_info/",

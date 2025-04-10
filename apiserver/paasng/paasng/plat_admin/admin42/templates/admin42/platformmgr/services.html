@@ -24,7 +24,6 @@
         <bk-table-column label="服务code" prop="name">
         </bk-table-column>
         <bk-table-column label="服务名称" prop="display_name"></bk-table-column>
-        <bk-table-column label="可用区" prop="region"></bk-table-column>
         <bk-table-column label="服务分类" prop="category_id">
             <template slot-scope="props">
                 <span > $[ props.row.category_id | category2zh ]</span>
@@ -84,15 +83,6 @@
             </bk-form-item>
             <bk-form-item label="支持语言" :required="true">
                 <bk-input v-model="dialog.form.available_languages" :disabled="dialog.type === 'delete'"></bk-input>
-            </bk-form-item>
-            <bk-form-item label="可用区" :required="true">
-                <bk-select v-model="dialog.form.region" :disabled="dialog.type === 'delete'">
-                    <bk-option v-for="region in regionList"
-                        :key="region.value"
-                        :id="region.value"
-                        :name="region.text">
-                    </bk-option>
-                </bk-select>
             </bk-form-item>
             <bk-form-item label="是否可用" :required="true">
                 <bk-switcher v-model="dialog.form.is_active" :disabled="dialog.type === 'delete'"></bk-switcher>

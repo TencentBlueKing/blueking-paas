@@ -32,7 +32,7 @@ def _get_service_choices():
     choices = []
     for svc in Service.objects.all():
         if svc.provider_name == "pool":
-            choices.append(f"{svc.region}:{svc.name}")
+            choices.append(svc.name)
     return choices
 
 
@@ -78,8 +78,7 @@ class Command(BaseCommand):
 
     def handle(self, service_name: str, credentials_str: str, **options):
         credentials = json.loads(credentials_str)
-        region, name = service_name.split(":")
-        svc = Service.objects.get_by_natural_key(region, name)
+        svc = Service.objects.get_by_natural_key(service_name)
         qs = PreCreatedInstance.objects.filter(plan__in=svc.plan_set.all())
         self.stdout.write("\n")
         for item in qs.all():

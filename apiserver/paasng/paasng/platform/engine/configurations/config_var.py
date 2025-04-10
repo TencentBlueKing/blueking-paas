@@ -309,6 +309,12 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEn
             description=_("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
             prefix=config_vars_prefix,
         ),
+        BuiltInEnvVarDetail(
+            key="MULTI_TENANT_MODE",
+            value=settings.ENABLE_MULTI_TENANT_MODE,
+            description=_("是否开启多租户模式"),
+            prefix=config_vars_prefix,
+        ),
     ]
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
     system_envs_with_prefix.extend(

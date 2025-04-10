@@ -19,7 +19,6 @@ import json
 from unittest import mock
 
 import pytest
-from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
@@ -53,9 +52,7 @@ def create_module(bk_app):
 
 @pytest.fixture()
 def local_service(request):
-    service = G(
-        Service, name="mysql", category=G(ServiceCategory), region=settings.DEFAULT_REGION_NAME, logo_b64="dummy"
-    )
+    service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     G(Plan, name="plan-1", service=service)
     G(Plan, name="plan-2", service=service)
     return mixed_service_mgr.get(service.uuid)

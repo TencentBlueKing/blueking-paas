@@ -441,17 +441,8 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         if not isinstance(feature_flags, dict):
             raise ValidationError(_("特性标志必须为字典"))
 
-        for k, v in feature_flags.items():
-            try:
-                ClusterFeatureFlag(k)
-            except ValueError:
-                # 不合法的特性标志直接忽略（历史遗留的废弃数据）
-                feature_flags.pop(k)
-
-            if not isinstance(v, bool):
-                raise ValidationError(_("特性标志的值必须为布尔值"))
-
-        return feature_flags
+        # 不合法的特性标志 / 非布尔类型的值，直接忽略（历史遗留的脏数据）
+        return {k: v for k, v in feature_flags.items() if k in ClusterFeatureFlag and isinstance(v, bool)}
 
     def validate_node_selector(self, node_selector: Dict[str, str]) -> Dict[str, str]:
         if not isinstance(node_selector, dict):

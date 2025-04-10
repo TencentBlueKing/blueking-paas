@@ -7,17 +7,31 @@ Open the `app_desc.yaml` file in the project's root directory (create it if it d
 Below is an example file defining two processes: `web` and `worker`:
 
 ```yaml
-spec_version: 2
+specVersion: 3
 module:
+  name: default
   language: Python
-  processes:
-    web:
-      command: gunicorn wsgi -w 4 -b [::]:${PORT}
-    worker:
-      command: celery -A app -l info
+  spec:
+    processes:
+      - name: web
+        procCommand: gunicorn wsgi -w 4 -b [::]:${PORT}
+        services:
+          - name: web
+            protocol: TCP
+            exposedType:
+              name: bk/http
+            targetPort: 5000
+            port: 80
+      - name: worker
+        procCommand: celery -A app -l info
+        services:
+          - name: worker
+            protocol: TCP
+            targetPort: 5000
+            port: 80
 ```
 
-The `processes` field's keys are the process names, and the values contain process details. The `command` is the start command for the process, supporting the use of `${VAR_NAME}` to reference environment variables.
+The `processes` field contains a list of processes, with each process specified by a `name` field. The procCommand is the startup command for the process, and it supports using `${VAR_NAME}` to reference environment variables.
 
 After modifying the `app_desc.yaml`, push the changes to the repository and **redeploy the module** to activate the new process configuration.
 
@@ -26,4 +40,4 @@ After modifying the `app_desc.yaml`, push the changes to the repository and **re
 1. Process name requirements: Start with a lowercase letter or number, include lowercase letters, numbers, and hyphens (`-`), and be no more than 12 characters long.
 2. If the module has a special "build directory," the `app_desc.yaml` file should be placed there, not in the repository's root directory.
 
-> Further reading: [Introduction to Application Processes](PROCFILE_DOC) | [Application Description File](APP_DESC_DOC)
+> Further reading: [Introduction to Application Processes](PROCFILE_DOC) | [Application Description File](APP_DESC_CNATIVE)

@@ -676,17 +676,17 @@ export default {
     envLoading() {
       return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
     },
-
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
-
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
     },
-
     addedModuleList() {
       return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
+    },
+    isCustomImage() {
+      return this.curAppModule?.web_config?.runtime_type === 'custom_image';
     },
   },
   created() {
@@ -839,10 +839,8 @@ export default {
           moduleId: this.curModuleId,
           data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('添加环境变量成功'),
-        });
+        // 弹窗提示
+        this.successInfo(this.$t('添加'));
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -867,10 +865,8 @@ export default {
           varId: data.id,
           data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('修改环境变量成功'),
-        });
+        // 弹窗提示
+        this.successInfo(this.$t('修改'));
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -901,14 +897,11 @@ export default {
           data: params,
         });
         // 操作对应tips
-        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
+        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '添加' : '删除';
         if (this.envVarList.length === this.envLocalVarList.length) {
           tipsType = '修改';
         }
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t(`${tipsType}环境变量成功`),
-        });
+        this.successInfo(this.$t(tipsType));
         // 批量更新不打乱当前顺序，重新复制当前新建id
         this.getEnvVarList(false);
       } catch (error) {
@@ -1359,10 +1352,7 @@ export default {
           moduleId: this.curModuleId,
           varId,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('删除环境变量成功'),
-        });
+        this.successInfo(this.$t('删除'));
         this.getEnvVarList();
       } catch (e) {
         this.$paasMessage({
@@ -1449,6 +1439,37 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 环境变量新建、编辑成功弹窗提示
+    successInfo(typeText) {
+      const h = this.$createElement;
+      const tips = this.isCustomImage
+        ? h('div', null, this.$t('您已{t}环境变量，变更将在下次部署时生效', { t: typeText }))
+        : h('div', null, [
+            h('p', null, this.$t('您已{t}环境变量，变更将在下次部署时生效。', { t: typeText })),
+            this.$t('在下一次部署时，您可以选择 “已构建镜像”，跳过构建阶段，直接进行部署操作。'),
+          ]);
+      this.$bkInfo({
+        type: 'success',
+        title: this.$t('环境变量{t}成功', { t: typeText }),
+        extCls: `change-env-info-cls ${this.isCustomImage ? 'image-module' : ''}`,
+        width: 480,
+        okText: this.$t('去部署'),
+        cancelText: this.$t('关闭'),
+        subHeader: h('div', [h('div', { class: ['tips'] }, [tips])]),
+        confirmFn: () => {
+          // 跳转部署应用
+          this.$router.push({
+            name: 'cloudAppDeployManageStag',
+            params: {
+              id: this.appCode,
+              isShowDeploy: true,
+              deployModuleId: this.curModuleId,
+            },
+          });
+        },
+      });
     },
   },
 };
@@ -2011,6 +2032,15 @@ a.is-disabled {
         height: 0;
       }
     }
+  }
+}
+.change-env-info-cls {
+  .tips {
+    text-align: left;
+    padding: 12px 16px;
+    background: #f5f7fa;
+    border-radius: 2px;
+    line-height: 22px;
   }
 }
 </style>

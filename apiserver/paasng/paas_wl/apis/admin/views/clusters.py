@@ -18,14 +18,10 @@
 import logging
 from collections import defaultdict
 from dataclasses import asdict
-from typing import Optional
 
 from django.conf import settings
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
-from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet, mixins
+from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from paas_wl.apis.admin.helpers.helm import (
     HelmReleaseParser,
@@ -35,122 +31,28 @@ from paas_wl.apis.admin.helpers.helm import (
 )
 from paas_wl.apis.admin.helpers.operator import detect_operator_status, fetch_paas_cobj_info
 from paas_wl.apis.admin.serializers.clusters import (
-    APIServerSLZ,
-    ClusterRegisterRequestSLZ,
     GetClusterComponentStatusSLZ,
     ReadonlyClusterSLZ,
 )
-from paas_wl.infras.cluster.models import APIServer, Cluster
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 
 logger = logging.getLogger(__name__)
 
 
-class ClusterViewSet(mixins.DestroyModelMixin, ReadOnlyModelViewSet):
-    """deprecated：Admin42 功能未来将由平台管理页面替代"""
+class ClusterViewSet(GenericViewSet):
+    """deprecated：Admin42 功能未来将由平台管理页面替代，目前只保留查看功能"""
 
-    queryset = Cluster.objects.all()
-    serializer_class = ReadonlyClusterSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     pagination_class = None
-    filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["name"]
-    ordering_fields = ("created", "updated")
 
-    @swagger_auto_schema(request_body=ClusterRegisterRequestSLZ)
-    def update_or_create(self, request, pk: Optional[str] = None):
-        slz = ClusterRegisterRequestSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(Cluster.objects.get(pk=pk)).data if pk else None
-        )
-
-        cluster = Cluster.objects.register_cluster(**data)
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.CREATE if request.method == "POST" else OperationEnum.MODIFY,
-            target=OperationTarget.CLUSTER,
-            attribute=cluster.name,
-            data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
-        )
-        return Response(data=ReadonlyClusterSLZ(cluster).data)
-
-    @swagger_auto_schema(request_body=APIServerSLZ)
-    def bind_api_server(self, request, pk):
-        slz = APIServerSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        cluster = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        api_server, _ = APIServer.objects.update_or_create(
-            cluster=cluster, host=data["host"], defaults={"tenant_id": cluster.tenant_id}
-        )
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.MODIFY,
-            target=OperationTarget.CLUSTER,
-            attribute=cluster.name,
-            data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
-        )
-        return Response(data=APIServerSLZ(api_server).data)
-
-    def unbind_api_server(self, request, pk, api_server_id):
-        cluster = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        APIServer.objects.filter(cluster=cluster, uuid=api_server_id).delete()
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.MODIFY,
-            target=OperationTarget.CLUSTER,
-            attribute=cluster.name,
-            data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data),
-        )
-        return Response()
-
-    def gen_node_state(self, request, cluster_name, *args, **kwargs):
-        cluster = Cluster.objects.filter(name=cluster_name).first()
-        if not cluster:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        logger.info(f"will generate state for [{cluster.name}]...")
-        client = get_client_by_cluster_name(cluster_name=cluster.name)
-
-        logger.info(f"generating state for [{cluster.name}]...")
-        # 强制忽略 master 节点
-        ignore_labels = {"node-role.kubernetes.io/master": "true"}
-        state = generate_state(cluster.name, client, ignore_labels, cluster.tenant_id)
-
-        logger.info("syncing the state to nodes...")
-        sync_state_to_nodes(client, state)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def destroy(self, request, *args, **kwargs):
-        cluster = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ReadonlyClusterSLZ(cluster).data)
-        cluster.delete()
-
-        add_admin_audit_record(
-            user=request.user.pk,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.CLUSTER,
-            attribute=cluster.name,
-            data_before=data_before,
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def list(self, request, *args, **kwargs):
+        clusters = Cluster.objects.all()
+        return Response(ReadonlyClusterSLZ(clusters, many=True).data)
 
 
 class ClusterComponentViewSet(ViewSet):

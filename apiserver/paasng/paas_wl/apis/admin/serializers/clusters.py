@@ -15,62 +15,45 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import base64
 from typing import List
 
 from rest_framework import serializers
 
-from paas_wl.infras.cluster.constants import ClusterTokenType
+from paas_wl.infras.cluster.constants import ClusterType
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.serializers import IngressConfigSLZ
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paasng.platform.modules.constants import ExposedURLType
 
 
-def ensure_base64_encoded(content):
-    try:
-        base64.b64decode(content)
-    except Exception:
-        raise serializers.ValidationError("content is not a base64 encoded obj.")
-
-
 class APIServerSLZ(serializers.Serializer):
-    uuid = serializers.CharField(required=False, read_only=True)
+    uuid = serializers.CharField(required=False)
     host = serializers.CharField()
 
 
-class ReadonlyClusterSLZ(serializers.ModelSerializer):
+class ReadonlyClusterSLZ(serializers.Serializer):
     """Serializer for Cluster object"""
 
-    ingress_config = IngressConfigSLZ(read_only=True)
-    annotations = serializers.JSONField(read_only=True)
-    api_servers = APIServerSLZ(many=True, read_only=True)
-    default_node_selector = serializers.JSONField(read_only=True)
-    default_tolerations = serializers.JSONField(read_only=True)
-    feature_flags = serializers.JSONField(read_only=True)
-    nodes = serializers.SerializerMethodField(read_only=True)
+    uuid = serializers.CharField()
+    name = serializers.CharField()
+    type = serializers.ChoiceField(choices=ClusterType.get_choices())
+    description = serializers.CharField()
 
-    class Meta:
-        model = Cluster
-        fields = [
-            "uuid",
-            "name",
-            "type",
-            "description",
-            "ingress_config",
-            "annotations",
-            "api_servers",
-            # 相关证书
-            "ca_data",
-            "cert_data",
-            "key_data",
-            "token_value",
-            "default_node_selector",
-            "default_tolerations",
-            "feature_flags",
-            "nodes",
-            "exposed_url_type",
-        ]
+    exposed_url_type = serializers.ChoiceField(choices=ExposedURLType.get_choices())
+    ingress_config = IngressConfigSLZ()
+    annotations = serializers.JSONField()
+
+    ca_data = serializers.CharField()
+    cert_data = serializers.CharField()
+    key_data = serializers.CharField()
+    token_value = serializers.CharField()
+
+    default_node_selector = serializers.JSONField()
+    default_tolerations = serializers.JSONField()
+    feature_flags = serializers.JSONField()
+
+    api_servers = APIServerSLZ(many=True)
+    nodes = serializers.SerializerMethodField()
 
     def get_nodes(self, obj: Cluster) -> List[str]:
         """获取集群拥有的 Node 信息（根据 RegionClusterState 表查询，若有新增节点需要先更新状态）"""
@@ -78,32 +61,6 @@ class ReadonlyClusterSLZ(serializers.ModelSerializer):
         if not state:
             return []
         return state.nodes_name
-
-
-class ClusterRegisterRequestSLZ(serializers.Serializer):
-    """Serializer for registering Cluster"""
-
-    name = serializers.CharField(required=True)
-    type = serializers.CharField(required=True)
-    # optional field
-    description = serializers.CharField(required=False, default="")
-    exposed_url_type = serializers.ChoiceField(choices=ExposedURLType.get_choices())
-    ingress_config = IngressConfigSLZ(required=False, default=None)
-    annotations = serializers.JSONField(required=False, default=None)
-    ca_data = serializers.CharField(
-        validators=[ensure_base64_encoded], required=False, allow_blank=True, allow_null=True, default=None
-    )
-    cert_data = serializers.CharField(
-        validators=[ensure_base64_encoded], required=False, allow_blank=True, allow_null=True, default=None
-    )
-    key_data = serializers.CharField(
-        validators=[ensure_base64_encoded], required=False, allow_blank=True, allow_null=True, default=None
-    )
-    token_type = serializers.ChoiceField(choices=ClusterTokenType.get_django_choices(), required=False)
-    token_value = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    default_node_selector = serializers.JSONField(default={}, required=False)
-    default_tolerations = serializers.JSONField(default=[], required=False)
-    feature_flags = serializers.JSONField(default=dict, required=False)
 
 
 class GetClusterComponentStatusSLZ(serializers.Serializer):

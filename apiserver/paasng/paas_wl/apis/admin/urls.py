@@ -81,13 +81,8 @@ urlpatterns = [
     # 平台管理-集群管理API
     path(
         "wl_api/platform/clusters/",
-        clusters.ClusterViewSet.as_view({"post": "update_or_create", "get": "list"}),
+        clusters.ClusterViewSet.as_view({"get": "list"}),
         name="wl_api.clusters",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:cluster_name>/node_state/",
-        clusters.ClusterViewSet.as_view({"post": "gen_node_state"}),
-        name="wl_api.cluster.node_state",
     ),
     path(
         "wl_api/platform/clusters/<str:cluster_name>/operator_info/",
@@ -103,20 +98,5 @@ urlpatterns = [
         "wl_api/platform/clusters/<str:cluster_name>/components/<str:component_name>/",
         clusters.ClusterComponentViewSet.as_view({"get": "get_component_status"}),
         name="wl_api.cluster.component_by_name",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/",
-        clusters.ClusterViewSet.as_view({"get": "retrieve", "put": "update_or_create", "delete": "destroy"}),
-        name="wl_api.cluster_by_id",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/api_servers",
-        clusters.ClusterViewSet.as_view({"post": "bind_api_server"}),
-        name="wl_api.cluster.api_servers",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/api_servers/<str:api_server_id>",
-        clusters.ClusterViewSet.as_view({"delete": "unbind_api_server"}),
-        name="wl_api.cluster.api_server_by_id",
     ),
 ]

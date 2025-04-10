@@ -15,16 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paasng.utils.addons import PlugableAppConfig
+
+class BaseNotifierError(Exception):
+    """消息通知服务异常基类"""
 
 
-class AppsConfig(PlugableAppConfig):
-    name = "paasng.infras.accounts"
-    default = True
+class MethodNotDefinedError(BaseNotifierError):
+    """API方法未定义异常"""
 
-    def ready(self):
-        super().ready()
-        # Patch get_user function when project/app is ready to make auth system works
-        from bkpaas_auth.monkey import patch_middleware_get_user
 
-        patch_middleware_get_user()
+class NotificationSendFailedError(BaseNotifierError):
+    """消息发送失败异常"""
+
+
+class InvalidNotificationParams(BaseNotifierError):
+    """无效的通知参数异常"""

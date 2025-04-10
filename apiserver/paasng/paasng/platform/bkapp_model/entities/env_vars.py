@@ -23,7 +23,7 @@ class EnvVar(BaseModel):
 
     name: str
     value: str
-    description: str
+    description: str = ""
 
 
 class EnvVarOverlay(EnvVar):

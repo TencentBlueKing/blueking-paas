@@ -47,7 +47,7 @@ class BaseEnvVarFields(serializers.Serializer):
 
     name = field_env_var_key()
     value = serializers.CharField(allow_blank=True)
-    description = serializers.CharField(allow_blank=True, max_length=200, default="")
+    description = serializers.CharField(allow_blank=True, max_length=200, required=False, default="")
 
 
 class EnvVarInputSLZ(BaseEnvVarFields):

@@ -29,8 +29,11 @@ pytestmark = pytest.mark.django_db
 class Test__sync_env_vars:
     def test_integrated(self, bk_module):
         G(PresetEnvVariable, module=bk_module, key="KEY_EXISTING")
-        env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
-        overlay_env_vars = [EnvVarOverlay(env_name="stag", name="KEY3", value="foo")]
+        env_vars = [
+            EnvVar(name="KEY1", value="foo", description="desc_1"),
+            EnvVar(name="KEY2", value="foo", description="desc_2"),
+        ]
+        overlay_env_vars = [EnvVarOverlay(env_name="stag", name="KEY3", value="foo", description="desc_3")]
         ret = sync_env_vars(bk_module, env_vars, overlay_env_vars)
 
         assert PresetEnvVariable.objects.count() == 3

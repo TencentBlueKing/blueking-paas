@@ -56,7 +56,7 @@ def sync_env_vars(
             module=module,
             environment_name=env_name.value,
             key=var.name,
-            defaults={"value": var.value, "tenant_id": module.tenant_id},
+            defaults={"value": var.value, "description": var.description, "tenant_id": module.tenant_id},
         )
         ret.incr_by_created_flag(created)
         existing_index.pop((env_name.value, var.name), None)
@@ -67,7 +67,11 @@ def sync_env_vars(
             module=module,
             environment_name=env_name.value,
             key=overlay_var.name,
-            defaults={"value": overlay_var.value, "tenant_id": module.tenant_id},
+            defaults={
+                "value": overlay_var.value,
+                "description": overlay_var.description,
+                "tenant_id": module.tenant_id,
+            },
         )
         ret.incr_by_created_flag(created)
         existing_index.pop((env_name.value, overlay_var.name), None)

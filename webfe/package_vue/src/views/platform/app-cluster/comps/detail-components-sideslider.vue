@@ -88,6 +88,7 @@
           <div slot-scope="{ row }">
             <!-- JSON格式预览 -->
             <vue-json-pretty
+              class="paas-vue-json-pretty-cls"
               :data="row.conditions"
               :deep="0"
               :show-length="true"

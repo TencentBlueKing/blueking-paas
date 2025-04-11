@@ -17,7 +17,7 @@
 
 import pytest
 
-from paas_wl.bk_app.addons_services.redis.constants import (
+from paas_wl.bk_app.addons.redis.constants import (
     DEFAULT_REDIS_EXPORTER_IMAGE,
     DEFAULT_REDIS_PORT,
     DEFAULT_REDIS_REPOSITORY,
@@ -50,7 +50,7 @@ class TestRedisManifest:
     @pytest.fixture()
     def plan_config(self):
         return RedisPlanConfig(
-            kind="RedisReplication",
+            type="RedisReplication",
             redis_version="v7.0.12",
             persistent_storage=True,
             monitor=True,
@@ -80,7 +80,7 @@ class TestRedisManifest:
             },
         }
 
-        plan_config.kind = "Redis"
+        plan_config.type = "Redis"
         manifest = get_external_clb_service_manifest(plan_config, instance_config)
         assert manifest == {
             "apiVersion": "v1",

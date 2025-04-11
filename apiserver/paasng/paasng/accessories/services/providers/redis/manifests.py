@@ -20,8 +20,8 @@ from typing import List, Union
 
 from django.conf import settings
 
-from paas_wl.bk_app.addons_services.redis import crd
-from paas_wl.bk_app.addons_services.redis.constants import (
+from paas_wl.bk_app.addons.redis import crd
+from paas_wl.bk_app.addons.redis.constants import (
     DEFAULT_REDIS_EXPORTER_IMAGE,
     DEFAULT_REDIS_PORT,
     DEFAULT_REDIS_REPOSITORY,

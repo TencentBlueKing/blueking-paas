@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from paas_wl.bk_app.addons_services.redis.constants import RedisType
+from paas_wl.bk_app.addons.redis.constants import RedisType
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.crd import KServiceMonitor, Redis, RedisReplication
 from paas_wl.infras.resources.base.kres import KNamespace, KSecret, KService
@@ -32,10 +32,6 @@ from .schemas import RedisInstanceConfig, RedisPlanConfig
 
 class RedisInstanceController:
     """Redis 实例控制器"""
-
-    plan_config: RedisPlanConfig
-    instance_config: RedisInstanceConfig
-    namespace: str
 
     def __init__(self, plan_config: RedisPlanConfig, instance_config: RedisInstanceConfig, namespace: str):
         self.plan_config = plan_config

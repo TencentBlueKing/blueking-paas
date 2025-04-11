@@ -53,6 +53,7 @@
     "jquery": "^3.6.4",
     "js-calendar": "^1.2.3",
     "js-yaml": "^4.1.0",
+    "json-editor-vue": "^0.18.1",
     "less": "^2.7.2",
     "lodash": "^4.17.4",
     "markdown-it": "^13.0.2",

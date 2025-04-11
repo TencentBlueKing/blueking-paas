@@ -1160,7 +1160,9 @@ BKLOG_CONFIG = settings.get(
 )
 
 # 日志 ES 服务地址
-ELASTICSEARCH_HOSTS = settings.get("ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200"}])
+ELASTICSEARCH_HOSTS = settings.get(
+    "ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200", "http_auth": "admin:blueking"}]
+)
 
 # 日志 ES 搜索超时时间
 DEFAULT_ES_SEARCH_TIMEOUT = 30

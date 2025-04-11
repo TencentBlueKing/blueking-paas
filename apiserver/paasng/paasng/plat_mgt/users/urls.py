@@ -35,12 +35,12 @@ urlpatterns = [
     # 用户特性
     path(
         "api/plat_mgt/users/account_feature_flags/",
-        views.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "upsert"}),
+        views.AccountFeatureFlagViewSet.as_view({"get": "list", "post": "upsert"}),
         name="plat_mgt.users.account_feature_flags.bulk",
     ),
     path(
-        "api/plat_mgt/users/<str:user>/account_feature_flags/<str:feature>/",
-        views.AccountFeatureFlagManageViewSet.as_view({"delete": "destroy"}),
+        "api/plat_mgt/users/account_feature_flags/<str:id>/",
+        views.AccountFeatureFlagViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.account_feature_flags.delete",
     ),
     # 系统 API 用户

@@ -42,6 +42,7 @@ class BulkCreatePlatformManagerSLZ(serializers.Serializer):
 class UserFeatureFlagSLZ(serializers.Serializer):
     """用户特性序列化器"""
 
+    id = serializers.IntegerField(read_only=True)
     user = serializers.CharField(source="user.username", read_only=True)
     feature = serializers.CharField(source="name")
     is_effect = serializers.BooleanField(source="effect")
@@ -56,7 +57,7 @@ class UserFeatureFlagSLZ(serializers.Serializer):
         return account_feature_default_flags.get(obj.name, False)
 
 
-class UpdateUserFeatureFlagSLZ(serializers.Serializer):
+class UpsertUserFeatureFlagSLZ(serializers.Serializer):
     """更新用户特性序列化器"""
 
     user = serializers.CharField(help_text="用户名称")
@@ -99,5 +100,4 @@ class CreateSystemAPIUserSLZ(serializers.Serializer):
     """创建或更新系统 API 用户序列化器"""
 
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False, allow_blank=True)
-    user = serializers.CharField(help_text="用户名")
-    role = serializers.CharField(help_text="权限")
+    role = serializers.IntegerField(help_text="权限")

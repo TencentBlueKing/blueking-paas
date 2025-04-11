@@ -38,9 +38,10 @@ from paasng.plat_mgt.users.serializers import (
     CreateSystemAPIUserSLZ,
     PlatformManagerSLZ,
     SystemAPIUserSLZ,
-    UpdateUserFeatureFlagSLZ,
+    UpsertUserFeatureFlagSLZ,
     UserFeatureFlagSLZ,
 )
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         # 获取删除前的用户信息
         userprofile = UserProfile.objects.filter(user=user_id).first()
         if not userprofile:
-            return Response({"detail": f"User {user} not found"}, status=status.HTTP_404_NOT_FOUND)
+            raise error_codes.USER_PROFILE_NOT_FOUND
 
         # 如果用户的权限已经不是管理员权限，直接返回 204
         if userprofile.role not in [SiteRole.ADMIN.value, SiteRole.SUPER_USER.value]:
@@ -163,7 +164,7 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
+class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     """用户特性管理 API"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
@@ -183,12 +184,12 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="更新或创建用户特性",
-        request_body=UpdateUserFeatureFlagSLZ,
+        request_body=UpsertUserFeatureFlagSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def upsert(self, request):
         """更新或创建用户特性"""
-        slz = UpdateUserFeatureFlagSLZ(data=request.data)
+        slz = UpsertUserFeatureFlagSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -231,18 +232,16 @@ class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
         operation_description="删除用户特性",
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def destroy(self, request, user=None, feature=None, *args, **kwargs):
+    def destroy(self, request, id=None, *args, **kwargs):
         """删除用户特性"""
 
-        # 将用户名编码为 userid
-        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
         # 查询db中是否存有该用户特性
-        feature_flag = AccountFeatureFlag.objects.filter(user=user_id, name=feature).first()
+        feature_flag = AccountFeatureFlag.objects.filter(pk=id).first()
         if not feature_flag:
-            return Response({"detail": "Feature flag not found"}, status=status.HTTP_404_NOT_FOUND)
+            raise error_codes.USER_FEATURE_FLAG_NOT_FOUND
 
         # 构建审计数据
-        before_data = [{"user": user, "feature": feature, "is_effect": feature_flag.effect}]
+        before_data = [{"user": feature_flag.user, "feature": feature_flag.name, "is_effect": feature_flag.effect}]
 
         try:
             # 删除用户特性
@@ -276,12 +275,12 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     def list(self, request, *args, **kwargs):
         """获取系统 API 用户列表"""
         # 查询所有系统 API 客户端
-        sys_api_clients = SysAPIClient.objects.all()
+        sys_api_clients = SysAPIClient.objects.filter(is_active=True)
         # 获取客户端ID列表
         client_ids = [client.id for client in sys_api_clients]
         # 查询应用认证关系
-        app_clients = AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids)
-        app_code_map = {client.client: client.bk_app_code for client in app_clients}
+        app_client_relation = AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids)
+        app_code_map = {relation.client_id: relation.bk_app_code for relation in app_client_relation}
         # 查询私有令牌
         private_tokens = ClientPrivateToken.objects.filter(client_id__in=client_ids)
         token_map = {client.client: client.token for client in private_tokens}
@@ -314,44 +313,29 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        user, bk_app_code, role = data["user"], data["bk_app_code"], data["role"]
+        bk_app_code, role = data["bk_app_code"], data["role"]
+
+        # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
+        user = f"authed-app-{bk_app_code}"
 
         # 验证role是否为ClientRole中的有效值
-        try:
-            role_int = int(role)
-            if role_int not in ClientRole.get_values():
-                return Response(
-                    {"detail": f"Invalid role: {role}. Must be one of {ClientRole.get_values()}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        except (ValueError, TypeError):
-            return Response(
-                {"detail": f"Invalid role format: {role}. Must be an integer."}, status=status.HTTP_400_BAD_REQUEST
-            )
+        if role not in ClientRole.get_values():
+            raise error_codes.SYSAPI_CLIENT_ROLE_NOT_FOUND
 
-        # 获取创建前的系统 API 用户数据
-        existing_client = SysAPIClient.objects.filter(name=user).first()
-        before_data = []
-
+        # 查看数据库中是否存在该用户, 是否启用
+        existing_client = SysAPIClient.objects.filter(name=user, is_active=True).first()
         if existing_client:
-            # 单独查询关联的应用
-            existing_app_client = AuthenticatedAppAsClient.objects.filter(client=existing_client).first()
-            existing_bk_app_code = existing_app_client.bk_app_code if existing_app_client else ""
+            raise error_codes.SYSAPI_CLIENT_ALREADY_EXISTS
 
-            before_data = [
-                {"user": existing_client.name, "bk_app_code": existing_bk_app_code, "role": existing_client.role}
-            ]
-
-        # 创建或更新客户端
+        # 创建客户端
         client, created = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
-        # 如果不是新创建的客户端，则更新角色
-        if not created and client.role != role:
-            client.role = role
-            client.save(update_fields=["role"])
-
-        # 创建或更新应用关系
-        if bk_app_code:
-            AuthenticatedAppAsClient.objects.update_or_create(client=client, defaults={"bk_app_code": bk_app_code})
+        if created:
+            # 如果客户端是新创建的, 则创建应用认证关系
+            AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
+        else:
+            # 如果客户端已经存在, 则更新角色为启用状态
+            client.is_active = True
+            client.save(update_fields=["is_active"])
 
         # 构建审计数据
         after_data = [{"user": user, "bk_app_code": bk_app_code, "role": role}]
@@ -360,7 +344,6 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
             data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
         )
 
@@ -374,36 +357,26 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update(self, request, *args, **kwargs):
-        # 验证请求数据
         slz = CreateSystemAPIUserSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        # 获取请求参数
-        user, role = data["user"], data["role"]
+        bk_app_code, role = data["bk_app_code"], data["role"]
 
         # 验证role是否为ClientRole中的有效值
-        try:
-            role_int = int(role)
-            if role_int not in ClientRole.get_values():
-                return Response(
-                    {"detail": f"Invalid role: {role}. Must be one of {ClientRole.get_values()}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        except (ValueError, TypeError):
-            return Response(
-                {"detail": f"Invalid role format: {role}. Must be an integer."}, status=status.HTTP_400_BAD_REQUEST
-            )
+        if role not in ClientRole.get_values():
+            raise error_codes.SYSAPI_CLIENT_ROLE_NOT_FOUND
 
-        # 检查要更新的用户是否存在
-        client = SysAPIClient.objects.filter(name=user).first()
+        # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
+        user = f"authed-app-{bk_app_code}"
+
+        # 检查要更新的用户是否存在, 并且是否启用
+        client = SysAPIClient.objects.filter(name=user, is_active=True).first()
         if not client:
-            return Response({"detail": f"System API user '{user}' not found"}, status=status.HTTP_404_NOT_FOUND)
+            raise error_codes.SYSAPI_CLIENT_NOT_FOUND
 
         # 构建审计数据
-        existing_app_client = AuthenticatedAppAsClient.objects.filter(client=client).first()
-        existing_bk_app_code = existing_app_client.bk_app_code if existing_app_client else ""
-        before_data = [{"user": client.name, "bk_app_code": existing_bk_app_code, "role": client.role}]
+        before_data = [{"user": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
         # 更新角色
         if client.role != role:
@@ -411,7 +384,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
             client.save(update_fields=["role"])
 
         # 构建审计数据
-        after_data = [{"user": user, "bk_app_code": existing_bk_app_code, "role": role}]
+        after_data = [{"user": user, "bk_app_code": bk_app_code, "role": role}]
 
         # 记录审计日志
         add_admin_audit_record(
@@ -432,19 +405,18 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     @atomic
     def destroy(self, request, user=None, *args, **kwargs):
         """删除系统 API 用户"""
-        client = SysAPIClient.objects.filter(name=user).first()
+        client = SysAPIClient.objects.filter(name=user, is_active=True).first()
         if not client:
-            return Response({"detail": "System API user not found"}, status=status.HTTP_404_NOT_FOUND)
+            raise error_codes.SYSAPI_CLIENT_NOT_FOUND
 
         # 构建审计数据
-        app_client = AuthenticatedAppAsClient.objects.filter(client=client).first()
-        bk_app_code = app_client.bk_app_code if app_client else ""
+        app_client_relation = AuthenticatedAppAsClient.objects.filter(client=client).first()
+        bk_app_code = app_client_relation.bk_app_code
         before_data = [{"user": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
-        # 删除关系
-        AuthenticatedAppAsClient.objects.filter(client=client).delete()
-        # 删除系统 API 用户
-        client.delete()
+        # 删除系统 API 用户, 仅仅禁用
+        client.is_active = False
+        client.save(update_fields=["is_active"])
 
         add_admin_audit_record(
             user=self.request.user.pk,

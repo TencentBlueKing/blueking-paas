@@ -25,6 +25,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.states import get_region
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import AppLanguage, ApplicationType
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
@@ -47,6 +48,9 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
     """创建系统外链应用"""
 
     operator = serializers.CharField(required=True)
+    app_tenant_id = serializers.CharField(
+        required=False, default="", help_text="租户ID，全租户应用则租户 ID 为空字符串"
+    )
 
     def validate_code(self, code):
         sys_id = self.context.get("sys_id")
@@ -58,6 +62,17 @@ class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
         if not code.startswith(prefix):
             raise ValidationError(f"应用ID 必须以 {prefix} 为前缀")
         return code
+
+    def validate(self, data):
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return data
+        # 多租户模式下需要校验租户相关字段
+        if data["app_tenant_mode"] == AppTenantMode.GLOBAL:
+            if data["app_tenant_id"]:
+                raise ValidationError(_("全租户应用的 app_tenant_id 必须为空"))
+        elif not data["app_tenant_id"]:
+            raise ValidationError(_("单租户应用必须设置 app_tenant_id"))
+        return data
 
 
 @i18n

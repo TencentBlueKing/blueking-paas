@@ -37,7 +37,7 @@ from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import LightApplicationViewSetErrorCode
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.tenant import validate_app_tenant_params
+from paasng.platform.applications.tenant import determine_tenant_id
 from paasng.platform.applications.utils import create_third_app
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 
@@ -87,14 +87,14 @@ class LightAppViewSet(viewsets.ViewSet):
             else:
                 logo_url = ""
 
-            app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
+            tenant_id = determine_tenant_id(data["app_tenant_mode"], data["app_tenant_id"])
             try:
                 light_app = AppAdaptor(session=session).create(
                     code=app_code,
                     name=data["name"],
-                    app_tenant_mode=app_tenant_mode,
-                    app_tenant_id=app_tenant_id,
-                    tenant_id=tenant.id,
+                    app_tenant_mode=data["app_tenant_mode"],
+                    app_tenant_id=data["app_tenant_id"],
+                    tenant_id=tenant_id,
                     logo=logo_url,
                     is_lapp=True,
                     creator=data["creator"],
@@ -308,16 +308,16 @@ class SysAppViewSet(viewsets.ViewSet):
 
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
+        tenant_id = determine_tenant_id(data["app_tenant_mode"], data["app_tenant_id"])
         application = create_third_app(
             data["region"],
             data["code"],
             data["name_zh_cn"],
             data["name_en"],
             operator,
-            app_tenant_mode,
-            app_tenant_id,
-            tenant.id,
+            data["app_tenant_mode"],
+            data["app_tenant_id"],
+            tenant_id,
         )
         # 返回应用的密钥信息
         secret = get_oauth2_client_secret(application.code)

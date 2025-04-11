@@ -29,15 +29,14 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
     BulkCreatePlatformManagerSLZ,
-    CreateSystemAPIUserSLZ,
     PlatformManagerSLZ,
     SystemAPIUserSLZ,
+    UpsertSystemAPIUserSLZ,
     UpsertUserFeatureFlagSLZ,
     UserFeatureFlagSLZ,
 )
@@ -86,36 +85,42 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         user_to_id = {user: user_id_encoder.encode(settings.USER_TYPE, user) for user in users}
         user_ids = list(user_to_id.values())
 
-        # 获取创建前的数据 - 查询数据库中已存在的用户
-        existing_profiles = UserProfile.objects.filter(user__in=user_ids)
-        existing_user_ids = set(existing_profiles.values_list("user", flat=True))
-
-        # 检查是否存在未登录过平台的用户, 如果存在则返回错误
-        non_existing_users = [user for user, user_id in user_to_id.items() if user_id not in existing_user_ids]
-        if non_existing_users:
-            return Response(
-                {"detail": f"user {', '.join(non_existing_users)} has not logged in to the platform yet"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # 准备审计数据并更新用户角色
+        # 查询已存在的用户, 用户id到模型的映射
         role = SiteRole.ADMIN.value
+        existing_profiles = UserProfile.objects.filter(user__in=user_ids)
+        existing_id_to_profile = {profile.user: profile for profile in existing_profiles}
+
+        # 准备审计数据
         before_data = []
+        after_data = []
+
+        # 批量创建和更新数据
         profiles_to_update = []
+        profiles_to_create = []
 
-        id_to_name = {user_id: user for user, user_id in user_to_id.items()}
+        # 处理所有用户
+        for user, user_id in user_to_id.items():
+            # 审计数据
+            after_data.append({"user": user, "role": role})
 
-        for profile in existing_profiles:
-            user = id_to_name.get(profile.user)
-            before_data.append({"user": user, "role": profile.role})
-            profile.role = role
-            profiles_to_update.append(profile)
+            if user_id in existing_id_to_profile:
+                # 已存在的用户 - 需要更新
+                profile = existing_id_to_profile[user_id]
+                before_data.append({"user": user, "role": profile.role})
 
-        # 批量更新用户角色
-        UserProfile.objects.bulk_update(profiles_to_update, ["role"])
+                if profile.role != role:
+                    profile.role = role
+                    profiles_to_update.append(profile)
+            else:
+                # 不存在的用户 - 需要创建
+                profiles_to_create.append(UserProfile(user=user_id, role=role))
 
-        # 构建更新后的审计数据
-        after_data = [{"user": user, "role": role} for user in users]
+        if profiles_to_create:
+            # 批量创建用户
+            UserProfile.objects.bulk_create(profiles_to_create)
+        if profiles_to_update:
+            # 批量更新用户
+            UserProfile.objects.bulk_update(profiles_to_update, ["role"])
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -132,7 +137,7 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def destroy(self, request, user, *args, **kwargs):
-        """删除平台管理员"""
+        """删除平台管理员, 后台对应的操作为将用户的权限修改为普通用户"""
         # 将用户名编码为userid
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
 
@@ -211,8 +216,7 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
             feature_flag.save(update_fields=["effect"])
         else:
             # 创建特性
-            feature_flag = AccountFeatureFlag(user=user_id, name=feature, effect=is_effect)
-            feature_flag.save()
+            AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
 
         # 构建更新后的审计数据
         after_data = [{"user": user, "feature": feature, "is_effect": is_effect}]
@@ -236,9 +240,10 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
         """删除用户特性"""
 
         # 查询db中是否存有该用户特性
-        feature_flag = AccountFeatureFlag.objects.filter(pk=id).first()
-        if not feature_flag:
-            raise error_codes.USER_FEATURE_FLAG_NOT_FOUND
+        try:
+            feature_flag = AccountFeatureFlag.objects.get(pk=id)
+        except AccountFeatureFlag.DoesNotExist:
+            return error_codes.USER_FEATURE_FLAG_NOT_FOUND
 
         # 构建审计数据
         before_data = [{"user": feature_flag.user, "feature": feature_flag.name, "is_effect": feature_flag.effect}]
@@ -304,12 +309,12 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="创建系统 API 用户",
-        request_body=CreateSystemAPIUserSLZ,
+        request_body=UpsertSystemAPIUserSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def create(self, request, *args, **kwargs):
         """创建系统 API 用户"""
-        slz = CreateSystemAPIUserSLZ(data=request.data)
+        slz = UpsertSystemAPIUserSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -317,10 +322,6 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
         user = f"authed-app-{bk_app_code}"
-
-        # 验证role是否为ClientRole中的有效值
-        if role not in ClientRole.get_values():
-            raise error_codes.SYSAPI_CLIENT_ROLE_NOT_FOUND
 
         # 查看数据库中是否存在该用户, 是否启用
         existing_client = SysAPIClient.objects.filter(name=user, is_active=True).first()
@@ -353,19 +354,15 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="更新系统 API 用户的权限",
-        request_body=CreateSystemAPIUserSLZ,
+        request_body=UpsertSystemAPIUserSLZ,
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update(self, request, *args, **kwargs):
-        slz = CreateSystemAPIUserSLZ(data=request.data)
+        slz = UpsertSystemAPIUserSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         bk_app_code, role = data["bk_app_code"], data["role"]
-
-        # 验证role是否为ClientRole中的有效值
-        if role not in ClientRole.get_values():
-            raise error_codes.SYSAPI_CLIENT_ROLE_NOT_FOUND
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
         user = f"authed-app-{bk_app_code}"
@@ -404,7 +401,7 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
     )
     @atomic
     def destroy(self, request, user=None, *args, **kwargs):
-        """删除系统 API 用户"""
+        """删除系统 API 用户, 后台对应逻辑为禁用用户"""
         client = SysAPIClient.objects.filter(name=user, is_active=True).first()
         if not client:
             raise error_codes.SYSAPI_CLIENT_NOT_FOUND

@@ -19,6 +19,7 @@
 from rest_framework import serializers
 
 from paasng.infras.accounts.constants import AccountFeatureFlag
+from paasng.infras.sysapi_client.constants import ClientRole
 
 # --------- 平台管理员相关序列化器 ---------
 
@@ -87,17 +88,18 @@ class SystemAPIUserSLZ(serializers.Serializer):
     role = serializers.CharField(help_text="权限")
     updated = serializers.DateTimeField(help_text="添加时间")
 
-    def to_representation(self, instance):
-        """当 private_token 为空字符串时不包含该字段"""
-        representation = super().to_representation(instance)
-        # 如果 private_token 为空字符串，则从输出中移除该字段
-        if representation.get("private_token") == "":
-            representation.pop("private_token")
-        return representation
 
-
-class CreateSystemAPIUserSLZ(serializers.Serializer):
+class UpsertSystemAPIUserSLZ(serializers.Serializer):
     """创建或更新系统 API 用户序列化器"""
 
-    bk_app_code = serializers.CharField(help_text="应用 ID", required=False, allow_blank=True)
+    bk_app_code = serializers.CharField(help_text="应用 ID", required=True)
     role = serializers.IntegerField(help_text="权限")
+
+    def validate_role(self, value):
+        """检查角色是否在 ClientRole 中定义"""
+        valid_roles = ClientRole.get_values()
+        if value not in valid_roles:
+            raise serializers.ValidationError(
+                f"Invalid role '{value}'. Must be one of: {', '.join(str(r) for r in valid_roles)}"
+            )
+        return value

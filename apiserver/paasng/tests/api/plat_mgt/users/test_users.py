@@ -36,41 +36,25 @@ class TestPlatformManagerViewSet:
 
     def test_list_manager(self, plat_mgt_api_client):
         """测试获取平台管理员列表"""
-        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
+        bulk_url = reverse("plat_mgt.users.admin_user.bulk")
         rsp = plat_mgt_api_client.get(bulk_url)
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
     def test_bulk_create_manager(self, plat_mgt_api_client):
         """测试批量创建平台管理员"""
-        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
+        bulk_url = reverse("plat_mgt.users.admin_user.bulk")
         users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
         user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
-
-        # 首先为测试用户创建 UserProfile 记录，因为视图实现要求用户已登录过平台
-        for user_id in user_ids:
-            UserProfile.objects.create(user=user_id, role=SiteRole.USER.value)
 
         data = {"users": users}
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
-        # 验证用户角色已更新为管理员
+        # 验证用户角色已创建且为管理员
         for user_id in user_ids:
             profile = UserProfile.objects.get(user=user_id)
             assert profile.role == SiteRole.ADMIN.value
-
-    def test_bulk_create_manager_nonexistent_users(self, plat_mgt_api_client):
-        """测试批量创建平台管理员 - 处理未登录用户的情况"""
-        bulk_url = reverse("plat_mgt.users.user_profiles.bulk")
-        users = [f"nonexistent_user_{generate_random_string(6)}" for _ in range(2)]
-
-        data = {"users": users}
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-
-        # 应当返回 400 错误，因为这些用户未登录过平台
-        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "has not logged in to the platform yet" in rsp.data["detail"]
 
     def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""
@@ -85,7 +69,7 @@ class TestPlatformManagerViewSet:
         assert profile.role == SiteRole.ADMIN.value
 
         # 尝试删除这个管理员
-        delete_url = reverse("plat_mgt.users.user_profiles.delete", kwargs={"user": user})
+        delete_url = reverse("plat_mgt.users.admin_user.delete", kwargs={"user": user})
         delete_rsp = plat_mgt_api_client.delete(delete_url)
         assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT
 

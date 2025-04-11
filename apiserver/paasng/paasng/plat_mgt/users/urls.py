@@ -23,14 +23,14 @@ from paasng.plat_mgt.users import views
 urlpatterns = [
     # 平台管理员
     path(
-        "api/plat_mgt/users/user_profiles/",
+        "api/plat_mgt/users/admin_user/",
         views.PlatformManagerViewSet.as_view({"get": "list", "post": "bulk_create"}),
-        name="plat_mgt.users.user_profiles.bulk",
+        name="plat_mgt.users.admin_user.bulk",
     ),
     path(
-        "api/plat_mgt/users/user_profiles/<str:user>/",
+        "api/plat_mgt/users/admin_user/<str:user>/",
         views.PlatformManagerViewSet.as_view({"delete": "destroy"}),
-        name="plat_mgt.users.user_profiles.delete",
+        name="plat_mgt.users.admin_user.delete",
     ),
     # 用户特性
     path(

@@ -20,8 +20,16 @@ from django.utils.translation import gettext_lazy as _
 
 
 class ErrorCodes:
+    # 平台管理员相关
+    USER_PROFILE_NOT_FOUND = ErrorCode(_("用户不存在"))
+
+    # 用户特性相关
+    USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))
+
     # System API client related
+    SYSAPI_CLIENT_ROLE_NOT_FOUND = ErrorCode(_("指定的 sysapi client 权限不存在"))
     SYSAPI_CLIENT_NOT_FOUND = ErrorCode(_("请求未携带有效的 sysapi client 信息"))
+    SYSAPI_CLIENT_ALREADY_EXISTS = ErrorCode(_("指定的 sysapi client 已存在"))
     SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
 
     # 用户与通知相关

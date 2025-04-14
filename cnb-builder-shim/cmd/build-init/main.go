@@ -255,6 +255,12 @@ type GroupElement struct {
 }
 
 // 根据环境变量设置 buildpacks 的执行顺序，若发现某 buildpack 声明为远程，则下载并解压到 /cnb/buildpacks 目录
+//
+// buildpack 的格式为:
+// oci-image bk-buildpack-apt urn:cnb:registry:fagiani/apt v2  ->  builder 镜像内置
+// oci-embedded bk-buildpack-python blueking/python v213       ->  builder 镜像内置
+// tgz bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205   ->  远程下载
+// 具体构建包类型说明可查看 buildpack.Type 及其常量定义
 func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error {
 	if err := os.MkdirAll(cnbDir, 0744); err != nil {
 		return errors.Wrap(err, "failed to create cnb dir")
@@ -262,11 +268,6 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 
 	var group Group
 	for _, bp := range strings.Split(buildpacks, ";") {
-		// buildpack 的格式为:
-		// oci-image bk-buildpack-apt urn:cnb:registry:fagiani/apt v2
-		// oci-embedded bk-buildpack-python blueking/python v213
-		// tgz bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205
-		// 具体构建包类型说明可查看 buildpack.Type 及其常量定义
 		items := strings.SplitN(bp, " ", 4)
 		if len(items) != 4 {
 			logger.Info("Invalid buildpack config", "bp", bp)

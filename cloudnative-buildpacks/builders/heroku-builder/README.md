@@ -33,3 +33,9 @@
 # 如需修改基础镜像, 需要修改 heroku-18.toml 中的 run-image 和 build-image 字段
 ❯ BUILDER_IMAGE_NAME="builder-heroku-bionic" BUILDER_TAG="latest" make builder-bionic
 ```
+
+### 参考资料
+
+- [buildpack 文档](https://buildpacks.io/docs/)
+- [builder.toml 配置说明](https://buildpacks.io/docs/reference/config/builder-config/)
+- [buildpack.toml 配置说明](https://buildpacks.io/docs/reference/config/buildpack-config/)

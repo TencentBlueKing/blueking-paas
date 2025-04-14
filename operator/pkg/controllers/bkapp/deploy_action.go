@@ -88,14 +88,19 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 
 	log.Info("New deploy action found", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
-	bkapp.Status.HookStatuses = nil
 	bkapp.Status.SetDeployID(currentDeployID)
 	SetDefaultConditions(bkapp)
 
 	// deep copy bkapp to generate merge-patch
 	originalBkapp := bkapp.DeepCopy()
 	// clear original bkapp status to force update
-	originalBkapp.Status = paasv1alpha2.AppStatus{}
+	originalBkapp.Status = paasv1alpha2.AppStatus{
+		// 必须保留 HookStatuses 字段值, patch mergeFrom 时, bkapp.Status.HookStatuses = nil 才能有效清空 HookStatuses.
+		// 清空后, 也进一步避免了在 HookReconciler 中, 读取到旧 HookStatuses 的情况.
+		HookStatuses: bkapp.Status.HookStatuses,
+	}
+	bkapp.Status.HookStatuses = nil
+
 	if err = r.Client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkapp)); err != nil {
 		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
 		return r.Result.WithError(

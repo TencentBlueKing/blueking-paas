@@ -97,6 +97,19 @@ var _ = Describe("Test DeployActionReconciler", func() {
 			ret := NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
 
 			expectDeployActionInitialized(ret, bkapp, "1")
+			Expect(bkapp.Status.HookStatuses).To(BeNil())
+		})
+
+		It("HookStatuses is set to nil when initial deploy action", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "1"})
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
+			Expect(bkapp.Status.HookStatuses).To(BeNil())
 		})
 
 		It("deploy ID changed", func() {

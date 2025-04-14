@@ -140,14 +140,13 @@ export default {
       }
     },
     handleGoConfig(type) {
-      if (type === 'cluster') {
-        this.$router.push({
-          name: 'platformAppCluster',
-          query: {
-            active: 'config',
-          },
-        });
-      }
+      const routeName = type === 'cluster' ? 'platformAppCluster' : 'platformAddOns';
+      this.$router.push({
+        name: routeName,
+        query: {
+          active: 'config',
+        },
+      });
     },
   },
 };

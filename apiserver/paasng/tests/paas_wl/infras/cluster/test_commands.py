@@ -19,7 +19,6 @@ import os
 
 import pytest
 from django.core.management import call_command
-from django.utils.crypto import get_random_string
 
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
 from paas_wl.infras.cluster.models import APIServer, Cluster
@@ -29,8 +28,6 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 
 @pytest.fixture()
 def _cluster_envs(monkeypatch):
-    monkeypatch.setenv("PAAS_WL_CLUSTER_REGION", get_random_string(6))
-    monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_APP_ROOT_DOMAIN", "apps1.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_SUB_PATH_DOMAIN", "apps2.example.com")
     monkeypatch.setenv("PAAS_WL_CLUSTER_BCS_CLUSTER_ID", "BCS-K8S-00000")

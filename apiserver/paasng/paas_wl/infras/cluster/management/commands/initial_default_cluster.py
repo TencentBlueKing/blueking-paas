@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from typing import Dict, List
 
 from attr import define
@@ -30,8 +29,6 @@ from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAllocationPolicy, ClusterElasticSearchConfig
 from paas_wl.infras.resources.base.base import invalidate_global_configuration_pool
 from paasng.core.tenant.user import get_init_tenant_id
-
-logger = logging.getLogger(__name__)
 
 env = Env()
 
@@ -88,18 +85,20 @@ class Command(BaseCommand):
     help = "Initialize the application cluster, which can overwrite the existing data in the database"
 
     def add_arguments(self, parser):
-        parser.add_argument("--override", dest="override", action="store_true")
+        parser.add_argument("--overwrite", dest="overwrite", action="store_true")
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
-    def handle(self, override, dry_run, *args, **options):
+    def handle(self, overwrite, dry_run, *args, **options):
         data = self._build_cluster_data()
 
         if dry_run:
-            logger.info("DRY-RUN: preparing to initialize the cluster, data: %s", data)
+            self.stdout.write(f"DRY-RUN: preparing to initialize the cluster, data: {data}")
             return
 
-        if Cluster.objects.filter(pk=data.uuid).exists() and not override:
-            logger.error("Cluster (uuid:%s, name:%s) exists and not allow to overwrite, skip", data.uuid, data.name)
+        if Cluster.objects.filter(pk=data.uuid).exists() and not overwrite:
+            self.stderr.write(
+                f"Cluster (uuid: {data.uuid}, name: {data.name}) exists and not allow to overwrite, skip"
+            )
             return
 
         # 更新 / 创建集群及相关资源配置
@@ -109,7 +108,7 @@ class Command(BaseCommand):
         # 禁用内存中的集群资源池配置，使其重新加载
         invalidate_global_configuration_pool()
 
-        logger.info("Successfully initialized the cluster %s in tenant %s", data.name, data.tenant_id)
+        self.stdout.write(f"Successfully initialized the cluster {data.name} in tenant {data.tenant_id}")
 
     def _build_cluster_data(self) -> InitialClusterData:
         """根据环境变量 / 项目配置构建集群数据"""
@@ -154,7 +153,7 @@ class Command(BaseCommand):
                 "bk_biz_id": bk_biz_id,
             }
         elif not bcs_cluster_id and not bcs_project_id and not bk_biz_id:
-            logger.info("No BCS cluster info found, set annotations as empty dict")
+            self.stderr.write("No BCS cluster info found, set annotations as empty dict")
             annotations = {}
         else:
             raise ValueError(
@@ -177,7 +176,7 @@ class Command(BaseCommand):
             # 过滤掉不合法的值（非法 key / value）
             feature_flags = {k: v for k, v in feature_flags.items() if k in ClusterFeatureFlag and v is not None}
         else:
-            logger.info("No feature flags found, using default feature flags")
+            self.stdout.write("No feature flags found, using default feature flags")
             feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL)
 
         # 节点选择器 & 污点容忍度

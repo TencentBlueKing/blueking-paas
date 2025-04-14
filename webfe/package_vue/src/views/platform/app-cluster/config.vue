@@ -1,8 +1,9 @@
 <template>
   <div class="platform-config">
     <paas-content-loader
-      placeholder="apps-loading"
-      :offset-top="30"
+      placeholder="platform-config-loading"
+      class="platform-config-loading-cls"
+      :offset-top="0"
       :is-loading="isContentLoading"
     >
       <div class="top-box flex-row">
@@ -392,6 +393,11 @@ export default {
   }
 }
 .platform-config {
+  .platform-config-loading-cls {
+    /deep/ .loading-placeholder {
+      margin-top: 0 !important;
+    }
+  }
   .filter-group {
     width: fit-content;
     background: #eaebf0;

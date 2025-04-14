@@ -204,5 +204,138 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
       return http.get(url);
     },
+    /**
+     * 获取服务方案
+     */
+    getPlans({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/`;
+      return http.get(url);
+    },
+    /**
+     * 获取所属服务
+     */
+    getPlatformServices({}) {
+      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      return http.get(url);
+    },
+    /**
+     * 获取服务分类
+     */
+    getServicesCategory({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/category/`;
+      return http.get(url);
+    },
+    /**
+     * 获取供应商
+     */
+    getServicesProviderChoices({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/provider_choices/`;
+      return http.get(url);
+    },
+    /**
+     * 新建服务
+     */
+    addPlatformService({}, { data }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      return http.post(url, data);
+    },
+    /**
+     * 编辑服务
+     */
+    updatePlatformService({}, { serviceId, data }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除本地服务
+     */
+    deletePlatformService({}, { serviceId }) {
+      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      return http.delete(url);
+    },
+    /**
+     * 添加方案
+     */
+    addPlan({}, { serviceId, tenantId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改方案
+     */
+    modifyPlan({}, { serviceId, tenantId, planId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除方案
+     */
+    deletePlan({}, { serviceId, tenantId, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
+      return http.delete(url);
+    },
+     /**
+     * 获取租户下的服务-方案
+     */
+    getServicePlansUnderTenant({}, { tenantId, serviceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/`;
+      return http.get(url);
+    },
+    /**
+     * 获取方案下的资源池
+     */
+    getPreCreatedInstances({}, { serviceId, tenantId, planId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/ `;
+      return http.get(url);
+    },
+    /**
+     * 添加资源池
+     */
+    addResourcePool({}, { data }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改资源池
+     */
+    updateResourcePool({}, { planId, id, data }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除资源池
+     */
+    deleteResourcePool({}, { planId, id }) {
+      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      return http.delete(url);
+    },
+    /**
+     * 获取服务配置方案
+     */
+    getBindingPolicies({}, { serviceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      return http.get(url);
+    },
+    /**
+     * 新建配置方案
+     */
+    addBindingPolicies({}, { serviceId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      return http.post(url, data);
+    },
+    /**
+     * 更新配置方案
+     */
+    updateBindingPolicies({}, { serviceId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除配置方案
+     */
+    deleteBindingPolicies({}, { tenantId, serviceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies?tenant_id=${tenantId}`;
+      return http.delete(url);
+    },
   },
 };

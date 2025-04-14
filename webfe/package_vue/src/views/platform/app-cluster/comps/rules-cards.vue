@@ -54,14 +54,18 @@
       </div>
       <bk-form-item
         v-if="!data.hasEnv"
-        :label="$t('集群')"
+        :label="$t(labelText)"
         :required="true"
         :property="'cluster'"
         :error-display-type="'normal'"
+        :desc="$t(tips)"
+        desc-type="icon"
+        :desc-icon="isCluster ? '' : 'icon-info-circle'"
       >
         <ClusterSelect
           @change="clusterSelectChange"
           key="not"
+          :placeholder="labelText"
           :edit-data="data?.clusters"
           class="cluster-select-cls"
         />
@@ -69,15 +73,19 @@
       <!-- 统一分配-按环境 -->
       <template v-else>
         <bk-form-item
-          :label="$t('集群')"
+          :label="$t(labelText)"
           :required="true"
           :property="'stagCluster'"
+          :desc="$t(tips)"
+          desc-type="icon"
+          :desc-icon="isCluster ? '' : 'icon-info-circle'"
         >
           <ClusterSelect
             key="stag"
             :has-label="true"
             :label="$t('预发布环境')"
             :env="'stag'"
+            :placeholder="labelText"
             class="cluster-select-cls"
             :edit-data="data?.envClusters?.stag"
             @change="envClusterSelectChange"
@@ -92,6 +100,7 @@
             :has-label="true"
             :label="$t('生产环境')"
             :env="'prod'"
+            :placeholder="labelText"
             class="cluster-select-cls"
             :edit-data="data?.envClusters?.prod"
             @change="envClusterSelectChange"
@@ -99,9 +108,12 @@
         </bk-form-item>
       </template>
     </bk-form>
-    <div class="tip flex-row">
+    <div
+      class="tip flex-row"
+      v-if="isCluster"
+    >
       <i class="bk-icon icon-info mr5"></i>
-      <p>{{ $t('如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。') }}</p>
+      <p>{{ $t(tips) }}</p>
     </div>
     <div
       v-if="!isLastCard"
@@ -166,6 +178,14 @@ export default {
     types: {
       type: Array,
       default: () => [],
+    },
+    labelText: {
+      type: String,
+      default: '集群',
+    },
+    tips: {
+      type: String,
+      default: '如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。',
     },
   },
   components: {
@@ -240,6 +260,9 @@ export default {
       const lowerCaseName = name.toLocaleLowerCase();
       const endsWithIn = lowerCaseName.endsWith('_in') || lowerCaseName.endsWith('.in');
       return this.$t(endsWithIn ? '请输入，多个值以英文逗号连接' : '请输入');
+    },
+    isCluster() {
+      return this.labelText === '集群';
     },
   },
   methods: {

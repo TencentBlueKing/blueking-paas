@@ -21,6 +21,13 @@ const clusterCreateEdit = () =>
       window.showDeployTip(error);
     });
 
+const platformAddOns = () =>
+  import(/* webpackChunkName: 'platform-services' */ '@/views/platform/services')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -56,7 +63,19 @@ export const platformRouters = [
             }
           }
         },
-      }
+      },
+      {
+        path: 'add-ons',
+        component: platformAddOns,
+        name: 'platformAddOns',
+        meta: {
+          title: i18n.t('增强服务'),
+          panels: [
+            { name: 'config', label: i18n.t('服务配置') },
+            { name: 'plan', label: i18n.t('服务方案') },
+          ],
+        },
+      },
     ],
   },
 ];

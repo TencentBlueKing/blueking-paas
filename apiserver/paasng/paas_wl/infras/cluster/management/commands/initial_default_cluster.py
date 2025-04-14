@@ -103,7 +103,7 @@ class Command(BaseCommand):
 
         # 更新 / 创建集群及相关资源配置
         with transaction.atomic(using="workloads"):
-            self._upsert_cluster_and_related_resources(data)
+            self._upsert_cluster_and_related_configs(data)
 
         # 禁用内存中的集群资源池配置，使其重新加载
         invalidate_global_configuration_pool()
@@ -201,7 +201,7 @@ class Command(BaseCommand):
             api_server_urls=api_server_urls,
         )
 
-    def _upsert_cluster_and_related_resources(self, data: InitialClusterData):
+    def _upsert_cluster_and_related_configs(self, data: InitialClusterData):
         # 1. 创建 / 更新集群
         cluster, _ = Cluster.objects.update_or_create(
             uuid=data.uuid,

@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -271,11 +272,21 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 			continue
 		}
 
-		bpType, bpName, bpUrl, bpVersion := items[0], items[1], items[2], items[3]
+		// 构建包类型
+		bpType := buildpack.BuildpackType(items[0])
+
+		// 检查 bpType 是否为受支持的类型
+		if !slices.Contains(buildpack.SupportedBuildpackTypes, bpType) {
+			logger.Info("Unsupported buildpack type", "type", bpType)
+			continue
+		}
+
+		// 构建包名称、Url、版本
+		bpName, bpUrl, bpVersion := items[1], items[2], items[3]
 
 		// 目前按约定，仅支持下载 tgz 类型的 buildpack，其是适配云原生 builder 的
 		// 注：不支持下载 tar 是避免下载到 slug-pilot 使用的，历史版本的 buildpack
-		if bpType == buildpack.TypeTgz {
+		if bpType == buildpack.Tgz {
 			destDir := path.Join(cnbDir, "buildpacks", bpName, bpVersion)
 			// 如果目标目录已经存在，则先清理再下载远程 buildpack（覆盖）
 			if _, err := os.Stat(destDir); err == nil {

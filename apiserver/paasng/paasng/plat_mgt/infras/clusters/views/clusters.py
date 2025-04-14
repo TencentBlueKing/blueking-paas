@@ -208,26 +208,15 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cert, ca, key, token = data["cert"], data["ca"], data["key"], data["token"]
         api_servers = data["api_servers"]
 
-        # 检查集群认证信息 & APIServers 是否被修改
-        # 集群认证信息有效情况（二种，SLZ 会拦截其他无效的情况）
-        #   1. ca、cert、key 都有值
-        #   2. token 有值
-        auth_cfg_modified = bool((ca and cert and key) or token)
-        exists_api_servers = cluster.api_servers.values_list("host", flat=True)
-        api_servers_modified = set(exists_api_servers) != set(api_servers)
-
         # 只有在集群认证信息或 APIServers 有变更时，才需要检查集群是否可访问
-        if (auth_cfg_modified or api_servers_modified) and not check_k8s_accessible(
-            api_servers, ca=ca, cert=cert, key=key, token=token
-        ):
+        if not check_k8s_accessible(api_servers, ca=ca, cert=cert, key=key, token=token):
             raise error_codes.CANNOT_UPDATE_CLUSTER.f(_("集群连通性测试失败，请检查 Server，Token 等配置是否准确"))
 
         # 集群认证信息
-        if auth_cfg_modified:
-            cluster.ca_data = ca
-            cluster.cert_data = cert
-            cluster.key_data = key
-            cluster.token_value = token
+        cluster.ca_data = ca
+        cluster.cert_data = cert
+        cluster.key_data = key
+        cluster.token_value = token
 
         # App 默认配置
         cluster.default_tolerations = data["tolerations"]
@@ -252,16 +241,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster.save()
             cluster_es_cfg.save()
 
-            if api_servers_modified:
-                # 更新 ApiServers，采用先全部删除，再插入的方式
-                cluster.api_servers.all().delete()
-                APIServer.objects.bulk_create(
-                    [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
-                )
+            # 更新 ApiServers，采用先全部删除再插入的方式
+            cluster.api_servers.all().delete()
+            APIServer.objects.bulk_create(
+                [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
+            )
 
-        # 更新集群后，需要根据变更的信息，决定是否刷新配置池
-        if auth_cfg_modified or api_servers_modified:
-            invalidate_global_configuration_pool()
+        # 更新集群后，需要刷新配置池
+        invalidate_global_configuration_pool()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

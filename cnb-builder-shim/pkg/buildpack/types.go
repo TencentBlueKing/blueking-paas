@@ -18,21 +18,19 @@
 
 package buildpack
 
-// BuildpackType 构建包类型
-type BuildpackType string
+// Type 构建包类型
+type Type string
 
 const (
-	// Tar tar 类型
-	Tar BuildpackType = "tar"
 	// Tgz tgz 类型
-	Tgz BuildpackType = "tgz"
+	Tgz Type = "tgz"
 	// OCIEmbedded oci 内嵌类型（builder 内置）
-	OCIEmbedded BuildpackType = "oci-embedded"
+	OCIEmbedded Type = "oci-embedded"
 	// OCIImage oci 镜像类型
-	OCIImage BuildpackType = "oci-image"
+	OCIImage Type = "oci-image"
 	// OCIFile oci 文件类型
-	OCIFile BuildpackType = "oci-file"
+	OCIFile Type = "oci-file"
 )
 
 // SupportedBuildpackTypes 受支持的构建包类型
-var SupportedBuildpackTypes = []BuildpackType{Tar, Tgz, OCIEmbedded, OCIImage, OCIFile}
+var SupportedBuildpackTypes = []Type{Tgz, OCIEmbedded, OCIImage, OCIFile}

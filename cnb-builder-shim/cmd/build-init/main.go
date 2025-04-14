@@ -265,7 +265,8 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 		// buildpack 的格式为:
 		// oci-image bk-buildpack-apt urn:cnb:registry:fagiani/apt v2
 		// oci-embedded bk-buildpack-python blueking/python v213
-		// tar bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205
+		// tgz bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205
+		// 具体构建包类型说明可查看 buildpack.Type 及其常量定义
 		items := strings.SplitN(bp, " ", 4)
 		if len(items) != 4 {
 			logger.Info("Invalid buildpack config", "bp", bp)
@@ -273,7 +274,7 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 		}
 
 		// 构建包类型
-		bpType := buildpack.BuildpackType(items[0])
+		bpType := buildpack.Type(items[0])
 
 		// 检查 bpType 是否为受支持的类型
 		if !slices.Contains(buildpack.SupportedBuildpackTypes, bpType) {

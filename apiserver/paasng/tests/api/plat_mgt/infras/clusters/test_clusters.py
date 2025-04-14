@@ -108,6 +108,7 @@ class TestRetrieveCluster:
                 "host": "127.0.0.12",
                 "port": 9200,
                 "username": "blueking",
+                "password": "blueking",
             },
             "available_tenant_ids": ["system", "default", random_tenant_id],
             "app_address_type": "subdomain",
@@ -130,6 +131,10 @@ class TestRetrieveCluster:
                 ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
                 ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
             },
+            "ca": "MTIzNDU2Cg==",
+            "cert": "MTIzNDU2Cg==",
+            "key": "MTIzNDU2Cg==",
+            "token": None,
         }
 
     def test_retrieve_bcs_cluster(self, init_default_cluster, plat_mgt_api_client, random_tenant_id):
@@ -163,6 +168,7 @@ class TestRetrieveCluster:
                 "host": "127.0.0.11",
                 "port": 9200,
                 "username": "admin",
+                "password": "admin",
             },
             "available_tenant_ids": ["default"],
             "app_address_type": "subpath",
@@ -185,6 +191,10 @@ class TestRetrieveCluster:
                 ClusterFeatureFlag.ENABLE_AUTOSCALING: True,
                 ClusterFeatureFlag.ENABLE_BCS_EGRESS: True,
             },
+            "ca": None,
+            "cert": None,
+            "key": None,
+            "token": "masked",
         }
 
 
@@ -407,6 +417,7 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
+                "password": "admin123",
             },
             "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.tencent.com",
@@ -428,8 +439,7 @@ class TestUpdateCluster:
             Domain(name="bkapps.example.com", https_enabled=True, reserved=True)
         ]
         assert init_default_cluster.ingress_config.frontend_ingress_ip == "127.0.0.11"
-        # 不提交 / 提交空值不会覆盖原来数据库中的值
-        assert init_default_cluster.elastic_search_config.password == "admin"
+        assert init_default_cluster.elastic_search_config.password == "admin123"
 
     def test_update_scene_cluster_component(self, init_default_cluster, plat_mgt_api_client):
         """集群更新 - 集群组件（第二步场景）"""
@@ -445,7 +455,7 @@ class TestUpdateCluster:
                 "http://bcs-api.example.com/clusters/BCS-K8S-55555",
             ],
             "auth_type": "token",
-            "token": "",
+            "token": "blueking123456",
             "container_log_dir": "/var/lib/containerd",
             "access_entry_ip": "127.0.0.11",
             "elastic_search_config": {
@@ -453,6 +463,7 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
+                "password": "admin",
             },
             "available_tenant_ids": [DEFAULT_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "hub.bk.tencent.com",
@@ -467,8 +478,7 @@ class TestUpdateCluster:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         init_default_cluster.refresh_from_db()
-        # token 提交空值不会覆盖原来数据库中的值
-        assert init_default_cluster.token_value == "masked"
+        assert init_default_cluster.token_value == "blueking123456"
         assert init_default_cluster.annotations == {
             "bcs_project_id": "fake_project_id",
             "bcs_cluster_id": "BCS-K8S-55555",
@@ -492,9 +502,9 @@ class TestUpdateCluster:
                 "http://127.0.0.19:6553",
             ],
             "auth_type": "cert",
-            # ca -> None, cert -> ""，key 直接不提交
-            "ca": None,
-            "cert": "",
+            "ca": "MTIzXDU2Cg==",
+            "cert": "MTIzXDU2Cg==",
+            "key": "MTIzXDU2Cg==",
             "container_log_dir": "/var/lib/containerd",
             "access_entry_ip": "127.0.0.11",
             "elastic_search_config": {
@@ -502,6 +512,7 @@ class TestUpdateCluster:
                 "host": "127.0.0.10",
                 "port": "9000",
                 "username": "admin",
+                "password": "admin1234",
             },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
             "component_image_registry": "bk.tencent.com",
@@ -525,10 +536,9 @@ class TestUpdateCluster:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         init_system_cluster.refresh_from_db()
-        # 不提交 / 提交空值不会覆盖原来数据库中的值
-        assert init_system_cluster.ca_data == "MTIzNDU2Cg=="
-        assert init_system_cluster.cert_data == "MTIzNDU2Cg=="
-        assert init_system_cluster.key_data == "MTIzNDU2Cg=="
+        assert init_system_cluster.ca_data == "MTIzXDU2Cg=="
+        assert init_system_cluster.cert_data == "MTIzXDU2Cg=="
+        assert init_system_cluster.key_data == "MTIzXDU2Cg=="
         assert init_system_cluster.annotations == {}
         assert set(init_system_cluster.api_servers.values_list("host", flat=True)) == {
             "http://127.0.0.18:6553",

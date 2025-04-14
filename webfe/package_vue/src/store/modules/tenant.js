@@ -337,5 +337,19 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies?tenant_id=${tenantId}`;
       return http.delete(url);
     },
+    /**
+     * 获取概览增强服务列表
+     */
+    getOverviewServices() {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/`;
+      return http.get(url);
+    },
+    /**
+     * 获取概览各个租户的配置状态（行数据）
+     */
+    getTenantConfigStatuses() {
+      const url = `${BACKEND_URL}/api/plat_mgt/overview/tenant_config_statuses/`;
+      return http.get(url);
+    },
   },
 };

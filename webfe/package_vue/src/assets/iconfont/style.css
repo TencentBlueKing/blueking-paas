@@ -1037,6 +1037,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-gitlab-3:before {
 	content: "\e266";
 }
+.paasng-overview1:before {
+	content: "\e298";
+}
 .paasng-circle-correct-filled:before {
 	content: "\e291";
 }

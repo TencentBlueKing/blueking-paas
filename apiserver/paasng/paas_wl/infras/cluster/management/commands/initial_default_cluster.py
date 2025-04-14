@@ -173,7 +173,10 @@ class Command(BaseCommand):
 
         # 集群功能特性
         feature_flags = env.json(EnvVarKey.FEATURE_FLAGS, {})
-        if not feature_flags:
+        if feature_flags:
+            # 过滤掉不合法的值（非法 key / value）
+            feature_flags = {k: v for k, v in feature_flags.items() if k in ClusterFeatureFlag and v is not None}
+        else:
             logger.info("No feature flags found, using default feature flags")
             feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL)
 

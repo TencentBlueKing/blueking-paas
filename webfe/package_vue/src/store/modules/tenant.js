@@ -359,11 +359,46 @@ export default {
       return http.get(url);
     },
     /**
+     * 添加平台管理员
+     */
+    addPlatformAdministrators({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/`;
+      return http.post(url, data);
+    },
+    /**
+     * 删除平台管理员
+     */
+    deletePlatformAdministrator({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/${id}/`;
+      return http.delete(url);
+    },
+    /**
      * 获取系统API用户列表
      */
     getSystemApiUser() {
       const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
       return http.get(url);
+    },
+    /**
+     * 添加系统API用户列表权限
+     */
+    addSystemApiUser({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改系统API用户权限
+     */
+    updateSystemApiUser({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除系统API用户
+     */
+    deleteSystemApiUser({}, { user }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/${user}/`;
+      return http.delete(url);
     },
     /**
      * 获取用户特性

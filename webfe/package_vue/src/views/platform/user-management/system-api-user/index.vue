@@ -4,7 +4,7 @@
       <bk-button
         :theme="'primary'"
         icon="plus"
-        @click="addSystemApiUser"
+        @click="showAddDialog('add')"
       >
         {{ $t('添加系统 API 用户') }}
       </bk-button>
@@ -36,7 +36,12 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            {{ row[column.prop] || '--' }}
+            <bk-user-display-name
+              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
+              :user-id="row[column.prop]"
+            ></bk-user-display-name>
+            <span v-else-if="column.prop === 'role'">{{ roleMap[row[column.prop]] || '--' }}</span>
+            <span v-else>{{ row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -48,13 +53,14 @@
               theme="primary"
               class="mr10"
               text
+              @click="showAddDialog('edit', row)"
             >
               {{ $t('修改权限') }}
             </bk-button>
             <bk-button
               theme="primary"
               text
-              @click="handleDelete(row)"
+              @click="showDeleteDialog(row)"
             >
               {{ $t('删除') }}
             </bk-button>
@@ -63,45 +69,63 @@
       </bk-table>
     </div>
 
-    <!-- 添加管理员 -->
+    <!-- 添加系统API用户 -->
     <bk-dialog
-      v-model="addDialogConfig.visible"
+      v-model="editAddDialogConfig.visible"
       header-position="left"
       theme="primary"
       :width="480"
       :mask-close="false"
-      :title="$t('添加系统 API 用户')"
+      :auto-close="false"
+      :title="isAdd ? $t('添加系统 API 用户') : $t('编辑权限')"
+      :loading="editAddDialogConfig.loading"
+      @confirm="handleConfirm"
     >
       <bk-form
         :label-width="200"
         form-type="vertical"
-        :model="addDialogConfig.formData"
-        ref="validateForm1"
+        :model="editAddDialogConfig.formData"
+        ref="editAddForm"
       >
         <bk-form-item
           :label="$t('应用 ID')"
           :required="true"
+          :property="'appId'"
+          :rules="isAdd ? requiredRule : []"
+          :error-display-type="'normal'"
         >
-          <bk-input v-model="addDialogConfig.formData.users"></bk-input>
+          <bk-input
+            v-model="editAddDialogConfig.formData.appId"
+            :disabled="!isAdd"
+          ></bk-input>
         </bk-form-item>
         <bk-form-item
           :label="$t('权限')"
           :required="true"
+          :property="'role'"
+          :rules="requiredRule"
+          :error-display-type="'normal'"
         >
-          <bk-input v-model="addDialogConfig.formData.users"></bk-input>
+          <bk-select v-model="editAddDialogConfig.formData.role">
+            <bk-option
+              v-for="option in roleList"
+              :key="option.id"
+              :id="option.id"
+              :name="option.name"
+            ></bk-option>
+          </bk-select>
         </bk-form-item>
       </bk-form>
     </bk-dialog>
 
     <!-- 删除 -->
-    <bk-dialog
-      v-model="deleteDialogConfig.visible"
-      header-position="left"
-      theme="primary"
-      :width="480"
-      :mask-close="false"
+    <delete-dialog
+      :show.sync="deleteDialogConfig.visible"
       :title="$t('确认删除系统 API 用户')"
-      ext-cls="custom-dialog-cls"
+      :expected-confirm-text="deleteDialogConfig.rowUser"
+      :loading="deleteDialogConfig.isLoading"
+      :placeholder="$t('请输入用户名确认')"
+      @confirm="deleteSystemApiUser"
     >
       <div class="hint-text">{{ $t('删除后将不能再调用平台提供的系统 API') }}</div>
       <div class="hint-text">
@@ -117,51 +141,43 @@
         </span>
         {{ $t('进行确认') }}
       </div>
-      <bk-input v-model="deleteDialogConfig.user"></bk-input>
-      <template slot="footer">
-        <bk-button
-          theme="primary"
-          :disabled="!isDeleteDisable"
-          :loading="deleteDialogConfig.isLoading"
-        >
-          {{ $t('确定') }}
-        </bk-button>
-        <bk-button
-          class="ml10"
-          theme="default"
-          @click="deleteDialogConfig.visible = false"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </template>
-    </bk-dialog>
+    </delete-dialog>
   </div>
 </template>
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
+import deleteDialog from '../components/delete-dialog.vue';
+import { mapState } from 'vuex';
 
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
   mixins: [paginationMixin],
+  components: {
+    deleteDialog,
+  },
   data() {
     return {
       // api用户列表
       systemApiUserList: [],
       isTableLoading: false,
-      addDialogConfig: {
+      // 新建编辑弹窗配置
+      editAddDialogConfig: {
         visible: false,
+        loading: false,
+        type: 'add',
+        row: {},
         formData: {
           // tenant/any
           method: 'tenant',
-          users: '',
+          appId: '',
+          role: '',
         },
       },
       deleteDialogConfig: {
         visible: false,
         isLoading: false,
-        user: '',
         rowUser: '',
       },
       columns: [
@@ -183,11 +199,35 @@ export default {
           sortable: true,
         },
       ],
+      // 权限对应映射关系
+      roleMap: {
+        1: this.$t('没有特定角色'),
+        50: this.$t('基础可读'),
+        60: this.$t('基础管理'),
+        70: this.$t('轻应用管理'),
+        80: this.$t('lesscode 系统专用角色'),
+      },
+      requiredRule: [
+        {
+          required: true,
+          message: this.$t('请输入'),
+          trigger: 'blur',
+        },
+      ],
     };
   },
   computed: {
-    isDeleteDisable() {
-      return this.deleteDialogConfig.rowUser === this.deleteDialogConfig.user;
+    ...mapState({
+      platformFeature: (state) => state.platformFeature,
+    }),
+    roleList() {
+      return Object.entries(this.roleMap).map(([id, name]) => ({
+        id: Number(id),
+        name,
+      }));
+    },
+    isAdd() {
+      return this.editAddDialogConfig.type === 'add';
     },
   },
   created() {
@@ -212,14 +252,81 @@ export default {
         this.isTableLoading = false;
       }
     },
-    // 添加系统API用户
-    addSystemApiUser() {
-      this.addDialogConfig.visible = true;
+    setDialogFormData(appId = '', role = '') {
+      this.editAddDialogConfig.formData.appId = appId;
+      this.editAddDialogConfig.formData.role = role;
     },
-    handleDelete(row) {
-      console.log('row', row);
+    // 添加系统API用户
+    showAddDialog(type, row) {
+      this.editAddDialogConfig.visible = true;
+      this.editAddDialogConfig.type = type;
+      if (type === 'edit') {
+        this.setDialogFormData(row.bk_app_code || '--', row.role);
+      } else {
+        this.setDialogFormData();
+      }
+    },
+    showDeleteDialog(row) {
       this.deleteDialogConfig.visible = true;
       this.deleteDialogConfig.rowUser = row.user;
+    },
+    handleConfirm() {
+      this.$refs.editAddForm.validate().then(
+        () => {
+          const { appId, role } = this.editAddDialogConfig.formData;
+          const params = {
+            bk_app_code: appId,
+            role,
+          };
+          console.log('this', params);
+          this.addSystemApiUser(params);
+        },
+        (validator) => {
+          console.error(validator);
+        }
+      );
+    },
+    async addSystemApiUser(data) {
+      this.editAddDialogConfig.loading = true;
+      const dispatchName = this.isAdd ? 'addSystemApiUser' : 'updateSystemApiUser';
+      try {
+        await this.$store.dispatch(`tenant/${dispatchName}`, {
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.isAdd ? this.$t('添加成功') : this.$t('修改成功'),
+        });
+        this.editAddDialogConfig.visible = false;
+        this.getSystemApiUser();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.editAddDialogConfig.loading = false;
+      }
+    },
+    // 关闭删除弹窗
+    closeDelDialog() {
+      this.deleteDialogConfig.visible = false;
+    },
+    // 删除系统API用户权限
+    async deleteSystemApiUser() {
+      this.deleteDialogConfig.isLoading = true;
+      try {
+        await this.$store.dispatch('tenant/deleteSystemApiUser', {
+          user: this.deleteDialogConfig.rowUser,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成功'),
+        });
+        this.closeDelDialog();
+        this.getSystemApiUser();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.deleteDialogConfig.isLoading = false;
+      }
     },
   },
 };

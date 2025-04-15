@@ -29,7 +29,7 @@ from paasng.accessories.publish.market.constant import AppType, ProductSourceUrl
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.exceptions import ReferencedAttachmentNotFound, ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.infras.accounts.models import User
@@ -298,7 +298,15 @@ class AppDeclarativeController:
                     continue
 
                 ref_module = application.get_module(service.shared_from)
-                manager.create(service=obj, ref_module=ref_module)
+                try:
+                    manager.create(service=obj, ref_module=ref_module)
+                except ReferencedAttachmentNotFound:
+                    err_msg = (
+                        "Failed to share service '{service_name}' from module '{ref_module_name}' to '{module_name}'. "
+                        "The service might not be provisioned in the referenced module yet, or multi-level sharing is not supported."
+                    ).format(service_name=service.name, ref_module_name=ref_module.name, module_name=module.name)
+                    logger.exception(err_msg)
+                    raise ControllerError(err_msg)
             else:
                 if mixed_service_mgr.module_is_bound_with(obj, module):
                     logger.info('Skip, service "%s" already bound', obj.name)

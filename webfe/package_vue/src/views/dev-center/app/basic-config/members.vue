@@ -14,7 +14,18 @@
         >
           {{ $t('新增成员') }}
         </bk-button>
+        <!-- 多租户环境，使用人员选择器进行搜索 -->
+        <user
+          v-if="platformFeature.MULTI_TENANT_MODE"
+          v-model="searchValues"
+          style="width: 360px"
+          :multiple="true"
+          :placeholder="$t('请输入成员姓名')"
+          :empty-text="$t('无匹配人员')"
+          @change="handleSearch"
+        />
         <bk-input
+          v-else
           v-model="keyword"
           class="search-input"
           :placeholder="$t('请输入成员姓名，按Enter搜索')"
@@ -25,7 +36,7 @@
       </div>
       <div class="content-wrapper">
         <bk-table
-          :data="memberListShow"
+          :data="paginatedData"
           size="small"
           :pagination="pagination"
           @page-change="pageChange"
@@ -268,6 +279,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import i18n from '@/language/i18n.js';
 import { mapState } from 'vuex';
+import { paginationFun } from '@/common/utils';
 
 const ROLE_BACKEND_IDS = {
   administrator: 2,
@@ -332,10 +344,9 @@ export default {
   data() {
     return {
       currentUser: auth.getCurrentUser().username,
-      hasPerm: false,
       loading: true,
       memberList: [],
-      memberListShow: [],
+      filteredData: [],
       roleNames: APP_ROLE_NAMES,
       roleSpec: ROLE_SPEC,
       roleName: 'administrator',
@@ -364,20 +375,19 @@ export default {
         visiable: false,
         isLoading: false,
       },
-
       pagination: {
         current: 1,
         count: 0,
         limit: 10,
       },
-      currentBackup: 1,
       enableToAddRole: false,
       keyword: '',
-      memberListClone: [],
       tableEmptyConf: {
         keyword: '',
         isAbnormal: false,
       },
+      // 多租户人员搜索
+      searchValues: [],
     };
   },
   computed: {
@@ -385,13 +395,15 @@ export default {
     currentRoleDesc() {
       return ROLE_DESC_MAP[this.roleName] || '';
     },
+    // 分页数据
+    paginatedData() {
+      const { pageData } = paginationFun(this.filteredData, this.pagination.current, this.pagination.limit);
+      return pageData;
+    },
   },
   watch: {
     $route() {
       this.init();
-    },
-    'pagination.current'(value) {
-      this.currentBackup = value;
     },
     keyword(val) {
       if (!val) {
@@ -404,17 +416,12 @@ export default {
   },
   methods: {
     pageChange(page) {
-      if (this.currentBackup === page) {
-        return;
-      }
       this.pagination.current = page;
-      this.handleSearch();
     },
 
     limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
-      this.handleSearch();
     },
 
     iKnow() {
@@ -431,23 +438,16 @@ export default {
       this.fetchMemberList();
     },
 
+    // 获取成员列表
     async fetchMemberList() {
       try {
         const res = await this.$store.dispatch('member/getMemberList', { appCode: this.appCode });
-
+        this.memberList = res.results || [];
+        this.filteredData = [...this.memberList]; // 过滤数据
         this.pagination.count = res.results.length;
-        const start = this.pagination.limit * (this.pagination.current - 1);
-        const end = start + this.pagination.limit;
-
-        this.hasPerm = true;
-
-        this.memberList.splice(0, this.memberList.length, ...(res.results || []));
-
-        this.memberListShow.splice(0, this.memberListShow.length, ...this.memberList.slice(start, end));
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
-        this.hasPerm = false;
         this.tableEmptyConf.isAbnormal = true;
         this.$paasMessage({
           theme: 'error',
@@ -665,22 +665,35 @@ export default {
       }
       return true;
     },
-    handleSearch() {
-      if (this.keyword) {
-        this.memberListShow = this.memberList.filter(
-          (apigw) => apigw.user.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1
-        );
-        this.memberListClone = [...this.memberListShow];
-        this.pagination.count = this.memberListClone.length;
-        if (this.memberListClone.length > 10) {
-          const start = this.pagination.limit * (this.pagination.current - 1);
-          const end = start + this.pagination.limit;
-          this.memberListShow.splice(0, this.memberListShow.length, ...this.memberListClone.slice(start, end));
-        }
-        this.updateTableEmptyConfig();
-      } else {
-        this.fetchMemberList();
+    // 多租户搜索处理
+    handleMultiTenantSearch() {
+      // 如果没有搜索值，返回全部数据
+      if (!this.searchValues?.length) {
+        return [...this.memberList];
       }
+      const searchSet = new Set(this.searchValues);
+      return this.memberList.filter((item) => item.user?.username && searchSet.has(item.user.username));
+    },
+    // 正常搜索处理
+    handleDefaultSearch() {
+      const keyword = this.keyword?.trim().toLowerCase();
+      if (!keyword) {
+        return [...this.memberList];
+      }
+      return this.memberList.filter((item) => {
+        const username = item.user?.username?.toLowerCase();
+        return username?.includes(keyword);
+      });
+    },
+    // 关键字搜索
+    handleSearch() {
+      this.pagination.current = 1;
+      if (this.platformFeature.MULTI_TENANT_MODE) {
+        this.filteredData = this.handleMultiTenantSearch();
+      } else {
+        this.filteredData = this.handleDefaultSearch();
+      }
+      this.pagination.count = this.filteredData.length;
     },
     genUserPerms(userRoles) {
       const userPerms = [];

@@ -79,6 +79,9 @@ import 'highlight.js/styles/github.css';
 // 功能依赖css
 import '@blueking/functional-dependency/vue2/vue2.css';
 
+// 多租户人员选择器样式
+import '@blueking/bk-user-selector/vue2/vue2.css';
+
 // 用户 DisplayName 展示方案
 import BkUserDisplayName from '@blueking/bk-user-display-name';
 

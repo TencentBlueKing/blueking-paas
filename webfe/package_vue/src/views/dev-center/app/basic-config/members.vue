@@ -14,24 +14,13 @@
         >
           {{ $t('新增成员') }}
         </bk-button>
-        <!-- 多租户环境，使用人员选择器进行搜索 -->
         <user
-          v-if="platformFeature.MULTI_TENANT_MODE"
           v-model="searchValues"
           style="width: 360px"
           :multiple="true"
           :placeholder="$t('请输入成员姓名')"
           :empty-text="$t('无匹配人员')"
           @change="handleSearch"
-        />
-        <bk-input
-          v-else
-          v-model="keyword"
-          class="search-input"
-          :placeholder="$t('请输入成员姓名，按Enter搜索')"
-          :clearable="true"
-          :right-icon="'bk-icon icon-search'"
-          @enter="handleSearch"
         />
       </div>
       <div class="content-wrapper">
@@ -381,7 +370,6 @@ export default {
         limit: 10,
       },
       enableToAddRole: false,
-      keyword: '',
       tableEmptyConf: {
         keyword: '',
         isAbnormal: false,
@@ -404,11 +392,6 @@ export default {
   watch: {
     $route() {
       this.init();
-    },
-    keyword(val) {
-      if (!val) {
-        this.handleSearch();
-      }
     },
   },
   created() {
@@ -665,8 +648,8 @@ export default {
       }
       return true;
     },
-    // 多租户搜索处理
-    handleMultiTenantSearch() {
+    // 搜索处理
+    handleDefaultSearch() {
       // 如果没有搜索值，返回全部数据
       if (!this.searchValues?.length) {
         return [...this.memberList];
@@ -674,26 +657,12 @@ export default {
       const searchSet = new Set(this.searchValues);
       return this.memberList.filter((item) => item.user?.username && searchSet.has(item.user.username));
     },
-    // 正常搜索处理
-    handleDefaultSearch() {
-      const keyword = this.keyword?.trim().toLowerCase();
-      if (!keyword) {
-        return [...this.memberList];
-      }
-      return this.memberList.filter((item) => {
-        const username = item.user?.username?.toLowerCase();
-        return username?.includes(keyword);
-      });
-    },
     // 关键字搜索
     handleSearch() {
       this.pagination.current = 1;
-      if (this.platformFeature.MULTI_TENANT_MODE) {
-        this.filteredData = this.handleMultiTenantSearch();
-      } else {
-        this.filteredData = this.handleDefaultSearch();
-      }
+      this.filteredData = this.handleDefaultSearch();
       this.pagination.count = this.filteredData.length;
+      this.updateTableEmptyConfig();
     },
     genUserPerms(userRoles) {
       const userPerms = [];
@@ -710,10 +679,11 @@ export default {
       return userPerms;
     },
     clearFilterKey() {
-      this.keyword = '';
+      this.searchValues = [];
+      this.handleSearch();
     },
     updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = this.keyword;
+      this.tableEmptyConf.keyword = !!this.searchValues.length;
     },
   },
 };
@@ -728,10 +698,6 @@ export default {
 }
 .content-wrapper {
   margin-top: 16px;
-}
-.search-input {
-  width: 360px;
-  display: inline-block;
 }
 .user-photo {
   margin: 5px 0;

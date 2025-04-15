@@ -28,13 +28,13 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.core.tenant.header import validate_tenant_id_header
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.tenant import validate_tenant_id_header
 from paasng.utils.error_codes import error_codes
 
 from . import serializers

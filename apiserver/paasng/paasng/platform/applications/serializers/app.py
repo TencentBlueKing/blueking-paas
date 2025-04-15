@@ -39,13 +39,17 @@ from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 from paasng.utils.serializers import UserNameField
 from paasng.utils.validators import RE_APP_SEARCH
 
-from .fields import ApplicationField, AppNameField
-from .mixins import AppBasicInfoMixin
+from .fields import AppIDField, ApplicationField, AppNameField
+from .mixins import AppTenantMixin
 
 
-class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
+@i18n
+class SysThirdPartyApplicationSLZ(AppTenantMixin):
     """创建系统外链应用"""
 
+    region = serializers.ChoiceField(choices=get_region().get_choices())
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
     operator = serializers.CharField(required=True)
 
     def validate_code(self, code):

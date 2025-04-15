@@ -29,6 +29,7 @@ from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.accessories.servicehub.manager import ServiceObjNotFound, SvcAttachmentDoesNotExist, mixed_service_mgr
+from paasng.core.tenant.header import validate_tenant_id_header
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import (
@@ -56,7 +57,6 @@ from paasng.plat_admin.system.serializers import (
 from paasng.plat_admin.system.utils import MaxLimitOffsetPagination
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.operators import get_contact_info_by_appids
-from paasng.platform.applications.tenant import validate_tenant_id_header
 from paasng.platform.engine.phases_steps.display_blocks import ServicesInfo
 from paasng.utils.error_codes import error_codes
 

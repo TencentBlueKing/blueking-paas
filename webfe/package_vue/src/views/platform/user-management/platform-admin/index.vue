@@ -4,7 +4,7 @@
       <bk-button
         :theme="'primary'"
         icon="plus"
-        @click="addAdmin"
+        @click="showAddDialog"
       >
         {{ $t('添加平台管理员') }}
       </bk-button>
@@ -36,7 +36,11 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            {{ row[column.prop] || '--' }}
+            <bk-user-display-name
+              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
+              :user-id="row[column.prop]"
+            ></bk-user-display-name>
+            <span v-else>{{ row[column.prop] ?? '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -64,12 +68,15 @@
       :width="480"
       :mask-close="false"
       :title="$t('添加平台管理员')"
+      :auto-close="false"
+      :loading="addAdminDialog.loading"
+      @confirm="handleConfirm"
     >
       <bk-form
+        ref="dialogForm"
         :label-width="200"
         form-type="vertical"
         :model="addAdminDialog.formData"
-        ref="validateForm1"
       >
         <bk-form-item
           :label="$t('添加方式')"
@@ -83,32 +90,78 @@
             <bk-radio :value="'any'">{{ $t('添加任意用户') }}</bk-radio>
           </bk-radio-group>
           <!-- 多租户人员选择器 -->
+          <user
+            v-if="addAdminDialog.formData.method === 'tenant'"
+            v-model="addAdminDialog.formData.userList"
+            :placeholder="$t('请输入用户')"
+            :multiple="true"
+            :empty-text="$t('无匹配人员')"
+          />
           <bk-input
+            v-else
             v-model="addAdminDialog.formData.users"
-            :placeholder="$t('请输入用户ID')"
+            :placeholder="$t('请输入用户 ID，多个用户 ID 以英文分号分隔')"
           ></bk-input>
         </bk-form-item>
       </bk-form>
     </bk-dialog>
+
+    <!-- 删除 -->
+    <delete-dialog
+      :show.sync="deleteDialogConfig.visible"
+      :title="$t('确认删除系统 API 用户')"
+      :expected-confirm-text="deleteDialogConfig.input"
+      :loading="deleteDialogConfig.isLoading"
+      :placeholder="$t('请输入用户名确认')"
+      @confirm="deletePlatformAdministrator"
+    >
+      <div class="hint-text">
+        <span>{{ $t('删除后将无法再使用平台管理的相关功能。请输入用户 ID') }}</span>
+        <span>
+          （
+          <span class="sign">{{ deleteDialogConfig.input }}</span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="deleteDialogConfig.input"
+          />
+          ）
+        </span>
+        {{ $t('进行确认') }}
+      </div>
+    </delete-dialog>
   </div>
 </template>
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
+import deleteDialog from '../components/delete-dialog.vue';
+import User from '@/components/user';
+import { mapState } from 'vuex';
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
   mixins: [paginationMixin],
+  components: {
+    User,
+    deleteDialog,
+  },
   data() {
     return {
       isTableLoading: false,
       addAdminDialog: {
         visible: false,
+        loading: false,
         formData: {
           // tenant/any
           method: 'tenant',
           users: '',
+          userList: [],
         },
+      },
+      deleteDialogConfig: {
+        visible: false,
+        input: '',
+        isLoading: false,
       },
       columns: [
         {
@@ -126,6 +179,11 @@ export default {
         },
       ],
     };
+  },
+  computed: {
+    ...mapState({
+      platformFeature: (state) => state.platformFeature,
+    }),
   },
   created() {
     this.getAdminUser();
@@ -149,10 +207,61 @@ export default {
       }
     },
     // 添加管理员
-    addAdmin() {
+    showAddDialog() {
       this.addAdminDialog.visible = true;
     },
-    handleDelete() {},
+    handleDelete(row) {
+      this.deleteDialogConfig.visible = true;
+      this.deleteDialogConfig.input = row.user;
+    },
+    formatCustomInputUser(users) {
+      return users.split(';');
+    },
+    handleConfirm() {
+      const { method, userList, users } = this.addAdminDialog.formData;
+      const params = {
+        users: method === 'tenant' ? userList : this.formatCustomInputUser(users),
+      };
+      this.addPlatformAdministrators(params);
+    },
+    // 添加平台管理员
+    async addPlatformAdministrators(data) {
+      this.addAdminDialog.loading = true;
+      try {
+        await this.$store.dispatch('tenant/addPlatformAdministrators', {
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加成功'),
+        });
+        this.addAdminDialog.visible = false;
+        this.getAdminUser();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.addAdminDialog.loading = false;
+      }
+    },
+    // 删除平台管理员
+    async deletePlatformAdministrator() {
+      this.deleteDialogConfig.isLoading = true;
+      try {
+        await this.$store.dispatch('tenant/deletePlatformAdministrator', {
+          id: this.deleteDialogConfig.input,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成功'),
+        });
+        this.deleteDialogConfig.visible = false;
+        this.getAdminUser();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.deleteDialogConfig.isLoading = false;
+      }
+    },
   },
 };
 </script>

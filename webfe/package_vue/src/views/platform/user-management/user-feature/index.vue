@@ -36,8 +36,12 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
+            <bk-user-display-name
+              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
+              :user-id="row[column.prop]"
+            ></bk-user-display-name>
             <bk-switcher
-              v-if="column.prop === 'is_effect'"
+              v-else-if="column.prop === 'is_effect'"
               v-model="row[column.prop]"
               theme="primary"
               :disabled="true"
@@ -93,6 +97,7 @@
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
+import { mapState } from 'vuex';
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
@@ -131,6 +136,11 @@ export default {
         },
       ],
     };
+  },
+  computed: {
+    ...mapState({
+      platformFeature: (state) => state.platformFeature,
+    }),
   },
   created() {
     this.getAdminUser();

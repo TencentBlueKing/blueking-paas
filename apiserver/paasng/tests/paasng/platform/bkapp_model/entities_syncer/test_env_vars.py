@@ -42,6 +42,18 @@ class Test__sync_env_vars:
         assert ret.created_num == 3
         assert ret.deleted_num == 1
 
+        # 测试 description 字段
+        expected_variables = [
+            {"key": "KEY1", "env_name": ConfigVarEnvName.GLOBAL.value, "description": "desc_1"},
+            {"key": "KEY2", "env_name": ConfigVarEnvName.GLOBAL.value, "description": "desc_2"},
+            {"key": "KEY3", "env_name": ConfigVarEnvName.STAG.value, "description": "desc_3"},
+        ]
+        for var in expected_variables:
+            assert (
+                PresetEnvVariable.objects.get(key=var["key"], environment_name=var["env_name"]).description
+                == var["description"]
+            )
+
     def test_notset_remove_all(self, bk_module):
         G(PresetEnvVariable, module=bk_module, key="KEY_EXISTING", environment_name=ConfigVarEnvName.STAG.value)
         sync_env_vars(bk_module, [], NOTSET)

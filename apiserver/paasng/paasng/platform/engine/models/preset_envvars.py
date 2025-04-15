@@ -34,12 +34,12 @@ class PresetEnvVariable(AuditedModel):
     )
     key = models.CharField(max_length=128, null=False)
     value = EncryptField(null=False)
-    description = models.CharField(max_length=200, blank=True, default="", help_text=_("环境变量描述"))
+    description = models.CharField(verbose_name=_("变量描述"), max_length=200, blank=True, null=True)
 
     tenant_id = tenant_id_field_factory()
 
     class Meta:
-        unique_together = ("module", "environment_name", "key", "description")
+        unique_together = ("module", "environment_name", "key")
 
     def is_within_scope(self, given_env: ConfigVarEnvName) -> bool:
         """判断当前的环境变量在所给的环境中是否生效"""

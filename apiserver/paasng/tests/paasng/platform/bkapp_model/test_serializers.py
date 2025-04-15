@@ -73,6 +73,6 @@ class TestBkAppSpecInputSLZ:
         assert result.configuration.env[0].description == "全局环境变量描述"
 
         # 验证环境特定变量的描述字段
-        env_vars = {var.name: var.description for var in result.env_overlay.env_variables}
-        assert env_vars["STAG_VAR"] == "测试环境特定描述"
-        assert env_vars["PROD_VAR"] == "生产环境特定描述"
+        env_var_descriptions = {var.name: var.description for var in result.env_overlay.env_variables}
+        assert env_var_descriptions["STAG_VAR"] == "测试环境特定描述"
+        assert env_var_descriptions["PROD_VAR"] == "生产环境特定描述"

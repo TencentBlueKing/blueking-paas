@@ -43,11 +43,11 @@ urlpatterns = [
         views.AccountFeatureFlagViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.account_feature_flags.delete",
     ),
-    # 返回用户特性列表
+    # 用户特性种类列表
     path(
         "api/plat_mgt/users/account_features/",
         views.AccountFeatureFlagViewSet.as_view({"get": "feature_list"}),
-        name="plat_mgt.users.account_features.list",
+        name="plat_mgt.users.account_features.feature_list",
     ),
     # 系统 API 用户
     path(

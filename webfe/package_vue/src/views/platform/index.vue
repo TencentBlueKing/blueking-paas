@@ -142,11 +142,24 @@ export default {
     background: #f5f7fa;
     .content-area {
       flex: 1;
+      min-height: 0;
     }
   }
 }
 </style>
 <style lang="scss">
+.pt-json-editor-custom-cls {
+  .jse-main .jse-message.jse-error {
+    display: none;
+  }
+  // 隐藏模式切换
+  .jse-menu {
+    button.jse-group-button,
+    .jse-separator {
+      display: none;
+    }
+  }
+}
 .platform-content {
   .border-tag,
   .tag {
@@ -160,6 +173,10 @@ export default {
   }
   .tag {
     background: #f0f1f5;
+    &.yes {
+      background: #daf6e5;
+      color: #299e56;
+    }
   }
   .border-tag {
     background: #fafbfd;

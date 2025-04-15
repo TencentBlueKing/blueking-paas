@@ -23,12 +23,34 @@ import i18n from '@/language/i18n';
 export default [
   {
     groupId: 'platform',
+    name: 'platformOverview',
+    label: i18n.t('概览'),
+    iconfontName: 'overview1',
+    matchRouters: ['platformOverview'],
+    destRoute: {
+      name: 'platformOverview',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'platform',
     name: 'platformAppCluster',
     label: i18n.t('应用集群'),
-    iconfontName: 'wenjianzhuanhuan',
+    iconfontName: 'organization',
     matchRouters: ['platformAppCluster', 'clusterCreateEdit'],
     destRoute: {
       name: 'platformAppCluster',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'platform',
+    name: 'platformAddOns',
+    label: i18n.t('增强服务'),
+    iconfontName: 'diamond',
+    matchRouters: ['platformAddOns'],
+    destRoute: {
+      name: 'platformAddOns',
     },
     sublist: [],
   },

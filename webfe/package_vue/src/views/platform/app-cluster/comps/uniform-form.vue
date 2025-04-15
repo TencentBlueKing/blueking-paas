@@ -8,13 +8,14 @@
     >
       <bk-form-item
         v-if="!hasEnv"
-        :label="$t('集群')"
+        :label="$t(labelText)"
         :required="true"
         :property="'cluster'"
         :error-display-type="'normal'"
       >
         <ClusterSelect
           key="not"
+          :placeholder="labelText"
           :edit-data="allocationPolicy?.clusters"
           @change="clusterSelectChange"
         />
@@ -22,7 +23,7 @@
       <!-- 统一分配-按环境 -->
       <template v-else>
         <bk-form-item
-          :label="$t('集群')"
+          :label="$t(labelText)"
           :required="true"
           :property="'stagCluster'"
         >
@@ -31,6 +32,7 @@
             :has-label="true"
             :label="$t('预发布环境')"
             :env="'stag'"
+            :placeholder="labelText"
             :edit-data="allocationPolicy?.env_clusters?.stag"
             @change="envClusterSelectChange"
           />
@@ -44,6 +46,7 @@
             :has-label="true"
             :label="$t('生产环境')"
             :env="'prod'"
+            :placeholder="labelText"
             :edit-data="allocationPolicy?.env_clusters?.prod"
             @change="envClusterSelectChange"
           />
@@ -52,7 +55,7 @@
     </bk-form>
     <div class="tip flex-row">
       <i class="bk-icon icon-info mr5"></i>
-      <p>{{ $t('如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。') }}</p>
+      <p>{{ $t(tips) }}</p>
     </div>
   </div>
 </template>
@@ -74,6 +77,14 @@ export default {
     data: {
       type: Object,
       default: () => ({}),
+    },
+    labelText: {
+      type: String,
+      default: '集群',
+    },
+    tips: {
+      type: String,
+      default: '如果配置多个集群，开发者在创建应用时需要选择一个，未选择时，使用默认（第一个）集群。',
     },
   },
   components: {

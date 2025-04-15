@@ -40,12 +40,8 @@
 ## 是否记录代码与数据库互动有关的信息，如请求执行的应用程序级别的 SQL 语句，默认值为 False
 # LOGGING_ENABLE_SQL_QUERIES: false
 
-## 服务通知相关插件
-# NOTIFICATION_PLUGIN_CLASSES:
-#   mail: paasng.utils.notification_plugins.MailNotificationPlugin
-#   sms: paasng.utils.notification_plugins.SMSNotificationPlugin
-#   wechat: paasng.utils.notification_plugins.WeChatNotificationPlugin
-
+# 发送通知的渠道，如果没有配置，则仅记录日志并不调用发送通知的 API
+BK_CMSI_ENABLED_METHODS: ["send_mail", "send_sms", "send_weixin"]
 
 ## ------------------------------------------ Django 基础配置（自定义） ------------------------------------------
 

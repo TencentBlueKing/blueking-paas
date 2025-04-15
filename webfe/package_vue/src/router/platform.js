@@ -1,5 +1,12 @@
 import i18n from '@/language/i18n.js';
 
+const platformOverview = () =>
+  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/overview')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 const platformManagement = () =>
   import(/* webpackChunkName: 'platform-management' */ '@/views/platform')
     .then((module) => module)
@@ -37,6 +44,14 @@ export const platformRouters = [
       name: 'platformAppCluster',
     },
     children: [
+      {
+        path: 'overview',
+        component: platformOverview,
+        name: 'platformOverview',
+        meta: {
+          title: i18n.t('概览'),
+        },
+      },
       {
         path: 'app-cluster',
         component: platformAppCluster,

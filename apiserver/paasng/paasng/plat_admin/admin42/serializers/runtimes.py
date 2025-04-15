@@ -34,7 +34,7 @@ class BuildPackCreateInputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppBuildPack
-        exclude = ["id", "created", "updated", "modules", "environments"]
+        exclude = ["id", "region", "created", "updated", "modules", "environments"]
 
 
 class BuildPackUpdateInputSLZ(BuildPackCreateInputSLZ):
@@ -83,7 +83,7 @@ class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugBuilder
-        exclude = ["id", "created", "updated", "modules", "environments", "buildpacks"]
+        exclude = ["id", "region", "created", "updated", "modules", "environments", "buildpacks"]
 
     def validate_name(self, name: str) -> str:
         if AppSlugBuilder.objects.filter(name=name).exists():
@@ -154,7 +154,7 @@ class AppSlugRunnerCreateInputSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = AppSlugRunner
-        exclude = ["modules", "id", "created", "updated", "environments"]
+        exclude = ["id", "region", "created", "updated", "modules", "environments"]
 
     def validate_name(self, name: str) -> str:
         if AppSlugRunner.objects.filter(name=name).exists():

@@ -17,7 +17,6 @@
 
 from typing import Any, Dict
 
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -26,7 +25,8 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
+from paasng.core.tenant.user import get_tenant
+from paasng.core.tenant.utils import validate_app_tenant_info
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
@@ -101,16 +101,11 @@ class AppTenantMixin(serializers.Serializer):
     )
 
     def validate(self, data):
-        # 非多租户模式下默认设置为 default 租户
-        if not settings.ENABLE_MULTI_TENANT_MODE:
-            data["app_tenant_mode"] = AppTenantMode.SINGLE
-            data["app_tenant_id"] = DEFAULT_TENANT_ID
-            return data
-
-        # 多租户模式下需要校验租户相关字段
-        if data["app_tenant_mode"] == AppTenantMode.GLOBAL:
-            if data["app_tenant_id"]:
-                raise ValidationError(_("全租户应用的 app_tenant_id 必须为空"))
-        elif not data["app_tenant_id"]:
-            raise ValidationError(_("单租户应用必须设置 app_tenant_id"))
+        try:
+            app_tenant_info = validate_app_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
+        except ValueError as e:
+            raise ValidationError(e)
+        data["app_tenant_mode"] = app_tenant_info.app_tenant_mode
+        data["app_tenant_id"] = app_tenant_info.app_tenant_id
+        data["tenant_id"] = app_tenant_info.tenant_id
         return data

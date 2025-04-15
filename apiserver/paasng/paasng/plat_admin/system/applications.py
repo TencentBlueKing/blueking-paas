@@ -122,7 +122,7 @@ class UniSimpleApp:
             type=ApplicationType.DEFAULT.value,
             # PaaS2.0 的应用都是非多租户模式下的应用
             tenant_id=DEFAULT_TENANT_ID,
-            app_tenant_mode=AppTenantMode.GLOBAL,
+            app_tenant_mode=AppTenantMode.SINGLE,
             _db_object=app,
         )
 

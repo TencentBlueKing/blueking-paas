@@ -28,7 +28,7 @@ from django.db.transaction import atomic
 from django.utils.translation import gettext as _
 
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.core.tenant.utils import validate_app_tenant_info
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -78,7 +78,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--app_tenant_mode",
-            dest="app_tenant_mode",
+            dest="raw_tenant_mode",
             required=False,
             type=str,
             default=AppTenantMode.GLOBAL,
@@ -86,20 +86,11 @@ class Command(BaseCommand):
             help="租户类型，可选值：global, single",
         )
         parser.add_argument(
-            "--app_tenant_id", dest="app_tenant_id", required=False, type=str, default="", help="租户ID"
+            "--app_tenant_id", dest="raw_tenant_id", required=False, type=str, default="", help="租户ID"
         )
 
     @handle_error
-    def handle(self, file_: str, operator, app_tenant_mode, app_tenant_id, *args, **options):
-        # 参数有效性校验
-        if app_tenant_mode == AppTenantMode.GLOBAL:
-            if app_tenant_id:
-                raise ValueError(
-                    f"当 app_tenant_mode 为 {AppTenantMode.GLOBAL} 时，app_tenant_id 必须为空，当前值为 {app_tenant_id}"
-                )
-        elif not app_tenant_id:
-            raise ValueError(f"当 app_tenant_mode 为 {app_tenant_mode} 时，app_tenant_id 不能为空")
-
+    def handle(self, file_: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):
         filepath = Path(file_)
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 
@@ -112,11 +103,11 @@ class Command(BaseCommand):
         handler = get_desc_handler(stat.meta_info)
 
         # 需要补充应用的租户信息
-        tenant_id = self._get_tenant_id(app_tenant_mode, app_tenant_id)
+        app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
         stat.meta_info["tenant"] = {
-            "app_tenant_mode": app_tenant_mode,
-            "app_tenant_id": app_tenant_id,
-            "tenant_id": tenant_id,
+            "app_tenant_mode": app_tenant_info.app_tenant_mode,
+            "app_tenant_id": app_tenant_info.app_tenant_id,
+            "tenant_id": app_tenant_info.tenant_id,
         }
         with atomic():
             # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
@@ -132,11 +123,3 @@ class Command(BaseCommand):
                 modules=set(handler.app_desc.modules.keys()),
             )
         self.stdout.write("Finish！")
-
-    def _get_tenant_id(self, app_tenant_mode, app_tenant_id):
-        """所属租户（tenant_id）是开发者中心自身的逻辑，为减少用户理解成本，可从已有参数中获取"""
-        if not settings.ENABLE_MULTI_TENANT_MODE:
-            return DEFAULT_TENANT_ID
-        if app_tenant_mode == AppTenantMode.GLOBAL:
-            return OP_TYPE_TENANT_ID
-        return app_tenant_id

@@ -29,12 +29,14 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
     BulkCreatePlatformManagerSLZ,
     PlatformManagerSLZ,
+    SystemAPIRoleSLZ,
     SystemAPIUserSLZ,
     UpsertSystemAPIUserSLZ,
     UpsertUserFeatureFlagSLZ,
@@ -422,3 +424,20 @@ class SystemAPIUserViewSet(viewsets.GenericViewSet):
             data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SystemAPIRolesViewSet(viewsets.GenericViewSet):
+    """系统 API 权限相关 API"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="获取系统 API 权限列表",
+        responses={status.HTTP_200_OK: SystemAPIUserSLZ(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        """获取系统 API 权限列表"""
+        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in ClientRole.get_choices()]
+        slz = SystemAPIRoleSLZ(roles_data, many=True)
+        return Response(slz.data)

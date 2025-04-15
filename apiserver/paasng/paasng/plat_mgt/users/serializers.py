@@ -104,3 +104,11 @@ class UpsertSystemAPIUserSLZ(serializers.Serializer):
                 f"Invalid role '{value}'. Must be one of: {', '.join(str(r) for r in valid_roles)}"
             )
         return value
+
+
+# --------- 系统 API 权限相关序列化器 ---------
+class SystemAPIRoleSLZ(serializers.Serializer):
+    """系统 API 权限序列化器"""
+
+    value = serializers.IntegerField(help_text="角色 ID")
+    label = serializers.CharField(help_text="角色描述")

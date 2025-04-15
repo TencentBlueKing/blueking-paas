@@ -54,4 +54,10 @@ urlpatterns = [
         views.SystemAPIUserViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.system_api_user.delete",
     ),
+    # 系统 API 权限
+    path(
+        "api/plat_mgt/users/system_api_roles/",
+        views.SystemAPIRolesViewSet.as_view({"get": "list"}),
+        name="plat_mgt.users.system_api_roles.list",
+    ),
 ]

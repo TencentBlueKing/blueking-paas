@@ -95,8 +95,10 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	originalBkapp := bkapp.DeepCopy()
 	// clear original bkapp status to force update
 	originalBkapp.Status = paasv1alpha2.AppStatus{
-		// 必须保留 HookStatuses 字段值, patch mergeFrom 时, bkapp.Status.HookStatuses = nil 才能有效清空 HookStatuses.
-		// 清空后, 也进一步避免了在 HookReconciler 中, 读取到旧 HookStatuses 的情况.
+		// 必须保留 HookStatuses 字段值, 目的是在 MergeFrom 时, 对比 bkapp.Status.HookStatuses 与
+		// originalBkapp.Status.HookStatuses 的值, 生成 patch 指令, 清空集群内 bkapp 模型的 HookStatuses 字段.
+		// 清空后, 进一步避免了在 HookReconciler 中, 读取到旧 HookStatuses 的情况.
+		// 有关 MergeFrom 的说明: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client#MergeFrom
 		HookStatuses: bkapp.Status.HookStatuses,
 	}
 	bkapp.Status.HookStatuses = nil

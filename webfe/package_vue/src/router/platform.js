@@ -1,5 +1,12 @@
 import i18n from '@/language/i18n.js';
 
+const platformOverview = () =>
+  import(/* webpackChunkName: 'platform-management' */ '@/views/platform/overview')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 const platformManagement = () =>
   import(/* webpackChunkName: 'platform-management' */ '@/views/platform')
     .then((module) => module)
@@ -21,6 +28,13 @@ const clusterCreateEdit = () =>
       window.showDeployTip(error);
     });
 
+const platformAddOns = () =>
+  import(/* webpackChunkName: 'platform-services' */ '@/views/platform/services')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -30,6 +44,14 @@ export const platformRouters = [
       name: 'platformAppCluster',
     },
     children: [
+      {
+        path: 'overview',
+        component: platformOverview,
+        name: 'platformOverview',
+        meta: {
+          title: i18n.t('概览'),
+        },
+      },
       {
         path: 'app-cluster',
         component: platformAppCluster,
@@ -56,7 +78,19 @@ export const platformRouters = [
             }
           }
         },
-      }
+      },
+      {
+        path: 'add-ons',
+        component: platformAddOns,
+        name: 'platformAddOns',
+        meta: {
+          title: i18n.t('增强服务'),
+          panels: [
+            { name: 'config', label: i18n.t('服务配置') },
+            { name: 'plan', label: i18n.t('服务方案') },
+          ],
+        },
+      },
     ],
   },
 ];

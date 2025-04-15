@@ -110,4 +110,39 @@ var _ = Describe("Test ingress_plugins.go", func() {
 			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
 		})
 	})
+
+	Context("test TenantGuardPlugin", func() {
+		DescribeTable("test MakeConfigurationSnippet", func(initAction func(), expected string) {
+			By("init", initAction)
+
+			var plugin NginxIngressPlugin = &TenantGuardPlugin{}
+			Expect(plugin.MakeConfigurationSnippet(bkapp, nil)).To(Equal(expected))
+		},
+			Entry("when without app metadata", func() {}, ""),
+			Entry("when disable tenant guard", func() {
+				testing.WithAppInfoAnnotations(bkapp)
+				bkapp.Annotations[paasv1alpha2.TenantGuardAnnoKey] = "false"
+			}, ""),
+			Entry("normal case", func() {
+				testing.WithAppInfoAnnotations(bkapp)
+				bkapp.Annotations[paasv1alpha2.TenantGuardAnnoKey] = "true"
+				bkapp.Annotations[paasv1alpha2.BkAppTenantIDKey] = "system"
+			}, dedent.Dedent(`
+        # Blow content was configured by tenant-guard plugin, do not edit
+
+        set $bkapp_app_code 'region-bkapp-app-code-stag';
+        set $bkapp_bk_app_code 'app-code';
+        set $bkapp_env_name 'stag';
+        set $bkapp_app_tenant_id 'system';
+
+        access_by_lua_file $tenant_guard_path/main.lua;
+
+        # content of tenant-guard plugin ends`)),
+		)
+
+		It("test MakeServerSnippet", func() {
+			var plugin NginxIngressPlugin = &TenantGuardPlugin{}
+			Expect(plugin.MakeServerSnippet(bkapp, nil)).To(Equal(""))
+		})
+	})
 })

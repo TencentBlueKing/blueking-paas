@@ -29,6 +29,7 @@ class PlatformManagerSLZ(serializers.Serializer):
 
     user = serializers.CharField(source="user.username", help_text="用户 ID")
     created = serializers.DateTimeField(help_text="添加时间")
+    tenant_id = serializers.CharField(help_text="租户 ID")
 
 
 class BulkCreatePlatformManagerSLZ(serializers.Serializer):

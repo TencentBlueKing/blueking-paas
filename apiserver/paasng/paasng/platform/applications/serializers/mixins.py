@@ -90,8 +90,15 @@ class AdvancedCreationParamsMixin(serializers.Serializer):
         return attrs
 
 
-class ValidateTenantMixin:
-    """校验应用的租户字段 app_tenant_mode 和 app_tenant_id 是否匹配"""
+class AppTenantMixin(serializers.Serializer):
+    """应用的租户字段 app_tenant_mode 和 app_tenant_id"""
+
+    app_tenant_mode = serializers.ChoiceField(
+        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
+    )
+    app_tenant_id = serializers.CharField(
+        required=False, default="", help_text="租户ID，全租户应用则租户 ID 为空字符串"
+    )
 
     def validate(self, data):
         # 非多租户模式下默认设置为 default 租户

@@ -305,7 +305,7 @@ class SysAppViewSet(viewsets.ViewSet):
         """给特定系统提供的创建第三方应用的 API, 应用ID 必现以系统ID为前缀"""
         serializer = slzs.SysThirdPartyApplicationSLZ(data=request.data, context={"sys_id": sys_id})
         serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        data = serializer.validated_data
 
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 

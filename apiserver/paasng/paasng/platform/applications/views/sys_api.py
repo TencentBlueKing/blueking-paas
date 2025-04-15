@@ -30,6 +30,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -315,7 +316,7 @@ class SysAppViewSet(viewsets.ViewSet):
             data["name_zh_cn"],
             data["name_en"],
             operator,
-            data["app_tenant_mode"],
+            AppTenantMode(data["app_tenant_mode"]),
             data["app_tenant_id"],
             tenant_id,
         )

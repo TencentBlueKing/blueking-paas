@@ -26,7 +26,7 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import get_tenant
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
@@ -94,8 +94,12 @@ class ValidateTenantMixin:
     """校验应用的租户字段 app_tenant_mode 和 app_tenant_id 是否匹配"""
 
     def validate(self, data):
+        # 非多租户模式下默认设置为 default 租户
         if not settings.ENABLE_MULTI_TENANT_MODE:
+            data["app_tenant_mode"] = AppTenantMode.SINGLE
+            data["app_tenant_id"] = DEFAULT_TENANT_ID
             return data
+
         # 多租户模式下需要校验租户相关字段
         if data["app_tenant_mode"] == AppTenantMode.GLOBAL:
             if data["app_tenant_id"]:

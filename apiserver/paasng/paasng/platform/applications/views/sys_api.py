@@ -37,7 +37,7 @@ from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import LightApplicationViewSetErrorCode
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.tenant import determine_tenant_id
+from paasng.platform.applications.tenant import get_tenant_id_by_tenant_info
 from paasng.platform.applications.utils import create_third_app
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 
@@ -87,7 +87,7 @@ class LightAppViewSet(viewsets.ViewSet):
             else:
                 logo_url = ""
 
-            tenant_id = determine_tenant_id(data["app_tenant_mode"], data["app_tenant_id"])
+            tenant_id = get_tenant_id_by_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
             try:
                 light_app = AppAdaptor(session=session).create(
                     code=app_code,
@@ -308,7 +308,7 @@ class SysAppViewSet(viewsets.ViewSet):
 
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
-        tenant_id = determine_tenant_id(data["app_tenant_mode"], data["app_tenant_id"])
+        tenant_id = get_tenant_id_by_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
         application = create_third_app(
             data["region"],
             data["code"],

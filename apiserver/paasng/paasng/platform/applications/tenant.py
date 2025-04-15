@@ -17,7 +17,6 @@
 import logging
 
 from django.conf import settings
-from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
@@ -50,24 +49,6 @@ def validate_app_tenant_params(user: User, raw_app_tenant_mode: str | None) -> t
     return app_tenant_mode, app_tenant_id, tenant
 
 
-def validate_tenant_id_header(request: HttpRequest) -> str:
-    """多租户环境下开发者中心注册的网关都是全租户网关，可以被所有应用调用，在获取列表类的应用态 API 中需要处理请求头中的租户 ID
-
-    :param request: HTTP 请求，多租户模式下请求头中必须有租户 ID 信息
-    :return: 租户 ID，如果未启用多租户模式则返回默认租户 ID
-    :raises ValidationError: 多租户模式下，请求头中未包含租户 ID 字段
-    """
-    # 未开启多租户，请求头中不一定有租户ID，直接返回默认的租户 ID 即可
-    if not settings.ENABLE_MULTI_TENANT_MODE:
-        return DEFAULT_TENANT_ID
-
-    tenant_id = request.META.get("HTTP_X_BK_TENANT_ID")
-    if not tenant_id:
-        raise ValidationError(_("请求头中未包含 X-Bk-Tenant-Id 字段"))
-
-    return tenant_id
-
-
 def get_tenant_id_for_app(app_code: str) -> str:
     # 若果未开启多租户，直接返回默认租户，减少一次 DB 查询操作
     if not settings.ENABLE_MULTI_TENANT_MODE:
@@ -81,7 +62,7 @@ def get_tenant_id_for_app(app_code: str) -> str:
     return app.tenant_id
 
 
-def determine_tenant_id(app_tenant_mode: str, app_tenant_id: str) -> str:
+def get_tenant_id_by_tenant_info(app_tenant_mode: str, app_tenant_id: str) -> str:
     """根据 app_tenant_mode、app_tenant_id 获取应用所属租户 ID
 
     NOTE：通过系统 API、Command 等创建应用时，无法从 request 请求中获取租户信息，需要通过参数传递。

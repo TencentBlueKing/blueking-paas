@@ -17,6 +17,7 @@
 
 from typing import Any, Dict
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -87,3 +88,18 @@ class AdvancedCreationParamsMixin(serializers.Serializer):
             raise ValidationError(_("你无法使用高级创建选项"))
 
         return attrs
+
+
+class ValidateTenantMixin:
+    """校验应用的租户字段 app_tenant_mode 和 app_tenant_id 是否匹配"""
+
+    def validate(self, data):
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            return data
+        # 多租户模式下需要校验租户相关字段
+        if data["app_tenant_mode"] == AppTenantMode.GLOBAL:
+            if data["app_tenant_id"]:
+                raise ValidationError(_("全租户应用的 app_tenant_id 必须为空"))
+        elif not data["app_tenant_id"]:
+            raise ValidationError(_("单租户应用必须设置 app_tenant_id"))
+        return data

@@ -38,7 +38,7 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }],
+      groups: [{ platform: this.$t('服务接入') }, { user: this.$t('用户管理') }],
       active: '',
       routeIndex: 0,
     };

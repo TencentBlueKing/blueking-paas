@@ -351,5 +351,26 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/overview/tenant_config_statuses/`;
       return http.get(url);
     },
+    /**
+     * 获取平台管理员
+     */
+    getAdminUser() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/`;
+      return http.get(url);
+    },
+    /**
+     * 获取系统API用户列表
+     */
+    getSystemApiUser() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+      return http.get(url);
+    },
+    /**
+     * 获取用户特性
+     */
+    getAccountFeatureFlags() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/`;
+      return http.get(url);
+    },
   },
 };

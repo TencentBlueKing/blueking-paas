@@ -41,7 +41,7 @@ class BulkCreatePlatformManagerSLZ(serializers.Serializer):
 # --------- 用户特性相关序列化器 ---------
 
 
-class UserFeatureFlagSLZ(serializers.Serializer):
+class AccountFeatureFlagSLZ(serializers.Serializer):
     """用户特性序列化器"""
 
     id = serializers.IntegerField(read_only=True)
@@ -59,7 +59,7 @@ class UserFeatureFlagSLZ(serializers.Serializer):
         return account_feature_default_flags.get(obj.name, False)
 
 
-class UpsertUserFeatureFlagSLZ(serializers.Serializer):
+class UpsertAccountFeatureFlagSLZ(serializers.Serializer):
     """更新用户特性序列化器"""
 
     user = serializers.CharField(help_text="用户名称")
@@ -75,6 +75,13 @@ class UpsertUserFeatureFlagSLZ(serializers.Serializer):
                 f"Invalid feature '{value}'. Must be one of: {', '.join(valid_features)}"
             )
         return value
+
+
+class AccountFeatureFlagListViewSet(serializers.Serializer):
+    """返回所有用户特性种类序列化器"""
+
+    value = serializers.CharField(help_text="特性名称")
+    label = serializers.CharField(help_text="特性描述")
 
 
 # --------- 系统 API 用户相关序列化器 ---------
@@ -104,3 +111,11 @@ class UpsertSystemAPIUserSLZ(serializers.Serializer):
                 f"Invalid role '{value}'. Must be one of: {', '.join(str(r) for r in valid_roles)}"
             )
         return value
+
+
+# --------- 系统 API 权限相关序列化器 ---------
+class SystemAPIUserRoleSLZ(serializers.Serializer):
+    """系统 API 权限序列化器"""
+
+    value = serializers.IntegerField(help_text="角色 ID")
+    label = serializers.CharField(help_text="角色描述")

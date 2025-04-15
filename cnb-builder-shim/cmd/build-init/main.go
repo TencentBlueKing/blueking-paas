@@ -328,7 +328,7 @@ func verifyOutputImageWritable(keychain authn.Keychain) error {
 	return nil
 }
 
-// 测试是否具有 output image 镜像的写权限
+// 测试是否具有 cache image 镜像的写权限
 func verifyCacheImageWritable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyWriteAccess(keychain, *cacheImage); err != nil {
 		return errors.Wrapf(err, "Error verifying write access to %q", *cacheImage)
@@ -336,7 +336,7 @@ func verifyCacheImageWritable(keychain authn.Keychain) error {
 	return nil
 }
 
-// 测试 run image 镜像存在且具有读权限
+// 测试是否具有 run image 镜像的写权限
 func verifyRunImageReadable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyReadAccess(keychain, *runImage); err != nil {
 		return errors.Wrapf(err, "Error verifying read access to run image %q", *runImage)

@@ -127,6 +127,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 				hook := hookres.BuildPreReleaseHook(bkapp, &hookStatus)
 				hook.Pod.Status.Phase = phase
+				hook.Pod.SetCreationTimestamp(startTime)
 				r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
 
 				ret := r.Reconcile(ctx, bkapp)
@@ -214,6 +215,8 @@ var _ = Describe("Test HookReconciler", func() {
 
 			hook.Pod.Status.Phase = podPhase
 			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
+			hook.Pod.SetCreationTimestamp(*hook.Pod.Status.StartTime)
+
 			if err := r.Client.Status().Update(ctx, hook.Pod); err != nil {
 				panic(err)
 			}
@@ -258,7 +261,14 @@ var _ = Describe("Test HookReconciler", func() {
 				false,
 				metav1.ConditionFalse,
 			),
-			Entry("running timeout", corev1.PodRunning, time.Duration(-1), false, true, metav1.ConditionFalse),
+			Entry(
+				"running timeout",
+				corev1.PodRunning,
+				time.Duration(-1),
+				false,
+				true,
+				metav1.ConditionFalse,
+			),
 			Entry(
 				"success",
 				corev1.PodSucceeded,
@@ -298,6 +308,7 @@ var _ = Describe("Test HookReconciler", func() {
 			hook := hookres.BuildPreReleaseHook(bkapp, nil)
 			hook.Pod.Status.Phase = phase
 			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
+			hook.Pod.SetCreationTimestamp(*hook.Pod.Status.StartTime)
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
 				Type:      paasv1alpha2.HookPreRelease,
 				StartTime: hook.Pod.Status.StartTime,

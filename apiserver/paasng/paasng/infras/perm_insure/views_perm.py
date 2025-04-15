@@ -99,6 +99,7 @@ def check_drf_view_perm(view_func, is_admin42: bool) -> List[Error]:
     if view_cls.__name__ in INSURE_CHECKING_EXCLUDED_VIEWS:
         return []
 
+    unprotected_actions = None
     if issubclass(view_cls, ViewSetMixin):
         # Some viewset doesn't configure `permission_classes`, them are protected by
         # decorators instead, make the check pass when all methods have been protected.

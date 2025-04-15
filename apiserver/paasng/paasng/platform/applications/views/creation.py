@@ -286,7 +286,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     @swagger_auto_schema(
         tags=["platform.applications.creation"],
         operation_description="获取创建应用高级选项",
-        request_body=CreationOptionsOutputSLZ,
         responses={status.HTTP_201_CREATED: CreationOptionsOutputSLZ()},
     )
     def get_creation_options(self, request):

@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db(databases=["workloads"])
 @pytest.fixture(autouse=True)
 def cluster_creator(ca_data, cert_data, key_data):
     def get_or_create(cluster_name: str, servers: List[Dict], token_value: Optional[str] = None):
-        cluster = Cluster.objects.register_cluster(
+        cluster = Cluster.objects.create(
             name=cluster_name,
             ca_data=ca_data,
             cert_data=cert_data,

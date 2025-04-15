@@ -35,7 +35,7 @@
           class="placeholder"
           v-else
         >
-          {{ $t('请选择集群') }}
+          {{ $t(`请选择${placeholder}`) }}
           <i class="bk-select-angle bk-icon icon-angle-down"></i>
         </div>
       </div>
@@ -46,7 +46,7 @@
         <ClusterTransfer
           ref="clusterTransfer"
           :list="availableClusters"
-          :default-target-list="editData"
+          :default-target-list="editData ?? []"
           @change="transferChange"
         />
       </bk-option>
@@ -94,6 +94,10 @@ export default {
     editData: {
       type: Array,
       default: () => [],
+    },
+    placeholder: {
+      type: String,
+      default: '集群',
     },
   },
   components: {

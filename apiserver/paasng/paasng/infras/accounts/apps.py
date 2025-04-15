@@ -28,8 +28,3 @@ class AppsConfig(PlugableAppConfig):
         from bkpaas_auth.monkey import patch_middleware_get_user
 
         patch_middleware_get_user()
-
-        # Register notification plugins
-        from paasng.utils.notification_plugins import register_plugins
-
-        register_plugins()

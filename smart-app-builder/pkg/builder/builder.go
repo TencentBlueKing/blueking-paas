@@ -1,35 +1,35 @@
 package builder
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/go-logr/logr"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/handler"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/plan"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/container"
 )
 
-// BuildExecutor execute the process which build the source code to artifact
-type BuildExecutor struct {
+// AppBuilder build the source code to artifact
+type AppBuilder struct {
 	sourceURL string
 	destURL   string
-	handler   handler.RuntimeHandler
+	executor  BuildExecutor
 
 	logger logr.Logger
 }
 
-// Execute run build process
-func (b *BuildExecutor) Execute() error {
-	appDir := b.handler.GetAppDir()
+// Build run build process
+func (a *AppBuilder) Build() error {
+	appDir := a.executor.GetAppDir()
 
 	// 获取源码
-	if err := b.fetchSource(appDir); err != nil {
+	if err := a.fetchSource(appDir); err != nil {
 		return err
 	}
 
@@ -40,17 +40,17 @@ func (b *BuildExecutor) Execute() error {
 	}
 
 	// 执行构建, 生成 artifact
-	artifactTGZ, err := b.handler.Build(buildPlan)
+	artifactTGZ, err := a.executor.Build(buildPlan)
 	if err != nil {
 		return err
 	}
 
-	return b.pushArtifact(artifactTGZ)
+	return a.pushArtifact(artifactTGZ)
 }
 
 // fetchSource fetch the source code to destDir
-func (b *BuildExecutor) fetchSource(destDir string) error {
-	parsedURL, err := url.Parse(b.sourceURL)
+func (a *AppBuilder) fetchSource(destDir string) error {
+	parsedURL, err := url.Parse(a.sourceURL)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (b *BuildExecutor) fetchSource(destDir string) error {
 		}
 
 		if !fileInfo.IsDir() {
-			if err = fs.NewFetcher(b.logger).Fetch(filePath, destDir); err != nil {
+			if err = fs.NewFetcher(a.logger).Fetch(filePath, destDir); err != nil {
 				return err
 			} else {
 				return nil
@@ -80,18 +80,18 @@ func (b *BuildExecutor) fetchSource(destDir string) error {
 		return nil
 
 	case "http", "https":
-		if err := http.NewFetcher(b.logger).Fetch(b.sourceURL, destDir); err != nil {
+		if err := http.NewFetcher(a.logger).Fetch(a.sourceURL, destDir); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("not support source-url scheme: %s", parsedURL.Scheme)
+		return errors.Errorf("not support source-url scheme: %s", parsedURL.Scheme)
 	}
 
 	return nil
 }
 
-func (b *BuildExecutor) pushArtifact(artifactTGZ string) error {
-	parsedURL, err := url.Parse(b.destURL)
+func (a *AppBuilder) pushArtifact(artifactTGZ string) error {
+	parsedURL, err := url.Parse(a.destURL)
 	if err != nil {
 		return err
 	}
@@ -116,15 +116,23 @@ func (b *BuildExecutor) pushArtifact(artifactTGZ string) error {
 
 	default:
 		// TODO push to bkrepo
-		return fmt.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
+		return errors.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
 	}
 }
 
-// NewBuildExecutor create a new buildExecutor
-func NewBuildExecutor(logger logr.Logger, sourceURL, destURL string) (*BuildExecutor, error) {
-	if h, err := handler.NewRuntimeHandler(); err != nil {
+// BuildExecutor is the interface which execute the build process
+type BuildExecutor interface {
+	// GetAppDir return the source code directory
+	GetAppDir() string
+	// Build will build the source code by plan, return the artifact({app_code}.tgz) file path
+	Build(buildPlan *plan.BuildPlan) (string, error)
+}
+
+// New create a AppBuilder instance
+func New(logger logr.Logger, sourceURL, destURL string) (*AppBuilder, error) {
+	if executor, err := container.NewContainerExecutor(); err != nil {
 		return nil, err
 	} else {
-		return &BuildExecutor{logger: logger, sourceURL: sourceURL, destURL: destURL, handler: h}, nil
+		return &AppBuilder{logger: logger, sourceURL: sourceURL, destURL: destURL, executor: executor}, nil
 	}
 }

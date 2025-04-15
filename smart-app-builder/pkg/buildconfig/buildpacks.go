@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
+	"github.com/pkg/errors"
+
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 )
 
 // Buildpack 构建工具
@@ -18,7 +20,7 @@ func GetBuildpackByLanguage(language string) (*Buildpack, error) {
 	if bp, ok := getDefaultBuildpacks()[strings.ToLower(language)]; ok {
 		return &bp, nil
 	}
-	return nil, fmt.Errorf("no buildpacks match with language: %s", language)
+	return nil, errors.Errorf("no buildpacks match with language: %s", language)
 }
 
 // GetDefaultVersionByBPName 根据 buildpack 的名字, 获取它的默认版本
@@ -29,10 +31,10 @@ func GetDefaultVersionByBPName(name string) (string, error) {
 			return v.Version, nil
 		}
 	}
-	return "", fmt.Errorf("no buildpacks match with name: %s", name)
+	return "", errors.Errorf("no buildpacks match with name: %s", name)
 }
 
-// GetBuildpacksEnvs return buildpacks 的环境变量
+// GetBuildpacksEnvs returns buildpacks 的环境变量
 func GetBuildpacksEnvs(name string) []string {
 	var envs []string
 	bpEnvs := make([]string, 0)

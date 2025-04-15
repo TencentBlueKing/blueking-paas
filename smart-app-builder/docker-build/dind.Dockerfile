@@ -9,7 +9,7 @@ RUN go mod download
 ADD ./cmd ./cmd
 ADD ./pkg ./pkg
 
-RUN go build -ldflags '-extldflags "-static" -w -s' -o smart-app-builder ./cmd/builder
+RUN go build -ldflags '-extldflags "-static" -w -s' -o smart-app-builder ./cmd
 
 FROM docker:28.0.1-dind
 

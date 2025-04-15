@@ -13,22 +13,22 @@ type pindCmdProvider struct {
 	execPath string
 }
 
-// StartDaemonCmd start container daemon
-func (p *pindCmdProvider) StartDaemonCmd() *exec.Cmd {
+// StartDaemon returns the command to start container daemon
+func (p *pindCmdProvider) StartDaemon() *exec.Cmd {
 	return utils.Command(p.execPath, "system", "service", "--time", "0")
 }
 
-// LoadImageCmd load tar to image
-func (p *pindCmdProvider) LoadImageCmd(tar string) *exec.Cmd {
+// LoadImage returns the command to load tar to image
+func (p *pindCmdProvider) LoadImage(tar string) *exec.Cmd {
 	return utils.Command(p.execPath, "load", "-i", tar)
 }
 
-// SaveImageCmd save image
-func (p *pindCmdProvider) SaveImageCmd(image string, destTAR string) *exec.Cmd {
+// SaveImage returns the command to save image
+func (p *pindCmdProvider) SaveImage(image string, destTAR string) *exec.Cmd {
 	return utils.Command(p.execPath, "save", "-o", destTAR, "--format", "oci-archive", image)
 }
 
-// RunImage run image
+// RunImage returns the command to run image
 func (p *pindCmdProvider) RunImage(image string, args ...string) *exec.Cmd {
 	runArgs := []string{"run"}
 	runArgs = append(runArgs, args...)

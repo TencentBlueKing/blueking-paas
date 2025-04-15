@@ -5,10 +5,11 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder"
 )
 
 const (
@@ -19,16 +20,16 @@ const (
 func main() {
 	logger := utils.GetLogger()
 
-	executor, err := builder.NewBuildExecutor(logger, config.G.SourceURL, config.G.DestURL)
+	appBuilder, err := builder.New(logger, config.G.SourceURL, config.G.DestURL)
 	if err != nil {
-		logger.Error(err, "failed to create build executor")
+		logger.Error(err, "create build executor")
 		os.Exit(1)
 	}
 
 	logger.Info("start to build s-mart package")
 
-	if err := executor.Execute(); err != nil {
-		logger.Error(err, "failed to build s-mart package")
+	if err := appBuilder.Build(); err != nil {
+		logger.Error(err, "build s-mart package")
 		os.Exit(1)
 	}
 
@@ -56,7 +57,7 @@ func init() {
 
 	if config.G.SourceURL == "" {
 		logger.Error(
-			fmt.Errorf("sourceURL is empty"),
+			errors.New("sourceURL is empty"),
 			fmt.Sprintf(
 				"please provide by setting --source-url option or setting as an environment variable %s",
 				SourceURLEnvVarKey,
@@ -67,7 +68,7 @@ func init() {
 
 	if config.G.DestURL == "" {
 		logger.Error(
-			fmt.Errorf("destURL is empty"),
+			errors.New("destURL is empty"),
 			fmt.Sprintf(
 				"please provide by setting --dest-url option or setting as an environment variable %s",
 				DestURLEnvVarKey,

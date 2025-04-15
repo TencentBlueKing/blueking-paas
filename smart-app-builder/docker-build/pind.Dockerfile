@@ -9,7 +9,7 @@ RUN go mod download
 ADD ./cmd ./cmd
 ADD ./pkg ./pkg
 
-RUN go build -ldflags '-extldflags "-static" -w -s' -o smart-app-builder ./cmd/builder
+RUN go build -ldflags '-extldflags "-static" -w -s' -o smart-app-builder ./cmd
 
 FROM mgoltzsche/podman:5.4.0
 

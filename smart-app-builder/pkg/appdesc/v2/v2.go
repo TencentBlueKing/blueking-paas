@@ -1,12 +1,10 @@
 package v2
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 
-	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/buildconfig"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 )
 
 // AppDescConfig spec_version: 2 版本的 app_desc
@@ -38,7 +36,7 @@ func (cfg *AppDescConfig) Validate() error {
 
 	for moduleName, spec := range cfg.Modules {
 		if spec.Processes == nil {
-			return fmt.Errorf("processes of module %s is empty", moduleName)
+			return errors.Errorf("processes of module %s is empty", moduleName)
 		}
 	}
 
@@ -59,8 +57,8 @@ func (cfg *AppDescConfig) GenerateProcfile() map[string]string {
 }
 
 // GenerateModuleBuildConfig 生成 ModuleBuildConfig
-func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]bcfg.ModuleBuildConfig, error) {
-	config := make([]bcfg.ModuleBuildConfig, 0)
+func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]buildconfig.ModuleBuildConfig, error) {
+	config := make([]buildconfig.ModuleBuildConfig, 0)
 
 	for moduleName, module := range cfg.Modules {
 		envs := make(map[string]string)
@@ -76,14 +74,14 @@ func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]bcfg.ModuleBuildConfig,
 
 		buildpacks := module.Build.Buildpacks
 		if buildpacks == nil {
-			if bp, err := bcfg.GetBuildpackByLanguage(module.Language); err != nil {
+			if bp, err := buildconfig.GetBuildpackByLanguage(module.Language); err != nil {
 				return nil, err
 			} else {
-				buildpacks = []bcfg.Buildpack{*bp}
+				buildpacks = []buildconfig.Buildpack{*bp}
 			}
 		}
 
-		config = append(config, bcfg.ModuleBuildConfig{
+		config = append(config, buildconfig.ModuleBuildConfig{
 			SourceDir:  src,
 			ModuleName: moduleName,
 			Envs:       envs,
@@ -101,11 +99,11 @@ type AppInfo struct {
 
 // ModuleSpec 单个 module 字段
 type ModuleSpec struct {
-	SourceDir    string             `yaml:"source_dir"`
-	Language     string             `yaml:"language"`
-	Processes    map[string]Process `yaml:"processes"`
-	EnvVariables []AppEnvVar        `yaml:"env_variables,omitempty"`
-	Build        bcfg.BuildConfig   `yaml:"build,omitempty"`
+	SourceDir    string                  `yaml:"source_dir"`
+	Language     string                  `yaml:"language"`
+	Processes    map[string]Process      `yaml:"processes"`
+	EnvVariables []AppEnvVar             `yaml:"env_variables,omitempty"`
+	Build        buildconfig.BuildConfig `yaml:"build,omitempty"`
 }
 
 // Process 进程配置

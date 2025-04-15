@@ -6,9 +6,9 @@ import (
 	"gopkg.in/yaml.v3"
 	"github.com/pkg/errors"
 
-	descv2 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v2"
-	descv3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v3"
-	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/buildconfig"
+	descv3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v3"
+	descv2 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v2"
+	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 )
 
 // AppDesc app_desc

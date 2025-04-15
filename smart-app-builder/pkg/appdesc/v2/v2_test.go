@@ -1,13 +1,16 @@
 package v2_test
 
 import (
+	"slices"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v2"
-	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/buildconfig"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v2"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 )
 
 var _ = Describe("V2", func() {
@@ -49,30 +52,29 @@ modules:
 		It("get module build config", func() {
 			buildConfig, _ := appDescConfig.GenerateModuleBuildConfig()
 
-			expectedPythonConfig := bcfg.ModuleBuildConfig{
+			expectedPythonConfig := buildconfig.ModuleBuildConfig{
 				SourceDir:  "frontend",
 				ModuleName: "web",
-				Buildpacks: []bcfg.Buildpack{
+				Buildpacks: []buildconfig.Buildpack{
 					{Name: "bk-buildpack-python", Version: "v213"},
 				},
 				Envs: map[string]string{},
 			}
-			expectedGoConfig := bcfg.ModuleBuildConfig{
+			expectedGoConfig := buildconfig.ModuleBuildConfig{
 				SourceDir:  "backend",
 				ModuleName: "api",
 				Envs: map[string]string{
 					"key1": "value1",
 				},
-				Buildpacks: []bcfg.Buildpack{{Name: "bk-buildpack-go", Version: "v191"}},
+				Buildpacks: []buildconfig.Buildpack{{Name: "bk-buildpack-go", Version: "v205"}},
 			}
 
-			if buildConfig[0].ModuleName == "api" {
-				Expect(buildConfig[0]).To(Equal(expectedGoConfig))
-				Expect(buildConfig[1]).To(Equal(expectedPythonConfig))
-			} else {
-				Expect(buildConfig[0]).To(Equal(expectedPythonConfig))
-				Expect(buildConfig[1]).To(Equal(expectedGoConfig))
-			}
+			slices.SortFunc(buildConfig, func(a, b buildconfig.ModuleBuildConfig) int {
+				return strings.Compare(a.ModuleName, b.ModuleName)
+			})
+
+			Expect(buildConfig[0]).To(Equal(expectedGoConfig))
+			Expect(buildConfig[1]).To(Equal(expectedPythonConfig))
 		})
 		It("get procfile", func() {
 			procfile := appDescConfig.GenerateProcfile()

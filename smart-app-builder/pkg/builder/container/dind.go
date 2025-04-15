@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 )
 
 // dindCmdProvider docker-in-docker command provider
@@ -15,19 +15,19 @@ type dindCmdProvider struct {
 	execPath string
 }
 
-// StartDaemonCmd start container daemon
-func (d *dindCmdProvider) StartDaemonCmd() *exec.Cmd {
+// StartDaemon returns the command to start container daemon
+func (d *dindCmdProvider) StartDaemon() *exec.Cmd {
 	execPath, _ := exec.LookPath("dockerd")
 	return utils.Command(execPath)
 }
 
-// LoadImageCmd load tar to image
-func (d *dindCmdProvider) LoadImageCmd(tar string) *exec.Cmd {
+// LoadImage returns the command to load tar to image
+func (d *dindCmdProvider) LoadImage(tar string) *exec.Cmd {
 	return utils.Command(d.execPath, "-H", fmt.Sprintf("unix://%s", config.G.DaemonSockFile), "load", "-i", tar)
 }
 
-// SaveImageCmd save image
-func (d *dindCmdProvider) SaveImageCmd(image string, destTAR string) *exec.Cmd {
+// SaveImage returns the command to save image
+func (d *dindCmdProvider) SaveImage(image string, destTAR string) *exec.Cmd {
 	return utils.Command(
 		d.execPath,
 		"-H",
@@ -39,7 +39,7 @@ func (d *dindCmdProvider) SaveImageCmd(image string, destTAR string) *exec.Cmd {
 	)
 }
 
-// RunImage run image
+// RunImage returns the command run image
 func (d *dindCmdProvider) RunImage(image string, args ...string) *exec.Cmd {
 	runArgs := []string{"-H", fmt.Sprintf("unix://%s", config.G.DaemonSockFile), "run"}
 	runArgs = append(runArgs, args...)

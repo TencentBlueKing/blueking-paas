@@ -10,20 +10,20 @@ var _ = Describe("PindCmdProvider", func() {
 		execPath: "podman",
 	}
 
-	It("StartDaemonCmd", func() {
-		cmd := pindCommandProvider.StartDaemonCmd()
+	It("StartDaemon", func() {
+		cmd := pindCommandProvider.StartDaemon()
 		Expect(cmd.Args).To(Equal([]string{"podman", "system", "service", "--time", "0"}))
 	})
 
-	It("LoadImageCmd", func() {
-		cmd := pindCommandProvider.LoadImageCmd("/tmp/test.tar")
+	It("LoadImage", func() {
+		cmd := pindCommandProvider.LoadImage("/tmp/test.tar")
 		Expect(
 			cmd.Args,
 		).To(Equal([]string{"podman", "load", "-i", "/tmp/test.tar"}))
 	})
 
-	It("SaveImageCmd", func() {
-		cmd := pindCommandProvider.SaveImageCmd("test:latest", "/tmp/test.tar")
+	It("SaveImage", func() {
+		cmd := pindCommandProvider.SaveImage("test:latest", "/tmp/test.tar")
 		Expect(
 			cmd.Args,
 		).To(Equal([]string{"podman", "save", "-o", "/tmp/test.tar", "--format", "oci-archive", "test:latest"}))

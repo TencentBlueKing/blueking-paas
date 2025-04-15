@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
 )
 
 var _ = Describe("writeArtifactJsonFile", func() {
@@ -22,14 +22,14 @@ var _ = Describe("writeArtifactJsonFile", func() {
 	})
 
 	It("Each module uses its own independent image tar", func() {
-		buildPlan := plan.BuildPlan{Steps: []*plan.ModuleBuildStep{
+		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
 			{
 				ModuleNames:        []string{"module1"},
-				OutPutImageTarName: "module1.tar",
+				OutputImageTarName: "module1.tar",
 			},
 			{
 				ModuleNames:        []string{"module2"},
-				OutPutImageTarName: "module2.tar",
+				OutputImageTarName: "module2.tar",
 			},
 		}}
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
@@ -43,14 +43,14 @@ var _ = Describe("writeArtifactJsonFile", func() {
 	})
 
 	It("Some module uses the same image tar", func() {
-		buildPlan := plan.BuildPlan{Steps: []*plan.ModuleBuildStep{
+		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
 			{
 				ModuleNames:        []string{"module1", "module2"},
-				OutPutImageTarName: "module1.tar",
+				OutputImageTarName: "module1.tar",
 			},
 			{
 				ModuleNames:        []string{"module3"},
-				OutPutImageTarName: "module3.tar",
+				OutputImageTarName: "module3.tar",
 			},
 		}}
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())

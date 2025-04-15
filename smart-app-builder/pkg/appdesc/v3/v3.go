@@ -1,12 +1,10 @@
 package v3
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 
-	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/buildconfig"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 )
 
 // AppDescConfig specVersion: 3 版本的 app_desc
@@ -38,7 +36,7 @@ func (cfg *AppDescConfig) Validate() error {
 
 	for _, spec := range cfg.Modules {
 		if spec.Spec.Processes == nil {
-			return fmt.Errorf("processes of module %s is empty", spec.Name)
+			return errors.Errorf("processes of module %s is empty", spec.Name)
 		}
 	}
 
@@ -59,8 +57,8 @@ func (cfg *AppDescConfig) GenerateProcfile() map[string]string {
 }
 
 // GenerateModuleBuildConfig 生成 ModuleBuildConfig
-func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]bcfg.ModuleBuildConfig, error) {
-	config := make([]bcfg.ModuleBuildConfig, 0)
+func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]buildconfig.ModuleBuildConfig, error) {
+	config := make([]buildconfig.ModuleBuildConfig, 0)
 
 	for _, module := range cfg.Modules {
 		envs := make(map[string]string)
@@ -76,14 +74,14 @@ func (cfg *AppDescConfig) GenerateModuleBuildConfig() ([]bcfg.ModuleBuildConfig,
 
 		buildpacks := module.Spec.Build.Buildpacks
 		if buildpacks == nil {
-			if bp, err := bcfg.GetBuildpackByLanguage(module.Language); err != nil {
+			if bp, err := buildconfig.GetBuildpackByLanguage(module.Language); err != nil {
 				return nil, err
 			} else {
-				buildpacks = []bcfg.Buildpack{*bp}
+				buildpacks = []buildconfig.Buildpack{*bp}
 			}
 		}
 
-		config = append(config, bcfg.ModuleBuildConfig{
+		config = append(config, buildconfig.ModuleBuildConfig{
 			SourceDir:  src,
 			ModuleName: module.Name,
 			Envs:       envs,
@@ -108,9 +106,9 @@ type ModuleSpec struct {
 
 // BkAppSpec bkapp spec
 type BkAppSpec struct {
-	Processes     []Process        `yaml:"processes"`
-	Configuration AppConfig        `yaml:"configuration,omitempty"`
-	Build         bcfg.BuildConfig `yaml:"build,omitempty"`
+	Processes     []Process               `yaml:"processes"`
+	Configuration AppConfig               `yaml:"configuration,omitempty"`
+	Build         buildconfig.BuildConfig `yaml:"build,omitempty"`
 }
 
 // Process 进程配置

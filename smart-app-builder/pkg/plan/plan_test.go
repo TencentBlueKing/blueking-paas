@@ -3,12 +3,14 @@ package plan_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
 )
 
 var _ = Describe("PrepareBuildPlan", func() {
@@ -67,23 +69,18 @@ modules:
 		Expect(buildPlan.Procfile["worker-celery"]).To(Equal("celery worker"))
 		Expect(buildPlan.Procfile["web-web-process"]).To(Equal("python main.py"))
 
-		Expect(buildPlan.Steps).To(HaveLen(2))
-		if buildPlan.Steps[0].RequiredBuildpacks == "tgz bk-buildpack-python ... v213" {
-			Expect(buildPlan.Steps[0].ModuleNames).To(Equal([]string{"web", "worker"}))
-			Expect(buildPlan.Steps[0].OutPutImageTarName).To(Equal("web.tar"))
+		Expect(buildPlan.BuildGroups).To(HaveLen(2))
 
-			Expect(buildPlan.Steps[1].ModuleNames).To(Equal([]string{"api"}))
+		slices.SortFunc(buildPlan.BuildGroups, func(a, b *plan.ModuleBuildGroup) int {
+			return strings.Compare(a.RequiredBuildpacks, b.RequiredBuildpacks)
+		})
 
-			Expect(buildPlan.Steps[1].RequiredBuildpacks).To(Equal("tgz bk-buildpack-go ... v191"))
-			Expect(buildPlan.Steps[1].OutPutImageTarName).To(Equal("api.tar"))
+		Expect(buildPlan.BuildGroups[0].ModuleNames).To(Equal([]string{"api"}))
+		Expect(buildPlan.BuildGroups[0].RequiredBuildpacks).To(Equal("tgz bk-buildpack-go ... v205"))
+		Expect(buildPlan.BuildGroups[0].OutputImageTarName).To(Equal("api.tar"))
 
-		} else {
-			Expect(buildPlan.Steps[0].ModuleNames).To(Equal([]string{"api"}))
-			Expect(buildPlan.Steps[0].OutPutImageTarName).To(Equal("api.tar"))
-
-			Expect(buildPlan.Steps[1].ModuleNames).To(Equal([]string{"web", "worker"}))
-			Expect(buildPlan.Steps[1].RequiredBuildpacks).To(Equal("tgz bk-buildpack-python ... v213"))
-			Expect(buildPlan.Steps[1].OutPutImageTarName).To(Equal("web.tar"))
-		}
+		Expect(buildPlan.BuildGroups[1].ModuleNames).To(Equal([]string{"web", "worker"}))
+		Expect(buildPlan.BuildGroups[1].RequiredBuildpacks).To(Equal("tgz bk-buildpack-python ... v213"))
+		Expect(buildPlan.BuildGroups[1].OutputImageTarName).To(Equal("web.tar"))
 	})
 })

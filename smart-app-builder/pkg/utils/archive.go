@@ -10,14 +10,13 @@ import (
 	"github.com/samber/lo"
 )
 
-// ArchiveTGZ 将 sourceDir 打包成 destTGZ
-func ArchiveTGZ(sourceDir, destTGZ string) error {
+// ArchiveTGZ 将 sourceDir 目录打包成 destTGZ
+func ArchiveTGZ(ctx context.Context, sourceDir, destTGZ string) error {
 	entries, err := os.ReadDir(sourceDir)
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
 	files, err := archives.FilesFromDisk(ctx, nil, lo.SliceToMap(entries, func(entry fs.DirEntry) (string, string) {
 		return filepath.Join(sourceDir, entry.Name()), ""
 	}))

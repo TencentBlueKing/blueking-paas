@@ -5,9 +5,11 @@ import (
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 
-	v3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc/v3"
-	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/buildconfig"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v3"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
+	"slices"
+	"strings"
 )
 
 var _ = Describe("V3", func() {
@@ -58,27 +60,27 @@ modules:
 		It("get module build config", func() {
 			buildConfig, _ := appDescConfig.GenerateModuleBuildConfig()
 
-			expectedPythonConfig := bcfg.ModuleBuildConfig{
+			expectedPythonConfig := buildconfig.ModuleBuildConfig{
 				SourceDir:  ".",
 				ModuleName: "web",
 				Envs:       map[string]string{"key1": "value1"},
-				Buildpacks: []bcfg.Buildpack{
+				Buildpacks: []buildconfig.Buildpack{
 					{Name: "bk-buildpack-python", Version: "test-version"},
 				},
 			}
-			expectedGoConfig := bcfg.ModuleBuildConfig{
+			expectedGoConfig := buildconfig.ModuleBuildConfig{
 				SourceDir:  "backend",
 				ModuleName: "api",
 				Envs:       map[string]string{},
-				Buildpacks: []bcfg.Buildpack{{Name: "bk-buildpack-go", Version: "v191"}},
+				Buildpacks: []buildconfig.Buildpack{{Name: "bk-buildpack-go", Version: "v205"}},
 			}
-			if buildConfig[0].ModuleName == "web" {
-				Expect(buildConfig[0]).To(Equal(expectedPythonConfig))
-				Expect(buildConfig[1]).To(Equal(expectedGoConfig))
-			} else {
-				Expect(buildConfig[0]).To(Equal(expectedGoConfig))
-				Expect(buildConfig[1]).To(Equal(expectedPythonConfig))
-			}
+
+			slices.SortFunc(buildConfig, func(a, b buildconfig.ModuleBuildConfig) int {
+				return strings.Compare(a.ModuleName, b.ModuleName)
+			})
+
+			Expect(buildConfig[0]).To(Equal(expectedGoConfig))
+			Expect(buildConfig[1]).To(Equal(expectedPythonConfig))
 		})
 	})
 	Describe("invalid", func() {

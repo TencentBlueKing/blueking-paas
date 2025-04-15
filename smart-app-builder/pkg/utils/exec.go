@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-// Command return a new command
+// Command returns a new command which writes its output to os.Stdout and stderr to os.Stderr
 func Command(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout

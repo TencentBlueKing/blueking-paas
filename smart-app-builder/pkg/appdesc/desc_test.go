@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/appdesc"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc"
 )
 
 var _ = Describe("ParseAppDescYAML", func() {

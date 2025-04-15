@@ -88,14 +88,21 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 
 	log.Info("New deploy action found", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
-	bkapp.Status.HookStatuses = nil
 	bkapp.Status.SetDeployID(currentDeployID)
 	SetDefaultConditions(bkapp)
 
 	// deep copy bkapp to generate merge-patch
 	originalBkapp := bkapp.DeepCopy()
 	// clear original bkapp status to force update
-	originalBkapp.Status = paasv1alpha2.AppStatus{}
+	originalBkapp.Status = paasv1alpha2.AppStatus{
+		// 必须保留 HookStatuses 字段值, 目的是在 MergeFrom 时, 对比 bkapp.Status.HookStatuses 与
+		// originalBkapp.Status.HookStatuses 的值, 生成 patch 指令, 清空集群内 bkapp 模型的 HookStatuses 字段.
+		// 清空后, 进一步避免了在 HookReconciler 中, 读取到旧 HookStatuses 的情况.
+		// 有关 MergeFrom 的说明: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client#MergeFrom
+		HookStatuses: bkapp.Status.HookStatuses,
+	}
+	bkapp.Status.HookStatuses = nil
+
 	if err = r.Client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkapp)); err != nil {
 		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
 		return r.Result.WithError(

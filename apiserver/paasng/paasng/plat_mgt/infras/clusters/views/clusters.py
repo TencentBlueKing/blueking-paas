@@ -128,10 +128,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
     def create(self, request, *args, **kwargs):
         cur_tenant_id = get_tenant(request.user).id
 
-        slz = ClusterCreateInputSLZ(
-            data=request.data,
-            context={"cur_tenant_id": cur_tenant_id},
-        )
+        slz = ClusterCreateInputSLZ(data=request.data, context={"cur_tenant_id": cur_tenant_id})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -246,8 +243,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster_es_cfg.host = es_cfg["host"]
         cluster_es_cfg.port = es_cfg["port"]
         cluster_es_cfg.username = es_cfg["username"]
-        # 更新时，如果密码为假值，则不更新
-        cluster_es_cfg.password = es_cfg["password"] if es_cfg.get("password") else cluster_es_cfg.password
+        cluster_es_cfg.password = es_cfg["password"]
 
         with transaction.atomic(using="workloads"):
             cluster.save()

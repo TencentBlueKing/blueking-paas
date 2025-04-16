@@ -380,6 +380,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 获取系统API权限列表
+     */
+    getSystemApiRoles() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_roles/`;
+      return http.get(url);
+    },
+    /**
      * 添加系统API用户列表权限
      */
     addSystemApiUser({}, { data }) {
@@ -396,8 +403,8 @@ export default {
     /**
      * 删除系统API用户
      */
-    deleteSystemApiUser({}, { user }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/${user}/`;
+    deleteSystemApiUser({}, { name }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/${name}/`;
       return http.delete(url);
     },
     /**
@@ -406,6 +413,27 @@ export default {
     getAccountFeatureFlags() {
       const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/`;
       return http.get(url);
+    },
+    /**
+     * 获取特性列表
+     */
+    getAccountFeatures() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_features/`;
+      return http.get(url);
+    },
+    /**
+     * 添加用户特性
+     */
+    addAccountFeatureFlags({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/`;
+      return http.post(url, data);
+    },
+    /**
+     * 删除用户特性
+     */
+    deleteAccountFeatureFlags({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/${id}/`;
+      return http.delete(url);
     },
   },
 };

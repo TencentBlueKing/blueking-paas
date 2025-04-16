@@ -90,7 +90,7 @@ class AccountFeatureFlagListViewSet(serializers.Serializer):
 class SystemAPIUserSLZ(serializers.Serializer):
     """系统 API 用户序列化器"""
 
-    user = serializers.CharField(source="name", help_text="用户 ID")
+    name = serializers.CharField(help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
     private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")

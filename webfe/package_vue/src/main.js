@@ -44,10 +44,6 @@ import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/common/bkmagic.js';
 import '@/common/event-tracking.js';
-// eslint-disable-next-line
-import Blob from '@/common/Blob'
-// eslint-disable-next-line
-import Export2Excel from '@/common/Export2Excel'
 import PaasContentLoader from '@/components/loader';
 
 // 时间格式过滤器引入
@@ -82,6 +78,12 @@ import 'highlight.js/styles/github.css';
 
 // 功能依赖css
 import '@blueking/functional-dependency/vue2/vue2.css';
+
+// 多租户人员选择器样式
+import '@blueking/bk-user-selector/vue2/vue2.css';
+
+// 用户 DisplayName 展示方案
+import BkUserDisplayName from '@blueking/bk-user-display-name';
 
 window.$ = $;
 
@@ -169,8 +171,11 @@ auth.requestCurrentUser().then((user) => {
         // 获取功能开头详情
         this.$store.dispatch('getUserFeature');
         this.$store.dispatch('getPlatformFeature');
+        BkUserDisplayName.configure({
+          tenantId: user.tenantId,
+          apiBaseUrl: window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod'),
+        });
       },
-      methods: {},
       template: '<App />',
     });
     bus.$emit('on-user-data', user);

@@ -46,7 +46,7 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
     host = serializers.CharField(help_text="ES 集群地址")
     port = serializers.IntegerField(help_text="ES 集群端口")
     username = serializers.CharField(help_text="ES 集群用户名")
-    password = serializers.CharField(help_text="ES 集群密码", required=False, allow_blank=True)
+    password = serializers.CharField(help_text="ES 集群密码")
 
 
 class ClusterListOutputSLZ(serializers.Serializer):
@@ -108,8 +108,11 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     api_address_type = serializers.SerializerMethodField(help_text="API Server 地址类型")
     api_servers = serializers.SerializerMethodField(help_text="API Server 列表")
 
-    # 注意：敏感信息如 ca，cert，key，token 需要不会暴露给前端（字段都没有）
     auth_type = serializers.SerializerMethodField(help_text="认证类型")
+    ca = serializers.CharField(help_text="CA 证书", source="ca_data")
+    cert = serializers.CharField(help_text="证书", source="cert_data")
+    key = serializers.CharField(help_text="私钥", source="key_data")
+    token = serializers.CharField(help_text="Token", source="token_value")
 
     container_log_dir = serializers.CharField(help_text="容器日志目录")
     access_entry_ip = serializers.SerializerMethodField(help_text="集群访问入口（一般为 clb）IP")
@@ -181,7 +184,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
         if not cfg:
             return {}
 
-        return ElasticSearchConfigSLZ(cfg.as_dict()).data
+        return ElasticSearchConfigSLZ(cfg).data
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_app_address_type(self, obj: Cluster) -> str:
@@ -455,14 +458,6 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
                 raise ValidationError(_("节点选择器 value 必须为字符串"))
 
         return node_selector
-
-    def _validate_auth_configs(self, attrs: Dict[str, Any]):
-        """更新清理下的认证配置比较特殊，允许为 None / 空字符串时候表示不覆盖"""
-        if attrs["auth_type"] == ClusterAuthType.CERT:
-            ca, cert, key = attrs.get("ca"), attrs.get("cert"), attrs.get("key")
-            # ca, cert, key 均为假值（None/空字符串）是可接受的，但是如果任意一项提供了，则都需要提供
-            if (ca or cert or key) and not (ca and cert and key):
-                raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
 
     def _validate_available_tenant_ids(self, attrs: Dict[str, Any]):
         cur_tenant_id = self.context["cur_cluster"].tenant_id

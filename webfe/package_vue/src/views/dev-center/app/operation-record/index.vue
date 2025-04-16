@@ -123,7 +123,15 @@
             :label="$t('操作人')"
             show-overflow-tooltip
             prop="operator"
-          ></bk-table-column>
+          >
+            <template slot-scope="{ row }">
+              <bk-user-display-name
+                :user-id="row.operator"
+                v-if="platformFeature.MULTI_TENANT_MODE"
+              ></bk-user-display-name>
+              <span v-else>{{ row.operator }}</span>
+            </template>
+          </bk-table-column>
           <bk-table-column
             :label="$t('操作时间')"
             prop="at"
@@ -212,6 +220,7 @@ import diff from './comps/diff.vue';
 import cloudApiDetail from './comps/cloud-api-detail.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import yamljs from 'js-yaml';
+import { mapState } from 'vuex';
 
 export default {
   name: 'OperationRecord',
@@ -267,6 +276,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['platformFeature']),
     appCode() {
       return this.$route.params.id;
     },

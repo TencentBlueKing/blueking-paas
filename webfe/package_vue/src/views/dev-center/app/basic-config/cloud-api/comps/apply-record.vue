@@ -32,7 +32,7 @@
           <user
             v-model="applicants"
             :placeholder="$t('请输入用户')"
-            style="width: 142px"
+            style="width: 180px"
             :multiple="false"
             :empty-text="$t('无匹配人员')"
             @change="handleMemberSelect"

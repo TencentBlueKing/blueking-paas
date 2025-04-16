@@ -14,20 +14,17 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from rest_framework import serializers
 
-from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.validators import Base64Validator
 
+from .mixins import AppTenantMixin
 
-class LightAppCreateSLZ(serializers.Serializer):
+
+class LightAppCreateSLZ(AppTenantMixin):
     parent_app_code = serializers.CharField(required=True, help_text="父应用ID")
     app_name = serializers.CharField(
         required=True, allow_blank=False, max_length=20, help_text="轻应用名称", source="name"
-    )
-    app_tenant_mode = serializers.ChoiceField(
-        help_text="应用租户模式", choices=AppTenantMode.get_choices(), default=None
     )
     app_url = serializers.URLField(required=True, allow_blank=False, help_text="应用链接", source="external_url")
     developers = serializers.ListField(

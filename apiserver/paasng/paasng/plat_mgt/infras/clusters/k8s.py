@@ -98,11 +98,7 @@ class K8SWorkloadStateGetter:
 
 
 def check_k8s_accessible(
-    api_servers: List[str],
-    ca: str | None = None,
-    cert: str | None = None,
-    key: str | None = None,
-    token: str | None = None,
+    api_servers: List[str], ca: str | None, cert: str | None, key: str | None, token: str | None
 ) -> bool:
     """通过直接访问 k8s api 的方式，检查 k8s 集群是否可访问"""
     cfg = Configuration()

@@ -30,6 +30,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.core.storages.sqlalchemy import legacy_db
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -37,7 +38,7 @@ from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.constants import LightApplicationViewSetErrorCode
 from paasng.platform.applications.exceptions import IntegrityError, LightAppAPIError
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.tenant import validate_app_tenant_params
+from paasng.platform.applications.tenant import get_tenant_id_by_tenant_info
 from paasng.platform.applications.utils import create_third_app
 from paasng.platform.mgrlegacy.constants import LegacyAppState
 
@@ -87,14 +88,14 @@ class LightAppViewSet(viewsets.ViewSet):
             else:
                 logo_url = ""
 
-            app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
+            tenant_id = get_tenant_id_by_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
             try:
                 light_app = AppAdaptor(session=session).create(
                     code=app_code,
                     name=data["name"],
-                    app_tenant_mode=app_tenant_mode,
-                    app_tenant_id=app_tenant_id,
-                    tenant_id=tenant.id,
+                    app_tenant_mode=data["app_tenant_mode"],
+                    app_tenant_id=data["app_tenant_id"],
+                    tenant_id=tenant_id,
                     logo=logo_url,
                     is_lapp=True,
                     creator=data["creator"],
@@ -304,20 +305,20 @@ class SysAppViewSet(viewsets.ViewSet):
         """给特定系统提供的创建第三方应用的 API, 应用ID 必现以系统ID为前缀"""
         serializer = slzs.SysThirdPartyApplicationSLZ(data=request.data, context={"sys_id": sys_id})
         serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        data = serializer.validated_data
 
         operator = user_id_encoder.encode(settings.USER_TYPE, data["operator"])
 
-        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(request.user, data["app_tenant_mode"])
+        tenant_id = get_tenant_id_by_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
         application = create_third_app(
             data["region"],
             data["code"],
             data["name_zh_cn"],
             data["name_en"],
             operator,
-            app_tenant_mode,
-            app_tenant_id,
-            tenant.id,
+            AppTenantMode(data["app_tenant_mode"]),
+            data["app_tenant_id"],
+            tenant_id,
         )
         # 返回应用的密钥信息
         secret = get_oauth2_client_secret(application.code)

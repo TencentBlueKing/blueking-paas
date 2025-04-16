@@ -10,11 +10,11 @@
         <bk-form form-type="inline">
           <bk-form-item
             :label="$t('模块')"
-            style="vertical-align: top;"
+            style="vertical-align: top"
           >
             <bk-select
               v-model="moduleValue"
-              style="width: 150px;"
+              style="width: 150px"
               :clearable="false"
               placeholder=" "
               @change="getDeployHistory(1)"
@@ -23,18 +23,18 @@
                 v-for="option in moduleList"
                 :key="option.key"
                 :id="option.key"
-                :name="option.name">
-              </bk-option>
+                :name="option.name"
+              ></bk-option>
             </bk-select>
           </bk-form-item>
           <bk-form-item
             :label="$t('操作人')"
             class="ml20"
-            style="vertical-align: top;"
+            style="vertical-align: top"
           >
             <user
               v-model="personnelSelectorList"
-              style="width: 350px;"
+              style="width: 350px"
               :placeholder="$t('请输入')"
               :multiple="false"
               @change="getDeployHistory(1)"
@@ -71,8 +71,7 @@
           column-key="moduleName"
           :render-header="$renderHeader"
           show-overflow-tooltip
-        >
-        </bk-table-column>
+        ></bk-table-column>
         <bk-table-column
           :label="$t('部署环境')"
           prop="environment"
@@ -83,8 +82,8 @@
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <span v-if="row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
-            <span v-else> {{ $t('生产环境') }} </span>
+            <span v-if="row.environment === 'stag'">{{ $t('预发布环境') }}</span>
+            <span v-else>{{ $t('生产环境') }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -97,10 +96,12 @@
               <span class="branch-name">{{ row.name }}</span>
               <div slot="content">
                 <p class="flex">
-                  <span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{ row.name }}</span>
+                  <span class="label">{{ $t('部署分支：') }}</span>
+                  <span class="value">{{ row.name }}</span>
                 </p>
                 <p class="flex">
-                  <span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{ row.url }}</span>
+                  <span class="label">{{ $t('仓库地址：') }}</span>
+                  <span class="value">{{ row.url }}</span>
                 </p>
               </div>
             </bk-popover>
@@ -116,21 +117,32 @@
           prop="operation_act"
           :render-header="$renderHeader"
         />
-        <bk-table-column :label="$t('结果')" min-width="100">
+        <bk-table-column
+          :label="$t('结果')"
+          min-width="100"
+        >
           <template slot-scope="{ row }">
-            <div class="flex-row align-items-center" v-if="row.status !== 'pending'">
-              <span :class="['dot', row.status]" /> {{ $t(deployStatus[row.status]) }}
+            <div
+              class="flex-row align-items-center"
+              v-if="row.status !== 'pending'"
+            >
+              <span :class="['dot', row.status]" />
+              {{ $t(deployStatus[row.status]) }}
             </div>
             <template v-else>
               <div
                 class="flex-row align-items-center"
-                v-if="row.status === 'pending' && row.operation_type === 'online'">
-                <span class="dot warning" /> {{ $t('部署中') }}
+                v-if="row.status === 'pending' && row.operation_type === 'online'"
+              >
+                <span class="dot warning" />
+                {{ $t('部署中') }}
               </div>
               <div
-                class="flex-row align-items-center" v-if="row.status === 'pending'
-                  && row.operation_type === 'offline'">
-                <span class="dot warning" /> {{ $t('下架中') }}
+                class="flex-row align-items-center"
+                v-if="row.status === 'pending' && row.operation_type === 'offline'"
+              >
+                <span class="dot warning" />
+                {{ $t('下架中') }}
               </div>
             </template>
           </template>
@@ -149,7 +161,15 @@
           prop="operator.username"
           :render-header="$renderHeader"
           show-overflow-tooltip
-        />
+        >
+          <template slot-scope="{ row }">
+            <bk-user-display-name
+              :user-id="row.operator.username"
+              v-if="platformFeature.MULTI_TENANT_MODE"
+            ></bk-user-display-name>
+            <span v-else>{{ row.operator.username }}</span>
+          </template>
+        </bk-table-column>
         <bk-table-column
           width="180"
           :label="$t('操作时间')"
@@ -166,14 +186,14 @@
               class="mr15"
               @click.stop="handleShowLogSideslider(row)"
             >
-              {{$t('部署日志')}}
+              {{ $t('部署日志') }}
             </bk-button>
             <bk-button
               text
               :disabled="row.operation_type === 'offline'"
               @click.stop="handleShowYamlSideslider(row)"
             >
-              {{$t('查看 YAML')}}
+              {{ $t('查看 YAML') }}
             </bk-button>
           </template>
         </bk-table-column>
@@ -194,7 +214,10 @@
       :quick-close="true"
     >
       <div slot="header">{{ $t('查看 YAML') }}</div>
-      <div class="yaml-wrapper" slot="content">
+      <div
+        class="yaml-wrapper"
+        slot="content"
+      >
         <resource-editor
           ref="editorRef"
           key="editor"
@@ -218,6 +241,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import { DEPLOY_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
 import { cloneDeep } from 'lodash';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -258,14 +282,12 @@ export default {
   },
 
   computed: {
+    ...mapState(['localLanguage', 'platformFeature']),
     sourceFilters() {
       return [
         { text: this.$t('生产环境'), value: 'prod' },
         { text: this.$t('预发布环境'), value: 'stag' },
       ];
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
     },
   },
 
@@ -283,8 +305,8 @@ export default {
     init() {
       this.moduleValue = '';
       this.getDeployHistory();
-      this.moduleList = this.curAppModuleList.map(item => ({ key: item.name, name: item.name }));
-       // 在列表头新增一项
+      this.moduleList = this.curAppModuleList.map((item) => ({ key: item.name, name: item.name }));
+      // 在列表头新增一项
       this.moduleList.unshift({ key: '', name: `${this.$t('全部')}` });
     },
 
@@ -468,8 +490,8 @@ export default {
         return '--';
       }
 
-      const start = (new Date(startTime).getTime()) / 1000;
-      const end = (new Date(endTime).getTime()) / 1000;
+      const start = new Date(startTime).getTime() / 1000;
+      const end = new Date(endTime).getTime() / 1000;
       const interval = Math.ceil(end - start);
 
       if (!interval) {
@@ -515,7 +537,8 @@ export default {
       }
     },
 
-    handleEditorErr(err) { // 捕获编辑器错误提示
+    handleEditorErr(err) {
+      // 捕获编辑器错误提示
       this.editorErr.type = 'content'; // 编辑内容错误
       this.editorErr.message = err;
     },
@@ -572,12 +595,12 @@ export default {
   }
 
   .deploy-detail {
-      display: flex;
-      height: 100%;
+    display: flex;
+    height: 100%;
 
-      /deep/ .paas-deploy-log-wrapper {
-          height: 100%;
-      }
+    /deep/ .paas-deploy-log-wrapper {
+      height: 100%;
+    }
   }
 
   .dot {
@@ -588,16 +611,16 @@ export default {
     margin-right: 8px;
 
     &.failed {
-      background: #EA3636;
+      background: #ea3636;
       border: 3px solid #fce0e0;
     }
     &.interrupted,
     &.warning {
-      background: #FF9C01;
+      background: #ff9c01;
       border: 3px solid #ffefd6;
     }
     &.successful {
-      background: #3FC06D;
+      background: #3fc06d;
       border: 3px solid #daefe4;
     }
   }

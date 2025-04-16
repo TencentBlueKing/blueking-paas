@@ -249,15 +249,3 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     password = EncryptField(help_text="ES 集群密码")
 
     tenant_id = tenant_id_field_factory()
-
-    def as_dict(self, include_password=False) -> Dict[str, Any]:
-        data = {
-            "scheme": self.scheme,
-            "host": self.host,
-            "port": self.port,
-            "username": self.username,
-        }
-        if include_password:
-            data["password"] = self.password
-
-        return data

@@ -12,21 +12,21 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
+	bexec "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
 )
 
 // AppBuilder build the source code to artifact
 type AppBuilder struct {
 	sourceURL string
 	destURL   string
-	exec      BuildExecutor
+	executor  BuildExecutor
 
 	logger logr.Logger
 }
 
 // Build run build process
 func (a *AppBuilder) Build() error {
-	appDir := a.exec.GetAppDir()
+	appDir := a.executor.GetAppDir()
 
 	// 获取源码
 	if err := a.fetchSource(appDir); err != nil {
@@ -40,7 +40,7 @@ func (a *AppBuilder) Build() error {
 	}
 
 	// 执行构建, 生成 artifact
-	artifactTGZ, err := a.exec.Build(buildPlan)
+	artifactTGZ, err := a.executor.Build(buildPlan)
 	if err != nil {
 		return err
 	}
@@ -130,9 +130,9 @@ type BuildExecutor interface {
 
 // New returns a AppBuilder instance
 func New(logger logr.Logger, sourceURL, destURL string) (*AppBuilder, error) {
-	if exec, err := executor.NewContainerExecutor(); err != nil {
+	if executor, err := bexec.NewContainerExecutor(); err != nil {
 		return nil, err
 	} else {
-		return &AppBuilder{logger: logger, sourceURL: sourceURL, destURL: destURL, exec: exec}, nil
+		return &AppBuilder{logger: logger, sourceURL: sourceURL, destURL: destURL, executor: executor}, nil
 	}
 }

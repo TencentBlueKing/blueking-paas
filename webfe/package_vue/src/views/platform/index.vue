@@ -11,11 +11,13 @@
       <TopBar
         :title="title"
         :tab-panels="panels"
-        :key="routeIndex"
         @tab-change="handleTabChange"
       ></TopBar>
       <div class="content-area">
-        <router-view :tab-active="active" />
+        <router-view
+          :tab-active="active"
+          :key="routeIndex"
+        />
       </div>
     </div>
   </div>

@@ -13,7 +13,8 @@
         :placeholder="$t('请输入用户 ID 或用户名')"
         :right-icon="'bk-icon icon-search'"
         style="width: 400px"
-        @input="pgHandleSearch"
+        :clearable="true"
+        @input="pgHandleCombinedSearch"
       ></bk-input>
     </div>
     <div class="card-style">
@@ -109,7 +110,7 @@
     <!-- 删除 -->
     <delete-dialog
       :show.sync="deleteDialogConfig.visible"
-      :title="$t('确认删除系统 API 用户')"
+      :title="$t('确认删除平台管理员')"
       :expected-confirm-text="deleteDialogConfig.input"
       :loading="deleteDialogConfig.isLoading"
       :placeholder="$t('请输入用户名确认')"

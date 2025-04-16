@@ -86,6 +86,13 @@ export default {
       return this.inputValue === this.expectedConfirmText;
     },
   },
+  watch: {
+    dialogVisible(newVal) {
+      if (!newVal) {
+        this.inputValue = '';
+      }
+    },
+  },
   methods: {
     close() {
       this.inputValue = '';

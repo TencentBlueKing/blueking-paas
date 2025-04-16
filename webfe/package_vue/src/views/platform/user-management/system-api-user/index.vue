@@ -1,22 +1,31 @@
 <template>
   <div class="system-api-user">
-    <div class="top-box flex-row justify-content-between">
+    <bk-alert
+      type="info"
+      :title="
+        $t(
+          '应用需要创建对应的系统 API 账号，才能访问平台注册在 API 网关上的应用态 API。当应用通过 API 网关访问“基础可读”级别的应用态 API 时，平台会自动为该应用添添加账号和权限。若需访问其他权限级别的应用态 API，除了在 API 网关申请权限外，还需在此处创建账号并添加相应权限。'
+        )
+      "
+    ></bk-alert>
+    <div class="top-box flex-row justify-content-between mt16">
       <bk-button
         :theme="'primary'"
         icon="plus"
         @click="showAddDialog('add')"
       >
-        {{ $t('添加系统 API 用户') }}
+        {{ $t('添加系统 API 账号') }}
       </bk-button>
       <bk-input
         v-model="pgSearchValue"
         :placeholder="$t('请输入应用 ID')"
         :right-icon="'bk-icon icon-search'"
         style="width: 400px"
-        @input="pgHandleSearch"
+        :clearable="true"
+        @input="pgHandleCombinedSearch"
       ></bk-input>
     </div>
-    <div class="card-style">
+    <div class="card-style mt16">
       <bk-table
         :data="pgPaginatedData"
         :pagination="pagination"
@@ -26,27 +35,24 @@
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
         @page-change="pgHandlePageChange"
         @page-limit-change="pgHandlePageLimitChange"
+        @filter-change="handleFilterChange"
       >
         <bk-table-column
           v-for="column in columns"
           v-bind="column"
           :label="column.label"
           :prop="column.prop"
-          :key="column.user"
+          :key="column.name"
           show-overflow-tooltip
         >
           <template slot-scope="{ row }">
-            <bk-user-display-name
-              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
-              :user-id="row[column.prop]"
-            ></bk-user-display-name>
-            <span v-else-if="column.prop === 'role'">{{ roleMap[row[column.prop]] || '--' }}</span>
+            <span v-if="column.prop === 'role'">{{ roleMap[row[column.prop]] || '--' }}</span>
             <span v-else>{{ row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('操作')"
-          :width="160"
+          :width="180"
         >
           <template slot-scope="{ row }">
             <bk-button
@@ -77,8 +83,9 @@
       :width="480"
       :mask-close="false"
       :auto-close="false"
-      :title="isAdd ? $t('添加系统 API 用户') : $t('编辑权限')"
+      :title="isAdd ? $t('添加系统 API 账号') : $t('编辑权限')"
       :loading="editAddDialogConfig.loading"
+      @value-change="handleValueChange"
       @confirm="handleConfirm"
     >
       <bk-form
@@ -109,9 +116,9 @@
           <bk-select v-model="editAddDialogConfig.formData.role">
             <bk-option
               v-for="option in roleList"
-              :key="option.id"
-              :id="option.id"
-              :name="option.name"
+              :key="option.value"
+              :id="option.value"
+              :name="option.label"
             ></bk-option>
           </bk-select>
         </bk-form-item>
@@ -121,8 +128,8 @@
     <!-- 删除 -->
     <delete-dialog
       :show.sync="deleteDialogConfig.visible"
-      :title="$t('确认删除系统 API 用户')"
-      :expected-confirm-text="deleteDialogConfig.rowUser"
+      :title="$t('确认删除系统 API 账号')"
+      :expected-confirm-text="deleteDialogConfig.rowName"
       :loading="deleteDialogConfig.isLoading"
       :placeholder="$t('请输入用户名确认')"
       @confirm="deleteSystemApiUser"
@@ -132,10 +139,10 @@
         <span>{{ $t('该操作不可撤销，请输入用户名') }}</span>
         <span>
           （
-          <span class="sign">{{ deleteDialogConfig.rowUser }}</span>
+          <span class="sign">{{ deleteDialogConfig.rowName }}</span>
           <i
             class="paasng-icon paasng-general-copy"
-            v-copy="deleteDialogConfig.rowUser"
+            v-copy="deleteDialogConfig.rowName"
           />
           ）
         </span>
@@ -161,7 +168,7 @@ export default {
     return {
       // api用户列表
       systemApiUserList: [],
-      isTableLoading: false,
+      isTableLoading: true,
       // 新建编辑弹窗配置
       editAddDialogConfig: {
         visible: false,
@@ -178,39 +185,14 @@ export default {
       deleteDialogConfig: {
         visible: false,
         isLoading: false,
-        rowUser: '',
+        rowName: '',
       },
-      columns: [
-        {
-          label: this.$t('用户'),
-          prop: 'user',
-        },
-        {
-          label: this.$t('应用 ID'),
-          prop: 'bk_app_code',
-        },
-        {
-          label: this.$t('权限'),
-          prop: 'role',
-        },
-        {
-          label: this.$t('操作时间'),
-          prop: 'updated',
-          sortable: true,
-        },
-      ],
-      // 权限对应映射关系
-      roleMap: {
-        1: this.$t('没有特定角色'),
-        50: this.$t('基础可读'),
-        60: this.$t('基础管理'),
-        70: this.$t('轻应用管理'),
-        80: this.$t('lesscode 系统专用角色'),
-      },
+      // 权限
+      roleList: [],
       requiredRule: [
         {
           required: true,
-          message: this.$t('请输入'),
+          message: this.$t('必填项'),
           trigger: 'blur',
         },
       ],
@@ -220,23 +202,72 @@ export default {
     ...mapState({
       platformFeature: (state) => state.platformFeature,
     }),
-    roleList() {
-      return Object.entries(this.roleMap).map(([id, name]) => ({
-        id: Number(id),
-        name,
-      }));
+    // 权限对应映射关系
+    roleMap() {
+      return this.roleList.reduce((acc, item) => {
+        acc[item.value] = item.label;
+        return acc;
+      }, {});
     },
     isAdd() {
       return this.editAddDialogConfig.type === 'add';
     },
+    columns() {
+      return [
+        {
+          label: this.$t('API 账号'),
+          prop: 'name',
+          renderHeader: this.renderHeader,
+        },
+        {
+          label: this.$t('应用 ID'),
+          prop: 'bk_app_code',
+        },
+        {
+          label: this.$t('权限'),
+          prop: 'role',
+          columnKey: 'role',
+          filters: this.roleList,
+          filterMultiple: false,
+        },
+        {
+          label: this.$t('操作时间'),
+          prop: 'updated',
+          sortable: true,
+        },
+      ];
+    },
   },
   created() {
-    this.getSystemApiUser();
+    Promise.all([this.getSystemApiUser(), this.getSystemApiRoles()]);
   },
   methods: {
+    renderHeader(h, data) {
+      const directive = {
+        name: 'bkTooltips',
+        content: this.$t('平台自动生成用于内部权限校验的账号'),
+        placement: 'top',
+      };
+      return (
+        <span
+          class="custom-header-cell"
+          v-bk-tooltips={directive}
+        >
+          {data.column.label}
+        </span>
+      );
+    },
+    // 表格筛选
+    handleFilterChange(filds) {
+      if (filds.role) {
+        this.pgFieldFilter.filterField = 'role';
+        this.pgFieldFilter.filterValue = filds.role.length ? filds.role[0] : null;
+      }
+      this.pgHandleCombinedSearch();
+    },
     // 自定义的过滤函数，提供给mixins中使用
     pgFilterFn(item, keyword) {
-      return item.user.toLowerCase().includes(keyword);
+      return item.name.toLowerCase().includes(keyword);
     },
     // 获取系统API用户列表
     async getSystemApiUser() {
@@ -249,7 +280,23 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
-        this.isTableLoading = false;
+        setTimeout(() => {
+          this.isTableLoading = false;
+        }, 100);
+      }
+    },
+    // 获取系统API权限列表
+    async getSystemApiRoles() {
+      try {
+        const res = await this.$store.dispatch('tenant/getSystemApiRoles');
+        this.roleList = res.map((v) => {
+          return {
+            text: v.label,
+            ...v,
+          };
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
     setDialogFormData(appId = '', role = '') {
@@ -268,7 +315,7 @@ export default {
     },
     showDeleteDialog(row) {
       this.deleteDialogConfig.visible = true;
-      this.deleteDialogConfig.rowUser = row.user;
+      this.deleteDialogConfig.rowName = row.name;
     },
     handleConfirm() {
       this.$refs.editAddForm.validate().then(
@@ -314,7 +361,7 @@ export default {
       this.deleteDialogConfig.isLoading = true;
       try {
         await this.$store.dispatch('tenant/deleteSystemApiUser', {
-          user: this.deleteDialogConfig.rowUser,
+          name: this.deleteDialogConfig.rowName,
         });
         this.$paasMessage({
           theme: 'success',
@@ -326,6 +373,12 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.deleteDialogConfig.isLoading = false;
+      }
+    },
+    // 清除错误提示
+    handleValueChange(flag) {
+      if (!flag) {
+        this.$refs?.editAddForm?.clearError();
       }
     },
   },
@@ -351,9 +404,17 @@ export default {
   }
 }
 .system-api-user {
-  .card-style {
+  .mt16 {
     margin-top: 16px;
+  }
+  .card-style {
     padding: 16px;
+  }
+  /deep/ .bk-table-header .custom-header-cell {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-position: under;
   }
 }
 </style>

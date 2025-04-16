@@ -1,6 +1,9 @@
 package v3_test
 
 import (
+	"slices"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
@@ -8,8 +11,6 @@ import (
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v3"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
-	"slices"
-	"strings"
 )
 
 var _ = Describe("V3", func() {

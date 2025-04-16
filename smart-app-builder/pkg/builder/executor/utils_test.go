@@ -1,10 +1,10 @@
 package executor
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 
+	"github.com/tidwall/gjson"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -22,24 +22,30 @@ var _ = Describe("writeArtifactJsonFile", func() {
 	})
 
 	It("Each module uses its own independent image tar", func() {
-		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
-			{
-				ModuleNames:        []string{"module1"},
-				OutputImageTarName: "module1.tar",
-			},
-			{
-				ModuleNames:        []string{"module2"},
-				OutputImageTarName: "module2.tar",
-			},
-		}}
+		buildPlan := plan.BuildPlan{
+			ProcessCommands: map[string]map[string]string{"module1": {"proc1": "cmd1", "proc2": "cmd2"},
+				"module2": {"proc1": "cmd1", "proc2": "cmd2"}},
+			BuildGroups: []*plan.ModuleBuildGroup{
+				{
+					ModuleNames:        []string{"module1"},
+					OutputImageTarName: "module1.tar",
+				},
+				{
+					ModuleNames:        []string{"module2"},
+					OutputImageTarName: "module2.tar",
+				},
+			}}
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
 
 		fileContent, _ := os.ReadFile(filepath.Join(artifactJsonDir, "artifact.json"))
-		var dataMap map[string]interface{}
-		Expect(json.Unmarshal(fileContent, &dataMap)).To(BeNil())
 
-		Expect(dataMap["module1"]).To(Equal("module1.tar"))
-		Expect(dataMap["module2"]).To(Equal("module2.tar"))
+		Expect(gjson.GetBytes(fileContent, "module1.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module2.tar"))
+
+		Expect(gjson.GetBytes(fileContent, "module1.entrypoints.proc1").Array()[0].String()).To(Equal("module1-proc1"))
+		Expect(gjson.GetBytes(fileContent, "module1.entrypoints.proc2").Array()[0].String()).To(Equal("module1-proc2"))
+		Expect(gjson.GetBytes(fileContent, "module2.entrypoints.proc1").Array()[0].String()).To(Equal("module2-proc1"))
+		Expect(gjson.GetBytes(fileContent, "module2.entrypoints.proc2").Array()[0].String()).To(Equal("module2-proc2"))
 	})
 
 	It("Some module uses the same image tar", func() {
@@ -56,11 +62,9 @@ var _ = Describe("writeArtifactJsonFile", func() {
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
 
 		fileContent, _ := os.ReadFile(filepath.Join(artifactJsonDir, "artifact.json"))
-		var dataMap map[string]interface{}
-		Expect(json.Unmarshal(fileContent, &dataMap)).To(BeNil())
 
-		Expect(dataMap["module1"]).To(Equal("module1.tar"))
-		Expect(dataMap["module2"]).To(Equal("module1.tar"))
-		Expect(dataMap["module3"]).To(Equal("module3.tar"))
+		Expect(gjson.GetBytes(fileContent, "module1.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "module3.image_tar").String()).To(Equal("module3.tar"))
 	})
 })

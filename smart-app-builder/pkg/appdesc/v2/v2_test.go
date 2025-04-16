@@ -76,10 +76,10 @@ modules:
 			Expect(buildConfig[0]).To(Equal(expectedGoConfig))
 			Expect(buildConfig[1]).To(Equal(expectedPythonConfig))
 		})
-		It("get procfile", func() {
-			procfile := appDescConfig.GenerateProcfile()
-			Expect(procfile["web-web-process"]).To(Equal("python main.py"))
-			Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
+		It("GenerateProcessCommands", func() {
+			procCommands := appDescConfig.GenerateProcessCommands()
+			Expect(procCommands["web"]["web-process"]).To(Equal("python main.py"))
+			Expect(procCommands["api"]["api-process"]).To(Equal("go run main.go"))
 		})
 	})
 

@@ -26,6 +26,9 @@ var G = struct {
 	CNBRunImage string
 	// CNBBuilderImage is CNB builder image used to build the source code
 	CNBBuilderImage string
+
+	// BuildpackType is the type of buildpack to use. Supported values: oci-embedded and tgz, default is oci-embedded
+	BuildpackType string
 }{Viper: viper.New()}
 
 // SetGlobalConfig set global config
@@ -46,6 +49,9 @@ func SetGlobalConfig() {
 	G.CNBBuilderImage = G.GetString("BUILDER_SHIM_IMAGE")
 	G.CNBRunImageTAR = G.GetString("CNB_RUN_IMAGE_TAR")
 	G.CNBRunImage = G.GetString("CNB_RUN_IMAGE")
+
+	G.SetDefault("BUILDPACK_TYPE", "oci-embedded")
+	G.BuildpackType = G.GetString("BUILDPACK_TYPE")
 
 	// set bk-buildpack-python env
 	G.SetDefault("PYTHON_BUILDPACK_VERSION", "v213")

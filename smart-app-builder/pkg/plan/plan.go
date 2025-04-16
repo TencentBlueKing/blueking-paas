@@ -12,6 +12,7 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc"
 	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 )
 
 const AppDescFileName = "app_desc.yaml"
@@ -28,10 +29,24 @@ type BuildPlan struct {
 	AppDescPath string
 	// LogoFilePath 应用 Logo 文件路径
 	LogoFilePath string
-	// Procfile 进程与启动命令的映射
-	Procfile map[string]string
+	// ProcessCommands 模块各进程及其启动命令
+	// 格式: {"模块名":{"进程名":"启动命令"}}
+	ProcessCommands map[string]map[string]string
 	// BuildGroups 模块构建组列表
 	BuildGroups []*ModuleBuildGroup
+}
+
+// GenerateProcfile 生成 Procfile. Procfile 是进程与启动命令的映射关系, 格式: {"模块名-进程名":"启动命令"}
+func (b *BuildPlan) GenerateProcfile() map[string]string {
+	procfile := make(map[string]string)
+
+	for moduleName, procInfo := range b.ProcessCommands {
+		for processName, procCommand := range procInfo {
+			procfile[GenerateProcType(moduleName, processName)] = procCommand
+		}
+	}
+
+	return procfile
 }
 
 // ModuleBuildGroup 是共享相同构建配置的模块分组，组内所有模块复用同一个构建流程(仅构建一次)和输出镜像
@@ -68,8 +83,8 @@ func PrepareBuildPlan(sourceDir string) (*BuildPlan, error) {
 		return nil, err
 	}
 
-	procfile := desc.GenerateProcfile()
-	if len(procfile) == 0 {
+	procCommands := desc.GenerateProcessCommands()
+	if len(procCommands) == 0 {
 		return nil, errors.New("no valid processes found in app_desc.yaml")
 	}
 
@@ -79,11 +94,11 @@ func PrepareBuildPlan(sourceDir string) (*BuildPlan, error) {
 	}
 
 	plan := &BuildPlan{
-		AppCode:      desc.GetAppCode(),
-		AppDescPath:  filepath.Join(sourceDir, AppDescFileName),
-		LogoFilePath: detectLogoFile(sourceDir),
-		Procfile:     procfile,
-		BuildGroups:  groups,
+		AppCode:         desc.GetAppCode(),
+		AppDescPath:     filepath.Join(sourceDir, AppDescFileName),
+		LogoFilePath:    detectLogoFile(sourceDir),
+		ProcessCommands: procCommands,
+		BuildGroups:     groups,
 	}
 
 	return plan, nil
@@ -147,7 +162,7 @@ func buildModuleBuildGroups(sourceDir string, desc appdesc.AppDesc) ([]*ModuleBu
 }
 
 // ToRequiredBuildpacks 将 buildpacks 从 list 排序后, 转换成 string 结构.
-// 格式如: tgz bk-buildpack-apt ... v2;tgz bk-buildpack-python ... v213
+// 格式如: oci-embedded bk-buildpack-apt ... v2;oci-embedded bk-buildpack-python ... v213
 // NOTE: 在转换的过程中, 如果 buildpack 的 version 为空版本, 会采用默认版本替换
 func ToRequiredBuildpacks(buildpacks []bcfg.Buildpack) (string, error) {
 	slices.SortFunc(buildpacks, func(a, b bcfg.Buildpack) int {
@@ -166,7 +181,7 @@ func ToRequiredBuildpacks(buildpacks []bcfg.Buildpack) (string, error) {
 			}
 		}
 
-		parts = append(parts, strings.Join([]string{"tgz", bp.Name, "...", v}, " "))
+		parts = append(parts, strings.Join([]string{config.G.BuildpackType, bp.Name, "...", v}, " "))
 
 	}
 
@@ -192,4 +207,9 @@ func detectLogoFile(sourceDir string) string {
 	}
 	// logo not found!
 	return ""
+}
+
+// GenerateProcType 生成进程类型
+func GenerateProcType(moduleName, procName string) string {
+	return fmt.Sprintf("%s-%s", moduleName, procName)
 }

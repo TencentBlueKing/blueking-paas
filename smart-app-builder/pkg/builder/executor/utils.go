@@ -19,8 +19,10 @@ import (
 // archiveSourceTarball 生成 Procfile 文件后写入 sourceDir, 并将其打包成 destTGZ 文件
 func archiveSourceTarball(sourceDir, destTGZ string, Procfile map[string]string) error {
 	procfileContent := ""
-	for procName, procCommand := range Procfile {
-		procfileContent += fmt.Sprintf("%s: %s\n", procName, procCommand)
+
+	// heroku Procfile: https://devcenter.heroku.com/articles/procfile#procfile-format
+	for procType, procCommand := range Procfile {
+		procfileContent += fmt.Sprintf("%s: %s\n", procType, procCommand)
 	}
 
 	procfilePath := filepath.Join(sourceDir, "Procfile")
@@ -111,15 +113,28 @@ func makeRunArgs(group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage str
 }
 
 // writeArtifactJsonFile 根据 buildPlan, 在目录 artifactDir 写入 artifact.json.
-// artifact.json 描述应用模块与镜像 tar 的对应关系, 格式如: {"module1": "module1.tar", "module2": "module2.tar"}
+// artifact.json 描述应用模块与镜像 tar 的对应关系以及 entrypoints, 格式如下:
+//  {
+//   "module1": {"image_tar": "module1.tar", "entrypoints": {进程名: 具体的 entrypoint}},
+//   "module2": {"image_tar": "module2.tar", "entrypoints": {进程名: 具体的 entrypoint}}
+// }
 func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error {
-	moduleArtifactRel := make(map[string]string)
+	moduleArtifact := make(map[string]map[string]any)
 	for _, group := range buildPlan.BuildGroups {
-		for _, module := range group.ModuleNames {
-			moduleArtifactRel[module] = group.OutputImageTarName
+		for _, name := range group.ModuleNames {
+			moduleArtifact[name] = map[string]any{"image_tar": group.OutputImageTarName}
 		}
 	}
-	relBytes, err := json.Marshal(moduleArtifactRel)
+
+	for moduleName, procInfo := range buildPlan.ProcessCommands {
+		entrypoints := make(map[string][]string)
+		for procName := range procInfo {
+			entrypoints[procName] = []string{plan.GenerateProcType(moduleName, procName)}
+		}
+		moduleArtifact[moduleName]["entrypoints"] = entrypoints
+	}
+
+	relBytes, err := json.Marshal(moduleArtifact)
 	if err != nil {
 		return err
 	}

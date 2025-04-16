@@ -17,8 +17,8 @@ type AppDesc interface {
 	GetAppCode() string
 	// Validate 验证 app_desc
 	Validate() error
-	// GenerateProcfile 生成 Procfile
-	GenerateProcfile() map[string]string
+	// GenerateProcessCommands 生成各模块进程与启动命令的映射关系. 格式如 {"模块名":{"进程名":"启动命令"}}
+	GenerateProcessCommands() map[string]map[string]string
 	// GenerateModuleBuildConfig 生成 ModuleBuildConfig
 	GenerateModuleBuildConfig() ([]bcfg.ModuleBuildConfig, error)
 }

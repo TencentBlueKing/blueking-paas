@@ -65,9 +65,11 @@ modules:
 		Expect(buildPlan.AppCode).To(Equal("test-app-code"))
 		Expect(buildPlan.AppDescPath).To(Equal(filepath.Join(sourceDir, "app_desc.yaml")))
 		Expect(buildPlan.LogoFilePath).To(Equal(""))
-		Expect(buildPlan.Procfile["api-api-process"]).To(Equal("go run main.go"))
-		Expect(buildPlan.Procfile["worker-celery"]).To(Equal("celery worker"))
-		Expect(buildPlan.Procfile["web-web-process"]).To(Equal("python main.py"))
+
+		procfile := buildPlan.GenerateProcfile()
+		Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
+		Expect(procfile["worker-celery"]).To(Equal("celery worker"))
+		Expect(procfile["web-web-process"]).To(Equal("python main.py"))
 
 		Expect(buildPlan.BuildGroups).To(HaveLen(2))
 
@@ -76,11 +78,11 @@ modules:
 		})
 
 		Expect(buildPlan.BuildGroups[0].ModuleNames).To(Equal([]string{"api"}))
-		Expect(buildPlan.BuildGroups[0].RequiredBuildpacks).To(Equal("tgz bk-buildpack-go ... v205"))
+		Expect(buildPlan.BuildGroups[0].RequiredBuildpacks).To(Equal("oci-embedded bk-buildpack-go ... v205"))
 		Expect(buildPlan.BuildGroups[0].OutputImageTarName).To(Equal("api.tar"))
 
 		Expect(buildPlan.BuildGroups[1].ModuleNames).To(Equal([]string{"web", "worker"}))
-		Expect(buildPlan.BuildGroups[1].RequiredBuildpacks).To(Equal("tgz bk-buildpack-python ... v213"))
+		Expect(buildPlan.BuildGroups[1].RequiredBuildpacks).To(Equal("oci-embedded bk-buildpack-python ... v213"))
 		Expect(buildPlan.BuildGroups[1].OutputImageTarName).To(Equal("web.tar"))
 	})
 })

@@ -43,17 +43,21 @@ func (cfg *AppDescConfig) Validate() error {
 	return utils.ValidateVersion(cfg.AppVersion)
 }
 
-// GenerateProcfile 生成 Procfile
-func (cfg *AppDescConfig) GenerateProcfile() map[string]string {
-	procfile := make(map[string]string)
+// GenerateProcessCommands 生成各模块进程与启动命令的映射关系. 格式如 {"模块名":{"进程名":"启动命令"}}
+func (cfg *AppDescConfig) GenerateProcessCommands() map[string]map[string]string {
+	processCommands := make(map[string]map[string]string)
 
 	for moduleName, module := range cfg.Modules {
+		commands := make(map[string]string)
 		for processName, process := range module.Processes {
-			procfile[moduleName+"-"+processName] = process.ProcCommand
+			commands[processName] = process.ProcCommand
+		}
+		if len(commands) > 0 {
+			processCommands[moduleName] = commands
 		}
 	}
 
-	return procfile
+	return processCommands
 }
 
 // GenerateModuleBuildConfig 生成 ModuleBuildConfig

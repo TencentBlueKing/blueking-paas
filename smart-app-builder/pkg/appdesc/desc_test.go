@@ -44,9 +44,9 @@ modules:
 		Expect(err).To(BeNil())
 		Expect(appDesc.GetAppCode()).To(Equal("test-app-code"))
 
-		procfile := appDesc.GenerateProcfile()
-		Expect(procfile["default-web"]).To(Equal("python main.py"))
-		Expect(procfile["backend-api-process"]).To(Equal("go run main.go"))
+		procCommands := appDesc.GenerateProcessCommands()
+		Expect(procCommands["default"]["web"]).To(Equal("python main.py"))
+		Expect(procCommands["backend"]["api-process"]).To(Equal("go run main.go"))
 	})
 
 	It("parse app desc v3", func() {
@@ -74,9 +74,9 @@ modules:
 		Expect(err).To(BeNil())
 		Expect(appDesc.GetAppCode()).To(Equal("test-app-code"))
 
-		procfile := appDesc.GenerateProcfile()
-		Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
-		Expect(procfile["web-web-process"]).To(Equal("python main.py"))
+		procCommands := appDesc.GenerateProcessCommands()
+		Expect(procCommands["api"]["api-process"]).To(Equal("go run main.go"))
+		Expect(procCommands["web"]["web-process"]).To(Equal("python main.py"))
 	})
 
 	It("parse invalid spec version", func() {

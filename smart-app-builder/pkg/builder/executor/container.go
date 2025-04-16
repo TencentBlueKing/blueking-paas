@@ -110,7 +110,7 @@ func (c *containerExecutor) runBuilder(buildPlan *plan.BuildPlan, runImage strin
 		// 1. 制作 source.tgz 模块源码包
 		moduleSrcDir := filepath.Join(c.sourceDir, group.SourceDir)
 		moduleSrcTGZ := filepath.Join(c.tmpDir, group.BuildModuleName, "source.tgz")
-		if err := archiveSourceTarball(moduleSrcDir, moduleSrcTGZ, buildPlan.Procfile); err != nil {
+		if err := archiveSourceTarball(moduleSrcDir, moduleSrcTGZ, buildPlan.GenerateProcfile()); err != nil {
 			return err
 		}
 

@@ -17,15 +17,28 @@
     >
       <template slot="label">{{ `${val}：` }}</template>
       <template slot="value">
+        <div v-if="key === 'token'">
+          <SensitiveText :text="displayInfoData[key]" />
+        </div>
         <div
-          class="dot-wrapper"
-          v-if="key === 'clusterToken'"
+          v-else-if="clusterSource === 'native_k8s' && ['ca', 'cert', 'key'].includes(key)"
+          class="certificate"
         >
           <span
-            class="dot"
-            v-for="i in 7"
-            :key="i"
-          ></span>
+            class="text"
+            v-bk-tooltips.top="{
+              content: displayInfoData[key],
+              placement: 'top',
+              extCls: 'certificate-tips-cls',
+            }"
+          >
+            {{ displayInfoData[key] }}
+          </span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="displayInfoData[key]"
+            v-bk-tooltips="$t('复制')"
+          ></i>
         </div>
         <template v-else-if="key === 'api_servers'">
           <template v-if="!displayInfoData[key]">--</template>
@@ -51,15 +64,8 @@
       <template slot="label">{{ `${val}：` }}</template>
       <template slot="value">
         <!-- 密码 -->
-        <div
-          class="dot-wrapper"
-          v-if="key === 'password'"
-        >
-          <span
-            v-for="i in 7"
-            class="dot"
-            :key="i"
-          ></span>
+        <div v-if="key === 'password'">
+          <SensitiveText :text="data.elastic_search_config?.[key]" />
         </div>
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
@@ -89,10 +95,12 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
+import SensitiveText from '@/components/sensitive-text';
 export default {
   name: 'DetailInfo',
   components: {
     DetailsRow,
+    SensitiveText,
   },
   props: {
     data: {
@@ -102,18 +110,6 @@ export default {
   },
   data() {
     return {
-      baseInfoKeys: {
-        name: this.$t('集群名称'),
-        description: this.$t('集群描述'),
-        cluster_source: this.$t('集群来源'),
-        bcs_project_name: this.$t('项目'),
-        bcs_cluster_name: `BCS ${this.$t('集群')}`,
-        bk_biz_name: this.$t('业务'),
-        api_servers: `${this.$t('集群')} Server`,
-        clusterToken: `${this.$t('集群')} Token`,
-        container_log_dir: this.$t('容器日志目录'),
-        access_entry_ip: this.$t('集群访问入口 IP'),
-      },
       configKeys: {
         scheme: this.$t('协议'),
         host: this.$t('主机'),
@@ -145,6 +141,37 @@ export default {
         bk_biz_name: this.data.bk_biz_name || this.data.bk_biz_id,
       };
     },
+    clusterSource() {
+      return this.displayInfoData['cluster_source'];
+    },
+    baseInfoKeys() {
+      const keysArray = [
+        { key: 'name', value: this.$t('集群名称') },
+        { key: 'description', value: this.$t('集群描述') },
+        { key: 'cluster_source', value: this.$t('集群来源') },
+        { key: 'bcs_project_name', value: this.$t('项目') },
+        { key: 'bcs_cluster_name', value: `BCS ${this.$t('集群')}` },
+        { key: 'bk_biz_name', value: this.$t('业务') },
+        { key: 'api_servers', value: `${this.$t('集群')} Server` },
+        { key: 'token', value: `${this.$t('集群')} Token` },
+        { key: 'container_log_dir', value: this.$t('容器日志目录') },
+        { key: 'access_entry_ip', value: this.$t('集群访问入口 IP') },
+      ];
+      // 当 clusterSource 为 'native_k8s' 时，添加证书信息，确保顺序
+      if (this.clusterSource === 'native_k8s') {
+        keysArray.splice(
+          7,
+          0, // 插入到正确的位置以保持顺序
+          { key: 'ca', value: this.$t('证书认证机构') },
+          { key: 'cert', value: this.$t('客户端证书') },
+          { key: 'key', value: this.$t('客户端密钥') }
+        );
+      }
+      return keysArray.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {});
+    },
   },
   methods: {
     handleEdit() {
@@ -163,20 +190,34 @@ export default {
   },
 };
 </script>
-
+<style lang="scss">
+.certificate-tips-cls {
+  .tippy-content {
+    max-width: 620px !important;
+  }
+}
+</style>
 <style lang="scss" scoped>
 .cluster-detail-info {
   position: relative;
-  .dot-wrapper {
+  .certificate {
     display: flex;
     align-items: center;
-    gap: 5px;
-  }
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #4d4f56;
+    .text {
+      min-width: 0;
+      flex: 1;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    i {
+      flex-shrink: 0;
+      font-size: 14px;
+      cursor: pointer;
+      &:hover {
+        color: #3a84ff;
+      }
+    }
   }
   .border-tag {
     margin-right: 4px;

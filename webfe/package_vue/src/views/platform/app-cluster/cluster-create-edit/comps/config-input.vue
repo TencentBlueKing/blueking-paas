@@ -4,7 +4,6 @@
       :value="$attrs.value"
       :type="type === 'input' ? undefined : type"
       v-bind="$attrs"
-      :password-icon="[]"
       show-word-limit
       @input="$emit('input', $event)"
       @focus="$emit('focus', $event)"

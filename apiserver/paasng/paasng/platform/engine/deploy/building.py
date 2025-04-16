@@ -28,8 +28,10 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.bkapp_model.services import upsert_process_service_flag
@@ -43,11 +45,7 @@ from paasng.platform.engine.configurations.building import (
     get_use_bk_ci_pipeline,
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.image import (
-    RuntimeImageInfo,
-    generate_image_repository,
-    get_app_image_registry_info,
-)
+from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
@@ -379,20 +377,20 @@ class DockerBuilder(BaseBuilder):
         """Start a new build process[using Dockerfile], this will start a celery task in the background without
         blocking current process.
         """
-        env = self.deployment.app_environment
+        env: ApplicationEnvironment = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
         app_image_repository = generate_image_repository(env.module)
         app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
 
-        image_registry, skip_tls_verify = get_app_image_registry_info(env.module)
+        image_registry = get_image_registry_by_app(env.wl_app)
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
             "BUILD_ARG": get_build_args(env.module),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
-            "SKIP_TLS_VERIFY_REGISTRIES": image_registry if skip_tls_verify else "",
+            "SKIP_TLS_VERIFY_REGISTRIES": image_registry.host if image_registry.skip_tls_verify else "",
         }
 
         # Create the Build object and start a background build task

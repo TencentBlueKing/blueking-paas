@@ -24,9 +24,10 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.constants import ClusterAnnotationKey, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAppImageRegistry, ClusterElasticSearchConfig
 from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paas_wl.workloads.networking.entrance.constants import AddressType
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.plat_mgt.infras.clusters.constants import (
     ClusterAPIAddressType,
     ClusterAuthType,
@@ -47,6 +48,16 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
     port = serializers.IntegerField(help_text="ES 集群端口")
     username = serializers.CharField(help_text="ES 集群用户名")
     password = serializers.CharField(help_text="ES 集群密码")
+
+
+class ImageRegistrySLZ(serializers.Serializer):
+    """镜像仓库信息"""
+
+    host = serializers.CharField(help_text="镜像仓库地址")
+    skip_tls_verify = serializers.BooleanField(help_text="是否跳过 TLS 校验")
+    namespace = serializers.CharField(help_text="镜像仓库命名空间")
+    username = serializers.CharField(help_text="镜像仓库用户名")
+    password = serializers.CharField(help_text="镜像仓库密码")
 
 
 class ClusterListOutputSLZ(serializers.Serializer):
@@ -118,6 +129,7 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     access_entry_ip = serializers.SerializerMethodField(help_text="集群访问入口（一般为 clb）IP")
 
     elastic_search_config = serializers.SerializerMethodField(help_text="ES 集群配置")
+    app_image_registry = serializers.SerializerMethodField(help_text="应用镜像仓库信息")
     available_tenant_ids = serializers.ListField(help_text="可用租户 ID 列表", child=serializers.CharField())
 
     component_preferred_namespace = serializers.CharField(help_text="集群组件优先部署的命名空间")
@@ -180,11 +192,17 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
 
     @swagger_serializer_method(serializer_or_field=ElasticSearchConfigSLZ())
     def get_elastic_search_config(self, obj: Cluster) -> Dict[str, Any]:
-        cfg = ClusterElasticSearchConfig.objects.filter(cluster=obj).first()
-        if not cfg:
-            return {}
+        if cfg := ClusterElasticSearchConfig.objects.filter(cluster=obj).first():
+            return ElasticSearchConfigSLZ(cfg).data
 
-        return ElasticSearchConfigSLZ(cfg).data
+        return {}
+
+    @swagger_serializer_method(serializer_or_field=ImageRegistrySLZ())
+    def get_app_image_registry(self, obj: Cluster) -> Dict[str, Any]:
+        if registry := ClusterAppImageRegistry.objects.filter(cluster=obj).first():
+            return ImageRegistrySLZ(registry).data
+
+        return {}
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_app_address_type(self, obj: Cluster) -> str:
@@ -284,6 +302,7 @@ class ClusterCreateInputSLZ(serializers.Serializer):
     )
 
     elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置")
+    app_image_registry = ImageRegistrySLZ(help_text="应用镜像仓库，若未指定则使用默认", required=False)
     available_tenant_ids = serializers.ListField(
         help_text="可用租户 ID 列表", child=serializers.CharField(), min_length=1
     )
@@ -293,6 +312,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         self._validate_cluster_configs(attrs)
         # 认证配置校验
         self._validate_auth_configs(attrs)
+        # 集群应用镜像仓库校验
+        self._validate_app_image_registry(attrs)
         # 可用租户 ID 列表校验
         self._validate_available_tenant_ids(attrs)
 
@@ -304,7 +325,7 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         return attrs
 
-    def _validate_cluster_configs(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_cluster_configs(self, attrs: Dict[str, Any]):
         cluster_source = attrs["cluster_source"]
         api_address_type = attrs["api_address_type"]
 
@@ -332,8 +353,6 @@ class ClusterCreateInputSLZ(serializers.Serializer):
             if not srv.startswith("http"):
                 raise ValidationError(_("API Server 地址必须以 http 或 https 开头"))
 
-        return attrs
-
     def _validate_auth_configs(self, attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
         if auth_type == ClusterAuthType.CERT and not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
@@ -341,6 +360,20 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
             raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
+
+    def _validate_app_image_registry(self, attrs: Dict[str, Any]):
+        # 创建时提供的 cur_tenant_id，更新时提供的是 cur_cluster
+        cur_tenant_id = self.context.get("cur_tenant_id") or self.context["cur_cluster"].tenant_id
+
+        # 默认 / 运营租户可以不配置应用集群镜像仓库（使用 settings 中的默认配置）
+        # 如果是接入默认 / 运营租户的第三方集群，理论上是不该使用默认的全局配置的，
+        # 但是这由接入的管理员决定，平台不做限制（这两租户的管理员都是平台管理员）
+        if cur_tenant_id in [DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID]:
+            return
+
+        # 其他普通租户都需要配置集群应用镜像凭证，不能使用全局配置以免泄露到第三方集群
+        if not attrs.get("app_image_registry"):
+            raise ValidationError(_("当前租户必须提供应用镜像仓库"))
 
     def _validate_available_tenant_ids(self, attrs: Dict[str, Any]):
         if self.context["cur_tenant_id"] not in attrs["available_tenant_ids"]:

@@ -110,6 +110,13 @@ class TestRetrieveCluster:
                 "username": "blueking",
                 "password": "blueking",
             },
+            "app_image_registry": {
+                "host": "hub.bktencent.com",
+                "skip_tls_verify": False,
+                "namespace": "bkapps",
+                "username": "blueking",
+                "password": "blueking",
+            },
             "available_tenant_ids": ["system", "default", random_tenant_id],
             "app_address_type": "subdomain",
             "app_domains": [
@@ -170,6 +177,7 @@ class TestRetrieveCluster:
                 "username": "admin",
                 "password": "admin",
             },
+            "app_image_registry": {},
             "available_tenant_ids": ["default"],
             "app_address_type": "subpath",
             "app_domains": [
@@ -237,10 +245,16 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
+            "app_image_registry": {
+                "host": "hub.bktencent.com",
+                "skip_tls_verify": False,
+                "namespace": "bkapps",
+                "username": "admin",
+                "password": "masked",
+            },
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
-
         assert resp.status_code == status.HTTP_201_CREATED
 
         cluster = Cluster.objects.filter(name=cluster_name).first()
@@ -264,6 +278,12 @@ class TestCreateCluster:
         assert cluster.elastic_search_config is not None
         assert cluster.elastic_search_config.port == 9300
         assert cluster.elastic_search_config.password == "masked"
+
+        assert cluster.app_image_registry is not None
+        assert cluster.app_image_registry.host == "hub.bktencent.com"
+        assert cluster.app_image_registry.namespace == "bkapps"
+        assert cluster.app_image_registry.username == "admin"
+        assert cluster.app_image_registry.password == "masked"
 
     def test_create_cluster_from_bcs_without_annotations(self, plat_mgt_api_client):
         """基于 bcs 集群创建集群"""
@@ -321,10 +341,10 @@ class TestCreateCluster:
                 "username": "admin",
                 "password": "masked",
             },
+            # 注：默认 / 运营租户不提供 AppImageRegistry 也是可以的
             "available_tenant_ids": [OP_TYPE_TENANT_ID, "cobra", "viper"],
         }
         resp = plat_mgt_api_client.post(reverse("plat_mgt.infras.cluster.list_create"), data=data)
-
         assert resp.status_code == status.HTTP_201_CREATED
 
         cluster = Cluster.objects.filter(name=cluster_name).first()

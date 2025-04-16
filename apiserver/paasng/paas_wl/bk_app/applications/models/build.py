@@ -31,6 +31,7 @@ from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models.misc import OutputStream
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
@@ -41,14 +42,6 @@ from paasng.platform.sourcectl.models import VersionInfo
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
-
-
-def get_app_docker_registry_client() -> DockerRegistryV2Client:
-    return DockerRegistryV2Client.from_api_endpoint(
-        api_endpoint=APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
-        username=settings.APP_DOCKER_REGISTRY_USERNAME,
-        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-    )
 
 
 class Build(UuidAuditedModel):
@@ -174,9 +167,15 @@ class Build(UuidAuditedModel):
         self.artifact_detail = {"invoke_message": self.build_process.invoke_message}
 
         if self.artifact_type == ArtifactType.IMAGE:
-            image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
-            registry_client = get_app_docker_registry_client()
+            image_registry = get_image_registry_by_app(self.app)
+            registry_client = DockerRegistryV2Client.from_api_endpoint(
+                api_endpoint=APIEndpoint(url=image_registry.host),
+                username=image_registry.username,
+                password=image_registry.password,
+            )
+            image = parse_image(self.image, default_registry=image_registry.host)
             ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
+
             # 默认的 "application/vnd.docker.distribution.manifest.v2+json" 可能 metadata 为 None, 但镜像已存在
             # FIXME: 同时带上多种格式的 media_type?
             metadata = ref.get_metadata()

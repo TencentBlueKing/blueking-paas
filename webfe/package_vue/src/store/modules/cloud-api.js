@@ -203,15 +203,6 @@ export default {
     },
 
     /**
-     * 查询模板详情(构建信息)
-     * @param {Object} params tplType模版类型, tplName模版名称
-     */
-    getBuildDataInfo({}, { tplTyp, tplName }, config = {}) {
-      const url = `${BACKEND_URL}/api/tmpls/${tplTyp}/template/${tplName}`;
-      return http.get(url, config);
-    },
-
-    /**
      * 获取新令牌
      * @param {string} appCode 应用id
      * @param {string} moduleId 环境id

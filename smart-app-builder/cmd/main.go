@@ -22,7 +22,7 @@ func main() {
 
 	appBuilder, err := builder.New(logger, config.G.SourceURL, config.G.DestURL)
 	if err != nil {
-		logger.Error(err, "create build executor")
+		logger.Error(err, "create app builder")
 		os.Exit(1)
 	}
 

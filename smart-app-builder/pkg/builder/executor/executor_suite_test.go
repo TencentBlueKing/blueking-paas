@@ -1,4 +1,4 @@
-package container_test
+package executor_test
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestContainer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Container Suite")
+	RunSpecs(t, "Executor Suite")
 }

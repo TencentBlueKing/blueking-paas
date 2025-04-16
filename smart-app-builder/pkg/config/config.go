@@ -30,7 +30,7 @@ var G = struct {
 
 // SetGlobalConfig set global config
 func SetGlobalConfig() {
-	G.BindPFlags(pflag.CommandLine)
+	_ = G.BindPFlags(pflag.CommandLine)
 	G.AutomaticEnv()
 
 	G.SourceURL = G.GetString("source-url")

@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := help
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint
+	$(GOCILINT) run
+
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
@@ -9,7 +13,7 @@ GOLINES ?= $(LOCALBIN)/golines
 GOFUMPT ?= $(LOCALBIN)/gofumpt
 GOCILINT ?= $(LOCALBIN)/golangci-lint
 
-GOCILINT_VERSION ?= v1.53.3
+GOCILINT_VERSION ?= v1.64.8
 
 .PHONY: build-pind-image
 build-pind-image: ## Build smart-app-builder to run in PIND mode
@@ -20,22 +24,22 @@ build-dind-image:  ## Build smart-app-builder to run in DIND mode
 	docker build -t smart-app-builder:dind . -f docker-build/dind.Dockerfile
 
 .PHONY: ginkgo
-ginkgo: $(GINKGO) ## 安装 ginkgo 二进制
+ginkgo: $(GINKGO) ## install ginkgo
 $(GINKGO): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
 
 .PHONY: golines
-golines: $(GOLINES) ## 安装 golines 二进制
+golines: $(GOLINES) ## install golines
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: gofumpt
-gofumpt: $(GOFUMPT) ## 安装 gofumpt 二进制
+gofumpt: $(GOFUMPT) ## install gofumpt
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: golangci-lint
-golangci-lint: $(GOCILINT) ## 安装 golangci-lint 二进制
+golangci-lint: $(GOCILINT) ## install golangci-lint
 $(GOCILINT): $(LOCALBIN)
 	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)

@@ -46,44 +46,58 @@ class AppTenantInfo:
     tenant_id: str
 
 
-def validate_app_tenant_info(raw_app_tenant_mode: str, raw_app_tenant_id: str) -> AppTenantInfo:
+def global_app_tenant_info() -> AppTenantInfo:
+    """全局应用的租户信息"""
+    # 仅运营租户能创建全租户应用
+    return AppTenantInfo(
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=OP_TYPE_TENANT_ID,
+    )
+
+
+def stub_app_tenant_info() -> AppTenantInfo:
+    """非多租户模式下，应用的租户信息"""
+    # 非多租户模式下，应用为单租户且租户 ID 为 default
+    return AppTenantInfo(
+        app_tenant_mode=AppTenantMode.SINGLE,
+        app_tenant_id=DEFAULT_TENANT_ID,
+        tenant_id=DEFAULT_TENANT_ID,
+    )
+
+
+def validate_app_tenant_info(app_tenant_mode: str, app_tenant_id: str) -> AppTenantInfo:
     """验证租户信息，并根据 app_tenant_mode、app_tenant_id 获取应用所属租户 ID
 
     NOTE：通过系统 API、命令行等创建应用时，无法从 request 请求中获取租户信息，需要通过参数传递。
     其中，所属租户 tenant_id 是开发者中心自身的逻辑，为减少用户理解成本可以根据其他 2 个参数确定。
 
-    :param raw_app_tenant_mode: 租户类型
-    :param raw_app_tenant_id: 租户 ID, 如果是全租户应用，则为空
+    :param app_tenant_mode: 参数中的租户类型
+    :param app_tenant_id: 参数中的租户 ID, 如果是全租户应用，则为空
 
-    :raise ValueError: raw_app_tenant_mode 和 raw_app_tenant_mode 不匹配时抛出异常
+    :raise ValueError: app_tenant_mode 和 app_tenant_mode 不匹配时抛出异常
     """
-    # 非多租户模式下，应用的租户信息是固定的
-    # NOTE：系统 API，命令行等创建应用为了向前兼容，默认的参数为全租户应用。所以未开启多租户时不校验参数。
+    # 非多租户模式下，应用的租户为单租户且租户 ID 为 default
     if not settings.ENABLE_MULTI_TENANT_MODE:
-        return AppTenantInfo(
-            app_tenant_mode=AppTenantMode.SINGLE,
-            app_tenant_id=DEFAULT_TENANT_ID,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
+        if app_tenant_mode != AppTenantMode.SINGLE or app_tenant_id != DEFAULT_TENANT_ID:
+            raise ValueError(
+                "For a non-multi-tenant mode, the app_tenant_mode must be 'single' and app_tenant_id must be default."
+            )
+        return stub_app_tenant_info()
 
-    if raw_app_tenant_mode == AppTenantMode.GLOBAL:
+    if app_tenant_mode == AppTenantMode.GLOBAL:
         # 全租户应用的 app_tenant_id 为空
-        if raw_app_tenant_id:
+        if app_tenant_id:
             raise ValueError("For a global-tenant app, the app_tenant_id must be empty.")
 
-        # 仅运营租户能创建全租户应用
-        return AppTenantInfo(
-            app_tenant_mode=AppTenantMode.GLOBAL,
-            app_tenant_id="",
-            tenant_id=OP_TYPE_TENANT_ID,
-        )
+        return global_app_tenant_info()
 
     # 单租户应用，必须指定 app_tenant_id
-    if not raw_app_tenant_id:
+    if not app_tenant_id:
         raise ValueError("For a single-tenant app, the app_tenant_id must be specified.")
 
     return AppTenantInfo(
         app_tenant_mode=AppTenantMode.SINGLE,
-        app_tenant_id=raw_app_tenant_id,
-        tenant_id=raw_app_tenant_id,
+        app_tenant_id=app_tenant_id,
+        tenant_id=app_tenant_id,
     )

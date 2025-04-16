@@ -17,6 +17,7 @@
 
 from typing import Any, Dict
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -26,7 +27,7 @@ from paas_wl.infras.cluster.shim import ClusterAllocator
 from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
-from paasng.core.tenant.utils import validate_app_tenant_info
+from paasng.core.tenant.utils import stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.platform.applications.constants import AppEnvironment
@@ -101,10 +102,14 @@ class AppTenantMixin(serializers.Serializer):
     )
 
     def validate(self, data):
-        try:
-            app_tenant_info = validate_app_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
-        except ValueError as e:
-            raise ValidationError(e)
+        # 非多租户模式下，应用的租户信息由平台固定设置
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            app_tenant_info = stub_app_tenant_info()
+        else:
+            try:
+                app_tenant_info = validate_app_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
+            except ValueError as e:
+                raise ValidationError(e)
 
         data["app_tenant_mode"] = app_tenant_info.app_tenant_mode
         data["app_tenant_id"] = app_tenant_info.app_tenant_id

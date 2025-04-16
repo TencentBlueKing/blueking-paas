@@ -28,7 +28,7 @@ from django.db.transaction import atomic
 from django.utils.translation import gettext as _
 
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.utils import validate_app_tenant_info
+from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -102,8 +102,12 @@ class Command(BaseCommand):
         validate_app_desc(get_app_description(stat))
         handler = get_desc_handler(stat.meta_info)
 
-        # 需要补充应用的租户信息
-        app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
+        # 如果参数中没有指定租户信息，则根据是否开启多租户获取默认值
+        if not raw_tenant_mode and not raw_tenant_id:
+            app_tenant_info = global_app_tenant_info() if settings.ENABLE_MULTI_TENANT_MODE else stub_app_tenant_info()
+        else:
+            app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
+
         stat.meta_info["tenant"] = {
             "app_tenant_mode": app_tenant_info.app_tenant_mode,
             "app_tenant_id": app_tenant_info.app_tenant_id,

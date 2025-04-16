@@ -25,20 +25,24 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFFs
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
+    AccountFeatureFlagListViewSet,
+    AccountFeatureFlagSLZ,
     BulkCreatePlatformManagerSLZ,
     PlatformManagerSLZ,
+    SystemAPIUserRoleSLZ,
     SystemAPIUserSLZ,
+    UpsertAccountFeatureFlagSLZ,
     UpsertSystemAPIUserSLZ,
-    UpsertUserFeatureFlagSLZ,
-    UserFeatureFlagSLZ,
 )
 from paasng.utils.error_codes import error_codes
 
@@ -176,25 +180,36 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
+        operation_description="获取系统 API 权限列表",
+        responses={status.HTTP_200_OK: AccountFeatureFlagListViewSet(many=True)},
+    )
+    def feature_list(self, request, *args, **kwargs):
+        """获取用户特性种类列表"""
+        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFFs.get_choices()]
+        slz = AccountFeatureFlagListViewSet(roles_data, many=True)
+        return Response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
         operation_description="获取用户特性列表",
-        responses={status.HTTP_200_OK: UserFeatureFlagSLZ(many=True)},
+        responses={status.HTTP_200_OK: AccountFeatureFlagSLZ(many=True)},
     )
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        slz = UserFeatureFlagSLZ(feature_flags, many=True)
+        slz = AccountFeatureFlagSLZ(feature_flags, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="更新或创建用户特性",
-        request_body=UpsertUserFeatureFlagSLZ,
+        request_body=UpsertAccountFeatureFlagSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def upsert(self, request):
         """更新或创建用户特性"""
-        slz = UpsertUserFeatureFlagSLZ(data=request.data)
+        slz = UpsertAccountFeatureFlagSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -267,10 +282,21 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SystemAPIUserViewSet(viewsets.GenericViewSet):
+class SystemApiUserViewSet(viewsets.GenericViewSet):
     """系统 API 用户相关 API"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.users"],
+        operation_description="获取系统 API 权限列表",
+        responses={status.HTTP_200_OK: SystemAPIUserRoleSLZ(many=True)},
+    )
+    def role_list(self, request, *args, **kwargs):
+        """获取系统 API 权限种类列表"""
+        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in ClientRole.get_choices()]
+        slz = SystemAPIUserRoleSLZ(roles_data, many=True)
+        return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],

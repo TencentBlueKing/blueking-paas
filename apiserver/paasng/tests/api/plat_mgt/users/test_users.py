@@ -128,6 +128,18 @@ class TestAccountFeatureFlagManageViewSet:
         # 验证已被删除
         assert not AccountFeatureFlag.objects.filter(user=user_id, name=feature).exists()
 
+    def test_list_features(self, plat_mgt_api_client):
+        """测试获取用户特性种类列表"""
+        list_url = reverse("plat_mgt.users.account_features.feature_list")
+        rsp = plat_mgt_api_client.get(list_url)
+        assert rsp.status_code == status.HTTP_200_OK
+        assert isinstance(rsp.data, list)
+
+        # 验证返回的数据格式
+        for item in rsp.data:
+            assert "value" in item
+            assert "label" in item
+
 
 class TestSystemAPIUserViewSet:
     def test_list_system_api_users(self, plat_mgt_api_client):
@@ -198,3 +210,15 @@ class TestSystemAPIUserViewSet:
 
         # 验证已被删除
         assert not SysAPIClient.objects.filter(name=user, is_active=True).exists()
+
+    def test_list_system_api_roles(self, plat_mgt_api_client):
+        """测试获取系统 API 权限种类列表"""
+        list_url = reverse("plat_mgt.users.system_api_roles.role_list")
+        rsp = plat_mgt_api_client.get(list_url)
+        assert rsp.status_code == status.HTTP_200_OK
+        assert isinstance(rsp.data, list)
+
+        # 验证返回的数据格式
+        for item in rsp.data:
+            assert "value" in item
+            assert "label" in item

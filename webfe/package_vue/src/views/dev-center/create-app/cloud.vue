@@ -261,13 +261,6 @@
                           {{ $t(defaultlangName[key]) }}
                         </bk-button>
                       </div>
-                      <div
-                        class="build-info"
-                        @click="showBuildDialog"
-                      >
-                        <i class="row-icon paasng-icon paasng-page-fill"></i>
-                        {{ $t('构建信息') }}
-                      </div>
                     </div>
                   </bk-form-item>
                   <div class="languages-card">
@@ -664,47 +657,6 @@
             {{ $t('取消') }}
           </bk-button>
         </div>
-
-        <!-- 构建信息弹窗 -->
-        <bk-dialog
-          v-model="buildDialog.visiable"
-          width="720"
-          :theme="'primary'"
-          :header-position="'left'"
-          :mask-close="true"
-          :show-footer="false"
-          :title="buildDialog.title"
-        >
-          <bk-form
-            :model="buildDialog.formData"
-            :label-width="localLanguage === 'en' ? 150 : 130"
-          >
-            <bk-form-item :label="`${$t('镜像仓库')}：`">
-              <span class="build-text">
-                {{ imageRepositoryTemplate }}
-              </span>
-            </bk-form-item>
-            <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
-              {{ mirrorTag }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('构建方式')}：`">
-              {{ buildDialog.formData.buildMethod }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('基础镜像')}：`">
-              {{ buildDialog.formData.imageName }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('构建工具')}：`">
-              <p
-                class="config-item"
-                v-for="item in buildDialog.formData.buildConfig"
-                :key="item.id"
-                v-bk-tooltips="`${item.display_name}${item.description ? item.description : ''}`"
-              >
-                {{ item.display_name }} {{ item.description ? item.description : '' }}
-              </p>
-            </bk-form-item>
-          </bk-form>
-        </bk-dialog>
       </section>
 
       <!-- S-mart 应用 -->
@@ -929,11 +881,6 @@ export default {
           },
         ],
       },
-      buildDialog: {
-        visiable: false,
-        title: this.$t('构建信息'),
-        formData: {},
-      },
       curCodeSource: 'default',
       activeIndex: 1,
       isShowAdvancedOptions: false,
@@ -952,31 +899,6 @@ export default {
     clusterList() {
       // 目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
       return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
-    },
-    imageRepositoryTemplate() {
-      if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
-      let imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate.replace(
-        '{app_code}',
-        this.formData.code
-      );
-      if (imageRepositoryTemplate.includes('//')) {
-        imageRepositoryTemplate = imageRepositoryTemplate.replace('//', '/');
-      }
-      return imageRepositoryTemplate.replace('{module_name}', 'default');
-    },
-    mirrorTag() {
-      const tagOptions = this.buildDialog.formData?.tagOptions || {};
-      const tagStrList = [];
-      // eslint-disable-next-line no-restricted-syntax
-      for (const key in tagOptions) {
-        if (tagOptions[key] && key !== 'prefix') {
-          tagStrList.push(this.$t(TAG_MAP[key]));
-        }
-      }
-      if (tagOptions.prefix) {
-        tagStrList.unshift(tagOptions.prefix);
-      }
-      return tagStrList.join('-');
     },
     mirrorExamplePlaceholder() {
       return `${this.$t('请输入镜像仓库，如')}：${
@@ -1526,30 +1448,6 @@ export default {
       };
       this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
-    },
-
-    // 获取构建信息
-    async showBuildDialog() {
-      try {
-        const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
-          appCode: this.appCode,
-          tplTyp: 'normal',
-          tplName: this.formData.sourceInitTemplate,
-        });
-        this.buildDialog.visiable = true;
-        this.buildDialog.formData = {
-          imageRepositoryTemplate: res.build_config.image_repository_template, // 镜像仓库
-          tagOptions: res.build_config.tag_options, // tag规则
-          buildMethod: res.build_config.build_method, // 构建方式
-          imageName: `${res.slugbuilder.display_name}（${res.slugbuilder.description}）`,
-          buildConfig: res.build_config.buildpacks,
-        };
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
     },
 
     // 构建参数校验

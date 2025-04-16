@@ -111,31 +111,3 @@ class TestTemplateDetailedViewSet:
         url = reverse("api.templates.list", kwargs=dict(tpl_type=TemplateType.NORMAL.value))
         response = api_client.get(url)
         assert len(response.data) == 2
-
-    @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("tpl_name", "expected_buildpacks"),
-        [
-            ("python", [{"name": "extra"}, {"name": "python"}]),
-            ("nodejs", [{"name": "nodejs"}]),
-        ],
-    )
-    def test_retrieve(self, request, api_client, slugbuilder, slugrunner, image_name, tpl_name, expected_buildpacks):
-        url = reverse(
-            "api.templates.detail",
-            kwargs=dict(tpl_type=TemplateType.NORMAL.value, tpl_name=tpl_name),
-        )
-        response = api_client.get(url)
-        assert response.status_code == 200
-
-        data = response.json()
-
-        build_config = data["build_config"]
-        assert build_config["build_method"] == "buildpack"
-        assert build_config["bp_stack_name"] == image_name
-        assert "{app_code}" in build_config["image_repository_template"]
-        assert "{module_name}" in build_config["image_repository_template"]
-        assert [{"name": bp["name"]} for bp in build_config["buildpacks"]] == expected_buildpacks
-
-        slugbuilder = data["slugbuilder"]
-        assert slugbuilder["name"] == image_name

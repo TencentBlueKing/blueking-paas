@@ -43,15 +43,26 @@ urlpatterns = [
         views.AccountFeatureFlagViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.account_feature_flags.delete",
     ),
+    # 用户特性种类列表
+    path(
+        "api/plat_mgt/users/account_features/",
+        views.AccountFeatureFlagViewSet.as_view({"get": "feature_list"}),
+        name="plat_mgt.users.account_features.feature_list",
+    ),
     # 系统 API 用户
     path(
         "api/plat_mgt/users/system_api_user/",
-        views.SystemAPIUserViewSet.as_view({"get": "list", "post": "create", "put": "update"}),
+        views.SystemApiUserViewSet.as_view({"get": "list", "post": "create", "put": "update"}),
         name="plat_mgt.users.system_api_user.bulk",
     ),
     path(
         "api/plat_mgt/users/system_api_user/<str:user>/",
-        views.SystemAPIUserViewSet.as_view({"delete": "destroy"}),
+        views.SystemApiUserViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.system_api_user.delete",
+    ),
+    path(
+        "api/plat_mgt/users/system_api_roles/",
+        views.SystemApiUserViewSet.as_view({"get": "role_list"}),
+        name="plat_mgt.users.system_api_roles.role_list",
     ),
 ]

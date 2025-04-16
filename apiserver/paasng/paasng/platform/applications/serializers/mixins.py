@@ -105,6 +105,7 @@ class AppTenantMixin(serializers.Serializer):
             app_tenant_info = validate_app_tenant_info(data["app_tenant_mode"], data["app_tenant_id"])
         except ValueError as e:
             raise ValidationError(e)
+
         data["app_tenant_mode"] = app_tenant_info.app_tenant_mode
         data["app_tenant_id"] = app_tenant_info.app_tenant_id
         data["tenant_id"] = app_tenant_info.tenant_id

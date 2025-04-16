@@ -68,7 +68,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "-f",
             "--file",
-            dest="file_",
+            dest="file_path",
             required=True,
             type=str,
             help="s-mart 应用包的路径",
@@ -90,8 +90,8 @@ class Command(BaseCommand):
         )
 
     @handle_error
-    def handle(self, file_: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):
-        filepath = Path(file_)
+    def handle(self, file_path: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):
+        filepath = Path(file_path)
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 
         stat = SourcePackageStatReader(filepath).read()

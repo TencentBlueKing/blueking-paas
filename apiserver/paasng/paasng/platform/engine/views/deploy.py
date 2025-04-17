@@ -222,11 +222,15 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={200: DeploymentResultSLZ}, paginator_inspectors=[])
     def get_deployment_result(self, request, code, module_name, uuid):
         """查询部署任务结果"""
+        include_ansi_codes = request.GET.get("include_ansi_codes", "false").lower() == "true"
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        logs = get_all_logs(deployment)
+        if not include_ansi_codes:
+            logs = strip_ansi(logs)
         hint = get_failure_hint(deployment)
         result = {
             "status": deployment.status,
-            "logs": get_all_logs(deployment),
+            "logs": logs,
             "error_detail": deployment.err_detail,
             "error_tips": asdict(hint),
         }

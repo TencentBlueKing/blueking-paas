@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from contextlib import closing
 from typing import List
 
@@ -29,6 +30,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.workflow import ServerSendEvent
 from paasng.utils.error_codes import error_codes
 from paasng.utils.rate_limit.constants import UserAction
@@ -52,6 +54,7 @@ class StreamViewSet(ViewSet):
     @rate_limits_by_user(UserAction.FETCH_DEPLOY_LOG, window_size=60, threshold=10)
     def streaming(self, request, channel_id):
         subscriber = self.get_subscriber(channel_id)
+        include_ansi_codes = request.GET.get("include_ansi_codes", "false").lower() == "true"
 
         def resp():
             with closing(subscriber):
@@ -61,7 +64,13 @@ class StreamViewSet(ViewSet):
                         continue
 
                     for s in e.to_yield_str_list():
-                        yield s
+                        out = s
+                        if not include_ansi_codes and '"line":' in s:
+                            prefix, json_str = s.split(":", 1)
+                            msg = json.loads(json_str)
+                            msg["line"] = strip_ansi(msg["line"])
+                            out = f"{prefix}:{json.dumps(msg)}"
+                        yield out
 
                 for s in ServerSendEvent.to_eof_str_list():
                     yield s

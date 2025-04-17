@@ -68,6 +68,8 @@ class PluginDefinition(UuidAuditedModel):
     logo = models.CharField(max_length=255)
 
     administrator = models.JSONField()
+    # 将 administrator 默认添加到插件实例的成员中
+    add_admin_to_plugin_members = models.BooleanField(default=False)
     approval_config = PluginCreateApprovalField()
 
     release_revision: ReleaseRevisionDefinition = ReleaseRevisionDefinitionField()

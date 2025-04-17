@@ -103,6 +103,7 @@ class ClusterComponentName(StrStructuredEnum):
     """集群组件名称"""
 
     BK_INGRESS_NGINX = EnumField("bk-ingress-nginx")
-    BKAPP_LOG_COLLECTION = EnumField("bkapp-log-collection")
     BKPAAS_APP_OPERATOR = EnumField("bkpaas-app-operator")
+    BKAPP_LOG_COLLECTION = EnumField("bkapp-log-collection")
+    BK_LOG_COLLECTOR = EnumField("bk-log-collector")
     BCS_GENERAL_POD_AUTOSCALER = EnumField("bcs-general-pod-autoscaler")

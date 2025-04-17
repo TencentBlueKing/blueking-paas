@@ -30,13 +30,12 @@ def get_default_component_configs() -> List[Dict[str, Any]]:
     # 开发者中心日志采集器
     bkapp_log_collection = {"name": ClusterComponentName.BKAPP_LOG_COLLECTION, "required": True}
     # 蓝鲸日志平台采集器
-    bk_log_collector = {"name": ClusterComponentName.BKAPP_LOG_COLLECTION, "required": False}
+    bk_log_collector = {"name": ClusterComponentName.BK_LOG_COLLECTOR, "required": True}
     # BCS 提供的通用 Pod 自动扩缩容
     bcs_general_pod_autoscaler = {"name": ClusterComponentName.BCS_GENERAL_POD_AUTOSCALER, "required": False}
 
-    # 如果走蓝鲸日志平台采集方案，则 bk_log_collector 组件必选，bkapp_log_collection 组件非必选
+    # 如果走蓝鲸日志平台采集方案，则 bk-log-collector 组件必选，bkapp-log-collection 组件非必选
     if BK_LOG_DEFAULT_ENABLED:
-        bk_log_collector["required"] = True
         bkapp_log_collection["required"] = False
         return [
             bk_ingress_nginx,
@@ -46,6 +45,7 @@ def get_default_component_configs() -> List[Dict[str, Any]]:
             bcs_general_pod_autoscaler,
         ]
 
+    # 默认情况下 bkapp-log-collection 组件必选
     return [
         bk_ingress_nginx,
         bkpaas_app_operator,

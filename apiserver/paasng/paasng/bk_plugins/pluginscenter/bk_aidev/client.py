@@ -56,10 +56,11 @@ class BkAiDevClient:
         try:
             res = self.client.list_user_mode_resource_meta_user_spaces()
         except (APIGatewayResponseError, ResponseError) as e:
-            raise BkAiDevGatewayServiceError(f"list spaces failed: {e}")
+            logger.exception("list ai-dev spaces failed")
+            raise BkAiDevGatewayServiceError(f"list ai-dev spaces error: {e}")
 
         # 返回的数据格式为：{'result': True, 'code': 'success', 'message': None, 'data': [{'space_id': '6f1c831bfcb52b9a', 'space_name': 'cloud4paas', 'space_desc': None}]
         if res.get("result"):
             return res.get("data", [])
         else:
-            raise BkAiDevApiError(f"list spaces failed: {res.get('message')}")
+            raise BkAiDevApiError(f"list ai-dev spaces error: {res.get('message')}")

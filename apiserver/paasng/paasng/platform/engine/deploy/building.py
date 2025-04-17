@@ -45,7 +45,10 @@ from paasng.platform.engine.configurations.building import (
     get_use_bk_ci_pipeline,
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
+from paasng.platform.engine.configurations.image import (
+    RuntimeImageInfo,
+    generate_image_repository_by_env,
+)
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
@@ -291,7 +294,7 @@ class ApplicationBuilder(BaseBuilder):
         # Use the default image when it's None, which means no images are bound to the app
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = runtime_info.generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
@@ -379,7 +382,7 @@ class DockerBuilder(BaseBuilder):
         """
         env: ApplicationEnvironment = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )

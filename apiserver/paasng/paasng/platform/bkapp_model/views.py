@@ -32,6 +32,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
@@ -56,8 +57,8 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleProcessSpecsOutputSLZ,
     SvcDiscConfigSLZ,
 )
-from paasng.platform.bkapp_model.utils import get_image_info
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName, RuntimeType
+from paasng.platform.modules.models import BuildConfig
 from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
@@ -117,8 +118,16 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def retrieve(self, request, code, module_name):
         """获取当前模块的进程配置"""
         module = self.get_module_via_path()
-        proc_specs = ModuleProcessSpec.objects.filter(module=module)
-        image_repository, image_credential_name = get_image_info(module)
+        build_cfg = BuildConfig.objects.get_or_create_by_module(module)
+
+        image_repo = None
+        # 注：只有纯镜像应用需要提供 repository 和 credential_name
+        if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
+            # 云原生应用使用 BuildConfig 中记录的值，旧的镜像应用使用 Module 中记录的值
+            if module.application.type == ApplicationType.CLOUD_NATIVE:
+                image_repo = build_cfg.image_repository
+            else:
+                image_repo = module.get_source_obj().get_repo_url() or ""
 
         try:
             observability = module.observability
@@ -126,37 +135,34 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except ObservabilityConfig.DoesNotExist:
             proc_metric_map = {}
 
-        proc_specs_data = []
-        for proc_spec in proc_specs:
+        proc_specs = []
+        for spec in ModuleProcessSpec.objects.filter(module=module):
             data = {
-                "name": proc_spec.name,
-                "image": image_repository,
-                "image_credential_name": image_credential_name,
-                "command": proc_spec.command or [],
-                "args": proc_spec.args or [],
-                "port": proc_spec.port,
+                "name": spec.name,
+                "image": image_repo,
+                "command": spec.command or [],
+                "args": spec.args or [],
+                "port": spec.port,
                 "env_overlay": {
                     environment_name.value: {
-                        "plan_name": proc_spec.get_plan_name(environment_name),
-                        "target_replicas": proc_spec.get_target_replicas(environment_name),
-                        "autoscaling": bool(proc_spec.get_autoscaling(environment_name)),
-                        "scaling_config": proc_spec.get_scaling_config(environment_name) or default_scaling_config,
+                        "plan_name": spec.get_plan_name(environment_name),
+                        "target_replicas": spec.get_target_replicas(environment_name),
+                        "autoscaling": bool(spec.get_autoscaling(environment_name)),
+                        "scaling_config": spec.get_scaling_config(environment_name) or default_scaling_config,
                     }
                     for environment_name in AppEnvName
                 },
-                "probes": proc_spec.probes or {},
-                "services": proc_spec.services,
+                "probes": spec.probes or {},
+                "services": spec.services,
             }
 
-            if metric := proc_metric_map.get(proc_spec.name):
+            if metric := proc_metric_map.get(spec.name):
                 data["monitoring"] = {"metric": metric.dict()}
 
-            proc_specs_data.append(data)
-        return Response(
-            ModuleProcessSpecsOutputSLZ(
-                {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs_data}
-            ).data
-        )
+            proc_specs.append(data)
+
+        resp_data = {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs}
+        return Response(ModuleProcessSpecsOutputSLZ(resp_data).data)
 
     @swagger_auto_schema(request_body=ModuleProcessSpecsInputSLZ)
     @atomic

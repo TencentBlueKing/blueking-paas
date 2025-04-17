@@ -22,8 +22,7 @@ import pytest
 from paas_wl.bk_app.applications.models import Build
 from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,
-    generate_image_repository,
-    get_image_repository_template,
+    generate_image_repository_by_env,
     update_image_runtime_config,
 )
 from paasng.platform.engine.constants import RuntimeType
@@ -49,22 +48,18 @@ class TestRuntimeInfo:
 
             assert runtime_info.generate_image(version_info=version) == "docker.io/library/python:foo"
 
-    @pytest.mark.parametrize(
-        ("is_cnb_runtime", "expected"), [(True, f"{get_image_repository_template()}:{{tag}}"), (False, "")]
-    )
-    def test_buildpack_runtime(self, bk_module_full, version, is_cnb_runtime, expected):
+    def test_buildpack_runtime(self, bk_module_full, version):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.BUILDPACK
         bk_module_full.build_config.save()
-        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app())
-        with mock.patch(
-            "paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=is_cnb_runtime
-        ):
-            assert runtime_info.generate_image(
-                version_info=version, special_tag=version.version_name
-            ) == expected.format(
-                app_code=bk_module_full.application.code, module_name=bk_module_full.name, tag=version.version_name
+
+        module_env = bk_module_full.get_envs("prod")
+        runtime_info = RuntimeImageInfo(module_env.get_engine_app())
+        with mock.patch("paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=True):
+            assert (
+                runtime_info.generate_image(version_info=version, special_tag=version.version_name)
+                == f"{generate_image_repository_by_env(module_env)}:{version.version_name}"
             )
 
     def test_dockerfile_runtime(self, bk_module_full, version):
@@ -72,10 +67,12 @@ class TestRuntimeInfo:
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.DOCKERFILE
         bk_module_full.build_config.save()
-        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app())
+
+        module_env = bk_module_full.get_envs("prod")
+        runtime_info = RuntimeImageInfo(module_env.get_engine_app())
         assert (
             runtime_info.generate_image(version_info=version, special_tag=version.version_name)
-            == f"{generate_image_repository(bk_module_full)}:{version.version_name}"
+            == f"{generate_image_repository_by_env(module_env)}:{version.version_name}"
         )
 
     @pytest.mark.parametrize(

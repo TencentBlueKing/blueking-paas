@@ -22,7 +22,7 @@ from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.infras.cluster.constants import ClusterAnnotationKey, ClusterFeatureFlag
+from paas_wl.infras.cluster.constants import BK_LOG_DEFAULT_ENABLED, ClusterAnnotationKey, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterElasticSearchConfig
 from paas_wl.workloads.networking.egress.models import RegionClusterState
@@ -283,7 +283,7 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         help_text="集群访问入口（一般为 clb）IP", required=False, allow_blank=True
     )
 
-    elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置")
+    elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置", required=False)
     available_tenant_ids = serializers.ListField(
         help_text="可用租户 ID 列表", child=serializers.CharField(), min_length=1
     )
@@ -293,6 +293,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         self._validate_cluster_configs(attrs)
         # 认证配置校验
         self._validate_auth_configs(attrs)
+        # ES 配置校验
+        self._validate_elastic_search_config(attrs)
         # 可用租户 ID 列表校验
         self._validate_available_tenant_ids(attrs)
 
@@ -341,6 +343,14 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
             raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
+
+    def _validate_elastic_search_config(self, attrs: Dict[str, Any]):
+        # 若启用蓝鲸日志平台方案，则 ES 配置是可选的
+        if BK_LOG_DEFAULT_ENABLED:
+            return
+
+        if not attrs.get("elastic_search_config"):
+            raise ValidationError(_("ES 集群配置是必填项"))
 
     def _validate_available_tenant_ids(self, attrs: Dict[str, Any]):
         if self.context["cur_tenant_id"] not in attrs["available_tenant_ids"]:

@@ -17,7 +17,7 @@
 
 from django.db import migrations
 
-from paas_wl.infras.cluster.constants import DEFAULT_COMPONENT_CONFIGS
+from paas_wl.infras.cluster.components import get_default_component_configs
 
 
 def forwards_func(apps, schema_editor):
@@ -28,7 +28,7 @@ def forwards_func(apps, schema_editor):
     for cluster in Cluster.objects.using(schema_editor.connection.alias).all():
         components = [
             ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
-            for cfg in DEFAULT_COMPONENT_CONFIGS
+            for cfg in get_default_component_configs()
         ]
         ClusterComponent.objects.using(schema_editor.connection.alias).bulk_create(components)
 

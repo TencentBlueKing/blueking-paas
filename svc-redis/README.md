@@ -1,6 +1,6 @@
-# svc-mysql
+# svc-redis
 
-`svc-mysql` 是蓝鲸开发者中心的 MySQL 增强服务模块。
+`svc-reids` 是蓝鲸开发者中心的 Redis 增强服务模块。Redis 服务实例由 [Redis-Operator](https://github.com/OT-CONTAINER-KIT/redis-operator) 管理生命周期
 
 ## 本地开发指引
 
@@ -22,7 +22,8 @@
 - 安装 poetry 并通过它安装依赖：
 
 ```shell
-❯ make init-py-dep
+❯ pip install poetry==2.1.1
+❯ poetry install
 ```
 
 完成依赖安装后，可以使用 poetry 启动项目，常用命令包括：
@@ -68,20 +69,54 @@ python manage.py shell
 import json
 from paas_service.models import Service
 from paas_service.models import Plan
+from svc_redis.cluster.models import Cluster
 
 # category 为增强服务分类，apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
-svc = Service.objects.create(name="mysql", display_name_zh_cn="MySQL", display_name_en="MySQL", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
+svc = Service.objects.create(name="redis", display_name_zh_cn="Redis", display_name_en="Redis", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
+
+# 创建集群
+cluster = Cluster.objects.create(
+    name="redis-cluster",
+    type="normal",
+    description="测试集群",
+    ca_data="",
+    cert_data="",
+    key_data="",
+)
 
 # 分配给 SaaS 的数据库实例信息，注意 user 和 password 必须有 root 权限
-config = {"auth_ip_list":["%"], "host":"127.0.0.1", "password":"blueking", "port":3006,"user":"root"}
+config = {
+    "type": "RedisReplication",
+    "redis_version": "v7.0.15",
+    "cluster_name": "redis-cluster",
+    "memory_size": "2Gi",
+    "service_export_type": "TencentCLB",
+    "persistent_storage": False,
+    "monitor": False,
+}
 
-# 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 region 的值
-Plan.objects.create(name="default-mysql", description="mysql 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
+Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
 ```
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
 
-### 5. 启动项目
+### 5. 集群部署 Redis-Operator
+
+使用以下命令在集群内部署 Redis-Operator：
+
+```bash
+# Add the helm chart
+$ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
+
+# Deploy the redis-operator
+$ helm upgrade redis-operator ot-helm/redis-operator \
+  --install --create-namespace --namespace ot-operators
+  
+# Test
+$ helm test redis-operator --namespace ot-operators 
+```
+
+### 6. 启动项目
 
 使用以下命令启动项目：
 
@@ -116,7 +151,7 @@ export PAAS_SERVICE_JWT_CLIENTS_KEY="xxx"
 
 ```yaml
 SERVICE_REMOTE_ENDPOINTS:
-  - name: mysql_remote
+  - name: redis_remote
     endpoint_url: http://localhost:8005/ # 增强服务的访问地址
     provision_params_tmpl:
       egress_info: "{cluster_info.egress_info_json}"
@@ -128,42 +163,3 @@ SERVICE_REMOTE_ENDPOINTS:
 ```
 
 **注意**：仅需修改 `endpoint_url` 和 `key` 的值，其他值无需更改。
-
-## 如何配置不同规格的增强服务
-
-增强服务允许给套餐设置不同的规格来满足给应用差异化分配增强服务实例的需求。如分别配置 MySQL5.7、MySQL8.0 2 个规格数据库实例，应用申请增强服务的时候可以按需选择。
-
-![img](docs/resource/img/svc_spec.png)
-
-SpecDefinition 用于描述规格的元信息，Specification 表示一个具体的 SpecDefinition 记录对应的值，可绑定到多个 Plan 上。
-
-```python
-python manage.py shell
-
-import json
-from paas_service.models import Service
-from paas_service.models import SpecDefinition, Specification
-from paas_service.models import Plan
-
-
-# 1.给增强服务添加规格定义
-definition = SpecDefinition.objects.create(name="version", display_name_zh_cn="数据库版本", display_name_en="Database version", recommended_value="5.7")
-svc = Service.objects.first()
-svc.specifications.add(definition)
-
-# 2.给规格赋值
-spec_version_57 = Specification.objects.create(value="5.7", display_name_zh_cn="MySQL 5.7",  display_name_en="MySQL 5.7", definition=definition)
-spec_version_80 = Specification.objects.create(value="8.0", display_name_zh_cn="MySQL 8.0",  display_name_en="MySQL 8.0", definition=definition)
-
-# 3. 给存量的套餐添加规格信息
-for plan in Plan.objects.all():
-    plan.specifications.add(spec_version_57)
-
-# 4. 添加新的套餐并设置规格
-# 分配给 SaaS 的数据库实例信息，注意 user 和 password 必须有 root 权限
-config = {"auth_ip_list":["%"], "host":"127.0.0.2", "password":"blueking", "port":3006,"user":"root"}
-# 注意这里是社区版本的初始化数据，如果是其他版本，需要修改 region 的值
-plan = Plan.objects.create(name="mysql-8.0", description="mysql 8.0", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
-# 给套餐添加规格信息
-plan.specifications.add(spec_version_80)
-```

@@ -42,10 +42,10 @@ var _ = Describe("writeArtifactJsonFile", func() {
 		Expect(gjson.GetBytes(fileContent, "module1.image_tar").String()).To(Equal("module1.tar"))
 		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module2.tar"))
 
-		Expect(gjson.GetBytes(fileContent, "module1.entrypoints.proc1").Array()[0].String()).To(Equal("module1-proc1"))
-		Expect(gjson.GetBytes(fileContent, "module1.entrypoints.proc2").Array()[0].String()).To(Equal("module1-proc2"))
-		Expect(gjson.GetBytes(fileContent, "module2.entrypoints.proc1").Array()[0].String()).To(Equal("module2-proc1"))
-		Expect(gjson.GetBytes(fileContent, "module2.entrypoints.proc2").Array()[0].String()).To(Equal("module2-proc2"))
+		Expect(gjson.GetBytes(fileContent, "module1.proc_entrypoints.proc1").Array()[0].String()).To(Equal("module1-proc1"))
+		Expect(gjson.GetBytes(fileContent, "module1.proc_entrypoints.proc2").Array()[0].String()).To(Equal("module1-proc2"))
+		Expect(gjson.GetBytes(fileContent, "module2.proc_entrypoints.proc1").Array()[0].String()).To(Equal("module2-proc1"))
+		Expect(gjson.GetBytes(fileContent, "module2.proc_entrypoints.proc2").Array()[0].String()).To(Equal("module2-proc2"))
 	})
 
 	It("Some module uses the same image tar", func() {

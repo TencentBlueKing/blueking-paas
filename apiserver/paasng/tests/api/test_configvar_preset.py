@@ -25,16 +25,42 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "environment_name",
-    [ConfigVarEnvName.GLOBAL.value, ConfigVarEnvName.STAG.value, ConfigVarEnvName.PROD.value],
+    ("environment_name", "env_description"),
+    [
+        (ConfigVarEnvName.GLOBAL, "desc_global"),
+        (ConfigVarEnvName.STAG, "desc_stag"),
+        (ConfigVarEnvName.PROD, "desc_prod"),
+    ],
 )
-def test_get_preset_config_var(api_client, bk_module, environment_name):
-    G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.GLOBAL, key="GLOBAL", value="1")
-    G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.STAG, key="STAG", value="1")
-    G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
+def test_get_preset_config_var(api_client, bk_module, environment_name, env_description):
+    G(
+        PresetEnvVariable,
+        module=bk_module,
+        environment_name=ConfigVarEnvName.GLOBAL,
+        key="GLOBAL",
+        value="1",
+        description="desc_global",
+    )
+    G(
+        PresetEnvVariable,
+        module=bk_module,
+        environment_name=ConfigVarEnvName.STAG,
+        key="STAG",
+        value="1",
+        description="desc_stag",
+    )
+    G(
+        PresetEnvVariable,
+        module=bk_module,
+        environment_name=ConfigVarEnvName.PROD,
+        key="PROD",
+        value="1",
+        description="desc_prod",
+    )
 
     params = {"environment_name": environment_name}
     # url 定义的时候使用了 make_app_pattern，使用 reverse("api.preset_config_vars") 来获取请求路径会导致缺省 module 模块相关的路径
     path = f"/api/bkapps/applications/{bk_module.application.code}/modules/{bk_module.name}/config_vars/preset/"
     response = api_client.get(path, params)
     assert response.data[0]["environment_name"] == environment_name
+    assert response.data[0]["description"] == env_description

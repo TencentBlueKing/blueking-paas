@@ -29,8 +29,11 @@ pytestmark = pytest.mark.django_db
 class Test__sync_env_vars:
     def test_integrated(self, bk_module):
         G(PresetEnvVariable, module=bk_module, key="KEY_EXISTING")
-        env_vars = [EnvVar(name="KEY1", value="foo"), EnvVar(name="KEY2", value="foo")]
-        overlay_env_vars = [EnvVarOverlay(env_name="stag", name="KEY3", value="foo")]
+        env_vars = [
+            EnvVar(name="KEY1", value="foo", description="desc_1"),
+            EnvVar(name="KEY2", value="foo", description="desc_2"),
+        ]
+        overlay_env_vars = [EnvVarOverlay(env_name="stag", name="KEY3", value="foo", description="desc_3")]
         ret = sync_env_vars(bk_module, env_vars, overlay_env_vars)
 
         assert PresetEnvVariable.objects.count() == 3
@@ -38,6 +41,18 @@ class Test__sync_env_vars:
         assert ret.updated_num == 0
         assert ret.created_num == 3
         assert ret.deleted_num == 1
+
+        # 测试 description 字段
+        expected_variables = [
+            {"key": "KEY1", "env_name": ConfigVarEnvName.GLOBAL.value, "description": "desc_1"},
+            {"key": "KEY2", "env_name": ConfigVarEnvName.GLOBAL.value, "description": "desc_2"},
+            {"key": "KEY3", "env_name": ConfigVarEnvName.STAG.value, "description": "desc_3"},
+        ]
+        for var in expected_variables:
+            assert (
+                PresetEnvVariable.objects.get(key=var["key"], environment_name=var["env_name"]).description
+                == var["description"]
+            )
 
     def test_notset_remove_all(self, bk_module):
         G(PresetEnvVariable, module=bk_module, key="KEY_EXISTING", environment_name=ConfigVarEnvName.STAG.value)

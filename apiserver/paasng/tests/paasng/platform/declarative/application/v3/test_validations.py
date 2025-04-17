@@ -93,7 +93,75 @@ class TestValidateBadCase:
                 module_spec={"addons": [{"name": "openai", "sharedFromModule": "bar"}], "processes": []},
             ),
         )
-        with pytest.raises(
-            DescriptionValidationError, match=r"modules\[0\].spec.addons: 提供共享增强服务的模块不存在"
-        ):
+        with pytest.raises(DescriptionValidationError, match=r"提供共享增强服务的模块不存在"):
             get_app_description(app_json)
+
+    def test_multi_level_service_dependency(self):
+        """测试多层服务依赖检查 - 不允许模块A引用模块B的服务，而模块B又引用模块C的服务"""
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+
+        # 创建一个有3个模块的应用，形成多层服务依赖链
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            # 模块C：提供基础服务
+            decorator.with_module(
+                module_name="resource",
+                is_default=False,
+                module_spec={
+                    "addons": [{"name": "mysql"}],  # 原始服务定义
+                    "processes": [],
+                },
+            ),
+            # 模块B：引用模块C的服务
+            decorator.with_module(
+                module_name="backend",
+                is_default=False,
+                module_spec={
+                    "addons": [{"name": "mysql", "sharedFromModule": "resource"}],  # 第一次依赖
+                    "processes": [],
+                },
+            ),
+            # 模块A：引用模块B的服务，形成多层依赖
+            decorator.with_module(
+                module_name="frontend",
+                is_default=True,
+                module_spec={
+                    "addons": [{"name": "mysql", "sharedFromModule": "backend"}],  # 第二次依赖，这里应该被拒绝
+                    "processes": [],
+                },
+            ),
+        )
+
+        # 验证多层依赖会被拒绝
+        with pytest.raises(DescriptionValidationError, match=r"不支持多层服务依赖"):
+            get_app_description(app_json)
+
+    def test_single_level_service_dependency_allowed(self):
+        """测试单层服务依赖是允许的 - 模块A可以引用模块B的服务"""
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+
+        # 创建一个有2个模块的应用，只有单层服务依赖
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            # 模块B：提供基础服务
+            decorator.with_module(
+                module_name="resource",
+                is_default=False,
+                module_spec={
+                    "addons": [{"name": "mysql"}],  # 原始服务定义
+                    "processes": [],
+                },
+            ),
+            # 模块A：引用模块B的服务（单层依赖是允许的）
+            decorator.with_module(
+                module_name="frontend",
+                is_default=True,
+                module_spec={"addons": [{"name": "mysql", "sharedFromModule": "resource"}], "processes": []},
+            ),
+        )
+
+        # 验证单层依赖可以成功通过校验
+        desc = get_app_description(app_json)
+        assert len(desc.modules) == 2
+        assert "frontend" in desc.modules
+        assert "resource" in desc.modules

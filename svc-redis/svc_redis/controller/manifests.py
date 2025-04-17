@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 from typing import List, Union
 
 from django.conf import settings
+from kubernetes.utils.quantity import parse_quantity
 
 from svc_redis.vendor.redis_crd import crd
 from svc_redis.vendor.redis_crd.constants import (
@@ -96,20 +97,21 @@ class ResourceManifestConstructor(ManifestConstructor):
         """根据内存限制自动计算合理的资源请求和限制
         规则：内存请求为限制的一半，每 GB 内存配 0.5c CPU Limits, 0.25c CPU Requests
 
-        :param memory_limit: 内存限制
+        :param memory_limit: 内存限制，输入一般为 xGi
         """
-        mem_int = int(memory_limit.removesuffix("Gi"))
+        # 安全解析带单位的内存值（返回字节数）
+        mem_bytes = parse_quantity(memory_limit)
+
+        # 转换为 GB 基数
+        mem_gb = mem_bytes / (1024**3)
 
         return crd.ResourceRequirements(
             requests={
-                # 每 GB 内存配 0.25 CPU(cpu limits 的一半)
-                "cpu": f"{mem_int * 250}m",
-                # 请求值为limit的一半
-                "memory": f"{mem_int // 2}Gi",
+                "cpu": f"{mem_gb * 250}m",
+                "memory": f"{mem_gb / 2}Gi",
             },
             limits={
-                # 每GB内存配0.5 CPU
-                "cpu": f"{mem_int * 500}m",
+                "cpu": f"{mem_gb * 500}m",
                 "memory": memory_limit,
             },
         )

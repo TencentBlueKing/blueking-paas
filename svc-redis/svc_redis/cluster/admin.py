@@ -26,19 +26,15 @@ class ClusterAdmin(admin.ModelAdmin):
         "type",
         "description",
         "annotations",
-        "ca_data",
-        "cert_data",
-        "key_data",
-        "token_type",
-        "token_value",
-        "assert_hostname",
     ]
+    list_filter = ("name",)
+    search_fields = ("name",)
+    readonly_fields = ("created", "updated")
 
 
-# 如果想让APIServer也可以单独管理
 @admin.register(APIServer)
 class APIServerAdmin(admin.ModelAdmin):
-    list_display = ("cluster", "host", "created", "updated")
+    list_display = ("cluster", "host")
     list_filter = ("cluster__name",)
     search_fields = ("host", "cluster__name")
     readonly_fields = ("created", "updated")
@@ -46,5 +42,6 @@ class APIServerAdmin(admin.ModelAdmin):
 
 @admin.register(TencentCLBEndpoint)
 class TencentCLBEndpointAdmin(admin.ModelAdmin):
-    list_display = ("name", "cluster", "vip", "port", "is_allocated")
+    list_display = ("name", "cluster", "vip", "clb_id", "port", "is_allocated")
     search_fields = ("name", "vip", "clb_id")
+    readonly_fields = ("created", "updated")

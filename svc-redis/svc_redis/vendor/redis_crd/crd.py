@@ -26,7 +26,14 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 from utils.text import DNS_SAFE_PATTERN
 
-from .constants import *
+from .constants import (
+    DEFAULT_CLUSTER_SIZE,
+    DEFAULT_PERSISTENT_STORAGE_SIZE,
+    DEFAULT_REDIS_EXPORTER_IMAGE,
+    DEFAULT_REDIS_REPOSITORY,
+    DEFAULT_REDIS_TAG,
+    ApiVersion,
+)
 
 
 class ObjectMetadata(BaseModel):

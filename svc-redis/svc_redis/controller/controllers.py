@@ -99,7 +99,15 @@ class RedisInstanceController:
         return exporter.recycle_endpoint(credential.host, credential.port)
 
     def create(self) -> RedisInstanceCredential:
-        """创建 Redis 实例"""
+        """
+        创建 Redis 实例
+
+        主要流程：
+        1. 创建 namespace
+        2. 创建 Redis 密码凭证对应的 Secret 资源
+        3. 创建 Redis 实例资源
+        4. 创建 Redis 服务资源
+        """
         self._ensure_namespace()
         password = self._deploy_redis_password_secret()
         self._deploy_redis_resource()

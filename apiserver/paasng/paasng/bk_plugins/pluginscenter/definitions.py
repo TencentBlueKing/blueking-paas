@@ -374,6 +374,7 @@ class PluginDefinition(BaseModel):
     logo: str = Field(description="插件logo链接")
     spec: PluginInstanceSpec = Field(description="插件实例相关属性")
     administrator: List[str] = Field(description="插件管理员(负责创建审批、上线审批), 内容需要使用 bkpaas_auth 编码")
+    addAdminToPluginMembers: bool = Field(default=False, description="是否将插件管理员添加到插件成员列表")
     approvalConfig: Optional[PluginCreateApproval] = Field(description="插件创建审批配置")
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")

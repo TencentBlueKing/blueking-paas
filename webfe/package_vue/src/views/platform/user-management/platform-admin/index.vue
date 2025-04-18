@@ -38,7 +38,7 @@
         >
           <template slot-scope="{ row }">
             <bk-user-display-name
-              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
+              v-if="column.userDisplay && platformFeature.MULTI_TENANT_MODE"
               :user-id="row[column.prop]"
             ></bk-user-display-name>
             <span v-else>{{ row[column.prop] ?? '--' }}</span>
@@ -80,29 +80,16 @@
         :model="addAdminDialog.formData"
       >
         <bk-form-item
-          :label="$t('添加方式')"
+          :label="$t('用户')"
           :required="true"
         >
-          <bk-radio-group
-            v-model="addAdminDialog.formData.method"
-            style="margin-bottom: 10px"
-          >
-            <bk-radio :value="'tenant'">{{ $t('添加当前租户下的用户') }}</bk-radio>
-            <bk-radio :value="'any'">{{ $t('添加任意用户') }}</bk-radio>
-          </bk-radio-group>
           <!-- 多租户人员选择器 -->
           <user
-            v-if="addAdminDialog.formData.method === 'tenant'"
             v-model="addAdminDialog.formData.userList"
             :placeholder="$t('请输入用户')"
             :multiple="true"
             :empty-text="$t('无匹配人员')"
           />
-          <bk-input
-            v-else
-            v-model="addAdminDialog.formData.users"
-            :placeholder="$t('请输入用户 ID，多个用户 ID 以英文分号分隔')"
-          ></bk-input>
         </bk-form-item>
       </bk-form>
     </bk-dialog>
@@ -153,8 +140,6 @@ export default {
         visible: false,
         loading: false,
         formData: {
-          // tenant/any
-          method: 'tenant',
           users: '',
           userList: [],
         },
@@ -166,8 +151,13 @@ export default {
       },
       columns: [
         {
+          label: this.$t('用户 ID'),
+          prop: 'user',
+        },
+        {
           label: this.$t('用户'),
           prop: 'user',
+          userDisplay: true,
         },
         {
           label: this.$t('所属租户'),
@@ -210,18 +200,16 @@ export default {
     // 添加管理员
     showAddDialog() {
       this.addAdminDialog.visible = true;
+      this.addAdminDialog.formData.userList = [];
     },
     handleDelete(row) {
       this.deleteDialogConfig.visible = true;
       this.deleteDialogConfig.input = row.user;
     },
-    formatCustomInputUser(users) {
-      return users.split(';');
-    },
     handleConfirm() {
-      const { method, userList, users } = this.addAdminDialog.formData;
+      const { userList } = this.addAdminDialog.formData;
       const params = {
-        users: method === 'tenant' ? userList : this.formatCustomInputUser(users),
+        users: userList,
       };
       this.addPlatformAdministrators(params);
     },

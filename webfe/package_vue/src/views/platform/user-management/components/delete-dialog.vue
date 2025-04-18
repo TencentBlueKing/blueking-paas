@@ -11,6 +11,7 @@
     <!-- 默认插槽用于提示内容 -->
     <slot></slot>
     <bk-input
+      style="margin-top: 8px"
       v-model="inputValue"
       :placeholder="placeholder"
     ></bk-input>
@@ -108,12 +109,14 @@ export default {
   margin-left: 10px;
 }
 /deep/ .custom-dialog-cls {
+  .bk-dialog-body {
+    margin-top: 8px;
+  }
   .hint-text {
-    font-size: 14px;
-    color: #4d4f56;
+    font-size: 12px;
+    color: #63656e;
     letter-spacing: 0;
     line-height: 22px;
-    margin-bottom: 8px;
     word-break: break-all;
   }
   .sign {

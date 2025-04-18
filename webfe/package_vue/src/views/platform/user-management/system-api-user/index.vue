@@ -85,9 +85,22 @@
       :auto-close="false"
       :title="isAdd ? $t('添加系统 API 账号') : $t('编辑权限')"
       :loading="editAddDialogConfig.loading"
+      ext-cls="edit-add-dialog-cls"
       @value-change="handleValueChange"
       @confirm="handleConfirm"
     >
+      <div
+        slot="header"
+        class="edit-add-title"
+      >
+        {{ isAdd ? $t('添加系统 API 账号') : $t('编辑权限') }}
+        <span
+          v-if="!isAdd"
+          class="sub-title"
+        >
+          {{ editAddDialogConfig.formData.appId }}
+        </span>
+      </div>
       <bk-form
         :label-width="200"
         form-type="vertical"
@@ -95,6 +108,7 @@
         ref="editAddForm"
       >
         <bk-form-item
+          v-if="isAdd"
           :label="$t('应用 ID')"
           :required="true"
           :property="'appId'"
@@ -386,23 +400,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.custom-dialog-cls {
-  .hint-text {
-    font-size: 14px;
-    color: #4d4f56;
-    letter-spacing: 0;
-    line-height: 22px;
-    margin-bottom: 8px;
-  }
-  .sign {
-    color: #ea3636;
-  }
-  .paasng-general-copy {
-    margin-left: 3px;
-    color: #3a84ff;
-    cursor: pointer;
-  }
-}
 .system-api-user {
   .mt16 {
     margin-top: 16px;
@@ -415,6 +412,20 @@ export default {
     text-decoration: underline;
     text-decoration-style: dashed;
     text-underline-position: under;
+  }
+}
+/deep/ .edit-add-dialog-cls {
+  .edit-add-title {
+    color: #313238;
+    .sub-title {
+      display: inline-block;
+      line-height: 18px;
+      margin-left: 10px;
+      padding-left: 8px;
+      font-size: 14px;
+      color: #979ba5;
+      border-left: 1px solid #dcdee5;
+    }
   }
 }
 </style>

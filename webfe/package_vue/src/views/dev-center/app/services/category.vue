@@ -11,7 +11,7 @@
       :is-loading="loading"
       placeholder="data-store-loading"
       :offset-top="10"
-      class="app-container ps-category middle"
+      class="app-container ps-category middle card-style"
     >
       <div class="fadeIn">
         <section v-show="!loading">

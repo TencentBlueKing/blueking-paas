@@ -11,7 +11,7 @@
     >
       <div
         slot="right"
-        style="line-height: 50px;"
+        style="line-height: 50px"
       >
         <bk-button
           text
@@ -32,7 +32,7 @@
     >
       <div
         slot="right"
-        style="line-height: 50px;"
+        style="line-height: 50px"
       >
         <bk-button
           text
@@ -48,13 +48,14 @@
       :is-loading="isLoading"
       placeholder="alarm-record-loading"
       :offset-top="10"
-      class="app-container middle alarm-middle"
+      class="app-container middle alarm-middle card-style"
     >
       <alarm-record @data-ready="handleDataReady" />
     </paas-content-loader>
   </div>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 import AlarmRecord from './alarm-record';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
@@ -73,7 +74,7 @@ export default {
     };
   },
   watch: {
-    '$route'() {
+    $route() {
       this.isLoading = true;
     },
   },
@@ -88,10 +89,10 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-    .alarm-middle {
-        margin: 16px auto 30px;
-        width: calc(100% - 48px);
-        background: #fff;
-        padding: 16px 24px
-    }
+.alarm-middle {
+  margin: 16px auto 30px;
+  width: calc(100% - 48px);
+  background: #fff;
+  padding: 16px 24px;
+}
 </style>

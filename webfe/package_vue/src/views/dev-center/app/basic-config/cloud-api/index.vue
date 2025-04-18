@@ -36,7 +36,7 @@
       >
         {{ $t('API 网关接入指引') }}
       </bk-button>
-      <section class="app-container middle cloud-container">
+      <section class="app-container middle cloud-container card-style">
         <paas-content-loader
           :key="pageKey"
           :is-loading="isLoading"

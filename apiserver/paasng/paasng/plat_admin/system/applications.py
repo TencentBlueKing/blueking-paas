@@ -66,6 +66,7 @@ class UniSimpleApp:
     type: str
     tenant_id: str
     app_tenant_mode: str
+    app_tenant_id: str
     developers: Optional[List[str]] = None
     _db_object: Optional[Any] = None
 
@@ -91,6 +92,7 @@ class UniSimpleApp:
             developers=app.get_developers() if include_developers_info else None,
             tenant_id=app.tenant_id,
             app_tenant_mode=app.app_tenant_mode,
+            app_tenant_id=app.app_tenant_id,
             _db_object=app,
         )
 
@@ -122,7 +124,8 @@ class UniSimpleApp:
             type=ApplicationType.DEFAULT.value,
             # PaaS2.0 的应用都是非多租户模式下的应用
             tenant_id=DEFAULT_TENANT_ID,
-            app_tenant_mode=AppTenantMode.GLOBAL,
+            app_tenant_mode=AppTenantMode.SINGLE,
+            app_tenant_id=DEFAULT_TENANT_ID,
             _db_object=app,
         )
 

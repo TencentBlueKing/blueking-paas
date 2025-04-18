@@ -30,10 +30,11 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
-from paasng.platform.declarative.application.resources import ApplicationDesc, AppTenantConf, get_application
+from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
 from paasng.platform.declarative.application.validations.v2 import AppDescriptionSLZ
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.serializers import validate_desc
@@ -63,7 +64,7 @@ def tag(bk_app):
 @pytest.fixture(autouse=True)
 def app_tenant():
     """Fixture providing tenant information for application creation"""
-    return AppTenantConf(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="default")
+    return AppTenantInfo(app_tenant_mode=AppTenantMode.GLOBAL, app_tenant_id="", tenant_id="default")
 
 
 @pytest.fixture(autouse=True)

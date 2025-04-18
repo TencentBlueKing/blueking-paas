@@ -32,6 +32,7 @@ from paasng.accessories.publish.market.signals import product_create_or_update_b
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.core.tenant.utils import AppTenantInfo
 from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -44,7 +45,6 @@ from paasng.platform.declarative.application.constants import APP_CODE_FIELD
 from paasng.platform.declarative.application.fields import AppRegionField
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
-    AppTenantConf,
     MarketDesc,
     ModuleDesc,
     ServiceSpec,
@@ -70,7 +70,7 @@ class AppDeclarativeController:
     source_origin = SourceOrigin.S_MART
     update_allowed_fields = [AppRegionField]
 
-    def __init__(self, user: User, app_tenant_conf: AppTenantConf, source_origin: Optional[SourceOrigin] = None):
+    def __init__(self, user: User, app_tenant_conf: AppTenantInfo, source_origin: Optional[SourceOrigin] = None):
         if source_origin:
             self.source_origin = source_origin
         self.user = user

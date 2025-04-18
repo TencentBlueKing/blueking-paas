@@ -34,6 +34,7 @@ class PresetEnvVariable(AuditedModel):
     )
     key = models.CharField(max_length=128, null=False)
     value = EncryptField(null=False)
+    description = models.CharField(verbose_name=_("变量描述"), max_length=200, blank=True, null=True)
 
     tenant_id = tenant_id_field_factory()
 

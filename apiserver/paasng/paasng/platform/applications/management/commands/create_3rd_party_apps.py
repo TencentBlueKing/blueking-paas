@@ -37,7 +37,7 @@ from paasng.accessories.publish.sync_market.handlers import (
 from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
+from paasng.core.tenant.utils import global_app_tenant_info, stub_app_tenant_info, validate_app_tenant_info
 from paasng.infras.iam.exceptions import BKIAMGatewayServiceError
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -75,30 +75,25 @@ class Command(BaseCommand):
         parser.add_argument(
             "--app_tenant_mode",
             type=str,
-            dest="app_tenant_mode",
+            dest="raw_tenant_mode",
             required=False,
-            default=AppTenantMode.GLOBAL,
+            default=None,
             choices=AppTenantMode.get_values(),
             help="租户类型，可选值：global, single",
         )
-        parser.add_argument("--app_tenant_id", type=str, dest="app_tenant_id", required=False, default="")
+        parser.add_argument("--app_tenant_id", type=str, dest="raw_tenant_id", required=False, default="")
         parser.add_argument("--override", type=str2bool, dest="override", default=False)
         parser.add_argument("--dry_run", dest="dry_run", action="store_true")
 
     def handle(
-        self, source, third_app_init_codes, app_tenant_mode, app_tenant_id, override, dry_run, *args, **options
+        self, source, third_app_init_codes, raw_tenant_mode, raw_tenant_id, override, dry_run, *args, **options
     ):
         """批量创建第三方应用"""
-        # 参数有效性校验
-        if app_tenant_mode == AppTenantMode.GLOBAL:
-            if app_tenant_id:
-                raise ValueError(
-                    f"当 app_tenant_mode 为 {AppTenantMode.GLOBAL} 时，app_tenant_id 必须为空，当前值为 {app_tenant_id}"
-                )
-        elif not app_tenant_id:
-            raise ValueError(f"当 app_tenant_mode 为 {app_tenant_mode} 时，app_tenant_id 不能为空")
-
-        tenant_id = self._get_tenant_id(app_tenant_mode, app_tenant_id)
+        # 如果参数中没有指定租户信息，则根据是否开启多租户获取默认值
+        if not raw_tenant_mode and not raw_tenant_id:
+            app_tenant_info = global_app_tenant_info() if settings.ENABLE_MULTI_TENANT_MODE else stub_app_tenant_info()
+        else:
+            app_tenant_info = validate_app_tenant_info(raw_tenant_mode, raw_tenant_id)
 
         with open(source, "r") as f:
             apps = yaml.safe_load(f)
@@ -124,7 +119,13 @@ class Command(BaseCommand):
                 logger.info("going to create App according to desc: %s", f"{desc.name} - {desc.code}")
                 already_in_paas2 = bool(legacy_app)
                 with atomic():
-                    self.create_3rd_app(desc, already_in_paas2, app_tenant_mode, app_tenant_id, tenant_id)
+                    self.create_3rd_app(
+                        desc,
+                        already_in_paas2,
+                        app_tenant_info.app_tenant_mode,
+                        app_tenant_info.app_tenant_id,
+                        app_tenant_info.tenant_id,
+                    )
 
     def get_app_secret_key(self, code: str) -> str:
         session = console_db.get_scoped_session()
@@ -241,11 +242,3 @@ class Command(BaseCommand):
         sync_external_url_to_market(application=application)
         # 同步市场配置到蓝鲸应用市场
         market_config_update_handler(sender=market_config, instance=market_config, created=False)
-
-    def _get_tenant_id(self, app_tenant_mode, app_tenant_id):
-        """所属租户（tenant_id）是开发者中心自身的逻辑，为减少用户理解成本，可从已有参数中获取"""
-        if not settings.ENABLE_MULTI_TENANT_MODE:
-            return DEFAULT_TENANT_ID
-        if app_tenant_mode == AppTenantMode.GLOBAL:
-            return OP_TYPE_TENANT_ID
-        return app_tenant_id

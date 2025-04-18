@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             model_name="application",
             name="app_tenant_id",
             field=models.CharField(
-                default="",
+                default="default",
                 help_text="应用对哪个租户的用户可用，当应用租户模式为全租户时，本字段值为空",
                 max_length=32,
                 verbose_name="应用租户 ID",
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
             model_name="application",
             name="app_tenant_mode",
             field=models.CharField(
-                default="global",
+                default="single",
                 help_text="应用在租户层面的可用范围，可选值：全租户、指定租户",
                 max_length=16,
                 verbose_name="应用租户模式",

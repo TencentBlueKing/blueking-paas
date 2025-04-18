@@ -177,7 +177,7 @@ class TestRetrieveCluster:
                 "username": "admin",
                 "password": "admin",
             },
-            "app_image_registry": {},
+            "app_image_registry": None,
             "available_tenant_ids": ["default"],
             "app_address_type": "subpath",
             "app_domains": [

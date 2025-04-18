@@ -190,19 +190,19 @@ class ClusterRetrieveOutputSLZ(serializers.Serializer):
     def get_access_entry_ip(self, obj: Cluster) -> str | None:
         return obj.ingress_config.frontend_ingress_ip
 
-    @swagger_serializer_method(serializer_or_field=ElasticSearchConfigSLZ())
-    def get_elastic_search_config(self, obj: Cluster) -> Dict[str, Any]:
+    @swagger_serializer_method(serializer_or_field=ElasticSearchConfigSLZ(allow_null=True))
+    def get_elastic_search_config(self, obj: Cluster) -> Dict[str, Any] | None:
         if cfg := ClusterElasticSearchConfig.objects.filter(cluster=obj).first():
             return ElasticSearchConfigSLZ(cfg).data
 
-        return {}
+        return None
 
-    @swagger_serializer_method(serializer_or_field=ImageRegistrySLZ())
-    def get_app_image_registry(self, obj: Cluster) -> Dict[str, Any]:
+    @swagger_serializer_method(serializer_or_field=ImageRegistrySLZ(allow_null=True))
+    def get_app_image_registry(self, obj: Cluster) -> Dict[str, Any] | None:
         if registry := ClusterAppImageRegistry.objects.filter(cluster=obj).first():
             return ImageRegistrySLZ(registry).data
 
-        return {}
+        return None
 
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_app_address_type(self, obj: Cluster) -> str:

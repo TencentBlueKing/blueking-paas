@@ -32,9 +32,10 @@
               extCls: 'certificate-tips-cls',
             }"
           >
-            {{ displayInfoData[key] }}
+            {{ displayInfoData[key] || '--' }}
           </span>
           <i
+            v-if="displayInfoData[key]"
             class="paasng-icon paasng-general-copy"
             v-copy="displayInfoData[key]"
             v-bk-tooltips="$t('复制')"
@@ -201,6 +202,7 @@ export default {
 .cluster-detail-info {
   position: relative;
   .certificate {
+    max-width: 480px;
     display: flex;
     align-items: center;
     .text {

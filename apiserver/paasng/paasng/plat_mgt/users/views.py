@@ -25,7 +25,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFFs
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -35,7 +35,7 @@ from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientP
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
-    AccountFeatureFlagListViewSet,
+    AccountFeatureFlagKindSLZ,
     AccountFeatureFlagSLZ,
     BulkCreatePlatformManagerSLZ,
     PlatformManagerSLZ,
@@ -181,12 +181,12 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取系统 API 权限列表",
-        responses={status.HTTP_200_OK: AccountFeatureFlagListViewSet(many=True)},
+        responses={status.HTTP_200_OK: AccountFeatureFlagKindSLZ(many=True)},
     )
     def feature_list(self, request, *args, **kwargs):
         """获取用户特性种类列表"""
-        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFFs.get_choices()]
-        slz = AccountFeatureFlagListViewSet(roles_data, many=True)
+        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFF.get_choices()]
+        slz = AccountFeatureFlagKindSLZ(roles_data, many=True)
         return Response(slz.data)
 
     @swagger_auto_schema(
@@ -197,7 +197,11 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        slz = AccountFeatureFlagSLZ(feature_flags, many=True)
+        user_ids = [f.user for f in feature_flags]
+        user_profiles = UserProfile.objects.filter(user__in=user_ids)
+        user_tenant = {up.user: up.tenant_id for up in user_profiles}
+
+        slz = AccountFeatureFlagSLZ(feature_flags, many=True, context={"user_tenant": user_tenant})
         return Response(slz.data)
 
     @atomic
@@ -347,15 +351,15 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         bk_app_code, role = data["bk_app_code"], data["role"]
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
-        user = f"authed-app-{bk_app_code}"
+        name = f"authed-app-{bk_app_code}"
 
         # 查看数据库中是否存在该用户, 是否启用
-        existing_client = SysAPIClient.objects.filter(name=user, is_active=True).first()
+        existing_client = SysAPIClient.objects.filter(name=name, is_active=True).first()
         if existing_client:
             raise error_codes.SYSAPI_CLIENT_ALREADY_EXISTS
 
         # 创建客户端
-        client, created = SysAPIClient.objects.get_or_create(name=user, defaults={"role": role})
+        client, created = SysAPIClient.objects.get_or_create(name=name, defaults={"role": role})
         if created:
             # 如果客户端是新创建的, 则创建应用认证关系
             AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
@@ -365,7 +369,7 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
             client.save(update_fields=["is_active"])
 
         # 构建审计数据
-        after_data = [{"user": user, "bk_app_code": bk_app_code, "role": role}]
+        after_data = [{"name": name, "bk_app_code": bk_app_code, "role": role}]
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -391,15 +395,15 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         bk_app_code, role = data["bk_app_code"], data["role"]
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
-        user = f"authed-app-{bk_app_code}"
+        name = f"authed-app-{bk_app_code}"
 
         # 检查要更新的用户是否存在, 并且是否启用
-        client = SysAPIClient.objects.filter(name=user, is_active=True).first()
+        client = SysAPIClient.objects.filter(name=name, is_active=True).first()
         if not client:
             raise error_codes.SYSAPI_CLIENT_NOT_FOUND
 
         # 构建审计数据
-        before_data = [{"user": client.name, "bk_app_code": bk_app_code, "role": client.role}]
+        before_data = [{"name": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
         # 更新角色
         if client.role != role:
@@ -407,7 +411,7 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
             client.save(update_fields=["role"])
 
         # 构建审计数据
-        after_data = [{"user": user, "bk_app_code": bk_app_code, "role": role}]
+        after_data = [{"name": name, "bk_app_code": bk_app_code, "role": role}]
 
         # 记录审计日志
         add_admin_audit_record(
@@ -426,16 +430,16 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     @atomic
-    def destroy(self, request, user=None, *args, **kwargs):
+    def destroy(self, request, name=None, *args, **kwargs):
         """删除系统 API 用户, 后台对应逻辑为禁用用户"""
-        client = SysAPIClient.objects.filter(name=user, is_active=True).first()
+        client = SysAPIClient.objects.filter(name=name, is_active=True).first()
         if not client:
             raise error_codes.SYSAPI_CLIENT_NOT_FOUND
 
         # 构建审计数据
         app_client_relation = AuthenticatedAppAsClient.objects.filter(client=client).first()
         bk_app_code = app_client_relation.bk_app_code
-        before_data = [{"user": client.name, "bk_app_code": bk_app_code, "role": client.role}]
+        before_data = [{"name": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
         # 删除系统 API 用户, 仅仅禁用
         client.is_active = False

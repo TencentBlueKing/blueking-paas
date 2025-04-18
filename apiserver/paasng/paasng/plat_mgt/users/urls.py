@@ -56,7 +56,7 @@ urlpatterns = [
         name="plat_mgt.users.system_api_user.bulk",
     ),
     path(
-        "api/plat_mgt/users/system_api_user/<str:user>/",
+        "api/plat_mgt/users/system_api_user/<str:name>/",
         views.SystemApiUserViewSet.as_view({"delete": "destroy"}),
         name="plat_mgt.users.system_api_user.delete",
     ),

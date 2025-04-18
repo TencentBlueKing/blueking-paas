@@ -700,7 +700,7 @@ export default {
   margin-top: 16px;
 }
 .user-photo {
-  margin: 5px 0;
+  margin: 5px 8px 5px 0;
   display: inline-block;
   width: 40px;
   height: 40px;

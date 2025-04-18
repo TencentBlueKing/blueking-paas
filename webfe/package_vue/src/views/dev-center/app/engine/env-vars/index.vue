@@ -10,7 +10,7 @@
       :is-loading="isLoading"
       placeholder="env-loading"
       :offset-top="20"
-      class="app-container env-container"
+      class="app-container env-container card-style"
     >
       <section v-show="!isLoading">
         <div class="middle variable-main">

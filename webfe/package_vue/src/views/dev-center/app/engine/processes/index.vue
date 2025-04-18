@@ -7,7 +7,7 @@
       :module-list="curAppModuleList"
     />
 
-    <section class="app-container middle ps-processes-container">
+    <section class="app-container middle ps-processes-container card-style">
       <paas-content-loader
         :is-loading="isLoading"
         placeholder="process-loading"
@@ -55,7 +55,10 @@
           v-if="advisedDocLinks.length"
           class="doc-links-container"
         >
-          <h2> {{ $t('帮助文档') }} <span class="tip">- {{ $t('学习如何定义 web 以外的其他应用进程，支持更复杂的应用场景') }}</span></h2>
+          <h2>
+            {{ $t('帮助文档') }}
+            <span class="tip">- {{ $t('学习如何定义 web 以外的其他应用进程，支持更复杂的应用场景') }}</span>
+          </h2>
           <ul class="doc-links-list">
             <li
               v-for="(link, index) in advisedDocLinks"
@@ -65,7 +68,9 @@
                 :href="link.location"
                 :title="link.short_description"
                 target="_blank"
-              >{{ $t(link.title) }}</a>
+              >
+                {{ $t(link.title) }}
+              </a>
             </li>
           </ul>
         </div>
@@ -74,7 +79,8 @@
   </div>
 </template>
 
-<script>import processOperation from './comps/process-operation';
+<script>
+import processOperation from './comps/process-operation';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
@@ -97,7 +103,7 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.isLoading = true;
     },
   },
@@ -140,56 +146,56 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .ps-processes-container{
-    background: #fff;
-    margin-top: 14px;
-    padding-top: 0px;
-    .process-wrapper{
-      padding: 0 24px 10px 24px;
+.ps-processes-container {
+  background: #fff;
+  margin-top: 14px;
+  padding-top: 0px;
+  .process-wrapper {
+    padding: 0 24px 10px 24px;
+  }
+
+  a {
+    cursor: pointer;
+  }
+  .textarea {
+    height: 300px;
+  }
+
+  .textarea .inner p {
+    height: 25px;
+    word-break: break-all;
+    white-space: nowrap;
+  }
+
+  .environment-instance {
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .doc-links-container {
+    margin-top: 5px;
+
+    h2 {
+      font-size: 14px;
+      color: #55545a;
+      font-weight: bold;
+      line-height: 22px;
+      padding: 5px 0;
+      margin-bottom: 6px;
+
+      span.tip {
+        font-weight: normal;
+        color: #666;
+      }
     }
 
-    a {
-        cursor: pointer;
-    }
-    .textarea {
-        height: 300px;
-    }
-
-    .textarea .inner p {
-        height: 25px;
-        word-break: break-all;
-        white-space: nowrap;
-    }
-
-    .environment-instance {
-        overflow: visible;
-        padding-bottom: 0;
-    }
-
-    .doc-links-container {
-        margin-top: 5px;
-
-        h2 {
-            font-size: 14px;
-            color: #55545a;
-            font-weight: bold;
-            line-height: 22px;
-            padding: 5px 0;
-            margin-bottom: 6px;
-
-            span.tip {
-                font-weight: normal;
-                color: #666;
-            }
-        }
-
-        ul.doc-links-list li {
-            border: none;
-            padding: 4px 0;
-            margin: 0;
-            font-size: 14px;
-            line-height: 28px;
-        }
+    ul.doc-links-list li {
+      border: none;
+      padding: 4px 0;
+      margin: 0;
+      font-size: 14px;
+      line-height: 28px;
     }
   }
+}
 </style>

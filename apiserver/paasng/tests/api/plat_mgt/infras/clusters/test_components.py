@@ -47,6 +47,11 @@ class TestListClusterComponents:
                 "status": "installed",
             },
             {
+                "name": "bk-log-collector",
+                "required": True,
+                "status": "installation_failed",
+            },
+            {
                 "name": "bkapp-log-collection",
                 "required": True,
                 "status": "installation_failed",

@@ -25,7 +25,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFFs
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -35,7 +35,7 @@ from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientP
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
-    AccountFeatureFlagListViewSet,
+    AccountFeatureFlagKindSLZ,
     AccountFeatureFlagSLZ,
     BulkCreatePlatformManagerSLZ,
     PlatformManagerSLZ,
@@ -181,12 +181,12 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取系统 API 权限列表",
-        responses={status.HTTP_200_OK: AccountFeatureFlagListViewSet(many=True)},
+        responses={status.HTTP_200_OK: AccountFeatureFlagKindSLZ(many=True)},
     )
     def feature_list(self, request, *args, **kwargs):
         """获取用户特性种类列表"""
-        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFFs.get_choices()]
-        slz = AccountFeatureFlagListViewSet(roles_data, many=True)
+        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFF.get_choices()]
+        slz = AccountFeatureFlagKindSLZ(roles_data, many=True)
         return Response(slz.data)
 
     @swagger_auto_schema(
@@ -197,7 +197,11 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        slz = AccountFeatureFlagSLZ(feature_flags, many=True)
+        user_ids = [f.user for f in feature_flags]
+        user_profiles = UserProfile.objects.filter(user__in=user_ids)
+        user_tenant = {up.user: up.tenant_id for up in user_profiles}
+
+        slz = AccountFeatureFlagSLZ(feature_flags, many=True, context={"user_tenant": user_tenant})
         return Response(slz.data)
 
     @atomic

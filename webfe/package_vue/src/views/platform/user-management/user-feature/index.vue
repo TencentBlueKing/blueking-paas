@@ -46,7 +46,7 @@
               v-else-if="column.prop === 'is_effect'"
               v-model="row[column.prop]"
               theme="primary"
-              :disabled="true"
+              @change="switcherChange(row, $event)"
             ></bk-switcher>
             <span v-else-if="column.prop === 'default_feature_flag'">
               {{ row[column.prop] ? $t('开启') : $t('关闭') }}
@@ -54,7 +54,7 @@
             <span v-else-if="column.prop === 'feature'">
               {{ featureMap[row[column.prop]] }}
             </span>
-            <span v-else>{{ row[column.prop] ?? '--' }}</span>
+            <span v-else>{{ row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -94,13 +94,18 @@
         ref="dialogForm"
       >
         <bk-form-item
-          :label="`${$t('用户')} ID`"
+          :label="$t('用户')"
           :required="true"
-          :property="'user'"
+          :property="'users'"
           :rules="requiredRule"
           :error-display-type="'normal'"
         >
-          <bk-input v-model="addDialogConfig.formData.user"></bk-input>
+          <user
+            v-model="addDialogConfig.formData.users"
+            :placeholder="$t('请输入用户')"
+            :multiple="false"
+            :empty-text="$t('无匹配人员')"
+          />
         </bk-form-item>
         <bk-form-item
           :label="$t('特性名称')"
@@ -156,11 +161,15 @@
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
+import User from '@/components/user';
 import { mapState } from 'vuex';
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
   mixins: [paginationMixin],
+  components: {
+    User,
+  },
   data() {
     return {
       isTableLoading: false,
@@ -168,7 +177,7 @@ export default {
         visible: false,
         loading: false,
         formData: {
-          user: '',
+          users: [],
           feature: '',
           is_effect: true,
         },
@@ -277,22 +286,23 @@ export default {
     // 添加管理员
     showAddDialog() {
       this.addDialogConfig.formData = {
-        user: '',
+        users: [],
         feature: '',
         is_effect: true,
       };
       this.addDialogConfig.visible = true;
     },
     // 添加用户特性
-    async addAccountFeatureFlags(data) {
+    async eidtiAddAccountFeatureFlags(data, type = 'add') {
       this.addDialogConfig.loading = true;
+      const messageTxt = data.is_effect ? this.$t('特性已开启') : this.$t('特性已关闭');
       try {
         await this.$store.dispatch('tenant/addAccountFeatureFlags', {
           data,
         });
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('添加成功'),
+          message: type === 'add' ? this.$t('添加成功') : messageTxt,
         });
         this.addDialogConfig.visible = false;
         this.getAccountFeatureFlags();
@@ -302,15 +312,19 @@ export default {
         this.addDialogConfig.loading = false;
       }
     },
-    handleConfirm() {
-      this.$refs.dialogForm.validate().then(
-        () => {
-          this.addAccountFeatureFlags(this.addDialogConfig.formData);
-        },
-        (validator) => {
-          console.error(validator);
-        }
-      );
+    async handleConfirm() {
+      try {
+        await this.$refs.dialogForm.validate();
+        const { users, feature, is_effect } = this.addDialogConfig.formData;
+        const params = {
+          user: users?.join(),
+          feature,
+          is_effect,
+        };
+        this.eidtiAddAccountFeatureFlags(params);
+      } catch (error) {
+        console.error('Form validation failed:', error);
+      }
     },
     // 删除用户特性
     async deleteAccountFeatureFlags() {
@@ -337,6 +351,16 @@ export default {
         this.$refs?.dialogForm?.clearError();
       }
     },
+    // 切换状态
+    switcherChange(row, val) {
+      const { user, feature } = row;
+      const params = {
+        user,
+        feature,
+        is_effect: val,
+      };
+      this.eidtiAddAccountFeatureFlags(params, 'feature');
+    },
   },
 };
 </script>
@@ -350,7 +374,10 @@ export default {
 }
 ::v-deep .delete-dialog-cls {
   .del-txt {
-    color: #4d4f56;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #63656e;
+    line-height: 22px;
     word-break: break-all;
   }
 }

@@ -15,6 +15,7 @@
       <bk-tab
         :active.sync="active"
         :scroll-step="100"
+        :label-height="42"
         type="unborder-card"
         ext-cls="platform-tab-cls"
         @tab-change="handleTabChange"
@@ -93,6 +94,10 @@ export default {
   z-index: 1;
   &.has-tab {
     line-height: 36px;
+    .title {
+      padding-top: 8px;
+      height: 46px;
+    }
   }
   .title {
     padding-left: 24px;
@@ -114,7 +119,6 @@ export default {
     padding: 0 !important;
   }
   /deep/ .bk-tab-header {
-    height: 50px !important;
     background-image: none !important;
     .bk-tab-scroll-controller {
       border-bottom: none;

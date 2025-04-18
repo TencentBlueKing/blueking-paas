@@ -58,7 +58,7 @@ export default [
     groupId: 'user',
     name: 'platformUserManagement',
     label: i18n.t('用户管理'),
-    iconfontName: 'user',
+    iconfontName: 'user-line',
     matchRouters: ['platformUserManagement'],
     destRoute: {
       name: 'platformUserManagement',

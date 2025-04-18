@@ -2980,4 +2980,6 @@ export default {
   '未启用时，挂载目录将被完全替换；启用后，挂载目录下同名文件将被覆盖，其他文件将保持不变。': 'When not enabled, the mount directory is fully replaced; when enabled, same-name files in the directory are overwritten, while other files remain unchanged.',
   启用子路径挂载: 'Enable Subpath Mounting',
   '请先授权代码源，然后选代码仓库': 'Please authorize the code source first, then choose the code repository.',
+  '环境变量{t}成功，修改将在应用下次部署时生效。': 'Environment variable {t} success, changes will take effect on the next application deployment.',
+  '将跳过代码构建阶段，仅发布环境变量等应用配置的变更': 'The code build phase will be skipped, only changes to application configuration such as environment variables will be deployed.',
 };

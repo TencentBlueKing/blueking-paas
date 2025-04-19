@@ -54,7 +54,7 @@ from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.engine.configurations.image import generate_image_repository
+from paasng.platform.engine.configurations.image import generate_image_repositories_by_module
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.exceptions import BPNotFound
@@ -462,14 +462,14 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             slugbuilder = runtime_manager.get_slug_builder(raise_exception=False)
             buildpacks = runtime_manager.list_buildpacks()
             info.update(
-                image_repository=generate_image_repository(module),
+                env_image_repositories=generate_image_repositories_by_module(module),
                 tag_options=build_config.tag_options,
                 bp_stack_name=getattr(slugbuilder, "name", None),
                 buildpacks=buildpacks,
             )
         elif build_config.build_method == RuntimeType.DOCKERFILE:
             info.update(
-                image_repository=generate_image_repository(module),
+                env_image_repositories=generate_image_repositories_by_module(module),
                 tag_options=build_config.tag_options,
                 dockerfile_path=build_config.dockerfile_path,
                 docker_build_args=build_config.docker_build_args,

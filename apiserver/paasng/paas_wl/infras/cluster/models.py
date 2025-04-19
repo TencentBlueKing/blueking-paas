@@ -249,3 +249,22 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     password = EncryptField(help_text="ES 集群密码")
 
     tenant_id = tenant_id_field_factory()
+
+
+class ClusterAppImageRegistry(UuidAuditedModel):
+    """
+    集群应用镜像仓库配置
+
+    默认租户 & 运营租户的集群，均可使用 settings 中配置的默认应用镜像仓库
+    但是非运营租户，或者托管到默认租户 / 运营租户的集群，则应该使用自定义应用镜像仓库
+    其目的是避免下发到集群中的 imagePullSecret 中包含默认租户的凭证继而导致泄露
+    """
+
+    cluster = models.OneToOneField(Cluster, related_name="app_image_registry", on_delete=models.CASCADE)
+    host = models.CharField(help_text="镜像仓库地址", max_length=256)
+    skip_tls_verify = models.BooleanField(help_text="是否跳过 TLS 证书验证", default=False)
+    namespace = models.CharField(help_text="镜像仓库命名空间", max_length=128)
+    username = models.CharField(help_text="镜像仓库用户名", max_length=64)
+    password = EncryptField(help_text="镜像仓库密码")
+
+    tenant_id = tenant_id_field_factory()

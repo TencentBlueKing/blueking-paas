@@ -180,7 +180,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
 
     name = serializers.CharField(help_text="进程名称")
 
-    image = serializers.CharField(help_text="镜像仓库/镜像地址", allow_null=True, required=False)
+    image = serializers.CharField(help_text="镜像仓库/镜像地址（仅纯镜像应用会提供）", allow_null=True, required=False)
     command = serializers.ListSerializer(
         child=serializers.CharField(), help_text="启动命令", default=list, allow_null=True
     )

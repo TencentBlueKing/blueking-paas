@@ -897,7 +897,7 @@ export default {
       return this.$store.state.cloudApi.cloudAppData;
     },
     clusterList() {
-      // 目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
+      // TODO（mh）目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
       return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
     },
     mirrorExamplePlaceholder() {
@@ -1336,7 +1336,7 @@ export default {
       // 集群名称
       if (this.formData.clusterName) {
         params.advanced_options = {
-          // 暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
+          // TODO（mh）暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
           env_cluster_names: {
             stag: this.formData.clusterName,
             prod: this.formData.clusterName,

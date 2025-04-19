@@ -225,3 +225,14 @@ class AllocationContext:
             f"<tenant_id: {self.tenant_id}, region: {self.region}, "
             + f"env: {self.environment}, username: {self.username}>"
         )
+
+
+@define
+class AppImageRegistry:
+    """应用镜像仓库"""
+
+    host: str
+    skip_tls_verify: bool
+    namespace: str
+    username: str
+    password: str

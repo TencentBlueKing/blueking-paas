@@ -294,8 +294,10 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
 
-    # custom image 相关字段
-    # NOTE: image_repository 同时用于表示从源码构建的部署方式的镜像仓库
+    # 源码构建（buildpack / dockerfile）产出的镜像的仓库地址
+    env_image_repositories = serializers.JSONField(help_text="环境镜像仓库", required=False, allow_null=True)
+
+    # custom image（纯镜像）专用字段
     image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
     image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False, allow_null=True)
 

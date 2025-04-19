@@ -31,7 +31,13 @@ from paas_wl.infras.cluster.constants import (
     ClusterTokenType,
     ClusterType,
 )
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import (
+    APIServer,
+    Cluster,
+    ClusterAppImageRegistry,
+    ClusterComponent,
+    ClusterElasticSearchConfig,
+)
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paas_wl.workloads.networking.entrance.constants import AddressType
@@ -174,6 +180,9 @@ class ClusterViewSet(viewsets.GenericViewSet):
             ClusterElasticSearchConfig.objects.create(
                 cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
             )
+            # 创建集群 App 镜像仓库配置
+            if image_registry := data.get("app_image_registry"):
+                ClusterAppImageRegistry.objects.create(cluster=cluster, tenant_id=cluster.tenant_id, **image_registry)
 
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
@@ -249,6 +258,12 @@ class ClusterViewSet(viewsets.GenericViewSet):
             cluster.save()
             cluster_es_cfg.save()
 
+            # 集群 App 镜像仓库配置
+            if image_registry := data.get("app_image_registry"):
+                ClusterAppImageRegistry.objects.update_or_create(
+                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=image_registry
+                )
+
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除再插入的方式
                 cluster.api_servers.all().delete()
@@ -285,6 +300,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         logger.warning(f"user {request.user.username} delete cluster {cluster_name}")
 
         ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
+        ClusterAppImageRegistry.objects.filter(cluster=cluster).delete()
         APIServer.objects.filter(cluster=cluster).delete()
         cluster.delete()
 

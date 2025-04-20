@@ -14,15 +14,24 @@
         <div class="code-detail form-edit">
           <bk-form :model="mirrorData">
             <bk-form-item :label="`${$t('镜像仓库')}：`">
+              <!-- 镜像托管模式 -->
               <template v-if="mirrorData.image_repository">
                 {{ mirrorData.image_repository || '--' }}
               </template>
+              <!-- 源码交付，平台产出镜像模式 -->
               <template v-else-if="mirrorData.env_image_repositories">
-                <div v-if="mirrorData.env_image_repositories.prod">
-                  <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} {{ $t('生产环境') }}</span>
+                <!-- 如果两个环境的镜像仓库是一样的，则只显示一个 -->
+                <div v-if="mirrorData.env_image_repositories.prod == mirrorData.env_image_repositories.stag">
+                  <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} </span>
                 </div>
-                <div v-if="mirrorData.env_image_repositories.stag">
-                  <span class="form-text"> {{ mirrorData.env_image_repositories.stag}} {{ $t('预发布环境') }}</span>
+                <!-- 否则两个环境分别展示 -->
+                <div v-else>
+                  <div v-if="mirrorData.env_image_repositories.prod">
+                    <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} （{{ $t('生产环境') }}）</span>
+                  </div>
+                  <div v-if="mirrorData.env_image_repositories.stag">
+                    <span class="form-text"> {{ mirrorData.env_image_repositories.stag}} （{{ $t('预发布环境') }}）</span>
+                  </div>
                 </div>
               </template>
               <template v-else>

@@ -55,8 +55,6 @@ IMAGE_CREDENTIALS_REF_ANNO_KEY = "bkapp.paas.bk.tencent.com/image-credentials"
 PA_SITE_ID_ANNO_KEY = "bkapp.paas.bk.tencent.com/paas-analysis-site-id"
 # 注解中存储资源类型的键名
 RESOURCE_TYPE_KEY = "bkapp.paas.bk.tencent.com/resource-type"
-# 注解中声明镜像类型是否 cnb 的键名
-USE_CNB_ANNO_KEY = "bkapp.paas.bk.tencent.com/use-cnb"
 # 注解中存储日志采集类型相关的键名
 LOG_COLLECTOR_TYPE_ANNO_KEY = "bkapp.paas.bk.tencent.com/log-collector-type"
 # 注解中存储 egress 相关的键名，存储 RegionClusterState 中的 name

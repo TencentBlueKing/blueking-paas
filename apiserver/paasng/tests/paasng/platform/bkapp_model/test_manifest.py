@@ -15,13 +15,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import functools
-from unittest import mock
 
 import pytest
 from django.conf import settings
 from django.test import override_settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.applications.models.build import Build as WlBuild
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_TENANT_ID_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
@@ -42,7 +42,6 @@ from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.manifest import (
-    DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
     DomainResolutionManifestConstructor,
@@ -52,6 +51,7 @@ from paasng.platform.bkapp_model.manifest import (
     ObservabilityManifestConstructor,
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
+    _update_cmd_args_from_wl_build,
     apply_builtin_env_vars,
     apply_env_annots,
     apply_proc_svc_if_implicit_needed,
@@ -66,11 +66,10 @@ from paasng.platform.bkapp_model.models import (
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
-from paasng.platform.modules.models import BuildConfig
 from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -266,30 +265,17 @@ class TestProcessesManifestConstructor:
         initialize_default_proc_spec_plans()
         assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
 
-    @pytest.mark.parametrize(
-        ("build_method", "is_cnb_runtime", "expected"),
-        [
-            (RuntimeType.BUILDPACK, False, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
-            (RuntimeType.BUILDPACK, True, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
-            (RuntimeType.DOCKERFILE, False, (["python"], ["-m", "http.server"])),
-        ],
-    )
-    def test_get_command_and_args(self, bk_module, process_web, build_method, is_cnb_runtime, expected):
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        cfg.build_method = build_method
-        cfg.save()
-        with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
-            assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
+    def test_get_command_and_args(self, bk_module, process_web):
+        assert ProcessesManifestConstructor().get_command_and_args(process_web) == (
+            ["python"],
+            ["-m", "http.server"],
+        )
 
     def test_get_command_and_args_invalid_var_expr(self, bk_module):
         """Test get_command_and_args() when there is an invalid env var expression."""
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        cfg.build_method = RuntimeType.DOCKERFILE
-        cfg.save(update_fields=["build_method"])
-
         proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}")
 
-        assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
+        assert ProcessesManifestConstructor().get_command_and_args(proc) == (
             ["start"],
             ["-b", "${PORT}"],
         ), "The ${PORT:-5000} should be replaced."
@@ -302,8 +288,8 @@ class TestProcessesManifestConstructor:
                 {
                     "name": "web",
                     "replicas": 1,
-                    "command": ["bash", "/runner/init"],
-                    "args": ["start", "web"],
+                    "command": ["python"],
+                    "args": ["-m", "http.server"],
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
                     "autoscaling": None,
@@ -592,3 +578,85 @@ def test_apply_proc_svc_if_implicit_needed_is_true(blank_resource_with_processes
     assert blank_resource_with_processes.spec.processes[0].services[0].exposedType is None
     assert blank_resource_with_processes.spec.processes[1].services[0].name == "web"
     assert blank_resource_with_processes.spec.processes[1].services[0].exposedType == crd.ExposedType()
+
+
+class Test__update_cmd_args_from_wl_build:
+    @pytest.fixture()
+    def bk_app_resource(self):
+        return crd.BkAppResource(
+            apiVersion=ApiVersion.V1ALPHA2,
+            metadata=ObjectMetadata(name="a-test-resource"),
+            spec=crd.BkAppSpec(
+                hooks=crd.BkAppHooks(
+                    preRelease=crd.Hook(
+                        command=["python"],
+                        args=["hook.py"],
+                    )
+                ),
+                processes=[
+                    crd.BkAppProcess(name="worker", command=["celery"], args=["worker", "-l", "info"]),
+                    crd.BkAppProcess(name="web", command=["python"], args=["manage.py", "runserver"]),
+                ],
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        ("artifact_metadata", "expected_hook", "expected_processes"),
+        [
+            # 非 cnb 构建(不设置)
+            (
+                {},
+                crd.Hook(
+                    command=["bash", "/runner/init", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["bash", "/runner/init"], args=["start", "worker"]),
+                    crd.BkAppProcess(name="web", command=["bash", "/runner/init"], args=["start", "web"]),
+                ],
+            ),
+            # 非 cnb 构建(显式设置)
+            (
+                {"use_cnb": False},
+                crd.Hook(
+                    command=["bash", "/runner/init", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["bash", "/runner/init"], args=["start", "worker"]),
+                    crd.BkAppProcess(name="web", command=["bash", "/runner/init"], args=["start", "web"]),
+                ],
+            ),
+            # cnb 构建
+            (
+                {"use_cnb": True},
+                crd.Hook(
+                    command=["launcher", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["worker"], args=[]),
+                    crd.BkAppProcess(name="web", command=["web"], args=[]),
+                ],
+            ),
+            # 指定了 proc_entrypoints 的 cnb 构建
+            (
+                {"use_cnb": True, "proc_entrypoints": {"web": ["frontend-web"], "worker": ["backend-worker"]}},
+                crd.Hook(
+                    command=["launcher", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["backend-worker"], args=[]),
+                    crd.BkAppProcess(name="web", command=["frontend-web"], args=[]),
+                ],
+            ),
+        ],
+    )
+    def test_update(self, bk_app_resource, artifact_metadata, expected_hook, expected_processes):
+        wl_build = WlBuild.objects.create(artifact_metadata=artifact_metadata)
+
+        _update_cmd_args_from_wl_build(bk_app_resource, wl_build)
+
+        assert bk_app_resource.spec.hooks.preRelease == expected_hook
+        assert bk_app_resource.spec.processes == expected_processes

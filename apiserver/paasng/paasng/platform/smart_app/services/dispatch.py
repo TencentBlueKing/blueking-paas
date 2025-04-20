@@ -25,7 +25,7 @@ from typing import Callable, List, Set
 from moby_distribution import ImageJSON, ImageRef, LayerRef
 
 from paasng.infras.accounts.models import User
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.declarative.handlers import get_source_dir_from_desc
 from paasng.platform.modules.models import Module
 from paasng.platform.smart_app.conf import bksmart_settings
@@ -59,6 +59,7 @@ def dispatch_package_to_modules(
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
+                parse_cnb_package(application, workplace)
                 handler = dispatch_cnb_image_to_registry
             else:
                 handler = dispatch_slug_image_to_registry
@@ -153,13 +154,12 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     base_image = mgr.get_cnb_runner_image_info()
     new_image_info = mgr.get_image_info(tag=stat.version)
 
-    image_tarball = (workplace / module.name).with_suffix(".tgz")
+    smart_app_extra = SMartAppExtraInfo.objects.get(app=module.application)
+    image_tar = smart_app_extra.get_image_tar(module.name)
+
+    image_tarball = workplace / image_tar
     with generate_temp_dir() as image_tmp_folder:
         uncompress_directory(source_path=image_tarball, target_path=image_tmp_folder)
-        # 解析 manifest.json 文件的第一个镜像, 逐层上传
-        tarball_manifest = DockerExportedImageManifest(
-            **json.loads((image_tmp_folder / "manifest.json").read_text())[0]
-        )
 
         client = bksmart_settings.registry.get_client()
         image_ref = ImageRef.from_image(
@@ -169,6 +169,8 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
             to_reference=new_image_info.tag,
             client=client,
         )
+
+        tarball_manifest = _construct_exported_image_manifest(image_tmp_folder)
 
         # merge image json at first.
         # cnb_layers_image_json.config contains Env, default Entrypoint.
@@ -195,3 +197,41 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     )
     source_package = SourcePackage.objects.store(module, policy, operator=operator)
     return source_package
+
+
+def parse_cnb_package(application: Application, workplace: Path):
+    """解析 cnb 制品的元数据, 并将相关构建元数据写入 SMartAppExtraInfo
+
+    构建元数据包括:
+    - use_cnb 标记
+    - 各模块进程的 entrypoints(如果有, 从 artifact.json 解析)
+    - 各模块使用的 image_tar(如果有, 从 artifact.json 解析)
+    """
+    smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
+    smart_app_extra.set_use_cnb_flag(True)
+
+    artifact_json_file = workplace / "artifact.json"
+    if not artifact_json_file.exists():
+        return
+
+    artifact_json = json.loads(artifact_json_file.read_text())
+    for module_name in artifact_json:
+        smart_app_extra.set_proc_entrypoints(module_name, artifact_json[module_name]["proc_entrypoints"])
+        smart_app_extra.set_image_tar(module_name, artifact_json[module_name]["image_tar"])
+
+
+def _construct_exported_image_manifest(image_tmp_folder: Path) -> DockerExportedImageManifest:
+    if (manifest_file := image_tmp_folder / "manifest.json") and manifest_file.exists():
+        return DockerExportedImageManifest(**json.loads(manifest_file.read_text())[0])
+
+    # 没有 manifest.json 时, 解析 index.json 文件
+    index_json = json.loads((image_tmp_folder / "index.json").read_text())
+    manifest_digest = index_json["manifests"][0]["digest"]
+    manifest_file = image_tmp_folder / f"blobs/{manifest_digest.replace(':', '/')}"
+
+    manifest = json.loads(manifest_file.read_text())
+    config_digest = manifest["config"]["digest"]
+
+    config = f"blobs/{config_digest.replace(':', '/')}"
+    layers = [f"blobs/{layer['digest'].replace(':', '/')}" for layer in manifest["layers"]]
+    return DockerExportedImageManifest(Config=config, Layers=layers)

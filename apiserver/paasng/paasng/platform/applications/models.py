@@ -38,6 +38,7 @@ from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRo
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.dictx import get_items
 from paasng.utils.models import (
     BkUserField,
     OrderByField,
@@ -673,4 +674,54 @@ class SMartAppExtraInfo(models.Model):
     app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
     original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
 
+    # artifact_metadata 的数据说明:
+    # - use_cnb: 是否使用 cnb 构建方案
+    # - module_proc_entrypoints: 模块进程的 entrypoint, 格式为 {模块名: {进程名: entrypoint}}
+    # - module_image_tars: 模块使用的镜像 tar, 格式为 {模块名: 镜像 tar 名}
+    artifact_metadata = models.JSONField(
+        default={}, help_text="构件元信息, 包含 use_cnb 和 module_proc_entrypoints 信息"
+    )
+
     tenant_id = tenant_id_field_factory()
+
+    @property
+    def use_cnb(self) -> bool:
+        return bool(self.artifact_metadata.get("use_cnb", False))
+
+    def set_use_cnb_flag(self, use_cnb: bool):
+        self.artifact_metadata["use_cnb"] = use_cnb
+        self.save(update_fields=["artifact_metadata"])
+
+    def get_proc_entrypoints(self, module_name: str) -> dict[str, list[str]] | None:
+        """根据模块名, 获取模块下所有进程的 entrypoints
+
+        :param module_name: 模块名
+        :return proc_entrypoints, 格式如 {进程名: entrypoint}
+        """
+        return get_items(self.artifact_metadata, f"module_proc_entrypoints.{module_name}")
+
+    def set_proc_entrypoints(self, module_name: str, proc_entrypoints: dict[str, list[str]]):
+        """设置模块下进程的 entrypoints
+
+        :param module_name: 模块名
+        :param proc_entrypoints: 进程 entrypoints
+        """
+        self.artifact_metadata.setdefault("module_proc_entrypoints", {})[module_name] = proc_entrypoints
+        self.save(update_fields=["artifact_metadata"])
+
+    def get_image_tar(self, module_name: str) -> str | None:
+        """获取模块使用的镜像 tar 包名
+
+        :param module_name: 模块名
+        :return 模块使用的镜像 tar 包名. 如果 artifact_metadata 中没有, 则返回默认值"模块名.tgz"
+        """
+        return get_items(self.artifact_metadata, f"module_image_tars.{module_name}", f"{module_name}.tgz")
+
+    def set_image_tar(self, module_name: str, image_tar: str):
+        """设置模块使用的镜像 tar 包名
+
+        :param module_name: 模块名
+        :param image_tar: 镜像 tar 包名
+        """
+        self.artifact_metadata.setdefault("module_image_tars", {})[module_name] = image_tar
+        self.save(update_fields=["artifact_metadata"])

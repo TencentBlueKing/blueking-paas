@@ -42,6 +42,10 @@ from paasng.platform.sourcectl.models import VersionInfo
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
+# CNB runner 默认的 entrypoint
+# see: https://buildpacks.io/docs/for-platform-operators/concepts/lifecycle/launch/
+DEFAULT_CNB_RUNNER_ENTRYPOINT = ["launcher"]
+
 
 def get_app_docker_registry_client() -> DockerRegistryV2Client:
     return DockerRegistryV2Client.from_api_endpoint(
@@ -79,8 +83,14 @@ class Build(UuidAuditedModel):
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
     artifact_detail = models.JSONField(default={}, help_text="构件详情(展示信息)")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
+
+    # artifact_metadata 的数据说明:
+    # - use_cnb: 是否使用 CNB 构建
+    # - use_dockerfile: 是否使用 Dockerfile 构建
+    # - entrypoint: 通用的 entrypoint
+    # - proc_entrypoints: 进程的 entrypoint, 格式为 {进程名: entrypoint}. 优先级高于通用的 entrypoint
     artifact_metadata = models.JSONField(
-        default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息"
+        default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile/proc_entrypoints 等信息"
     )
 
     tenant_id = tenant_id_field_factory()
@@ -96,14 +106,20 @@ class Build(UuidAuditedModel):
         # 兜底逻辑, 兼容未绑定运行时的迁移应用或历史数据
         return self.app.latest_config.get_image()
 
+    def is_build_from_cnb(self) -> bool:
+        """获取当前 Build 构件是否基于 cnb 构建"""
+        return bool(self.artifact_metadata.get("use_cnb"))
+
     def get_universal_entrypoint(self) -> List[str]:
         """获取使用 Build 运行 hook 等命令的 entrypoint"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return self.artifact_metadata.get("entrypoint") or DEFAULT_SLUG_RUNNER_ENTRYPOINT
-        elif self.artifact_metadata.get("use_cnb"):
+        if self.is_build_from_cnb():
             # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-            return ["launcher"]
+            return DEFAULT_CNB_RUNNER_ENTRYPOINT
+
+        if self.artifact_type == ArtifactType.SLUG:
+            return self.artifact_metadata.get("entrypoint") or DEFAULT_SLUG_RUNNER_ENTRYPOINT
+
         # 旧镜像应用分支
         # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
         # 虽然实际上绝大部分 CRI 实现会在当 Command 非空时 忽略镜像的 CMD(即认为 ENTRYPOINT 和 CMD 是绑定的, 只要 ENTRYPOINT 被修改, 就会忽略 CMD)
@@ -115,27 +131,32 @@ class Build(UuidAuditedModel):
 
     def get_entrypoint_for_proc(self, process_type: str) -> List[str]:
         """获取使用 Build 运行 process_type 的 entrypoint"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return self.get_universal_entrypoint()
-        elif self.artifact_metadata.get("use_cnb"):
-            # cnb 运行时的 entrypoint 是 process_type
-            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
-            return [process_type]
-        return self.get_universal_entrypoint()
+        if (proc_entrypoints := self.artifact_metadata.get("proc_entrypoints")) and (
+            entrypoint := proc_entrypoints.get(process_type)
+        ):
+            return entrypoint
+
+        return self._get_default_entrypoint(process_type)
 
     def get_command_for_proc(self, process_type: str, proc_command: str) -> List[str]:
         """获取运行 Build 的 command"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return ["start", process_type]
-        elif self.artifact_metadata.get("use_cnb"):
+        if self.is_build_from_cnb():
             # cnb 运行时的 command 是空列表
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
             return []
+
+        if self.artifact_type == ArtifactType.SLUG:
+            return ["start", process_type]
+
         return shlex.split(proc_command)
 
-    def is_build_from_cnb(self) -> bool:
-        """获取当前 Build 构件是否基于 cnb 构建"""
-        return bool(self.artifact_metadata.get("use_cnb"))
+    def _get_default_entrypoint(self, process_type: str) -> List[str]:
+        if self.is_build_from_cnb():
+            # cnb 运行时的 entrypoint 是 process_type
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
+            return [process_type]
+
+        return self.get_universal_entrypoint()
 
     @property
     def image_repository(self) -> Optional[str]:

@@ -25,6 +25,7 @@ import pytest
 import requests
 from requests_mock import Adapter
 
+from paasng.platform.applications.models import SMartAppExtraInfo
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import (
     bksmart_settings,
@@ -83,6 +84,11 @@ def image_config_content():
         },
         indent=0,
     ).encode()
+
+
+@pytest.fixture()
+def smart_app_extra(bk_module):
+    return SMartAppExtraInfo.objects.create(app=bk_module.application)
 
 
 def test_dispatch_slug_image_to_registry(
@@ -216,12 +222,33 @@ def test_dispatch_slug_image_to_registry(
             assert expected_url == req.url
 
 
+@pytest.mark.parametrize(
+    ("package_name", "layer_digest_list"),
+    [
+        (
+            "cnb-image",
+            [
+                "1cad71326f6c0f3196ae135e80033987496ea7e2a6e6f31389e7cba9ce7c8996",
+                "741772c7f3e2c81925ccb74a032df3ee0ff15079c81fdee1ae4f581cdf9fcdf2",
+            ],
+        ),
+        ("cnb-image-with-index", ["a73021ffe901b947e70157b20a513779576a1f72e2aacf606905fcad4a93e10a"]),
+    ],
+)
 def test_dispatch_cnb_image_to_registry(
-    bk_module, bk_user, assets_rootpath, mock_adapter, image_manifest_content, image_config_content
+    bk_module,
+    bk_user,
+    assets_rootpath,
+    mock_adapter,
+    image_manifest_content,
+    image_config_content,
+    smart_app_extra,
+    package_name,
+    layer_digest_list,
 ):
-    """测试将 slug runner 镜像分发到 registry, 涉及多次网络请求, 要保证顺序正确。
+    """测试将 cnb 镜像分发到 registry, 涉及多次网络请求, 要保证顺序正确。
 
-    1. 获取镜像镜像信息 -> runner_manifest_url & runner_config_url
+    1. 获取镜像信息 -> runner_manifest_url & runner_config_url
     2. 初始化上传 -> init_upload_url
     3. 逐层上传镜像层文件到 registry -> upload_url & layer_commit_url
     4. 上传合并后的配置文件 -> upload_url
@@ -229,8 +256,10 @@ def test_dispatch_cnb_image_to_registry(
     6. 提交 App Image Manifest -> app_image_commit_url
     7. 验证镜像清单已上传成功 -> app_image_manifest_url
     """
+    if package_name == "cnb-image-with-index":
+        smart_app_extra.set_image_tar("main", "main.tar")
 
-    smart_asserts_path = assets_rootpath / "cnb-image"
+    smart_asserts_path = assets_rootpath / package_name
     bk_module.name = "main"
     bk_module.save()
     mgr = SMartImageManager(bk_module)
@@ -241,7 +270,7 @@ def test_dispatch_cnb_image_to_registry(
     upload_url = "https://upload-endpoint/"
     commit_url = "https://commit-endpoint/"
 
-    # Step 1: 获取镜像镜像信息
+    # Step 1: 获取镜像信息
     runner_manifest_url = f"{base_url}/v2/{cnb_runner_image.name}/manifests/{cnb_runner_image.tag}"
     mock_adapter.register_uri("GET", url=runner_manifest_url, content=image_manifest_content)
     runner_config_url = f"{base_url}/v2/{cnb_runner_image.name}/blobs/example-config"
@@ -260,10 +289,6 @@ def test_dispatch_cnb_image_to_registry(
     )
 
     # Step 3: 逐层上传镜像层文件到 registry
-    layer_digest_list = [
-        "1cad71326f6c0f3196ae135e80033987496ea7e2a6e6f31389e7cba9ce7c8996",
-        "741772c7f3e2c81925ccb74a032df3ee0ff15079c81fdee1ae4f581cdf9fcdf2",
-    ]
     for sha256_digest in layer_digest_list:
         layer_commit_url = f"{commit_url}?digest=sha256%3A{sha256_digest}"
         mock_adapter.register_uri("PUT", url=layer_commit_url, status_code=201)
@@ -289,7 +314,7 @@ def test_dispatch_cnb_image_to_registry(
 
     # Step 7: 验证镜像清单已上传成功
     # 1.0 是 app_desc 里的 app_version
-    app_image_manifest_url = f"{base_url}/v2/{module_image.name}/manifests/1.0"
+    app_image_manifest_url = f"{base_url}/v2/{module_image.name}/manifests/1.0.0"
     mock_adapter.register_uri("PUT", url=app_image_manifest_url)
     mock_adapter.register_uri("GET", url=app_image_manifest_url, content=image_manifest_content)
 
@@ -338,10 +363,12 @@ def test_dispatch_cnb_image_to_registry(
             assert expected_url == req.url
 
 
+@pytest.mark.usefixtures("smart_app_extra")
 @pytest.mark.parametrize(
     ("package_path", "dispatcher_uri"),
     [
         ("cnb-image", "paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry"),
+        ("cnb-image-with-index", "paasng.platform.smart_app.services.dispatch.dispatch_cnb_image_to_registry"),
         ("slugrunner-image", "paasng.platform.smart_app.services.dispatch.dispatch_slug_image_to_registry"),
     ],
 )

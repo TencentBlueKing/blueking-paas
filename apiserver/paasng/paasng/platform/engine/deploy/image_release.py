@@ -26,6 +26,7 @@ from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import SMartAppExtraInfo
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.bkapp_model.services import upsert_process_service_flag
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -97,16 +98,22 @@ class ImageReleaseMgr(DeployStep):
             return
 
         # smart 应用部署操作
-        if is_smart_app := self.module_environment.module.application.is_smart_app:
-            parse_result = self._handle_smart_app_description()
-            use_cnb = parse_result.spec_version == AppSpecVersion.VER_3
+        module = self.module_environment.module
+        app = module.application
+        if is_smart_app := app.is_smart_app:
+            self._handle_smart_app_description()
+            smart_app_extra = SMartAppExtraInfo.objects.get(app=app)
+            artifact_metadata = {
+                "use_cnb": smart_app_extra.use_cnb,
+                "proc_entrypoints": smart_app_extra.get_proc_entrypoints(module.name),
+            }
         # 仅托管镜像的应用(包含云原生应用和旧镜像应用)部署操作
         else:
             self._handle_image_app_processes()
-            use_cnb = False
+            artifact_metadata = {"use_cnb": False}
 
         # 目前构建流程必须有有效的 build, 因此需要 dummy build 过程
-        build_id = self._create_build(is_smart_app=is_smart_app, use_cnb=use_cnb)
+        build_id = self._create_build(is_smart_app=is_smart_app, artifact_metadata=artifact_metadata)
 
         # dummy build 完成，更新 deployment 的 build_id
         self.deployment.update_fields(build_status=JobStatus.SUCCESSFUL, build_id=build_id)
@@ -161,16 +168,15 @@ class ImageReleaseMgr(DeployStep):
         }
         self.deployment.update_fields(processes=processes_dict)
 
-    def _create_build(self, is_smart_app: bool, use_cnb: bool = False) -> str:
+    def _create_build(self, is_smart_app: bool, artifact_metadata: dict) -> str:
         runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
+
         return self.engine_client.create_build(
             image=runtime_info.generate_image(self.version_info),
             extra_envs={"BKPAAS_IMAGE_APPLICATION_FLAG": "1"},
             # 需要兼容 s-mart 应用
             artifact_type=ArtifactType.SLUG if is_smart_app else ArtifactType.NONE,
-            artifact_metadata={
-                "use_cnb": use_cnb,
-            },
+            artifact_metadata=artifact_metadata,
         )
 
     def _provision_services(self, p: DeployProcedure):

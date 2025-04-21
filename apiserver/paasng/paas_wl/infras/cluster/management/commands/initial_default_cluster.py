@@ -24,9 +24,16 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from environ import Env
 
+from paas_wl.infras.cluster.components import get_default_component_configs
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag, ClusterType
 from paas_wl.infras.cluster.entities import AllocationPolicy
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAllocationPolicy, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import (
+    APIServer,
+    Cluster,
+    ClusterAllocationPolicy,
+    ClusterComponent,
+    ClusterElasticSearchConfig,
+)
 from paas_wl.infras.resources.base.base import invalidate_global_configuration_pool
 from paasng.core.tenant.user import get_init_tenant_id
 
@@ -218,6 +225,7 @@ class Command(BaseCommand):
                 "default_node_selector": data.default_node_selector,
                 "default_tolerations": data.default_tolerations,
                 "feature_flags": data.feature_flags,
+                "available_tenant_ids": [data.tenant_id],
             },
         )
 
@@ -227,7 +235,16 @@ class Command(BaseCommand):
             [APIServer(cluster=cluster, host=url, tenant_id=cluster.tenant_id) for url in data.api_server_urls]
         )
 
-        # 3. 创建集群关联的日志配置
+        # 3. 创建集群组件配置，采用先删除后添加的方式
+        ClusterComponent.objects.filter(cluster=cluster).delete()
+        ClusterComponent.objects.bulk_create(
+            [
+                ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
+                for cfg in get_default_component_configs()
+            ]
+        )
+
+        # 4. 创建集群关联的日志配置
         if not settings.ELASTICSEARCH_HOSTS:
             raise ValueError("ELASTICSEARCH_HOSTS is not configured!")
 
@@ -248,7 +265,7 @@ class Command(BaseCommand):
             },
         )
 
-        # 4. 检查集群分配策略，若不存在，则创建默认的分配策略
+        # 5. 检查集群分配策略，若不存在，则创建默认的分配策略
         if not ClusterAllocationPolicy.objects.filter(tenant_id=cluster.tenant_id).exists():
             ClusterAllocationPolicy.objects.create(
                 tenant_id=cluster.tenant_id,

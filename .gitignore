@@ -165,3 +165,5 @@ webfe/package_vue/.bk.local.env
 
 pre-*-bkcodeai
 bkcodeai.json
+bin
+cover.out

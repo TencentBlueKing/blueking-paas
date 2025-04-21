@@ -197,11 +197,7 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     def list(self, request):
         """获取用户特性列表"""
         feature_flags = AccountFeatureFlag.objects.all()
-        user_ids = [f.user for f in feature_flags]
-        user_profiles = UserProfile.objects.filter(user__in=user_ids)
-        user_tenant = {up.user: up.tenant_id for up in user_profiles}
-
-        slz = AccountFeatureFlagSLZ(feature_flags, many=True, context={"user_tenant": user_tenant})
+        slz = AccountFeatureFlagSLZ(feature_flags, many=True)
         return Response(slz.data)
 
     @atomic

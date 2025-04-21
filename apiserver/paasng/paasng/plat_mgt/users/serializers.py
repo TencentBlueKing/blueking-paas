@@ -19,7 +19,7 @@
 from rest_framework import serializers
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
+from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
 
 # --------- 平台管理员相关序列化器 ---------
@@ -55,8 +55,8 @@ class AccountFeatureFlagSLZ(serializers.Serializer):
 
     def get_tenant_id(self, obj: AccountFeatureFlag) -> str:
         """获取租户 ID"""
-        user_tenant = self.context.get("user_tenant", {})
-        return user_tenant.get(obj.user, "")
+        profile = UserProfile.objects.filter(user=obj.user).first()
+        return profile.tenant_id if profile else ""
 
     def get_default_feature_flag(self, obj: AFF) -> bool:
         """根据特性名称获取其默认配置值"""

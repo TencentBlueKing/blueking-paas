@@ -33,8 +33,8 @@ export function formatRenewFun(status) {
       data.tips = '权限无限制，无需续期';
       break;
     case 'expired':
-      data.disabled = true;
-      data.tips = '权限已过期，请重新申请';
+      // 允许续期
+      data.disabled = false;
       break;
     case 'owned':
       // 允许续期

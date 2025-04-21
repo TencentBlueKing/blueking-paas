@@ -339,6 +339,7 @@ export default {
   '输入API名称或描述，多个API以逗号分割': 'Enter API name/description, separate with commas.',
   查询: 'Query',
   '若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。': 'If the validity period is less than 180 days, but the APP is still accessing the API, the validity period will be automatically extended to 180 days (unlimited times)',
+  '将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限': 'Will apply for {t} {n} permissions for <i class="l1">{l}</i> {y} APIs',
   暂无数据: 'No Data',
   API的权限: 'API permissions',
   系统: 'System',

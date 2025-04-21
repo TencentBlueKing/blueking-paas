@@ -18,7 +18,6 @@
               width: 220,
               extCls: 'create-token-tips-cls',
             }"
-            style="margin-right: 10px"
             @click="handleShowDialogCreateToken"
           >
             {{ $t('创建新令牌') }}
@@ -27,15 +26,6 @@
       </div>
     </div>
     <div class="tab-container-cls">
-      <bk-button
-        class="f12 gateway-guide"
-        :style="{ right: isPlugin ? '100px' : '48px' }"
-        text
-        theme="primary"
-        @click="toLink('gateway')"
-      >
-        {{ $t('API 网关接入指引') }}
-      </bk-button>
       <section class="app-container middle cloud-container">
         <paas-content-loader
           :key="pageKey"
@@ -44,9 +34,19 @@
           :offset-top="12"
           :delay="1000"
         >
+          <bk-button
+            class="gateway-guide"
+            text
+            theme="primary"
+            @click="toLink('gateway')"
+          >
+            {{ $t('API 网关接入指引') }}
+            <i class="paasng-icon paasng-jump-link"></i>
+          </bk-button>
           <bk-tab
             :active.sync="active"
             type="unborder-card"
+            ext-cls="paas-custom-tab-card-grid"
             @tab-change="handleTabChange"
           >
             <bk-tab-panel
@@ -54,32 +54,32 @@
               :key="index"
               v-bind="panel"
             />
+            <div class="cloud-type-item">
+              <render-api
+                v-if="active === 'gatewayApi'"
+                :key="comKey"
+                :app-code="appCode"
+                @data-ready="handlerDataReady"
+              />
+              <render-api
+                v-if="active === 'componentApi'"
+                :key="comKey"
+                api-type="component"
+                :app-code="appCode"
+                @data-ready="handlerDataReady"
+              />
+              <app-perm
+                v-if="active === 'appPerm'"
+                :type-list="typeList"
+                @data-ready="handlerDataReady"
+              />
+              <apply-record
+                v-if="active === 'applyRecord'"
+                :type-list="typeList"
+                @data-ready="handlerDataReady"
+              />
+            </div>
           </bk-tab>
-          <div class="cloud-type-item">
-            <render-api
-              v-if="active === 'gatewayApi'"
-              :key="comKey"
-              :app-code="appCode"
-              @data-ready="handlerDataReady"
-            />
-            <render-api
-              v-if="active === 'componentApi'"
-              :key="comKey"
-              api-type="component"
-              :app-code="appCode"
-              @data-ready="handlerDataReady"
-            />
-            <app-perm
-              v-if="active === 'appPerm'"
-              :type-list="typeList"
-              @data-ready="handlerDataReady"
-            />
-            <apply-record
-              v-if="active === 'applyRecord'"
-              :type-list="typeList"
-              @data-ready="handlerDataReady"
-            />
-          </div>
         </paas-content-loader>
       </section>
     </div>
@@ -402,14 +402,20 @@ export default {
   .ps-top-bar {
     padding: 0px 24px;
   }
+  /deep/ .bk-tab-section {
+    padding: 16px 0 0 0;
+    background: #fff;
+    box-shadow: 0 2px 4px 0 #1919290d;
+  }
 }
 
 .cloud-container {
+  position: relative;
   background: #fff;
   margin-top: 16px;
   padding-top: 0px;
   .cloud-type-item {
-    padding: 0 24px 16px 24px;
+    padding: 0 24px 24px 24px;
   }
   .cloud-class {
     padding-top: 16px;
@@ -446,10 +452,6 @@ export default {
 
 .ps-top-bar.cloud-api-permission {
   box-shadow: 0 3px 4px 0 #0000000a;
-}
-
-.cloud-wrapper /deep/ .bk-tab-section {
-  padding: 16px 0 0 0;
 }
 
 .steps-wrapper {
@@ -509,9 +511,12 @@ export default {
   position: relative;
   .gateway-guide {
     position: absolute;
-    right: 48px;
-    top: 13px;
+    right: 0px;
+    top: 10px;
     z-index: 99;
+    i {
+      font-size: 16px;
+    }
   }
 }
 

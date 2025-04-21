@@ -12,31 +12,28 @@
     <div class="content">
       <paasng-alert>
         <div slot="title">
-          {{ `${$t('将申请')}${isComponent ? $t('系统') : $t('网关')} ${apiName} ${$t('下')}` }}
-          <span style="color: #2dcb56;">{{ applyRows.length }}</span>
-          {{ `${$t('个')}${isComponent ? $t('组件') : $t('网关')}${$t('API的权限')}` }}{{ renewalRows.length > 0 ? '，' : '。' }}
+          <span v-html="alertTxt"></span>
+          {{ renewalRows.length > 0 ? '，' : '。' }}
           <template v-if="renewalRows.length > 0">
-            <span style="color: #ff9c01;">{{ renewalRows.length }}</span>
+            <span style="color: #ff9c01">{{ renewalRows.length }}</span>
             {{ $t('个网关 API 已有权限，不可重复申请。') }}
           </template>
         </div>
       </paasng-alert>
       <div class="api-batch-apply-content">
-        <table
-          class="bk-table api-batch-apply-fixed-table"
-        >
+        <table class="bk-table api-batch-apply-fixed-table">
           <colgroup>
-            <col style="width: 200px;">
-            <col style="width: 200px;">
-            <col>
+            <col style="width: 200px" />
+            <col style="width: 200px" />
+            <col />
           </colgroup>
           <thead>
             <tr>
-              <th style="padding-left: 20px;">
+              <th style="padding-left: 20px">
                 {{ isComponent ? $t('系统') : $t('网关') }}
               </th>
               <th>API</th>
-              <th> {{ $t('描述') }} </th>
+              <th>{{ $t('描述') }}</th>
             </tr>
           </thead>
         </table>
@@ -45,28 +42,28 @@
           :class="['api-batch-apply-table', { 'has-bottom-border': !isScrollBottom && rows.length > 4 }]"
           @scroll.stop="handleScroll($event)"
         >
-          <table
-            class="bk-table has-table-hover"
-          >
+          <table class="bk-table has-table-hover">
             <colgroup>
-              <col style="width: 200px;">
-              <col style="width: 200px;">
-              <col>
+              <col style="width: 200px" />
+              <col style="width: 200px" />
+              <col />
             </colgroup>
-            <tbody style="background: #fff;">
+            <tbody style="background: #fff">
               <template v-if="rows.length > 0">
                 <tr
                   v-for="(item, index) in rows"
                   :key="index"
                 >
-                  <td style="text-align: left; padding-left: 20px;">
+                  <td style="text-align: left; padding-left: 20px">
                     <span class="name">{{ isComponent ? item.system_name : item.api_name }}</span>
                   </td>
                   <td>
                     <span
                       class="api-batch-apply-name"
                       :title="item.name"
-                    >{{ item.name }}</span>
+                    >
+                      {{ item.name }}
+                    </span>
                   </td>
                   <td>
                     <span
@@ -74,7 +71,7 @@
                       :title="item.description ? item.description : ''"
                     >
                       <template v-if="item.permission_action === 'renew'">
-                        <span style="color: #ff9c01"> {{ $t('已有权限，不可重复申请') }} </span>
+                        <span style="color: #ff9c01">{{ $t('已有权限，不可重复申请') }}</span>
                       </template>
                       <template v-else>
                         {{ item.description || '--' }}
@@ -101,7 +98,7 @@
       <bk-form
         :label-width="localLanguage === 'en' ? 110 : 80"
         :model="formData"
-        style="margin-top: 25px;"
+        style="margin-top: 25px"
       >
         <bk-form-item
           :label="$t('申请理由')"
@@ -119,20 +116,17 @@
           required
           property="expired"
         >
-          <div class="bk-button-group bk-button-group-cls">
-            <bk-button
-              :class="formData.expired === 6 ? 'is-selected' : ''"
-              @click="formData.expired = 6"
-            >
+          <bk-radio-group v-model="formData.expired">
+            <bk-radio-button :value="6">
               {{ $t('6个月') }}
-            </bk-button>
-            <bk-button
-              :class="formData.expired === 12 ? 'is-selected' : ''"
-              @click="formData.expired = 12"
-            >
+            </bk-radio-button>
+            <bk-radio-button :value="12">
               {{ $t('12个月') }}
-            </bk-button>
-          </div>
+            </bk-radio-button>
+            <bk-radio-button :value="0">
+              {{ $t('永久') }}
+            </bk-radio-button>
+          </bk-radio-group>
         </bk-form-item>
       </bk-form>
     </div>
@@ -146,7 +140,7 @@
         {{ $t('确定') }}
       </bk-button>
       <bk-button
-        style="margin-left: 10px;"
+        style="margin-left: 10px"
         @click="handleCancel"
       >
         {{ $t('取消') }}
@@ -154,7 +148,8 @@
     </template>
   </bk-dialog>
 </template>
-<script>import PaasngAlert from './paasng-alert';
+<script>
+import PaasngAlert from './paasng-alert';
 import i18n from '@/language/i18n';
 export default {
   name: '',
@@ -205,14 +200,22 @@ export default {
   computed: {
     // 可申请
     applyRows() {
-      return this.rows.filter(item => !item.applyDisabled);
+      return this.rows.filter((item) => !item.applyDisabled);
     },
     // 可续期
     renewalRows() {
-      return this.rows.filter(item => !item.renewDisabled);
+      return this.rows.filter((item) => !item.renewDisabled);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    alertTxt() {
+      return this.$t('将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限', {
+        t: this.isComponent ? this.$t('系统') : this.$t('网关'),
+        n: this.apiName,
+        l: this.applyRows.length,
+        y: this.isComponent ? this.$t('组件') : this.$t('网关'),
+      });
     },
   },
   watch: {
@@ -236,10 +239,10 @@ export default {
           appCode: this.appCode,
         };
         if (this.isComponent) {
-          params.data.component_ids = this.applyRows.map(item => item.id);
+          params.data.component_ids = this.applyRows.map((item) => item.id);
           params.systemId = this.apiId;
         } else {
-          params.data.resource_ids = this.applyRows.map(item => item.id);
+          params.data.resource_ids = this.applyRows.map((item) => item.id);
           params.data.grant_dimension = 'resource';
           params.apiId = this.apiId;
         }
@@ -258,10 +261,13 @@ export default {
     },
 
     handleAfterLeave() {
-      this.formData = Object.assign({}, {
-        reason: '',
-        expired: 6,
-      });
+      this.formData = Object.assign(
+        {},
+        {
+          reason: '',
+          expired: 6,
+        }
+      );
       this.$emit('update:show', false);
       this.$emit('after-leave');
     },
@@ -277,106 +283,110 @@ export default {
 };
 </script>
 <style lang="scss">
-    .paasng-api-batch-apply-dialog {
-        .api-batch-apply-content {
-            position: relative;
-            margin-top: 10px;
+.paasng-api-batch-apply-dialog {
+  .l1 {
+    color: #2dcb56;
+    font-style: normal;
+  }
+  .api-batch-apply-content {
+    position: relative;
+    margin-top: 10px;
+  }
+  .api-batch-apply-fixed-table {
+    width: 100%;
+    border-top: 1px solid #e6e6e6;
+    border-left: 1px solid #e6e6e6;
+    border-right: 1px solid #e6e6e6;
+    border-bottom: none;
+    thead {
+      tr {
+        th {
+          height: 42px;
+          font-size: 12px;
+          background: #f5f6fa;
+          .bk-form-checkbox .bk-checkbox-text {
+            font-size: 12px;
+          }
         }
-        .api-batch-apply-fixed-table {
-            width: 100%;
-            border-top: 1px solid #e6e6e6;
-            border-left: 1px solid #e6e6e6;
-            border-right: 1px solid #e6e6e6;
-            border-bottom: none;
-            thead {
-                tr {
-                    th {
-                        height: 42px;
-                        font-size: 12px;
-                        background: #f5f6fa;
-                        .bk-form-checkbox .bk-checkbox-text {
-                            font-size: 12px;
-                        }
-                    }
-                }
-            }
-        }
-        .api-batch-apply-table {
-            position: relative;
-            width: 100%;
-            max-height: 200px;
-            margin-top: -1px;
-            overflow-y: auto;
-            border-left: 1px solid #e6e6e6;
-            border-right: 1px solid #e6e6e6;
-            border-bottom: none;
-            &.has-bottom-border {
-                border-bottom: 1px solid #e6e6e6;
-            }
-            &::-webkit-scrollbar {
-                width: 4px;
-                background-color: lighten(transparent, 80%);
-            }
-            &::-webkit-scrollbar-thumb {
-                height: 5px;
-                border-radius: 2px;
-                background-color: #e6e9ea;
-            }
-            .bk-table {
-                width: 100%;
-                border: none;
-                thead {
-                    tr {
-                        th {
-                            height: 42px;
-                            font-size: 12px;
-                        }
-                    }
-                }
-                tbody {
-                    tr {
-                        position: relative;
-                        td {
-                            height: 42px;
-                            font-size: 12px;
-                        }
-                    }
-                    .search-empty-wrapper {
-                        position: relative;
-                        min-height: 200px;
-                        .empty-wrapper {
-                            position: absolute;
-                            left: 50%;
-                            top: 50%;
-                            text-align: center;
-                            transform: translate(-50%, -50%);
-                            i {
-                                font-size: 50px;
-                                color: #c3cdd7;
-                            }
-                        }
-                    }
-                }
-                .api-batch-apply-name,
-                .name {
-                    display: inline-block;
-                    max-width: 140px;
-                    font-size: 12px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    vertical-align: middle;
-                }
-                .desc {
-                    display: inline-block;
-                    max-width: 200px;
-                    font-size: 12px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    vertical-align: middle;
-                }
-            }
-        }
+      }
     }
+  }
+  .api-batch-apply-table {
+    position: relative;
+    width: 100%;
+    max-height: 200px;
+    margin-top: -1px;
+    overflow-y: auto;
+    border-left: 1px solid #e6e6e6;
+    border-right: 1px solid #e6e6e6;
+    border-bottom: none;
+    &.has-bottom-border {
+      border-bottom: 1px solid #e6e6e6;
+    }
+    &::-webkit-scrollbar {
+      width: 4px;
+      background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 5px;
+      border-radius: 2px;
+      background-color: #e6e9ea;
+    }
+    .bk-table {
+      width: 100%;
+      border: none;
+      thead {
+        tr {
+          th {
+            height: 42px;
+            font-size: 12px;
+          }
+        }
+      }
+      tbody {
+        tr {
+          position: relative;
+          td {
+            height: 42px;
+            font-size: 12px;
+          }
+        }
+        .search-empty-wrapper {
+          position: relative;
+          min-height: 200px;
+          .empty-wrapper {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            text-align: center;
+            transform: translate(-50%, -50%);
+            i {
+              font-size: 50px;
+              color: #c3cdd7;
+            }
+          }
+        }
+      }
+      .api-batch-apply-name,
+      .name {
+        display: inline-block;
+        max-width: 140px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+      .desc {
+        display: inline-block;
+        max-width: 200px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+    }
+  }
+}
 </style>

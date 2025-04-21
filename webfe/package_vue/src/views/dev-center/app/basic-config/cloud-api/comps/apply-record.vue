@@ -1,29 +1,19 @@
 <template>
   <div class="paasng-api-panel">
     <div class="search-wrapper">
-      <section class="search-item">
-        <div class="label">
-          {{ $t('类型') }}
-        </div>
-        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
-          <bk-select
-            v-bk-tooltips.top="{
-              content: curSelectedType,
-              disabled: localLanguage !== 'en',
-            }"
-            v-model="typeValue"
-            :clearable="false"
-            @selected="handleSelect"
-          >
-            <bk-option
-              v-for="option in typeList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.name"
-            />
-          </bk-select>
-        </div>
-      </section>
+      <bk-radio-group
+        class="record-type-cls"
+        v-model="typeValue"
+        @change="handleSelect"
+      >
+        <bk-radio-button
+          v-for="item in typeList"
+          :value="item.id"
+          :key="item.id"
+        >
+          {{ item.name }}
+        </bk-radio-button>
+      </bk-radio-group>
       <section class="search-item set-ml">
         <div class="label">
           {{ $t('申请人') }}
@@ -37,30 +27,6 @@
             :empty-text="$t('无匹配人员')"
             @change="handleMemberSelect"
           />
-        </div>
-      </section>
-      <section class="search-item set-ml">
-        <div class="label">
-          {{ $t('状态') }}
-        </div>
-        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
-          <bk-select
-            v-bk-tooltips.top="{
-              content: curSelectedStatus,
-              disabled: localLanguage !== 'en',
-            }"
-            v-model="statusValue"
-            clearable
-            @selected="handleStatusSelect"
-            @clear="handleClear"
-          >
-            <bk-option
-              v-for="option in statusList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.name"
-            />
-          </bk-select>
         </div>
       </section>
       <section class="search-item set-ml">
@@ -91,14 +57,6 @@
           @enter="handleSearch"
         />
       </section>
-      <section class="search-item search-btn">
-        <bk-button
-          theme="primary"
-          @click="handlePageSearch"
-        >
-          {{ $t('查询') }}
-        </bk-button>
-      </section>
     </div>
     <paas-content-loader
       :is-loading="loading"
@@ -109,13 +67,16 @@
       <div>
         <bk-table
           :data="tableList"
+          ref="tableRef"
           size="small"
           :empty-text="$t('暂无数据')"
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :outer-border="false"
           @page-change="pageChange"
           @page-limit-change="limitChange"
+          @filter-change="handleFilterChange"
         >
           <div slot="empty">
             <table-empty
@@ -184,6 +145,10 @@
           <bk-table-column
             :label="$t('审批状态')"
             :render-header="$renderHeader"
+            prop="apply_status"
+            column-key="apply_status"
+            :filters="statusFilters"
+            :filter-multiple="false"
           >
             <template slot-scope="props">
               <template v-if="props.row.apply_status === 'approved'">
@@ -567,8 +532,13 @@ export default {
     curSelectedType() {
       return this.typeList.find((v) => v.id === this.typeValue)?.name;
     },
-    curSelectedStatus() {
-      return this.statusList.find((v) => v.id === this.statusValue)?.name;
+    statusFilters() {
+      return this.statusList.map((v) => {
+        return {
+          text: v.name,
+          value: v.id,
+        };
+      });
     },
   },
   watch: {
@@ -644,27 +614,11 @@ export default {
       this.fetchList();
     },
 
-    handleClear() {
-      this.statusValue = '';
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handleStatusSelect() {
-      this.resetPagination();
-      this.fetchList();
-    },
-
     handleSearch() {
       if (this.searchValue === '') {
         return;
       }
       this.isFilter = true;
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handlePageSearch() {
       this.resetPagination();
       this.fetchList();
     },
@@ -693,6 +647,15 @@ export default {
     limitChange(currentLimit, prevLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
+      this.fetchList();
+    },
+
+    // 表头过滤
+    handleFilterChange(filds) {
+      if (filds.apply_status) {
+        this.statusValue = filds.apply_status.length ? filds.apply_status[0] : '';
+      }
+      this.resetPagination();
       this.fetchList();
     },
 
@@ -755,7 +718,8 @@ export default {
     clearFilterKey() {
       this.searchValue = '';
       this.applicants = [];
-      this.handleClear();
+      this.$refs.tableRef.clearFilter();
+      this.resetPagination();
     },
 
     updateTableEmptyConfig() {
@@ -775,6 +739,9 @@ export default {
   display: flex;
   flex-wrap: wrap;
   margin-bottom: 16px;
+  .record-type-cls {
+    width: auto;
+  }
   .search-item {
     display: inline-block;
     vertical-align: middle;

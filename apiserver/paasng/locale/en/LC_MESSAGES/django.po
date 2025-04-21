@@ -2652,6 +2652,16 @@ msgstr "An APP must have a default module"
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
 
+#: paasng/platform/declarative/application/validations/v2.py:160
+#: paasng/platform/declarative/application/validations/v3.py:152
+msgid "提供共享增强服务的模块中不存在该服务"
+msgstr "module providing shared Add-ons does not exist enhancement service"
+
+#: paasng/platform/declarative/application/validations/v2.py:164
+#: paasng/platform/declarative/application/validations/v3.py:156
+msgid "不支持多层服务依赖"
+msgstr "not support multi-layer service dependencies"
+
 #: paasng/platform/declarative/handlers.py:204
 #: paasng/platform/declarative/handlers.py:206
 msgid "内容不能为空"

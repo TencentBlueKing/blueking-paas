@@ -129,7 +129,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         if not has_default:
             raise serializers.ValidationError({"modules": _("一个应用必须有一个主模块")})
 
-    def _validate_service_shared_from(self, modules: Dict[str, ModuleDesc]):
+    def _validate_addons_shared_from(self, modules: Dict[str, ModuleDesc]):
         """校验服务共享配置的合法性"""
         # 校验 shared_from 的模块配置的合法性
         for module_name, module_desc in modules.items():
@@ -149,7 +149,7 @@ class AppDescriptionSLZ(serializers.Serializer):
                 # 检查依赖 module 中是否存在该服务
                 if not ref_service:
                     raise serializers.ValidationError(
-                        {f"modules[{module_name}].spec.addons": _("共享增强服务的模块中不存在该服务")}
+                        {f"modules[{module_name}].spec.addons": _("提供共享增强服务的模块中不存在该服务")}
                     )
                 # 检查依赖的服务是否也有 shared_from
                 if ref_service.shared_from:
@@ -163,7 +163,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 执行校验
         self._validate_default_module(attrs["modules"])
-        self._validate_service_shared_from(attrs["modules"])
+        self._validate_addons_shared_from(attrs["modules"])
 
         # 处理额外字段
         attrs.setdefault("plugins", [])

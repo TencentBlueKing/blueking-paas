@@ -138,7 +138,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         if not has_default:
             raise serializers.ValidationError({"modules": _("一个应用必须有一个主模块")})
 
-    def _validate_service_shared_from(self, modules: Dict[str, ModuleDesc]):
+    def _validate_services_shared_from(self, modules: Dict[str, ModuleDesc]):
         """校验服务共享配置的合法性"""
         for module_name, module_desc in modules.items():
             for svc in module_desc.services:
@@ -148,7 +148,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
                 if svc.shared_from not in modules:
                     raise serializers.ValidationError(
-                        {f"modules[{module_name}].spec.addons": _("提供共享增强服务的模块不存在")}
+                        {f"modules[{module_name}].services": _("提供共享增强服务的模块不存在")}
                     )
 
                 ref_module = modules[svc.shared_from]
@@ -157,11 +157,11 @@ class AppDescriptionSLZ(serializers.Serializer):
                 # 检查依赖 module 中是否存在该服务
                 if not ref_service:
                     raise serializers.ValidationError(
-                        {f"modules[{module_name}].spec.addons": _("共享增强服务的模块中不存在该服务")}
+                        {f"modules[{module_name}].services": _("提供共享增强服务的模块中不存在该服务")}
                     )
                 # 检查依赖的服务是否也有 shared_from
                 if ref_service.shared_from:
-                    raise serializers.ValidationError({f"modules[{module_name}].spec.addons": _("不支持多层服务依赖")})
+                    raise serializers.ValidationError({f"modules[{module_name}].services": _("不支持多层服务依赖")})
 
     def to_internal_value(self, data: Dict) -> ApplicationDesc:
         attrs = super().to_internal_value(data)
@@ -169,7 +169,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 执行校验
         self._validate_default_module(attrs["modules"])
-        self._validate_service_shared_from(attrs["modules"])
+        self._validate_services_shared_from(attrs["modules"])
 
         attrs.setdefault("plugins", [])
         if self.context.get("app_version"):

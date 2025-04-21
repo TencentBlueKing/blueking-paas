@@ -120,14 +120,14 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_module_via_path()
         build_cfg = BuildConfig.objects.get_or_create_by_module(module)
 
-        image_repo = None
-        # 注：只有纯镜像应用需要提供 repository 和 credential_name
+        image_repository = None
+        # 注：只有纯镜像应用需要提供 repository
         if build_cfg.build_method == RuntimeType.CUSTOM_IMAGE:
             # 云原生应用使用 BuildConfig 中记录的值，旧的镜像应用使用 Module 中记录的值
             if module.application.type == ApplicationType.CLOUD_NATIVE:
-                image_repo = build_cfg.image_repository
+                image_repository = build_cfg.image_repository
             else:
-                image_repo = module.get_source_obj().get_repo_url() or ""
+                image_repository = module.get_source_obj().get_repo_url() or ""
 
         try:
             observability = module.observability
@@ -139,7 +139,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for spec in ModuleProcessSpec.objects.filter(module=module):
             data = {
                 "name": spec.name,
-                "image": image_repo,
+                "image": image_repository,
                 "command": spec.command or [],
                 "args": spec.args or [],
                 "port": spec.port,

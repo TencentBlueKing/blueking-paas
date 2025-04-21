@@ -32,6 +32,7 @@ from paasng.platform.smart_app.services.dispatch import (
     dispatch_cnb_image_to_registry,
     dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
+    parse_cnb_package,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
@@ -385,3 +386,13 @@ def test_dispatch_package_to_modules(bk_app, bk_module, bk_user, assets_rootpath
         with mock.patch(dispatcher_uri) as dispatcher:
             dispatch_package_to_modules(bk_app, tarball_path, stat, bk_user, {"main"})
         assert dispatcher.called
+
+
+@pytest.mark.usefixtures("smart_app_extra")
+def test_parse_cnb_package(bk_app, assets_rootpath):
+    parse_cnb_package(bk_app, assets_rootpath / "cnb-image-with-index")
+
+    expected_app_extra = SMartAppExtraInfo.objects.get(app=bk_app)
+    assert expected_app_extra.use_cnb is True
+    assert expected_app_extra.get_image_tar("main") == "main.tar"
+    assert expected_app_extra.get_proc_entrypoints("main") == {"web": ["main-web"]}

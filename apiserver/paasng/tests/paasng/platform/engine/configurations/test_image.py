@@ -48,7 +48,8 @@ class TestRuntimeInfo:
 
             assert runtime_info.generate_image(version_info=version) == "docker.io/library/python:foo"
 
-    def test_buildpack_runtime(self, bk_module_full, version):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_buildpack_runtime(self, bk_cnative_app, bk_module_full, version):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.BUILDPACK
@@ -62,7 +63,8 @@ class TestRuntimeInfo:
                 == f"{generate_image_repository_by_env(module_env)}:{version.version_name}"
             )
 
-    def test_dockerfile_runtime(self, bk_module_full, version):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_dockerfile_runtime(self, bk_cnative_app, bk_module_full, version):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.DOCKERFILE

@@ -58,7 +58,9 @@ class ImageCredentials(AppEntity):
 
         if should_inject_builtin_image_credential():
             reg = get_image_registry_by_app(app)
-            credentials.append(ImageCredential(registry=reg.host, username=reg.username, password=reg.password))
+            # 仅 host 不为空时才注入
+            if reg.host:
+                credentials.append(ImageCredential(registry=reg.host, username=reg.username, password=reg.password))
 
         return ImageCredentials(
             app=app,

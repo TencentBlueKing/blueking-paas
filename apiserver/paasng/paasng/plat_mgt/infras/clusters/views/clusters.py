@@ -249,12 +249,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         with transaction.atomic(using="workloads"):
             cluster.save()
 
-            # 集群 App 镜像仓库配置
-            if image_registry := data.get("app_image_registry"):
-                ClusterAppImageRegistry.objects.update_or_create(
-                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=image_registry
-                )
-
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除再插入的方式
                 cluster.api_servers.all().delete()
@@ -265,14 +259,13 @@ class ClusterViewSet(viewsets.GenericViewSet):
             # 集群 ElasticSearch 配置
             if es_cfg := data.get("elastic_search_config"):
                 ClusterElasticSearchConfig.objects.update_or_create(
-                    cluster=cluster,
-                    defaults={
-                        "scheme": es_cfg["scheme"],
-                        "host": es_cfg["host"],
-                        "port": es_cfg["port"],
-                        "username": es_cfg["username"],
-                        "password": es_cfg["password"],
-                    },
+                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=es_cfg
+                )
+
+            # 集群 App 镜像仓库配置
+            if image_registry := data.get("app_image_registry"):
+                ClusterAppImageRegistry.objects.update_or_create(
+                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=image_registry
                 )
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池

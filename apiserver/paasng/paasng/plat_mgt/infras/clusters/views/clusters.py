@@ -25,13 +25,19 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.infras.cluster.components import get_default_component_configs
 from paas_wl.infras.cluster.constants import (
-    DEFAULT_COMPONENT_CONFIGS,
     ClusterFeatureFlag,
     ClusterTokenType,
     ClusterType,
 )
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import (
+    APIServer,
+    Cluster,
+    ClusterAppImageRegistry,
+    ClusterComponent,
+    ClusterElasticSearchConfig,
+)
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paas_wl.workloads.networking.entrance.constants import AddressType
@@ -167,13 +173,17 @@ class ClusterViewSet(viewsets.GenericViewSet):
             ClusterComponent.objects.bulk_create(
                 [
                     ClusterComponent(cluster=cluster, name=cfg["name"], required=cfg["required"])
-                    for cfg in DEFAULT_COMPONENT_CONFIGS
+                    for cfg in get_default_component_configs()
                 ]
             )
+
             # 创建 ElasticSearch 配置
-            ClusterElasticSearchConfig.objects.create(
-                cluster=cluster, tenant_id=cluster.tenant_id, **data["elastic_search_config"]
-            )
+            if es_cfg := data.get("elastic_search_config"):
+                ClusterElasticSearchConfig.objects.create(cluster=cluster, tenant_id=cluster.tenant_id, **es_cfg)
+
+            # 创建集群 App 镜像仓库配置
+            if image_registry := data.get("app_image_registry"):
+                ClusterAppImageRegistry.objects.create(cluster=cluster, tenant_id=cluster.tenant_id, **image_registry)
 
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
@@ -236,24 +246,26 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster.component_image_registry = data["component_image_registry"]
         cluster.feature_flags = data["feature_flags"]
 
-        # 集群 ElasticSearch 配置
-        es_cfg = data["elastic_search_config"]
-        cluster_es_cfg = cluster.elastic_search_config
-        cluster_es_cfg.scheme = es_cfg["scheme"]
-        cluster_es_cfg.host = es_cfg["host"]
-        cluster_es_cfg.port = es_cfg["port"]
-        cluster_es_cfg.username = es_cfg["username"]
-        cluster_es_cfg.password = es_cfg["password"]
-
         with transaction.atomic(using="workloads"):
             cluster.save()
-            cluster_es_cfg.save()
 
             if api_servers_modified:
                 # 更新 ApiServers，采用先全部删除再插入的方式
                 cluster.api_servers.all().delete()
                 APIServer.objects.bulk_create(
                     [APIServer(cluster=cluster, host=host, tenant_id=cluster.tenant_id) for host in api_servers]
+                )
+
+            # 集群 ElasticSearch 配置
+            if es_cfg := data.get("elastic_search_config"):
+                ClusterElasticSearchConfig.objects.update_or_create(
+                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=es_cfg
+                )
+
+            # 集群 App 镜像仓库配置
+            if image_registry := data.get("app_image_registry"):
+                ClusterAppImageRegistry.objects.update_or_create(
+                    cluster=cluster, tenant_id=cluster.tenant_id, defaults=image_registry
                 )
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池
@@ -285,6 +297,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         logger.warning(f"user {request.user.username} delete cluster {cluster_name}")
 
         ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
+        ClusterAppImageRegistry.objects.filter(cluster=cluster).delete()
         APIServer.objects.filter(cluster=cluster).delete()
         cluster.delete()
 

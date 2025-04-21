@@ -72,7 +72,6 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.utils import get_image_info
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.version import get_env_deployed_version_info
 from paasng.platform.engine.models.deployment import Deployment
@@ -332,10 +331,8 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             application.type == ApplicationType.CLOUD_NATIVE
             and module.build_config.build_method == RuntimeType.CUSTOM_IMAGE
         ):
-            try:
-                return get_image_info(module)[0]
-            except ValueError:
-                return None
+            return module.build_config.image_repository
+
         repo = module.get_source_obj()
         if repo is None:
             return None

@@ -19,7 +19,13 @@ import pytest
 
 from paas_wl.infras.cluster.constants import ClusterComponentName, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
-from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterComponent, ClusterElasticSearchConfig
+from paas_wl.infras.cluster.models import (
+    APIServer,
+    Cluster,
+    ClusterAppImageRegistry,
+    ClusterComponent,
+    ClusterElasticSearchConfig,
+)
 from paas_wl.infras.resources.base.base import invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import get_digest_of_nodes_name
 from paas_wl.workloads.networking.egress.models import RegionClusterState
@@ -227,6 +233,16 @@ def init_system_cluster(random_tenant_id) -> Cluster:
         scheme="https",
         host="127.0.0.12",
         port=9200,
+        username="blueking",
+        password="blueking",
+        tenant_id=cluster.tenant_id,
+    )
+    # 集群应用镜像仓库
+    ClusterAppImageRegistry.objects.create(
+        cluster=cluster,
+        host="hub.bktencent.com",
+        skip_tls_verify=False,
+        namespace="bkapps",
         username="blueking",
         password="blueking",
         tenant_id=cluster.tenant_id,

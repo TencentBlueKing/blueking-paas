@@ -19,40 +19,13 @@ import logging
 from operator import attrgetter
 from typing import Dict, List, Optional
 
-from django.core.exceptions import ObjectDoesNotExist
-
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.modules.constants import APP_CATEGORY
 from paasng.platform.modules.entities import BuildConfig
-from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
+from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.templates.models import Template
 
 logger = logging.getLogger(__name__)
-
-
-def retrieve_template_build_config(template: Template) -> BuildConfig:
-    """根据传入的 template 构造根据该模板创建应用时会使用的 BuildConfig 对象"""
-    mgr = TemplateRuntimeManager(tmpl_name=template.name)
-    if template.runtime_type == RuntimeType.DOCKERFILE:
-        return mgr.get_docker_build_config()
-
-    try:
-        builder = AppSlugBuilder.objects.select_default_runtime(
-            labels={"language": template.language, "category": APP_CATEGORY.NORMAL_APP.value}
-        )
-        # by designed, name must be consistent between builder and runner
-        runner = AppSlugRunner.objects.get(name=builder.name)
-    except ObjectDoesNotExist:
-        logger.warning("default image is not found")
-        raise
-    return BuildConfig(
-        build_method=RuntimeType.BUILDPACK,
-        buildpacks=mgr.get_required_buildpacks(bp_stack_name=builder.name),
-        buildpack_builder=builder,
-        buildpack_runner=runner,
-        tag_options=ImageTagOptions(),
-    )
 
 
 class TemplateRuntimeManager:

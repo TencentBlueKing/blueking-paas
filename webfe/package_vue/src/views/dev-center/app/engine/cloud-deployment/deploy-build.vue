@@ -22,6 +22,7 @@
         <!-- 上云版添加源码信息 -->
         <code-source
           v-if="curAppInfo.feature?.IMAGE_APP_BIND_REPO"
+          class="custom-image-modle"
           :build-method="buildMethod"
           @close-content-loader="closeContentLoader"
         />
@@ -140,6 +141,9 @@ export default {
 .build-container {
   padding: 0 20px 20px;
   min-height: 200px;
+  ::v-deep .custom-image-modle .source-code-info {
+    border-bottom: none;
+  }
 
   :deep(.code-main),
   :deep(.mirror-main) {

@@ -18,8 +18,8 @@
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.cluster.entities import AllocationContext
-from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.entities import AllocationContext, AppImageRegistry
+from paas_wl.infras.cluster.models import Cluster, ClusterAppImageRegistry
 from paas_wl.infras.cluster.shim import ClusterAllocator
 
 
@@ -53,3 +53,27 @@ def get_dev_sandbox_cluster(app: WlApp) -> Cluster:
     # 否则使用使用匹配到的的默认集群，注意：
     #  - 功能要求 k8s 版本 >= 1.20.x, 版本过低可能会导致 ingress 等资源出现版本兼容问题
     return ClusterAllocator(AllocationContext.from_wl_app(app)).get_default()
+
+
+def get_image_registry_by_app(app: WlApp) -> AppImageRegistry:
+    """获取 WlApp 使用的镜像仓库信息"""
+    cluster = get_cluster_by_app(app)
+
+    # 如果应用绑定的集群，有配置自定义镜像仓库，则应该使用
+    if reg := ClusterAppImageRegistry.objects.filter(cluster=cluster).first():
+        return AppImageRegistry(
+            host=reg.host,
+            skip_tls_verify=reg.skip_tls_verify,
+            namespace=reg.namespace,
+            username=reg.username,
+            password=reg.password,
+        )
+
+    # 否则使用默认的镜像仓库
+    return AppImageRegistry(
+        host=settings.APP_DOCKER_REGISTRY_HOST,
+        skip_tls_verify=settings.APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY,
+        namespace=settings.APP_DOCKER_REGISTRY_NAMESPACE,
+        username=settings.APP_DOCKER_REGISTRY_USERNAME,
+        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
+    )

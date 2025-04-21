@@ -14,12 +14,33 @@
         <div class="code-detail form-edit">
           <bk-form :model="mirrorData">
             <bk-form-item :label="`${$t('镜像仓库')}：`">
-              <span class="form-text">
-                {{ mirrorData.image_repository || '--' }}</span>
+              <!-- 镜像托管模式 -->
+              <template v-if="mirrorData.image_repository">
+                {{ mirrorData.image_repository || '--' }}
+              </template>
+              <!-- 源码交付，平台产出镜像模式 -->
+              <template v-else-if="mirrorData.env_image_repositories">
+                <!-- 如果两个环境的镜像仓库是一样的，则只显示一个 -->
+                <div v-if="mirrorData.env_image_repositories.prod == mirrorData.env_image_repositories.stag">
+                  <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} </span>
+                </div>
+                <!-- 否则两个环境分别展示 -->
+                <div v-else>
+                  <div v-if="mirrorData.env_image_repositories.prod">
+                    <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} （{{ $t('生产环境') }}）</span>
+                  </div>
+                  <div v-if="mirrorData.env_image_repositories.stag">
+                    <span class="form-text"> {{ mirrorData.env_image_repositories.stag}} （{{ $t('预发布环境') }}）</span>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                --
+              </template>
             </bk-form-item>
             <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
               <span class="form-text">
-                {{ mirrorTag }}
+                {{ imageTag }}
               </span>
             </bk-form-item>
             <bk-form-item :label="`${$t('构建方式')}：`">
@@ -364,7 +385,7 @@ export default {
     };
   },
   computed: {
-    mirrorTag() {
+    imageTag() {
       const tagOptions = this.mirrorData.tag_options;
       const tagStrList = [];
       for (const key in tagOptions) {

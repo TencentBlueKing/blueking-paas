@@ -45,8 +45,6 @@
               :maxlength="item.maxlength"
               :disabled="item.disabled || (!!queryClusterId && editDisabledPropertys.includes(item.property))"
               v-model="infoFormData[item.property]"
-              @blur="inputBlur($event, item.property, 'infoFormData')"
-              @focus="inputFocus($event, item.property, 'infoFormData')"
             />
             <ConfigSelect
               v-else-if="item.type === 'select'"
@@ -129,8 +127,6 @@
             :maxlength="item.maxlength"
             :disabled="item.disabled || (!!queryClusterId && editDisabledPropertys.includes(item.property))"
             v-model="infoFormData[item.property]"
-            @blur="inputBlur($event, item.property, 'infoFormData')"
-            @focus="inputFocus($event, item.property, 'infoFormData')"
           />
           <ConfigSelect
             v-else-if="item.type === 'select'"
@@ -205,8 +201,6 @@
             v-if="['password', 'input'].includes(item.type)"
             v-model="elasticSearchFormData[item.property]"
             :type="item.type"
-            @blur="inputBlur($event, item.property, 'elasticSearchFormData')"
-            @focus="inputFocus($event, item.property, 'elasticSearchFormData')"
           />
           <ConfigSelect
             v-else-if="item.type === 'select'"
@@ -262,9 +256,6 @@ import ConfigSelect from '../comps/config-select.vue';
 import InputList from '../comps/input-list.vue';
 import { pick } from 'lodash';
 import { mapState } from 'vuex';
-
-// 敏感默认占位符
-const featurePlaceholder = '••••••';
 
 export default {
   name: 'SelectCluster',
@@ -338,8 +329,6 @@ export default {
       // 编辑态特殊处理
       specialPropertys: ['bcs_cluster_id', 'bcs_project_id'],
       editDisabledPropertys: ['name'],
-      // 敏感字段
-      sensitivePropertys: ['token', 'ca', 'cert', 'key', 'password'],
     };
   },
   computed: {
@@ -442,8 +431,6 @@ export default {
         ...this.elasticSearchFormData,
         ...data.elastic_search_config,
       };
-      // 敏感字段后端未返回，前端回填默认值
-      this.sensitiveInfoPlaceholder();
       // k8s APIServers 数据（数组）
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
       // apiServices 数据回填
@@ -457,13 +444,6 @@ export default {
           this.$refs.clusterServices[0]?.setData(apiServers);
         }
       });
-    },
-    // 编辑态下，敏感信息默认回填六位占位符
-    sensitiveInfoPlaceholder() {
-      ['token', 'ca', 'cert', 'key'].forEach((field) => {
-        this.$set(this.infoFormData, field, featurePlaceholder);
-      });
-      this.$set(this.elasticSearchFormData, 'password', featurePlaceholder);
     },
     infoSelectChange(data) {
       // 设置业务值
@@ -480,10 +460,6 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
-    },
-    // 提交时，处理前端默认占位数据
-    replacePlaceholders(value) {
-      return value === featurePlaceholder ? '' : value;
     },
     formatBcsData() {
       let data = pick(this.infoFormData, [
@@ -512,13 +488,10 @@ export default {
       } else {
         data.api_servers = [this.infoFormData.api_servers];
       }
-      // 清空默认占位符
-      data.token = this.replacePlaceholders(data.token);
       // ElasticSearch 集群信息
       const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
-        password: this.replacePlaceholders(password),
       };
       return data;
     },
@@ -537,8 +510,6 @@ export default {
           'available_tenant_ids',
           'api_address_type',
         ]);
-        // 清空默认占位符
-        data.token = this.replacePlaceholders(data.token);
       } else {
         data = pick(this.infoFormData, [
           'name',
@@ -553,10 +524,6 @@ export default {
           'available_tenant_ids',
           'api_address_type',
         ]);
-        // 清空默认占位符
-        ['ca', 'cert', 'key'].forEach((field) => {
-          data[field] = this.replacePlaceholders(data[field]);
-        });
       }
       // APIServers
       data.api_servers = this.$refs.apiServices[0]?.getData();
@@ -564,7 +531,6 @@ export default {
       const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
-        password: this.replacePlaceholders(password),
       };
       return data;
     },
@@ -592,22 +558,6 @@ export default {
       }
       // K8S集群
       return this.formatK8sData();
-    },
-    // 编辑态下
-    inputFocus(val, property, dataName) {
-      if (this.queryClusterId) {
-        // 敏感字段回填输入框，聚焦时直接清空
-        if (this.sensitivePropertys.includes(property) && val === featurePlaceholder) {
-          this.$set(this[dataName], property, '');
-        }
-      }
-    },
-    inputBlur(val, property, dataName) {
-      if (this.queryClusterId) {
-        if (this.sensitivePropertys.includes(property) && val.trim() === '') {
-          this.$set(this[dataName], property, featurePlaceholder);
-        }
-      }
     },
   },
 };

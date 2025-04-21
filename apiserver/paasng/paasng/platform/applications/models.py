@@ -679,7 +679,7 @@ class SMartAppExtraInfo(models.Model):
     # - module_proc_entrypoints: 模块进程的 entrypoint, 格式为 {模块名: {进程名: entrypoint}}
     # - module_image_tars: 模块使用的镜像 tar, 格式为 {模块名: 镜像 tar 名}
     artifact_metadata = models.JSONField(
-        default={}, help_text="构件元信息, 包含 use_cnb 和 module_proc_entrypoints 信息"
+        default={}, help_text="构件元信息, 包含 use_cnb, module_proc_entrypoints 等信息"
     )
 
     tenant_id = tenant_id_field_factory()

@@ -14,8 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import re
 
 from django.utils.translation import get_language
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -25,6 +27,9 @@ from paasng.accessories.servicehub.services import ServiceSpecificationDefinitio
 from paasng.accessories.services.models import Plan, PreCreatedInstance
 from paasng.plat_admin.admin42.serializers.engine import EnvironmentSLZ
 from paasng.utils.i18n import to_translated_field
+
+# 增强服务名称规范
+ADDONS_SERVICE_NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]$")
 
 
 class ServiceSpecificationDefinitionSLZ(serializers.Serializer):
@@ -85,6 +90,16 @@ class ServiceObjSLZ(serializers.Serializer):
             data[_translated_field] = data.pop(_field, "")
 
         return data
+
+    def validate_name(self, name: str) -> str:
+        if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):
+            raise ValidationError(
+                _(
+                    "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
+                ).format(name)
+            )  # noqa: E501
+
+        return name
 
 
 class PlanObjSLZ(serializers.Serializer):

@@ -112,8 +112,7 @@ class UserProfileManager(models.Manager):
         except self.model.DoesNotExist:
             # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
             if settings.AUTO_CREATE_REGULAR_USER:
-                tenant_id = current_tenant_id
-                return self.create(user=user.pk, tenant_id=tenant_id, role=SiteRole.USER.value)
+                return self.create(user=user.pk, tenant_id=current_tenant_id, role=SiteRole.USER.value)
             raise
         else:
             return profile

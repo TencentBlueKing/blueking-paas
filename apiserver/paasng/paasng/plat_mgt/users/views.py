@@ -37,7 +37,7 @@ from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
     AccountFeatureFlagKindSLZ,
     AccountFeatureFlagSLZ,
-    BulkCreatePlatformManagerSLZ,
+    CreatePlatformManagerSLZ,
     PlatformManagerSLZ,
     SystemAPIUserRoleSLZ,
     SystemAPIUserSLZ,
@@ -76,17 +76,22 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="批量创建平台管理员",
-        request_body=BulkCreatePlatformManagerSLZ,
+        request_body=CreatePlatformManagerSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def bulk_create(self, request, *args, **kwargs):
         """批量创建平台管理员"""
-        slz = BulkCreatePlatformManagerSLZ(data=request.data)
+        slz = CreatePlatformManagerSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
-        users = slz.validated_data["users"]
+        users_data = slz.validated_data
 
         # 创建用户名到用户ID的映射
-        user_to_id = {user: user_id_encoder.encode(settings.USER_TYPE, user) for user in users}
+        user_to_id = {}
+        for item in users_data:
+            user = item["user"]
+            # 将用户名编码为userid
+            user_id = user_id_encoder.encode(settings.USER_TYPE, user)
+            user_to_id[user] = user_id
         user_ids = list(user_to_id.values())
 
         # 查询已存在的用户, 用户id到模型的映射
@@ -103,28 +108,33 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         profiles_to_create = []
 
         # 处理所有用户
-        for user, user_id in user_to_id.items():
+        for item in users_data:
+            user = item["user"]
+            user_id = user_to_id[user]
+            tenant_id = item.get("tenant_id", None)
+
             # 审计数据
             after_data.append({"user": user, "role": role})
 
             if user_id in existing_id_to_profile:
                 # 已存在的用户 - 需要更新
                 profile = existing_id_to_profile[user_id]
-                before_data.append({"user": user, "role": profile.role})
+                before_data.append({"user": user, "role": profile.role, "tenant_id": profile.tenant_id})
 
-                if profile.role != role:
+                if profile.role != role or profile.tenant_id != tenant_id:
                     profile.role = role
+                    profile.tenant_id = tenant_id
                     profiles_to_update.append(profile)
             else:
                 # 不存在的用户 - 需要创建
-                profiles_to_create.append(UserProfile(user=user_id, role=role))
+                profiles_to_create.append(UserProfile(user=user_id, role=role, tenant_id=tenant_id))
 
         if profiles_to_create:
             # 批量创建用户
             UserProfile.objects.bulk_create(profiles_to_create)
         if profiles_to_update:
             # 批量更新用户
-            UserProfile.objects.bulk_update(profiles_to_update, ["role"])
+            UserProfile.objects.bulk_update(profiles_to_update, ["role", "tenant_id"])
 
         add_admin_audit_record(
             user=self.request.user.pk,

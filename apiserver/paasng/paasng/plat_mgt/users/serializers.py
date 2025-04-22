@@ -33,10 +33,11 @@ class PlatformManagerSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="租户 ID")
 
 
-class BulkCreatePlatformManagerSLZ(serializers.Serializer):
-    """批量创建平台管理员序列化器"""
+class CreatePlatformManagerSLZ(serializers.Serializer):
+    """创建平台管理员序列化器"""
 
-    users = serializers.ListField(child=serializers.CharField(), min_length=1, help_text="管理员用户名列表")
+    user = serializers.CharField(help_text="用户 ID")
+    tenant_id = serializers.CharField(help_text="租户 ID", required=False)
 
 
 # --------- 用户特性相关序列化器 ---------

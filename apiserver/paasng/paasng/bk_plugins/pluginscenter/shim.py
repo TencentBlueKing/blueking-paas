@@ -120,7 +120,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     # 添加默认管理员
     admins = [operator]
     if plugin.pd.options and plugin.pd.options.shouldAddAdmins:
-        admins += plugin.pd.basic_info_definition.administrator
+        admins += plugin.pd.administrator
     add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=admins)
 
 

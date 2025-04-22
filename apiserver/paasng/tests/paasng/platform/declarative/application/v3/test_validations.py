@@ -54,7 +54,7 @@ class TestValidateGoodCase:
         app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name="foo", is_default=True))
         get_app_description(app_json)
 
-    def test_normal_addons_shared(self):
+    def test_normal_shared_addons(self):
         """测试单层服务依赖是允许的 - 模块A可以引用模块B的服务"""
         bk_app_code = f"ut{generate_random_string(length=10)}"
 

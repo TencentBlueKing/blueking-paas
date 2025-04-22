@@ -96,7 +96,7 @@ class TestValidations:
         with pytest.raises(DescriptionValidationError, match="modules"):
             get_app_description(app_json)
 
-    def test_service_shared_error(self):
+    def test_shared_service_error(self):
         bk_app_code = f"ut{generate_random_string(length=10)}"
         app_json = builder.make_app_desc(
             bk_app_code,
@@ -109,7 +109,7 @@ class TestValidations:
         with pytest.raises(DescriptionValidationError, match="modules"):
             get_app_description(app_json)
 
-    def test_nested_service_shared(self):
+    def test_nested_shared_service(self):
         """测试多层服务依赖检查 - 不允许模块A引用模块B的服务，而模块B又引用模块C的服务"""
         bk_app_code = f"ut{generate_random_string(length=10)}"
 

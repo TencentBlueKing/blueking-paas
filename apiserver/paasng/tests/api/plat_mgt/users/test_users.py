@@ -47,14 +47,15 @@ class TestPlatformManagerViewSet:
         users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
         user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
 
-        data = {"users": users}
+        data = [{"user": users[0], "tenant_id": "default"}, {"user": users[1], "tenant_id": "default"}]
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
-        # 验证用户角色已创建且为管理员
+        # 验证用户角色已创建且为管理员, 租户为给定租户
         for user_id in user_ids:
             profile = UserProfile.objects.get(user=user_id)
             assert profile.role == SiteRole.ADMIN.value
+            assert profile.tenant_id == "default"
 
     def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""

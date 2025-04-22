@@ -364,6 +364,11 @@ class PluginCreateApproval(BaseModel):
 
 
 @prepare_json_field
+class PluginOptions(BaseModel):
+    shouldAddAdmins: bool = Field(default=False, description="是否将插件的平台管理员默认添加到插件实例的成员中")
+
+
+@prepare_json_field
 class PluginDefinition(BaseModel):
     """插件模板定义"""
 
@@ -374,7 +379,6 @@ class PluginDefinition(BaseModel):
     logo: str = Field(description="插件logo链接")
     spec: PluginInstanceSpec = Field(description="插件实例相关属性")
     administrator: List[str] = Field(description="插件管理员(负责创建审批、上线审批), 内容需要使用 bkpaas_auth 编码")
-    addAdminToPluginMembers: bool = Field(default=False, description="是否将插件管理员添加到插件成员列表")
     approvalConfig: Optional[PluginCreateApproval] = Field(description="插件创建审批配置")
     releaseRevision: ReleaseRevisionDefinition = Field(description="插件发布版本规则")
     releaseStages: List[ReleaseStageDefinition] = Field(description="插件发布步骤")
@@ -383,6 +387,7 @@ class PluginDefinition(BaseModel):
 
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
     features: List[PluginFeature] = Field(default_factory=list)
+    options: PluginOptions = Field(description="插件额外配置项")
 
 
 def find_stage_by_id(

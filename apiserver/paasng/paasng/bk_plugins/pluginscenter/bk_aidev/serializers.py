@@ -14,19 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from django.conf import settings
-from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
 
-from paasng.bk_plugins.pluginscenter.bk_aidev.client import BkAIDevClient
-from paasng.bk_plugins.pluginscenter.bk_aidev.serializers import BkAIDevSpaceSLZ
-from paasng.core.tenant.user import get_tenant
+from rest_framework import serializers
 
 
-class BkAIDevManageView(ViewSet):
-    def get_spaces(self, request):
-        login_cookie = request.COOKIES.get(settings.BK_COOKIE_NAME, None)
-        tenant_id = get_tenant(request.user).id
-        client = BkAIDevClient(login_cookie, tenant_id)
-        data = client.list_spaces()
-        return Response(BkAIDevSpaceSLZ(data, many=True).data)
+class BkAIDevSpaceSLZ(serializers.Serializer):
+    space_id = serializers.CharField()
+    space_name = serializers.CharField()

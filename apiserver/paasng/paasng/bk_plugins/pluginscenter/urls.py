@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 from django.urls import path
 
 from . import views
-from .bk_aidev.views import BkAiDevManageView
+from .bk_aidev.views import BkAIDevManageView
 from .bk_user.views import BkPluginUserManageView
 from .iam_adaptor.views import PluginSelectionView
 
@@ -213,6 +213,6 @@ urlpatterns = [
     # bk aidev api
     path(
         "api/bkaidev/spaces/",
-        BkAiDevManageView.as_view({"get": "get_spaces"}),
+        BkAIDevManageView.as_view({"get": "get_spaces"}),
     ),
 ]

@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-class BkAiDevGatewayServiceError(Exception):
+class BkAIDevGatewayServiceError(Exception):
     """This error indicates that there's something wrong when operating bk-aidev's
     API Gateway resource. It's a wrapper class of API SDK's original exceptions
     """
@@ -26,7 +26,7 @@ class BkAiDevGatewayServiceError(Exception):
         self.message = message
 
 
-class BkAiDevApiError(BkAiDevGatewayServiceError):
+class BkAIDevApiError(BkAIDevGatewayServiceError):
     """When calling the bk-aidev api, bk-aidev returns an error message,
     which needs to be captured and displayed to the user on the page
     """

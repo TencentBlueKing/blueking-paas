@@ -15,24 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""
-原CDB/gcs数据库申请/授权逻辑
-"""
 import logging
 
 import pymysql
 
-from paasng.accessories.services.utils import gen_unique_id, generate_password
+from paasng.accessories.services.providers.base import BaseProvider, InstanceData
+from paasng.accessories.services.utils import gen_addons_cert_mount_path, gen_unique_id, generate_password
 
 from .constants import GRANT_SQL_FMT, REVOKE_SQL_FMT, MySQLAuthTypeEnum
 from .exceptions import CreateDatabaseFailed
-from ..base import BaseProvider, InstanceData
 
 logger = logging.getLogger(__name__)
 
 
 class MySQLProvider(BaseProvider):
-    display_name = "MySQL 通用申请服务"
     """
     desc: 普通数据库授权 / CDB 数据库授权
     example: qcloud的正式/测试环境的db申请, 内部版测试环境db申请
@@ -47,12 +43,23 @@ class MySQLProvider(BaseProvider):
     - 追加授权
     """
 
+    display_name = "MySQL 通用申请服务"
+
     def __init__(self, config):
         self.host = config["host"]
         self.port = config["port"]
         self.user = config["user"]
         self.password = config["password"]
         self.auth_ip_list = config["auth_ip_list"]
+
+        # ssl 证书
+        tls = config.get("tls") or {}
+        self.ca = tls.get("ca")
+        self.cert = tls.get("cert")
+        self.cert_key = tls.get("key")
+
+        # 增强服务方案
+        self.plan = config["__plan__"]
 
     def _get_connection(self):
         connection = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
@@ -158,6 +165,16 @@ class MySQLProvider(BaseProvider):
             "user": database_user,
             "password": database_password,
         }
+
+        # 添加证书路径到凭证信息中
+        provider_name = self.plan.service.provider_name
+        if self.ca:
+            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
+
+        if self.cert and self.cert_key:
+            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "key.pem")
+
         return InstanceData(credentials=credentials, config={})
 
     def delete(self, instance_data: InstanceData) -> None:

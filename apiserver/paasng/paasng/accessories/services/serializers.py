@@ -28,7 +28,7 @@ class PlanSlugField(serializers.SlugRelatedField):
 
 class PreCreatedInstanceImportSLZ(serializers.ModelSerializer):
     plan = PlanSlugField(slug_field="name")
-    config = serializers.JSONField(help_text="same of ServiceInstance.config", binary=True)
+    config = serializers.JSONField(help_text="same of ServiceInstance.config")
     credentials = serializers.JSONField(help_text="same of ServiceInstance.credentials")
 
     class Meta:

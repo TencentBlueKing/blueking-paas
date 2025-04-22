@@ -110,11 +110,9 @@ class Base36Handler:
         str_len = len(encoded)
         num = 0
 
-        idx = 0
-        for char in encoded:
-            power = str_len - (idx + 1)
+        for idx, char in enumerate(encoded, start=1):
+            power = str_len - idx
             num += alphabet.index(char) * (base**power)
-            idx += 1
 
         return num
 
@@ -177,3 +175,18 @@ class WRItemList:
 
 
 # WR Algorithm end
+
+
+def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
+    """生成蓝鲸应用挂载增强服务 ssl 证书的路径
+
+    :param provider_name: 增强服务提供者名称，如：redis，mysql，rabbitmq（也可能与 Service 同名）
+    :param cert_name: 证书名称，必须是 ca.pem，cert.pem，key.pem 三者之一
+    """
+    if not provider_name:
+        raise ValueError("provider_name is required")
+
+    if cert_name not in ["ca.pem", "cert.pem", "key.pem"]:
+        raise ValueError("cert_name must be one of ca.pem, cert.pem, key.pem")
+
+    return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"

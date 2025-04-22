@@ -14,27 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import Literal
-
-from pydantic import BaseModel
 
 
-class RedisPlanConfig(BaseModel):
-    """Redis 计划配置"""
-
-    type: Literal["Redis", "RedisReplication"] = "Redis"
-    redis_version: str
-    # 部署集群
-    cluster_name: str
-    persistent_storage: bool = False
-    monitor: bool = False
-    memory_size: Literal["2Gi", "4Gi", "8Gi"] = "2Gi"
-    service_export_type: Literal["TencentCLB", "ClusterDNS"] = "ClusterDNS"
-
-
-class RedisInstanceCredential(BaseModel):
-    """Redis 实例配置"""
-
-    host: str
-    port: int
-    password: str
+class ResourceNotEnoughError(Exception):
+    """资源不足异常"""

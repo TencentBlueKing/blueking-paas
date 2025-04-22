@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import logging
 from dataclasses import dataclass
 from typing import Dict
@@ -21,7 +22,7 @@ from typing import Dict
 from paas_service.base_vendor import BaseProvider, InstanceData
 
 from svc_redis.controller.controllers import RedisInstanceController
-from svc_redis.controller.schemas import RedisInstanceCredential, RedisPlanConfig
+from svc_redis.controller.entities import RedisInstanceCredential, RedisPlanConfig
 from svc_redis.vendor.utils import gen_unique_id
 
 from .exceptions import CreateRedisFailed, DeleteRedisFailed
@@ -31,17 +32,15 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Provider(BaseProvider):
-    """Redis 服务提供商实现类
-    使用 Kubernetes Operator 管理 Redis 实例
+    """Redis 服务提供商实现类，使用 Kubernetes Operator 管理 Redis 实例。
 
-    属性：
-        type: Redis 部署类型 (Redis/RedisReplication)
-        redis_version: Redis 版本号 (如 'v6.2.12')
-        cluster_name: Kubernetes 集群名称
-        memory_size: 内存限制 (如 '2Gi')
-        service_export_type: 服务暴露方式 ("TencentCLB", "ClusterDNS")
-        persistent_storage: 是否启用持久化存储 (默认 False)
-        monitor: 是否启用监控 (默认 False)
+    :param type: Redis 部署类型，可选值为 "Redis" 或 "RedisReplication"
+    :param redis_version: Redis 版本号，例如 "v6.2.12"
+    :param cluster_name: Kubernetes 集群名称，用于标识部署目标集群
+    :param memory_size: 内存限制，单位为 Kubernetes 资源格式，例如 "2Gi"
+    :param service_export_type: 服务暴露方式，可选值为 "TencentCLB" 或 "ClusterDNS"
+    :param persistent_storage: 是否启用持久化存储，默认为 False
+    :param monitor: 是否启用 Prometheus 监控，默认为 False
     """
 
     type: str
@@ -74,12 +73,9 @@ class Provider(BaseProvider):
         3. 返回访问凭证
 
         :param params: Dict, 由 v3 申请增强服务实例时透传
-        engine_app_name: str
-        :return: InstanceData
-        credentials: 连接凭证 (host, port, password)
-        config: {"namespace":"xxx"}
+        :return: InstanceData，包含 credentials 和 config
         """
-        logger.info("正在创建增强服务实例...")
+        logger.info("Creating service instance...")
 
         # 创建唯一的 namespace
         preferred_name = str(params.get("engine_app_name"))
@@ -92,20 +88,17 @@ class Provider(BaseProvider):
             credential = controller.create()
         except Exception as e:
             # 如果资源申请失败，实例保持未分配状态
-            logger.exception("资源申请失败")
-            raise CreateRedisFailed("资源申请失败") from e
+            logger.exception("Resource allocation failed")
+            raise CreateRedisFailed("Resource allocation failed") from e
 
         return InstanceData(credentials=credential.dict(), config={"namespace": namespace})
 
     def delete(self, instance_data: InstanceData):
         """删除 Redis 实例
 
-        :param instance_data:
-        credentials: 连接凭证 (host, port, password)
-        config: {"namespace":"xxx"}
-        :return:
+        :param instance_data: 实例信息，包含 credentials 和 config
         """
-        logger.info("正在删除增强服务实例...")
+        logger.info("Deleting service instance...")
         db_info = instance_data.credentials
 
         credential = RedisInstanceCredential(host=db_info["host"], port=db_info["port"], password=db_info["password"])
@@ -114,8 +107,8 @@ class Provider(BaseProvider):
             controller = RedisInstanceController(self.plan_config, namespace)
             controller.delete(credential)
         except Exception as e:
-            logger.exception("资源释放失败")
-            raise DeleteRedisFailed("资源释放失败") from e
+            logger.exception("Resource delete failed")
+            raise DeleteRedisFailed("Resource delete failed") from e
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError

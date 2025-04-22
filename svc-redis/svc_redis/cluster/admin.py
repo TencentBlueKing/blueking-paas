@@ -14,9 +14,10 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 from django.contrib import admin
 
-from .models import APIServer, Cluster, TencentCLBEndpoint
+from .models import APIServer, Cluster, TencentCLBListener
 
 
 @admin.register(Cluster)
@@ -40,8 +41,8 @@ class APIServerAdmin(admin.ModelAdmin):
     readonly_fields = ("created", "updated")
 
 
-@admin.register(TencentCLBEndpoint)
-class TencentCLBEndpointAdmin(admin.ModelAdmin):
+@admin.register(TencentCLBListener)
+class TencentCLBListenerAdmin(admin.ModelAdmin):
     list_display = ("name", "cluster", "vip", "clb_id", "port", "is_allocated")
     search_fields = ("name", "vip", "clb_id")
     readonly_fields = ("created", "updated")

@@ -31,7 +31,7 @@ from svc_redis.vendor.redis_crd.constants import (
     RedisType,
 )
 
-from .schemas import RedisPlanConfig
+from .entities import RedisPlanConfig
 
 
 class ManifestConstructor(ABC):

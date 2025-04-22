@@ -27,10 +27,11 @@ from .constants import (
     ClusterTokenType,
     ClusterType,
 )
+from .exceptions import ResourceNotEnoughError
 
 
 class Cluster(UuidAuditedModel):
-    """应用集群"""
+    """服务部署集群"""
 
     name = models.CharField(help_text="集群名称", max_length=32, unique=True)
     type = models.CharField(max_length=32, help_text="集群类型", default=ClusterType.NORMAL)
@@ -85,62 +86,61 @@ class APIServer(UuidAuditedModel):
         verbose_name_plural = verbose_name = "API Server"
 
 
-class TencentCLBEndpoint(UuidAuditedModel):
-    """CLB 端点"""
+class TencentCLBListenerManager(models.Manager):
+    """Manager for CLB listener operations with thread-safe allocation"""
+
+    def acquire_by_cluster_name(self, cluster_name: str) -> "TencentCLBListener":
+        """
+        Thread-safely acquire an available CLB listener for specified cluster
+
+        :param cluster_name: Name of the target cluster
+        :return: TencentCLBListener
+
+        :raises: ResourceNotEnoughError When no available endpoints exist
+        """
+        with transaction.atomic():
+            # 使用 select_for_update 锁定符合条件的记录，防止并发修改
+            clb_endpoint = self.select_for_update().filter(cluster__name=cluster_name, is_allocated=False).first()
+
+            if not clb_endpoint:
+                raise ResourceNotEnoughError(f"No available CLB listener for cluster {cluster_name}")
+
+            clb_endpoint.is_allocated = True
+            clb_endpoint.save(update_fields=["is_allocated"])
+            return clb_endpoint
+
+    def release(self, cluster_name: str, vip: str, port: int):
+        """
+        Release a previously allocated CLB listener
+
+        :param cluster_name: Name of the cluster
+        :param vip: Virtual IP address of the endpoint
+        :param port: Port of the endpoint
+        """
+        clb_endpoint = self.get(
+            cluster__name=cluster_name,
+            vip=vip,
+            port=port,
+        )
+        if clb_endpoint.is_allocated is False:
+            return
+
+        clb_endpoint.is_allocated = False
+        clb_endpoint.save(update_fields=["is_allocated"])
+
+
+class TencentCLBListener(UuidAuditedModel):
+    """CLB Listener"""
 
     name = models.CharField(max_length=255, help_text="CLB 名称")
-    cluster = models.ForeignKey(to=Cluster, related_name="clb_ports", on_delete=models.CASCADE)
+    cluster = models.ForeignKey(to=Cluster, related_name="clb_endpoints", on_delete=models.CASCADE)
     clb_id = models.CharField(max_length=255, help_text="CLB ID")
     vip = models.GenericIPAddressField(help_text="CLB VIP 地址")
     port = models.IntegerField(help_text="CLB 端口")
     is_allocated = models.BooleanField(default=False, help_text="是否已被分配")
 
+    objects = TencentCLBListenerManager()
+
     class Meta:
-        unique_together = ("cluster", "vip", "port")
-        verbose_name_plural = verbose_name = "腾讯云 CLB 端点"
-
-    def acquire(self):
-        self.is_allocated = True
-        self.save(update_fields=["is_allocated"])
-
-    def release(self):
-        self.is_allocated = False
-        self.save(update_fields=["is_allocated"])
-
-    @classmethod
-    def acquire_clb_endpoint_by_cluster_name(cls, cluster_name: str) -> "TencentCLBEndpoint":
-        """
-        线程安全地获取并分配一个可用的 CLB 端点
-        """
-        with transaction.atomic():
-            try:
-                # 使用 select_for_update 锁定符合条件的记录，防止并发修改
-                clb_endpoint = (
-                    cls.objects.select_for_update().filter(cluster__name=cluster_name, is_allocated=False).first()
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to acquire CLB endpoint: {e}")
-            else:
-                if not clb_endpoint:
-                    raise ValueError(f"No available CLB endpoints for cluster {cluster_name}.")
-
-                clb_endpoint.acquire()
-                return clb_endpoint
-
-    @classmethod
-    def release_clb_endpoint(cls, cluster_name: str, vip: str, port: int) -> None:
-        """
-        根据集群名称、VIP 和端口释放 CLB 端点。
-        """
-        try:
-            clb_endpoint = cls.objects.get(
-                cluster__name=cluster_name,
-                vip=vip,
-                port=port,
-                is_allocated=True,
-            )
-            clb_endpoint.release()
-        except cls.DoesNotExist:
-            raise ValueError(f"CLB Endpoint {vip}:{port} not found or not allocated.")
-        except Exception as e:
-            raise ValueError(f"Failed to release CLB endpoint: {e}")
+        unique_together = ("vip", "port")
+        verbose_name_plural = verbose_name = "腾讯云 CLB 监听器"

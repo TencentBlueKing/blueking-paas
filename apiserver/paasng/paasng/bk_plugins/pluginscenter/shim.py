@@ -121,7 +121,7 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     admins = [operator]
     if plugin.pd.options and plugin.pd.options.shouldAddAdmins:
         admins += plugin.pd.administrator
-    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=admins)
+    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=list(set(admins)))
 
 
 @atomic

@@ -26,6 +26,7 @@ RUN poetry config virtualenvs.create false && poetry install --no-root -vvv
 
 ADD ./svc_redis ./svc_redis
 ADD ./static ./static
+ADD ./utils ./utils
 ADD ./manage.py .
 ADD ./start.sh .
 

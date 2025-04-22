@@ -82,6 +82,9 @@
         <bk-form-item
           :label="$t('用户')"
           :required="true"
+          :property="'userList'"
+          :rules="userRule"
+          :error-display-type="'normal'"
         >
           <!-- 多租户人员选择器 -->
           <user
@@ -89,6 +92,7 @@
             :placeholder="$t('请输入用户')"
             :multiple="true"
             :empty-text="$t('无匹配人员')"
+            @change="handleUserChange"
           />
         </bk-form-item>
       </bk-form>
@@ -124,7 +128,7 @@
 import paginationMixin from '../pagination-mixin.js';
 import deleteDialog from '../components/delete-dialog.vue';
 import User from '@/components/user';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
@@ -169,12 +173,22 @@ export default {
           sortable: true,
         },
       ],
+      userRule: [
+        {
+          validator: () => {
+            return !!this.addAdminDialog.formData?.userList?.length;
+          },
+          message: this.$t('必填项'),
+          trigger: 'blur',
+        },
+      ],
     };
   },
   computed: {
     ...mapState({
       platformFeature: (state) => state.platformFeature,
     }),
+    ...mapGetters(['tenantId']),
   },
   created() {
     this.getAdminUser();
@@ -206,12 +220,20 @@ export default {
       this.deleteDialogConfig.visible = true;
       this.deleteDialogConfig.input = row.user;
     },
-    handleConfirm() {
-      const { userList } = this.addAdminDialog.formData;
-      const params = {
-        users: userList,
-      };
-      this.addPlatformAdministrators(params);
+    async handleConfirm() {
+      try {
+        await this.$refs.dialogForm.validate();
+        const { userList } = this.addAdminDialog.formData;
+        const params = userList.map((v) => {
+          return {
+            user: v,
+            tenant_id: this.tenantId,
+          };
+        });
+        this.addPlatformAdministrators(params);
+      } catch (error) {
+        console.error('Form validation failed:', error);
+      }
     },
     // 添加平台管理员
     async addPlatformAdministrators(data) {
@@ -250,6 +272,11 @@ export default {
       } finally {
         this.deleteDialogConfig.isLoading = false;
       }
+    },
+    handleUserChange() {
+      this.$refs.dialogForm.validateField('userList').catch((e) => {
+        console.error(e);
+      });
     },
   },
 };

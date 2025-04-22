@@ -138,7 +138,7 @@ class AppDescriptionSLZ(serializers.Serializer):
         if not has_default:
             raise serializers.ValidationError({"modules": _("一个应用必须有一个主模块")})
 
-    def _validate_services_shared_from(self, modules: Dict[str, ModuleDesc]):
+    def _validate_shared_services(self, modules: Dict[str, ModuleDesc]):
         """校验服务共享配置的合法性"""
         for module_name, module_desc in modules.items():
             for svc in module_desc.services:
@@ -171,7 +171,7 @@ class AppDescriptionSLZ(serializers.Serializer):
 
         # 执行校验
         self._validate_default_module(attrs["modules"])
-        self._validate_services_shared_from(attrs["modules"])
+        self._validate_shared_services(attrs["modules"])
 
         attrs.setdefault("plugins", [])
         if self.context.get("app_version"):

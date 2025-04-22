@@ -103,8 +103,8 @@ class UserProfileManager(models.Manager):
 
         try:
             profile = self.model.objects.get(user=user.pk)
-            # 如果租户 ID 为空则自动补全
-            if not profile.tenant_id:
+            # 如果 tenant_id 跟当前用户的 tenant-id 不一致的时候更新
+            if profile.tenant_id != get_tenant(user).id:
                 profile.tenant_id = get_tenant(user).id
                 profile.save(update_fields=["tenant_id"])
         except self.model.DoesNotExist:

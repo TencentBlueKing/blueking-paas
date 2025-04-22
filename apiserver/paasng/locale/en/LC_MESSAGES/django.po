@@ -2654,13 +2654,13 @@ msgstr "module providing shared Add-ons does not exist"
 
 #: paasng/platform/declarative/application/validations/v2.py:160
 #: paasng/platform/declarative/application/validations/v3.py:152
-msgid "提供共享增强服务的模块中不存在该服务"
-msgstr "module providing shared Add-ons does not exist enhancement service"
+msgid "提供共享增强服务的模块未启用该服务"
+msgstr "the shared Add-ons is not enabled in this module"
 
-#: paasng/platform/declarative/application/validations/v2.py:164
-#: paasng/platform/declarative/application/validations/v3.py:156
-msgid "不支持多层服务依赖"
-msgstr "not support multi-layer service dependencies"
+#: paasng/platform/declarative/application/validations/v2.py:165
+#: paasng/platform/declarative/application/validations/v3.py:157
+msgid "不允许嵌套共享增强服务"
+msgstr "nested shared Add-ons are not allowed"
 
 #: paasng/platform/declarative/handlers.py:204
 #: paasng/platform/declarative/handlers.py:206

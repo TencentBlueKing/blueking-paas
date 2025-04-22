@@ -96,7 +96,7 @@ class TestValidateBadCase:
         with pytest.raises(DescriptionValidationError, match="modules"):
             get_app_description(app_json)
 
-    def test_validate_addons_shared_from(self):
+    def test_nested_addons_shared(self):
         """测试多层服务依赖检查 - 不允许模块A引用模块B的服务，而模块B又引用模块C的服务"""
         bk_app_code = f"ut{generate_random_string(length=10)}"
 
@@ -136,7 +136,7 @@ class TestValidateBadCase:
         with pytest.raises(DescriptionValidationError, match="modules"):
             get_app_description(app_json)
 
-    def test_validate_addons_shared_from_allowed(self):
+    def test_normal_addons_shared(self):
         """测试单层服务依赖是允许的 - 模块A可以引用模块B的服务"""
         bk_app_code = f"ut{generate_random_string(length=10)}"
 

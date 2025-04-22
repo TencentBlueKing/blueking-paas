@@ -157,11 +157,13 @@ class AppDescriptionSLZ(serializers.Serializer):
                 # 检查依赖 module 中是否存在该服务
                 if not ref_service:
                     raise serializers.ValidationError(
-                        {f"modules[{module_name}].services": _("提供共享增强服务的模块中不存在该服务")}
+                        {f"modules[{module_name}].services": _("提供共享增强服务的模块未启用该服务")}
                     )
                 # 检查依赖的服务是否也有 shared_from
                 if ref_service.shared_from:
-                    raise serializers.ValidationError({f"modules[{module_name}].services": _("不支持多层服务依赖")})
+                    raise serializers.ValidationError(
+                        {f"modules[{module_name}].services": _("不允许嵌套共享增强服务")}
+                    )
 
     def to_internal_value(self, data: Dict) -> ApplicationDesc:
         attrs = super().to_internal_value(data)

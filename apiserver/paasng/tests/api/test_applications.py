@@ -704,8 +704,8 @@ class TestCreateApplicationWithTenantParams:
 
         assert response.status_code == 201, f"error: {response.json()['detail']}"
         app_data = response.json()["application"]
-        assert app_data["app_tenant_mode"] == AppTenantMode.GLOBAL
-        assert app_data["app_tenant_id"] == ""
+        assert app_data["app_tenant_mode"] == AppTenantMode.SINGLE
+        assert app_data["app_tenant_id"] == DEFAULT_TENANT_ID
 
         # Check the tenant_id of the created application object
         # TODO: Find a better way to do this assertion check.

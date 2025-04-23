@@ -33,6 +33,7 @@ from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
@@ -309,13 +310,13 @@ class Application(OwnerTimestampedModel):
     app_tenant_mode = models.CharField(
         verbose_name="应用租户模式",
         max_length=16,
-        default=AppTenantMode.GLOBAL.value,
+        default=AppTenantMode.SINGLE.value,
         help_text="应用在租户层面的可用范围，可选值：全租户、指定租户",
     )
     app_tenant_id = models.CharField(
         verbose_name="应用租户 ID",
         max_length=32,
-        default="",
+        default=DEFAULT_TENANT_ID,
         help_text="应用对哪个租户的用户可用，当应用租户模式为全租户时，本字段值为空",
     )
     type = models.CharField(

@@ -74,6 +74,7 @@ class UniversalAppSLZ(serializers.Serializer):
     developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表", allow_null=True)
     tenant_id = serializers.CharField(help_text="所属租户")
     app_tenant_mode = serializers.CharField(help_text="租户类型")
+    app_tenant_id = serializers.CharField(help_text="租户 ID")
 
 
 class ContactInfoSLZ(serializers.Serializer):

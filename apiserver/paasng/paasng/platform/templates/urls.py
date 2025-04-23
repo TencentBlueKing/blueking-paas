@@ -32,10 +32,4 @@ urlpatterns = [
         views.TemplateDetailedViewSet.as_view({"get": "list"}),
         name="api.templates.list",
     ),
-    # 按类型和名字获取某个模板的详情
-    re_path(
-        r"^api/tmpls/(?P<tpl_type>[^/]+)/template/(?P<tpl_name>[^/]+)$",
-        views.TemplateDetailedViewSet.as_view({"get": "retrieve"}),
-        name="api.templates.detail",
-    ),
 ]

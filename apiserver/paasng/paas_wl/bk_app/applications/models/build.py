@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import os
 import shlex
 from typing import Dict, List, Optional
@@ -26,11 +27,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
 from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from moby_distribution.registry.exceptions import PermissionDeny, ResourceNotFound, UnSupportMediaType
 from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
 from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models.misc import OutputStream
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
 from paas_wl.utils.models import UuidAuditedModel, validate_procfile
@@ -46,13 +49,7 @@ DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 # see: https://buildpacks.io/docs/for-platform-operators/concepts/lifecycle/launch/
 DEFAULT_CNB_RUNNER_ENTRYPOINT = ["launcher"]
 
-
-def get_app_docker_registry_client() -> DockerRegistryV2Client:
-    return DockerRegistryV2Client.from_api_endpoint(
-        api_endpoint=APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
-        username=settings.APP_DOCKER_REGISTRY_USERNAME,
-        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-    )
+logger = logging.getLogger(__name__)
 
 
 class Build(UuidAuditedModel):
@@ -195,22 +192,31 @@ class Build(UuidAuditedModel):
         self.artifact_detail = {"invoke_message": self.build_process.invoke_message}
 
         if self.artifact_type == ArtifactType.IMAGE:
-            image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
-            registry_client = get_app_docker_registry_client()
+            image_registry = get_image_registry_by_app(self.app)
+            registry_client = DockerRegistryV2Client.from_api_endpoint(
+                api_endpoint=APIEndpoint(url=image_registry.host),
+                username=image_registry.username,
+                password=image_registry.password,
+            )
+            image = parse_image(self.image, default_registry=image_registry.host)
             ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
-            # 默认的 "application/vnd.docker.distribution.manifest.v2+json" 可能 metadata 为 None, 但镜像已存在
-            # FIXME: 同时带上多种格式的 media_type?
-            metadata = ref.get_metadata()
+
+            metadata = None
+            try:
+                metadata = ref.get_metadata()
+            except (PermissionDeny, ResourceNotFound, UnSupportMediaType) as e:
+                # 由于集群关联的镜像仓库可能被修改，导致历史的构建所关联的镜像不一定能查询到，这里需要忽略
+                logger.warning(f"Failed to get metadata of image {self.image}: {e}")
+
+            size, digest = 0, "unknown"
             if metadata:
                 manifest: ManifestSchema2 = ref.get()
-                self.artifact_detail.update(
-                    {"size": sum(layer.size for layer in manifest.layers), "digest": metadata.digest}
-                )
-            else:
-                # 如果 metadata 为 None, 表示未查找到镜像
-                self.artifact_detail.update({"size": 0, "digest": "unknown"})
+                size = sum(layer.size for layer in manifest.layers)
+                digest = metadata.digest
 
-        self.save(update_fields=["artifact_detail"])
+            self.artifact_detail.update({"size": size, "digest": digest})
+
+        self.save(update_fields=["artifact_detail", "updated"])
         return self.artifact_detail
 
     def artifact_invoke_message(self):

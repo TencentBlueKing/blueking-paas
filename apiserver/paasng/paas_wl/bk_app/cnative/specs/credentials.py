@@ -15,16 +15,24 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 from contextlib import contextmanager
 from typing import Iterator, List
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.infras.resources.base import kres
+from paas_wl.workloads.configuration.secret.kres_entities import Secret, secret_kmodel
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paas_wl.workloads.images.kres_entities import ImageCredentialsManager as _ImageCredentialsManager
 from paas_wl.workloads.images.models import AppUserCredential
-from paasng.platform.applications.models import Application
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.accessories.services.models import PreCreatedInstance
+from paasng.accessories.services.utils import gen_addons_cert_secret_name
+from paasng.platform.applications.models import Application, ModuleEnvironment
+
+logger = logging.getLogger(__name__)
 
 
 def split_image(repository: str) -> str:
@@ -55,3 +63,59 @@ class ImageCredentialsManager(_ImageCredentialsManager):
         yield self.entity_type.Meta.kres_class(self._client, api_version=api_version)
 
     kres = contextmanager(_kres)
+
+
+def deploy_addons_tls_certs(env: ModuleEnvironment):
+    """下发增强服务 TLS 证书（如果需要的话）"""
+    # 绑定的增强服务
+    bound_services = list(mixed_service_mgr.list_binded(env.module))
+    # 共享的增强服务
+    shared_services = [info.service for info in ServiceSharingManager(env.module).list_all_shared_info()]
+    # 合并两个列表
+    all_services = set(bound_services + shared_services)
+    # 环境信息（日志打印用）
+    env_info = f"App: {env.application.code}, Module: {env.module.name}, Env: {env.environment}"
+
+    for service in all_services:
+        for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
+            svc_inst = rel.get_instance()
+
+            cfg = svc_inst.config
+            if not cfg:
+                continue
+
+            provider_name = cfg.get("provider_name")
+            has_tls_certs = cfg.get("has_tls_certs")
+            # 只有当能够获取增强服务提供方名称，且明确有 TLS 证书时才继续
+            if not (provider_name and has_tls_certs):
+                continue
+
+            tls = None
+            # 预先创建的资源实例 -> 资源池类型，证书数据存在 PreCreatedInstance.config 中
+            if cfg.get("is_pre_created"):
+                if pk := cfg.get("__pk__"):
+                    pre_created_inst = PreCreatedInstance.objects.get(pk=pk)
+                    tls = pre_created_inst.config.get("tls")
+            # 其他情况下，证书存在方案配置中
+            else:
+                tls = rel.get_plan().config.get("tls")
+
+            if not tls:
+                logger.warning("%s, service %s has not tls config, skip...", env_info, service.name)
+                continue
+
+            tls_certs = {}
+            if ca := tls.get("ca"):
+                tls_certs["ca.pem"] = ca
+
+            cert, cert_key = tls.get("cert"), tls.get("key")
+            if cert and cert_key:
+                tls_certs["cert.pen"] = cert
+                tls_certs["key.pem"] = cert_key
+
+            if not tls_certs:
+                logger.warning("%s, service %s cannot generate tls certs, skip...", env_info, service.name)
+                continue
+
+            secret_name = gen_addons_cert_secret_name(provider_name)
+            secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, data=tls_certs))

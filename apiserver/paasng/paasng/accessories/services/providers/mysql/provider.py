@@ -58,9 +58,6 @@ class MySQLProvider(BaseProvider):
         self.cert = tls.get("cert")
         self.cert_key = tls.get("key")
 
-        # 增强服务方案
-        self.plan = config["__plan__"]
-
     def _get_connection(self):
         connection = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
         return connection
@@ -167,7 +164,7 @@ class MySQLProvider(BaseProvider):
         }
 
         # 添加证书路径到凭证信息中
-        provider_name = self.plan.service.provider_name
+        provider_name = "mysql"
         if self.ca:
             credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
 
@@ -175,7 +172,10 @@ class MySQLProvider(BaseProvider):
             credentials["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
             credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "key.pem")
 
-        return InstanceData(credentials=credentials, config={})
+        return InstanceData(
+            credentials=credentials,
+            config={"provider_name": provider_name, "has_tls_certs": bool(self.ca or self.cert or self.cert_key)},
+        )
 
     def delete(self, instance_data: InstanceData) -> None:
         credentials = instance_data.credentials

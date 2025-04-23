@@ -193,6 +193,11 @@ class ConfigMapSource(BaseModel):
 
 
 @register
+class SecretSource(BaseModel):
+    name: str
+
+
+@register
 class PersistentStorage(BaseModel):
     name: str
 
@@ -200,6 +205,7 @@ class PersistentStorage(BaseModel):
 @register
 class VolumeSource(BaseModel):
     configMap: Optional[ConfigMapSource] = None
+    secret: Optional[SecretSource] = None
     persistentStorage: Optional[PersistentStorage] = None
 
 

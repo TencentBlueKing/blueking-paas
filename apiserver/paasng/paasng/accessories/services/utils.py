@@ -177,16 +177,29 @@ class WRItemList:
 # WR Algorithm end
 
 
+def gen_addons_cert_mount_dir(provider_name: str) -> str:
+    """生成蓝鲸应用挂载增强服务 ssl 证书的目录路径"""
+    if not provider_name:
+        raise ValueError("provider_name is required")
+
+    return f"/opt/blueking/bkapp-addons-certs/{provider_name}"
+
+
 def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
     """生成蓝鲸应用挂载增强服务 ssl 证书的路径
 
     :param provider_name: 增强服务提供者名称，如：redis，mysql，rabbitmq（也可能与 Service 同名）
     :param cert_name: 证书名称，必须是 ca.pem，cert.pem，key.pem 三者之一
     """
-    if not provider_name:
-        raise ValueError("provider_name is required")
-
     if cert_name not in ["ca.pem", "cert.pem", "key.pem"]:
         raise ValueError("cert_name must be one of ca.pem, cert.pem, key.pem")
 
-    return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"
+    return f"{gen_addons_cert_mount_dir(provider_name)}/{cert_name}"
+
+
+def gen_addons_cert_secret_name(provider_name: str) -> str:
+    """生成蓝鲸应用挂载增强服务 ssl 证书的 secret 名称"""
+    if not provider_name:
+        raise ValueError("provider_name is required")
+
+    return f"bkapp-addons-certs-{provider_name}"

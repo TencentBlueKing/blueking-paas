@@ -336,7 +336,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = slzs.ServiceCategoryByRegionSLZ(results, many=True)
         return Response({"count": len(results), "results": serializer.data})
 
-    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
+    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ())
     def list_related_apps(self, request, service_id):
         """获取服务绑定的所有应用"""
         serializer = slzs.ServiceAttachmentQuerySLZ(data=request.query_params)

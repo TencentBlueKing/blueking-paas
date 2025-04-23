@@ -85,14 +85,23 @@ class ResourcePoolProvider(BaseProvider):
 
             # 如果实例配置中有证书，则在凭证部分中添加挂载证书的路径
             # （证书内容会在部署时候以 Secret 形式挂载到容器中）
-            if tls.get("ca"):
+            ca, cert, cert_key = tls.get("ca"), tls.get("cert"), tls.get("key")
+            if ca:
                 creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
 
-            if tls.get("cert") and tls.get("key"):
+            if cert and cert_key:
                 creds["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
                 creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "key.pem")
 
-            return InstanceData(credentials=json.loads(creds), config={"__pk__": instance.pk})
+            return InstanceData(
+                credentials=json.loads(creds),
+                config={
+                    "__pk__": instance.pk,
+                    "is_pre_created": True,
+                    "provider_name": provider_name,
+                    "has_tls_certs": bool(ca or cert or cert_key),
+                },
+            )
 
     def delete(self, instance_data: InstanceData) -> None:
         """如果实例可回收, 则将实例重新放回资源池."""

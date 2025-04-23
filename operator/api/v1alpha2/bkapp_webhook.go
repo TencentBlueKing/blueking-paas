@@ -592,7 +592,7 @@ func (r *BkApp) validateProcServices(pPath *field.Path, services []ProcService) 
 }
 
 // validateExposedTypes validates exposed types in BkApp scope.
-// 目前支持 bk/http 和 bk/grpc 类型，并且, 一个 BkApp 只能有一个 bk/http 或 bk/grpc 类型的暴露服务作为主入口
+// 每个 BkApp 最多只能有一个主入口服务，类型为 bk/http 或 bk/grpc，其他类型暂不支持
 func (r *BkApp) validateExposedTypes() *field.Error {
 	exposedTypes := sets.String{}
 

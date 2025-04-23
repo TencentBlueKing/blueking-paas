@@ -71,7 +71,7 @@ func (bkapp *BkApp) HasProcServices() bool {
 func (bkapp *BkApp) FindExposedProcService() *ExposedProcService {
 	for _, proc := range bkapp.Spec.Processes {
 		for _, procSvc := range proc.Services {
-			// 一个 bkapp 下仅有一个有效的 exposed type. 如果有, 返回第一个即可
+			// 每个 BkApp 最多只能有一个 exposed 类型的服务，因此返回第一个即可
 			if validateExposedType(procSvc.ExposedType) == nil {
 				return &ExposedProcService{proc.Name, &procSvc, procSvc.ExposedType.Name}
 			}

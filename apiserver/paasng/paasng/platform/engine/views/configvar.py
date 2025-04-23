@@ -55,7 +55,6 @@ from paasng.platform.engine.serializers import (
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
-    ConfigVarUpsertByKeySLZ,
     ListConfigVarsSLZ,
 )
 
@@ -179,7 +178,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        request_body=ConfigVarUpsertByKeySLZ,
+        request_body=ConfigVarFormatSLZ,
         tags=["环境配置"],
         responses={status.HTTP_200_OK: None},
     )
@@ -187,18 +186,20 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         """通过环境变量的 key 更新或创建环境变量"""
         config_vars_key = kwargs.get("config_vars_key")
         module = self.get_module_via_path()
-        slz = ConfigVarUpsertByKeySLZ(data=request.data)
+        data = request.data.copy()
+        data["key"] = config_vars_key
+        slz = ConfigVarFormatSLZ(data=data, context={"module": module})
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        env_name, value, desc = data["environment_name"], data["value"], data["description"]
+        config_var = slz.validated_data
+        env_name, value, desc = config_var.environment_name, config_var.value, config_var.description
 
         # 查找所有同 key 的变量
-        config_vars = ConfigVar.objects.filter(module=module, key=config_vars_key)
-        global_vars = config_vars.filter(is_global=True)
+        config_vars = self.get_queryset().filter(key=config_vars_key)
+        global_var = config_vars.filter(is_global=True)
 
         # 如果只存在一条 __global__, 且请求不是 __global__, 则拆分
-        if config_vars.count() == 1 and global_vars.exists() and env_name != ConfigVarEnvName.GLOBAL.value:
-            global_var = global_vars.first()
+        if config_vars.count() == 1 and global_var.exists() and env_name != ConfigVarEnvName.GLOBAL.value:
+            global_var = global_var.first()
             # 确定另一个环境变量, 值为 global_var 的值
             for e_name, e_value, e_desc in [
                 (env_name, value, desc),
@@ -220,12 +221,9 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
                 )
         else:
             # 正常 upsert
-            ConfigVar.objects.update_or_create(
-                module=module,
-                key=config_vars_key,
-                environment__environment=env_name,
-                defaults={"value": value, "description": desc},
-            )
+            config_var.value = value
+            config_var.description = desc
+            config_var.save()
 
         return Response(status=status.HTTP_201_CREATED)
 

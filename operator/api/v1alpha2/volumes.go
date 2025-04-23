@@ -26,6 +26,7 @@ import (
 // VolumeSource 参考 k8s.io/api/core/v1.VolumeSource
 type VolumeSource struct {
 	ConfigMap         *ConfigMapSource   `json:"configMap,omitempty"`
+	Secret            *SecretSource      `json:"secret,omitempty"`
 	PersistentStorage *PersistentStorage `json:"persistentStorage,omitempty"`
 }
 
@@ -33,6 +34,9 @@ type VolumeSource struct {
 func (vs *VolumeSource) ToValidator() (VolumeSourceValidator, error) {
 	if vs.ConfigMap != nil {
 		return vs.ConfigMap, nil
+	}
+	if vs.Secret != nil {
+		return vs.Secret, nil
 	}
 	if vs.PersistentStorage != nil {
 		return vs.PersistentStorage, nil
@@ -47,8 +51,7 @@ type VolumeSourceValidator interface {
 	Validate() []string
 }
 
-// ConfigMapSource represents a configMap that should
-// populate this volume
+// ConfigMapSource represents a configMap that should populate this volume
 type ConfigMapSource struct {
 	Name string `json:"name"`
 }
@@ -59,6 +62,18 @@ func (c ConfigMapSource) Validate() []string {
 }
 
 var _ VolumeSourceValidator = new(ConfigMapSource)
+
+// SecretSource represents a secret that should populate this volume
+type SecretSource struct {
+	Name string `json:"name"`
+}
+
+// Validate Secret name
+func (c SecretSource) Validate() []string {
+	return validation.IsDNS1123Subdomain(c.Name)
+}
+
+var _ VolumeSourceValidator = new(SecretSource)
 
 // PersistentStorage represents a PersistentStorage that should populate this volume
 type PersistentStorage struct {

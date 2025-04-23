@@ -113,7 +113,13 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 				LocalObjectReference: corev1.LocalObjectReference{Name: source.ConfigMap.Name},
 			},
 		}, nil
-	} else if source.PersistentStorage != nil {
+	}
+	if source.Secret != nil {
+		return corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{SecretName: source.Secret.Name},
+		}, nil
+	}
+	if source.PersistentStorage != nil {
 		return corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 				ClaimName: source.PersistentStorage.Name,

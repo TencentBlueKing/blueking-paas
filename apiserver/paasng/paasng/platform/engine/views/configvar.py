@@ -31,6 +31,7 @@ from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
@@ -54,6 +55,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
+    ConfigVarUpsertByKeySLZ,
     ListConfigVarsSLZ,
 )
 
@@ -163,6 +165,69 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             ),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        query_serializer=ListConfigVarsSLZ(),
+        tags=["环境配置"],
+        responses={status.HTTP_200_OK: ConfigVarSLZ(many=True)},
+    )
+    def retrieve_by_key(self, request, *args, **kwargs):
+        """通过环境变量的 key 获取环境变量"""
+        config_vars_key = kwargs.get("config_vars_key")
+        config_vars = self.get_queryset().filter(key=config_vars_key)
+        serializer = self.serializer_class(config_vars, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=ConfigVarUpsertByKeySLZ,
+        tags=["环境配置"],
+        responses={status.HTTP_200_OK: None},
+    )
+    def upsert_by_key(self, request, *args, **kwargs):
+        """通过环境变量的 key 更新或创建环境变量"""
+        config_vars_key = kwargs.get("config_vars_key")
+        module = self.get_module_via_path()
+        slz = ConfigVarUpsertByKeySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        env_name, value, desc = data["environment_name"], data["value"], data["description"]
+
+        # 查找所有同 key 的变量
+        config_vars = ConfigVar.objects.filter(module=module, key=config_vars_key)
+        global_vars = config_vars.filter(is_global=True)
+
+        # 如果只存在一条 __global__, 且请求不是 __global__, 则拆分
+        if config_vars.count() == 1 and global_vars.exists() and env_name != ConfigVarEnvName.GLOBAL.value:
+            global_var = global_vars.first()
+            # 确定另一个环境变量, 值为 global_var 的值
+            for e_name, e_value, e_desc in [
+                (env_name, value, desc),
+                (
+                    ConfigVarEnvName.PROD.value
+                    if env_name == ConfigVarEnvName.STAG.value
+                    else ConfigVarEnvName.STAG.value,
+                    global_var.value,
+                    global_var.description,
+                ),
+            ]:
+                env_obj = ApplicationEnvironment.objects.get(module=module, environment=e_name)
+                ConfigVar.objects.create(
+                    module=module,
+                    key=config_vars_key,
+                    environment=env_obj,
+                    value=e_value,
+                    description=e_desc,
+                )
+        else:
+            # 正常 upsert
+            ConfigVar.objects.update_or_create(
+                module=module,
+                key=config_vars_key,
+                environment__environment=env_name,
+                defaults={"value": value, "description": desc},
+            )
+
+        return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["环境配置"], responses={201: ConfigVarApplyResultSLZ()})
     def clone(self, request, **kwargs):

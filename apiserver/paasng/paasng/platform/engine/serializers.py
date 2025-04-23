@@ -245,21 +245,6 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     deleted_num = serializers.IntegerField()
 
 
-class ConfigVarUpsertByKeySLZ(serializers.Serializer):
-    """Serializer for ConfigVar UpsertByKey"""
-
-    environment_name = serializers.CharField()
-    value = serializers.CharField()
-    description = serializers.CharField(
-        allow_blank=True,
-        allow_null=True,
-        max_length=200,
-        required=False,
-        default="",
-        help_text="变量描述，不超过 200 个字符",
-    )
-
-
 class ConfigVarFormatSLZ(serializers.Serializer):
     """Serializer for ConfigVar"""
 

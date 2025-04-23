@@ -15,6 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+"""
+该模块从 apiserver[https://github.com/TencentBlueKing/blueking-paas/tree/main/apiserver] 项目中复制而来
+原始路径：apiserver/paasng/paas_wl/utils/kubestatus.py
+"""
+
 import json
 from typing import List, Optional, Type, TypeVar, Union
 

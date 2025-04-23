@@ -1,6 +1,6 @@
 # svc-redis
 
-`svc-reids` 是蓝鲸开发者中心的 Redis 增强服务模块。Redis 服务实例由 [Redis-Operator](https://github.com/OT-CONTAINER-KIT/redis-operator) 管理生命周期
+`svc-reids` 是蓝鲸开发者中心的 Redis 增强服务模块。Redis 服务实例由 [Redis-Operator](https://github.com/OT-CONTAINER-KIT/redis-operator) 管理生命周期。
 
 ## 本地开发指引
 
@@ -28,7 +28,6 @@
 
 完成依赖安装后，可以使用 poetry 启动项目，常用命令包括：
 
-- `poetry shell`：进入当前 virtualenv。
 - `poetry run {COMMAND}`：在 virtualenv 中执行命令。
 
 ### 3. 配置本地环境变量
@@ -53,7 +52,24 @@ export BKKRILL_ENCRYPT_SECRET_KEY="请参考上面的命令生成"
 export DJANGO_SETTINGS_MODULE="svc_redis.settings"
 ```
 
-### 4. 初始化数据
+### 4. 集群部署 Redis-Operator
+
+使用以下命令在集群内部署 Redis-Operator：
+
+```bash
+# Add the helm chart
+$ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
+
+# Deploy the redis-operator
+$ helm upgrade redis-operator ot-helm/redis-operator \
+  --install --create-namespace --namespace ot-operators
+  
+# Test
+$ helm test redis-operator --namespace ot-operators 
+```
+
+
+### 5. 初始化数据
 
 运行以下命令初始化数据库：
 
@@ -72,7 +88,7 @@ from paas_service.models import Plan
 from svc_redis.cluster.models import Cluster
 
 # category 为增强服务分类，apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
-svc = Service.objects.create(name="redis", display_name_zh_cn="Redis", display_name_en="Redis", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
+svc = Service.objects.create(name="remote_redis", display_name_zh_cn="Remote Redis", display_name_en="Remote Redis", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
 
 # 创建集群
 cluster = Cluster.objects.create(
@@ -84,37 +100,34 @@ cluster = Cluster.objects.create(
     key_data="",
 )
 
-# 分配给 SaaS 的数据库实例信息，注意 user 和 password 必须有 root 权限
 config = {
+    # Redis 部署架构类型
+    # - "Redis": 单节点模式，适用于开发测试环境
+    # - "RedisReplication": 主从复制模式，提供基础高可用，适合生产环境
     "type": "RedisReplication",
+    # Redis 版本号
     "redis_version": "v7.0.15",
+    # Kubernetes 集群名称
     "cluster_name": "redis-cluster",
+    # 每个 Redis 实例的内存限制
     "memory_size": "2Gi",
+    # 服务暴露方式 (必填)
+    # - "ClusterDNS": 通过集群内 DNS 访问服务
+    # - "TencentCLB": 通过腾讯云负载均衡器暴露服务
     "service_export_type": "TencentCLB",
+    # 是否启用持久化存储
+    # True 时会自动创建 PVC，需要集群已配置 StorageClass
     "persistent_storage": False,
-    "monitor": False,
+    # 是否启用监控
+    # 依赖条件：
+    # - 集群已安装 Prometheus Operator
+    "monitor": False  # 当前未启用监控
 }
 
-Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={ "region":"default"}, config=json.dumps(config))
+Plan.objects.create(name="default-redis", description="redis 实例", is_active=True, service_id=svc.uuid, properties={}, config=json.dumps(config))
 ```
 
 **说明**：apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
-
-### 5. 集群部署 Redis-Operator
-
-使用以下命令在集群内部署 Redis-Operator：
-
-```bash
-# Add the helm chart
-$ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
-
-# Deploy the redis-operator
-$ helm upgrade redis-operator ot-helm/redis-operator \
-  --install --create-namespace --namespace ot-operators
-  
-# Test
-$ helm test redis-operator --namespace ot-operators 
-```
 
 ### 6. 启动项目
 
@@ -151,10 +164,9 @@ export PAAS_SERVICE_JWT_CLIENTS_KEY="xxx"
 
 ```yaml
 SERVICE_REMOTE_ENDPOINTS:
-  - name: redis_remote
+  - name: remote_redis
     endpoint_url: http://localhost:8005/ # 增强服务的访问地址
     provision_params_tmpl:
-      egress_info: "{cluster_info.egress_info_json}"
       engine_app_name: "{engine_app.name}"
       operator: "{engine_app.owner}"
     jwt_auth_conf:

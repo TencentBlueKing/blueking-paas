@@ -168,7 +168,6 @@ SERVICE_REMOTE_ENDPOINTS:
     endpoint_url: http://localhost:8005/ # 增强服务的访问地址
     provision_params_tmpl:
       engine_app_name: "{engine_app.name}"
-      operator: "{engine_app.owner}"
     jwt_auth_conf:
       iss: paas-v3
       key: xxx # 与增强服务中配置的 PAAS_SERVICE_JWT_CLIENTS_KEY 的值一致

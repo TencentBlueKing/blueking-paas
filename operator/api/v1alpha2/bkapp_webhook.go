@@ -592,7 +592,7 @@ func (r *BkApp) validateProcServices(pPath *field.Path, services []ProcService) 
 }
 
 // validateExposedTypes validates exposed types in BkApp scope.
-// 目前只支持 bk/http 类型，并且一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
+// 目前支持 bk/http 和 bk/grpc 类型，并且, 一个 BkApp 只能有一个 bk/http 或 bk/grpc 类型的暴露服务作为主入口
 func (r *BkApp) validateExposedTypes() *field.Error {
 	exposedTypes := sets.String{}
 
@@ -622,6 +622,19 @@ func (r *BkApp) validateExposedTypes() *field.Error {
 				exposedTypes.Insert(exposedTypeName)
 			}
 		}
+	}
+
+	if len(exposedTypes) > 1 {
+		v := make([]string, 0)
+		for t := range exposedTypes {
+			v = append(v, t)
+		}
+
+		return field.Invalid(
+			field.NewPath("spec").Child("processes"),
+			fmt.Sprintf("%d exposedTypes(%s)", len(v), strings.Join(v, ", ")),
+			"multiple exposedTypes are not supported",
+		)
 	}
 
 	return nil

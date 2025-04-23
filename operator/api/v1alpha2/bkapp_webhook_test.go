@@ -1219,6 +1219,42 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 			Expect(err.Error()).To(ContainSubstring(`Duplicate value: "bk/http"`))
 		})
 	})
+
+	It("Multiple exposed types", func() {
+		bkapp.Spec.Processes = []paasv1alpha2.Process{
+			{
+				Name:         "web",
+				Replicas:     paasv1alpha2.ReplicasTwo,
+				ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				Services: []paasv1alpha2.ProcService{
+					{
+						Name:        "web",
+						TargetPort:  5000,
+						Port:        80,
+						Protocol:    corev1.ProtocolTCP,
+						ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkGrpc},
+					},
+				},
+			},
+			{
+				Name:         "metric",
+				Replicas:     paasv1alpha2.ReplicasTwo,
+				ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				Services: []paasv1alpha2.ProcService{
+					{
+						Name:        "web",
+						TargetPort:  5000,
+						Port:        80,
+						Protocol:    corev1.ProtocolTCP,
+						ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+					},
+				},
+			},
+		}
+
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring(`multiple exposedTypes are not supported`))
+	})
 })
 
 var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {

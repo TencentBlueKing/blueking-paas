@@ -113,35 +113,41 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
 		})
 
-		It("test if bkapp has one process service with exposed type bk/http", func() {
-			bkapp.EnableProcServicesFeature()
-			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
-				{
-					Name:        "foo",
-					ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
-					TargetPort:  8000,
-					Port:        80,
-				},
-				{
-					Name:       "web",
-					TargetPort: 8080,
-					Port:       80,
-				},
-			}
-			domains := DomainGroup{
-				SourceType: DomainSubDomain,
-				Domains: []Domain{
-					{Host: "foo.example.com", PathPrefixList: []string{"/foo/", "/foo-bar/"}},
-				},
-			}
-			builder := MonoIngressBuilder{bkapp, domains.SourceType}
-			ingresses, err := builder.Build(domains.Domains)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
-			ingressServiceBackend := ingresses[0].Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service
-			Expect(ingressServiceBackend.Name).To(Equal(names.Service(bkapp, "web")))
-			Expect(ingressServiceBackend.Port.Name).To(Equal("foo"))
-		})
+		DescribeTable(
+			"test if bkapp has one process service with exposed type",
+			func(exposedType paasv1alpha2.ExposedTypeName, backendProtocol string) {
+				bkapp.EnableProcServicesFeature()
+				bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+					{
+						Name:        "foo",
+						ExposedType: &paasv1alpha2.ExposedType{Name: exposedType},
+						TargetPort:  8000,
+						Port:        80,
+					},
+					{
+						Name:       "web",
+						TargetPort: 8080,
+						Port:       80,
+					},
+				}
+				domains := DomainGroup{
+					SourceType: DomainSubDomain,
+					Domains: []Domain{
+						{Host: "foo.example.com", PathPrefixList: []string{"/foo/", "/foo-bar/"}},
+					},
+				}
+				builder := MonoIngressBuilder{bkapp, domains.SourceType}
+				ingresses, err := builder.Build(domains.Domains)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ingresses[0].GetAnnotations()[BackendProtocolAnnoKey]).To(Equal(backendProtocol))
+				Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
+				ingressServiceBackend := ingresses[0].Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service
+				Expect(ingressServiceBackend.Name).To(Equal(names.Service(bkapp, "web")))
+				Expect(ingressServiceBackend.Port.Name).To(Equal("foo"))
+			},
+			Entry("When bk/http", paasv1alpha2.ExposedTypeNameBkHttp, ""),
+			Entry("When bk/grpc", paasv1alpha2.ExposedTypeNameBkGrpc, "GRPC"),
+		)
 	})
 
 	Context("CustomIngressBuilder", func() {

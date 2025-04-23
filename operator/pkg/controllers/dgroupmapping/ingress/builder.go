@@ -43,6 +43,7 @@ const (
 	DefaultServiceProcName      = "web"
 	DefaultServicePortName      = "http"
 	ServerSnippetAnnoKey        = "nginx.ingress.kubernetes.io/server-snippet"
+	BackendProtocolAnnoKey      = "nginx.ingress.kubernetes.io/backend-protocol"
 	ConfigurationSnippetAnnoKey = "nginx.ingress.kubernetes.io/configuration-snippet"
 	RewriteTargetAnnoKey        = "nginx.ingress.kubernetes.io/rewrite-target"
 	// SkipFilterCLBAnnoKey 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
@@ -172,27 +173,17 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 	ingress := networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Ingress"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: bkapp.Namespace,
-			Labels:    labels.AppDefault(bkapp),
-			Annotations: map[string]string{
-				SkipFilterCLBAnnoKey:        "true",
-				RewriteTargetAnnoKey:        makeRewriteTarget(),
-				ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
-				ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),
-			},
+			Name:        name,
+			Namespace:   bkapp.Namespace,
+			Labels:      labels.AppDefault(bkapp),
+			Annotations: makeAnnotations(bkapp, domains),
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: makeRules(builder.bkapp, domains),
 			TLS:   makeTLS(domains),
 		},
 	}
-	// 如果已配置 ingressClassName，则使用
-	if ingClassName := config.Global.GetIngressClassName(); ingClassName != "" {
-		// WARNING: kubernetes.io/ingress.class annotation will be deprecated in the future.
-		// See https://kubernetes.github.io/ingress-nginx/user-guide/multiple-ingress/#multiple-ingress-controllers
-		ingress.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
-	}
+
 	results = append(results, &ingress)
 	return results, nil
 }
@@ -218,26 +209,15 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 		val := networkingv1.Ingress{
 			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Ingress"},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: bkapp.Namespace,
-				Labels:    labels.AppDefault(bkapp),
-				Annotations: map[string]string{
-					SkipFilterCLBAnnoKey:        "true",
-					RewriteTargetAnnoKey:        makeRewriteTarget(),
-					ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
-					ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),
-				},
+				Name:        name,
+				Namespace:   bkapp.Namespace,
+				Labels:      labels.AppDefault(bkapp),
+				Annotations: makeAnnotations(bkapp, domains),
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: makeRules(builder.bkapp, []Domain{d}),
 				TLS:   makeTLS([]Domain{d}),
 			},
-		}
-
-		if ingClassName := config.Global.GetCustomDomainIngressClassName(); ingClassName != "" {
-			// WARNING: kubernetes.io/ingress.class annotation will be deprecated in the future.
-			// See https://kubernetes.github.io/ingress-nginx/user-guide/multiple-ingress/#multiple-ingress-controllers
-			val.Annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
 		}
 
 		results = append(results, &val)
@@ -308,21 +288,20 @@ func makeIngressServiceBackend(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressB
 // makeIngressBackendByProcService return the ingress backend by the process service with exposed type bk/http,
 // otherwise return nil.
 func makeIngressBackendByProcService(bkapp *paasv1alpha2.BkApp) *networkingv1.IngressBackend {
-	for _, proc := range bkapp.Spec.Processes {
-		for _, procSvc := range proc.Services {
-			if procSvc.ExposedType != nil && procSvc.ExposedType.Name == paasv1alpha2.ExposedTypeNameBkHttp {
-				return &networkingv1.IngressBackend{
-					Service: &networkingv1.IngressServiceBackend{
-						Name: names.Service(bkapp, proc.Name),
-						Port: networkingv1.ServiceBackendPort{
-							Name: procSvc.Name,
-						},
-					},
-				}
-			}
-		}
+	exposedProcService := bkapp.FindExposedProcService()
+
+	if exposedProcService == nil {
+		return nil
 	}
-	return nil
+
+	return &networkingv1.IngressBackend{
+		Service: &networkingv1.IngressServiceBackend{
+			Name: names.Service(bkapp, exposedProcService.ProcName),
+			Port: networkingv1.ServiceBackendPort{
+				Name: exposedProcService.ProcSvc.Name,
+			},
+		},
+	}
 }
 
 // makeDefaultIngressBackend return the default ingress backend for the bkapp which not enable proc services feature
@@ -437,6 +416,30 @@ func makeLocationPath(path string) string {
 // makeRewriteTarget is a shortcut for RegexLocationBuilder.makeRewriteTarget
 func makeRewriteTarget() string {
 	return (&RegexLocationBuilder{}).makeRewriteTarget()
+}
+
+// makeAnnotations return a map of annotations
+func makeAnnotations(bkapp *paasv1alpha2.BkApp, domains []Domain) map[string]string {
+	annotations := map[string]string{
+		SkipFilterCLBAnnoKey:        "true",
+		RewriteTargetAnnoKey:        makeRewriteTarget(),
+		ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
+		ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),
+	}
+
+	exposedProcService := bkapp.FindExposedProcService()
+	if exposedProcService != nil && exposedProcService.ExposedTypeName == paasv1alpha2.ExposedTypeNameBkGrpc {
+		annotations[BackendProtocolAnnoKey] = "GRPC"
+	}
+
+	// 如果已配置 ingressClassName，则使用
+	if ingClassName := config.Global.GetIngressClassName(); ingClassName != "" {
+		// WARNING: kubernetes.io/ingress.class annotation will be deprecated in the future.
+		// See https://kubernetes.github.io/ingress-nginx/user-guide/multiple-ingress/#multiple-ingress-controllers
+		annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
+	}
+
+	return annotations
 }
 
 func init() {

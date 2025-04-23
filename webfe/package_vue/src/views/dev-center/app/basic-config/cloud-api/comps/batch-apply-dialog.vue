@@ -192,7 +192,7 @@ export default {
       loading: false,
       formData: {
         reason: '',
-        expired: 6,
+        expired: 12,
       },
       isScrollBottom: false,
     };

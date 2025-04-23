@@ -44,6 +44,19 @@ export default {
   },
   actions: {
     /**
+     * 获取租户下的人员信息
+     */
+    searchTenantUsers({}, { keyword, tenantId }) {
+      const config = {
+        headers: {
+          'X-Bk-Tenant-Id': tenantId,
+        }
+      };
+      const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
+      const url = `${apiUrl}/api/v3/open-web/tenant/users/-/search/?keyword=${keyword}`;
+      return http.get(url, {}, config);
+    },
+    /**
      * 获取所有租户
      */
     getTenants({}) {

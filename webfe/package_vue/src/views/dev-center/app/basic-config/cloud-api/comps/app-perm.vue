@@ -397,9 +397,6 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
-    isPageDisabled() {
-      return this.tableList.every((item) => !item.permission_action) || !this.tableList.length;
-    },
     curDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
     },
@@ -752,7 +749,7 @@ export default {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
-            const renew = formatRenewFun(v.permission_status);
+            const renew = formatRenewFun(v.permission_status, v);
             return {
               ...v,
               applyDisabled: apply.disabled,
@@ -961,7 +958,7 @@ export default {
     line-height: 32px;
   }
   .input-wrapper {
-    width: 300px;
+    width: 420px;
   }
 }
 

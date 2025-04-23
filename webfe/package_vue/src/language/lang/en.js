@@ -3006,4 +3006,9 @@ export default {
   '基础开发：包含部署管理、进程管理、日志查询、环境配置、访问入口、增强服务信息查看、代码库配置、镜像凭证等功能': 'Basic Development: Includes deployment management, process management, log query, environment configuration, access entry, enhanced service information viewing, code repository configuration, and image credentials',
   '模块管理：包含设置为主模块、新建模块': 'Module Management: Includes setting as main module and creating new module',
   '增强服务管理：包含增强服务的解绑、删除等功能': 'Enhanced Service Management: Includes unbinding and deleting enhanced services',
+  请输入申请人: 'Please enter applicant',
+  请输入网关名: 'Please enter gateway name',
+  请输入系统名称: 'Please enter system name',
+  '搜索网关名称/申请人': 'Search gateway name/applicant',
+  '有效期为永久，不可续期': 'Validity period is permanent, cannot be renewed',
 };

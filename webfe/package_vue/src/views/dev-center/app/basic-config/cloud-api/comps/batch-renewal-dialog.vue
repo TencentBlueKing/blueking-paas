@@ -54,16 +54,7 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
-              <span
-                v-if="props.row.permission_action === 'apply'"
-                style="color: #ff5656"
-              >
-                {{ $t('无权限，不可续期') }}
-              </span>
-              <span
-                v-else
-                style="color: #ffb400"
-              >
+              <span style="color: #ffb400">
                 {{ applyNewTime }}
               </span>
             </template>
@@ -152,7 +143,7 @@ export default {
       visible: false,
       loading: false,
       formData: {
-        expired: 6,
+        expired: 12,
       },
       renewKey: -1,
       applyNewTime: 0,

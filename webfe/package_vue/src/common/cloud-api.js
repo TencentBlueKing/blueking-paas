@@ -16,13 +16,19 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-
 /**
  *  云api权限续期按钮状态&tips
  * @param {*} status
+ * @param {*} row
  * @returns { disabled, tips }
  */
-export function formatRenewFun(status) {
+export function formatRenewFun(status, row) {
+  if (!row.expires_in && status === 'owned') {
+    return {
+      disabled: true,
+      tips: '有效期为永久，不可续期',
+    };
+  }
   const data = {
     disabled: false,
     tips: '',
@@ -47,7 +53,7 @@ export function formatRenewFun(status) {
       break;
   }
   return data;
-};
+}
 
 /**
  *  云api权限申请按钮状态&tips
@@ -78,4 +84,4 @@ export function formatApplyFun(status) {
       break;
   }
   return data;
-};
+}

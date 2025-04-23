@@ -465,9 +465,6 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
-    isPageDisabled() {
-      return this.tableList.every((item) => !item.permission_action) || !this.tableList.length;
-    },
     curFetchDispatchMethod() {
       return this.isComponentApi ? 'getComponents' : 'getResources';
     },
@@ -815,7 +812,7 @@ export default {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
-            const renew = formatRenewFun(v.permission_status);
+            const renew = formatRenewFun(v.permission_status, v);
             return {
               ...v,
               applyDisabled: apply.disabled,

@@ -30,21 +30,23 @@
               class="name"
             >
               <span v-html="highlight(item)" />
-              <bk-tag
+              <PaasTag
                 v-if="!isGateway && item.tag !== ''"
+                size="small"
                 :class="[
                   { inner: [$t('内部版'), $t('互娱外部版')].includes(item.tag) },
                   { clound: [$t('上云版'), $t('互娱外部上云版')].includes(item.tag) },
                 ]"
               >
                 {{ item.tag }}
-              </bk-tag>
-              <bk-tag
-                theme="warning"
+              </PaasTag>
+              <PaasTag
                 v-if="isGateway && item.tenant_mode === 'global'"
+                theme="warning"
+                size="small"
               >
                 {{ $t('全租户') }}
-              </bk-tag>
+              </PaasTag>
             </p>
             <p
               v-bk-overflow-tips
@@ -66,7 +68,12 @@
   </div>
 </template>
 <script>
+import PaasTag from '@/components/paas-tag';
+
 export default {
+  components: {
+    PaasTag,
+  },
   props: {
     list: {
       type: Array,

@@ -1337,9 +1337,8 @@ spec:
                           description: Source of the mount
                           properties:
                             configMap:
-                              description: |-
-                                ConfigMapSource represents a configMap that should
-                                populate this volume
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
                               properties:
                                 name:
                                   type: string
@@ -1349,6 +1348,15 @@ spec:
                             persistentStorage:
                               description: PersistentStorage represents a PersistentStorage
                                 that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            secret:
+                              description: SecretSource represents a secret that should
+                                populate this volume
                               properties:
                                 name:
                                   type: string
@@ -1441,9 +1449,8 @@ spec:
                       description: Source of the mount
                       properties:
                         configMap:
-                          description: |-
-                            ConfigMapSource represents a configMap that should
-                            populate this volume
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
                           properties:
                             name:
                               type: string
@@ -1453,6 +1460,15 @@ spec:
                         persistentStorage:
                           description: PersistentStorage represents a PersistentStorage
                             that should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        secret:
+                          description: SecretSource represents a secret that should
+                            populate this volume
                           properties:
                             name:
                               type: string

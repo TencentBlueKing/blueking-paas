@@ -100,6 +100,16 @@ urlpatterns = [
         views.PresetConfigVarViewSet.as_view({"get": "list"}),
         name="api.preset_config_vars",
     ),
+    re_path(
+        make_app_pattern(r"/config_vars/(?P<config_vars_key>\w+)/$", include_envs=False),
+        views.ConfigVarViewSet.as_view(
+            {
+                "get": "retrieve_by_key",
+                "post": "upsert_by_key",
+            }
+        ),
+        name="api.config_vars_by_key",
+    ),
     # deploy
     re_path(
         make_app_pattern(r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False),

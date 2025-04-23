@@ -326,6 +326,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
         """validate process services by two rules as below:
         - check whether service name, targetPort or port are duplicated in one process
         - check whether exposedTypes are duplicated in one module
+        - check whether multiple exposedTypes in one module
         """
         exposed_types = set()
 
@@ -337,18 +338,18 @@ class BkAppSpecInputSLZ(serializers.Serializer):
             for svc in proc.services or []:
                 name = svc.name
                 if name in names:
-                    raise ValidationError(f"duplicate service name: {name}")
+                    raise ValidationError(f"process({proc.name}) has duplicate service name: {name}")
                 names.add(name)
 
                 target_port = svc.target_port
                 if target_port in target_ports:
-                    raise ValidationError(f"duplicate targetPort: {target_port}")
+                    raise ValidationError(f"process({proc.name}) has duplicate targetPort: {target_port}")
                 target_ports.add(target_port)
 
                 port = svc.port
                 if port:
                     if port in ports:
-                        raise ValidationError(f"duplicate port: {port}")
+                        raise ValidationError(f"process({proc.name}) has duplicate port: {port}")
                     ports.add(port)
 
                 exposed_type = svc.exposed_type
@@ -356,6 +357,9 @@ class BkAppSpecInputSLZ(serializers.Serializer):
                     if exposed_type.name in exposed_types:
                         raise ValidationError(f"duplicate exposedType: {exposed_type.name}")
                     exposed_types.add(exposed_type.name)
+
+        if len(exposed_types) > 1:
+            raise ValidationError("multiple exposedTypes in an app module are not supported")
 
     def _validate_observability(self, data: v1alpha2.BkAppSpec):
         """validate observability config by rules as below:

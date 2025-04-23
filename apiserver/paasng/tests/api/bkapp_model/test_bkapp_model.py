@@ -233,6 +233,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         [
             (None, 200, ""),
             ([{"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}}], 200, ""),
+            ([{"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}}], 200, ""),
             # invalid exposed_type
             ([{"name": "web", "target_port": 5000, "exposed_type": {"name": "foo/http"}}], 400, "不是合法选项"),
             ([{"name": "web"}], 400, "services.target_port: 该字段是必填项"),
@@ -269,49 +270,126 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         assert expected_detail_str in resp.data.get("detail", "")
 
     @pytest.mark.parametrize(
-        "request_data",
+        ("request_data", "exposed_type"),
         [
-            [
-                {
-                    "name": "web",
-                    "image": "python:latest",
-                    "command": ["python", "-m"],
-                    "args": ["http.server"],
-                    "services": [
-                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                        {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/http"}},
-                    ],
-                }
-            ],
-            [
-                {
-                    "name": "web",
-                    "image": "python:latest",
-                    "command": ["python", "-m"],
-                    "args": ["http.server"],
-                    "services": [
-                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                    ],
-                },
-                {
-                    "name": "celery",
-                    "image": "python:latest",
-                    "command": ["python", "-m"],
-                    "args": ["http.server"],
-                    "services": [
-                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                    ],
-                },
-            ],
+            (
+                [
+                    {
+                        "name": "web",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                            {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/http"}},
+                        ],
+                    },
+                ],
+                "bk/http",
+            ),
+            (
+                [
+                    {
+                        "name": "web",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        ],
+                    },
+                    {
+                        "name": "celery",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        ],
+                    },
+                ],
+                "bk/http",
+            ),
+            (
+                [
+                    {
+                        "name": "web",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                        ],
+                    },
+                    {
+                        "name": "celery",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                        ],
+                    },
+                ],
+                "bk/grpc",
+            ),
         ],
     )
-    def test_validate_duplicated_exposed_type(self, api_client, bk_cnative_app, bk_module, request_data):
+    def test_validate_duplicated_exposed_type(self, api_client, bk_cnative_app, bk_module, request_data, exposed_type):
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         resp = api_client.post(url, data={"proc_specs": request_data})
         assert resp.status_code == 400
-        assert "exposed_type bk/http is duplicated in one app module" in resp.data.get("detail", "")
+        assert f"exposed_type {exposed_type} is duplicated in an app module" in resp.data.get("detail", "")
 
-    def test_save(self, api_client, bk_cnative_app, bk_module, web):
+    @pytest.mark.parametrize(
+        "request_data",
+        [
+            (
+                [
+                    {
+                        "name": "web",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                            {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/grpc"}},
+                        ],
+                    }
+                ]
+            ),
+            (
+                [
+                    {
+                        "name": "web",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        ],
+                    },
+                    {
+                        "name": "celery",
+                        "image": "python:latest",
+                        "command": ["python", "-m"],
+                        "args": ["http.server"],
+                        "services": [
+                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                        ],
+                    },
+                ]
+            ),
+        ],
+    )
+    def test_validate_multiple_exposed_type(self, api_client, bk_cnative_app, bk_module, web, request_data):
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == 400
+        assert "multiple exposed_types in an app module are not supported" in resp.data.get("detail", "")
+
+    @pytest.mark.parametrize("exposed_type", ["bk/http", "bk/grpc"])
+    def test_save(self, api_client, bk_cnative_app, bk_module, web, exposed_type):
         request_data = [
             {
                 "name": "web",
@@ -320,7 +398,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
                 "args": ["http.server"],
                 "port": 5000,
                 "services": [
-                    {"name": "web", "target_port": "${PORT}", "port": 80, "exposed_type": {"name": "bk/http"}},
+                    {"name": "web", "target_port": "${PORT}", "port": 80, "exposed_type": {"name": exposed_type}},
                     {"name": "backend", "target_port": 5001},
                 ],
             },
@@ -343,7 +421,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
                 "name": "web",
                 "target_port": "${PORT}",
                 "port": 80,
-                "exposed_type": {"name": "bk/http"},
+                "exposed_type": {"name": exposed_type},
                 "protocol": "TCP",
             },
             {"name": "backend", "target_port": 5001, "port": None, "exposed_type": None, "protocol": "TCP"},
@@ -353,7 +431,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         web_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
         assert web_process_spec.services[0].target_port == "${PORT}"
         assert web_process_spec.services[0].port == 80
-        assert web_process_spec.services[0].exposed_type.name == "bk/http"
+        assert web_process_spec.services[0].exposed_type.name == exposed_type
 
         celery_process_spec = ModuleProcessSpec.objects.get(module=bk_module, name="celery")
         assert celery_process_spec.services is None

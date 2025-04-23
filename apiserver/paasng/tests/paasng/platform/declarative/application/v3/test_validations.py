@@ -97,3 +97,55 @@ class TestValidateBadCase:
             DescriptionValidationError, match=r"modules\[0\].spec.addons: 提供共享增强服务的模块不存在"
         ):
             get_app_description(app_json)
+
+    @pytest.mark.parametrize(
+        ("processes", "expected_error_keyword"),
+        [
+            (
+                [
+                    {
+                        "name": "web",
+                        "services": [{"name": "web", "targetPort": 5000, "exposedType": {"name": "cc/http"}}],
+                    }
+                ],
+                r"不是合法选项",
+            ),
+            (
+                [
+                    {
+                        "name": "web",
+                        "services": [
+                            {"name": "web", "targetPort": 5000, "exposedType": {"name": "bk/http"}},
+                            {"name": "api", "targetPort": 5001, "exposedType": {"name": "bk/http"}},
+                        ],
+                    }
+                ],
+                r"duplicate exposedType: bk/http",
+            ),
+            (
+                [
+                    {
+                        "name": "web",
+                        "services": [
+                            {"name": "web", "targetPort": 5000, "exposedType": {"name": "bk/http"}},
+                        ],
+                    },
+                    {
+                        "name": "api",
+                        "services": [
+                            {"name": "api", "targetPort": 5000, "exposedType": {"name": "bk/grpc"}},
+                        ],
+                    },
+                ],
+                r"multiple exposedTypes in an app module are not supported",
+            ),
+        ],
+    )
+    def test_proc_service_exposed_error(self, processes, expected_error_keyword):
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            decorator.with_module(module_name="foo", is_default=True, module_spec={"processes": processes}),
+        )
+        with pytest.raises(DescriptionValidationError, match=expected_error_keyword):
+            get_app_description(app_json)

@@ -1,6 +1,6 @@
 # svc-redis
 
-`svc-reids` 是蓝鲸开发者中心的 Redis 增强服务模块。Redis 服务实例由 [Redis-Operator](https://github.com/OT-CONTAINER-KIT/redis-operator) 管理生命周期。
+`svc-redis` 是蓝鲸开发者中心的 Redis 增强服务模块。Redis 服务实例由 [Redis-Operator](https://github.com/OT-CONTAINER-KIT/redis-operator) 管理生命周期。
 
 ## 本地开发指引
 

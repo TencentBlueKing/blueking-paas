@@ -16,5 +16,5 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-class RedisConnectionFailed(Exception):
+class RedisReadinessTimeout(Exception):
     pass

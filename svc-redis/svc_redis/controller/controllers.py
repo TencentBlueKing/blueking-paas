@@ -19,16 +19,14 @@ import logging
 import time
 from abc import ABC, abstractmethod
 
-import redis
-
 from svc_redis.cluster.models import TencentCLBListener
 from svc_redis.resources.base.base import get_client_by_cluster_name
 from svc_redis.resources.base.crd import KServiceMonitor, Redis, RedisReplication
-from svc_redis.resources.base.kres import KNamespace, KSecret, KService
+from svc_redis.resources.base.kres import KNamespace, KSecret, KService, KStatefulSet
 from svc_redis.vendor.redis_crd.constants import DEFAULT_REDIS_PORT, RedisType
 
 from .entities import RedisEndpoint, RedisInstanceCredential, RedisPlanConfig
-from .exceptions import RedisConnectionFailed
+from .exceptions import RedisReadinessTimeout
 from .manifests import (
     generate_redis_name,
     get_external_tencent_clb_service_manifest,
@@ -65,15 +63,12 @@ class RedisInstanceController:
         self._deploy_redis_resource()
         endpoint = self._deploy_and_get_endpoint()
         self._deploy_redis_service_monitor()
-        credential = RedisInstanceCredential(
+        self._check_redis_status()
+        return RedisInstanceCredential(
             host=endpoint.host,
             port=endpoint.port,
             password=password,
         )
-        # TODO: 通过检查 StatefulSets 来判断 ClusterDNS 类型服务是否就绪
-        if self.plan_config.service_export_type == "TencentCLB":
-            self._check_redis_status(credential)
-        return credential
 
     def delete(self, credential: RedisInstanceCredential):
         """删除 namespace 以删除所有资源"""
@@ -144,30 +139,26 @@ class RedisInstanceController:
         )
         return exporter.recycle_endpoint(endpoint)
 
-    def _check_redis_status(self, credential: RedisInstanceCredential, max_attempts=60, retry_interval=10):
+    def _check_redis_status(self, max_attempts=60, retry_interval=10):
         """
-        检查 Redis 连接状态
+        通过 StatefulSet 就绪副本数，判断 Redis 实例状态
 
-        :param credential: Redis 实例凭证
         :param max_attempts: 最大重试次数
         :param retry_interval: 重试间隔时间（秒）
         """
         for attempt in range(1, max_attempts + 1):
             try:
-                r = redis.Redis(
-                    host=credential.host,
-                    port=credential.port,
-                    password=credential.password,
-                    decode_responses=True,
-                )
-                if r.ping():
+                sts = KStatefulSet(self.client).get(name=generate_redis_name(), namespace=self.namespace)
+                if not getattr(sts, "status"):
+                    continue
+
+                if sts.status.replicas == sts.status.readyReplicas:
                     return
             except Exception as e:
                 if attempt < max_attempts:
-                    logger.info(f"Redis({credential.host}:{credential.port}) 连接失败, {retry_interval} 秒后重试")
                     time.sleep(retry_interval)
                 else:
-                    raise RedisConnectionFailed("Redis Connection Failed") from e
+                    raise RedisReadinessTimeout("Redis Readiness Timeout") from e
 
 
 class ServiceExporter(ABC):

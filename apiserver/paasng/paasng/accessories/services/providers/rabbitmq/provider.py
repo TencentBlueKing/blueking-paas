@@ -15,30 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""
-rabbitmq provider
-"""
 from typing import Dict
 
 import requests
 
-from paasng.accessories.services.utils import gen_unique_id, generate_password
+from paasng.accessories.services.providers.base import BaseProvider, InstanceData
+from paasng.accessories.services.utils import gen_addons_cert_mount_path, gen_unique_id, generate_password
 
 from .exceptions import CreateRabbitMQFail
-from ..base import BaseProvider, InstanceData
 
 
 class RabbitMQProvider(BaseProvider):
+    """申请 RabbitMQ 资源"""
+
     display_name = "RabbitMQ 通用申请服务"
-    """
-    RabbitMQ资源处理
-    """
 
     def __init__(self, config):
         self._host = config["host"]
         self._port = config["port"]
         self._user = config["user"]
         self._password = config["password"]
+
+        # ssl 证书
+        tls = config.get("tls") or {}
+        self.ca = tls.get("ca")
+        self.cert = tls.get("cert")
+        self.cert_key = tls.get("key")
 
         # the port which user will connect on
         self.port = config["http_port"]
@@ -112,7 +114,19 @@ class RabbitMQProvider(BaseProvider):
             "password": rabbitmq_password,
         }
 
-        return InstanceData(credentials=credentials, config={})
+        # 4. 添加证书路径到凭证信息中
+        provider_name = "rabbitmq"
+        if self.ca:
+            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
+
+        if self.cert and self.cert_key:
+            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
+        return InstanceData(
+            credentials=credentials,
+            config={"provider_name": provider_name, "enable_tls": bool(self.ca or self.cert or self.cert_key)},
+        )
 
     def delete(self, instance_data: InstanceData):
         """

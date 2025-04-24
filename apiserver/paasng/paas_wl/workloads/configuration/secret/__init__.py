@@ -14,23 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from rest_framework import serializers
-
-from paasng.accessories.services.models import PreCreatedInstance, Service
-
-
-class PlanSlugField(serializers.SlugRelatedField):
-    def get_queryset(self):
-        svc: Service = self.context["service"]
-        return svc.plan_set.all()
-
-
-class PreCreatedInstanceImportSLZ(serializers.ModelSerializer):
-    plan = PlanSlugField(slug_field="name")
-    config = serializers.JSONField(help_text="same of ServiceInstance.config")
-    credentials = serializers.JSONField(help_text="same of ServiceInstance.credentials")
-
-    class Meta:
-        model = PreCreatedInstance
-        fields = "__all__"

@@ -19,39 +19,24 @@ import logging
 from dataclasses import dataclass
 from typing import Dict
 
-from paas_wl.infras.resources.base.kres import KConfigMap
+from paas_wl.infras.resources.base.kres import KSecret
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
-from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
-from .kres_slzs import ConfigMapDeserializer, ConfigMapSerializer
+from .constants import SecretType
+from .kres_slzs import SecretDeserializer, SecretSerializer
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ConfigMap(AppEntity):
+class Secret(AppEntity):
+    type: SecretType
     data: Dict[str, str]
 
     class Meta:
-        kres_class = KConfigMap
-        deserializer = ConfigMapDeserializer
-        serializer = ConfigMapSerializer
+        kres_class = KSecret
+        deserializer = SecretDeserializer
+        serializer = SecretSerializer
 
 
-class ConfigMapManager(AppEntityManager[ConfigMap]):
-    def __init__(self):
-        super().__init__(ConfigMap)
-
-    def delete(self, res: ConfigMap, non_grace_period: bool = False):
-        namespace = res.app.namespace
-        config_name = res.name
-
-        try:
-            existed_one = self.get(app=res.app, name=config_name)
-        except AppEntityNotFound:
-            logger.info("ConfigMap<%s/%s> does not exist, will skip delete", namespace, config_name)
-            return None
-        return super().delete(existed_one, non_grace_period)
-
-
-configmap_kmodel = ConfigMapManager()
+secret_kmodel: AppEntityManager[Secret] = AppEntityManager(Secret)

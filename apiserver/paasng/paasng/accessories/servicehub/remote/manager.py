@@ -448,12 +448,16 @@ def create_svc_instance_obj_from_remote(
     special fields:
 
     - `config.__meta__`: if "should_hidden_fields" or "should_remove_fields" was included in this
-        field, the value will be popped for instance intializing.
+        field, the value will be popped for instance initializing.
     """
 
     def _format_key(val):
-        """Turn credential keys in to upper case and with prefix"""
-        return f"{field_prefix}_{val}".upper()
+        """
+        Turn credential keys in to upper case and add prefix (svc name),
+        also replace '-' with '_' to match the unix environment variable name format
+        """
+        key = f"{field_prefix}_{val}".upper()
+        return key.replace("-", "_")
 
     _credentials = {_format_key(key): value for key, value in credentials.items()}
 

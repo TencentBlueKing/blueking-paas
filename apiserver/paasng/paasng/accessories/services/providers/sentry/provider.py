@@ -19,6 +19,7 @@ import logging
 
 from django.utils.translation import gettext as _
 
+from paasng.accessories.services.providers.base import BaseProvider, InstanceData
 from paasng.accessories.services.utils import gen_unique_id
 
 from .client import SentryClient
@@ -29,16 +30,14 @@ from .exceptions import (
     CreateSentryUserFail,
     FetchSentryTeamMembersFail,
 )
-from ..base import BaseProvider, InstanceData
 
 logger = logging.getLogger(__name__)
 
 
 class SentryProvider(BaseProvider):
+    """Sentry 资源处理"""
+
     display_name = _("Sentry 通用申请服务")
-    """
-    Sentry 资源处理
-    """
 
     def __init__(self, config):
         """

@@ -238,5 +238,8 @@ class ResourceId(models.Model):
 class InstanceData(NamedTuple):
     credentials: Dict
     # NOTE: config
-    # - if admin_url in config, will show admin entrance to developer
+    # admin_url: will show admin entrance to developer
+    # is_pre_created: whether this instance is pre-created（PreCreatedInstance）
+    # provider_name: the provider name of this instance（service.provider_name / mysql / rabbitmq ...)
+    # enable_tls: whether this instance enable tls (must deploy with tls cert secrets)
     config: Optional[Dict] = None

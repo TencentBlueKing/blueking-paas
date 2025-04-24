@@ -12,43 +12,61 @@
       </div>
       <div class="content">
         <div class="top-wrapper">
-          <p class="info" v-if="departments.length === 0 && users.length === 0">{{ $t('默认全员可见') }}</p>
-          <p
-            v-else
-            class="info"
-            v-html="infoMsg"
-          ></p>
-          <div
-            class="edit-container"
-            @click="handleOpenMemberDialog"
-          >
-            <i class="paasng-icon paasng-edit-2 pl10" />
-            {{ $t('编辑') }}
-          </div>
+          <!-- 多租户组织架构选择器 -->
+          <bk-org-selector
+            v-if="platformFeature.MULTI_TENANT_MODE"
+            v-model="orgMemberSelector"
+            :api-base-url="tenantApiBaseUrl"
+            :tenant-id="tenantId"
+            :has-user="true"
+            @change="handleBkOrgSelector"
+          ></bk-org-selector>
+          <template v-else>
+            <p
+              class="info"
+              v-if="departments.length === 0 && users.length === 0"
+            >
+              {{ $t('默认全员可见') }}
+            </p>
+            <p
+              v-else
+              class="info"
+              v-html="infoMsg"
+            ></p>
+            <div
+              class="edit-container"
+              @click="handleOpenMemberDialog"
+            >
+              <i class="paasng-icon paasng-edit-2 pl10" />
+              {{ $t('编辑') }}
+            </div>
+          </template>
         </div>
         <!-- 组织/用户 -->
-        <div
-          class="render-member-wrapper"
-          v-if="departments.length || users.length"
-        >
-          <render-member-list
-            v-if="departments.length > 0"
-            type="department"
-            :custom-styles="true"
-            :data="departments"
-          />
-          <render-member-list
-            v-if="users.length > 0"
-            :custom-styles="true"
-            :data="users"
-          />
-        </div>
+        <template v-if="!platformFeature.MULTI_TENANT_MODE">
+          <div
+            class="render-member-wrapper"
+            v-if="departments.length || users.length"
+          >
+            <render-member-list
+              v-if="departments.length > 0"
+              type="department"
+              :custom-styles="true"
+              :data="departments"
+            />
+            <render-member-list
+              v-if="users.length > 0"
+              :custom-styles="true"
+              :data="users"
+            />
+          </div>
+        </template>
       </div>
     </section>
 
     <user-selector-dialog
       ref="userSelectorDialogRef"
-      :show.sync="isShow"
+      :show.sync="isShowUserSelector"
       :users="users"
       :departments="departments"
       :api-host="apiHost"
@@ -61,13 +79,17 @@
 <script>
 import userSelectorDialog from '@/components/user-selector';
 import RenderMemberList from './render-member-list';
+import BkOrgSelector from '@blueking/bk-org-selector/vue2';
 import { cloneDeep } from 'lodash';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
+import { mapGetters, mapState } from 'vuex';
+import { normalizeOrgSelectionData } from '@/common/tools';
 export default {
   name: 'AppVisibleRange',
   components: {
     userSelectorDialog,
     RenderMemberList,
+    BkOrgSelector,
   },
   props: {
     data: {
@@ -80,18 +102,23 @@ export default {
       platFormConfig: PLATFORM_CONFIG,
       apiHost: window.BK_COMPONENT_API_URL,
       baseInfo: {},
-      isShow: false,
+      isShowUserSelector: false,
+      orgMemberSelector: [],
     };
   },
   computed: {
+    ...mapState({
+      platformFeature: (state) => state.platformFeature,
+    }),
+    ...mapGetters(['tenantId', 'tenantApiBaseUrl']),
     appCode() {
       return this.$route.params.id;
     },
     users() {
-      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'user');
+      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
     },
     departments() {
-      return (this.baseInfo.visiable_labels || []).filter(item => item.type === 'department');
+      return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'department');
     },
     infoMsg() {
       return this.$t('已选择 <span>{d}</span> 个组织，<span class="s2">{s}</span> 个用户', {
@@ -104,6 +131,7 @@ export default {
     data: {
       handler(newVal) {
         this.baseInfo = cloneDeep(newVal);
+        this.orgMemberSelector = normalizeOrgSelectionData(newVal?.visiable_labels || [], { nonUserType: 'org' });
       },
       deep: true,
       immediate: true,
@@ -111,19 +139,19 @@ export default {
   },
   methods: {
     handleOpenMemberDialog() {
-      this.isShow = true;
+      this.isShowUserSelector = true;
     },
     handleSubmit(payload) {
       this.baseInfo.visiable_labels = payload;
       this.saveVisibleRange();
     },
     // 保存可见范围
-    async saveVisibleRange() {
+    async saveVisibleRange(visiableLabels = []) {
       try {
         await this.$store.dispatch('market/updateMarketInfo', {
           appCode: this.appCode,
           data: {
-            visiable_labels: this.baseInfo.visiable_labels,
+            visiable_labels: this.platformFeature.MULTI_TENANT_MODE ? visiableLabels : this.baseInfo.visiable_labels,
           },
         });
         this.$paasMessage({
@@ -139,6 +167,11 @@ export default {
         });
       }
     },
+    // 多租户组织架构选择
+    handleBkOrgSelector(data) {
+      const visiableLabels = normalizeOrgSelectionData(data);
+      this.saveVisibleRange(visiableLabels);
+    },
   },
 };
 </script>
@@ -150,10 +183,10 @@ export default {
   .main {
     display: flex;
     .title {
-        font-weight: 700;
-        font-size: 14px;
-        color: #313238;
-      }
+      font-weight: 700;
+      font-size: 14px;
+      color: #313238;
+    }
     .content {
       margin-left: 24px;
       .top-wrapper {

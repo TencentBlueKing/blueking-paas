@@ -19,7 +19,7 @@ to the current version of the project delivered to anyone in the future.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Type
 
 from django.conf import settings
 from paas_service.base_vendor import ArgumentInvalidError, BaseProvider, InstanceData
@@ -29,7 +29,7 @@ from .client import Client
 from .clusters import Cluster
 from .helper import InstanceHelper, Version
 from .models import InstanceBill, LimitPolicy, UserPolicy
-from .utils import generate_password
+from .utils import gen_addons_cert_mount_path, generate_password
 
 logger = logging.getLogger(__name__)
 
@@ -138,13 +138,15 @@ PROVIDER_PLUGINS: "List[Type[ProviderPlugin]]" = [
 
 @dataclass
 class Provider(BaseProvider):
-    host: Optional[str] = None
-    port: Optional[int] = None
-    management_api: Optional[str] = None
-    admin: Optional[str] = None
-    password: Optional[str] = None
-    version: Optional[str] = None
-    clusters: List = field(default_factory=list)
+    host: str | None = None
+    port: int | None = None
+    management_api: str | None = None
+    admin: str | None = None
+    password: str | None = None
+    version: str | None = None
+    tls: Dict[str, str] = field(default_factory=dict)
+    # clusters 包含多个 RabbitMQ 集群配置
+    clusters: List[Cluster] = field(default_factory=list)
 
     def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []
@@ -171,6 +173,7 @@ class Provider(BaseProvider):
                 "admin": self.admin,
                 "password": self.password,
                 "version": self.version,
+                "tls": self.tls,
             }
             try:
                 return Cluster(**values)
@@ -220,15 +223,30 @@ class Provider(BaseProvider):
             plugin = cls(context=context, cluster=cluster, client=client, virtual_host=virtual_host)
             plugin.on_create()
 
+        credentials = {
+            "host": cluster.host,
+            "port": cluster.port,
+            "user": user,
+            "password": password,
+            "vhost": virtual_host,
+        }
+
+        ca = cluster.tls.get("ca")
+        cert = cluster.tls.get("cert")
+        cert_key = cluster.tls.get("key")
+
+        # 添加证书路径到凭证信息中
+        provider_name = "rabbitmq"
+        if ca:
+            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
+
+        if cert and cert_key:
+            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
         return InstanceData(
-            credentials={
-                "host": cluster.host,
-                "port": cluster.port,
-                "user": user,
-                "password": password,
-                "vhost": virtual_host,
-            },
-            config={"bill": bill.uuid.hex},
+            credentials=credentials,
+            config={"bill": bill.uuid.hex, "provider_name": provider_name, "enable_tls": bool(ca or cert or cert_key)},
         )
 
     def create(self, params: Dict) -> "InstanceData":

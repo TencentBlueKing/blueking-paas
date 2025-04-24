@@ -16,15 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from paas_service.base_vendor import BaseProvider, InstanceData
 from paas_service.utils import WRItemList, generate_password
+
 from svc_mysql.vendor.helper import MySQLAuthorizer, MySQLEngine
-from svc_mysql.vendor.utils import gen_unique_id
+from svc_mysql.vendor.utils import gen_addons_cert_mount_path, gen_unique_id
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +37,21 @@ class DBCredential:
     port: int
     user: str
     password: str
-    name: Optional[str] = None
+    name: str | None = None
 
 
 @dataclass
 class Provider(BaseProvider):
     """使用 mysql client 管理用户和数据库"""
 
-    host: Optional[str] = None
-    port: Optional[int] = None
-    user: Optional[str] = None
-    password: Optional[str] = None
+    host: str | None = None
+    port: int | None = None
+    user: str | None = None
+    password: str | None = None
     servers: List = field(default_factory=list)
     auth_ip_list: List[str] = field(default_factory=list)
     db_operator_template: Dict = field(default_factory=dict)
+    tls: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.servers and not (self.host and self.port and self.user and self.password):
@@ -133,7 +136,25 @@ class Provider(BaseProvider):
         engine = MySQLEngine(**asdict(db_info))
         create_db_sql = self.db_operator_template["CREATE_DATABASE"].format(engine=engine)
         engine.execute(create_db_sql)
-        return InstanceData(credentials=asdict(db_info), config={})
+
+        credentials = asdict(db_info)
+        ca = self.tls.get("ca")
+        cert = self.tls.get("cert")
+        cert_key = self.tls.get("key")
+
+        # 添加证书路径到凭证信息中
+        provider_name = "mysql"
+        if ca:
+            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
+
+        if cert and cert_key:
+            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
+        return InstanceData(
+            credentials=credentials,
+            config={"provider_name": provider_name, "enable_tls": bool(ca or cert or cert_key)},
+        )
 
     def delete(self, instance_data: InstanceData):
         """删除数据库实例, DROP DATABASE

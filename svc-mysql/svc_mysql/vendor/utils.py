@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from django.db import transaction
 from paas_service.models import ResourceId
 from paas_service.utils import Base36Handler
@@ -39,3 +40,19 @@ def gen_unique_id(name: str, namespace: str = "default", max_length: int = 16, d
         resource_id.save(update_fields=["uid"])
 
     return resource_id.uid
+
+
+def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
+    """生成蓝鲸应用挂载增强服务 ssl 证书的路径
+    重要：不要随意调整该路径，可能会导致证书无法正常挂载（需要与 ApiServer 侧同步调整）
+
+    :param provider_name: 增强服务提供者名称，如：redis，mysql，rabbitmq（也可能与 Service 同名）
+    :param cert_name: 证书名称，必须是 ca.crt，tls.crt，tls.key 三者之一
+    """
+    if not provider_name:
+        raise ValueError("provider_name is required")
+
+    if cert_name not in ["ca.crt", "tls.crt", "tls.key"]:
+        raise ValueError("cert_name must be one of ca.crt, tls.crt, tls.key")
+
+    return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"

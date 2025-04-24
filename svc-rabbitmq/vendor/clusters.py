@@ -14,8 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from typing import Dict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Cluster(BaseModel):
@@ -25,3 +26,4 @@ class Cluster(BaseModel):
     admin: str
     password: str
     version: str
+    tls: Dict[str, str] = Field(default_factory=dict)

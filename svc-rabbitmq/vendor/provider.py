@@ -236,7 +236,7 @@ class Provider(BaseProvider):
         cert_key = cluster.tls.get("key")
 
         # 添加证书路径到凭证信息中
-        provider_name = "mysql"
+        provider_name = "rabbitmq"
         if ca:
             credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
 

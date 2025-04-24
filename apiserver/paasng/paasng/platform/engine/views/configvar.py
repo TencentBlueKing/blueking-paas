@@ -54,6 +54,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
+    ConfigVarWithoutKeyFormatSLZ,
     ListConfigVarsSLZ,
 )
 
@@ -176,7 +177,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        request_body=ConfigVarFormatSLZ,
+        request_body=ConfigVarWithoutKeyFormatSLZ,
         tags=["环境配置"],
         responses={status.HTTP_200_OK: None},
     )
@@ -195,11 +196,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
 
         if existing_vars.exists():
-            # 存在，更新第一个匹配的记录
-            var_obj = existing_vars.first()
-            var_obj.value = config_var.value
-            var_obj.description = config_var.description
-            var_obj.save()
+            # 存在, 更新已有记录
+            existing_vars.update(value=config_var.value, description=config_var.description)
         else:
             # 不存在，创建新记录
             ConfigVar.objects.create(

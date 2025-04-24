@@ -117,11 +117,11 @@ class RabbitMQProvider(BaseProvider):
         # 4. 添加证书路径到凭证信息中
         provider_name = "rabbitmq"
         if self.ca:
-            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
+            credentials["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
 
         if self.cert and self.cert_key:
-            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
-            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "cert.key")
+            credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
 
         return InstanceData(
             credentials=credentials,

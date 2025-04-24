@@ -87,11 +87,11 @@ class ResourcePoolProvider(BaseProvider):
             # 证书内容会在部署时候以 Secret 形式挂载到容器中
             ca, cert, cert_key = tls.get("ca"), tls.get("cert"), tls.get("key")
             if ca:
-                creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
+                creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.crt")
 
             if cert and cert_key:
-                creds["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
-                creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "cert.key")
+                creds["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
+                creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
 
             return InstanceData(
                 credentials=json.loads(creds),

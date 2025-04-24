@@ -141,7 +141,8 @@ class RedisInstanceController:
 
     def _check_redis_status(self, max_attempts=60, retry_interval=10):
         """
-        通过 StatefulSet 就绪副本数，判断 Redis 实例状态
+        当采用 ClusterDNS 进行服务访问时，该服务端无法直接访问Redis 实例服务
+        因此通过 StatefulSet 就绪副本数，判断 Redis 实例状态，而不是 Redis Ping
 
         :param max_attempts: 最大重试次数
         :param retry_interval: 重试间隔时间（秒）
@@ -155,10 +156,9 @@ class RedisInstanceController:
                 if sts.status.replicas == sts.status.readyReplicas:
                     return
             except Exception as e:
-                if attempt < max_attempts:
-                    time.sleep(retry_interval)
-                else:
+                if attempt >= max_attempts:
                     raise RedisReadinessTimeout("Redis Readiness Timeout") from e
+                time.sleep(retry_interval)
 
 
 class ServiceExporter(ABC):

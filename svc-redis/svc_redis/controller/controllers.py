@@ -164,14 +164,12 @@ class RedisInstanceController:
                 )
                 if r.ping():
                     return
-            except redis.ConnectionError as e:
+            except Exception as e:
                 if attempt < max_attempts:
                     logger.info(f"Redis({credential.host}:{credential.port}) 连接失败, {retry_interval} 秒后重试")
                     time.sleep(retry_interval)
                 else:
                     raise RedisConnectionFailed("Redis Connection Failed") from e
-            except Exception as e:
-                raise RedisConnectionFailed("Redis Connection Failed") from e
 
 
 class ServiceExporter(ABC):

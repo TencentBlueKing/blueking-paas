@@ -153,7 +153,14 @@ class RedisInstanceController:
         for attempt in range(1, max_attempts + 1):
             try:
                 r = redis.Redis(
-                    host=credential.host, port=credential.port, password=credential.password, decode_responses=True
+                    host=credential.host,
+                    port=credential.port,
+                    password=credential.password,
+                    decode_responses=True,
+                    # 非单体模式下，需要等全部就绪才可以提供服务
+                    # 但是会先创建与 master 的连接，因此需要设置较长的超时时间
+                    socket_timeout=max_attempts * retry_interval,
+                    socket_connect_timeout=max_attempts * retry_interval,
                 )
                 if r.ping():
                     return

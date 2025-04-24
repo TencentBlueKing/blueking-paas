@@ -70,7 +70,9 @@ class RedisInstanceController:
             port=endpoint.port,
             password=password,
         )
-        self._check_redis_status(credential)
+        # TODO: 通过检查 StatefulSets 来判断 ClusterDNS 类型服务是否就绪
+        if self.plan_config.service_export_type == "TencentCLB":
+            self._check_redis_status(credential)
         return credential
 
     def delete(self, credential: RedisInstanceCredential):

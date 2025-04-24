@@ -56,7 +56,7 @@ class RedisInstanceController:
         2. 创建 Redis 密码凭证对应的 Secret 资源
         3. 创建 Redis 实例资源
         4. 创建 Redis 服务资源
-        5. 检测 Redis 服务是否就绪
+        5. 检测 Redis StatefulSet 副本是否就绪
         """
         self._ensure_namespace()
         password = self._deploy_redis_password_secret()

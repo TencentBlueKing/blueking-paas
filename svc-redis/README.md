@@ -88,7 +88,7 @@ from paas_service.models import Plan
 from svc_redis.cluster.models import Cluster
 
 # category 为增强服务分类，apiserver 侧也需要参考 apiserver/paasng/fixtures/services.yaml 初始化增强服务分类
-svc = Service.objects.create(name="remote_redis", display_name_zh_cn="Remote Redis", display_name_en="Remote Redis", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
+svc = Service.objects.create(name="paas_redis", display_name_zh_cn="PaaS-Redis", display_name_en="PaaS-Redis", category=1, logo="http://example.com", available_languages="python,golang,nodejs")
 
 # 创建集群
 cluster = Cluster.objects.create(
@@ -164,7 +164,7 @@ export PAAS_SERVICE_JWT_CLIENTS_KEY="xxx"
 
 ```yaml
 SERVICE_REMOTE_ENDPOINTS:
-  - name: remote_redis
+  - name: paas_redis
     endpoint_url: http://localhost:8005/ # 增强服务的访问地址
     provision_params_tmpl:
       engine_app_name: "{engine_app.name}"

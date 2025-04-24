@@ -200,19 +200,37 @@
           </bk-form-item>
         </bk-form>
       </section>
+      <!-- 更多信息根据接口字段动态生成、AI插件特殊处理 -->
       <section
-        v-if="Object.keys(extraFields).length"
+        v-if="Object.keys(extraFields).length || isAiPlugin"
         :class="['info-container', 'card-style', 'mt16', { mb75: isSticky }]"
       >
         <div class="base-info-tit">
           {{ $t('更多信息') }}
         </div>
         <bk-form
-          ref="form"
-          :model="form"
-          :rules="informationRules"
+          ref="moreForm"
+          :model="isAiPlugin ? bkAiSpaces : form"
         >
+          <template v-if="isAiPlugin">
+            <bk-form-item
+              :label="$t('AI 空间')"
+              :required="true"
+              :property="'spaceId'"
+              :rules="requiredRules"
+            >
+              <bk-select v-model="bkAiSpaces.spaceId">
+                <bk-option
+                  v-for="option in bkAiSpaces.spacesList"
+                  :key="option.space_id"
+                  :id="option.space_id"
+                  :name="option.space_name"
+                ></bk-option>
+              </bk-select>
+            </bk-form-item>
+          </template>
           <BkSchemaForm
+            v-else
             :key="form.pd_id"
             class="bk-form-warp"
             v-model="schemaFormData"
@@ -254,8 +272,15 @@ import 'quill/dist/quill.bubble.css';
 import paasPluginTitle from '@/components/pass-plugin-title';
 import createForm from '@blueking/bkui-form';
 import { throttle, uniqBy } from 'lodash';
+import i18n from '@/language/i18n';
 
 const BkSchemaForm = createForm();
+// 必填校验
+const requiredRule = {
+  required: true,
+  message: i18n.t('该字段是必填项'),
+  trigger: 'blur',
+};
 
 export default {
   components: {
@@ -273,59 +298,16 @@ export default {
         templateName: '',
         repositoryTemplateUrl: '',
       },
+      requiredRules: [requiredRule],
       rules: {
-        pd_id: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-        plugin_id: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-        name: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-
-        language: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-        applicableLanguage: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-        templateName: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
-        repositoryTemplateUrl: [
-          {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-        ],
+        pd_id: [requiredRule],
+        plugin_id: [requiredRule],
+        name: [requiredRule],
+        language: [requiredRule],
+        applicableLanguage: [requiredRule],
+        templateName: [requiredRule],
+        repositoryTemplateUrl: [requiredRule],
       },
-      informationRules: {},
       pluginTypeList: [],
       pluginTypeData: { plugin_type: {}, schema: {} },
       pluginLanguage: [],
@@ -334,9 +316,6 @@ export default {
       pluginTemplateList: [],
       extraFields: {},
       buttonLoading: false,
-      editorOption: {
-        placeholder: this.$t('@通知他人，ctrl+enter快速提交'),
-      },
       curPluginItem: {},
       pdIdPlaceholder: '',
       namePlaceholder: '',
@@ -353,6 +332,11 @@ export default {
         },
       },
       isSticky: false,
+      // AI空间
+      bkAiSpaces: {
+        spaceId: '',
+        spacesList: [],
+      },
     };
   },
   computed: {
@@ -372,6 +356,10 @@ export default {
     developmentLanguages() {
       return uniqBy(this.pluginLanguage, 'language');
     },
+    // AI插件由前端特殊处理
+    isAiPlugin() {
+      return this.form.pd_id === 'bk-saas' && this.form.templateName === 'bk-ai-plugin-python';
+    },
   },
   watch: {
     'form.plugin_id'(value) {
@@ -386,6 +374,11 @@ export default {
       this.curPluginItem = selected[0];
       this.addRules();
       this.changePlaceholder();
+    },
+    isAiPlugin(newVal) {
+      if (newVal && !this.bkAiSpaces.spacesList?.length) {
+        this.getBkaidevSpaces();
+      }
     },
   },
   mounted() {
@@ -494,13 +487,8 @@ export default {
         this.pdIdMaxLength = this.curPluginInfo.schema.id.maxlength || 16;
         this.nameMaxLength = this.curPluginInfo.schema.name.maxlength || 20;
       }
-      const baseRule = {
-        required: true,
-        message: this.$t('该字段是必填项'),
-        trigger: 'blur',
-      };
-      const rulesPluginId = [baseRule];
-      const rulesName = [baseRule];
+      const rulesPluginId = [requiredRule];
+      const rulesName = [requiredRule];
       // 插件ID
       rulesPluginId.push({
         regex: new RegExp(this.curPluginInfo.schema.id.pattern),
@@ -588,6 +576,9 @@ export default {
       if (this.$refs.bkForm) {
         formArray.push(this.$refs.bkForm.validate());
       }
+      if (this.isAiPlugin && this.$refs.moreForm) {
+        formArray.push(this.$refs.moreForm.validate());
+      }
       Promise.all(formArray)
         .then(() => {
           this.buttonLoading = true;
@@ -608,7 +599,7 @@ export default {
           name: this.form.name,
           template: this.form.templateName,
           pd_id: this.form.pd_id,
-          extra_fields: this.schemaFormData,
+          extra_fields: this.isAiPlugin ? { space_id: this.bkAiSpaces.spaceId } : this.schemaFormData,
         };
         const res = await this.$store.dispatch('plugin/savePlugins', params);
         this.$paasMessage({
@@ -676,6 +667,16 @@ export default {
     closeSpellcheck() {
       const textarea = document.querySelector('.bk-form textarea');
       textarea && textarea.setAttribute('spellcheck', false);
+    },
+
+    // 获取AI空间下拉列表
+    async getBkaidevSpaces() {
+      try {
+        const res = await this.$store.dispatch('plugin/getBkaidevSpaces');
+        this.bkAiSpaces.spacesList = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
   },
 };

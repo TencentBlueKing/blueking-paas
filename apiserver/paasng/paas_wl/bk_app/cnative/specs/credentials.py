@@ -17,7 +17,7 @@
 
 import logging
 from contextlib import contextmanager
-from typing import Iterator, List
+from typing import Dict, Iterator, List
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
@@ -27,8 +27,8 @@ from paas_wl.workloads.configuration.secret.kres_entities import Secret, secret_
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paas_wl.workloads.images.kres_entities import ImageCredentialsManager as _ImageCredentialsManager
 from paas_wl.workloads.images.models import AppUserCredential
-from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.accessories.servicehub.services import EngineAppInstanceRel
+from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.models import PreCreatedInstance
 from paasng.accessories.services.utils import gen_addons_cert_secret_name
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -66,57 +66,47 @@ class ImageCredentialsManager(_ImageCredentialsManager):
     kres = contextmanager(_kres)
 
 
+def get_tls_certs_from_addons_rel(rel: EngineAppInstanceRel) -> Dict[str, str] | None:
+    """获取增强服务 TLS 证书内容"""
+    cfg = rel.get_instance().config
+
+    tls = None
+    # 预先创建的资源实例 -> 资源池类型，证书数据存在 PreCreatedInstance.config 中
+    if cfg.get("is_pre_created"):
+        if pk := cfg.get("__pk__"):
+            pre_created_inst = PreCreatedInstance.objects.get(pk=pk)
+            tls = pre_created_inst.config.get("tls")
+    # 其他情况下，证书存在方案配置中
+    else:
+        tls = rel.get_plan().config.get("tls")
+
+    if not tls:
+        return None
+
+    tls_certs = {}
+    if ca := tls.get("ca"):
+        tls_certs["ca.crt"] = ca
+
+    cert, cert_key = tls.get("cert"), tls.get("key")
+    if cert and cert_key:
+        tls_certs.update({"tls.crt": cert, "tls.key": cert_key})
+
+    return tls_certs
+
+
 def deploy_addons_tls_certs(env: ModuleEnvironment):
     """下发增强服务 TLS 证书（如果需要的话）"""
-    # 绑定的增强服务
-    bound_services = list(mixed_service_mgr.list_binded(env.module))
-    # 共享的增强服务
-    shared_services = [info.service for info in ServiceSharingManager(env.module).list_all_shared_info()]
-    # 合并两个列表
-    all_services = set(bound_services + shared_services)
     # 环境信息（日志打印用）
     env_info = f"App: {env.application.code}, Module: {env.module.name}, Env: {env.environment}"
 
-    for service in all_services:
-        for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
-            svc_inst = rel.get_instance()
+    for rel in list_provisioned_tls_enabled_rels(env):
+        svc_inst = rel.get_instance()
+        cfg = svc_inst.config
 
-            cfg = svc_inst.config
-            if not cfg:
-                continue
+        tls_certs = get_tls_certs_from_addons_rel(rel)
+        if not tls_certs:
+            logger.warning("%s, service instance %s cannot generate tls certs, skip...", env_info, svc_inst.uuid)
+            continue
 
-            provider_name = cfg.get("provider_name")
-            enable_tls = cfg.get("enable_tls")
-            # 只有当能够获取增强服务提供方名称，且明确有 TLS 证书时才继续
-            if not (provider_name and enable_tls):
-                continue
-
-            tls = None
-            # 预先创建的资源实例 -> 资源池类型，证书数据存在 PreCreatedInstance.config 中
-            if cfg.get("is_pre_created"):
-                if pk := cfg.get("__pk__"):
-                    pre_created_inst = PreCreatedInstance.objects.get(pk=pk)
-                    tls = pre_created_inst.config.get("tls")
-            # 其他情况下，证书存在方案配置中
-            else:
-                tls = rel.get_plan().config.get("tls")
-
-            if not tls:
-                logger.warning("%s, service %s has not tls config, skip...", env_info, service.name)
-                continue
-
-            tls_certs = {}
-            if ca := tls.get("ca"):
-                tls_certs["ca.pem"] = ca
-
-            cert, cert_key = tls.get("cert"), tls.get("key")
-            if cert and cert_key:
-                tls_certs["cert.pem"] = cert
-                tls_certs["cert.key"] = cert_key
-
-            if not tls_certs:
-                logger.warning("%s, service %s cannot generate tls certs, skip...", env_info, service.name)
-                continue
-
-            secret_name = gen_addons_cert_secret_name(provider_name)
-            secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, type=SecretType.TLS, data=tls_certs))
+        secret_name = gen_addons_cert_secret_name(cfg["provider_name"])
+        secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, type=SecretType.TLS, data=tls_certs))

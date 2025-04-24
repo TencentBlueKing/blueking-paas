@@ -15,7 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
+import time
 from abc import ABC, abstractmethod
+
+import redis
 
 from svc_redis.cluster.models import TencentCLBListener
 from svc_redis.resources.base.base import get_client_by_cluster_name
@@ -24,6 +28,7 @@ from svc_redis.resources.base.kres import KNamespace, KSecret, KService
 from svc_redis.vendor.redis_crd.constants import DEFAULT_REDIS_PORT, RedisType
 
 from .entities import RedisEndpoint, RedisInstanceCredential, RedisPlanConfig
+from .exceptions import RedisConnectionFailed
 from .manifests import (
     generate_redis_name,
     get_external_tencent_clb_service_manifest,
@@ -31,6 +36,8 @@ from .manifests import (
     get_redis_resource,
     get_service_monitor_manifest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RedisInstanceController:
@@ -51,18 +58,20 @@ class RedisInstanceController:
         2. 创建 Redis 密码凭证对应的 Secret 资源
         3. 创建 Redis 实例资源
         4. 创建 Redis 服务资源
+        5. 检测 Redis 服务是否就绪
         """
         self._ensure_namespace()
         password = self._deploy_redis_password_secret()
         self._deploy_redis_resource()
         endpoint = self._deploy_and_get_endpoint()
         self._deploy_redis_service_monitor()
-
-        return RedisInstanceCredential(
+        credential = RedisInstanceCredential(
             host=endpoint.host,
             port=endpoint.port,
             password=password,
         )
+        self._check_redis_status(credential)
+        return credential
 
     def delete(self, credential: RedisInstanceCredential):
         """删除 namespace 以删除所有资源"""
@@ -132,6 +141,32 @@ class RedisInstanceController:
             port=credential.port,
         )
         return exporter.recycle_endpoint(endpoint)
+
+    def _check_redis_status(self, credential: RedisInstanceCredential, max_attempts=10, retry_interval=10):
+        """
+        检查 Redis 连接状态
+
+        :param credential: Redis 实例凭证
+        :param max_attempts: 最大重试次数
+        :param retry_interval: 重试间隔时间（秒）
+        """
+        for attempt in range(1, max_attempts + 1):
+            try:
+                r = redis.Redis(
+                    host=credential.host, port=credential.port, password=credential.password, decode_responses=True
+                )
+                if r.ping():
+                    return
+            except redis.ConnectionError as e:
+                if attempt < max_attempts:
+                    logger.info(
+                        f"Redis({credential.host}:{credential.port}) 连接失败 (尝试 {attempt}/{max_attempts}), {retry_interval}秒后重试..."
+                    )
+                    time.sleep(retry_interval)
+                else:
+                    raise RedisConnectionFailed("Redis Connection Failed") from e
+            except Exception as e:
+                raise RedisConnectionFailed("Redis Connection Failed") from e
 
 
 class ServiceExporter(ABC):

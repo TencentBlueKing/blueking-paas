@@ -46,5 +46,6 @@ dependencies = [
     'pyjwt (==2.4.0)',
     "kubernetes (==24.2.0)",
     "cattrs (==1.10.0)",
-    "attrs (==22.1.0)"
+    "attrs (==22.1.0)",
+    "redis (>=5.2.1,<6.0.0)"
 ]

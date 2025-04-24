@@ -60,7 +60,7 @@ export DJANGO_SETTINGS_MODULE="svc_redis.settings"
 # Add the helm chart
 $ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
 
-# Deploy the redis-operator
+# Deploy the redis-operator（已验证 v0.19.3 版本可用）
 $ helm upgrade redis-operator ot-helm/redis-operator \
   --install --create-namespace --namespace ot-operators
   

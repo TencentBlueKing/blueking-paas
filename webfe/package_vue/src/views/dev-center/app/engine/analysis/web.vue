@@ -1,11 +1,10 @@
 <template lang="html">
   <div class="right-main">
-
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="analysis-loading"
       :offset-top="20"
-      class="app-container middle web-container"
+      class="app-container middle web-container card-style"
     >
       <app-analysis
         :backend-type="'user_tracker'"
@@ -41,7 +40,7 @@ export default {
     };
   },
   watch: {
-    '$route'() {
+    $route() {
       this.isEngineEnabled = this.curAppInfo.web_config.engine_enabled;
       this.isLoading = true;
     },
@@ -57,7 +56,7 @@ export default {
 };
 </script>
 <style scoped lang="scss">
-.web-container{
+.web-container {
   background: #fff;
   margin: 16px auto 30px;
   padding: 1px 24px;

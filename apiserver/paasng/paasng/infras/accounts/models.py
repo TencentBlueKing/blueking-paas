@@ -101,14 +101,21 @@ class UserProfileManager(models.Manager):
         if user.pk is None or not user.pk:
             raise ValueError("Must provide a real user, not an anonymous user!")
 
+        current_tenant_id = get_tenant(user).id
+
         try:
-            return self.model.objects.get(user=user.pk)
+            profile = self.model.objects.get(user=user.pk)
+            # 如果 tenant_id 跟当前用户的 tenant-id 不一致的时候更新
+            if profile.tenant_id != current_tenant_id:
+                profile.tenant_id = current_tenant_id
+                profile.save(update_fields=["tenant_id"])
         except self.model.DoesNotExist:
             # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
             if settings.AUTO_CREATE_REGULAR_USER:
-                tenant_id = get_tenant(user).id
-                return self.create(user=user.pk, tenant_id=tenant_id, role=SiteRole.USER.value)
+                return self.create(user=user.pk, tenant_id=current_tenant_id, role=SiteRole.USER.value)
             raise
+        else:
+            return profile
 
     def get_by_natural_key(self, user: str):
         return self.get(user=user)

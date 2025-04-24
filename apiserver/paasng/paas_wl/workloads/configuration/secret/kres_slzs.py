@@ -21,6 +21,7 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paas_wl.workloads.configuration.secret.constants import SecretType
 
 if TYPE_CHECKING:
     from paas_wl.workloads.configuration.secret.kres_entities import Secret
@@ -37,6 +38,7 @@ class SecretSerializer(AppEntitySerializer["Secret"]):
                 "name": obj.name,
                 "namespace": obj.app.namespace,
             },
+            "type": obj.type.value,
             "data": obj.data,
         }
 
@@ -46,5 +48,6 @@ class SecretDeserializer(AppEntityDeserializer["Secret"]):
         return self.entity_type(
             app=app,
             name=kube_data.metadata.name,
+            type=SecretType(kube_data.type),
             data=kube_data.data,
         )

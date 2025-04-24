@@ -22,6 +22,7 @@ from typing import Iterator, List
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.infras.resources.base import kres
+from paas_wl.workloads.configuration.secret.constants import SecretType
 from paas_wl.workloads.configuration.secret.kres_entities import Secret, secret_kmodel
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paas_wl.workloads.images.kres_entities import ImageCredentialsManager as _ImageCredentialsManager
@@ -118,4 +119,4 @@ def deploy_addons_tls_certs(env: ModuleEnvironment):
                 continue
 
             secret_name = gen_addons_cert_secret_name(provider_name)
-            secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, data=tls_certs))
+            secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, type=SecretType.TLS, data=tls_certs))

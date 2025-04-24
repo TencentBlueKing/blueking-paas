@@ -52,8 +52,8 @@ class Provider(BaseProvider):
     auth_ip_list: List[str] = field(default_factory=list)
     db_operator_template: Dict = field(default_factory=dict)
     tls: Dict[str, str] = field(default_factory=dict)
-    # servers 包含多个 mysql server 配置
-    servers: List = field(default_factory=list)
+    # servers 包含多个 mysql 数据库配置
+    servers: List[DBCredential] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.servers and not (self.host and self.port and self.user and self.password):

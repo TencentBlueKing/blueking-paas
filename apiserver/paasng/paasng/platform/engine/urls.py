@@ -101,7 +101,7 @@ urlpatterns = [
         name="api.preset_config_vars",
     ),
     re_path(
-        make_app_pattern(r"/config_vars/(?P<config_vars_key>\w+)/$", include_envs=False),
+        make_app_pattern(r"/config_vars/(?P<config_vars_key>[A-Z][A-Z0-9_]*)/$", include_envs=False),
         views.ConfigVarViewSet.as_view(
             {
                 "get": "retrieve_by_key",

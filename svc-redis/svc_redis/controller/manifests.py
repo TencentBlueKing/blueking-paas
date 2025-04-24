@@ -202,7 +202,7 @@ def get_service_monitor_manifest() -> dict:
             "name": "svc-redis-prometheus-monitoring",
         },
         "spec": {
-            "endpoints": endpoint,
+            "endpoints": [endpoint],
             "selector": {"matchLabels": match_labels},
         },
     }

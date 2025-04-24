@@ -142,7 +142,7 @@ class RedisInstanceController:
         )
         return exporter.recycle_endpoint(endpoint)
 
-    def _check_redis_status(self, credential: RedisInstanceCredential, max_attempts=10, retry_interval=30):
+    def _check_redis_status(self, credential: RedisInstanceCredential, max_attempts=60, retry_interval=10):
         """
         检查 Redis 连接状态
 

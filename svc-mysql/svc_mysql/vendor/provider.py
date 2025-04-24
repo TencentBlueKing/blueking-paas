@@ -38,6 +38,7 @@ class DBCredential:
     user: str
     password: str
     name: str | None = None
+    tls: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,10 +49,11 @@ class Provider(BaseProvider):
     port: int | None = None
     user: str | None = None
     password: str | None = None
-    servers: List = field(default_factory=list)
     auth_ip_list: List[str] = field(default_factory=list)
     db_operator_template: Dict = field(default_factory=dict)
     tls: Dict[str, str] = field(default_factory=dict)
+    # servers 包含多个 mysql server 配置
+    servers: List = field(default_factory=list)
 
     def __post_init__(self):
         if not self.servers and not (self.host and self.port and self.user and self.password):
@@ -77,7 +79,7 @@ class Provider(BaseProvider):
             assert self.port, "未设置 mysql 服务端口"
             assert self.user, "未设置 mysql 管理员用户账号"
             assert self.password, "未设置 mysql 管理员用户密码"
-            return DBCredential(host=self.host, port=self.port, user=self.user, password=self.password)
+            return DBCredential(host=self.host, port=self.port, user=self.user, password=self.password, tls=self.tls)
 
         result = WRItemList.from_json(self.servers).get()
         return DBCredential(**result.values)
@@ -138,9 +140,9 @@ class Provider(BaseProvider):
         engine.execute(create_db_sql)
 
         credentials = asdict(db_info)
-        ca = self.tls.get("ca")
-        cert = self.tls.get("cert")
-        cert_key = self.tls.get("key")
+        ca = server_credential.tls.get("ca")
+        cert = server_credential.tls.get("cert")
+        cert_key = server_credential.tls.get("key")
 
         # 添加证书路径到凭证信息中
         provider_name = "mysql"

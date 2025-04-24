@@ -159,9 +159,7 @@ class RedisInstanceController:
                     return
             except redis.ConnectionError as e:
                 if attempt < max_attempts:
-                    logger.info(
-                        f"Redis({credential.host}:{credential.port}) 连接失败 (尝试 {attempt}/{max_attempts}), {retry_interval}秒后重试..."
-                    )
+                    logger.info(f"Redis({credential.host}:{credential.port}) 连接失败, {retry_interval} 秒后重试")
                     time.sleep(retry_interval)
                 else:
                     raise RedisConnectionFailed("Redis Connection Failed") from e

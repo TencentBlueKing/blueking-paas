@@ -51,9 +51,24 @@ class TestValidations:
     def test_normal(self):
         # 保证应用 ID 是以字母开头
         bk_app_code = f"ut{generate_random_string(length=10)}"
-        module_name = f"ut{generate_random_string(length=10)}"
-        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name, is_default=True))
-        get_app_description(app_json)
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            decorator.with_module(
+                module_name="resource",
+                is_default=True,
+                services=[{"name": "mysql"}],
+            ),
+            decorator.with_module(
+                module_name="frontend",
+                is_default=False,
+                language="NodeJS",
+                services=[{"name": "mysql", "shared_from": "resource"}],
+                env_variables=[{"key": "FOO", "value": "value_of_foo", "description": "desc_of_foo"}],
+                processes={"web": {"command": "echo 'hello world'"}},
+            ),
+        )
+        desc = get_app_description(app_json)
+        assert set(desc.modules) == {"frontend", "resource"}
 
     def test_invalid_name_length(self):
         # 保证应用 ID 是以字母开头
@@ -61,4 +76,66 @@ class TestValidations:
         module_name = f"ut{generate_random_string(length=10)}"
         app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name, is_default=True))
         with pytest.raises(DescriptionValidationError, match=r"bk_app_code: .*?20"):
+            get_app_description(app_json)
+
+    def test_missing_default_module(self):
+        # 保证应用 ID 是以字母开头
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(bk_app_code, decorator.with_module(module_name="foo", is_default=False))
+        with pytest.raises(DescriptionValidationError, match="modules"):
+            get_app_description(app_json)
+
+    def test_multiple_default_module(self):
+        # 保证应用 ID 是以字母开头
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            decorator.with_module(module_name="foo", is_default=True),
+            decorator.with_module(module_name="bar", is_default=True),
+        )
+        with pytest.raises(DescriptionValidationError, match="modules"):
+            get_app_description(app_json)
+
+    def test_shared_service_error(self):
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            decorator.with_module(
+                module_name="foo",
+                is_default=True,
+                services=[{"name": "openai", "shared_from": "bar"}],
+            ),
+        )
+        with pytest.raises(DescriptionValidationError, match="modules"):
+            get_app_description(app_json)
+
+    def test_nested_shared_service(self):
+        """测试多层服务依赖检查 - 不允许模块A引用模块B的服务，而模块B又引用模块C的服务"""
+        bk_app_code = f"ut{generate_random_string(length=10)}"
+
+        # 创建一个有3个模块的应用，形成多层服务依赖链
+        app_json = builder.make_app_desc(
+            bk_app_code,
+            # 模块C：提供基础服务
+            decorator.with_module(
+                module_name="resource",
+                is_default=False,
+                services=[{"name": "mysql"}],  # 原始服务定义
+            ),
+            # 模块B：引用模块C的服务
+            decorator.with_module(
+                module_name="backend",
+                is_default=False,
+                services=[{"name": "mysql", "shared_from": "resource"}],  # 第一次依赖
+            ),
+            # 模块A：引用模块B的服务，形成多层依赖
+            decorator.with_module(
+                module_name="frontend",
+                is_default=True,
+                services=[{"name": "mysql", "shared_from": "backend"}],  # 第二次依赖，这里应该被拒绝
+            ),
+        )
+
+        # 验证多层依赖会被拒绝
+        with pytest.raises(DescriptionValidationError, match="modules"):
             get_app_description(app_json)

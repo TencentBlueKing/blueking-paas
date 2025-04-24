@@ -19,11 +19,9 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List
 
-from django.conf import settings
-
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.constants import ClusterAnnotationKey
-from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.infras.cluster.utils import get_cluster_by_app, get_image_registry_by_app
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -54,21 +52,15 @@ class ImageCredentials(AppEntity):
         ]
 
         def should_inject_builtin_image_credential():
-            if not settings.APP_DOCKER_REGISTRY_HOST:
-                return False
-
             # 明确说明当前集群不注入内置镜像凭证的，需要跳过（如：用户托管的集群的情况）
             annos = get_cluster_by_app(app).annotations
             return annos.get(ClusterAnnotationKey.SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL) != "true"
 
         if should_inject_builtin_image_credential():
-            credentials.append(
-                ImageCredential(
-                    registry=settings.APP_DOCKER_REGISTRY_HOST,
-                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
-                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-                )
-            )
+            reg = get_image_registry_by_app(app)
+            # 仅 host 不为空时才注入
+            if reg.host:
+                credentials.append(ImageCredential(registry=reg.host, username=reg.username, password=reg.password))
 
         return ImageCredentials(
             app=app,

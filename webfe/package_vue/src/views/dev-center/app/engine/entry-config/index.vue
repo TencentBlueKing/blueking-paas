@@ -32,7 +32,7 @@
       </bk-tab>
       <div
         v-if="active === 'moduleAddress'"
-        class="controller"
+        :class="['controller', { default: !isCloudNativeApp }]"
       >
         <paas-content-loader
           :is-loading="isLoading"
@@ -190,6 +190,10 @@ export default {
     background: #fff;
     margin: 20px 24px 0 24px;
     padding-bottom: 20px;
+    &:not(.cloud-cls) {
+      box-shadow: 0 2px 4px 0 #1919290d;
+      border-radius: 2px;
+    }
     &.cloud-cls {
       background: #f5f7fa;
     }
@@ -206,8 +210,10 @@ export default {
   .controller {
     background: #fff;
     min-height: calc(100% - 50px);
-    width: calc(100% - 38px);
     margin: 15px auto 0;
+    &.default {
+      padding: 0 16px;
+    }
     .entry-bar {
       /deep/ .bar-container {
         border: none !important;

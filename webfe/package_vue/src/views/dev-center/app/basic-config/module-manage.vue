@@ -13,7 +13,7 @@
       :is-loading="isLoading"
       placeholder="module-manage-loading"
       :offset-top="25"
-      class="app-container middle module-container"
+      class="app-container middle module-container card-style"
     >
       <section v-if="!isLoading">
         <div class="module-info-item mt15">

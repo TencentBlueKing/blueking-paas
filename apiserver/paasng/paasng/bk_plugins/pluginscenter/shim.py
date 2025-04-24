@@ -118,7 +118,10 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     # 创建 IAM 用户组
     setup_builtin_user_groups(plugin)
     # 添加默认管理员
-    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
+    admins = [operator]
+    if plugin.pd.options and plugin.pd.options.shouldAddAdmins:
+        admins += plugin.pd.administrator
+    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=list(set(admins)))
 
 
 @atomic

@@ -20,7 +20,7 @@
             </span>
           </span>
         </bk-alert>
-        <div class="flex-row align-items-center justify-content-between mt20">
+        <div class="flex-row align-items-center justify-content-between mt16">
           <div class="left-filter flex-row align-items-center">
             <template v-if="!isBatchEdit">
               <bk-button
@@ -108,10 +108,28 @@
             </bk-button>
           </div>
         </div>
+        <bk-alert
+          type="success"
+          class="mt16"
+          v-if="isDeployEnvVarChange"
+        >
+          <span slot="title">
+            {{ $t('环境变量{t}成功，修改将在应用下次部署时生效。', { t: envVarChangeText }) }}
+            <bk-button
+              :theme="'primary'"
+              text
+              size="small"
+              class="to-deploy-btn"
+              @click="handleToDeploy"
+            >
+              {{ $t('去部署') }}
+            </bk-button>
+          </span>
+        </bk-alert>
         <bk-table
           v-bkloading="{ isLoading: isTableLoading }"
           :data="envVarList"
-          class="variable-table-cls mt20"
+          class="variable-table-cls mt16"
           @sort-change="handleSortChange"
         >
           <!-- 新建环境变量 -->
@@ -670,6 +688,8 @@ export default {
       builtInEnvVars: {},
       showChild: false,
       varPresetlLength: 0,
+      isDeployEnvVarChange: false,
+      envVarChangeText: '',
     };
   },
   computed: {
@@ -839,10 +859,7 @@ export default {
           moduleId: this.curModuleId,
           data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('添加环境变量成功'),
-        });
+        this.handleEnvVarChange(this.$t('添加'));
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -867,10 +884,7 @@ export default {
           varId: data.id,
           data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('修改环境变量成功'),
-        });
+        this.handleEnvVarChange(this.$t('修改'));
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -901,14 +915,11 @@ export default {
           data: params,
         });
         // 操作对应tips
-        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '新建' : '删除';
+        let tipsType = this.envVarList.length > this.envLocalVarList.length ? '添加' : '删除';
         if (this.envVarList.length === this.envLocalVarList.length) {
           tipsType = '修改';
         }
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t(`${tipsType}环境变量成功`),
-        });
+        this.handleEnvVarChange(this.$t(tipsType));
         // 批量更新不打乱当前顺序，重新复制当前新建id
         this.getEnvVarList(false);
       } catch (error) {
@@ -1359,10 +1370,7 @@ export default {
           moduleId: this.curModuleId,
           varId,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('删除环境变量成功'),
-        });
+        this.handleEnvVarChange(this.$t('删除'));
         this.getEnvVarList();
       } catch (e) {
         this.$paasMessage({
@@ -1450,6 +1458,24 @@ export default {
         });
       }
     },
+
+    // 环境变量变更
+    handleEnvVarChange(text, value = true) {
+      this.envVarChangeText = text;
+      this.isDeployEnvVarChange = value;
+    },
+
+    // 跳转部署管理
+    handleToDeploy() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+          isShowDeploy: true,
+          deployModuleId: this.curModuleId,
+        },
+      });
+    },
   },
 };
 </script>
@@ -1477,6 +1503,14 @@ export default {
 .env-container {
   padding: 0 20px 20px;
   min-height: 200px;
+  .to-deploy-btn {
+    height: auto;
+    line-height: 1;
+    padding: 0;
+  }
+  .mt16 {
+    margin-top: 16px;
+  }
 }
 .variable-instruction {
   font-size: 14px;

@@ -18,7 +18,8 @@
 
 from rest_framework import serializers
 
-from paasng.infras.accounts.constants import AccountFeatureFlag
+from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
+from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
 
 # --------- 平台管理员相关序列化器 ---------
@@ -32,10 +33,11 @@ class PlatformManagerSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="租户 ID")
 
 
-class BulkCreatePlatformManagerSLZ(serializers.Serializer):
-    """批量创建平台管理员序列化器"""
+class CreatePlatformManagerSLZ(serializers.Serializer):
+    """创建平台管理员序列化器"""
 
-    users = serializers.ListField(child=serializers.CharField(), min_length=1, help_text="管理员用户名列表")
+    user = serializers.CharField(help_text="用户 ID")
+    tenant_id = serializers.CharField(help_text="租户 ID", required=False)
 
 
 # --------- 用户特性相关序列化器 ---------
@@ -46,15 +48,21 @@ class AccountFeatureFlagSLZ(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     user = serializers.CharField(source="user.username", read_only=True)
+    tenant_id = serializers.SerializerMethodField(help_text="租户 ID")
     feature = serializers.CharField(source="name")
     is_effect = serializers.BooleanField(source="effect")
     created = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
     default_feature_flag = serializers.SerializerMethodField()
 
-    def get_default_feature_flag(self, obj: AccountFeatureFlag) -> bool:
+    def get_tenant_id(self, obj: AccountFeatureFlag) -> str:
+        """获取租户 ID"""
+        profile = UserProfile.objects.filter(user=obj.user).first()
+        return profile.tenant_id if profile else ""
+
+    def get_default_feature_flag(self, obj: AFF) -> bool:
         """根据特性名称获取其默认配置值"""
         # 从 AccountFeatureFlag 获取所有特性的默认值
-        account_feature_default_flags = AccountFeatureFlag.get_default_flags()
+        account_feature_default_flags = AFF.get_default_flags()
         # 使用特性名称(obj.name)从默认值中获取对应的配置
         return account_feature_default_flags.get(obj.name, False)
 
@@ -68,7 +76,7 @@ class UpsertAccountFeatureFlagSLZ(serializers.Serializer):
 
     def validate_feature(self, value):
         """检查特性名称是否在 AccountFeatureFlag 中定义"""
-        choices = AccountFeatureFlag.get_choices()
+        choices = AFF.get_choices()
         valid_features = [choice[0] for choice in choices]
         if value not in valid_features:
             raise serializers.ValidationError(
@@ -77,7 +85,7 @@ class UpsertAccountFeatureFlagSLZ(serializers.Serializer):
         return value
 
 
-class AccountFeatureFlagListViewSet(serializers.Serializer):
+class AccountFeatureFlagKindSLZ(serializers.Serializer):
     """返回所有用户特性种类序列化器"""
 
     value = serializers.CharField(help_text="特性名称")
@@ -90,7 +98,7 @@ class AccountFeatureFlagListViewSet(serializers.Serializer):
 class SystemAPIUserSLZ(serializers.Serializer):
     """系统 API 用户序列化器"""
 
-    user = serializers.CharField(source="name", help_text="用户 ID")
+    name = serializers.CharField(help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
     private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")

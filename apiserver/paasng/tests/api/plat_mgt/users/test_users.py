@@ -47,14 +47,15 @@ class TestPlatformManagerViewSet:
         users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
         user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
 
-        data = {"users": users}
+        data = [{"user": users[0], "tenant_id": "default"}, {"user": users[1], "tenant_id": "default"}]
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
-        # 验证用户角色已创建且为管理员
+        # 验证用户角色已创建且为管理员, 租户为给定租户
         for user_id in user_ids:
             profile = UserProfile.objects.get(user=user_id)
             assert profile.role == SiteRole.ADMIN.value
+            assert profile.tenant_id == "default"
 
     def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""
@@ -190,26 +191,26 @@ class TestSystemAPIUserViewSet:
         # 先创建一个系统 API 用户
         bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
         bk_app_code = f"{generate_random_string(6)}"
-        user = f"authed-app-{bk_app_code}"
+        name = f"authed-app-{bk_app_code}"
         role = ClientRole.BASIC_READER.value
-        data = {"user": user, "bk_app_code": bk_app_code, "role": role}
+        data = {"name": name, "bk_app_code": bk_app_code, "role": role}
 
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
         # 验证已在数据库写入
-        assert SysAPIClient.objects.filter(name=user, role=role, is_active=True).exists()
+        assert SysAPIClient.objects.filter(name=name, role=role, is_active=True).exists()
 
         # 删除该用户
         delete_url = reverse(
             "plat_mgt.users.system_api_user.delete",
-            kwargs={"user": user},
+            kwargs={"name": name},
         )
         delete_rsp = plat_mgt_api_client.delete(delete_url)
         assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT
 
         # 验证已被删除
-        assert not SysAPIClient.objects.filter(name=user, is_active=True).exists()
+        assert not SysAPIClient.objects.filter(name=name, is_active=True).exists()
 
     def test_list_system_api_roles(self, plat_mgt_api_client):
         """测试获取系统 API 权限种类列表"""

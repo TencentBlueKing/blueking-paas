@@ -388,3 +388,30 @@ class TestSysApis:
 
         release = PluginRelease.objects.get(id=release_strategy.release.id)
         assert release.status == release_status
+
+
+class TestBkAIDevApis:
+    @pytest.mark.usefixtures("_enable_plugin_center")
+    def test_get_spaces(self, api_client, settings):
+        # Mock tenant 和 client
+        mock_tenant = mock.MagicMock()
+        mock_tenant.id = "test_tenant"
+        with mock.patch(
+            "paasng.bk_plugins.pluginscenter.bk_aidev.views.get_tenant", return_value=mock_tenant
+        ), mock.patch("paasng.bk_plugins.pluginscenter.bk_aidev.views.BkAIDevClient") as mock_client:
+            mock_instance = mock_client.return_value
+            mock_instance.list_spaces.return_value = [
+                {"space_id": "1", "space_name": "test_space1"},
+                {"space_id": "2", "space_name": "test_space2"},
+            ]
+
+            response = api_client.get("/api/bkaidev/spaces/")
+            data = response.json()
+
+            # 验证结果
+            assert response.status_code == 200
+            assert data == [
+                {"space_id": "1", "space_name": "test_space1"},
+                {"space_id": "2", "space_name": "test_space2"},
+            ]
+            mock_instance.list_spaces.assert_called_once()

@@ -184,6 +184,13 @@
                 {{ $t(item.label) }}
               </bk-button>
             </div>
+            <p
+              class="tips"
+              v-if="deploymentInfoBackUp?.activeImageSource"
+            >
+              <i class="paasng-icon paasng-info-line"></i>
+              {{ $t('将跳过代码构建阶段，仅发布环境变量等应用配置的变更') }}
+            </p>
           </div>
         </template>
         <div
@@ -264,6 +271,9 @@
             :searchable="true"
             @change="handleChangeTags"
             :loading="isTagLoading"
+            enable-scroll-load
+            :scroll-loading="scrollLoadingOptions"
+            @scroll-end="handleScrollToBottom"
           >
             <bk-option
               v-for="option in imageTagList"
@@ -271,14 +281,6 @@
               :key="option.id"
               :name="option.tag"
             />
-            <div
-              slot="extension"
-              @click="handleNext"
-              style="cursor: pointer"
-              v-if="isShowNext"
-            >
-              {{ $t('下一页') }}
-            </div>
           </bk-select>
         </div>
       </div>
@@ -588,6 +590,10 @@ export default {
       },
       commitsList: [],
       moduleReleaseInfo: null,
+      scrollLoadingOptions: {
+        size: 'mini',
+        isLoading: false,
+      },
     };
   },
   computed: {
@@ -713,8 +719,10 @@ export default {
     show: {
       handler(value) {
         if (!value) return;
+        // 镜像来源、镜像拉取策略默认值
+        const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         this.deployAppDialog.visiable = !!value;
-        this.buttonActive = 'branch';
+        this.buttonActive = activeImageSource || 'branch';
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -731,9 +739,11 @@ export default {
         this.getModuleRuntimeOverview();
         // 获取当前模块部署信息
         this.getModuleReleaseInfo();
-        // 上次选择的镜像拉取策略
-        if (this.lastSelectedImagePullStrategy) {
-          this.imagePullStrategy = this.lastSelectedImagePullStrategy;
+        // 外界传递镜像拉取策略，上次选择的镜像拉取策略，否则为默认值
+        this.imagePullStrategy = activeImagePullPolicy || this.lastSelectedImagePullStrategy || 'IfNotPresent';
+        // 已构建镜像，获取下拉列表
+        if (activeImageSource) {
+          this.handleSelected({ value: 'image', label: this.$t('已构建镜像') });
         }
       },
       immediate: true,
@@ -1122,6 +1132,7 @@ export default {
     async getImageTagList() {
       try {
         this.isTagLoading = true;
+        this.scrollLoadingOptions.isLoading = true;
         const res = await this.$store.dispatch('deploy/getImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -1141,6 +1152,7 @@ export default {
         });
       } finally {
         this.isTagLoading = false;
+        this.scrollLoadingOptions.isLoading = false;
       }
     },
 
@@ -1211,7 +1223,7 @@ export default {
       this.handleCloseProcessWatch();
     },
 
-    handleNext() {
+    handleScrollToBottom() {
       if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
       this.pagination.limit += 10;
       this.getImageTagList();
@@ -1377,6 +1389,13 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+.image-source {
+  .tips {
+    font-size: 12px;
+    color: #979ba5;
+    margin-top: 4px;
+  }
+}
 .version-code {
   cursor: pointer;
   color: #3a84ff;

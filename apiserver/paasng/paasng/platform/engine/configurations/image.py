@@ -16,16 +16,17 @@
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import arrow
-from django.conf import settings
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -42,24 +43,16 @@ if TYPE_CHECKING:
     from paasng.platform.sourcectl.models import VersionInfo
 
 
-def get_image_repository_template() -> str:
-    """Get the image repository template"""
-    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-    return f"{system_prefix}/{{app_code}}/{{module_name}}"
+def generate_image_repositories_by_module(module: Module) -> Dict[str, str]:
+    """获取应用模块的镜像仓库地址（按环境划分）"""
+    return {env.environment: generate_image_repository_by_env(env) for env in module.get_envs()}
 
 
-def generate_image_repository(module: Module) -> str:
-    """Get the image repository for storing container image"""
-    application = module.application
-    return get_image_repository_template().format(app_code=application.code, module_name=module.name)
-
-
-def get_app_image_registry_info(module: Module) -> Tuple[str, bool]:
-    """Get the image registry info
-
-    :return: a Tuple[registry_full_addr, should_skip_tls_verify]
-    """
-    return settings.APP_DOCKER_REGISTRY_HOST, settings.APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY
+def generate_image_repository_by_env(env: ModuleEnvironment) -> str:
+    """通过部署环境来获取镜像仓库地址"""
+    reg = get_image_registry_by_app(env.wl_app)
+    tmpl = f"{reg.host}/{reg.namespace}/{{app_code}}/{{module_name}}"
+    return tmpl.format(app_code=env.application.code, module_name=env.module.name)
 
 
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:
@@ -167,7 +160,7 @@ class RuntimeImageInfo:
             reference = version_info.revision
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
-            app_image_repository = generate_image_repository(self.module)
+            app_image_repository = generate_image_repository_by_env(self.engine_app.env)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         elif (
@@ -180,7 +173,7 @@ class RuntimeImageInfo:
         mgr = ModuleRuntimeManager(self.module)
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
-            app_image_repository = generate_image_repository(self.module)
+            app_image_repository = generate_image_repository_by_env(self.engine_app.env)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         return getattr(slug_runner, "full_image", "")

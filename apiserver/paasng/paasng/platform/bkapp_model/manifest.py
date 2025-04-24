@@ -367,11 +367,11 @@ class MountsManifestConstructor(ManifestConstructor):
         model_res.spec.mounts = model_res.spec.mounts or []
         model_res.spec.envOverlay = model_res.spec.envOverlay or crd.EnvOverlay()
         # 增强服务 TLS 证书
-        self._apply_addons_tls_certs_to_model_res(model_res, module)
+        self._apply_addons_tls_certs(model_res, module)
         # 用户自定义的挂载卷
-        self._apply_mounts_to_model_res(model_res, module)
+        self._apply_mounts(model_res, module)
 
-    def _apply_addons_tls_certs_to_model_res(self, model_res: crd.BkAppResource, module: Module):
+    def _apply_addons_tls_certs(self, model_res: crd.BkAppResource, module: Module):
         """将增强服务的 TLS 证书添加到 bkapp 定义中"""
         # 绑定的增强服务
         bound_services = list(mixed_service_mgr.list_binded(module))
@@ -388,13 +388,13 @@ class MountsManifestConstructor(ManifestConstructor):
                         continue
 
                     provider_name = svc_inst.config.get("provider_name")
-                    has_tls_certs = svc_inst.config.get("has_tls_certs")
+                    enable_tls = svc_inst.config.get("enable_tls")
                     # 只有当能够获取增强服务提供方名称，且明确有 TLS 证书时才继续
-                    if not (provider_name and has_tls_certs):
+                    if not (provider_name and enable_tls):
                         continue
 
                     secret_name = gen_addons_cert_secret_name(provider_name)
-                    model_res.spec.envOverlay.append_item(
+                    model_res.spec.envOverlay.append_item(  # type: ignore
                         "mounts",
                         crd.MountOverlay(
                             envName=env.environment,
@@ -407,18 +407,18 @@ class MountsManifestConstructor(ManifestConstructor):
                         ),
                     )
 
-    def _apply_mounts_to_model_res(self, model_res: crd.BkAppResource, module: Module):
+    def _apply_mounts(self, model_res: crd.BkAppResource, module: Module):
         """将用户自定义的挂载卷添加到 bkapp 定义中"""
         # The global mounts
         for config in Mount.objects.filter(module_id=module.pk, environment_name=MountEnvName.GLOBAL.value):
-            model_res.spec.mounts.append(
+            model_res.spec.mounts.append(  # type: ignore
                 crd.Mount(name=config.name, mountPath=config.mount_path, source=config.source_config)
             )
 
         # The environment specific mounts
         for env in [AppEnvName.STAG, AppEnvName.PROD]:
             for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
-                model_res.spec.envOverlay.append_item(
+                model_res.spec.envOverlay.append_item(  # type: ignore
                     "mounts",
                     crd.MountOverlay(
                         envName=env, name=config.name, mountPath=config.mount_path, source=config.source_config

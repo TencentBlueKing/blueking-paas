@@ -85,9 +85,9 @@ def deploy_addons_tls_certs(env: ModuleEnvironment):
                 continue
 
             provider_name = cfg.get("provider_name")
-            has_tls_certs = cfg.get("has_tls_certs")
+            enable_tls = cfg.get("enable_tls")
             # 只有当能够获取增强服务提供方名称，且明确有 TLS 证书时才继续
-            if not (provider_name and has_tls_certs):
+            if not (provider_name and enable_tls):
                 continue
 
             tls = None
@@ -110,8 +110,8 @@ def deploy_addons_tls_certs(env: ModuleEnvironment):
 
             cert, cert_key = tls.get("cert"), tls.get("key")
             if cert and cert_key:
-                tls_certs["cert.pen"] = cert
-                tls_certs["key.pem"] = cert_key
+                tls_certs["cert.pem"] = cert
+                tls_certs["cert.key"] = cert_key
 
             if not tls_certs:
                 logger.warning("%s, service %s cannot generate tls certs, skip...", env_info, service.name)

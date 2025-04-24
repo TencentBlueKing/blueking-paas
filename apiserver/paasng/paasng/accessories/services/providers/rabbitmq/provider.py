@@ -121,11 +121,11 @@ class RabbitMQProvider(BaseProvider):
 
         if self.cert and self.cert_key:
             credentials["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
-            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "key.pem")
+            credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "cert.key")
 
         return InstanceData(
             credentials=credentials,
-            config={"provider_name": provider_name, "has_tls_certs": bool(self.ca or self.cert or self.cert_key)},
+            config={"provider_name": provider_name, "enable_tls": bool(self.ca or self.cert or self.cert_key)},
         )
 
     def delete(self, instance_data: InstanceData):

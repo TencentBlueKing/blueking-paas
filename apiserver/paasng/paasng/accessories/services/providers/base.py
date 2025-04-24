@@ -84,14 +84,14 @@ class ResourcePoolProvider(BaseProvider):
             provider_name = instance.plan.service.provider_name
 
             # 如果实例配置中有证书，则在凭证部分中添加挂载证书的路径
-            # （证书内容会在部署时候以 Secret 形式挂载到容器中）
+            # 证书内容会在部署时候以 Secret 形式挂载到容器中
             ca, cert, cert_key = tls.get("ca"), tls.get("cert"), tls.get("key")
             if ca:
                 creds["ca"] = gen_addons_cert_mount_path(provider_name, "ca.pem")
 
             if cert and cert_key:
                 creds["cert"] = gen_addons_cert_mount_path(provider_name, "cert.pem")
-                creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "key.pem")
+                creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "cert.key")
 
             return InstanceData(
                 credentials=json.loads(creds),
@@ -99,7 +99,7 @@ class ResourcePoolProvider(BaseProvider):
                     "__pk__": instance.pk,
                     "is_pre_created": True,
                     "provider_name": provider_name,
-                    "has_tls_certs": bool(ca or cert or cert_key),
+                    "enable_tls": bool(ca or cert or cert_key),
                 },
             )
 

@@ -189,10 +189,10 @@ def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
     """生成蓝鲸应用挂载增强服务 ssl 证书的路径
 
     :param provider_name: 增强服务提供者名称，如：redis，mysql，rabbitmq（也可能与 Service 同名）
-    :param cert_name: 证书名称，必须是 ca.pem，cert.pem，key.pem 三者之一
+    :param cert_name: 证书名称，必须是 ca.pem，cert.pem，cert.key 三者之一
     """
-    if cert_name not in ["ca.pem", "cert.pem", "key.pem"]:
-        raise ValueError("cert_name must be one of ca.pem, cert.pem, key.pem")
+    if cert_name not in ["ca.pem", "cert.pem", "cert.key"]:
+        raise ValueError("cert_name must be one of ca.pem, cert.pem, cert.key")
 
     return f"{gen_addons_cert_mount_dir(provider_name)}/{cert_name}"
 

@@ -31,7 +31,6 @@ from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
@@ -167,9 +166,8 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         tags=["环境配置"],
         responses={status.HTTP_200_OK: ConfigVarSLZ(many=True)},
     )
-    def retrieve_by_key(self, request, *args, **kwargs):
+    def retrieve_by_key(self, request, code, module_name, config_vars_key):
         """通过环境变量的 key 获取环境变量"""
-        config_vars_key = kwargs.get("config_vars_key")
         config_vars = self.get_queryset().filter(key=config_vars_key)
         serializer = self.serializer_class(config_vars, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -179,48 +177,35 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         tags=["环境配置"],
         responses={status.HTTP_200_OK: None},
     )
-    def upsert_by_key(self, request, *args, **kwargs):
+    def upsert_by_key(self, request, code, module_name, config_vars_key):
         """通过环境变量的 key 更新或创建环境变量"""
-        config_vars_key = kwargs.get("config_vars_key")
-        module = self.get_module_via_path()
         data = request.data.copy()
         data["key"] = config_vars_key
+        module = self.get_module_via_path()
         slz = ConfigVarFormatSLZ(data=data, context={"module": module})
         slz.is_valid(raise_exception=True)
         config_var = slz.validated_data
-        env_name, value, desc = config_var.environment_name, config_var.value, config_var.description
 
-        # 查找所有同 key 的变量
-        config_vars = self.get_queryset().filter(key=config_vars_key)
-        global_var = config_vars.filter(is_global=True)
+        # 查询是否已存在相同 key 和 env 的变量
+        existing_vars = ConfigVar.objects.filter(
+            module=module, key=config_vars_key, environment_id__environment=config_var.environment_name
+        )
 
-        # 如果只存在一条 __global__, 且请求不是 __global__, 则拆分
-        if config_vars.count() == 1 and global_var.exists() and env_name != ConfigVarEnvName.GLOBAL.value:
-            global_var = global_var.first()
-            # 确定另一个环境变量, 值为 global_var 的值
-            for e_name, e_value, e_desc in [
-                (env_name, value, desc),
-                (
-                    ConfigVarEnvName.PROD.value
-                    if env_name == ConfigVarEnvName.STAG.value
-                    else ConfigVarEnvName.STAG.value,
-                    global_var.value,
-                    global_var.description,
-                ),
-            ]:
-                env_obj = ApplicationEnvironment.objects.get(module=module, environment=e_name)
-                ConfigVar.objects.create(
-                    module=module,
-                    key=config_vars_key,
-                    environment=env_obj,
-                    value=e_value,
-                    description=e_desc,
-                )
+        if existing_vars.exists():
+            # 存在，更新第一个匹配的记录
+            var_obj = existing_vars.first()
+            var_obj.value = config_var.value
+            var_obj.description = config_var.description
+            var_obj.save()
         else:
-            # 正常 upsert
-            config_var.value = value
-            config_var.description = desc
-            config_var.save()
+            # 不存在，创建新记录
+            ConfigVar.objects.create(
+                module=module,
+                key=config_vars_key,
+                environment_id=config_var.environment_id,
+                value=config_var.value,
+                description=config_var.description,
+            )
 
         return Response(status=status.HTTP_201_CREATED)
 

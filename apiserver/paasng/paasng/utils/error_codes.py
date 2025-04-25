@@ -25,12 +25,13 @@ class ErrorCodes:
 
     # 用户特性相关
     USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))
+    USER_FEATURE_FLAG_ALREADY_EXISTS = ErrorCode(_("用户特性已存在"))
 
     # 已授权应用相关
     APP_NOT_FOUND = ErrorCode(_("应用不存在"))
     SYSAPI_CLIENT_ROLE_NOT_FOUND = ErrorCode(_("指定的 sysapi client 权限不存在"))
     SYSAPI_CLIENT_NOT_FOUND = ErrorCode(_("请求未携带有效的 sysapi client 信息"))
-    APP_AUTHENTICATED_ALREADY_EXISTS = ErrorCode(_("应用已经存在认证关系"))
+    APP_AUTHENTICATED_ALREADY_EXISTS = ErrorCode(_("应用已经添加了授权关系"))
     SYSAPI_CLIENT_ALREADY_EXISTS = ErrorCode(_("指定的 sysapi client 已存在"))
     SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
 

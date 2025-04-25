@@ -100,19 +100,6 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         existing_profiles = UserProfile.objects.filter(user__in=user_ids)
         existing_id_to_profile = {profile.user: profile for profile in existing_profiles}
 
-        # 检查是否存有用户已经是管理员, 如果存在已经是管理员的用户则返回错误信息
-        existing_admins = []
-        for item in users_data:
-            user = item["user"]
-            user_id = user_to_id[user]
-            if user_id in existing_id_to_profile and existing_id_to_profile[user_id].role == role:
-                existing_admins.append(user)
-
-        if existing_admins:
-            admin_list = ", ".join(existing_admins)
-            error_message = f"{admin_list} are already administrators, no need to add again."
-            return Response({"detail": error_message}, status=status.HTTP_400_BAD_REQUEST)
-
         # 准备审计数据
         before_data = []
         after_data = []
@@ -252,8 +239,7 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
 
         # 如果用户特性已存在, 则返回错误
         if feature_flag and feature_flag.effect == is_effect:
-            error_message = f"{user} already has {feature} feature"
-            return Response({"detail": error_message}, status=status.HTTP_400_BAD_REQUEST)
+            raise error_codes.USER_FEATURE_FLAG_ALREADY_EXISTS
 
         # 构建审计数据
         before_data = []
@@ -398,12 +384,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
             raise error_codes.SYSAPI_CLIENT_ALREADY_EXISTS
 
         # 创建客户端或启用已存在的客户端
-        client, created = SysAPIClient.objects.get_or_create(name=name, defaults={"role": role})
-        if not created:
-            # 如果客户端是已经存在的, 则激活
-            client.role = role
-            client.is_active = True
-            client.save(update_fields=["role", "is_active"])
+        client = SysAPIClient.objects.update_or_create(name=name, defaults={"role": role, "is_active": True})
 
         AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
 

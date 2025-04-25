@@ -373,10 +373,10 @@ export default {
       return http.delete(url);
     },
     /**
-     * 获取系统API用户列表
+     * 获取已授权应用列表
      */
-    getSystemApiUser() {
-      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+    getSysapiClient() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
       return http.get(url);
     },
     /**
@@ -387,24 +387,24 @@ export default {
       return http.get(url);
     },
     /**
-     * 添加系统API用户列表权限
+     * 添加已授权应用列表权限
      */
     addSystemApiUser({}, { data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
       return http.post(url, data);
     },
     /**
-     * 修改系统API用户权限
+     * 修改已授权应用权限
      */
     updateSystemApiUser({}, { data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
       return http.put(url, data);
     },
     /**
-     * 删除系统API用户
+     * 删除已授权应用
      */
     deleteSystemApiUser({}, { name }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_user/${name}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/${name}/`;
       return http.delete(url);
     },
     /**

@@ -106,8 +106,8 @@ export const platformRouters = [
           title: i18n.t('用户管理'),
           panels: [
             { name: 'admin', label: i18n.t('平台管理员') },
-            { name: 'api', label: i18n.t('系统 API 账号') },
             { name: 'feature', label: i18n.t('用户特性') },
+            { name: 'authorized', label: i18n.t('已授权应用') },
           ],
         },
       },

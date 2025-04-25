@@ -1,6 +1,6 @@
 <template>
   <div class="right-main platform-user-management">
-    <SystemApiUser v-if="queueActive === 'api'" />
+    <AuthorizedApp v-if="queueActive === 'authorized'" />
     <UserFeature v-else-if="queueActive === 'feature'" />
     <PlatformAdmin v-else />
   </div>
@@ -8,13 +8,13 @@
 
 <script>
 import PlatformAdmin from './platform-admin';
-import SystemApiUser from './system-api-user';
+import AuthorizedApp from './authorized-app';
 import UserFeature from './user-feature';
 export default {
   name: 'PlatformUserManagement',
   components: {
     PlatformAdmin,
-    SystemApiUser,
+    AuthorizedApp,
     UserFeature,
   },
   computed: {

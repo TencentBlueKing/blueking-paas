@@ -61,7 +61,7 @@ urlpatterns = [
         name="plat_mgt.users.sysapi_client.delete",
     ),
     path(
-        "api/plat_mgt/users/sysapi_client/",
+        "api/plat_mgt/users/system_api_roles/",
         views.SystemApiClientViewSet.as_view({"get": "role_list"}),
         name="plat_mgt.users.sysapi_client.role_list",
     ),

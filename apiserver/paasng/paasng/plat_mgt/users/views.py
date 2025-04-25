@@ -99,6 +99,19 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         existing_profiles = UserProfile.objects.filter(user__in=user_ids)
         existing_id_to_profile = {profile.user: profile for profile in existing_profiles}
 
+        # 检查是否存有用户已经是管理员, 如果存在已经是管理员的用户则返回错误信息
+        existing_admins = []
+        for item in users_data:
+            user = item["user"]
+            user_id = user_to_id[user]
+            if user_id in existing_id_to_profile and existing_id_to_profile[user_id].role == role:
+                existing_admins.append(user)
+
+        if existing_admins:
+            admin_list = ", ".join(existing_admins)
+            error_message = f"{admin_list} are already administrators, no need to add again."
+            return Response({"detail": error_message}, status=status.HTTP_400_BAD_REQUEST)
+
         # 准备审计数据
         before_data = []
         after_data = []
@@ -229,6 +242,11 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
         # 获取更新或创建前的用户特性
         feature_flag = AccountFeatureFlag.objects.filter(user=user_id, name=feature).first()
 
+        # 如果用户特性已存在, 则返回错误
+        if feature_flag and feature_flag.effect == is_effect:
+            error_message = f"{user} already has {feature} feature"
+            return Response({"detail": error_message}, status=status.HTTP_400_BAD_REQUEST)
+
         # 构建审计数据
         before_data = []
         if feature_flag:
@@ -292,8 +310,8 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SystemApiUserViewSet(viewsets.GenericViewSet):
-    """系统 API 用户相关 API"""
+class SystemApiClientViewSet(viewsets.GenericViewSet):
+    """已授权应用相关 API"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
@@ -303,7 +321,7 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SystemAPIUserRoleSLZ(many=True)},
     )
     def role_list(self, request, *args, **kwargs):
-        """获取系统 API 权限种类列表"""
+        """获取已授权应用权限种类列表"""
         roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in ClientRole.get_choices()]
         slz = SystemAPIUserRoleSLZ(roles_data, many=True)
         return Response(slz.data)
@@ -314,7 +332,7 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SystemAPIUserSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
-        """获取系统 API 用户列表"""
+        """获取已授权应用列表"""
         # 查询所有系统 API 客户端
         sys_api_clients = SysAPIClient.objects.filter(is_active=True)
         # 获取客户端ID列表
@@ -349,12 +367,16 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: None},
     )
     def create(self, request, *args, **kwargs):
-        """创建系统 API 用户"""
+        """创建已授权应用"""
         slz = UpsertSystemAPIUserSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         bk_app_code, role = data["bk_app_code"], data["role"]
+
+        # 验证应用 ID 是否存在, 如果不存在则返回错误
+
+        # 校验应用 ID 是否已经在用户特性表, 如果存在则返回错误
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
         name = f"authed-app-{bk_app_code}"
@@ -437,7 +459,7 @@ class SystemApiUserViewSet(viewsets.GenericViewSet):
     )
     @atomic
     def destroy(self, request, name=None, *args, **kwargs):
-        """删除系统 API 用户, 后台对应逻辑为禁用用户"""
+        """删除已授权应用, 后台对应逻辑为禁用应用"""
         client = SysAPIClient.objects.filter(name=name, is_active=True).first()
         if not client:
             raise error_codes.SYSAPI_CLIENT_NOT_FOUND

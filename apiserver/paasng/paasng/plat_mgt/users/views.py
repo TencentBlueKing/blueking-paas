@@ -31,7 +31,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.sysapi_client.constants import ClientRole
-from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, ClientPrivateToken, SysAPIClient
+from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.users.serializers import (
@@ -39,11 +39,12 @@ from paasng.plat_mgt.users.serializers import (
     AccountFeatureFlagSLZ,
     CreatePlatformManagerSLZ,
     PlatformManagerSLZ,
-    SystemAPIUserRoleSLZ,
-    SystemAPIUserSLZ,
+    SystemAPIClientRoleSLZ,
+    SystemAPIClientSLZ,
     UpsertAccountFeatureFlagSLZ,
-    UpsertSystemAPIUserSLZ,
+    UpsertSystemAPIClientSLZ,
 )
+from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -208,7 +209,14 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     )
     def feature_list(self, request, *args, **kwargs):
         """获取用户特性种类列表"""
-        roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in AFF.get_choices()]
+        roles_data = [
+            {
+                "value": choice[0],
+                "label": str(choice[1]),
+                "default_flag": AFF.get_default_flags().get(choice[0]),
+            }
+            for choice in AFF.get_choices()
+        ]
         slz = AccountFeatureFlagKindSLZ(roles_data, many=True)
         return Response(slz.data)
 
@@ -318,65 +326,68 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="获取系统 API 权限列表",
-        responses={status.HTTP_200_OK: SystemAPIUserRoleSLZ(many=True)},
+        responses={status.HTTP_200_OK: SystemAPIClientRoleSLZ(many=True)},
     )
     def role_list(self, request, *args, **kwargs):
         """获取已授权应用权限种类列表"""
         roles_data = [{"value": choice[0], "label": str(choice[1])} for choice in ClientRole.get_choices()]
-        slz = SystemAPIUserRoleSLZ(roles_data, many=True)
+        slz = SystemAPIClientRoleSLZ(roles_data, many=True)
         return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
-        operation_description="获取系统 API 用户列表",
-        responses={status.HTTP_200_OK: SystemAPIUserSLZ(many=True)},
+        operation_description="获取已授权应用列表",
+        responses={status.HTTP_200_OK: SystemAPIClientSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取已授权应用列表"""
-        # 查询所有系统 API 客户端
-        sys_api_clients = SysAPIClient.objects.filter(is_active=True)
-        # 获取客户端ID列表
-        client_ids = [client.id for client in sys_api_clients]
-        # 查询应用认证关系
-        app_client_relation = AuthenticatedAppAsClient.objects.filter(client_id__in=client_ids)
-        app_code_map = {relation.client_id: relation.bk_app_code for relation in app_client_relation}
-        # 查询私有令牌
-        private_tokens = ClientPrivateToken.objects.filter(client_id__in=client_ids)
-        token_map = {client.client: client.token for client in private_tokens}
+        # 先查询应用认证关系
+        app_client_relations = AuthenticatedAppAsClient.objects.all()
+        # 获取有验证关系的客户端 ID 列表
+        client_ids = [relation.client_id for relation in app_client_relations]
+        # 查询这些ID中活跃的系统API客户端
+        sys_api_clients = SysAPIClient.objects.filter(id__in=client_ids, is_active=True)
+
+        # 创建客户端ID到应用代码的映射
+        app_code_map = {relation.client_id: relation.bk_app_code for relation in app_client_relations}
 
         # 组装数据
         result = []
         for client in sys_api_clients:
             client_data = {
-                "name": client.name,
-                "bk_app_code": app_code_map.get(client.id, ""),
-                "private_token": token_map.get(client.id, ""),
+                "bk_app_code": app_code_map.get(client.id),
                 "role": client.role,
                 "updated": client.updated,
             }
             result.append(client_data)
 
-        slz = SystemAPIUserSLZ(result, many=True)
+        slz = SystemAPIClientSLZ(result, many=True)
         return Response(slz.data)
 
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
-        operation_description="创建系统 API 用户",
-        request_body=UpsertSystemAPIUserSLZ,
+        operation_description="创建已授权应用",
+        request_body=UpsertSystemAPIClientSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def create(self, request, *args, **kwargs):
         """创建已授权应用"""
-        slz = UpsertSystemAPIUserSLZ(data=request.data)
+        slz = UpsertSystemAPIClientSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         bk_app_code, role = data["bk_app_code"], data["role"]
 
         # 验证应用 ID 是否存在, 如果不存在则返回错误
+        existing_application = Application.objects.filter(code=bk_app_code)
+        if not existing_application.exists():
+            raise error_codes.APP_NOT_FOUND
 
-        # 校验应用 ID 是否已经在用户特性表, 如果存在则返回错误
+        # 校验应用 ID 是否已经在在授权表中, 如果存在则返回错误
+        existing_auth_relation = AuthenticatedAppAsClient.objects.filter(bk_app_code=bk_app_code)
+        if existing_auth_relation.exists():
+            raise error_codes.APP_AUTHENTICATED_ALREADY_EXISTS
 
         # 使用与管理命令 create_authed_app_user 相同的规则构建用户名
         name = f"authed-app-{bk_app_code}"
@@ -386,18 +397,18 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         if existing_client:
             raise error_codes.SYSAPI_CLIENT_ALREADY_EXISTS
 
-        # 创建客户端
+        # 创建客户端或启用已存在的客户端
         client, created = SysAPIClient.objects.get_or_create(name=name, defaults={"role": role})
-        if created:
-            # 如果客户端是新创建的, 则创建应用认证关系
-            AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
-        else:
-            # 如果客户端已经存在, 则更新角色为启用状态
+        if not created:
+            # 如果客户端是已经存在的, 则激活
+            client.role = role
             client.is_active = True
-            client.save(update_fields=["is_active"])
+            client.save(update_fields=["role", "is_active"])
+
+        AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
 
         # 构建审计数据
-        after_data = [{"name": name, "bk_app_code": bk_app_code, "role": role}]
+        after_data = [{"bk_app_code": bk_app_code, "role": role}]
 
         add_admin_audit_record(
             user=self.request.user.pk,
@@ -411,12 +422,12 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
-        operation_description="更新系统 API 用户的权限",
-        request_body=UpsertSystemAPIUserSLZ,
+        operation_description="更新已授权应用的权限",
+        request_body=UpsertSystemAPIClientSLZ,
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update(self, request, *args, **kwargs):
-        slz = UpsertSystemAPIUserSLZ(data=request.data)
+        slz = UpsertSystemAPIClientSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -454,7 +465,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
-        operation_description="删除系统 API 用户",
+        operation_description="删除已授权应用",
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     @atomic
@@ -469,9 +480,11 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         bk_app_code = app_client_relation.bk_app_code
         before_data = [{"name": client.name, "bk_app_code": bk_app_code, "role": client.role}]
 
-        # 删除系统 API 用户, 仅仅禁用
+        # 删除已授权应用, 仅仅禁用
         client.is_active = False
         client.save(update_fields=["is_active"])
+        # 删除应用认证关系
+        app_client_relation.delete()
 
         add_admin_audit_record(
             user=self.request.user.pk,

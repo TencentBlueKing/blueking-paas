@@ -90,22 +90,21 @@ class AccountFeatureFlagKindSLZ(serializers.Serializer):
 
     value = serializers.CharField(help_text="特性名称")
     label = serializers.CharField(help_text="特性描述")
+    default_flag = serializers.BooleanField(help_text="默认值")
 
 
 # --------- 已授权应用相关序列化器 ---------
 
 
-class SystemAPIUserSLZ(serializers.Serializer):
+class SystemAPIClientSLZ(serializers.Serializer):
     """已授权应用序列化器"""
 
-    name = serializers.CharField(help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
-    private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")
     updated = serializers.DateTimeField(help_text="添加时间")
 
 
-class UpsertSystemAPIUserSLZ(serializers.Serializer):
+class UpsertSystemAPIClientSLZ(serializers.Serializer):
     """创建或更新已授权应用序列化器"""
 
     bk_app_code = serializers.CharField(help_text="应用 ID", required=True)
@@ -122,7 +121,7 @@ class UpsertSystemAPIUserSLZ(serializers.Serializer):
 
 
 # --------- 系统 API 权限相关序列化器 ---------
-class SystemAPIUserRoleSLZ(serializers.Serializer):
+class SystemAPIClientRoleSLZ(serializers.Serializer):
     """已授权应用权限序列化器"""
 
     value = serializers.IntegerField(help_text="角色 ID")

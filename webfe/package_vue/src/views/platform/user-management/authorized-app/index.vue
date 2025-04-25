@@ -4,7 +4,7 @@
       type="info"
       :title="
         $t(
-          '应用需要创建对应的系统 API 账号，才能访问平台注册在 API 网关上的应用态 API。当应用通过 API 网关访问“基础可读”级别的应用态 API 时，平台会自动为该应用添添加账号和权限。若需访问其他权限级别的应用态 API，除了在 API 网关申请权限外，还需在此处创建账号并添加相应权限。'
+          '仅已授权应用才能访问平台注册在 API 网关上的应用态 API。若需访问非 “基础可读” 级别的 API，除了在 API 网关申请权限外，还需在此处手动为应用添加相应权限。'
         )
       "
     ></bk-alert>
@@ -14,11 +14,11 @@
         icon="plus"
         @click="showAddDialog('add')"
       >
-        {{ $t('添加系统 API 账号') }}
+        {{ $t('添加授权应用') }}
       </bk-button>
       <bk-input
         v-model="pgSearchValue"
-        :placeholder="$t('请输入应用 ID')"
+        :placeholder="$t('请输入应用 ID，按 Enter 搜索')"
         :right-icon="'bk-icon icon-search'"
         style="width: 400px"
         :clearable="true"
@@ -83,7 +83,7 @@
       :width="480"
       :mask-close="false"
       :auto-close="false"
-      :title="isAdd ? $t('添加系统 API 账号') : $t('编辑权限')"
+      :title="isAdd ? $t('添加授权应用') : $t('编辑权限')"
       :loading="editAddDialogConfig.loading"
       ext-cls="edit-add-dialog-cls"
       @value-change="handleValueChange"
@@ -93,7 +93,7 @@
         slot="header"
         class="edit-add-title"
       >
-        {{ isAdd ? $t('添加系统 API 账号') : $t('编辑权限') }}
+        {{ isAdd ? $t('添加授权应用') : $t('编辑权限') }}
         <span
           v-if="!isAdd"
           class="sub-title"
@@ -142,15 +142,14 @@
     <!-- 删除 -->
     <delete-dialog
       :show.sync="deleteDialogConfig.visible"
-      :title="$t('确认删除系统 API 账号')"
+      :title="$t('确认删除已授权应用')"
       :expected-confirm-text="deleteDialogConfig.rowName"
       :loading="deleteDialogConfig.isLoading"
-      :placeholder="$t('请输入用户名确认')"
       @confirm="deleteSystemApiUser"
     >
       <div class="hint-text">{{ $t('删除后将不能再调用平台提供的系统 API') }}</div>
       <div class="hint-text">
-        <span>{{ $t('该操作不可撤销，请输入用户名') }}</span>
+        <span>{{ $t('该操作不可撤销，请输入应用 ID') }}</span>
         <span>
           （
           <span class="sign">{{ deleteDialogConfig.rowName }}</span>
@@ -229,11 +228,6 @@ export default {
     columns() {
       return [
         {
-          label: this.$t('API 账号'),
-          prop: 'name',
-          renderHeader: this.renderHeader,
-        },
-        {
           label: this.$t('应用 ID'),
           prop: 'bk_app_code',
         },
@@ -253,24 +247,9 @@ export default {
     },
   },
   created() {
-    Promise.all([this.getSystemApiUser(), this.getSystemApiRoles()]);
+    Promise.all([this.getSysapiClient(), this.getSystemApiRoles()]);
   },
   methods: {
-    renderHeader(h, data) {
-      const directive = {
-        name: 'bkTooltips',
-        content: this.$t('平台自动生成用于内部权限校验的账号'),
-        placement: 'top',
-      };
-      return (
-        <span
-          class="custom-header-cell"
-          v-bk-tooltips={directive}
-        >
-          {data.column.label}
-        </span>
-      );
-    },
     // 表格筛选
     handleFilterChange(filds) {
       if (filds.role) {
@@ -281,13 +260,13 @@ export default {
     },
     // 自定义的过滤函数，提供给mixins中使用
     pgFilterFn(item, keyword) {
-      return item.name.toLowerCase().includes(keyword);
+      return item.bk_app_code.toLowerCase().includes(keyword);
     },
-    // 获取系统API用户列表
-    async getSystemApiUser() {
+    // 获取已授权用户
+    async getSysapiClient() {
       this.isTableLoading = true;
       try {
-        const res = await this.$store.dispatch('tenant/getSystemApiUser');
+        const res = await this.$store.dispatch('tenant/getSysapiClient');
         this.systemApiUserList = res;
         // mixins-初始化过滤数据
         this.pgInitPaginationData(res);
@@ -329,7 +308,7 @@ export default {
     },
     showDeleteDialog(row) {
       this.deleteDialogConfig.visible = true;
-      this.deleteDialogConfig.rowName = row.name;
+      this.deleteDialogConfig.rowName = row.bk_app_code;
     },
     handleConfirm() {
       this.$refs.editAddForm.validate().then(
@@ -359,7 +338,7 @@ export default {
           message: this.isAdd ? this.$t('添加成功') : this.$t('修改成功'),
         });
         this.editAddDialogConfig.visible = false;
-        this.getSystemApiUser();
+        this.getSysapiClient();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -382,7 +361,7 @@ export default {
           message: this.$t('删除成功'),
         });
         this.closeDelDialog();
-        this.getSystemApiUser();
+        this.getSysapiClient();
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

@@ -1,5 +1,9 @@
 <template>
   <div class="platform-admin">
+    <bk-alert
+      type="info"
+      :title="$t('管理员能查看并执行 “平台管理” 导航下所有操作。')"
+    ></bk-alert>
     <div class="top-box flex-row justify-content-between">
       <bk-button
         :theme="'primary'"
@@ -8,14 +12,13 @@
       >
         {{ $t('添加平台管理员') }}
       </bk-button>
-      <bk-input
-        v-model="pgSearchValue"
-        :placeholder="$t('请输入用户 ID 或用户名')"
-        :right-icon="'bk-icon icon-search'"
+      <user
+        v-model="userSearchValues"
         style="width: 400px"
-        :clearable="true"
-        @input="pgHandleCombinedSearch"
-      ></bk-input>
+        :multiple="false"
+        :placeholder="$t('按用户搜索')"
+        :empty-text="$t('无匹配人员')"
+      />
     </div>
     <div class="card-style">
       <bk-table
@@ -80,7 +83,7 @@
         :model="addAdminDialog.formData"
       >
         <bk-form-item
-          :label="$t('用户')"
+          :label="$t('管理员')"
           :required="true"
           :property="'userList'"
           :rules="userRule"
@@ -89,7 +92,7 @@
           <!-- 多租户人员选择器 -->
           <user
             v-model="addAdminDialog.formData.userList"
-            :placeholder="$t('请输入用户')"
+            :placeholder="$t('请输入')"
             :multiple="true"
             :empty-text="$t('无匹配人员')"
             @change="handleUserChange"
@@ -99,34 +102,23 @@
     </bk-dialog>
 
     <!-- 删除 -->
-    <delete-dialog
-      :show.sync="deleteDialogConfig.visible"
-      :title="$t('确认删除平台管理员')"
-      :expected-confirm-text="deleteDialogConfig.input"
+    <bk-dialog
+      v-model="deleteDialogConfig.visible"
+      theme="primary"
+      :width="480"
       :loading="deleteDialogConfig.isLoading"
-      :placeholder="$t('请输入用户名确认')"
+      :mask-close="false"
+      header-position="left"
+      :title="$t('确认删除平台管理员')"
       @confirm="deletePlatformAdministrator"
     >
-      <div class="hint-text">
-        <span>{{ $t('删除后将无法再使用平台管理的相关功能。请输入用户 ID') }}</span>
-        <span>
-          （
-          <span class="sign">{{ deleteDialogConfig.input }}</span>
-          <i
-            class="paasng-icon paasng-general-copy"
-            v-copy="deleteDialogConfig.input"
-          />
-          ）
-        </span>
-        {{ $t('进行确认') }}
-      </div>
-    </delete-dialog>
+      {{ $t('删除后将无法再使用平台管理相关功能。') }}
+    </bk-dialog>
   </div>
 </template>
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
-import deleteDialog from '../components/delete-dialog.vue';
 import User from '@/components/user';
 import { mapState, mapGetters } from 'vuex';
 export default {
@@ -135,7 +127,6 @@ export default {
   mixins: [paginationMixin],
   components: {
     User,
-    deleteDialog,
   },
   data() {
     return {
@@ -155,11 +146,11 @@ export default {
       },
       columns: [
         {
-          label: this.$t('用户 ID'),
+          label: `${this.$t('管理员')} ID`,
           prop: 'user',
         },
         {
-          label: this.$t('用户'),
+          label: this.$t('管理员名称'),
           prop: 'user',
           userDisplay: true,
         },
@@ -182,6 +173,7 @@ export default {
           trigger: 'blur',
         },
       ],
+      userSearchValues: [],
     };
   },
   computed: {
@@ -189,6 +181,13 @@ export default {
       platformFeature: (state) => state.platformFeature,
     }),
     ...mapGetters(['tenantId']),
+  },
+  watch: {
+    userSearchValues(newVal) {
+      // 分页搜索
+      this.pgSearchValue = newVal.join();
+      this.pgHandleCombinedSearch();
+    },
   },
   created() {
     this.getAdminUser();
@@ -284,6 +283,9 @@ export default {
 
 <style lang="scss" scoped>
 .platform-admin {
+  .top-box {
+    margin-top: 16px;
+  }
   .card-style {
     margin-top: 16px;
     padding: 16px;

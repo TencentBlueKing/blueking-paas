@@ -1,5 +1,11 @@
 <template>
   <div class="platform-admin">
+    <bk-alert
+      type="info"
+      :title="
+        $t('平台通过用户特性功能，将部分功能以灰度方式开放给用户。添加用户特性后，用户可以在产品页面上访问相关功能。')
+      "
+    ></bk-alert>
     <div class="top-box flex-row justify-content-between">
       <bk-button
         :theme="'primary'"
@@ -8,14 +14,13 @@
       >
         {{ $t('添加用户特性') }}
       </bk-button>
-      <bk-input
-        v-model="pgSearchValue"
-        :placeholder="$t('请输入用户 ID 或用户名')"
-        :right-icon="'bk-icon icon-search'"
+      <user
+        v-model="userSearchValues"
         style="width: 400px"
-        :clearable="true"
-        @input="pgHandleCombinedSearch"
-      ></bk-input>
+        :multiple="false"
+        :placeholder="$t('按用户搜索')"
+        :empty-text="$t('无匹配人员')"
+      />
     </div>
     <div class="card-style">
       <bk-table
@@ -52,9 +57,9 @@
               {{ row[column.prop] ? $t('开启') : $t('关闭') }}
             </span>
             <span v-else-if="column.prop === 'feature'">
-              {{ featureMap[row[column.prop]] }}
+              {{ featureMap[row[column.prop]] || '--' }}
             </span>
-            <span v-else>{{ row[column.prop] || '--' }}</span>
+            <span v-else>{{ column.prop === 'userId' ? row['user'] : row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -122,6 +127,14 @@
               :name="option.label"
             ></bk-option>
           </bk-select>
+          <p
+            v-if="addDialogConfig.formData.feature"
+            slot="tip"
+            class="f12"
+            style="color: #979ba5"
+          >
+            {{ $t('特性的默认状态为：{f}', { f: curFeatureSelected.default_flag ? $t('开启') : $t('关闭') }) }}
+          </p>
         </bk-form-item>
         <bk-form-item
           :label="$t('状态')"
@@ -134,6 +147,12 @@
           ></bk-switcher>
         </bk-form-item>
       </bk-form>
+      <bk-alert
+        v-if="curFeatureSelected.default_flag === addDialogConfig.formData.is_effect"
+        class="mt10"
+        type="warning"
+        :title="$t('状态和特性默认值一致，添加后将不会产生任何效果。')"
+      ></bk-alert>
     </bk-dialog>
 
     <!-- 删除 -->
@@ -148,12 +167,22 @@
       @confirm="deleteAccountFeatureFlags"
     >
       <div class="del-txt">
-        {{
-          $t('确认删除用户（{u}）的特性（{f}）？', {
-            u: delDialogConfig.row.user,
-            f: featureMap[delDialogConfig.row.feature],
-          })
-        }}
+        <p>
+          <span>{{ $t('确认删除用户') }}</span>
+          &nbsp;
+          <bk-user-display-name
+            v-if="platformFeature.MULTI_TENANT_MODE"
+            :user-id="delDialogConfig.row.user"
+          ></bk-user-display-name>
+          <span v-else>{{ delDialogConfig.row.user }}</span>
+          &nbsp;
+          <span>{{ `${$t('的特性')}？` }}</span>
+        </p>
+        <p class="mt8">
+          {{ $t('删除用户的特性') }}（{{ featureMap[delDialogConfig.row.feature] }}）{{ $t('将恢复默认值') }}：
+          <span>{{ delDialogConfig.row.default_feature_flag ? $t('开启') : $t('关闭') }}</span>
+          <span>{{ localLanguage === 'en' ? '.' : '。' }}</span>
+        </p>
       </div>
     </bk-dialog>
   </div>
@@ -194,11 +223,13 @@ export default {
           trigger: 'blur',
         },
       ],
+      userSearchValues: [],
     };
   },
   computed: {
     ...mapState({
       platformFeature: (state) => state.platformFeature,
+      localLanguage: (state) => state.localLanguage,
     }),
     featureMap() {
       return this.featureList.reduce((acc, item) => {
@@ -206,8 +237,15 @@ export default {
         return acc;
       }, {});
     },
+    curFeatureSelected() {
+      return this.featureList.find((v) => v.value === this.addDialogConfig.formData.feature) || {};
+    },
     columns() {
       return [
+        {
+          label: `${this.$t('用户')} ID`,
+          prop: 'userId',
+        },
         {
           label: this.$t('用户'),
           prop: 'user',
@@ -232,6 +270,13 @@ export default {
           prop: 'is_effect',
         },
       ];
+    },
+  },
+  watch: {
+    userSearchValues(newVal) {
+      this.pgSearchValue = newVal.join();
+      // 分页搜索
+      this.pgHandleCombinedSearch();
     },
   },
   created() {
@@ -367,6 +412,9 @@ export default {
 
 <style lang="scss" scoped>
 .platform-admin {
+  .top-box {
+    margin-top: 16px;
+  }
   .card-style {
     margin-top: 16px;
     padding: 16px;
@@ -379,6 +427,9 @@ export default {
     color: #63656e;
     line-height: 22px;
     word-break: break-all;
+    .mt8 {
+      margin-top: 8px;
+    }
   }
 }
 </style>

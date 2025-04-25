@@ -6,9 +6,14 @@
        <bk-table-column type="expand" width="30">
             <template slot-scope="props">
                 <bk-table :data="props.row.pre_created_instances" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}" :cell-class-name="cellStyleCallback">
-                    <bk-table-column prop="credentials" label="实例配置">
+                    <bk-table-column prop="credentials" label="实例凭证">
                         <template slot-scope="subProps">
                             <json-pretty :data="JSON.parse(subProps.row.credentials)" show-length highlight-mouseover-node :deep="2"></json-pretty>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column prop="config" label="实例配置">
+                        <template slot-scope="subProps">
+                            <json-pretty :data="subProps.row.config" show-length highlight-mouseover-node :deep="1"></json-pretty>
                         </template>
                     </bk-table-column>
                     <bk-table-column prop="is_allocated" label="已分配">
@@ -62,8 +67,11 @@
                 <bk-switcher :value="true" :disabled="true" v-if="(JSON.parse(dialog.row.config)?.recyclable)"></bk-switcher>
                 <bk-switcher v-model="dialog.form.config.recyclable" v-else></bk-switcher>
             </bk-form-item>
-            <bk-form-item label="实例配置" :required="true">
+            <bk-form-item label="实例凭证" :required="true">
                 <json-editor v-model="dialog.form.credentials" :disabled="dialog.type === 'delete'" :schema="instanceSchemas[dialog.row?.uuid]"></json-editor>
+            </bk-form-item>
+            <bk-form-item label="实例配置" :required="true">
+                <json-editor v-model="dialog.form.config" :disabled="dialog.type === 'delete'"></json-editor>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
@@ -151,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.form.uuid = undefined
                 this.dialog.form.plan = plan.uuid
                 this.dialog.form.credentials = {}
+                this.dialog.form.config = {}
                 this.dialog.visible = true
             },
             handleEditInstance: function (instance, plan) {
@@ -160,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.form.uuid = instance.uuid
                 this.dialog.form.plan = plan.uuid
                 this.dialog.form.credentials = JSON.parse(instance.credentials)
+                this.dialog.form.config = instance.config
                 this.dialog.visible = true
             },
             handelDeleteInstance: function (instance, plan) {
@@ -169,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.form.uuid = instance.uuid
                 this.dialog.form.plan = plan.uuid
                 this.dialog.form.credentials = JSON.parse(instance.credentials)
+                this.dialog.form.config = instance.config
                 this.dialog.visible = true
             },
             cellStyleCallback: function ({row, column, rowIndex, columnIndex}) {

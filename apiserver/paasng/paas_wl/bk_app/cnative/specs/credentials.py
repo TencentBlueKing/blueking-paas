@@ -109,4 +109,7 @@ def deploy_addons_tls_certs(env: ModuleEnvironment):
             continue
 
         secret_name = gen_addons_cert_secret_name(cfg["provider_name"])
-        secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, type=SecretType.TLS, data=tls_certs))
+        # Q: 为什么不使用 SecretType.TLS 类型？
+        # A: 因为 TLS 类型的 Secret 会强制检查 tls.crt, tls.key 是否存在，但是我们如果只使用单向认证，
+        # 则只需要也只会提供 ca.crt，此时如果使用 TLS 类型的 Secret 会出错，因此还是使用 Opaque 类型的 Secret 即可
+        secret_kmodel.upsert(Secret(app=env.wl_app, name=secret_name, type=SecretType.OPAQUE, data=tls_certs))

@@ -79,7 +79,7 @@ class ResourcePoolProvider(BaseProvider):
 
             instance.acquire()
 
-            creds = instance.credentials
+            creds = json.loads(instance.credentials)
             tls = instance.config.get("tls", {})
             provider_name = instance.plan.service.provider_name
 
@@ -94,7 +94,7 @@ class ResourcePoolProvider(BaseProvider):
                 creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
 
             return InstanceData(
-                credentials=json.loads(creds),
+                credentials=creds,
                 config={
                     "__pk__": instance.pk,
                     "is_pre_created": True,

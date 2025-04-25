@@ -31,7 +31,7 @@ def list_provisioned_tls_enabled_rels(env: ModuleEnvironment) -> Iterable[Engine
     # 共享的增强服务
     shared_services = [info.service for info in ServiceSharingManager(env.module).list_all_shared_info()]
     # 合并两个列表
-    all_services = set(bound_services + shared_services)
+    all_services = bound_services + shared_services
 
     for service in all_services:
         for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):

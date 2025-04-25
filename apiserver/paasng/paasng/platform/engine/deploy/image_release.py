@@ -21,6 +21,7 @@ from celery import shared_task
 from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.cnative.specs.credentials import validate_references
 from paas_wl.bk_app.cnative.specs.exceptions import InvalidImageCredentials
 from paas_wl.workloads.images.models import AppImageCredential
@@ -103,14 +104,13 @@ class ImageReleaseMgr(DeployStep):
         if is_smart_app := app.is_smart_app:
             self._handle_smart_app_description()
             smart_app_extra = SMartAppExtraInfo.objects.get(app=app)
-            artifact_metadata = {
-                "use_cnb": smart_app_extra.use_cnb,
-                "proc_entrypoints": smart_app_extra.get_proc_entrypoints(module.name),
-            }
+            artifact_metadata = BuildArtifactMetadata(
+                use_cnb=smart_app_extra.use_cnb, proc_entrypoints=smart_app_extra.get_proc_entrypoints(module.name)
+            )
         # 仅托管镜像的应用(包含云原生应用和旧镜像应用)部署操作
         else:
             self._handle_image_app_processes()
-            artifact_metadata = {"use_cnb": False}
+            artifact_metadata = BuildArtifactMetadata(use_cnb=False)
 
         # 目前构建流程必须有有效的 build, 因此需要 dummy build 过程
         build_id = self._create_build(is_smart_app=is_smart_app, artifact_metadata=artifact_metadata)
@@ -168,7 +168,7 @@ class ImageReleaseMgr(DeployStep):
         }
         self.deployment.update_fields(processes=processes_dict)
 
-    def _create_build(self, is_smart_app: bool, artifact_metadata: dict) -> str:
+    def _create_build(self, is_smart_app: bool, artifact_metadata: BuildArtifactMetadata) -> str:
         runtime_info = RuntimeImageInfo(engine_app=self.engine_app)
 
         return self.engine_client.create_build(

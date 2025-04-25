@@ -32,11 +32,12 @@ from moby_distribution.registry.resources.manifests import ManifestRef, Manifest
 from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
-from paas_wl.utils.models import UuidAuditedModel, validate_procfile
+from paas_wl.utils.models import UuidAuditedModel, make_json_field, validate_procfile
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
@@ -50,6 +51,8 @@ DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 DEFAULT_CNB_RUNNER_ENTRYPOINT = ["launcher"]
 
 logger = logging.getLogger(__name__)
+
+BuildArtifactMetadataField = make_json_field("BuildArtifactMetadataField", py_model=BuildArtifactMetadata)
 
 
 class Build(UuidAuditedModel):
@@ -81,13 +84,9 @@ class Build(UuidAuditedModel):
     artifact_detail = models.JSONField(default={}, help_text="构件详情(展示信息)")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
 
-    # artifact_metadata 的数据说明:
-    # - use_cnb: 是否使用 CNB 构建
-    # - use_dockerfile: 是否使用 Dockerfile 构建
-    # - entrypoint: 通用的 entrypoint
-    # - proc_entrypoints: 进程的 entrypoint, 格式为 {进程名: entrypoint}. 优先级高于通用的 entrypoint
-    artifact_metadata = models.JSONField(
-        default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile/proc_entrypoints 等信息"
+    artifact_metadata = BuildArtifactMetadataField(
+        default=BuildArtifactMetadata,
+        help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile/proc_entrypoints 等信息",
     )
 
     tenant_id = tenant_id_field_factory()
@@ -105,7 +104,7 @@ class Build(UuidAuditedModel):
 
     def is_build_from_cnb(self) -> bool:
         """获取当前 Build 构件是否基于 cnb 构建"""
-        return bool(self.artifact_metadata.get("use_cnb"))
+        return bool(self.artifact_metadata.use_cnb)
 
     def get_universal_entrypoint(self) -> List[str]:
         """获取使用 Build 运行 hook 等命令的 entrypoint"""
@@ -115,7 +114,7 @@ class Build(UuidAuditedModel):
             return DEFAULT_CNB_RUNNER_ENTRYPOINT
 
         if self.artifact_type == ArtifactType.SLUG:
-            return self.artifact_metadata.get("entrypoint") or DEFAULT_SLUG_RUNNER_ENTRYPOINT
+            return self.artifact_metadata.entrypoint or DEFAULT_SLUG_RUNNER_ENTRYPOINT
 
         # 旧镜像应用分支
         # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
@@ -128,7 +127,7 @@ class Build(UuidAuditedModel):
 
     def get_entrypoint_for_proc(self, process_type: str) -> List[str]:
         """获取使用 Build 运行 process_type 的 entrypoint"""
-        if (proc_entrypoints := self.artifact_metadata.get("proc_entrypoints")) and (
+        if (proc_entrypoints := self.artifact_metadata.proc_entrypoints) and (
             entrypoint := proc_entrypoints.get(process_type)
         ):
             return entrypoint

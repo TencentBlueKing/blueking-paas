@@ -99,8 +99,8 @@ class TestHandleProcessesAndDummyBuild:
             deployment = Deployment.objects.get(id=simple_deployment.id)
             build = Build.objects.get(uuid=deployment.build_id)
 
-            assert build.artifact_metadata.get("use_cnb") == bool(init_artifact_metadata.get("use_cnb"))
-            assert build.artifact_metadata.get("proc_entrypoints") == init_artifact_metadata.get("proc_entrypoints")
+            assert build.artifact_metadata.use_cnb == bool(init_artifact_metadata.get("use_cnb"))
+            assert build.artifact_metadata.proc_entrypoints == init_artifact_metadata.get("proc_entrypoints")
 
     @pytest.mark.usefixtures("_with_wl_apps")
     def test_for_image_app(self, bk_module, simple_deployment):

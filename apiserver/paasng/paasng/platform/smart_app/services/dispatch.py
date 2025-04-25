@@ -59,7 +59,7 @@ def dispatch_package_to_modules(
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                parse_cnb_package(application, workplace)
+                parse_and_save_cnb_metadata(application, workplace)
                 handler = dispatch_cnb_image_to_registry
             else:
                 handler = dispatch_slug_image_to_registry
@@ -199,13 +199,19 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     return source_package
 
 
-def parse_cnb_package(application: Application, workplace: Path):
+def parse_and_save_cnb_metadata(application: Application, workplace: Path):
     """解析 cnb 制品的元数据, 并将相关构建元数据写入 SMartAppExtraInfo
 
     构建元数据包括:
     - use_cnb 标记
     - 各模块进程的 entrypoints(如果有, 从 artifact.json 解析)
     - 各模块使用的 image_tar(如果有, 从 artifact.json 解析)
+
+    artifact.json 格式为:
+    {
+       "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
+       "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
+     }
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
     smart_app_extra.set_use_cnb_flag(True)
@@ -221,6 +227,41 @@ def parse_cnb_package(application: Application, workplace: Path):
 
 
 def _construct_exported_image_manifest(image_tmp_folder: Path) -> DockerExportedImageManifest:
+    """基于 oci 镜像层文件, 生成对应的 DockerExportedImageManifest.
+
+    生成 DockerExportedImageManifest 分为两种情况:
+    - 制品中包含 manifest.json 时, 直接解析 manifest.json
+    manifest.json 文件内容示例:
+    [
+        {
+            "Config": "blobs/sha256/1403d9c60d0a0f24a305913e527e19fece5fd3acd1f00296e42df099ec50d371",
+            "Layers": [
+                "blobs/sha256/5e0230e216a7bbefb83517665bd5a48ee140bee0238e69f240a9d4e32e14c0ac",
+                "blobs/sha256/913346a9a60b8aef7ef9c325d3826b9f684af3dd4bfe11cffea65ab56ae24c39",
+                ...,
+            ],
+             "RepoTags": [
+                "local/default:latest"
+            ],
+            "LayerSources": {...},
+        }
+    ]
+
+    - 制品中不包含 manifest.json 时, 解析 index.json
+    index.json 文件内容示例:
+    {
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "manifests": [
+            {
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "digest": "sha256:a287e58837548de0da8e65f69bcf0d4bf45c5de2c964631b0f37443b30541c68",
+                ...,
+            }
+        ]
+    }
+    文件中指向了 manifest 的 digest 信息, 因此需要进行转换才能生成符合 DockerExportedImageManifest 协议的数据
+    """
     if (manifest_file := image_tmp_folder / "manifest.json") and manifest_file.exists():
         return DockerExportedImageManifest(**json.loads(manifest_file.read_text())[0])
 

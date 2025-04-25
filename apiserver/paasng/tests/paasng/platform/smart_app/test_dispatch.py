@@ -32,7 +32,7 @@ from paasng.platform.smart_app.services.dispatch import (
     dispatch_cnb_image_to_registry,
     dispatch_package_to_modules,
     dispatch_slug_image_to_registry,
-    parse_cnb_package,
+    parse_and_save_cnb_metadata,
 )
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, uncompress_directory
@@ -389,8 +389,8 @@ def test_dispatch_package_to_modules(bk_app, bk_module, bk_user, assets_rootpath
 
 
 @pytest.mark.usefixtures("smart_app_extra")
-def test_parse_cnb_package(bk_app, assets_rootpath):
-    parse_cnb_package(bk_app, assets_rootpath / "cnb-image-with-index")
+def test_parse_and_save_cnb_metadata(bk_app, assets_rootpath):
+    parse_and_save_cnb_metadata(bk_app, assets_rootpath / "cnb-image-with-index")
 
     expected_app_extra = SMartAppExtraInfo.objects.get(app=bk_app)
     assert expected_app_extra.use_cnb is True

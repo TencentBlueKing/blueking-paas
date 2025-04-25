@@ -21,6 +21,7 @@ from django.conf import settings
 from django.test import override_settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.applications.models.build import Build as WlBuild
 from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_TENANT_ID_ANNO_KEY,
@@ -605,7 +606,7 @@ class Test__update_cmd_args_from_wl_build:
         [
             # 非 cnb 构建(不设置)
             (
-                {},
+                BuildArtifactMetadata(),
                 crd.Hook(
                     command=["bash", "/runner/init", "python"],
                     args=["hook.py"],
@@ -617,7 +618,7 @@ class Test__update_cmd_args_from_wl_build:
             ),
             # 非 cnb 构建(显式设置)
             (
-                {"use_cnb": False},
+                BuildArtifactMetadata(use_cnb=False),
                 crd.Hook(
                     command=["bash", "/runner/init", "python"],
                     args=["hook.py"],
@@ -629,7 +630,7 @@ class Test__update_cmd_args_from_wl_build:
             ),
             # cnb 构建
             (
-                {"use_cnb": True},
+                BuildArtifactMetadata(use_cnb=True),
                 crd.Hook(
                     command=["launcher", "python"],
                     args=["hook.py"],
@@ -641,7 +642,9 @@ class Test__update_cmd_args_from_wl_build:
             ),
             # 指定了 proc_entrypoints 的 cnb 构建
             (
-                {"use_cnb": True, "proc_entrypoints": {"web": ["frontend-web"], "worker": ["backend-worker"]}},
+                BuildArtifactMetadata(
+                    use_cnb=True, proc_entrypoints={"web": ["frontend-web"], "worker": ["backend-worker"]}
+                ),
                 crd.Hook(
                     command=["launcher", "python"],
                     args=["hook.py"],

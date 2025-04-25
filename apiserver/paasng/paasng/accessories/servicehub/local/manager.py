@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Local services manager
-"""
+"""Local services manager"""
+
 import json
 import logging
 import uuid
@@ -281,7 +281,7 @@ class LocalServiceMgr(BaseServiceMgr):
     def bind_service(self, service: ServiceObj, module: Module, specs: Optional["Dict[str, str]"] = None) -> str:
         """Bind a service to module"""
         db_service = Service.objects.get(pk=service.uuid)
-        return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module).pk
+        return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module, specs).pk
 
     def bind_service_partial(self, service: ServiceObj, module: Module) -> str:
         """Bind a service to module, without binding to engine app"""

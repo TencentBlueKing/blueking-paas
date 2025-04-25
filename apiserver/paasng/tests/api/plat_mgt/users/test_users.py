@@ -151,6 +151,7 @@ class TestAccountFeatureFlagManageViewSet:
         for item in rsp.data:
             assert "value" in item
             assert "label" in item
+            assert "default_flag" in item
 
 
 class TestSystemAPIClientViewSet:
@@ -256,7 +257,7 @@ class TestSystemAPIClientViewSet:
         client = SysAPIClient.objects.create(name=client_name, role=init_role, is_active=True)
         AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=app_code)
 
-        delete_url = reverse("plat_mgt.users.sysapi_client.delete", kwargs={"name": client_name})
+        delete_url = reverse("plat_mgt.users.sysapi_client.delete", kwargs={"name": app_code})
         rsp = plat_mgt_api_client.delete(delete_url)
         assert rsp.status_code == status.HTTP_204_NO_CONTENT
         # 验证已被删除

@@ -471,6 +471,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
     @atomic
     def destroy(self, request, name=None, *args, **kwargs):
         """删除已授权应用, 后台对应逻辑为禁用应用"""
+        name = f"authed-app-{name}"
         client = SysAPIClient.objects.filter(name=name, is_active=True).first()
         if not client:
             raise error_codes.SYSAPI_CLIENT_NOT_FOUND

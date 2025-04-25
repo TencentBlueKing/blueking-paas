@@ -54,6 +54,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
+    ConfigVarWithoutKeyFormatSLZ,
     ListConfigVarsSLZ,
 )
 
@@ -160,6 +161,51 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             ),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        query_serializer=ListConfigVarsSLZ(),
+        tags=["环境配置"],
+        responses={status.HTTP_200_OK: ConfigVarSLZ(many=True)},
+    )
+    def retrieve_by_key(self, request, code, module_name, config_vars_key):
+        """通过环境变量的 key 获取环境变量"""
+        config_vars = self.get_queryset().filter(key=config_vars_key)
+        serializer = self.serializer_class(config_vars, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=ConfigVarWithoutKeyFormatSLZ,
+        tags=["环境配置"],
+        responses={status.HTTP_200_OK: None},
+    )
+    def upsert_by_key(self, request, code, module_name, config_vars_key):
+        """通过环境变量的 key 更新或创建环境变量"""
+        data = request.data.copy()
+        data["key"] = config_vars_key
+        module = self.get_module_via_path()
+        slz = ConfigVarFormatSLZ(data=data, context={"module": module})
+        slz.is_valid(raise_exception=True)
+        config_var = slz.validated_data
+
+        # 查询是否已存在相同 key 和 env 的变量
+        existing_vars = ConfigVar.objects.filter(
+            module=module, key=config_vars_key, environment_id__environment=config_var.environment_name
+        )
+
+        if existing_vars.exists():
+            # 存在, 更新已有记录
+            existing_vars.update(value=config_var.value, description=config_var.description)
+        else:
+            # 不存在，创建新记录
+            ConfigVar.objects.create(
+                module=module,
+                key=config_vars_key,
+                environment_id=config_var.environment_id,
+                value=config_var.value,
+                description=config_var.description,
+            )
+
+        return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["环境配置"], responses={201: ConfigVarApplyResultSLZ()})
     def clone(self, request, **kwargs):

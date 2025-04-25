@@ -384,7 +384,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
             raise error_codes.SYSAPI_CLIENT_ALREADY_EXISTS
 
         # 创建客户端或启用已存在的客户端
-        client = SysAPIClient.objects.update_or_create(name=name, defaults={"role": role, "is_active": True})
+        client, _ = SysAPIClient.objects.update_or_create(name=name, defaults={"role": role, "is_active": True})
 
         AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=bk_app_code)
 

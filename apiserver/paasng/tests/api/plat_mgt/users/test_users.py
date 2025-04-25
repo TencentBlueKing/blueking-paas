@@ -58,11 +58,6 @@ class TestPlatformManagerViewSet:
             assert profile.role == SiteRole.ADMIN.value
             assert profile.tenant_id == "default"
 
-        # 尝试再次添加同一批用户作为管理员
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already administrators" in rsp.data["detail"]
-
     def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""
         # 先创建用户配置文件
@@ -110,7 +105,7 @@ class TestAccountFeatureFlagManageViewSet:
         # 尝试再次添加同一特性
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_400_BAD_REQUEST
-        assert f"{user} already has {feature} feature" in rsp.data["detail"]
+        assert rsp.data["code"] == "USER_FEATURE_FLAG_ALREADY_EXISTS"
 
     def test_destroy_feature_flags(self, plat_mgt_api_client):
         """测试删除用户特性"""

@@ -19,20 +19,21 @@ to the current version of the project delivered to anyone in the future.
 
 import json
 import logging
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 from paas_service.base_vendor import BaseProvider, InstanceData
 from paas_service.utils import WRItemList, generate_password
 
 from svc_mysql.vendor.helper import MySQLAuthorizer, MySQLEngine
+from svc_mysql.vendor.tls import TLSCertificateManager
 from svc_mysql.vendor.utils import gen_addons_cert_mount_path, gen_unique_id
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DBCredential:
+class Server:
     host: str
     port: int
     user: str
@@ -53,11 +54,12 @@ class Provider(BaseProvider):
     db_operator_template: Dict = field(default_factory=dict)
     tls: Dict[str, str] = field(default_factory=dict)
     # servers 包含多个 mysql 数据库配置
-    servers: List[DBCredential] = field(default_factory=list)
+    servers: List[Dict] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.servers and not (self.host and self.port and self.user and self.password):
             raise ValueError("config is not valid, no servers found")
+
         self.db_operator_template.setdefault(
             "CREATE_DATABASE",
             # default create database sql;
@@ -69,80 +71,85 @@ class Provider(BaseProvider):
             "DROP DATABASE IF EXISTS `{engine.name}`",
         )
 
-    def pick_server(self) -> DBCredential:
+    def pick_server(self, host: str | None = None) -> Server:
         """pick a single server config from available servers
 
-        :returns: (host, port)
+        :params host: 如果指定，则必须能匹配到才返回
         """
+        # 没有多个 Server 的情况
         if not self.servers:
-            assert self.host, "未设置 mysql 服务地址"
-            assert self.port, "未设置 mysql 服务端口"
-            assert self.user, "未设置 mysql 管理员用户账号"
-            assert self.password, "未设置 mysql 管理员用户密码"
-            return DBCredential(host=self.host, port=self.port, user=self.user, password=self.password, tls=self.tls)
+            if host and host != self.host:
+                raise ValueError(f"the only server host is {self.host}, not match with {host}")
 
+            return Server(host=self.host, port=self.port, user=self.user, password=self.password, tls=self.tls)
+
+        # 按照 Host 进行匹配，确保能找到对应的 Server
+        if host:
+            for srv in self.servers:
+                if srv["host"] == host:
+                    return Server(**srv)
+
+            raise ValueError(f"no server found in self.servers for host {host}")
+
+        # 按权重随机选择 Server
         result = WRItemList.from_json(self.servers).get()
-        return DBCredential(**result.values)
+        return Server(**result.values)
 
     def create(self, params: Dict) -> InstanceData:
-        """创建 MySQL 数据库实例
-        1. 授权 Mysql 权限
-        2. 创建 Database
+        """创建 MySQL 数据库实例 & 授权"""
+        logger.info("start create mysql addons instance...")
 
-        :param params: Dict, 由 v3 申请增强服务实例时透传
-        engine_app_name: str
-        auth_ip_list: List[str], default: self.auth_ip_list
-        :return: InstanceData
-        credentials:
-            host: str
-            port: int
-            name: str
-            user: str
-            password: str
-        config: {}
-        """
-        logger.info("正在创建增强服务实例...")
-        server_credential = self.pick_server()
+        server = self.pick_server()
         preferred_name = params.get("engine_app_name", "")
-        # egress_info perhaps look like: `{"egress_ips": [<IP>, ], "digest_version": <DIGEST_VERSION>}`
+        # egress_info perhaps format:
+        # `{"egress_ips": [<ip1>, <ip2>], "digest_version": <DIGEST_VERSION>}`
         egress_info = params.get("egress_info", "{}")
         client_hosts = set(json.loads(egress_info).get("egress_ips", self.auth_ip_list)) | set(self.auth_ip_list)
 
         # get_unique_id & password
         # max length of uid is 16 according to gcs mysql
         uid = gen_unique_id(preferred_name)[:16]
-        database_name = uid
-        database_user = uid
+        db_name = uid
+        db_user = uid
+        db_password = generate_password()
 
-        database_password = generate_password()
+        with TLSCertificateManager(server.tls) as mgr:
+            # 1. 授权 Mysql 权限
+            authorizer = MySQLAuthorizer(
+                host=server.host,
+                port=server.port,
+                user=server.user,
+                password=server.password,
+                name=db_name,
+                ssl_options=mgr.get_django_ssl_options(),
+                client_hosts=list(client_hosts),
+            )
+            authorizer.grant_db(user=db_user, password=db_password, db_name=db_name)
 
-        db_info = DBCredential(
-            host=server_credential.host,
-            port=server_credential.port,
-            name=database_name,
-            user=database_user,
-            password=database_password,
-        )
+            # 2. 创建数据库
+            engine = MySQLEngine(
+                host=server.host,
+                port=server.port,
+                user=db_user,
+                password=db_password,
+                name=db_name,
+                ssl_options=mgr.get_django_ssl_options(),
+            )
+            create_db_sql = self.db_operator_template["CREATE_DATABASE"].format(engine=engine)
+            engine.execute(create_db_sql)
 
-        # 1. 授权 Mysql 权限
-        authorizer = MySQLAuthorizer(
-            host=server_credential.host,
-            port=server_credential.port,
-            user=server_credential.user,
-            password=server_credential.password,
-            client_hosts=list(client_hosts),
-        )
-        authorizer.grant_db(user=db_info.user, password=db_info.password, db_name=str(db_info.name))
+            logger.info("create mysql addons instance %s success", db_name)
 
-        # 2. 创建 DataBase
-        engine = MySQLEngine(**asdict(db_info))
-        create_db_sql = self.db_operator_template["CREATE_DATABASE"].format(engine=engine)
-        engine.execute(create_db_sql)
-
-        credentials = asdict(db_info)
-        ca = server_credential.tls.get("ca")
-        cert = server_credential.tls.get("cert")
-        cert_key = server_credential.tls.get("key")
+        credentials = {
+            "host": server.host,
+            "port": server.port,
+            "name": db_name,
+            "user": db_user,
+            "password": db_password,
+        }
+        ca = server.tls.get("ca")
+        cert = server.tls.get("cert")
+        cert_key = server.tls.get("key")
 
         # 添加证书路径到凭证信息中
         provider_name = "mysql"
@@ -155,27 +162,31 @@ class Provider(BaseProvider):
 
         return InstanceData(
             credentials=credentials,
-            config={"provider_name": provider_name, "enable_tls": bool(ca or cert or cert_key)},
+            config={
+                "provider_name": provider_name,
+                "enable_tls": bool(ca or cert or cert_key),
+            },
         )
 
     def delete(self, instance_data: InstanceData):
-        """删除数据库实例, DROP DATABASE
+        """删除数据库实例 -> DROP DATABASE"""
+        creds = instance_data.credentials
 
-        :param instance_data:
-        credentials:
-            host: str
-            port: int
-            name: str
-            user: str
-            password: str
-        config: {}
-        :return:
-        """
-        logger.info("正在删除增强服务实例...")
-        db_info = instance_data.credentials
-        engine = MySQLEngine(**db_info)
-        drop_db_sql = self.db_operator_template["DROP_DATABASE"].format(engine=engine)
-        engine.execute(drop_db_sql)
+        logger.info("start delete mysql addons instance %s...", creds["name"])
+        server = self.pick_server(creds["host"])
+
+        with TLSCertificateManager(server.tls) as mgr:
+            # 删除数据库
+            engine = MySQLEngine(
+                host=creds["host"],
+                port=creds["port"],
+                user=creds["user"],
+                password=creds["password"],
+                name=creds["name"],
+                ssl_options=mgr.get_django_ssl_options(),
+            )
+            drop_db_sql = self.db_operator_template["DROP_DATABASE"].format(engine=engine)
+            engine.execute(drop_db_sql)
 
     def patch(self, instance_data: InstanceData, params: Dict) -> InstanceData:
         raise NotImplementedError

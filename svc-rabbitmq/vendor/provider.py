@@ -146,7 +146,7 @@ class Provider(BaseProvider):
     version: str | None = None
     tls: Dict[str, str] = field(default_factory=dict)
     # clusters 包含多个 RabbitMQ 集群配置
-    clusters: List[Cluster] = field(default_factory=list)
+    clusters: List[Dict] = field(default_factory=list)
 
     def make_instance_name(self, name: "str", uuid: "str") -> "str":
         parts = []

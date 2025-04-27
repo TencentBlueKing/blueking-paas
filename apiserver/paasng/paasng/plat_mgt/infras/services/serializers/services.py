@@ -32,7 +32,7 @@ ADDONS_SERVICE_NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]
 class ServiceObjOutputSLZ(serializers.Serializer):
     """增强服务详情"""
 
-    uuid = serializers.CharField(help_text="唯一 ID", source="uuid")
+    uuid = serializers.CharField(help_text="唯一 ID")
     name = serializers.CharField(help_text="名称")
     category_id = serializers.IntegerField(help_text="服务分类")
     display_name = serializers.CharField(help_text="展示用名称")

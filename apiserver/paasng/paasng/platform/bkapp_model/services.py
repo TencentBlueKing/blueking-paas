@@ -15,8 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
+
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_PROCESS_NAME
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
+from paasng.platform.bkapp_model.entities.proc_service import ExposedType, ProcService
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
 
@@ -38,14 +42,22 @@ def check_replicas_manually_scaled(m: Module) -> bool:
     return fieldmgr.FieldMgrName.WEB_FORM in managers.values()
 
 
-def upsert_process_service_flag(m: Module, implicit_needed: bool):
-    """upsert process service flag by app module
+def upsert_proc_svc_if_implicit_needed(m: Module):
+    """upsert process service. When using app_desc.yaml with spec_version: 2
+    or only a Procfile, process services must be implicitly upsert"""
+    proc_specs = ModuleProcessSpec.objects.filter(module=m)
 
-    :param m: app module
-    :param implicit_needed: 是否隐式需要 process services 配置
-    """
-    for env in m.get_envs():
-        ProcessServicesFlag.objects.update_or_create(
-            app_environment=env,
-            defaults={"implicit_needed": implicit_needed, "tenant_id": m.tenant_id},
+    for proc_spec in proc_specs:
+        proc_svc = ProcService(
+            name=proc_spec.name,
+            target_port=settings.CONTAINER_PORT,
+            protocol="TCP",
+            port=80,
         )
+        if proc_spec.name == DEFAULT_PROCESS_NAME:
+            proc_svc.exposed_type = ExposedType()
+
+        proc_spec.services = [proc_svc]
+
+    if proc_specs:
+        ModuleProcessSpec.objects.bulk_update(proc_specs, ["services"])

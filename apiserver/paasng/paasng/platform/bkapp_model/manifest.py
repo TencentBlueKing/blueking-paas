@@ -62,7 +62,6 @@ from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
     ObservabilityConfig,
-    ProcessServicesFlag,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
@@ -527,8 +526,8 @@ def get_bkapp_resource_for_deploy(
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
-    # 由于 bkapp 新增了 process services 配置特性，部分旧模块需要平台创建 process services 并注入到 model_res 中
-    apply_proc_svc_if_implicit_needed(model_res, env)
+    # 由于 bkapp 新增了 process services 配置特性，默认启用
+    model_res.set_proc_services_annotation("true")
 
     # Apply other changes to the resource
     apply_env_annots(model_res, env, deploy_id=deploy_id)
@@ -590,37 +589,6 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
         if not overlay:
             overlay = model_res.spec.envOverlay = crd.EnvOverlay(envVariables=[])
         overlay.envVariables = override_env_vars_overlay(overlay.envVariables or [], builtin_env_vars_overlay)
-
-
-def apply_proc_svc_if_implicit_needed(model_res: crd.BkAppResource, env: ModuleEnvironment):
-    """如果 implicit_needed flag 为 True, 则创建 process services, 并注入到 model_res 中; 否则不做任何操作.
-
-    :param model_res: The bkapp model resource object.
-    :param env: The environment object.
-    """
-    flag, _ = ProcessServicesFlag.objects.get_or_create(
-        app_environment=env, defaults={"implicit_needed": False, "tenant_id": env.tenant_id}
-    )
-    model_res.set_proc_services_annotation("true")
-
-    if flag.implicit_needed:
-        for process in model_res.spec.processes:
-            if not process.services:
-                process.services = []
-            if process.name == "web":
-                service = crd.ProcService(
-                    name=process.name,
-                    targetPort=settings.CONTAINER_PORT,
-                    protocol="TCP",
-                    port=80,
-                    exposedType=crd.ExposedType(),
-                )
-                process.services.append(service)
-            else:
-                service = crd.ProcService(
-                    name=process.name, targetPort=settings.CONTAINER_PORT, protocol="TCP", port=80
-                )
-                process.services.append(service)
 
 
 def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironment):

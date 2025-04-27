@@ -31,7 +31,6 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
-    updated_humanized = HumanizeDateTimeField(source="updated")
 
     def get_app_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)
@@ -41,6 +40,26 @@ class ApplicationSLZ(serializers.ModelSerializer):
         if app_resource_quotas := self.context.get("app_resource_quotas"):
             return app_resource_quotas.get(instance.code, default_quotas)
         return default_quotas
+
+    class Meta:
+        model = Application
+        fields = (
+            "logo_url",
+            "code",
+            "name",
+            "app_tenant_mode",
+            "app_type",
+            "resource_quotas",
+            "is_active",
+            "creator",
+            "created_humanized",
+        )
+
+
+class ApplicationDetailSLZ(ApplicationSLZ):
+    """应用详细信息序列化器"""
+
+    updated_humanized = HumanizeDateTimeField(source="updated")
 
     class Meta:
         model = Application

@@ -23,7 +23,12 @@ urlpatterns = [
     # 平台管理 - 应用列表
     path(
         "api/plat_mgt/applications/",
-        application.ApplicationListView.as_view({"get": "list"}),
+        application.ApplicationView.as_view({"get": "list"}),
         name="plat_mgt.applications.list_applications",
+    ),
+    path(
+        "api/plat_mgt/applications/<str:app_code>/",
+        application.ApplicationView.as_view({"get": "retrieve"}),
+        name="plat_mgt.applications.retrieve_application",
     ),
 ]

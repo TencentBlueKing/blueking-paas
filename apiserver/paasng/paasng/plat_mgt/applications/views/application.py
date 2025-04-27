@@ -22,14 +22,14 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.applications.serializers.application import ApplicationSLZ
+from paasng.plat_mgt.applications.serializers.application import ApplicationDetailSLZ, ApplicationSLZ
 from paasng.platform.applications.models import Application
 
 
-class ApplicationListView(viewsets.GenericViewSet):
+class ApplicationView(viewsets.GenericViewSet):
     """平台管理 - 应用列表 API"""
 
-    serializer_class = ApplicationSLZ
+    queryset = Application.objects.all()
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
@@ -40,7 +40,22 @@ class ApplicationListView(viewsets.GenericViewSet):
     def list(self, request, *args, **kwargs):
         """获取应用列表"""
 
-        queryset = Application.objects.all()
+        queryset = self.get_queryset()
 
-        slz = self.get_serializer(queryset, many=True)
+        slz = ApplicationSLZ(queryset, many=True)
+        return Response(slz.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取单个应用信息",
+        responses={status.HTTP_200_OK: ApplicationDetailSLZ()},
+    )
+    def retrieve(self, request, *args, **kwargs):
+        """获取单个应用信息"""
+        app_code = kwargs.get("app_code")
+        app = self.get_queryset().filter(code=app_code).first()
+        if not app:
+            return Response({"detail": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        slz = ApplicationDetailSLZ(app)
         return Response(slz.data, status=status.HTTP_200_OK)

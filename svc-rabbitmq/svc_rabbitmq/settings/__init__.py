@@ -124,13 +124,13 @@ WSGI_APPLICATION = "svc_rabbitmq.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": env.str("DATABASE_ENGINE", "django.db.backends.mysql"),
-        "NAME": env.str("DATABASE_NAME", "service_rabbitmq"),
-        "USER": env.str("DATABASE_USER", "service_rabbitmq"),
-        "PASSWORD": env.str("DATABASE_PASSWORD"),
-        "HOST": env.str("DATABASE_HOST", "localhost"),
-        "PORT": env.str("DATABASE_PORT", "3306"),
-        "OPTIONS": env.json("DATABASE_OPTIONS", {}),
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": env.str("MYSQL_NAME", "service_rabbitmq"),
+        "USER": env.str("MYSQL_USER", "service_rabbitmq"),
+        "PASSWORD": env.str("MYSQL_PASSWORD"),
+        "HOST": env.str("MYSQL_HOST", "localhost"),
+        "PORT": env.str("MYSQL_PORT", "3306"),
+        "OPTIONS": env.json("MYSQL_OPTIONS", {}),
     }
 }
 

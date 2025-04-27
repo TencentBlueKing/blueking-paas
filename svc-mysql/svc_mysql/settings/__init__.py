@@ -146,7 +146,7 @@ else:
             "USER": env("MYSQL_USER", default="svc_mysql"),
             "PASSWORD": env("MYSQL_PASSWORD", default="blueking"),
             "HOST": env("MYSQL_HOST", default="127.0.0.1"),
-            "PORT": env("MYSQL_PORT", default=3306),
+            "PORT": env("MYSQL_PORT", default="3306"),
             "OPTIONS": env.json("MYSQL_OPTIONS", default={}),
         }
     }

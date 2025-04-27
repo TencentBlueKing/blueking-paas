@@ -130,12 +130,7 @@ DATABASES = {
         "PASSWORD": env.str("DATABASE_PASSWORD"),
         "HOST": env.str("DATABASE_HOST", "localhost"),
         "PORT": env.str("DATABASE_PORT", "3306"),
-        "OPTIONS": env.dict(
-            "DATABASE_OPTIONS",
-            default={
-                "init_command": "SET default_storage_engine=INNODB",
-            },
-        ),
+        "OPTIONS": env.json("DATABASE_OPTIONS", {}),
     }
 }
 
@@ -261,27 +256,14 @@ RABBITMQ_MANAGEMENT_API_CACHE_SECONDS = env.int("RABBITMQ_MANAGEMENT_API_CACHE_S
 
 MODEL_TAG_CLUSTER = "cluster"
 
-REDIS_HOST = env.str("REDIS_HOST", "localhost")
-REDIS_PORT = env.int("REDIS_PORT", 6379)
-REDIS_DB = env.int("REDIS_DB", 0)
-REDIS_PASS = env.str("REDIS_PASSWORD", "")
-
 CACHES = {
-    "redis": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
-        "OPTIONS": {
-            "CLIENT_CLASS": "svc_rabbitmq.redis.Client",
-            "PASSWORD": REDIS_PASS,
-        },
-    },
     "database": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": env.str("CACHE_TABLE_NAME", "cache_table"),
     },
 }
 
-CACHES["default"] = CACHES[env.str("CACHE_BACKEND", "redis")]
+CACHES["default"] = CACHES[env.str("CACHE_BACKEND", "database")]
 
 # 秒
 CRON_TASK_CHECK_INTERVAL = env.int("CRON_TASK_CHECK_INTERVAL", 10)

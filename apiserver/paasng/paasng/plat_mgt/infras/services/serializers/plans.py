@@ -20,6 +20,8 @@ from rest_framework import serializers
 from paasng.accessories.servicehub.services import PlanObj
 from paasng.accessories.services.models import PreCreatedInstance
 
+from .pre_created_instances import PreCreatedInstanceSLZ
+
 
 class BasePlanObjSLZ(serializers.Serializer):
     uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -34,20 +36,25 @@ class PlanUpsertInputSLZ(BasePlanObjSLZ):
     pass
 
 
-class PreCreatedInstanceSLZ(serializers.ModelSerializer):
-    config = serializers.JSONField()
-
-    class Meta:
-        model = PreCreatedInstance
-        fields = "__all__"
-
-
 class PlanWithSvcSLZ(BasePlanObjSLZ):
     tenant_id = serializers.CharField(help_text="所属租户")
 
     service_name = serializers.CharField(source="service.name", read_only=True)
     service_id = serializers.CharField(source="service.uuid", read_only=True)
     service_config = serializers.JSONField(source="service.config", default={}, read_only=True)
+
+    pre_created_instances = serializers.SerializerMethodField()
+
+    def get_pre_created_instances(self, plan: PlanObj) -> list:
+        # 若非资源池类型的服务, 不返回预创建实例
+        if plan.service and plan.service.config.get("provider_name") == "pool":
+            pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
+            return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
+        return []
+
+
+class PlanWithPreCreatedInstanceSLZ(BasePlanObjSLZ):
+    tenant_id = serializers.CharField(help_text="所属租户")
 
     pre_created_instances = serializers.SerializerMethodField()
 

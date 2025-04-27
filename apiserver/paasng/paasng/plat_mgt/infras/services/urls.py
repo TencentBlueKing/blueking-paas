@@ -20,11 +20,18 @@ from django.urls import path
 from paasng.plat_mgt.infras.services import views
 
 urlpatterns = [
+    # 平台管理-增强服务-服务管理 API
     path(
         "api/plat_mgt/infras/services/",
-        views.AddonsServiceViewSet.as_view({"get": "list"}),
-        name="plat_mgt.infras.services.list",
+        views.ServiceViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.infras.services",
     ),
+    path(
+        "api/plat_mgt/infras/services/<str:service_id>/",
+        views.ServiceViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="plat_mgt.infras.services.detail",
+    ),
+    # 平台管理-增强服务-服务方案 API
     path(
         "api/plat_mgt/infras/plans/",
         views.PlanViewSet.as_view({"get": "list_all"}),
@@ -40,7 +47,7 @@ urlpatterns = [
         views.PlanViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.services.plans.detail",
     ),
-    # 集群分配策略相关
+    # 分配策略相关 API
     path(
         "api/plat_mgt/infras/service_binding_policy_condition_types/",
         views.BindingPolicyViewSet.as_view({"get": "list_condition_types"}),
@@ -60,5 +67,16 @@ urlpatterns = [
         "api/plat_mgt/infras/services/provider_choices/",
         views.ProviderViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.services.provider_choices.list",
+    ),
+    # 平台管理-增强服务管理-资源池
+    path(
+        "api/plat_mgt/infras/pre-created-instances/$",
+        views.PreCreatedInstanceViewSet.as_view({"post": "create", "get": "list"}),
+        name="plat_mgt.infras.pre_created_instances",
+    ),
+    path(
+        "api/plat_mgt/infras/pre-created-instances/(?P<plan_id>[^/]+)/(?P<uuid>[^/]+)/$",
+        views.PreCreatedInstanceViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="plat_mgt.infras.pre_created_instances.detail",
     ),
 ]

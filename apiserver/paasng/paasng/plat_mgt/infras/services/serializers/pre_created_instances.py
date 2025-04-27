@@ -15,35 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .binding_policies import (
-    DeletePolicyCombinationSLZ,
-    PolicyCombinationConfigOutputSLZ,
-    PolicyCombinationConfigUpsertSLZ,
-    PrecedencePolicyCondTypeOutputSLZ,
-)
-from .plans import (
-    BasePlanObjSLZ,
-    PlanUpsertInputSLZ,
-    PlanWithPreCreatedInstanceSLZ,
-    PlanWithSvcSLZ,
-)
-from .pre_created_instances import PreCreatedInstanceSLZ
-from .services import ServiceObjOutputSLZ, ServiceUpsertSLZ
+from rest_framework import serializers
 
-__all__ = [
-    # plans
-    "PlanWithSvcSLZ",
-    "PlanUpsertInputSLZ",
-    "BasePlanObjSLZ",
-    "PlanWithPreCreatedInstanceSLZ",
-    # binding_policy
-    "DeletePolicyCombinationSLZ",
-    "PolicyCombinationConfigUpsertSLZ",
-    "PolicyCombinationConfigOutputSLZ",
-    "PrecedencePolicyCondTypeOutputSLZ",
-    # services
-    "ServiceObjOutputSLZ",
-    "ServiceUpsertSLZ",
-    # pre_created_instance
-    "PreCreatedInstanceSLZ",
-]
+from paasng.accessories.services.models import PreCreatedInstance
+
+
+class PreCreatedInstanceSLZ(serializers.ModelSerializer):
+    config = serializers.JSONField()
+
+    class Meta:
+        model = PreCreatedInstance
+        fields = "__all__"

@@ -14,13 +14,87 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import re
 
+from django.utils.translation import get_language
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.accessories.servicehub.local.manager import LocalServiceObj
+from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
+from paasng.utils.i18n import to_translated_field
+
+# 增强服务名称规范
+ADDONS_SERVICE_NAME_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]$")
 
 
-class ServiceListOutputSLZ(serializers.Serializer):
-    """增强服务列表"""
+class ServiceObjOutputSLZ(serializers.Serializer):
+    """增强服务详情"""
 
-    id = serializers.CharField(help_text="唯一 ID", source="uuid")
+    uuid = serializers.CharField(help_text="唯一 ID", source="uuid")
     name = serializers.CharField(help_text="名称")
+    category_id = serializers.IntegerField(help_text="服务分类")
     display_name = serializers.CharField(help_text="展示用名称")
+    logo = serializers.CharField()
+
+    description = serializers.CharField(help_text="描述")
+    long_description = serializers.CharField(help_text="详细描述")
+    instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
+    config = serializers.JSONField(required=False, default=dict)
+
+    is_visible = serializers.BooleanField(help_text="是否可见")
+
+    provider_name = serializers.CharField(help_text="供应商", required=False, allow_null=True, allow_blank=True)
+    origin = serializers.SerializerMethodField(help_text="服务来源")
+
+    def get_origin(self, obj):
+        if isinstance(obj, LocalServiceObj):
+            return "local"
+        elif isinstance(obj, RemoteServiceObj):
+            return "remote"
+        raise ValueError("unknown obj origin")
+
+
+class ServiceUpsertSLZ(serializers.Serializer):
+    """创建/修改增强服务"""
+
+    name = serializers.CharField(help_text="名称")
+    category_id = serializers.IntegerField(help_text="服务分类")
+    display_name = serializers.CharField(help_text="展示用名称")
+    logo = serializers.CharField()
+
+    description = serializers.CharField(help_text="描述")
+    long_description = serializers.CharField(help_text="详细描述")
+    instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
+
+    config = serializers.JSONField(required=False, default=dict)
+
+    is_visible = serializers.BooleanField(help_text="是否可见")
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        # 本地增强服务已删除 specifications 字段
+        # 但是远程增强服务还没有删除，并且各个远程增强服务
+        # paas_service 包版本依赖不一致，通过添加空列表作为兜底策略
+        data["specifications"] = []
+
+        language_code = get_language()
+        # 国际化相关的字段需要按当前用户的语言来确定字段
+        i18n_fields = ["display_name", "description", "long_description", "instance_tutorial"]
+        for _field in i18n_fields:
+            # 需要将语言中的连字符转为下划线，如 zh-cn 转为: zh_cn
+            _translated_field = to_translated_field(_field, language_code)
+            data[_translated_field] = data.pop(_field, "")
+
+        return data
+
+    def validate_name(self, name: str) -> str:
+        if not re.fullmatch(ADDONS_SERVICE_NAME_REGEX, name):
+            raise ValidationError(
+                _(
+                    "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾"
+                ).format(name)
+            )  # noqa: E501
+
+        return name

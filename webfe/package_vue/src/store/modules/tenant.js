@@ -215,7 +215,7 @@ export default {
      * 获取所属服务
      */
     getPlatformServices({}) {
-      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/`;
       return http.get(url);
     },
     /**
@@ -236,21 +236,21 @@ export default {
      * 新建服务
      */
     addPlatformService({}, { data }) {
-      const url = `${BACKEND_URL}/admin42/platform/services/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/`;
       return http.post(url, data);
     },
     /**
      * 编辑服务
      */
     updatePlatformService({}, { serviceId, data }) {
-      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/`;
       return http.put(url, data);
     },
     /**
      * 删除本地服务
      */
     deletePlatformService({}, { serviceId }) {
-      const url = `${BACKEND_URL}/admin42/platform/services/${serviceId}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/`;
       return http.delete(url);
     },
     /**
@@ -292,21 +292,21 @@ export default {
      * 添加资源池
      */
     addResourcePool({}, { data }) {
-      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/`;
       return http.post(url, data);
     },
     /**
      * 修改资源池
      */
     updateResourcePool({}, { planId, id, data }) {
-      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/${planId}/${id}/`;
       return http.put(url, data);
     },
     /**
      * 删除资源池
      */
     deleteResourcePool({}, { planId, id }) {
-      const url = `${BACKEND_URL}/admin42/platform/pre-created-instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/${planId}/${id}/`;
       return http.delete(url);
     },
     /**

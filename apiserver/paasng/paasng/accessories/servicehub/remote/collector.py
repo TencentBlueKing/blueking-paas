@@ -93,6 +93,7 @@ class RemotePlanSLZ(serializers.Serializer):
     description = serializers.CharField()
     is_active = serializers.BooleanField(required=False, default=True)
     config = serializers.JSONField(required=False, default=dict)
+    tenant_id = serializers.CharField(required=False)
 
 
 class RemoteServiceSLZ(serializers.Serializer):

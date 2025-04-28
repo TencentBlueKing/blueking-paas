@@ -41,6 +41,7 @@ class RabbitMQProvider(BaseProvider):
         self.ca = tls.get("ca")
         self.cert = tls.get("cert")
         self.cert_key = tls.get("key")
+        self.insecure_skip_verify = tls.get("insecure_skip_verify") is True
 
         # the port which user will connect on
         self.port = config["http_port"]
@@ -122,6 +123,9 @@ class RabbitMQProvider(BaseProvider):
         if self.cert and self.cert_key:
             credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
             credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
+        if self.insecure_skip_verify:
+            credentials["insecure_skip_verify"] = "true"
 
         return InstanceData(
             credentials=credentials,

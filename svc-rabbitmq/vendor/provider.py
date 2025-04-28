@@ -244,6 +244,9 @@ class Provider(BaseProvider):
             credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
             credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
 
+        if cluster.tls.get("insecure_skip_verify") is True:
+            credentials["insecure_skip_verify"] = "true"
+
         return InstanceData(
             credentials=credentials,
             config={"bill": bill.uuid.hex, "provider_name": provider_name, "enable_tls": bool(ca or cert or cert_key)},

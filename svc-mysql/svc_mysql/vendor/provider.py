@@ -39,7 +39,7 @@ class Server:
     user: str
     password: str
     name: str | None = None
-    tls: Dict[str, str] = field(default_factory=dict)
+    tls: Dict[str, str | bool] = field(default_factory=dict)
 
 
 @dataclass
@@ -159,6 +159,9 @@ class Provider(BaseProvider):
         if cert and cert_key:
             credentials["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
             credentials["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
+
+        if server.tls.get("insecure_skip_verify") is True:
+            credentials["insecure_skip_verify"] = "true"
 
         return InstanceData(
             credentials=credentials,

@@ -172,7 +172,7 @@
                     v-model="formData.args"
                     style="width: 500px"
                     ext-cls="tag-extra"
-                    placeholder="留空将使用镜像的默认值"
+                    :placeholder="$t('留空将使用镜像的默认值')"
                     :allow-create="allowCreate"
                     :allow-auto-match="true"
                     :has-delete-icon="hasDeleteIcon"

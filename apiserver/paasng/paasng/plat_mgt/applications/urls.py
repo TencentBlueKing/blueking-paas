@@ -27,6 +27,21 @@ urlpatterns = [
         name="plat_mgt.applications.list_applications",
     ),
     path(
+        "api/plat_mgt/applications/tenant_id_list/",
+        application.ApplicationView.as_view({"get": "list_tenant_id"}),
+        name="plat_mgt.applications.list_tenant_id",
+    ),
+    path(
+        "api/plat_mgt/applications/tenant_mode_list/",
+        application.ApplicationView.as_view({"get": "list_tenant_mode"}),
+        name="plat_mgt.applications.list_tenant_mode",
+    ),
+    path(
+        "api/plat_mgt/applications/types/",
+        application.ApplicationView.as_view({"get": "list_app_types"}),
+        name="plat_mgt.applications.types",
+    ),
+    path(
         "api/plat_mgt/applications/<str:app_code>/",
         application.ApplicationView.as_view({"get": "retrieve"}),
         name="plat_mgt.applications.retrieve_application",

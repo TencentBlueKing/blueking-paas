@@ -17,8 +17,10 @@
 
 from rest_framework import serializers
 
+from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tasks import cal_app_resource_quotas
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 
@@ -36,10 +38,19 @@ class ApplicationSLZ(serializers.ModelSerializer):
         return ApplicationType.get_choice_label(instance.type)
 
     def get_resource_quotas(self, instance: Application) -> dict:
+        """获取应用资源配额, 优先从 Redis 缓存获取, 缺失时触发异步任务计算"""
         default_quotas = {"memory": "--", "cpu": "--"}
-        if app_resource_quotas := self.context.get("app_resource_quotas"):
-            return app_resource_quotas.get(instance.code, default_quotas)
-        return default_quotas
+
+        # 尝试从 Redis 中获取资源配额
+        store = DefaultRediStore(rkey="quotas::app")
+        app_resource_quotas = store.get()
+
+        # 如果 Redis 中没有数据，触发异步任务计算
+        if not app_resource_quotas:
+            cal_app_resource_quotas.delay()
+            return default_quotas
+
+        return app_resource_quotas.get(instance.code, default_quotas)
 
     class Meta:
         model = Application
@@ -47,6 +58,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
             "logo_url",
             "code",
             "name",
+            "app_tenant_id",
             "app_tenant_mode",
             "app_type",
             "resource_quotas",
@@ -64,3 +76,24 @@ class ApplicationDetailSLZ(ApplicationSLZ):
     class Meta:
         model = Application
         fields = "__all__"
+
+
+class TenantIdListSLZ(serializers.Serializer):
+    """租户 ID 列表序列化器"""
+
+    tenant_id = serializers.CharField(help_text="租户 ID")
+    app_count = serializers.IntegerField(help_text="应用数量")
+
+
+class TenantModeListSLZ(serializers.Serializer):
+    """租户模式列表序列化器"""
+
+    type = serializers.CharField(help_text="租户模式")
+    label = serializers.CharField(help_text="租户模式标签")
+
+
+class ApplicationTypeListSLZ(serializers.Serializer):
+    """应用类型列表序列化器"""
+
+    type = serializers.CharField(help_text="应用类型")
+    label = serializers.CharField(help_text="应用类型标签")

@@ -70,7 +70,12 @@
                 v-for="(val, key) in PERMISSIONS"
                 :class="['role-item', { 'is-last': '告警策略配置' === key }]"
               >
-                <div class="operate">{{ $t(key) }}</div>
+                <div
+                  class="operate text-ellipsis"
+                  v-bk-overflow-tips
+                >
+                  {{ $t(key) }}
+                </div>
                 <div
                   v-for="role in roleList"
                   :key="role.id"

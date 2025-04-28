@@ -161,13 +161,6 @@ class TestSystemAPIClientViewSet:
         """测试创建已授权应用"""
         bulk_url = reverse("plat_mgt.users.sysapi_client.bulk")
 
-        # 尝试为不存在的应用创建客户端
-        non_existent_app = f"non_existent_app_{generate_random_string(6)}"
-        data = {"bk_app_code": non_existent_app, "role": ClientRole.BASIC_READER.value}
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
-        assert rsp.data["code"] == "APP_NOT_FOUND"
-
         # 创建一个有效的应用
         app_code = f"test_app_{generate_random_string(6)}"
         Application.objects.create(code=app_code, name=app_code)

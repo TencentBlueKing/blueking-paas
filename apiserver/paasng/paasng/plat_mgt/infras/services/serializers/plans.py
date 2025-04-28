@@ -33,7 +33,10 @@ class BasePlanObjSLZ(serializers.Serializer):
 
 
 class PlanUpsertInputSLZ(BasePlanObjSLZ):
-    pass
+    # TODO: 这几个字段已弃用，paas_service 升级后，删除这几个字段
+    specifications = serializers.JSONField(default=dict)
+    region = serializers.CharField(required=False, default="default")
+    properties = serializers.JSONField(required=False, default=dict)
 
 
 class PlanWithSvcSLZ(BasePlanObjSLZ):

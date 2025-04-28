@@ -222,14 +222,14 @@ export default {
      * 获取服务分类
      */
     getServicesCategory({}) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services_category/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/service_category/`;
       return http.get(url);
     },
     /**
      * 获取供应商
      */
     getServicesProviderChoices({}) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services_provider_choices/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/service_provider_choices/`;
       return http.get(url);
     },
     /**

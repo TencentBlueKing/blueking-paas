@@ -222,14 +222,14 @@ export default {
      * 获取服务分类
      */
     getServicesCategory({}) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/category/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services_category/`;
       return http.get(url);
     },
     /**
      * 获取供应商
      */
     getServicesProviderChoices({}) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/provider_choices/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services_provider_choices/`;
       return http.get(url);
     },
     /**
@@ -292,49 +292,49 @@ export default {
      * 添加资源池
      */
     addResourcePool({}, { data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created-_instances/`;
       return http.post(url, data);
     },
     /**
      * 修改资源池
      */
     updateResourcePool({}, { planId, id, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created_instances/${planId}/${id}/`;
       return http.put(url, data);
     },
     /**
      * 删除资源池
      */
     deleteResourcePool({}, { planId, id }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre-created-instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created_instances/${planId}/${id}/`;
       return http.delete(url);
     },
     /**
      * 获取服务配置方案
      */
     getBindingPolicies({}, { serviceId }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding_policies/`;
       return http.get(url);
     },
     /**
      * 新建配置方案
      */
     addBindingPolicies({}, { serviceId, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding_policies/`;
       return http.post(url, data);
     },
     /**
      * 更新配置方案
      */
     updateBindingPolicies({}, { serviceId, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding_policies/`;
       return http.put(url, data);
     },
     /**
      * 删除配置方案
      */
     deleteBindingPolicies({}, { tenantId, serviceId }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding-policies?tenant_id=${tenantId}`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/binding_policies?tenant_id=${tenantId}`;
       return http.delete(url);
     },
     /**

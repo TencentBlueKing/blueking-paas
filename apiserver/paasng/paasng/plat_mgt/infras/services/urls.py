@@ -54,28 +54,28 @@ urlpatterns = [
         name="plat_mgt.infras.binding-policiey.list_condition_types",
     ),
     path(
-        "api/plat_mgt/infras/services/<str:service_id>/binding-policies/",
+        "api/plat_mgt/infras/services/<str:service_id>/binding_policies/",
         views.BindingPolicyViewSet.as_view({"get": "list", "post": "upsert", "put": "upsert", "delete": "destroy"}),
         name="plat_mgt.infras.services.binding-policies.detail",
     ),
     path(
-        "api/plat_mgt/infras/services/category/",
+        "api/plat_mgt/infras/service_category/",
         views.CategoryViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.services.category.list",
     ),
     path(
-        "api/plat_mgt/infras/services/provider_choices/",
+        "api/plat_mgt/infras/service_provider_choices/",
         views.ProviderViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.services.provider_choices.list",
     ),
     # 平台管理-增强服务管理-资源池
     path(
-        "api/plat_mgt/infras/pre-created-instances/$",
+        "api/plat_mgt/infras/pre_created_instances/$",
         views.PreCreatedInstanceViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.pre_created_instances",
     ),
     path(
-        "api/plat_mgt/infras/pre-created-instances/(?P<plan_id>[^/]+)/(?P<uuid>[^/]+)/$",
+        "api/plat_mgt/infras/pre_created_instances/(?P<plan_id>[^/]+)/(?P<uuid>[^/]+)/$",
         views.PreCreatedInstanceViewSet.as_view({"delete": "destroy", "put": "update"}),
         name="plat_mgt.infras.pre_created_instances.detail",
     ),

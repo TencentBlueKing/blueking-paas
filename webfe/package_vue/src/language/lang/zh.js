@@ -1898,6 +1898,7 @@ export default {
   widget配置: 'widget配置',
 
   // 静态static文件
+  开发者工具: '开发者工具',
   蓝鲸助手: '蓝鲸助手',
   头部导航列表: '头部导航列表',
   '云 API': '云 API',

@@ -1781,6 +1781,7 @@ export default {
   'Bamboo 支持基本的流程启动、暂停、继续、重试和撤销，以及流程串行、并行、分支、循环、打回控制等进阶特性。': 'Bamboo supports basic process start, pause, resume, retry and undo, as well as advanced features such as process serial, parallel, branching, looping, and hit-and-run control.',
   'Bamboo 可以解析、管理、执行由用户创建的流程任务，提供了如暂停、继续、撤销、跳过和重试等灵活的任务控制能力，并且支持子流程，流程串行、并行、分支、循环、打回控制等进阶特性。': 'Bamboo can parse, manage and execute user-created process tasks, providing flexible task control capabilities such as pause, resume, undo, skip and retry, and supporting advanced features such as sub-processes, process serialization, parallelism, branching, looping, and hit-and-miss control.',
   // 静态static文件
+  开发者工具: 'Developer Tools',
   蓝鲸助手: 'BK Assistant',
   头部导航列表: 'Header navigation list',
   '云 API': 'BK Cloud API',
@@ -2248,7 +2249,7 @@ export default {
   '删除失败，请重新操作': 'Deletion failed, please try again',
   '更换失败，请重新操作': 'Replacement failed, please try again',
   '镜像 tag 规则': 'Image Tag Rules',
-  '蓝鲸 Buildpack': 'Bk Buildpack',
+  '蓝鲸 Buildpack': 'BK Buildpack',
   'Dockerfile 构建': 'Dockerfile',
   'Dockerfile 路径': 'Dockerfile Path',
   镜像仓库: 'Image Repository',

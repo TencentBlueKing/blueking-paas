@@ -497,7 +497,7 @@ export const PAAS_STATIC_CONFIG = {
                 "list": [
                     {
                         "title": staticI18n.$t("如何使用蓝鲸开发框架？"),
-                        "url": PAAS_DOCS_URL_PREFIX + "/DevelopTools/SaaSGuide/DevBasics/README.md",
+                        "url": BK_DOCS_URL_PREFIX + "/markdown/ZH/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md",
                         "info": staticI18n.$t("集成登录鉴权、安全防护、权限控制等基础模块，更有后台任务、云API调用等样例供您参考")
                     },
                     {

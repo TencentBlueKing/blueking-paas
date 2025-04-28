@@ -26,4 +26,4 @@ class Cluster(BaseModel):
     admin: str
     password: str
     version: str
-    tls: Dict[str, str] = Field(default_factory=dict)
+    tls: Dict[str, str | bool] = Field(default_factory=dict)

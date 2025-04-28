@@ -44,7 +44,6 @@ from paasng.plat_mgt.users.serializers import (
     UpsertAccountFeatureFlagSLZ,
     UpsertSystemAPIClientSLZ,
 )
-from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -214,7 +213,7 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     )
     def list(self, request):
         """获取用户特性列表"""
-        feature_flags = AccountFeatureFlag.objects.all()
+        feature_flags = AccountFeatureFlag.objects.all().order_by("-updated")
         slz = AccountFeatureFlagSLZ(feature_flags, many=True)
         return Response(slz.data)
 
@@ -332,7 +331,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         # 获取有验证关系的客户端 ID 列表
         client_ids = [relation.client_id for relation in app_client_relations]
         # 查询这些ID中活跃的系统API客户端
-        sys_api_clients = SysAPIClient.objects.filter(id__in=client_ids, is_active=True)
+        sys_api_clients = SysAPIClient.objects.filter(id__in=client_ids, is_active=True).order_by("-updated")
 
         # 创建客户端ID到应用代码的映射
         app_code_map = {relation.client_id: relation.bk_app_code for relation in app_client_relations}
@@ -364,11 +363,6 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         bk_app_code, role = data["bk_app_code"], data["role"]
-
-        # 验证应用 ID 是否存在, 如果不存在则返回错误
-        existing_application = Application.objects.filter(code=bk_app_code)
-        if not existing_application.exists():
-            raise error_codes.APP_NOT_FOUND
 
         # 校验应用 ID 是否已经在在授权表中, 如果存在则返回错误
         existing_auth_relation = AuthenticatedAppAsClient.objects.filter(bk_app_code=bk_app_code)

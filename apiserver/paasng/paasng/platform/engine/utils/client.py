@@ -16,11 +16,12 @@
 
 """Engine services module"""
 
-from typing import Dict, Optional
+from typing import Dict
 
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.workloads.images.models import AppImageCredential
@@ -44,7 +45,7 @@ class EngineDeployClient:
         image: str,
         extra_envs: Dict[str, str],
         artifact_type: ArtifactType = ArtifactType.NONE,
-        artifact_metadata: Optional[Dict] = None,
+        artifact_metadata: BuildArtifactMetadata | None = None,
     ) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
@@ -52,7 +53,7 @@ class EngineDeployClient:
             env_variables=extra_envs,
             image=image,
             artifact_type=artifact_type,
-            artifact_metadata=artifact_metadata or {},
+            artifact_metadata=artifact_metadata or BuildArtifactMetadata(),
             tenant_id=self.wl_app.tenant_id,
         )
         return str(build.uuid)

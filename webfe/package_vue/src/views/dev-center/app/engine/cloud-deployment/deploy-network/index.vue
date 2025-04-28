@@ -60,7 +60,7 @@ export default {
       dnsServeData: {
         title: this.$t('DNS 服务器'),
         tips: this.$t('应用可通过 nameservers 字段来设置 DNS 服务器 （效果等同于配置 /etc/resolv.conf 文件）'),
-        headerCol: ['nameserver'],
+        headerCol: ['nameservers'],
         list: [],
         md: 'nameservers.md',
         doc: `${this.GLOBAL.DOC.APP_DESC_CNATIVE}#%E5%9F%9F%E5%90%8D%E8%A7%A3%E6%9E%90specdomainresolution`,

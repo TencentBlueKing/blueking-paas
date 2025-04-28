@@ -20,12 +20,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
@@ -310,18 +312,19 @@ class ApplicationBuilder(BaseBuilder):
         )
 
         # Start the background build process
+        build_metadata = BuildMetadata(
+            image=app_image,
+            use_cnb=build_info.use_cnb,
+            image_repository=app_image_repository,
+            buildpacks=build_process.buildpacks_as_build_env(),
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs,
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "buildpacks": build_process.buildpacks_as_build_env(),
-                "use_cnb": build_info.use_cnb,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
@@ -406,18 +409,19 @@ class DockerBuilder(BaseBuilder):
             invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
 
+        build_metadata = BuildMetadata(
+            image=app_image,
+            image_repository=app_image_repository,
+            use_dockerfile=True,
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs or {},
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "use_dockerfile": True,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )

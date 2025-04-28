@@ -23,6 +23,7 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler, ProcessesHandler
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resource_templates.constants import AppAddOnType
@@ -40,7 +41,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 region = settings.DEFAULT_REGION_NAME
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestCommand:
     @pytest.fixture(autouse=True)
     def _skip_if(self, k8s_version):
@@ -51,7 +52,7 @@ class TestCommand:
     @pytest.fixture()
     def command_model(self, wl_app, wl_build):
         wl_build.image = "busybox:latest"
-        wl_build.artifact_metadata = {"entrypoint": ["sh", "-c"]}
+        wl_build.artifact_metadata = BuildArtifactMetadata(entrypoint=["sh", "-c"])
         wl_build.save()
         config = wl_app.latest_config
         config.runtime.image_pull_policy = ImagePullPolicy.NEVER
@@ -139,7 +140,7 @@ class TestProcessHandler:
     def worker_process(self, wl_app, wl_release):
         return AppProcessManager(app=wl_app).assemble_process("worker", release=wl_release)
 
-    @pytest.mark.mock_get_structured_app
+    @pytest.mark.mock_get_structured_app()
     def test_deploy_processes(self, wl_app, web_process):
         handler = ProcessesHandler.new_by_app(wl_app)
         with (

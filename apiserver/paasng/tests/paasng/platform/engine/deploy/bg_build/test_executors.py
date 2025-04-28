@@ -23,6 +23,7 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paasng.infras.bk_ci import entities
 from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.platform.engine.constants import BuildStatus
@@ -41,7 +42,7 @@ class TestDefaultBuildProcessExecutor:
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
         bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
-        build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"], image=""))
+        build_instance = bpe.create_and_bind_build_instance(BuildMetadata(image=""))
         assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
         assert build_instance.owner == bk_deployment_full.operator, "build instance 绑定 owner 异常"
         assert build_proc.status == BuildStatus.SUCCESSFUL, "build_process status 未设置为 SUCCESSFUL"
@@ -59,7 +60,7 @@ class TestDefaultBuildProcessExecutor:
             mock.patch("paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"),
             mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"),
         ):
-            bpe.execute({"image": ""})
+            bpe.execute(BuildMetadata(image=""))
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"
 
 
@@ -114,13 +115,7 @@ class TestPipelineBuildProcessExecutor:
             "paasng.platform.engine.deploy.bg_build.executors.BkCIPipelineClient", new=StubBkCIPipelineClient
         ):
             bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
-            bpe.execute(
-                {
-                    "image": "busybox:latest",
-                    "image_repository": "dockerhub.com",
-                    "use_dockerfile": True,
-                }
-            )
+            bpe.execute(BuildMetadata(image="busybox:latest", image_repository="dockerhub.com", use_dockerfile=True))
 
         assert build_proc.status == BuildStatus.SUCCESSFUL
 

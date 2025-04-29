@@ -995,12 +995,8 @@ export default {
   },
   methods: {
     async init() {
-      await Promise.all([
-        this.fetchLanguageInfo(),
-        this.fetchSourceControlTypesData(),
-        this.fetchAdvancedOptions(),
-        this.getPluginTmpls(),
-      ]);
+      await Promise.all([this.fetchLanguageInfo(), this.fetchSourceControlTypesData(), this.fetchAdvancedOptions()]);
+      this.getPluginTmpls();
       // 收集依赖
       const data = this.collectDependencies();
       this.initSidebarFormData(data);
@@ -1078,7 +1074,7 @@ export default {
     },
 
     // 获取代码源仓库信息
-    fetchSourceControlTypesData() {
+    async fetchSourceControlTypesData() {
       this.$store.dispatch('fetchAccountAllowSourceControlType', {}).then((res) => {
         this.sourceControlTypes = res;
         this.sourceControlTypes = this.sourceControlTypes.map((e) => {

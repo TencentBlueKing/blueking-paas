@@ -183,8 +183,9 @@ export default {
     // 删除
     async handleDelete(row) {
       try {
+        console.log('当前行数据 (row):', row);
         await this.$store.dispatch('tenant/deleteResourcePool', {
-          planId: row.plan,
+          planId: row.plan_id,
           id: row.uuid,
         });
         this.$paasMessage({

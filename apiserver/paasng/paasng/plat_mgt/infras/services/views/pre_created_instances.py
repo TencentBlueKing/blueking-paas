@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -30,6 +31,11 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.pre_created_instances"],
+        operation_description="全量预创建实例列表",
+        responses={status.HTTP_200_OK: PlanWithPreCreatedInstanceSLZ(many=True)},
+    )
     def list_all(self, request, *args, **kwargs):
         qs = Plan.objects.filter(
             service__in=[service for service in Service.objects.all() if service.config.get("provider_name") == "pool"]
@@ -37,12 +43,22 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         page = self.paginate_queryset(qs)
         return Response(PlanWithPreCreatedInstanceSLZ(page or qs, many=True).data)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.pre_created_instances"],
+        operation_description="预创建实例列表",
+        responses={status.HTTP_200_OK: PlanWithPreCreatedInstanceSLZ(many=True)},
+    )
     def list(self, request, plan_id, *args, **kwargs):
         services = [service for service in Service.objects.all() if service.config.get("provider_name") == "pool"]
         qs = Plan.objects.filter(service__in=services, plan_id=plan_id)
         page = self.paginate_queryset(qs)
         return Response(PlanWithPreCreatedInstanceSLZ(page or qs, many=True).data)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.pre_created_instances"],
+        operation_description="预创建实例列表",
+        responses={status.HTTP_201_CREATED: ""},
+    )
     def create(self, request, plan_id, *args, **kwargs):
         slz = PreCreatedInstanceUpsertSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -56,6 +72,11 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         )
         return Response(status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.pre_created_instances"],
+        operation_description="预创建实例列表",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
     def update(self, request, plan_id, instance_id, *args, **kwargs):
         slz = PreCreatedInstanceUpsertSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -66,6 +87,11 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat-mgt.infras.pre_created_instances"],
+        operation_description="预创建实例列表",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
         instance.delete()

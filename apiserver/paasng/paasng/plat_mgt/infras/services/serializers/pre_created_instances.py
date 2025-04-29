@@ -18,12 +18,12 @@
 from rest_framework import serializers
 
 
-class PreCreatedInstanceUpsertSLZ(serializers.ModelSerializer):
+class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     config = serializers.JSONField(help_text="预创建实例的配置")
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
 
 
-class PreCreatedInstanceOutputSLZ(serializers.ModelSerializer):
+class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     plan_id = serializers.CharField(help_text="方案 ID", source="plan.uuid")
     uuid = serializers.CharField(help_text="实例 ID")
     config = serializers.JSONField(help_text="预创建实例的配置")

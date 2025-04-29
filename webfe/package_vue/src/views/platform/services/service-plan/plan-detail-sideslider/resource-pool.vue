@@ -184,7 +184,7 @@ export default {
     async handleDelete(row) {
       try {
         await this.$store.dispatch('tenant/deleteResourcePool', {
-          planId: row.plan,
+          planId: row.plan.planId,
           id: row.uuid,
         });
         this.$paasMessage({

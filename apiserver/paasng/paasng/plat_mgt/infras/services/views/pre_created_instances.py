@@ -69,4 +69,4 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
         instance.delete()
-        Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)

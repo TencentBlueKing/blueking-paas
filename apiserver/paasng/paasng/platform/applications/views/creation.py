@@ -61,6 +61,7 @@ from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeGatewayServiceError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
 from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.sourcectl.initializer import create_new_repo_and_initialized
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -161,15 +162,20 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         if advanced_options := params.get("advanced_options"):
             env_cluster_names = advanced_options.get("env_cluster_names", {})
 
+        repo_type = src_cfg.get("source_control_type")
         source_init_result = init_module_in_view(
             module,
-            repo_type=src_cfg.get("source_control_type"),
+            repo_type=repo_type,
             repo_url=src_cfg.get("source_repo_url"),
             repo_auth_info=src_cfg.get("source_repo_auth_info"),
             source_dir=src_cfg.get("source_dir", ""),
             env_cluster_names=env_cluster_names,
             bkapp_spec=params["bkapp_spec"],
         ).source_init_result
+
+        # 创建代码仓库并初始化
+        if src_cfg.get("is_new_repo_and_init"):
+            create_new_repo_and_initialized(module, repo_type, request.user.username)
 
         post_create_application.send(sender=self.__class__, application=application)
 

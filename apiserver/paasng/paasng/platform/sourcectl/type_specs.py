@@ -37,6 +37,7 @@ from paasng.platform.sourcectl.controllers.bk_svn import SvnRepoController
 from paasng.platform.sourcectl.controllers.gitee import GiteeRepoController
 from paasng.platform.sourcectl.controllers.github import GitHubRepoController
 from paasng.platform.sourcectl.controllers.gitlab import GitlabRepoController
+from paasng.platform.sourcectl.initializer import TcGitRepoInitializer
 from paasng.platform.sourcectl.source_types import DiffFeature, SourceTypeSpec
 
 
@@ -44,6 +45,7 @@ class BkSvnSourceTypeSpec(SourceTypeSpec):
     connector_class = IntegratedSvnAppRepoConnector
     repo_controller_class = SvnRepoController
     oauth_backend_class = None
+    initializer_class = None
     basic_type = "svn"
     diff_feature = DiffFeature(method=DiffFeatureType.INTERNAL, enabled=True)
 
@@ -66,6 +68,7 @@ class GitHubSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GitHubRepoController
     oauth_backend_class = GitHubBackend
+    initializer_class = None
     basic_type = "git"
 
     _default_label = "GitHub"
@@ -79,6 +82,7 @@ class GiteeSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GiteeRepoController
     oauth_backend_class = GiteeBackend
+    initializer_class = None
     basic_type = "git"
 
     _default_label = "Gitee"
@@ -91,6 +95,7 @@ class GiteeSourceTypeSpec(SourceTypeSpec):
 class BareGitSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalBasicAuthRepoConnector
     repo_controller_class = BareGitRepoController
+    initializer_class = None
     oauth_backend_class = None
     basic_type = "git"
     diff_feature = DiffFeature(method=None, enabled=False)
@@ -106,6 +111,7 @@ class BareSvnSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalBasicAuthRepoConnector
     repo_controller_class = BareSvnRepoController
     oauth_backend_class = None
+    initializer_class = None
     basic_type = "svn"
     diff_feature = DiffFeature(method=None, enabled=False)
 
@@ -120,6 +126,7 @@ class GitLabSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GitlabRepoController
     oauth_backend_class = GitLabBackend
+    initializer_class = None
     basic_type = "git"
 
     _default_label = "GitLab"
@@ -137,6 +144,7 @@ try:
         connector_class = ExternalGitAppRepoConnector
         repo_controller_class = TcGitRepoController
         oauth_backend_class = TcGitBackend
+        initializer_class = TcGitRepoInitializer
         basic_type = "git"
 
         _default_label = _("工蜂 Git")

@@ -622,6 +622,16 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # SMART_IMAGE_TAG: v0.0.1-smart
 # SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
+## ------------------------------------ 初始化代码仓库配置项 ------------------------------------
+## 代码仓库组，如果应用选择由平台创建仓库，则在仓库组下创建一个以应用 ID 为名的代码仓库
+# APP_REPOSITORY_GROUP = settings.get("APP_REPOSITORY_GROUP", "")
+## 源码仓库 API、凭证等相关配置
+# APP_REPO_CONF:
+#  api_url: 'http://api.example.com/'
+#  private_token: ''
+#  email: 'blueking@tencent.com'
+#  username: 'blueking'
+
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 
 ## 插件中心「源码仓库」相关配置
@@ -630,6 +640,7 @@ BK_CI_CLIENT_USERNAME = "blueking"
 #  private_token: ''
 #  email: 'blueking@tencent.com'
 #  username: 'blueking'
+#  certificate_id: xxxxxx
 
 ## 插件开发中心在权限中心注册的系统 ID
 # IAM_PLUGINS_CENTER_SYSTEM_ID: bk_plugins

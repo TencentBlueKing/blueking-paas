@@ -149,3 +149,17 @@ class OauthAuthorizationRequired(Exception):
         super().__init__(authorization_url, auth_docs)
         self.authorization_url = authorization_url
         self.auth_docs = auth_docs
+
+
+class APIError(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class AuthTokenMissingError(Exception):
+    """缺少鉴权凭证错误"""
+
+
+class RepoNameConflict(APIError):
+    """仓库名称冲突, 同名仓库已存在"""

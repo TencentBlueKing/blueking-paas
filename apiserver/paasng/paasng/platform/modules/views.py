@@ -82,6 +82,7 @@ from paasng.platform.modules.serializers import (
     ModuleSLZ,
 )
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.initializer import create_new_repo_and_initialized
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.api_docs import openapi_empty_response
@@ -305,9 +306,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             tenant_id=application.tenant_id,
         )
 
+        repo_type = source_config.get("source_control_type")
         ret = init_module_in_view(
             module,
-            repo_type=source_config.get("source_control_type"),
+            repo_type=repo_type,
             repo_url=source_config.get("source_repo_url"),
             repo_auth_info=source_config.get("source_repo_auth_info"),
             source_dir=source_config.get("source_dir", ""),
@@ -315,6 +317,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             env_cluster_names=get_app_cluster_names(application),
             bkapp_spec=data["bkapp_spec"],
         )
+
+        # 创建代码仓库并初始化
+        if data.get("is_new_repo_and_init"):
+            create_new_repo_and_initialized(module, repo_type, request.user.username)
 
         return Response(
             data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},

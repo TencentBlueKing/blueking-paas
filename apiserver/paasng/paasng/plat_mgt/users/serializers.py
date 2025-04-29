@@ -16,8 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from django.conf import settings
 from rest_framework import serializers
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
@@ -38,6 +40,13 @@ class CreatePlatformManagerSLZ(serializers.Serializer):
 
     user = serializers.CharField(help_text="用户 ID")
     tenant_id = serializers.CharField(help_text="租户 ID", required=False)
+
+    def validate(self, attrs):
+        """根据多租户模式验证和填充租户ID"""
+        # 在未开启多租户模式且未提供租户ID的情况下，使用默认租户ID
+        if not getattr(settings, "ENABLE_MULTI_TENANT_MODE", False) and "tenant_id" not in attrs:
+            attrs["tenant_id"] = DEFAULT_TENANT_ID
+        return attrs
 
 
 # --------- 用户特性相关序列化器 ---------

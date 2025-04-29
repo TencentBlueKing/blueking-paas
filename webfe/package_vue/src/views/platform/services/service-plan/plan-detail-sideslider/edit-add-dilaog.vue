@@ -162,9 +162,10 @@ export default {
     // 添加资源池
     async addResourcePool(data) {
       try {
+        const planId = this.data.planId;
         await this.$store.dispatch('tenant/addResourcePool', {
-          planId: this.data.planId,
-          data: data,
+          planId,
+          data,
         });
         this.$paasMessage({
           theme: 'success',

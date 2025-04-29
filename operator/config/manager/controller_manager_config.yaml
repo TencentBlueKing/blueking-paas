@@ -21,6 +21,8 @@ ingressPlugin:
     redisConfigKey: ""
   paasAnalysis:
     enabled: false
+  tenantGuard:
+    enabled: false
 resLimits:
   procDefaultCPULimit: 4000m
   procDefaultMemLimit: 1024Mi

@@ -116,21 +116,8 @@ class TestApplicationListView:
     ):
         """测试应用列表的过滤功能"""
 
-        base_url = reverse("plat_mgt.applications.list_applications")
-
-        # 构建查询字符串
-        params = []
-        for key, value in filter_key.items():
-            if isinstance(value, list):
-                for item in value:
-                    params.append(f"{key}={item}")
-            else:
-                params.append(f"{key}={value}")
-        query_string = "&".join(params)
-        url = f"{base_url}?{query_string}"
-
         # 发送请求并验证基础响应
-        rsp = plat_mgt_api_client.get(url)
+        rsp = plat_mgt_api_client.get(reverse("plat_mgt.applications.list_applications"), filter_key)
         assert rsp.status_code == 200
         assert rsp.data["count"] == expected_count
 
@@ -175,17 +162,23 @@ class TestApplicationListView:
         """测试获取租户 ID 列表"""
 
         url = reverse("plat_mgt.applications.list_tenant_id")
-        rsp = plat_mgt_api_client.get(url)
 
+        # 测试不带查询参数的情况
+        rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
         assert len(rsp.data) == 3
+        assert rsp.data == [
+            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 2},
+            {"tenant_id": "tenant1", "app_count": 2},
+            {"tenant_id": "tenant2", "app_count": 1},
+        ]
 
-        # 验证第一项是全局租户数据
-        assert rsp.data[0]["tenant_id"] == AppTenantMode.GLOBAL.value
-        assert rsp.data[0]["app_count"] == 2
-
-        # 验证单租户数据
-        assert rsp.data[1]["tenant_id"] == "tenant1"
-        assert rsp.data[1]["app_count"] == 2
-        assert rsp.data[2]["tenant_id"] == "tenant2"
-        assert rsp.data[2]["app_count"] == 1
+        # 测试携带查询参数的情况
+        rsp = plat_mgt_api_client.get(url, {"app_tenant_mode": AppTenantMode.SINGLE.value})
+        assert rsp.status_code == 200
+        assert len(rsp.data) == 3
+        assert rsp.data == [
+            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 0},
+            {"tenant_id": "tenant1", "app_count": 2},
+            {"tenant_id": "tenant2", "app_count": 1},
+        ]

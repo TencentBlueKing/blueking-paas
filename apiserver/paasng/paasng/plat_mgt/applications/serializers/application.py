@@ -86,7 +86,7 @@ class ApplicationFilterSLZ(serializers.Serializer):
         allow_null=True,
         help_text="应用状态: true(正常) / false(下架), null 或不传表示不进行过滤",
     )
-    order_by = serializers.ListField(default=["-created", "is_active"], help_text="排序字段")
+    order_by = serializers.ListField(child=serializers.CharField(), default=["-created"], help_text="排序字段")
 
     def validate_order_by(self, fields) -> list:
         """校验排序字段"""

@@ -64,6 +64,7 @@ class ApplicationFilterBackend(BaseFilterBackend):
             queryset = queryset.filter(is_active=is_active)
 
         # 处理排序
-        queryset = queryset.order_by(*validate_params.get("order_by"))
+        order_by = ["-is_active"] + (validate_params.get("order_by") or [])
+        queryset = queryset.order_by(*order_by)
 
         return queryset

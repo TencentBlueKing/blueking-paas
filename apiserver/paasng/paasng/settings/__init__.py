@@ -42,6 +42,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 
 import copy
 import os
+import ssl
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -638,6 +639,18 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
         "master_name": settings.get("CELERY_RESULT_BACKEND_SENTINEL_MASTER_NAME", SENTINEL_MASTER_NAME),
         "sentinel_kwargs": {"password": settings.get("CELERY_RESULT_BACKEND_SENTINEL_PASSWORD", SENTINEL_PASSWORD)},
     }
+
+# Celery TLS 证书配置
+CELERY_BROKER_USE_SSL = settings.get("CELERY_BROKER_USE_SSL") or None
+
+if CELERY_BROKER_USE_SSL and isinstance(CELERY_BROKER_USE_SSL, dict):
+    for k, v in CELERY_BROKER_USE_SSL.items():
+        # 环境变量中只会将其设置为 bool 值，这里需要手动转换成 ssl 的枚举类值
+        # 兼容 amqp -> cert_reqs, redis -> ssl_cert_reqs 两种 key
+        # ref: https://docs.celeryq.dev/en/stable/userguide/configuration.html#broker-use-ssl
+        if k in ["cert_reqs", "ssl_cert_reqs"]:
+            # 只有显式指定为 False，才允许跳过证书检查
+            CELERY_BROKER_USE_SSL[k] = ssl.CERT_NONE if v is False else ssl.CERT_REQUIRED
 
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
@@ -1300,9 +1313,9 @@ SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking
 # S-Mart 基础镜像信息
 _SMART_TAG_SUFFIX = "smart"
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f'{parse_image(settings.get("APP_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f'{parse_image(settings.get("HEROKU_RUNNER_IMAGE", "")).tag or "latest"}-{_SMART_TAG_SUFFIX}'
+SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

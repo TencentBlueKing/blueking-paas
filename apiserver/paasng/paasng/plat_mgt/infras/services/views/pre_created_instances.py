@@ -56,7 +56,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.pre_created_instances"],
-        operation_description="预创建实例列表",
+        operation_description="创建预创建实例",
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, plan_id, *args, **kwargs):
@@ -74,7 +74,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.pre_created_instances"],
-        operation_description="预创建实例列表",
+        operation_description="更新预创建实例",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, plan_id, instance_id, *args, **kwargs):
@@ -89,7 +89,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.pre_created_instances"],
-        operation_description="预创建实例列表",
+        operation_description="删除预创建实例",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):

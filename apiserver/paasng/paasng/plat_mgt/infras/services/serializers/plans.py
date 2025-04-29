@@ -20,7 +20,7 @@ from rest_framework import serializers
 from paasng.accessories.servicehub.services import PlanObj
 from paasng.accessories.services.models import PreCreatedInstance
 
-from .pre_created_instances import PreCreatedInstanceSLZ
+from .pre_created_instances import PreCreatedInstanceOutputSLZ
 
 
 class BasePlanObjSLZ(serializers.Serializer):
@@ -52,7 +52,7 @@ class PlanWithSvcSLZ(BasePlanObjSLZ):
         # 若非资源池类型的服务, 不返回预创建实例
         if plan.service and plan.service.config.get("provider_name") == "pool":
             pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
-            return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
+            return PreCreatedInstanceOutputSLZ(pre_created_instances, many=True).data
         return []
 
 
@@ -65,5 +65,5 @@ class PlanWithPreCreatedInstanceSLZ(BasePlanObjSLZ):
         # 若非资源池类型的服务, 不返回预创建实例
         if plan.service and plan.service.config.get("provider_name") == "pool":
             pre_created_instances = PreCreatedInstance.objects.filter(plan__uuid=plan.uuid)
-            return PreCreatedInstanceSLZ(pre_created_instances, many=True).data
+            return PreCreatedInstanceOutputSLZ(pre_created_instances, many=True).data
         return []

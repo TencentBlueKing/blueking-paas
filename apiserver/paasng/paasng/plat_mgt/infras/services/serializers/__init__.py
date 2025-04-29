@@ -27,7 +27,7 @@ from .plans import (
     PlanWithPreCreatedInstanceSLZ,
     PlanWithSvcSLZ,
 )
-from .pre_created_instances import PreCreatedInstanceSLZ
+from .pre_created_instances import PreCreatedInstanceOutputSLZ, PreCreatedInstanceUpsertSLZ
 from .services import ServiceObjOutputSLZ, ServiceUpsertSLZ
 
 __all__ = [
@@ -45,5 +45,6 @@ __all__ = [
     "ServiceObjOutputSLZ",
     "ServiceUpsertSLZ",
     # pre_created_instance
-    "PreCreatedInstanceSLZ",
+    "PreCreatedInstanceUpsertSLZ",
+    "PreCreatedInstanceOutputSLZ",
 ]

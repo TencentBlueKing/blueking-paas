@@ -71,11 +71,16 @@ urlpatterns = [
     # 平台管理-增强服务管理-资源池
     path(
         "api/plat_mgt/infras/pre_created_instances/$",
+        views.PreCreatedInstanceViewSet.as_view({"get": "list_all"}),
+        name="plat_mgt.infras.pre_created_instances.list_all",
+    ),
+    path(
+        "api/plat_mgt/infras/plans/<str:plan_id>/pre_created_instances/$",
         views.PreCreatedInstanceViewSet.as_view({"post": "create", "get": "list"}),
         name="plat_mgt.infras.pre_created_instances",
     ),
     path(
-        "api/plat_mgt/infras/pre_created_instances/(?P<plan_id>[^/]+)/(?P<uuid>[^/]+)/$",
+        "api/plat_mgt/infras/plans/<str:plan_id>/pre_created_instances/<str:instance_id>/$",
         views.PreCreatedInstanceViewSet.as_view({"delete": "destroy", "put": "update"}),
         name="plat_mgt.infras.pre_created_instances.detail",
     ),

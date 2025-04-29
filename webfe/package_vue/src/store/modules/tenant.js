@@ -291,22 +291,22 @@ export default {
     /**
      * 添加资源池
      */
-    addResourcePool({}, { data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created-_instances/`;
+    addResourcePool({}, { planId,data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/`;
       return http.post(url, data);
     },
     /**
      * 修改资源池
      */
     updateResourcePool({}, { planId, id, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created_instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/${id}/`;
       return http.put(url, data);
     },
     /**
      * 删除资源池
      */
     deleteResourcePool({}, { planId, id }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created_instances/${planId}/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/${id}/`;
       return http.delete(url);
     },
     /**

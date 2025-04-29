@@ -163,7 +163,8 @@ export default {
     async addResourcePool(data) {
       try {
         await this.$store.dispatch('tenant/addResourcePool', {
-          data,
+          planId: this.data.planId,
+          data: data,
         });
         this.$paasMessage({
           theme: 'success',

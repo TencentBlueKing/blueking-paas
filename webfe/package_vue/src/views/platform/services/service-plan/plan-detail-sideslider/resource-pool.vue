@@ -176,7 +176,7 @@ export default {
         isShow: true,
         row,
         type: 'edit',
-        planId: row.plan,
+        planId: row.plan_id,
         service: this.formatServiceName(),
       };
     },

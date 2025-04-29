@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from typing import Any, Dict
+
 from django.conf import settings
 from rest_framework import serializers
 
@@ -41,11 +43,14 @@ class CreatePlatformManagerSLZ(serializers.Serializer):
     user = serializers.CharField(help_text="用户 ID")
     tenant_id = serializers.CharField(help_text="租户 ID", required=False)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         """根据多租户模式验证和填充租户ID"""
-        # 在未开启多租户模式且未提供租户ID的情况下，使用默认租户ID
-        if not getattr(settings, "ENABLE_MULTI_TENANT_MODE", False) and "tenant_id" not in attrs:
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            # 如果多租户模式未启用，则将租户 ID 设置为默认值
             attrs["tenant_id"] = DEFAULT_TENANT_ID
+        # 开启多租户, tenant_id 为必填项
+        elif not attrs.get("tenant_id"):
+            raise serializers.ValidationError({"tenant_id": "Tenant ID is required when multi-tenant mode is enabled"})
         return attrs
 
 

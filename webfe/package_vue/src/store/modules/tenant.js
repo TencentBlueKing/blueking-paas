@@ -306,7 +306,7 @@ export default {
      * 删除资源池
      */
     deleteResourcePool({}, { planId, id }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/${id}/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/pre_created_instances/${planId}/${id}/`;
       return http.delete(url);
     },
     /**

@@ -183,7 +183,7 @@ export default {
       try {
         const { planId, row } = this.data;
         await this.$store.dispatch('tenant/updateResourcePool', {
-          planId:this.data.planId,
+          planId,
           id: row.uuid,
           data,
         });

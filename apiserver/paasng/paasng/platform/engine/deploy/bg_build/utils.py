@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING, Dict, Optional
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
+
 # NOTE: Import kube resource related modules from paas_wl
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
@@ -55,7 +57,7 @@ def generate_slug_path(bp: BuildProcess) -> str:
     return f"{app.region}/home/{slug_name}/push"
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict[str, str]:
     """Generate all env vars required for building."""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
@@ -64,10 +66,10 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
 
     # TODO: 支持构建镜像到私有仓库
     # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
-    if metadata.get("use_dockerfile"):
+    if metadata.use_dockerfile:
         # build application form Dockerfile
-        image_repository = metadata["image_repository"]
-        output_image = metadata["image"]
+        image_repository = metadata.image_repository
+        output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -76,10 +78,10 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())),
         )
-    elif metadata.get("use_cnb"):
+    elif metadata.use_cnb:
         # build application as image
-        image_repository = metadata["image_repository"]
-        output_image = metadata["image"]
+        image_repository = metadata.image_repository
+        output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -123,8 +125,7 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
     if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
         env_vars.update(get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL))
 
-    if metadata:
-        update_env_vars_with_metadata(env_vars, metadata)
+    update_env_vars_with_metadata(env_vars, metadata)
 
     return env_vars
 
@@ -145,21 +146,19 @@ def generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
     }
 
 
-def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
+def update_env_vars_with_metadata(env_vars: Dict, metadata: BuildMetadata):
     """Update slugbuilder envs from metadata into env_vars
 
     :param env_vars: slugbuilder envs dict
-    :param metadata: metadata dict
-    :return:
+    :param metadata: BuildMetadata obj
     """
     # All system built-in vars were injected by this step
-    if "extra_envs" in metadata:
-        env_vars.update(metadata["extra_envs"])
+    if metadata.extra_envs:
+        env_vars.update(metadata.extra_envs)
 
-    buildpacks = metadata.get("buildpacks")
-    if buildpacks:
+    if metadata.buildpacks:
         # slugbuilder 自动下载指定的 buildpacks
-        env_vars["REQUIRED_BUILDPACKS"] = buildpacks
+        env_vars["REQUIRED_BUILDPACKS"] = metadata.buildpacks
 
 
 def prepare_slugbuilder_template(

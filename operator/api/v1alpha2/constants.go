@@ -115,6 +115,7 @@ const (
 	// ResourceTypeKey 注解中存储资源类型的键名
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
 	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
+	// Deprecated: 新部署的 bkapp 模型已不再包含该字段, 保留仅用于兼容存量模型
 	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"

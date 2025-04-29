@@ -163,6 +163,7 @@ export default {
     async addResourcePool(data) {
       try {
         await this.$store.dispatch('tenant/addResourcePool', {
+          planId: this.data.planId,
           data,
         });
         this.$paasMessage({
@@ -181,10 +182,10 @@ export default {
     // 编辑资源池
     async updateResourcePool(data) {
       try {
-        const { planId, row } = this.data;
+        console.log('当前行数据 (planId):', this.data);
         await this.$store.dispatch('tenant/updateResourcePool', {
-          planId,
-          id: row.uuid,
+          planId:this.data.planId,
+          id: this.data.row.uuid,
           data,
         });
         this.$paasMessage({

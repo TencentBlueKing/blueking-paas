@@ -185,7 +185,7 @@ export default {
       try {
         console.log('当前行数据 (row):', row);
         await this.$store.dispatch('tenant/deleteResourcePool', {
-          planId: row.plan,
+          planId: row.planId,
           id: row.uuid,
         });
         this.$paasMessage({

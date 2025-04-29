@@ -18,6 +18,7 @@
 from django.db.models import Q
 from rest_framework.filters import BaseFilterBackend
 
+from paasng.plat_mgt.applications.serializers.application import ApplicationFilterSLZ
 from paasng.platform.applications.models import Application
 
 
@@ -28,44 +29,41 @@ class ApplicationFilterBackend(BaseFilterBackend):
         if queryset.model != Application:
             raise ValueError("ApplicationFilterBackend only support to filter Application")
 
-        # 标签过滤 - system, tenant, tenant2
-        app_tenant_id = request.query_params.get("app_tenant_id", None)
-        if app_tenant_id:
-            queryset = queryset.filter(app_tenant_id=app_tenant_id)
+        slz = ApplicationFilterSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        validate_params = slz.data
 
-        # 关键字过滤 - 名称/ID 搜索
-        search = request.query_params.get("search", None)
+        # 搜索应用 名称/ID 过滤
+        search = validate_params.get("search")
         if search:
             queryset = queryset.filter(Q(name__icontains=search) | Q(code__icontains=search))
 
-        # 专门的应用名称过滤
-        app_name = request.query_params.get("name")
-        if app_name:
-            queryset = queryset.filter(name__icontains=app_name)
+        # 应用名称过滤
+        name = validate_params.get("name")
+        if name:
+            queryset = queryset.filter(name__icontains=name)
 
-        # 租户类型过滤
-        app_tenant_mode = request.query_params.get("app_tenant_mode")
+        # 应用租户ID过滤
+        app_tenant_id = validate_params.get("app_tenant_id")
+        if app_tenant_id:
+            queryset = queryset.filter(app_tenant_id=app_tenant_id)
+
+        # 应用租户模式过滤
+        app_tenant_mode = validate_params.get("app_tenant_mode")
         if app_tenant_mode:
             queryset = queryset.filter(app_tenant_mode=app_tenant_mode)
 
         # 应用类型过滤
-        type = request.query_params.get("type")
-        if type:
-            queryset = queryset.filter(type=type)
+        app_type = validate_params.get("type")
+        if app_type:
+            queryset = queryset.filter(type=app_type)
 
-        # 状态过滤
-        status = request.query_params.get("is_active")
-        if status is not None:
-            queryset = queryset.filter(is_active=status.lower() == "true")
+        # 应用激活状态过滤
+        is_active = validate_params.get("is_active")
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active)
 
-        # 排序操作
-        ordering = request.query_params.get("ordering")
-        if ordering:
-            # 支持多个字段排序, 用逗号分隔
-            # 字段前添加 '-' 表示降序
-            order_fields = ordering.split(",")
-            queryset = queryset.order_by(*order_fields)
-        else:
-            queryset = queryset.order_by("-created")
+        # 处理排序
+        queryset = queryset.order_by(*validate_params.get("order_by"))
 
         return queryset

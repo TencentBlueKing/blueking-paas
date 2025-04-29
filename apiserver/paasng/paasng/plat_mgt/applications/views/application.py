@@ -15,12 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.db.models import Count
+from collections import Counter
+
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
@@ -32,9 +35,10 @@ from paasng.plat_mgt.applications.serializers.application import (
     TenantModeListSLZ,
 )
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
-from paasng.plat_mgt.applications.utils.pagination import ApplicationListPagination
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tasks import cal_app_resource_quotas
+from paasng.utils.error_codes import error_codes
 
 
 class ApplicationView(viewsets.GenericViewSet):
@@ -43,7 +47,7 @@ class ApplicationView(viewsets.GenericViewSet):
     queryset = Application.objects.all()
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
     filter_backends = [ApplicationFilterBackend]
-    pagination_class = ApplicationListPagination
+    pagination_class = LimitOffsetPagination
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
@@ -52,12 +56,17 @@ class ApplicationView(viewsets.GenericViewSet):
     )
     def list(self, request, *args, **kwargs):
         """获取应用列表"""
-
         queryset = self.get_queryset()
-        queryset = self.filter_queryset(queryset)
+        filter_queryset = self.filter_queryset(queryset)
 
-        page = self.paginate_queryset(queryset)
-        slz = ApplicationSLZ(page, many=True, context={"request": request})
+        page = self.paginate_queryset(filter_queryset)
+        app_resource_quotas = self.get_app_resource_quotas()
+
+        slz = ApplicationSLZ(
+            page,
+            many=True,
+            context={"request": request, "app_resource_quotas": app_resource_quotas},
+        )
         return self.get_paginated_response(slz.data)
 
     @swagger_auto_schema(
@@ -70,21 +79,41 @@ class ApplicationView(viewsets.GenericViewSet):
         app_code = kwargs.get("app_code")
         app = self.get_queryset().filter(code=app_code).first()
         if not app:
-            return Response({"detail": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+            raise error_codes.APP_NOT_FOUND.f("Application with code '{}' not found.".format(app_code))
 
-        slz = ApplicationDetailSLZ(app)
+        app_resource_quotas = self.get_app_resource_quotas()
+        slz = ApplicationDetailSLZ(
+            app,
+            context={"request": request, "app_resource_quotas": app_resource_quotas},
+        )
         return Response(slz.data, status=status.HTTP_200_OK)
+
+    def get_app_resource_quotas(self) -> dict:
+        """获取应用资源配额信息，优先从 Redis 缓存获取，缺失时触发异步任务计算"""
+        # 尝试从 Redis 中获取资源配额
+        store = DefaultRediStore(rkey="quotas::app")
+        app_resource_quotas = store.get()
+
+        if not app_resource_quotas:
+            # 触发异步任务计算资源配额
+            # 计算完成后会将结果存入 Redis 中
+            cal_app_resource_quotas.delay()
+
+        return app_resource_quotas or {}
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用租户类型列表",
         responses={status.HTTP_200_OK: TenantIdListSLZ(many=True)},
     )
-    def list_tenant_id(self, request, *args, **kwargs):
+    def list_tenant_id(self, request):
         """获取数据库中各租户的应用数量"""
+        # 应用所有过滤条件, 获取过滤后的查询集
+        filtered_queryset = self.filter_queryset(self.get_queryset())
+
         tenant_id_list = []
         # 查询全租户可用的应用
-        global_apps = self.get_queryset().filter(app_tenant_mode=AppTenantMode.GLOBAL.value)
+        global_apps = filtered_queryset.filter(app_tenant_mode=AppTenantMode.GLOBAL.value)
         tenant_id_list.append(
             {
                 "tenant_id": AppTenantMode.GLOBAL.value,
@@ -92,20 +121,12 @@ class ApplicationView(viewsets.GenericViewSet):
             }
         )
         # 查询各个租户的应用数量
-        tenant_id_counts = (
-            self.get_queryset()
-            .filter(app_tenant_mode=AppTenantMode.SINGLE.value)
-            .values("app_tenant_id")
-            .annotate(app_count=Count("id"))
-            .order_by("app_tenant_id")
+        tenant_ids = filtered_queryset.filter(app_tenant_mode=AppTenantMode.SINGLE.value).values_list(
+            "app_tenant_id", flat=True
         )
-        for tenant in tenant_id_counts:
-            tenant_id_list.append(
-                {
-                    "tenant_id": tenant["app_tenant_id"],
-                    "app_count": tenant["app_count"],
-                }
-            )
+        tenant_id_counts = Counter(tenant_ids)
+        for tenant_id in sorted(tenant_id_counts.keys()):
+            tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
         slz = TenantIdListSLZ(tenant_id_list, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
@@ -116,11 +137,7 @@ class ApplicationView(viewsets.GenericViewSet):
     )
     def list_tenant_mode(self, request, *args, **kwargs):
         """获取应用租户模式列表"""
-        tenant_modes = []
-        for enum_mode in AppTenantMode:
-            tenant_modes.append(
-                {"type": enum_mode[0], "label": enum_mode[1]},
-            )
+        tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
         slz = TenantModeListSLZ(tenant_modes, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
@@ -131,10 +148,6 @@ class ApplicationView(viewsets.GenericViewSet):
     )
     def list_app_types(self, request):
         """获取应用类型列表"""
-        app_types = []
-        for enum_type in ApplicationType:
-            app_types.append(
-                {"type": enum_type[0], "label": enum_type[1]},
-            )
+        app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
         slz = ApplicationTypeListSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)

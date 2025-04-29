@@ -86,26 +86,26 @@ class TestApplicationListView:
     @pytest.mark.parametrize(
         ("filter_key", "expected_count", "expected_codes"),
         [
-            ({}, 5, {"global-app1", "global-app2", "single-app1", "single-app2", "single-app3"}),
+            ({}, 5, {"single-app1", "global-app2", "global-app1", "single-app3", "single-app2"}),
             # 测试通过名称或 id 搜索
             ({"search": "全局"}, 2, {"global-app1", "global-app2"}),
             ({"search": "single"}, 3, {"single-app1", "single-app2", "single-app3"}),
             # 测试过滤条件
             ({"name": "全局"}, 2, ["global-app1", "global-app2"]),
             ({"app_tenant_id": "global-tenant-1"}, 1, ["global-app1"]),
-            ({"type": "default"}, 2, ["global-app1", "global-app2"]),
+            ({"type": "default"}, 2, ["global-app2", "global-app1"]),
             ({"app_tenant_mode": "global"}, 2, {"global-app1", "global-app2"}),
             ({"is_active": "true"}, 3, {"global-app1", "global-app2", "single-app1"}),
             # 测试排序功能
             (
-                {"ordering": "is_active,-created"},
+                {"order_by": ["is_active", "-created"]},
                 5,
                 ["single-app1", "global-app2", "global-app1", "single-app3", "single-app2"],
             ),
             # 测试组合过滤
             ({"is_active": "true", "search": "全局"}, 2, {"global-app1", "global-app2"}),
             (
-                {"app_tenant_mode": "single", "ordering": "is_active,-created"},
+                {"app_tenant_mode": "single", "order_by": ["is_active", "-created"]},
                 3,
                 ["single-app1", "single-app3", "single-app2"],
             ),
@@ -119,7 +119,14 @@ class TestApplicationListView:
         base_url = reverse("plat_mgt.applications.list_applications")
 
         # 构建查询字符串
-        query_string = "&".join([f"{key}={value}" for key, value in filter_key.items()])
+        params = []
+        for key, value in filter_key.items():
+            if isinstance(value, list):
+                for item in value:
+                    params.append(f"{key}={item}")
+            else:
+                params.append(f"{key}={value}")
+        query_string = "&".join(params)
         url = f"{base_url}?{query_string}"
 
         # 发送请求并验证基础响应

@@ -2302,7 +2302,6 @@ export default {
   模块部署: 'Module Deployment',
   进程操作: 'Process Operation',
   资源配置: 'Resource config',
-  查看YAML: 'View YAML',
   托管方式: 'Hosting method',
   应用模版: 'Application template',
   模版来源: 'Template Source',

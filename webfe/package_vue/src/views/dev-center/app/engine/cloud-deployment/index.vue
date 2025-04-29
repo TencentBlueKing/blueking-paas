@@ -28,12 +28,31 @@
           >
             <template slot="setting">
               <bk-button
-                class="pr20"
+                class="mr10"
                 text
-                @click="handleYamlView"
+                @click="toDeploy"
               >
-                {{ $t('查看YAML') }}
+                <i class="paasng-icon paasng-bushu"></i>
+                {{ $t('去部署') }}
               </bk-button>
+              <bk-popover
+                class="mr20"
+                theme="light"
+                ext-cls="more-operations"
+                placement="bottom"
+                ref="moreRef"
+                :tippy-options="{ hideOnClick: false }"
+              >
+                <i class="paasng-icon paasng-icon-more"></i>
+                <div slot="content">
+                  <div
+                    class="option"
+                    @click="handleYamlView"
+                  >
+                    {{ $t('查看 YAML') }}
+                  </div>
+                </div>
+              </bk-popover>
             </template>
             <bk-tab-panel
               v-for="(panel, index) in panels"
@@ -259,6 +278,17 @@ export default {
       this.isTab = true;
       callback(this);
     },
+
+    // 跳转模块部署
+    toDeploy() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+          filterModule: this.curModuleId,
+        },
+      });
+    },
   },
 };
 </script>
@@ -337,6 +367,17 @@ export default {
       height: 100%;
     }
   }
+  i.paasng-icon-more {
+    padding: 3px;
+    font-size: 16px;
+    color: #63656e;
+    cursor: pointer;
+    border-radius: 50%;
+    transform: translateY(0px);
+    &:hover {
+      background: #f0f1f5;
+    }
+  }
 }
 .instance-alert-cls {
   margin-bottom: 16px;
@@ -350,5 +391,21 @@ export default {
   color: #3a84ff;
   font-size: 12px;
   cursor: pointer;
+}
+.more-operations {
+  .tippy-tooltip.light-theme {
+    padding: 6px 0;
+  }
+  .option {
+    height: 32px;
+    line-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+    color: #63656e;
+    &:hover {
+      background-color: #eaf3ff;
+      color: #3a84ff;
+    }
+  }
 }
 </style>

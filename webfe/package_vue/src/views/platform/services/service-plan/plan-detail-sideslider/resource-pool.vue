@@ -187,6 +187,7 @@ export default {
           planId: row.plan,
           id: row.uuid,
         });
+        console.log('当前行数据 (row):', row);
         this.$paasMessage({
           theme: 'success',
           message: this.$t('删除成功'),

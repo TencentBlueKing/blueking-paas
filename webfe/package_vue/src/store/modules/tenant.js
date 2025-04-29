@@ -292,7 +292,6 @@ export default {
      * 添加资源池
      */
     addResourcePool({}, { planId, data }) {
-      console.log('当前行数据 (planId):', planId);
       const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/`;
       return http.post(url, data);
     },
@@ -300,7 +299,6 @@ export default {
      * 修改资源池
      */
     updateResourcePool({}, { planId, id, data }) {
-      console.log('当前行数据 (planId):', planId);
       const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/${id}/`;
       return http.put(url, data);
     },
@@ -308,7 +306,6 @@ export default {
      * 删除资源池
      */
     deleteResourcePool({}, { planId, id }) {
-      console.log('当前行数据 (planId):', planId);
       const url = `${BACKEND_URL}/api/plat_mgt/infras/plans/${planId}/pre_created_instances/${id}/`;
       return http.delete(url);
     },

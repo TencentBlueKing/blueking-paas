@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.http.response import Http404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -29,7 +28,7 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_mgt.infras.services.serializers import ServiceObjOutputSLZ, ServiceUpsertSLZ
+from paasng.plat_mgt.infras.services.serializers import ServiceObjOutputListSLZ, ServiceObjOutputSLZ, ServiceUpsertSLZ
 from paasng.utils.error_codes import error_codes
 
 
@@ -41,11 +40,11 @@ class ServiceViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
         operation_description="增强服务列表",
-        responses={status.HTTP_200_OK: ServiceObjOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: ServiceObjOutputListSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         services = mixed_service_mgr.list()
-        return Response(data=ServiceObjOutputSLZ(services, many=True).data)
+        return Response(data=ServiceObjOutputListSLZ(services, many=True).data)
 
     @swagger_auto_schema(
         tags=["plat-mgt.infras.services"],
@@ -76,7 +75,7 @@ class ServiceViewSet(viewsets.GenericViewSet):
         try:
             service = mixed_service_mgr.get(uuid=service_id)
         except ServiceObjNotFound:
-            raise Http404("ServiceObjNotFound")
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         slz = ServiceUpsertSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

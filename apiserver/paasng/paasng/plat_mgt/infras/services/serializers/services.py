@@ -18,6 +18,7 @@ import re
 
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
+from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -48,12 +49,17 @@ class ServiceObjOutputSLZ(serializers.Serializer):
     provider_name = serializers.CharField(help_text="供应商", required=False, allow_null=True, allow_blank=True)
     origin = serializers.SerializerMethodField(help_text="服务来源")
 
-    def get_origin(self, obj):
+    @swagger_serializer_method(serializer_or_field=serializers.CharField)
+    def get_origin(self, obj) -> str:
         if isinstance(obj, LocalServiceObj):
             return "local"
         elif isinstance(obj, RemoteServiceObj):
             return "remote"
         raise ValueError("unknown obj origin")
+
+
+class ServiceObjOutputListSLZ(ServiceObjOutputSLZ):
+    pass
 
 
 class ServiceUpsertSLZ(serializers.Serializer):

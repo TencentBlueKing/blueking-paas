@@ -162,9 +162,7 @@ export default {
     // 添加资源池
     async addResourcePool(data) {
       try {
-        const planId = this.data.planId;
         await this.$store.dispatch('tenant/addResourcePool', {
-          planId,
           data,
         });
         this.$paasMessage({
@@ -185,7 +183,7 @@ export default {
       try {
         const { planId, row } = this.data;
         await this.$store.dispatch('tenant/updateResourcePool', {
-          planId,
+          planId:this.data.planId,
           id: row.uuid,
           data,
         });

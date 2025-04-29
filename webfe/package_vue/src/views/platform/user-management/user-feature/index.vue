@@ -241,7 +241,7 @@ export default {
       return this.featureList.find((v) => v.value === this.addDialogConfig.formData.feature) || {};
     },
     columns() {
-      return [
+      const baseColumns = [
         {
           label: `${this.$t('用户')} ID`,
           prop: 'userId',
@@ -270,6 +270,12 @@ export default {
           prop: 'is_effect',
         },
       ];
+
+      // 如果 MULTI_TENANT_MODE 为 false，过滤掉 'user' 列
+      if (!this.platformFeature.MULTI_TENANT_MODE) {
+        return baseColumns.filter((column) => column.label !== this.$t('用户'));
+      }
+      return baseColumns;
     },
   },
   watch: {

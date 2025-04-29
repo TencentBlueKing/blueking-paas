@@ -144,7 +144,25 @@ export default {
         input: '',
         isLoading: false,
       },
-      columns: [
+      userRule: [
+        {
+          validator: () => {
+            return !!this.addAdminDialog.formData?.userList?.length;
+          },
+          message: this.$t('必填项'),
+          trigger: 'blur',
+        },
+      ],
+      userSearchValues: [],
+    };
+  },
+  computed: {
+    ...mapState({
+      platformFeature: (state) => state.platformFeature,
+    }),
+    ...mapGetters(['tenantId']),
+    columns() {
+      const baseColumns = [
         {
           label: `${this.$t('管理员')} ID`,
           prop: 'user',
@@ -163,24 +181,13 @@ export default {
           prop: 'created',
           sortable: true,
         },
-      ],
-      userRule: [
-        {
-          validator: () => {
-            return !!this.addAdminDialog.formData?.userList?.length;
-          },
-          message: this.$t('必填项'),
-          trigger: 'blur',
-        },
-      ],
-      userSearchValues: [],
-    };
-  },
-  computed: {
-    ...mapState({
-      platformFeature: (state) => state.platformFeature,
-    }),
-    ...mapGetters(['tenantId']),
+      ];
+
+      if (!this.platformFeature.MULTI_TENANT_MODE) {
+        return baseColumns.filter((column) => column.label !== this.$t('管理员名称'));
+      }
+      return baseColumns;
+    },
   },
   watch: {
     userSearchValues(newVal) {

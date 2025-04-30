@@ -191,6 +191,8 @@ var _ = Describe("test apply to deployment", func() {
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("nginx-pvc"))
 	})
+
+	// FIXME（su） 在 1.7 版本中，添加 ApplyToPod 相关测试
 })
 
 var _ = Describe("test builtin logs", func() {

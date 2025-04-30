@@ -50,6 +50,8 @@ const (
 type VolumeMounter interface {
 	// ApplyToDeployment 将挂载卷应用到 deployment
 	ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error
+	// ApplyToPod 将挂载卷应用到 pod
+	ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error
 	// GetName 返回挂载卷的名字
 	GetName() string
 	// GetMountPath 返回挂载卷的挂载路径
@@ -77,10 +79,7 @@ func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deplo
 
 	deployment.Spec.Template.Spec.Volumes = append(
 		deployment.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name:         vm.Volume.Name,
-			VolumeSource: vs,
-		},
+		corev1.Volume{Name: vm.Volume.Name, VolumeSource: vs},
 	)
 
 	containers := deployment.Spec.Template.Spec.Containers
@@ -89,6 +88,28 @@ func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deplo
 			Name:      vm.Volume.Name,
 			MountPath: vm.MountPath,
 		})
+	}
+	return nil
+}
+
+// ApplyToPod 将 GenericVolumeMount 应用到 pod
+func (vm *GenericVolumeMount) ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error {
+	vs, err := ToCoreV1VolumeSource(vm.Volume.Source)
+	if err != nil {
+		return err
+	}
+
+	pod.Spec.Volumes = append(
+		pod.Spec.Volumes,
+		corev1.Volume{Name: vm.Volume.Name, VolumeSource: vs},
+	)
+
+	containers := pod.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(
+			containers[idx].VolumeMounts,
+			corev1.VolumeMount{Name: vm.Volume.Name, MountPath: vm.MountPath},
+		)
 	}
 	return nil
 }
@@ -134,17 +155,31 @@ type BuiltinLogsVolumeMount struct {
 // ApplyToDeployment 将内置日志挂载卷应用到 deployment
 func (v BuiltinLogsVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error {
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: v.Name,
-		VolumeSource: corev1.VolumeSource{
-			HostPath: v.Source,
-		},
+		Name:         v.Name,
+		VolumeSource: corev1.VolumeSource{HostPath: v.Source},
 	})
 	containers := deployment.Spec.Template.Spec.Containers
 	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      v.Name,
-			MountPath: v.MountPath,
-		})
+		containers[idx].VolumeMounts = append(
+			containers[idx].VolumeMounts,
+			corev1.VolumeMount{Name: v.Name, MountPath: v.MountPath},
+		)
+	}
+	return nil
+}
+
+// ApplyToPod 将内置日志挂载卷应用到 pod
+func (v BuiltinLogsVolumeMount) ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error {
+	pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
+		Name:         v.Name,
+		VolumeSource: corev1.VolumeSource{HostPath: v.Source},
+	})
+	containers := pod.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(
+			containers[idx].VolumeMounts,
+			corev1.VolumeMount{Name: v.Name, MountPath: v.MountPath},
+		)
 	}
 	return nil
 }

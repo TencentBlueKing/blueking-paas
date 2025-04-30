@@ -28,7 +28,12 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_mgt.infras.services.serializers import ServiceObjOutputListSLZ, ServiceObjOutputSLZ, ServiceUpsertSLZ
+from paasng.plat_mgt.infras.services.serializers import (
+    ServiceCreateSLZ,
+    ServiceObjOutputListSLZ,
+    ServiceObjOutputSLZ,
+    ServiceUpdateSLZ,
+)
 from paasng.utils.error_codes import error_codes
 
 
@@ -52,7 +57,7 @@ class ServiceViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, *args, **kwargs):
-        slz = ServiceUpsertSLZ(data=request.data)
+        slz = ServiceCreateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         # 只支持创建本地增强服务
@@ -77,7 +82,7 @@ class ServiceViewSet(viewsets.GenericViewSet):
         except ServiceObjNotFound:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        slz = ServiceUpsertSLZ(data=request.data)
+        slz = ServiceUpdateSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         data_before = ServiceObjOutputSLZ(service).data
@@ -114,7 +119,7 @@ class ServiceViewSet(viewsets.GenericViewSet):
         try:
             mixed_service_mgr.destroy(service)
         except UnsupportedOperationError as e:
-            raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
+            raise error_codes.UNSUPPORTED_OPERATION.f(str(e))
 
         add_admin_audit_record(
             user=request.user.pk,

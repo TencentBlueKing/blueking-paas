@@ -22,6 +22,7 @@ from drf_yasg.utils import swagger_serializer_method
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
 from paasng.utils.i18n import to_translated_field
@@ -52,9 +53,9 @@ class ServiceObjOutputSLZ(serializers.Serializer):
     @swagger_serializer_method(serializer_or_field=serializers.CharField)
     def get_origin(self, obj) -> str:
         if isinstance(obj, LocalServiceObj):
-            return "local"
+            return ServiceType.LOCAL
         elif isinstance(obj, RemoteServiceObj):
-            return "remote"
+            return ServiceType.REMOTE
         raise ValueError("unknown obj origin")
 
 
@@ -62,8 +63,8 @@ class ServiceObjOutputListSLZ(ServiceObjOutputSLZ):
     pass
 
 
-class ServiceUpsertSLZ(serializers.Serializer):
-    """创建/修改增强服务"""
+class ServiceCreateSLZ(serializers.Serializer):
+    """创建增强服务"""
 
     name = serializers.CharField(help_text="名称")
     category_id = serializers.IntegerField(help_text="服务分类")
@@ -104,3 +105,7 @@ class ServiceUpsertSLZ(serializers.Serializer):
             )  # noqa: E501
 
         return name
+
+
+class ServiceUpdateSLZ(ServiceCreateSLZ):
+    """更新增强服务"""

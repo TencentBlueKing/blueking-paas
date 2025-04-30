@@ -64,6 +64,7 @@ class ErrorCodes:
     CREATE_SHARED_ATTACHMENT_ERROR = ErrorCode(_("共享增强服务失败"), code_num=4313050)
     CANNOT_DESTROY_CI_RESOURCES = ErrorCode(_("CI相关资源删除失败"), code_num=4313081)
     CANNOT_READ_INSTANCE_INFO = ErrorCode(_("读取增强服务实例信息失败"), code_num=4313082)
+    UNSUPPORTED_OPERATION = ErrorCode(_("增强服务暂时不支持该操作"))
     # 部署
     CANNOT_GET_DEPLOYMENT = ErrorCode(_("查询部署信息失败"), code_num=4311001)
     CANNOT_GET_DEPLOYMENT_PHASES = ErrorCode(_("查询部署阶段信息失败"), code_num=4311002)

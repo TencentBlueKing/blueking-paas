@@ -36,7 +36,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         operation_description="全量预创建实例列表",
         responses={status.HTTP_200_OK: PlanWithPreCreatedInstanceSLZ(many=True)},
     )
-    def list_all(self, request, *args, **kwargs):
+    def list_all_pre_created_instances(self, request, *args, **kwargs):
         qs = Plan.objects.filter(
             service__in=[service for service in Service.objects.all() if service.config.get("provider_name") == "pool"]
         )
@@ -81,10 +81,12 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         slz = PreCreatedInstanceUpsertSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
+
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
         instance.config = data["config"]
         instance.credentials = data["credentials"]
-        instance.save()
+        instance.save(update_fields=["config", "credentials"])
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

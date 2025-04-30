@@ -50,7 +50,7 @@ urlpatterns = [
     # 平台管理-增强服务管理-资源池
     path(
         "api/plat_mgt/infras/pre_created_instances/",
-        views.PreCreatedInstanceViewSet.as_view({"get": "list_all"}),
+        views.PreCreatedInstanceViewSet.as_view({"get": "list_all_pre_created_instances"}),
         name="plat_mgt.infras.pre_created_instances.list_all",
     ),
     path(

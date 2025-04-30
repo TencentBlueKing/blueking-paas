@@ -572,6 +572,35 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "cloudAppDeployForBuild",
+                "label": staticI18n.$t("nav-模块配置"),
+                "iconfontName": "configuration-line",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "cloudAppDeployForBuild"
+                },
+                "matchRouters": [
+                    "cloudAppDeploy",
+                    "cloudAppDeployForBuild",
+                    "cloudAppDeployForProcess",
+                    "cloudAppDeployForEnv",
+                    "cloudAppDeployForVolume",
+                    "cloudAppDeployForHook",
+                    "cloudAppDeployForResource",
+                    'imageCredential',
+                    'observabilityConfig',
+                    'moduleInfo',
+                    'appServices',
+                    'appServiceInnerShared',
+                    'appServiceInner',
+                    'cloudAppServiceInnerShared',
+                    'cloudAppServiceInner',
+                    'cloudAppServiceInnerWithModule',
+                    'networkConfig'
+                ],
+                "children": []
+            },
+            {
                 "name": "appObservability",
                 "label": staticI18n.$t("可观测性"),
                 "iconfontName": "keguance",
@@ -630,63 +659,19 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appConfigs",
-                "label": staticI18n.$t("应用配置"),
+                "label": staticI18n.$t("应用设置"),
                 "iconfontName": "gear",
-                "children": [
-                    {
-                        "name": staticI18n.$t("模块配置"),
-                        "matchRouters": [
-                            "cloudAppDeploy",
-                            "cloudAppDeployForBuild",
-                            "cloudAppDeployForProcess",
-                            "cloudAppDeployForEnv",
-                            "cloudAppDeployForVolume",
-                            "cloudAppDeployForYaml",
-                            "cloudAppDeployForHook",
-                            "cloudAppDeployForResource",
-                            'imageCredential',
-                            'observabilityConfig',
-                            'moduleInfo',
-                            'appServices',
-                            'appServiceInnerShared',
-                            'appServiceInner',
-                            'cloudAppServiceInnerShared',
-                            'cloudAppServiceInner',
-                            'cloudAppServiceInnerWithModule',
-                            'networkConfig'
-                        ],
-                        "iconfontName": "squares",
-                        "supportModule": false,
-                        "destRoute": {
-                          "name": "cloudAppDeployForBuild"
-                        },
-                        "children": []
-                    },
-                    {
-                        "name": staticI18n.$t("应用配置"),
-                        "matchRouters": [
-                            'appConfigs',
-                            'appMarket',
-                            'appBasicInfo',
-                            'appMembers',
-                            'appPersistentStorage',
-                        ],
-                        "destRoute": {
-                          "name": "appConfigs"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "docuManagement",
-                "label": staticI18n.$t("文档管理"),
-                "matchRouters": [
-                    "docuManagement"
-                ],
-                "iconfontName": "page-fill",
                 "supportModule": false,
+                "matchRouters": [
+                    'appConfigs',
+                    'appMarket',
+                    'appBasicInfo',
+                    'appMembers',
+                    'appPersistentStorage',
+                    'docuManagement',
+                ],
                 "destRoute": {
-                    "name": "docuManagement"
+                    "name": "appMarket"
                 },
                 "children": []
             },
@@ -956,19 +941,6 @@ export const PAAS_STATIC_CONFIG = {
                 ],
                 "destRoute": {
                   "name": "appConfigs"
-                },
-                "children": []
-            },
-            {
-                "name": "docuManagement",
-                "label": staticI18n.$t("文档管理"),
-                "matchRouters": [
-                    "docuManagement"
-                ],
-                "iconfontName": "page-fill",
-                "supportModule": false,
-                "destRoute": {
-                    "name": "docuManagement"
                 },
                 "children": []
             },

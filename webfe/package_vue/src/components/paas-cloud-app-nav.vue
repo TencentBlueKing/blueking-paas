@@ -87,7 +87,6 @@ export default {
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
-        'cloudAppDeployForResource',
         'imageCredential',
         'observabilityConfig',
         'moduleInfo',
@@ -128,8 +127,6 @@ export default {
           'cloudAppDeployForHook',
           // 应用编排 - 环境变量
           'cloudAppDeployForEnv',
-          // 应用编排 - 依赖资源
-          'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
           // 部署管理
@@ -184,16 +181,14 @@ export default {
           'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
-          // 应用编排 - 构建配置
+          // 构建配置
           'cloudAppDeployForBuild',
-          // 应用编排 - 进程配置
+          // 进程配置
           'cloudAppDeployForProcess',
-          // 应用编排 - 钩子命令
+          // 钩子命令
           'cloudAppDeployForHook',
-          // 应用编排 - 环境变量
+          // 环境变量
           'cloudAppDeployForEnv',
-          // 应用编排 - 依赖资源
-          'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
           // 部署管理
@@ -401,23 +396,11 @@ export default {
           return nav;
         });
 
-        // 接入feature flag来控制应用导航
-        const featureMaps = {
-          docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
-        };
         const subFeatureMaps = {
           cloudAppAnalysis: 'ANALYTICS', // 访问统计
           codeReview: 'CODE_CHECK', // 代码检查
           monitorAlarm: 'MONITORING', // 告警记录
         };
-        // 一级
-        navTree = navTree.filter((nav) => {
-          const key = featureMaps[nav.name];
-          if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
-            return this.curAppInfo.feature[key];
-          }
-          return true;
-        });
         // 二级
         for (let i = 0; i < navTree.length; i++) {
           const nav = navTree[i];
@@ -456,7 +439,6 @@ export default {
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
-        'cloudAppDeployForResource',
         'imageCredential',
         'observabilityConfig',
         'moduleInfo',
@@ -477,6 +459,13 @@ export default {
         'networkConfig',
         // 迁移信息
         'appMigrationInfo',
+        'cloudAppDeployForProcess',
+        'cloudAppDeployForVolume',
+        'appMarket',
+        'appBasicInfo',
+        'appMembers',
+        'appPersistentStorage',
+        'docuManagement',
       ];
 
       this.navTree.forEach((nav) => {

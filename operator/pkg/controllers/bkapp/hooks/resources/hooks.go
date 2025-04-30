@@ -26,12 +26,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/labels"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/envs"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/volumes"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 )
 
@@ -56,6 +58,9 @@ var (
 	// ErrLastHookStillRunning 最近一个 Hook 仍在运行状态
 	ErrLastHookStillRunning = errors.New("the last pre-release-hook is still running")
 )
+
+// log is for logging in this package.
+var log = logf.Log.WithName("controllers-resources")
 
 // HookInstance 指示解析后的 Hook 实例
 type HookInstance struct {
@@ -127,7 +132,7 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 	envVars := common.GetAppEnvs(bkapp)
 	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: "sys-pre-rel"})
 
-	return &HookInstance{
+	hook := &HookInstance{
 		Pod: &corev1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",
@@ -156,13 +161,9 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						ImagePullPolicy: bkapp.Spec.Build.ImagePullPolicy,
 						// pre-hook 使用默认资源配置
 						Resources: envs.NewProcResourcesGetter(bkapp).Default(),
-						// TODO: 挂载点
-						VolumeMounts: nil,
 					},
 				},
 				RestartPolicy: "Never",
-				// TODO: 挂载卷
-				Volumes: nil,
 				// TODO: 亲和性、污点
 				NodeSelector: nil,
 				Tolerations:  nil,
@@ -172,4 +173,19 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		},
 		Status: status,
 	}
+
+	mounterMap, err := volumes.GetAllVolumeMounterMap(bkapp)
+	if err != nil {
+		log.Error(err, "Failed to get volume mounter map for pre-release-hook", "bkappName", bkapp.Name)
+		return hook
+	}
+
+	for _, mounter := range mounterMap {
+		err = mounter.ApplyToPod(bkapp, hook.Pod)
+		if err != nil {
+			log.Error(err, "Failed to inject mounts info to pre-release-hook")
+		}
+	}
+
+	return hook
 }

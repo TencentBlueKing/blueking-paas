@@ -52,17 +52,6 @@ class ApplicationSLZ(serializers.Serializer):
         return app_resource_quotas.get(instance.code, default_quotas)
 
 
-class ApplicationDetailSLZ(ApplicationSLZ):
-    """应用详细信息序列化器"""
-
-    owner = UserNameField()
-    language = serializers.CharField(read_only=True, help_text="应用语言")
-    last_deployed_date = serializers.DateTimeField(read_only=True, help_text="最后部署时间")
-    is_smart_app = serializers.BooleanField(read_only=True, help_text="是否 smart 应用")
-
-    updated_humanized = HumanizeDateTimeField(source="updated")
-
-
 class ApplicationFilterSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 

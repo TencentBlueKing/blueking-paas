@@ -41,9 +41,4 @@ urlpatterns = [
         application.ApplicationView.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
     ),
-    path(
-        "api/plat_mgt/applications/<str:app_code>/",
-        application.ApplicationView.as_view({"get": "retrieve"}),
-        name="plat_mgt.applications.retrieve_application",
-    ),
 ]

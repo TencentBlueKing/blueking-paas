@@ -28,7 +28,6 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.plat_mgt.applications.serializers.application import (
-    ApplicationDetailSLZ,
     ApplicationSLZ,
     ApplicationTypeListSLZ,
     TenantIdListSLZ,
@@ -38,7 +37,6 @@ from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
-from paasng.utils.error_codes import error_codes
 
 
 class ApplicationView(viewsets.GenericViewSet):
@@ -68,25 +66,6 @@ class ApplicationView(viewsets.GenericViewSet):
             context={"request": request, "app_resource_quotas": app_resource_quotas},
         )
         return self.get_paginated_response(slz.data)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取单个应用信息",
-        responses={status.HTTP_200_OK: ApplicationDetailSLZ()},
-    )
-    def retrieve(self, request, *args, **kwargs):
-        """获取单个应用信息"""
-        app_code = kwargs.get("app_code")
-        app = self.get_queryset().filter(code=app_code).first()
-        if not app:
-            raise error_codes.APP_NOT_FOUND.f("Application with code '{}' not found.".format(app_code))
-
-        app_resource_quotas = self.get_app_resource_quotas()
-        slz = ApplicationDetailSLZ(
-            app,
-            context={"request": request, "app_resource_quotas": app_resource_quotas},
-        )
-        return Response(slz.data, status=status.HTTP_200_OK)
 
     def get_app_resource_quotas(self) -> dict:
         """获取应用资源配额信息，优先从 Redis 缓存获取，缺失时触发异步任务计算"""

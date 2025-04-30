@@ -130,18 +130,6 @@ class TestApplicationListView:
             # 多个结果比较集合
             assert set(actual_codes) == set(expected_codes)
 
-    def test_retrieve_application(self, plat_mgt_api_client, prepare_applications):
-        """测试获取单个应用的详细信息"""
-
-        # 准备数据
-        app = Application.objects.create(code="app1", name="应用1", tenant_id="plat_tenant")
-        url = reverse("plat_mgt.applications.retrieve_application", args=[app.code])
-
-        # 平台管理员获取应用信息
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-        assert rsp.data["code"] == app.code
-
     def test_list_app_types(self, plat_mgt_api_client):
         """测试获取应用类型列表"""
 

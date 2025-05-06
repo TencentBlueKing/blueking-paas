@@ -568,6 +568,14 @@ const router = new Router({
                 module: 'member',
               },
             },
+            {
+              path: 'doc',
+              component: docuManagement,
+              name: 'docuManagement',
+              meta: {
+                module: 'doc',
+              },
+            },
           ],
         },
         // 云原生访问统计
@@ -977,11 +985,6 @@ const router = new Router({
           path: ':id/:moduleId/service/:category_id/service_config/:service',
           component: appServicesConfig,
           name: 'appServiceConfig',
-        },
-        {
-          path: ':id/doc_mgt',
-          component: docuManagement,
-          name: 'docuManagement',
         },
         {
           path: ':id/operation-record',

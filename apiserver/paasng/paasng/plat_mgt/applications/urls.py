@@ -15,11 +15,30 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import path
+
+from paasng.plat_mgt.applications.views import application
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
+    # 平台管理 - 应用列表
+    path(
+        "api/plat_mgt/applications/",
+        application.ApplicationView.as_view({"get": "list"}),
+        name="plat_mgt.applications.list_applications",
+    ),
+    path(
+        "api/plat_mgt/applications/tenant_id_list/",
+        application.ApplicationView.as_view({"get": "list_tenant_id"}),
+        name="plat_mgt.applications.list_tenant_id",
+    ),
+    path(
+        "api/plat_mgt/applications/tenant_mode_list/",
+        application.ApplicationView.as_view({"get": "list_tenant_mode"}),
+        name="plat_mgt.applications.list_tenant_mode",
+    ),
+    path(
+        "api/plat_mgt/applications/types/",
+        application.ApplicationView.as_view({"get": "list_app_types"}),
+        name="plat_mgt.applications.types",
+    ),
 ]

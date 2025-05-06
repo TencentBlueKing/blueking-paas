@@ -255,9 +255,11 @@ class TcGitRepoInitializer:
 
     def _download_to(self, repo_url: str, source_dir: Path, dest_dir: Path):
         """将代码仓库指定目录的内容下载到本地 `dest_dir` 目录"""
+        git_project = GitProject.parse_from_repo_url(repo_url, "tc_git")
+        repository = self._build_repo_url_with_auth(git_project)
         with generate_temp_dir() as temp_dir:
             real_source_dir = temp_dir / source_dir
-            self._client.clone(repo_url, path=temp_dir, depth=1)
+            self._client.clone(repository, path=temp_dir, depth=1)
             self._client.clean_meta_info(temp_dir)
             for path in real_source_dir.iterdir():
                 shutil.move(str(path), str(dest_dir / path.relative_to(real_source_dir)))

@@ -24,14 +24,13 @@ from django.test import override_settings
 from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl.constants import TencentGitMemberRole, TencentGitVisibleLevel
 from paasng.platform.sourcectl.initializer import create_new_repo_and_initialized
+from paasng.platform.templates.models import Template
 
 pytestmark = [pytest.mark.django_db]
 
 
 @pytest.fixture
 def mock_sourcectl_type():
-    """模拟源码类型配置"""
-
     class MockSourceType:
         initializer_class = None
 
@@ -48,6 +47,7 @@ class TestCreateNewRepoAndInitialized:
         with pytest.raises(NotImplementedError):
             create_new_repo_and_initialized(bk_module, "invalid_type", "test-operator")
 
+    @pytest.mark.usefixtures("_init_tmpls")
     @patch("paasng.platform.sourcectl.initializer.get_sourcectl_type")
     @patch("paasng.platform.sourcectl.initializer.TcGitRepoInitializer")
     @patch("paasng.platform.modules.utils.get_module_init_repo_context")
@@ -65,7 +65,8 @@ class TestCreateNewRepoAndInitialized:
         mock_get_type.return_value = mock_sourcectl_type
 
         # 初始化模板的上下文
-        mock_context = get_module_init_repo_context(bk_module)
+        template = Template.objects.get(name="dummy_template")
+        mock_context = get_module_init_repo_context(bk_module, template.type)
         mock_get_context.return_value = mock_context
 
         create_new_repo_and_initialized(bk_module, "tc_git", "test-operator")
@@ -86,7 +87,7 @@ class TestCreateNewRepoAndInitialized:
 
         # 验证仓库初始化
         mock_initializer.initial_repo.assert_called_once_with(
-            mock_initializer.create_project.return_value.repo_url, "dummy_template", mock_context
+            mock_initializer.create_project.return_value.repo_url, template, mock_context
         )
 
         # 验证成员添加

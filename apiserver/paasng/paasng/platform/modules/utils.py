@@ -18,6 +18,7 @@ from django.conf import settings
 
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.modules.models import Module
+from paasng.platform.templates.constants import TemplateType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 
@@ -30,23 +31,26 @@ def parse_assignment_list(assignments):
     return dict(i.split("=", 1) for i in assignments)
 
 
-def get_module_init_repo_context(module: Module):
+def get_module_init_repo_context(module: Module, template_type: TemplateType):
     """获取模块初始化代码仓库的上下文"""
     application = module.application
 
     client_secret = get_oauth2_client_secret(application.code)
     owner_username = get_username_by_bkpaas_user_id(application.owner)
-    context = {
-        "region": application.region,
-        "owner_username": owner_username,
-        "app_code": application.code,
-        "app_secret": client_secret,
-        "app_name": application.name,
-        # 插件模板上下文
-        "project_name": application.code,
-        "plugin_desc": application.name,
-        "init_admin": owner_username,
-        "init_apigw_maintainer": owner_username,
-        "apigw_manager_url_tmpl": settings.BK_API_URL_TMPL,
-    }
-    return context
+
+    if template_type == TemplateType.PLUGIN:
+        return {
+            "project_name": application.code,
+            "plugin_desc": application.name,
+            "init_admin": owner_username,
+            "init_apigw_maintainer": owner_username,
+            "apigw_manager_url_tmpl": settings.BK_API_URL_TMPL,
+        }
+    else:
+        return {
+            "region": application.region,
+            "owner_username": owner_username,
+            "app_code": application.code,
+            "app_secret": client_secret,
+            "app_name": application.name,
+        }

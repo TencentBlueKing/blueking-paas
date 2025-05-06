@@ -163,7 +163,7 @@ class TcGitRepoInitializer:
         resp = self._session.delete(urljoin(self._api_url, _url))
         validate_response(resp)
 
-    def initial_repo(self, repo_url: str, source_init_template: str, context: dict):
+    def initial_repo(self, repo_url: str, template: Template, context: dict):
         """初始化插件代码
 
         :param repo_url: 源码仓库地址
@@ -177,7 +177,7 @@ class TcGitRepoInitializer:
             # 克隆仓库到工作目录 dest_dir
             self._client.clone(self._build_repo_url_with_auth(git_project), dest_dir)
             # 将模板代码渲染到 dest_dir
-            self._render_template_to_dest_dir(source_init_template, dest_dir, context)
+            self._render_template_to_dest_dir(template, dest_dir, context)
 
             # 配置 Git 用户信息
             self._fix_git_user_config(dest_dir / ".git" / "config")
@@ -262,16 +262,12 @@ class TcGitRepoInitializer:
                 shutil.move(str(path), str(dest_dir / path.relative_to(real_source_dir)))
         return dest_dir
 
-    def _render_template_to_dest_dir(self, source_init_template: str, dest_dir: Path, context: dict):
+    def _render_template_to_dest_dir(self, template: Template, dest_dir: Path, context: dict):
         """渲染模板到目标目录"""
-        try:
-            template = Template.objects.get(name=source_init_template)
-        except Template.DoesNotExist:
-            raise ValueError(f"Template {source_init_template} does not exist")
 
         if template.type == TemplateType.NORMAL:
             # 普通代码仓库，用模板引擎渲染
-            templater = Templater(tmpl_name=source_init_template, type=TemplateType.NORMAL, **context)
+            templater = Templater(tmpl_name=template.name, type=TemplateType.NORMAL, **context)
             templater.write_to_dir(dest_dir)
         elif template.type == TemplateType.PLUGIN:
             # 插件模板用 cookiecutter 渲染
@@ -308,8 +304,12 @@ def create_new_repo_and_initialized(module: Module, repo_type: str, operator: st
     repo_project = initializer.create_project(repo_name, TencentGitVisibleLevel.PUBLIC, description)
 
     # 初始化代码仓库
-    context = get_module_init_repo_context(module)
-    initializer.initial_repo(repo_project.repo_url, module.source_init_template, context)
+    try:
+        template = Template.objects.get(name=module.source_init_template)
+    except Template.DoesNotExist:
+        raise ValueError(f"Template {module.source_init_template} does not exist")
+    context = get_module_init_repo_context(module, template.type)
+    initializer.initial_repo(repo_project.repo_url, template, context)
 
     # 将当前操作者添加为仓库的 Master
     initializer.add_member(repo_project.repo_url, operator, TencentGitMemberRole.MASTER)

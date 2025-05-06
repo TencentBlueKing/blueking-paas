@@ -21,7 +21,7 @@ Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
 import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Union
 
 from pydantic import BaseModel, Field, validator
 
@@ -73,17 +73,17 @@ class HTTPGetAction(BaseModel):
     """HTTPGetAction describes an action based on HTTP Get requests."""
 
     port: Union[int, str]
-    host: Optional[str] = None
-    path: Optional[str] = None
+    host: str | None = None
+    path: str | None = None
     httpHeaders: List[HTTPHeader] = Field(default_factory=list)
-    scheme: Optional[Literal["HTTP", "HTTPS"]] = "HTTP"
+    scheme: Literal["HTTP", "HTTPS"] | None = "HTTP"
 
 
 class TCPSocketAction(BaseModel):
     """TCPSocketAction describes an action based on opening a socket"""
 
     port: Union[int, str]
-    host: Optional[str] = None
+    host: str | None = None
 
 
 class Probe(BaseModel):
@@ -100,21 +100,21 @@ class Probe(BaseModel):
     :param failureThreshold: 连续几次检测失败后，判定容器是不健康
     """
 
-    exec: Optional[ExecAction] = None
-    httpGet: Optional[HTTPGetAction] = None
-    tcpSocket: Optional[TCPSocketAction] = None
+    exec: ExecAction | None = None
+    httpGet: HTTPGetAction | None = None
+    tcpSocket: TCPSocketAction | None = None
 
-    initialDelaySeconds: Optional[int] = 0
-    timeoutSeconds: Optional[int] = 1
-    periodSeconds: Optional[int] = 10
-    successThreshold: Optional[int] = 1
-    failureThreshold: Optional[int] = 3
+    initialDelaySeconds: int | None = 0
+    timeoutSeconds: int | None = 1
+    periodSeconds: int | None = 10
+    successThreshold: int | None = 1
+    failureThreshold: int | None = 3
 
 
 class ProbeSet(BaseModel):
-    liveness: Optional[Probe] = None
-    readiness: Optional[Probe] = None
-    startup: Optional[Probe] = None
+    liveness: Probe | None = None
+    readiness: Probe | None = None
+    startup: Probe | None = None
 
 
 class ExposedType(BaseModel):
@@ -141,8 +141,8 @@ class ProcService(BaseModel):
     name: str
     targetPort: int
     protocol: Literal["TCP", "UDP"] = "TCP"
-    exposedType: Optional[ExposedType] = None
-    port: Optional[int] = None
+    exposedType: ExposedType | None = None
+    port: int | None = None
 
 
 class BkAppProcess(BaseModel):
@@ -150,28 +150,28 @@ class BkAppProcess(BaseModel):
 
     name: str
     # `None` value means the replicas is not specified.
-    replicas: Optional[int] = 1
-    command: Optional[List[str]] = Field(default_factory=list)
-    args: Optional[List[str]] = Field(default_factory=list)
+    replicas: int | None = 1
+    command: List[str] | None = Field(default_factory=list)
+    args: List[str] | None = Field(default_factory=list)
     # FIXME: deprecated targetPort, will be removed in the future
-    targetPort: Optional[int] = None
-    resQuotaPlan: Optional[ResQuotaPlan] = None
-    autoscaling: Optional[AutoscalingSpec] = None
-    probes: Optional[ProbeSet] = None
-    services: Optional[List[ProcService]] = None
+    targetPort: int | None = None
+    resQuotaPlan: ResQuotaPlan | None = None
+    autoscaling: AutoscalingSpec | None = None
+    probes: ProbeSet | None = None
+    services: List[ProcService] | None = None
 
 
 class Hook(BaseModel):
     """A hook object"""
 
-    command: Optional[List[str]] = Field(default_factory=list)
-    args: Optional[List[str]] = Field(default_factory=list)
+    command: List[str] | None = Field(default_factory=list)
+    args: List[str] | None = Field(default_factory=list)
 
 
 class BkAppHooks(BaseModel):
     """Hook commands for BkApp"""
 
-    preRelease: Optional[Hook] = None
+    preRelease: Hook | None = None
 
 
 class EnvVar(BaseModel):
@@ -204,16 +204,16 @@ class PersistentStorage(BaseModel):
 
 @register
 class VolumeSource(BaseModel):
-    configMap: Optional[ConfigMapSource] = None
-    secret: Optional[SecretSource] = None
-    persistentStorage: Optional[PersistentStorage] = None
+    configMap: ConfigMapSource | None = None
+    secret: SecretSource | None = None
+    persistentStorage: PersistentStorage | None = None
 
 
 class Mount(BaseModel):
     mountPath: str
     name: str
     source: VolumeSource
-    subPaths: Optional[List[str]] = None
+    subPaths: List[str] | None = None
 
 
 class MountOverlay(BaseModel):
@@ -221,7 +221,7 @@ class MountOverlay(BaseModel):
     mountPath: str
     name: str
     source: VolumeSource
-    subPaths: Optional[List[str]] = None
+    subPaths: List[str] | None = None
 
 
 class ReplicasOverlay(BaseModel):
@@ -261,11 +261,11 @@ class AutoscalingOverlay(BaseModel):
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
-    replicas: Optional[List[ReplicasOverlay]] = None
-    resQuotas: Optional[List[ResQuotaOverlay]] = None
-    envVariables: Optional[List[EnvVarOverlay]] = None
-    autoscaling: Optional[List[AutoscalingOverlay]] = None
-    mounts: Optional[List[MountOverlay]] = None
+    replicas: List[ReplicasOverlay] | None = None
+    resQuotas: List[ResQuotaOverlay] | None = None
+    envVariables: List[EnvVarOverlay] | None = None
+    autoscaling: List[AutoscalingOverlay] | None = None
+    mounts: List[MountOverlay] | None = None
 
     def append_item(self, field_name: str, item: Any):
         """A shortcut method that append an item to the given field."""
@@ -286,12 +286,12 @@ class BkAppBuildConfig(BaseModel):
     """BuildConfig for BkApp"""
 
     # 兼容使用注解支持多镜像的场景（v1alpha1 遗留功能）
-    image: Optional[str] = None
+    image: str | None = None
     imagePullPolicy: str = ImagePullPolicy.IF_NOT_PRESENT.value
-    imageCredentialsName: Optional[str] = None
-    dockerfile: Optional[str] = None
-    buildTarget: Optional[str] = None
-    args: Optional[Dict[str, str]] = None
+    imageCredentialsName: str | None = None
+    dockerfile: str | None = None
+    buildTarget: str | None = None
+    args: Dict[str, str] | None = None
 
 
 class BkAppAddonSpec(BaseModel):
@@ -310,8 +310,8 @@ class BkAppAddon(BaseModel):
     """
 
     name: str
-    specs: Optional[List[BkAppAddonSpec]] = Field(default_factory=list)
-    sharedFromModule: Optional[str] = None
+    specs: List[BkAppAddonSpec] | None = Field(default_factory=list)
+    sharedFromModule: str | None = None
 
 
 class HostAlias(BaseModel):
@@ -332,7 +332,7 @@ class SvcDiscEntryBkSaaS(BaseModel):
     """A service discovery entry that represents an application and an optional module."""
 
     bkAppCode: str
-    moduleName: Optional[str] = None
+    moduleName: str | None = None
 
 
 class SvcDiscConfig(BaseModel):
@@ -354,30 +354,30 @@ class Metric(BaseModel):
     process: str
     serviceName: str
     path: str
-    params: Optional[Dict] = None
+    params: Dict | None = None
 
 
 class Monitoring(BaseModel):
-    metrics: Optional[List[Metric]] = None
+    metrics: List[Metric] | None = None
 
 
 class Observability(BaseModel):
-    monitoring: Optional[Monitoring] = None
+    monitoring: Monitoring | None = None
 
 
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
-    build: Optional[BkAppBuildConfig] = None
+    build: BkAppBuildConfig | None = None
     processes: List[BkAppProcess] = Field(default_factory=list)
-    hooks: Optional[BkAppHooks] = None
+    hooks: BkAppHooks | None = None
     addons: List[BkAppAddon] = Field(default_factory=list)
-    mounts: Optional[List[Mount]] = None
+    mounts: List[Mount] | None = None
     configuration: BkAppConfiguration = Field(default_factory=BkAppConfiguration)
-    domainResolution: Optional[DomainResolution] = None
-    svcDiscovery: Optional[SvcDiscConfig] = None
-    envOverlay: Optional[EnvOverlay] = None
-    observability: Optional[Observability] = None
+    domainResolution: DomainResolution | None = None
+    svcDiscovery: SvcDiscConfig | None = None
+    envOverlay: EnvOverlay | None = None
+    observability: Observability | None = None
 
 
 class BkAppStatus(BaseModel):
@@ -386,7 +386,7 @@ class BkAppStatus(BaseModel):
     phase: str = MResPhaseType.AppPending.value
     observedGeneration: int = Field(default=0)
     conditions: List[MetaV1Condition] = Field(default_factory=list)
-    lastUpdate: Optional[datetime.datetime]
+    lastUpdate: datetime.datetime | None
     deployId: str = ""
 
 
@@ -423,6 +423,6 @@ class BkAppResource(BaseModel):
         """
         self.metadata.annotations[PROC_SERVICES_ENABLED_ANNOTATION_KEY] = enabled
 
-    def get_proc_services_annotation(self) -> Optional[str]:
+    def get_proc_services_annotation(self) -> str | None:
         """get proc services feature annotation"""
         return self.metadata.annotations.get(PROC_SERVICES_ENABLED_ANNOTATION_KEY)

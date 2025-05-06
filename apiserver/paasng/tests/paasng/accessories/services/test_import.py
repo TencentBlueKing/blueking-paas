@@ -42,8 +42,8 @@ class TestPreCreatedInstanceImport:
     @pytest.mark.parametrize(
         "input_",
         [
-            {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
-            {"plan": "plan-b", "config": '{"a": "b"}', "credentials": DUMMY_CREDENTIALS},
+            {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
+            {"plan": "plan-b", "config": {"a": "b"}, "credentials": DUMMY_CREDENTIALS},
         ],
     )
     def test_import_single(self, bk_service, bk_plan, input_):
@@ -54,18 +54,18 @@ class TestPreCreatedInstanceImport:
 
         assert PreCreatedInstance.objects.filter(plan=bk_plan).count() == 1
         instance = PreCreatedInstance.objects.get(plan=bk_plan)
-        assert instance.config == json.loads(input_["config"])
+        assert instance.config == input_["config"]
         assert json.loads(instance.credentials) == json.loads(DUMMY_CREDENTIALS)
 
     @pytest.mark.parametrize(
         ("input_", "expected"),
         [
             ([], 0),
-            ([{"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS}], 1),
+            ([{"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS}], 1),
             (
                 [
-                    {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
-                    {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
+                    {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
+                    {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
                 ],
                 2,
             ),

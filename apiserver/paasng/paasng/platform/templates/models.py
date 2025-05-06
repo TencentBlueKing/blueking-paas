@@ -62,7 +62,7 @@ class Template(AuditedModel):
 
     def get_source_dir(self) -> Path:
         """get relative source_dir"""
-        source_dir = Path(self.sourceDir)
+        source_dir = Path(self.source_dir)
         if source_dir.is_absolute():
             return source_dir.relative_to("/")
         return source_dir

@@ -32,6 +32,7 @@ from requests.models import Response
 
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.utils import get_module_init_repo_context
+from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.constants import TencentGitMemberRole, TencentGitVisibleLevel
 from paasng.platform.sourcectl.definitions import RepoProject
 from paasng.platform.sourcectl.exceptions import APIError, AuthTokenMissingError, RepoNameConflict
@@ -295,6 +296,11 @@ def create_new_repo_and_initialized(module: Module, repo_type: str, operator: st
     if not initializer_cls:
         raise NotImplementedError
 
+    try:
+        template = Template.objects.get(name=module.source_init_template)
+    except Template.DoesNotExist:
+        raise ValueError(f"Template {module.source_init_template} does not exist")
+
     initializer = initializer_cls(
         repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
     )
@@ -303,13 +309,22 @@ def create_new_repo_and_initialized(module: Module, repo_type: str, operator: st
     description = f"{module.application.name}({module.name} 模块)"
     repo_project = initializer.create_project(repo_name, TencentGitVisibleLevel.PUBLIC, description)
 
-    # 初始化代码仓库
-    try:
-        template = Template.objects.get(name=module.source_init_template)
-    except Template.DoesNotExist:
-        raise ValueError(f"Template {module.source_init_template} does not exist")
-    context = get_module_init_repo_context(module, template.type)
-    initializer.initial_repo(repo_project.repo_url, template, context)
+    # 绑定源码仓库信息到模块
+    connector = get_repo_connector(repo_type, module)
+    connector.bind(repo_project.repo_url)
 
-    # 将当前操作者添加为仓库的 Master
-    initializer.add_member(repo_project.repo_url, operator, TencentGitMemberRole.MASTER)
+    try:
+        # 初始化代码仓库
+        context = get_module_init_repo_context(module, template.type)
+        initializer.initial_repo(repo_project.repo_url, template, context)
+
+        # 将当前操作者添加为仓库的 Master
+        initializer.add_member(repo_project.repo_url, operator, TencentGitMemberRole.MASTER)
+    except Exception:
+        # 任何异常发生时回滚已创建的仓库
+        logger.exception(f"Failed to initialize repository, delete repository({repo_name})...")
+        try:
+            initializer.delete_project(repo_project.repo_url)
+        except Exception:
+            logger.exception(f"Failed to delete repository({repo_name}) during rollback")
+        raise

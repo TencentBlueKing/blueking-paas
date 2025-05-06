@@ -187,7 +187,7 @@ def is_redis_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
         return False
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
-    return value.startswith(("redis://", "sentinel://"))
+    return value.startswith(("redis://", "rediss://", "sentinel://"))
 
 
 def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:

@@ -175,7 +175,10 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         # 创建代码仓库并初始化
         if src_cfg.get("is_new_repo_and_init"):
-            create_new_repo_and_initialized(module, repo_type, request.user.username)
+            try:
+                create_new_repo_and_initialized(module, repo_type, request.user.username)
+            except Exception:
+                raise error_codes.CANNOT_CREATE_APP.f(_("代码初始化过程失败，请稍候再试"))
 
         post_create_application.send(sender=self.__class__, application=application)
 

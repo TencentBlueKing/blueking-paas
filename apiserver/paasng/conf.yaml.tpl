@@ -640,7 +640,6 @@ BK_CI_CLIENT_USERNAME = "blueking"
 #  private_token: ''
 #  email: 'blueking@tencent.com'
 #  username: 'blueking'
-#  certificate_id: xxxxxx
 
 ## 插件开发中心在权限中心注册的系统 ID
 # IAM_PLUGINS_CENTER_SYSTEM_ID: bk_plugins

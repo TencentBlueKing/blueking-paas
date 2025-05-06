@@ -573,7 +573,7 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "cloudAppDeployForBuild",
-                "label": staticI18n.$t("nav-模块配置"),
+                "label": staticI18n.$t("模块配置"),
                 "iconfontName": "configuration-line",
                 "supportModule": false,
                 "destRoute": {

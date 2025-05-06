@@ -302,11 +302,10 @@ def create_new_repo_and_initialized(module: Module, repo_type: str, operator: st
     initializer = initializer_cls(
         repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
     )
-    # 创建代码仓库
+    # 创建代码仓库，仓库名为应用 ID_模块名，仓库可见级别为公开
     repo_name = f"{module.application.code}_{module.name}"
-    repo_project = initializer.create_project(
-        repo_name, TencentGitVisibleLevel.PUBLIC, description=f"{module.application.name}({module.name} 模块)"
-    )
+    description = f"{module.application.name}({module.name} 模块)"
+    repo_project = initializer.create_project(repo_name, TencentGitVisibleLevel.PUBLIC, description)
 
     # 初始化代码仓库
     context = get_module_init_repo_context(module)

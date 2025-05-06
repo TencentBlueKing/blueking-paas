@@ -25,6 +25,7 @@ from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.bk_app.applications.managers import get_metadata
+from paas_wl.bk_app.applications.models.build import Build as WlBuild
 from paas_wl.bk_app.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
@@ -40,7 +41,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MODULE_NAME_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
-    USE_CNB_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
     MountEnvName,
@@ -56,7 +56,7 @@ from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT, PORT_PLACEHOLDER, ResQuotaPlan
+from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
@@ -186,9 +186,9 @@ class ProcessesManifestConstructor(ManifestConstructor):
         processes = []
         for process_spec in process_specs:
             try:
-                command, args = self.get_command_and_args(module, process_spec)
+                command, args = self.get_command_and_args(process_spec)
             except ValueError:
-                logger.warning("模块<%s>的 %s 进程 未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
+                logger.warning("模块<%s>的 %s 进程未定义启动命令, 将使用镜像默认命令运行", module, process_spec.name)
                 command, args = [], []
 
             process_entity = Process(
@@ -283,19 +283,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
         # quota_plan_memory[-1][1] 是内存最大 plan
         return ResQuotaPlan(quota_plan_memory[-1][1])
 
-    def get_command_and_args(self, module: Module, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
+    def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.
 
         :return: (command, args)
         """
-        mgr = ModuleRuntimeManager(module)
-
-        # buildpack 优先级最高, 忽略 process_spec 中的命令配置. 按照 buildpack 规则设置 command 和 args
-        if mgr.build_config.build_method == RuntimeType.BUILDPACK:
-            # Note: 此处无需考虑兼容 cnb buildpack, cnb buildpack 的启动命令由 operator 做兼容(通过 use-cnb annotations 声明)
-            # 普通应用的启动命令固定了 entrypoint
-            return DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", process_spec.name]
-
         if process_spec.proc_command:
             o = self._sanitize_args(shlex.split(process_spec.proc_command))
             return [o[0]], o[1:]
@@ -514,11 +506,6 @@ def get_bkapp_resource_for_deploy(
             model_res.spec.build = crd.BkAppBuildConfig()
         model_res.spec.build.imagePullPolicy = image_pull_policy
 
-    # 采用 CNB 的应用在启动进程时，entrypoint 为 `process_type`, command 是空列表，
-    # 执行其他命令需要用 `launcher` 进入 buildpack 上下文，因此需要特殊标注
-    # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-    model_res.metadata.annotations[USE_CNB_ANNO_KEY] = "true" if use_cnb else "false"
-
     # Set log collector type to inform operator do some special logic.
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
@@ -535,6 +522,11 @@ def get_bkapp_resource_for_deploy(
 
     # 将出口集群信息注入到 model_res 中
     apply_egress_annotations(model_res, env)
+
+    # 如果模块是通过 buildpack 构建的，则需要更新 hooks 和 processes 中的 command/args
+    mgr = ModuleRuntimeManager(env.module)
+    if mgr.build_config.build_method == RuntimeType.BUILDPACK:
+        _update_cmd_args_from_wl_build(model_res, WlBuild.objects.get(uuid=deployment.build_id))
 
     # TODO: Missing parts: "build"
     return model_res
@@ -603,6 +595,19 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
         pass
     else:
         model_res.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] = binding.state.name
+
+
+def _update_cmd_args_from_wl_build(model_res: crd.BkAppResource, wl_build: WlBuild):
+    """从 WlBuild 的构建元数据中获取 entrypoint/command, 并将其更新或替换到 model_res 的 hooks 和 processes 配置中,
+    确保最终配置符合基于 buildpack 构建的容器镜像运行规范
+    """
+    if model_res.spec.hooks and model_res.spec.hooks.preRelease:
+        command = wl_build.get_universal_entrypoint() + (model_res.spec.hooks.preRelease.command or [])
+        model_res.spec.hooks.preRelease.command = command
+
+    for proc in model_res.spec.processes:
+        proc.args = wl_build.get_command_for_proc(proc.name, "")
+        proc.command = wl_build.get_entrypoint_for_proc(proc.name)
 
 
 def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> str:

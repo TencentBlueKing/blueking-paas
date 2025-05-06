@@ -195,7 +195,7 @@ content_patch_conf = {
             wrap_multiline_str(
                 4,
                 """
-                {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled }}
+                {{- if or .Values.accessControl.enabled .Values.paasAnalysis.enabled .Values.tenantGuard.enabled }}
                 ingressPlugin:
                   {{- if .Values.accessControl.enabled }}
                   accessControl:
@@ -689,6 +689,7 @@ class HelmChartUpdater:
         values["accessControl"] = {"enabled": False, "redisConfigKey": ""}
         # PA 访问日志统计挪到顶层
         values["paasAnalysis"] = {"enabled": False}
+        values["tenantGuard"] = {"enabled": False}
         del values["controller"]["ingressPlugin"]
 
         values["resLimits"] = values["controller"].pop("resLimits")

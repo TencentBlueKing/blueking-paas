@@ -97,7 +97,6 @@ export default {
           'moduleManage', // 模块管理
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
           'operationRecord', // 操作记录
         ],
@@ -111,7 +110,6 @@ export default {
           'moduleManage', // 模块管理
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
           'operationRecord', // 操作记录
         ],
@@ -123,7 +121,6 @@ export default {
           'appConfigs', // 基本设置
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
           'operationRecord', // 操作记录
         ],
       },
@@ -258,7 +255,6 @@ export default {
         // 接入feature flag来控制应用导航
         const featureMaps = {
           appAnalysis: 'ANALYTICS', // 访问统计
-          docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
         };
         const subFeatureMaps = {
           codeReview: 'CODE_CHECK', // 代码检查
@@ -324,6 +320,7 @@ export default {
         'appBasicInfo', // 基本信息
         'appMembers', // 成员管理
         'appPersistentStorage', // 持久存储
+        'docuManagement', // 文档管理
       ];
 
       this.navTree.forEach((nav) => {

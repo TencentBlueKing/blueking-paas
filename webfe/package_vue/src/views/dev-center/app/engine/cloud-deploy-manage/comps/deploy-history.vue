@@ -289,6 +289,9 @@ export default {
         { text: this.$t('预发布环境'), value: 'stag' },
       ];
     },
+    logId() {
+      return this.$route.query.logId;
+    },
   },
 
   watch: {
@@ -432,6 +435,10 @@ export default {
       } finally {
         this.isPageLoading = false;
         this.isLoading = false;
+        this.$nextTick(() => {
+          const curLog = this.historyList.find((v) => v.id === this.logId);
+          curLog && this.handleShowLogSideslider(curLog);
+        });
       }
     },
 

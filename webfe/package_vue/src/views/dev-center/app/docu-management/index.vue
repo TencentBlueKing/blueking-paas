@@ -1,28 +1,24 @@
 <template>
   <div class="right-main paas-docu-manager-wrapper">
-    <div class="ps-top-bar">
-      <h2>
-        {{ $t('文档管理') }}
-        <a
-          v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
-          class="link fr"
-          :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
-          target="_blank"
-        >
-          {{ $t('蓝鲸 SaaS 研发管理参考规范') }}
-        </a>
-      </h2>
-    </div>
     <paas-content-loader
-      class="app-container middle docu-container card-style"
+      class="app-container docu-container card-style"
       :is-loading="isLoading"
       placeholder="docu-manager-loading"
     >
       <div v-if="!isLoading && tableList.length > 0">
-        <bk-alert
-          type="warning"
-          :title="curTitle"
-        />
+        <bk-alert type="warning">
+          <div slot="title">
+            <span>{{ curTitle }}</span>
+            <a
+              v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+              class="link fr"
+              :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+              target="_blank"
+            >
+              {{ $t('蓝鲸 SaaS 研发管理参考规范') }}
+            </a>
+          </div>
+        </bk-alert>
         <table class="bk-table docu-manager-custom-table">
           <colgroup>
             <col style="width: 200px" />

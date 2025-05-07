@@ -633,7 +633,7 @@ func (r *BkApp) validateExposedTypes() *field.Error {
 		return field.Invalid(
 			field.NewPath("spec").Child("processes"),
 			fmt.Sprintf("%d exposedTypes(%s)", len(v), strings.Join(v, ", ")),
-			"multiple exposedTypes are not supported",
+			"setting multiple exposedTypes in a BkApp is not supported",
 		)
 	}
 

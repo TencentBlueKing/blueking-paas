@@ -843,8 +843,8 @@ spec:
 
 
                               ExposedType can be one of the following:
-                              - {Name: ExposedTypeNameBkHttp} exposed by DomainGroupMapping. Backend protocol is http.
-                              - {Name: ExposedTypeNameBkGrpc} exposed by DomainGroupMapping. Backend protocol is grpc.
+                              - {Name: ExposedTypeNameBkHTTP} exposed by DomainGroupMapping. Backend protocol is http.
+                              - {Name: ExposedTypeNameBkGRPC} exposed by DomainGroupMapping. Backend protocol is grpc.
                             properties:
                               name:
                                 description: The name of the exposed type.
@@ -2044,8 +2044,8 @@ spec:
 
 
                               ExposedType can be one of the following:
-                              - {Name: ExposedTypeNameBkHttp} exposed by DomainGroupMapping. Backend protocol is http.
-                              - {Name: ExposedTypeNameBkGrpc} exposed by DomainGroupMapping. Backend protocol is grpc.
+                              - {Name: ExposedTypeNameBkHTTP} exposed by DomainGroupMapping. Backend protocol is http.
+                              - {Name: ExposedTypeNameBkGRPC} exposed by DomainGroupMapping. Backend protocol is grpc.
                             properties:
                               name:
                                 description: The name of the exposed type.

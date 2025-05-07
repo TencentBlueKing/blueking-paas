@@ -28,10 +28,10 @@ import (
 type ExposedTypeName string
 
 const (
-	// ExposedTypeNameBkHttp is the exposed type which implements based on DomainGroupMapping. Backend protocol is http.
-	ExposedTypeNameBkHttp ExposedTypeName = "bk/http"
-	// ExposedTypeNameBkGrpc is the exposed type which implements based on DomainGroupMapping. Backend protocol is grpc.
-	ExposedTypeNameBkGrpc ExposedTypeName = "bk/grpc"
+	// ExposedTypeNameBkHTTP is the exposed type which implements based on DomainGroupMapping. Backend protocol is http.
+	ExposedTypeNameBkHTTP ExposedTypeName = "bk/http"
+	// ExposedTypeNameBkGRPC is the exposed type which implements based on DomainGroupMapping. Backend protocol is gRPC.
+	ExposedTypeNameBkGRPC ExposedTypeName = "bk/grpc"
 )
 
 // ProcService is a process service which used to expose network
@@ -52,8 +52,8 @@ type ProcService struct {
 	// TODO implement control logic in operator?
 	//
 	// ExposedType can be one of the following:
-	// - {Name: ExposedTypeNameBkHttp} exposed by DomainGroupMapping. Backend protocol is http.
-	// - {Name: ExposedTypeNameBkGrpc} exposed by DomainGroupMapping. Backend protocol is grpc.
+	// - {Name: ExposedTypeNameBkHTTP} exposed by DomainGroupMapping. Backend protocol is http.
+	// - {Name: ExposedTypeNameBkGRPC} exposed by DomainGroupMapping. Backend protocol is grpc.
 	//
 	// +optional
 	ExposedType *ExposedType `json:"exposedType,omitempty"`
@@ -81,8 +81,8 @@ type ExposedProcService struct {
 }
 
 var allowedExposedTypes = map[ExposedTypeName]bool{
-	ExposedTypeNameBkHttp: true,
-	ExposedTypeNameBkGrpc: true,
+	ExposedTypeNameBkHTTP: true,
+	ExposedTypeNameBkGRPC: true,
 }
 
 func validateExposedType(t *ExposedType) error {

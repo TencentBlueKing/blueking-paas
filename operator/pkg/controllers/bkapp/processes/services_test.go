@@ -269,7 +269,7 @@ var _ = Describe("test build expect service by proc services", func() {
 							Name:        "web",
 							TargetPort:  5000,
 							Protocol:    corev1.ProtocolTCP,
-							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
 							Port:        80,
 						},
 						{

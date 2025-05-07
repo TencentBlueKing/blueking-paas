@@ -46,6 +46,7 @@ const (
 	BackendProtocolAnnoKey      = "nginx.ingress.kubernetes.io/backend-protocol"
 	ConfigurationSnippetAnnoKey = "nginx.ingress.kubernetes.io/configuration-snippet"
 	RewriteTargetAnnoKey        = "nginx.ingress.kubernetes.io/rewrite-target"
+	SSLRedirectAnnoKey          = "nginx.ingress.kubernetes.io/ssl-redirect"
 	// SkipFilterCLBAnnoKey 由于 tke 集群默认会为没有绑定 CLB 的 Ingress 创建并绑定公网 CLB 的危险行为，
 	// bcs-webhook 会对下发/更新配置时没有指定 clb 的 Ingress 进行拦截，在关闭 tke 集群的 l7-lb-controller 组件后
 	// 可以在下发 Ingress 时候添加注解 bkbcs.tencent.com/skip-filter-clb: "true" 以跳过 bcs-webhook 的拦截
@@ -166,7 +167,6 @@ type MonoIngressBuilder struct {
 func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingress, error) {
 	bkapp := builder.bkapp
 
-	results := []*networkingv1.Ingress{}
 	// TODO: The resource name might conflict if multiple DomainGroupMappings uses
 	// same sourceTypes.
 	name := fmt.Sprintf("%s-%s", bkapp.Name, builder.sourceType)
@@ -184,7 +184,7 @@ func (builder MonoIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ingre
 		},
 	}
 
-	results = append(results, &ingress)
+	results := []*networkingv1.Ingress{&ingress}
 	return results, nil
 }
 
@@ -228,7 +228,7 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 
 // Make rule objects
 func makeRules(bkapp *paasv1alpha2.BkApp, domains []Domain) []networkingv1.IngressRule {
-	rules := []networkingv1.IngressRule{}
+	rules := make([]networkingv1.IngressRule, 0)
 	for _, d := range domains {
 		r := networkingv1.IngressRule{
 			Host: d.Host,
@@ -261,14 +261,24 @@ func makeTLS(domains []Domain) (results []networkingv1.IngressTLS) {
 
 // Make path objects
 func makePaths(bkapp *paasv1alpha2.BkApp, pathPrefixes []string) []networkingv1.HTTPIngressPath {
-	results := []networkingv1.HTTPIngressPath{}
+	results := make([]networkingv1.HTTPIngressPath, 0)
+
+	isGRPC := isBackendProtocolGRPC(bkapp)
+
+	var path string
 	for _, prefix := range pathPrefixes {
-		path := networkingv1.HTTPIngressPath{
-			Path:     makeLocationPath(prefix),
+		// gRPC protocol. Field Path is set to "/"
+		if isGRPC {
+			path = "/"
+		} else {
+			path = makeLocationPath(prefix)
+		}
+		ingressPath := networkingv1.HTTPIngressPath{
+			Path:     path,
 			PathType: lo.ToPtr(networkingv1.PathTypeImplementationSpecific),
 			Backend:  *makeIngressServiceBackend(bkapp),
 		}
-		results = append(results, path)
+		results = append(results, ingressPath)
 	}
 	return results
 }
@@ -420,16 +430,16 @@ func makeRewriteTarget() string {
 
 // makeAnnotations return a map of annotations
 func makeAnnotations(bkapp *paasv1alpha2.BkApp, domains []Domain) map[string]string {
-	annotations := map[string]string{
-		SkipFilterCLBAnnoKey:        "true",
-		RewriteTargetAnnoKey:        makeRewriteTarget(),
-		ServerSnippetAnnoKey:        makeServerSnippet(bkapp, domains),
-		ConfigurationSnippetAnnoKey: makeConfigurationSnippet(bkapp, domains),
-	}
+	annotations := map[string]string{SkipFilterCLBAnnoKey: "true"}
 
-	exposedProcService := bkapp.FindExposedProcService()
-	if exposedProcService != nil && exposedProcService.ExposedTypeName == paasv1alpha2.ExposedTypeNameBkGrpc {
+	if isBackendProtocolGRPC(bkapp) {
+		// TODO: 支持相关插件的 ServerSnippetAnnoKey 和 ConfigurationSnippetAnnoKey. 目前验证了 accessControl 插件不能直接使用
+		annotations[SSLRedirectAnnoKey] = "true"
 		annotations[BackendProtocolAnnoKey] = "GRPC"
+	} else {
+		annotations[RewriteTargetAnnoKey] = makeRewriteTarget()
+		annotations[ServerSnippetAnnoKey] = makeServerSnippet(bkapp, domains)
+		annotations[ConfigurationSnippetAnnoKey] = makeConfigurationSnippet(bkapp, domains)
 	}
 
 	// 如果已配置 ingressClassName，则使用
@@ -440,6 +450,14 @@ func makeAnnotations(bkapp *paasv1alpha2.BkApp, domains []Domain) map[string]str
 	}
 
 	return annotations
+}
+
+func isBackendProtocolGRPC(bkapp *paasv1alpha2.BkApp) bool {
+	exposedProcService := bkapp.FindExposedProcService()
+	if exposedProcService != nil && exposedProcService.ExposedTypeName == paasv1alpha2.ExposedTypeNameBkGRPC {
+		return true
+	}
+	return false
 }
 
 func init() {

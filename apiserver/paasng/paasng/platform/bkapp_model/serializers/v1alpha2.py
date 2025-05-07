@@ -359,7 +359,7 @@ class BkAppSpecInputSLZ(serializers.Serializer):
                     exposed_types.add(exposed_type.name)
 
         if len(exposed_types) > 1:
-            raise ValidationError("multiple exposedTypes in an app module are not supported")
+            raise ValidationError("setting multiple exposedTypes in an app module is not supported")
 
     def _validate_observability(self, data: v1alpha2.BkAppSpec):
         """validate observability config by rules as below:

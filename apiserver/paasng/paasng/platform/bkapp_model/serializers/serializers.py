@@ -278,7 +278,7 @@ class ModuleProcessSpecsInputSLZ(serializers.Serializer):
                 exposed_types.add(exposed_type_name)
 
         if len(exposed_types) > 1:
-            raise ValidationError("multiple exposed_types in an app module are not supported")
+            raise ValidationError("setting multiple exposed_types in an app module is not supported")
 
 
 class ModuleDeployHookSLZ(serializers.Serializer):

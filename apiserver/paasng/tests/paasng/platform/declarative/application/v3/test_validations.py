@@ -137,7 +137,7 @@ class TestValidateBadCase:
                         ],
                     },
                 ],
-                r"multiple exposedTypes in an app module are not supported",
+                r"setting multiple exposedTypes in an app module is not supported",
             ),
         ],
     )

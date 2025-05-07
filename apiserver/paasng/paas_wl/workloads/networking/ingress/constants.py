@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.data_types.enum import IntStructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 
 ANNOT_SERVER_SNIPPET = "nginx.ingress.kubernetes.io/server-snippet"
 ANNOT_CONFIGURATION_SNIPPET = "nginx.ingress.kubernetes.io/configuration-snippet"
@@ -46,6 +46,11 @@ class AppDomainSource(IntStructuredEnum):
     # Deprecated: The "independent" source is used for the custom domain in the old version,
     # it became useless after the data was migrated to the `Domain` model.
     INDEPENDENT = 3
+
+
+class AppDomainSchema(StrStructuredEnum):
+    HTTP_OR_HTTPS = EnumField("http_or_https")
+    GRPC = EnumField("grpc")
 
 
 class AppSubpathSource(IntStructuredEnum):

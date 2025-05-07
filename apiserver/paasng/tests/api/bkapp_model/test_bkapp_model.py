@@ -386,7 +386,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         resp = api_client.post(url, data={"proc_specs": request_data})
         assert resp.status_code == 400
-        assert "multiple exposed_types in an app module are not supported" in resp.data.get("detail", "")
+        assert "setting multiple exposed_types in an app module is not supported" in resp.data.get("detail", "")
 
     @pytest.mark.parametrize("exposed_type", ["bk/http", "bk/grpc"])
     def test_save(self, api_client, bk_cnative_app, bk_module, web, exposed_type):

@@ -15,30 +15,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import path
-
-from paasng.plat_mgt.applications.views import application
+from paasng.plat_mgt.applications import views
+from paasng.utils.basic import re_path
 
 urlpatterns = [
     # 平台管理 - 应用列表
-    path(
-        "api/plat_mgt/applications/",
-        application.ApplicationView.as_view({"get": "list"}),
+    re_path(
+        r"^api/plat_mgt/applications/$",
+        views.ApplicationListViewSet.as_view({"get": "list"}),
         name="plat_mgt.applications.list_applications",
     ),
-    path(
-        "api/plat_mgt/applications/tenant_id_list/",
-        application.ApplicationView.as_view({"get": "list_tenant_id"}),
-        name="plat_mgt.applications.list_tenant_id",
+    re_path(
+        r"^api/plat_mgt/applications/tenant_app_statistics/$",
+        views.ApplicationListViewSet.as_view({"get": "list_tenant_app_statistics"}),
+        name="plat_mgt.applications.list_tenant_app_statistics",
     ),
-    path(
-        "api/plat_mgt/applications/tenant_mode_list/",
-        application.ApplicationView.as_view({"get": "list_tenant_mode"}),
-        name="plat_mgt.applications.list_tenant_mode",
+    re_path(
+        r"^api/plat_mgt/applications/tenant_mode_list/$",
+        views.ApplicationListViewSet.as_view({"get": "list_tenant_modes"}),
+        name="plat_mgt.applications.list_tenant_modes",
     ),
-    path(
-        "api/plat_mgt/applications/types/",
-        application.ApplicationView.as_view({"get": "list_app_types"}),
+    re_path(
+        r"^api/plat_mgt/applications/types/$",
+        views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
     ),
 ]

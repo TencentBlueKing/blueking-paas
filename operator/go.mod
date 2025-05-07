@@ -1,6 +1,6 @@
 module bk.tencent.com/paas-app-operator
 
-go 1.23.0
+go 1.23.8
 
 require (
 	github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler v0.0.0-20230419100919-e7fc943fe8ef

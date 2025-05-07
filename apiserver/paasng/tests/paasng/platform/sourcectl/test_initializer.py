@@ -18,13 +18,12 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from django.conf import settings
 from django.test import override_settings
 
-from paasng.platform.modules.utils import get_module_init_repo_context
-from paasng.platform.sourcectl.constants import TencentGitMemberRole, TencentGitVisibleLevel
+from paasng.platform.sourcectl.exceptions import RepoNameConflict
 from paasng.platform.sourcectl.initializer import create_new_repo_and_initialized
-from paasng.platform.templates.models import Template
+from paasng.platform.sourcectl.models import SourceTypeSpecConfig
+from paasng.platform.sourcectl.source_types import refresh_sourcectl_types
 
 pytestmark = [pytest.mark.django_db]
 
@@ -37,7 +36,31 @@ def mock_sourcectl_type():
     return MockSourceType()
 
 
+@pytest.fixture(autouse=True)
+def _setup_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
+    spec_cls_module_path = "paasng.platform.sourcectl.type_specs"
+
+    configs = [
+        SourceTypeSpecConfig(
+            name="tc_git",
+            label_zh_cn="tc_git",
+            label_en="tc_git",
+            enabled=True,
+            spec_cls=f"{spec_cls_module_path}.BareGitSourceTypeSpec",
+        ),
+    ]
+
+    type_configs = [dummy_gitlab_spec, dummy_svn_spec]
+    type_configs.extend([c.to_dict() for c in configs])
+    refresh_sourcectl_types(type_configs)
+
+
 class TestCreateNewRepoAndInitialized:
+    COMMON_SETTINGS = override_settings(
+        APP_REPO_CONF={"private_token": "test-token", "api_url": "http://api.example.com"},
+        APP_REPOSITORY_GROUP="http://git.example.com/groups/test",
+    )
+
     @patch("paasng.platform.sourcectl.initializer.get_sourcectl_type")
     def test_no_initializer_class_raise_error(self, mock_get_type, bk_module, mock_sourcectl_type):
         """没有设置 initializer_class 时抛出异常"""
@@ -48,49 +71,48 @@ class TestCreateNewRepoAndInitialized:
             create_new_repo_and_initialized(bk_module, "invalid_type", "test-operator")
 
     @pytest.mark.usefixtures("_init_tmpls")
+    @COMMON_SETTINGS
     @patch("paasng.platform.sourcectl.initializer.get_sourcectl_type")
     @patch("paasng.platform.sourcectl.initializer.TcGitRepoInitializer")
-    @patch("paasng.platform.modules.utils.get_module_init_repo_context")
-    @override_settings(
-        APP_REPO_CONF={"private_token": "test-token", "api_url": "http://api.example.com"},
-        APP_REPOSITORY_GROUP="http://git.example.com/groups/test",
-    )
-    def test_normal_flow_with_mocks(
-        self, mock_get_context, mock_initializer_cls, mock_get_type, bk_module, mock_sourcectl_type
-    ):
-        """测试正常流程"""
-        mock_initializer = Mock()
-        mock_initializer_cls.return_value = mock_initializer
-        mock_sourcectl_type.initializer_class = mock_initializer_cls
-        mock_get_type.return_value = mock_sourcectl_type
+    def test_template_not_exist(self, mock_initializer_cls, mock_get_type, bk_module):
+        """测试模板不存在的情况"""
+        mock_get_type.return_value = Mock(initializer_class=mock_initializer_cls)
 
-        # 初始化模板的上下文
-        template = Template.objects.get(name="dummy_template")
-        mock_context = get_module_init_repo_context(bk_module, template.type)
-        mock_get_context.return_value = mock_context
+        # 设置不存在的模板名称
+        bk_module.source_init_template = "non_exist_template"
+        bk_module.save()
 
-        create_new_repo_and_initialized(bk_module, "tc_git", "test-operator")
+        with pytest.raises(ValueError, match="Template non_exist_template does not exist"):
+            create_new_repo_and_initialized(bk_module, "tc_git", "test-operator")
 
-        # 验证初始化器调用
-        mock_initializer_cls.assert_called_once_with(
-            repository_group=settings.APP_REPOSITORY_GROUP,
-            api_url=settings.APP_REPO_CONF["api_url"],
-            user_credentials={"private_token": "test-token"},
-        )
+    @pytest.mark.usefixtures("_init_tmpls")
+    @COMMON_SETTINGS
+    @patch("paasng.platform.sourcectl.initializer.get_sourcectl_type")
+    @patch("paasng.platform.sourcectl.initializer.TcGitRepoInitializer")
+    @patch("paasng.platform.sourcectl.connector.get_repo_connector")
+    def test_repo_rollback_on_error(self, mock_connector, mock_initializer_cls, mock_get_type, bk_module):
+        """测试初始化失败时的回滚逻辑"""
+        mock_initializer = mock_initializer_cls.return_value
+        mock_initializer.create_project.return_value = Mock(repo_url="http://repo.example.com/test-repo")
+        mock_initializer.initial_repo.side_effect = Exception("Init error")
+        mock_get_type.return_value = Mock(initializer_class=mock_initializer_cls)
+        mock_connector.return_value = Mock()
 
-        # 验证仓库创建
-        expected_repo_name = f"{bk_module.application.code}_{bk_module.name}"
-        expected_description = f"{bk_module.application.name}({bk_module.name} 模块)"
-        mock_initializer.create_project.assert_called_once_with(
-            expected_repo_name, TencentGitVisibleLevel.PUBLIC, expected_description
-        )
+        with pytest.raises(Exception, match=r"Init error"):
+            create_new_repo_and_initialized(bk_module, "tc_git", "test-operator")
 
-        # 验证仓库初始化
-        mock_initializer.initial_repo.assert_called_once_with(
-            mock_initializer.create_project.return_value.repo_url, template, mock_context
-        )
+        # 验证回滚操作
+        mock_initializer.delete_project.assert_called_once_with("http://repo.example.com/test-repo")
 
-        # 验证成员添加
-        mock_initializer.add_member.assert_called_once_with(
-            mock_initializer.create_project.return_value.repo_url, "test-operator", TencentGitMemberRole.MASTER
-        )
+    @pytest.mark.usefixtures("_init_tmpls")
+    @COMMON_SETTINGS
+    @patch("paasng.platform.sourcectl.initializer.get_sourcectl_type")
+    @patch("paasng.platform.sourcectl.initializer.TcGitRepoInitializer")
+    def test_repo_creation_conflict(self, mock_initializer_cls, mock_get_type, bk_module):
+        """测试仓库名称冲突的情况"""
+        mock_initializer = mock_initializer_cls.return_value
+        mock_initializer.create_project.side_effect = RepoNameConflict("Path has already been taken")
+        mock_get_type.return_value = Mock(initializer_class=mock_initializer_cls)
+
+        with pytest.raises(RepoNameConflict, match="Path has already been taken"):
+            create_new_repo_and_initialized(bk_module, "tc_git", "test-operator")

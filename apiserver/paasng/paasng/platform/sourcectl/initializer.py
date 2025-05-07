@@ -313,7 +313,7 @@ def create_new_repo_and_initialized(module: Module, repo_type: str, operator: st
 
     # 绑定源码仓库信息到模块
     connector = get_repo_connector(repo_type, module)
-    connector.bind(repo_project.repo_url)
+    connector.bind(repo_project.repo_url, repo_auth_info={})
 
     try:
         # 初始化代码仓库

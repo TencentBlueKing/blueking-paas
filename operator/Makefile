@@ -171,7 +171,7 @@ HELMIFY ?= $(LOCALBIN)/helmify
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
-GOCILINT_VERSION ?= v1.53.3
+GOCILINT_VERSION ?= v1.64.8
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -192,7 +192,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## 安装 ginkgo 二进制
 $(GINKGO): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
+	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.22.2
 
 .PHONY: golines
 golines: $(GOLINES) ## 安装 golines 二进制

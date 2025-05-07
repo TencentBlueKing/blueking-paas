@@ -51,6 +51,8 @@ const (
 type VolumeMounter interface {
 	// ApplyToDeployment 将挂载卷应用到 deployment
 	ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deployment *appsv1.Deployment) error
+	// ApplyToPod 将挂载卷应用到 pod
+	ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error
 	// GetName 返回挂载卷的名字
 	GetName() string
 	// GetMountPath 返回挂载卷的挂载路径
@@ -79,13 +81,30 @@ func (vm *GenericVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, deplo
 
 	deployment.Spec.Template.Spec.Volumes = append(
 		deployment.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name:         vm.Volume.Name,
-			VolumeSource: vs,
-		},
+		corev1.Volume{Name: vm.Volume.Name, VolumeSource: vs},
 	)
 
 	containers := deployment.Spec.Template.Spec.Containers
+	for idx := range containers {
+		volumeMounts := vm.getVolumeMounts()
+		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, volumeMounts...)
+	}
+	return nil
+}
+
+// ApplyToPod 将 GenericVolumeMount 应用到 pod
+func (vm *GenericVolumeMount) ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error {
+	vs, err := ToCoreV1VolumeSource(vm.Volume.Source)
+	if err != nil {
+		return err
+	}
+
+	pod.Spec.Volumes = append(
+		pod.Spec.Volumes,
+		corev1.Volume{Name: vm.Volume.Name, VolumeSource: vs},
+	)
+
+	containers := pod.Spec.Containers
 	for idx := range containers {
 		volumeMounts := vm.getVolumeMounts()
 		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, volumeMounts...)
@@ -113,7 +132,13 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 				LocalObjectReference: corev1.LocalObjectReference{Name: source.ConfigMap.Name},
 			},
 		}, nil
-	} else if source.PersistentStorage != nil {
+	}
+	if source.Secret != nil {
+		return corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{SecretName: source.Secret.Name},
+		}, nil
+	}
+	if source.PersistentStorage != nil {
 		return corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 				ClaimName: source.PersistentStorage.Name,
@@ -124,22 +149,21 @@ func ToCoreV1VolumeSource(source *paasv1alpha2.VolumeSource) (corev1.VolumeSourc
 }
 
 func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
-	if len(vm.SubPaths) > 0 {
-		var volumeMounts []corev1.VolumeMount
-		for _, subPath := range vm.SubPaths {
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      vm.Volume.Name,
-				MountPath: filepath.Join(vm.MountPath, subPath),
-				SubPath:   subPath,
-			})
-		}
-		return volumeMounts
+	if len(vm.SubPaths) == 0 {
+		return []corev1.VolumeMount{{
+			Name: vm.Volume.Name, MountPath: vm.MountPath,
+		}}
 	}
 
-	return []corev1.VolumeMount{{
-		Name:      vm.Volume.Name,
-		MountPath: vm.MountPath,
-	}}
+	var volumeMounts []corev1.VolumeMount
+	for _, subPath := range vm.SubPaths {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      vm.Volume.Name,
+			MountPath: filepath.Join(vm.MountPath, subPath),
+			SubPath:   subPath,
+		})
+	}
+	return volumeMounts
 }
 
 // BuiltinLogsVolumeMount 内置日志挂载卷
@@ -160,10 +184,26 @@ func (v BuiltinLogsVolumeMount) ApplyToDeployment(bkapp *paasv1alpha2.BkApp, dep
 	})
 	containers := deployment.Spec.Template.Spec.Containers
 	for idx := range containers {
-		containers[idx].VolumeMounts = append(containers[idx].VolumeMounts, corev1.VolumeMount{
-			Name:      v.Name,
-			MountPath: v.MountPath,
-		})
+		containers[idx].VolumeMounts = append(
+			containers[idx].VolumeMounts,
+			corev1.VolumeMount{Name: v.Name, MountPath: v.MountPath},
+		)
+	}
+	return nil
+}
+
+// ApplyToPod 将内置日志挂载卷应用到 pod
+func (v BuiltinLogsVolumeMount) ApplyToPod(bkapp *paasv1alpha2.BkApp, pod *corev1.Pod) error {
+	pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
+		Name:         v.Name,
+		VolumeSource: corev1.VolumeSource{HostPath: v.Source},
+	})
+	containers := pod.Spec.Containers
+	for idx := range containers {
+		containers[idx].VolumeMounts = append(
+			containers[idx].VolumeMounts,
+			corev1.VolumeMount{Name: v.Name, MountPath: v.MountPath},
+		)
 	}
 	return nil
 }

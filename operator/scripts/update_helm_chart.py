@@ -689,6 +689,7 @@ class HelmChartUpdater:
         values["accessControl"] = {"enabled": False, "redisConfigKey": ""}
         # PA 访问日志统计挪到顶层
         values["paasAnalysis"] = {"enabled": False}
+        # 租户网关访问守卫挪到顶层
         values["tenantGuard"] = {"enabled": False}
         del values["controller"]["ingressPlugin"]
 

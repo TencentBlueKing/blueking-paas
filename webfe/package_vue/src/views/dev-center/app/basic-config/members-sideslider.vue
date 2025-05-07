@@ -33,7 +33,7 @@
               <user
                 v-model="formData.users"
                 :multiple="true"
-                :placeholder="$t('请输入成员姓名')"
+                :placeholder="$t('请输入用户名')"
                 :empty-text="$t('无匹配人员')"
                 :disabled="isEidt"
               />
@@ -364,8 +364,9 @@ export default {
       }
     }
     .permission-notes {
+      margin: 16px 0 0 7px;
       margin-top: 16px;
-      font-size: 10px;
+      font-size: 12px;
       color: #313238;
       li {
         position: relative;
@@ -374,7 +375,7 @@ export default {
           content: '';
           position: absolute;
           left: -7px;
-          top: 50%;
+          top: 8px;
           width: 2px;
           height: 2px;
           border-radius: 50%;

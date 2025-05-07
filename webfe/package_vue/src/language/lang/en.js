@@ -2999,6 +2999,7 @@ export default {
   增强服务管理: 'Enhanced Service Management',
   部署环境限制管理: 'Deployment Environment Restriction Management',
   告警策略配置: 'Alert Policy Config',
+  请输入用户名: 'Please enter username',
   '拥有开发（部署、日志、配置、云API）、运营（应用访问权限、应用市场信息）等权限': 'Has development (deployment, logging, configuration, cloud API) and operations (application access permissions, marketplace information) permissions',
   '拥有开发相关的权限（部署、日志、配置、云API），但无法管理应用访问权限和应用成员': 'Has development-related permissions (deployment, logging, configuration, cloud API), but cannot manage application access permissions and members',
   '仅可修改应用名称/市场信息、管理应用访问权限、查看访问统计数据和告警记录': 'Can only modify application name/marketplace information, manage application access permissions, and view access statistics and alert records',

@@ -165,13 +165,9 @@ export default defineComponent({
       });
     };
 
-    watch(
-      () => props.navList,
-      (list) => {
-        // 通过路径高亮tab
-        curActive.value = props.active || list[0]?.name;
-      }
-    );
+    watch([() => props.navList, () => props.active], ([newList, newActive]) => {
+      curActive.value = newActive || newList[0]?.name;
+    });
 
     const handleShowAppMigrationDialog = () => {
       emit('migration-dialog', true);

@@ -26,7 +26,9 @@
             <template slot-scope="{ item }">{{ `${item.label}（${item.count}）` }}</template>
           </CustomRadioCapsule>
           <bk-button
+            class="pl0"
             theme="primary"
+            size="small"
             text
             @click="viewPermissionModel"
           >
@@ -37,7 +39,7 @@
           v-model="searchValues"
           style="width: 300px"
           :multiple="true"
-          :placeholder="$t('请输入成员姓名')"
+          :placeholder="$t('请输入用户名')"
           :empty-text="$t('无匹配人员')"
           @change="handleSearch"
         />
@@ -88,7 +90,11 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('角色')">
+          <bk-table-column
+            :label="$t('角色')"
+            :width="220"
+            :show-overflow-tooltip="true"
+          >
             <template #default="{ row }">
               <span>{{ row.displayRoles }}</span>
             </template>

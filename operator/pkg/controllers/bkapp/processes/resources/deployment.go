@@ -72,6 +72,8 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 		return nil, err
 	}
 	replicasGetter := envs.NewReplicasGetter(app)
+
+	// NOTE: UseCNBAnnoKey 保留仅用于兼容存量模型. 新部署的 bkapp 模型已不再包含该注解, 模型中已正确处理 command/args
 	useCNB, _ := strconv.ParseBool(app.Annotations[paasv1alpha2.UseCNBAnnoKey])
 
 	// Find the process spec object
@@ -176,6 +178,8 @@ func buildContainers(
 	useCNB bool,
 ) []corev1.Container {
 	var command, args []string
+
+	// NOTE: useCNB 保留仅用于兼容存量 bkapp 模型. 新部署的 bkapp 模型已不再关注该字段, 模型中已正确处理 command/args
 	if useCNB {
 		// cnb 运行时启动 Process 的 entrypoint 是 `Process.Name`, command 是空列表
 		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go

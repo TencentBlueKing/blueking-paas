@@ -191,6 +191,7 @@
                     >
                       <bk-input
                         v-model="row.key"
+                        placeholder="ENV_KEY"
                         class="env-input-cls"
                         @enter="handleInputEvent(row, $index)"
                         @blur="handleInputEvent(row, $index)"
@@ -234,6 +235,7 @@
                   >
                     <bk-input
                       v-model="row.value"
+                      placeholder="env_value"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)"
                       class="env-input-cls"
@@ -296,6 +298,7 @@
                   >
                     <bk-input
                       v-model="row.description"
+                      :placeholder="$t('输入描述文字，可选')"
                       class="env-input-cls"
                     ></bk-input>
                   </bk-form-item>

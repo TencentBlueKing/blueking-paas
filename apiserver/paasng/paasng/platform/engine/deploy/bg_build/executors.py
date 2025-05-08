@@ -27,6 +27,7 @@ from django.conf import settings
 from django.utils.encoding import force_str
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata, BuildMetadata
 from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
 from paas_wl.bk_app.applications.models.build import Build, BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
@@ -84,7 +85,7 @@ class DefaultBuildProcessExecutor(DeployStep):
         self.wl_app: "WlApp" = bp.app
         self._builder_name = generate_builder_name(self.wl_app)
 
-    def execute(self, metadata: Dict):
+    def execute(self, metadata: BuildMetadata):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):
@@ -195,21 +196,18 @@ class DefaultBuildProcessExecutor(DeployStep):
         logger.debug("SlugBuilder created: %s", slug_builder_name)
         return slug_builder_name
 
-    def create_and_bind_build_instance(self, metadata: Dict) -> Build:
+    def create_and_bind_build_instance(self, metadata: BuildMetadata) -> Build:
         """Create the Build instance and bind it to self.BuildProcess instance
 
-        :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
+        :param metadata: BuildMetadata to be stored in Build instance
         """
-        if "image" not in metadata:
-            raise KeyError("'image' is required")
-        image = metadata["image"]
         artifact_type = ArtifactType.SLUG
-        artifact_metadata = {}
-        if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
+        artifact_metadata = BuildArtifactMetadata()
+
+        if metadata.use_dockerfile or metadata.use_cnb:
             artifact_type = ArtifactType.IMAGE
-            artifact_metadata["use_dockerfile"] = metadata.get("use_dockerfile", False)
-            artifact_metadata["use_cnb"] = metadata.get("use_cnb", False)
-        bkapp_revision_id = metadata.get("bkapp_revision_id")
+            artifact_metadata.use_dockerfile = metadata.use_dockerfile
+            artifact_metadata.use_cnb = metadata.use_cnb
 
         # starting create build
         build_instance = Build.objects.create(
@@ -218,11 +216,11 @@ class DefaultBuildProcessExecutor(DeployStep):
             module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
-            image=image,
+            image=metadata.image,
             branch=self.bp.branch,
             revision=self.bp.revision,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
-            bkapp_revision_id=bkapp_revision_id,
+            bkapp_revision_id=metadata.bkapp_revision_id,
             artifact_type=artifact_type,
             artifact_metadata=artifact_metadata,
             tenant_id=self.wl_app.tenant_id,
@@ -270,7 +268,7 @@ class PipelineBuildProcessExecutor(DeployStep):
         tenant_id = get_tenant_id_for_app(deployment.get_application().code)
         self.ctl = BkCIPipelineClient(tenant_id, bk_username=settings.BK_CI_CLIENT_USERNAME)
 
-    def execute(self, metadata: Dict):
+    def execute(self, metadata: BuildMetadata):
         """Execute the build process"""
         try:
             with self.procedure("构建环境变量"):
@@ -396,16 +394,12 @@ class PipelineBuildProcessExecutor(DeployStep):
         if self.ctl.retrieve_build_status(pb).status != PipelineBuildStatus.SUCCEED:
             raise BkCIPipelineBuildNotSuccess("build image with bk_ci pipeline not success")
 
-    def _create_and_bind_build_instance(self, metadata: Dict) -> Build:
+    def _create_and_bind_build_instance(self, metadata: BuildMetadata) -> Build:
         """
         创建 Build 对象并绑定到 BuildProcess 实例
 
         注：蓝盾流水线构建只支持镜像制品，不支持 slug 包
         """
-        if not metadata.get("image"):
-            raise KeyError("metadata.image is required")
-
-        procfile = metadata.get("procfile") or {}
 
         build_inst = Build.objects.create(
             owner=self.deployment.operator,
@@ -413,17 +407,14 @@ class PipelineBuildProcessExecutor(DeployStep):
             module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
-            image=metadata["image"],
+            image=metadata.image,
             branch=self.bp.branch,
             revision=self.bp.revision,
-            procfile=procfile,
+            procfile={},
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
-            bkapp_revision_id=metadata.get("bkapp_revision_id"),
+            bkapp_revision_id=metadata.bkapp_revision_id,
             artifact_type=ArtifactType.IMAGE,
-            artifact_metadata={
-                "use_dockerfile": metadata.get("use_dockerfile", False),
-                "use_cnb": metadata.get("use_cnb", False),
-            },
+            artifact_metadata=BuildArtifactMetadata(use_dockerfile=metadata.use_dockerfile, use_cnb=metadata.use_cnb),
             tenant_id=self.wl_app.tenant_id,
         )
         mark_as_latest_artifact(build_inst)

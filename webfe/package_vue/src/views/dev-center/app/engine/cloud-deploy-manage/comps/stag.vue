@@ -122,6 +122,9 @@ export default {
     platformFeature() {
       return this.$store.state.platformFeature;
     },
+    currentFilterModule() {
+      return this.$route.params?.filterModule || this.$t('全部模块');
+    },
   },
 
   watch: {
@@ -135,6 +138,7 @@ export default {
   },
 
   created() {
+    this.moduleValue = this.currentFilterModule;
     this.showModuleList = this.moduleInfoList;
   },
 

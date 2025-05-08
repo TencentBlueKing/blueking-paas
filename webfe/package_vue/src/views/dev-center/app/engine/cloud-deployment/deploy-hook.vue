@@ -64,7 +64,7 @@
             <bk-tag-input
               v-model="preFormData.command"
               style="width: 500px"
-              :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
+              placeholder=" "
               :allow-create="allowCreate"
               :allow-auto-match="true"
               :has-delete-icon="hasDeleteIcon"
@@ -74,7 +74,8 @@
               slot="tip"
               class="whole-item-tips"
             >
-              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh
+              {{ $t('数组类型，示例数据：[\'/process_data\']，按回车键分隔每个元素') }}<br/>
+              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }} ['/bin/sh', './bin/pre-task.sh']
             </span>
           </bk-form-item>
           <bk-form-item
@@ -87,13 +88,15 @@
               v-model="preFormData.args"
               style="width: 500px"
               ext-cls="tag-extra"
-              :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+              placeholder=" "
               :allow-create="allowCreate"
               :allow-auto-match="true"
               :has-delete-icon="hasDeleteIcon"
               :paste-fn="copyCommandParameter"
             />
-            <span class="whole-item-tips">{{ $t('示例：--env prod，多个参数可用回车键分隔') }}</span>
+            <span class="whole-item-tips">
+              {{ $t('数组类型，示例数据：[\'--dataset\', \'myset\']，按回车键分隔每个元素') }}
+            </span>
           </bk-form-item>
         </bk-form>
         <bk-form

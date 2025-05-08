@@ -17,7 +17,6 @@
 
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
@@ -27,11 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.components import get_default_component_configs
-from paas_wl.infras.cluster.constants import (
-    ClusterFeatureFlag,
-    ClusterTokenType,
-    ClusterType,
-)
+from paas_wl.infras.cluster.constants import ClusterTokenType, ClusterType
 from paas_wl.infras.cluster.models import (
     APIServer,
     Cluster,
@@ -42,7 +37,7 @@ from paas_wl.infras.cluster.models import (
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID, get_tenant
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
@@ -53,7 +48,6 @@ from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
-    ClusterDefaultsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
@@ -347,21 +341,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         }
 
         return Response(ClusterStatusRetrieveOutputSLZ(state).data)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.infras.cluster"],
-        operation_description="获取集群默认配置",
-        responses={status.HTTP_200_OK: ClusterDefaultsRetrieveOutputSLZ()},
-    )
-    def retrieve_defaults(self, request, *args, **kwargs):
-        # 默认当前集群不能使用平台默认镜像仓库
-        image_repository = ""
-        # 如果集群是默认 / 运营租户下的，则允许使用平台默认镜像仓库
-        if get_tenant(request.user).id in [DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID]:
-            image_repository = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-
-        defaults = {"image_repository": image_repository, "feature_flags": ClusterFeatureFlag.get_default_flags()}
-        return Response(ClusterDefaultsRetrieveOutputSLZ(defaults).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],

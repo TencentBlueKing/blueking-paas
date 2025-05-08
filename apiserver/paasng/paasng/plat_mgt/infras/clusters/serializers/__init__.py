@@ -22,7 +22,6 @@ from .bcs_resources import (
 )
 from .clusters import (
     ClusterCreateInputSLZ,
-    ClusterDefaultsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
@@ -34,6 +33,7 @@ from .components import (
     ClusterComponentRetrieveOutputSLZ,
     ClusterComponentUpsertInputSLZ,
 )
+from .defaults import ClusterDefaultsListOutputSLZ
 from .feature_flags import ClusterFeatureFlagListOutputSLZ
 from .policies import (
     ClusterAllocationPolicyCondTypeOutputSLZ,
@@ -50,12 +50,13 @@ __all__ = [
     "ClusterCreateInputSLZ",
     "ClusterUpdateInputSLZ",
     "ClusterStatusRetrieveOutputSLZ",
-    "ClusterDefaultsRetrieveOutputSLZ",
     "ClusterUsageRetrieveOutputSLZ",
     # components
     "ClusterComponentListOutputSLZ",
     "ClusterComponentRetrieveOutputSLZ",
     "ClusterComponentUpsertInputSLZ",
+    # defaults
+    "ClusterDefaultsListOutputSLZ",
     # feature_flags
     "ClusterFeatureFlagListOutputSLZ",
     # policies

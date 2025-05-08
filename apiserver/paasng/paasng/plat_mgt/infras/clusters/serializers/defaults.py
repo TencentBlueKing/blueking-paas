@@ -15,18 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .bcs_resources import BCSResourceViewSet
-from .clusters import ClusterViewSet
-from .components import ClusterComponentViewSet
-from .defaults import ClusterDefaultsViewSet
-from .feature_flags import ClusterFeatureFlagViewSet
-from .policies import ClusterAllocationPolicyViewSet
+from rest_framework import serializers
 
-__all__ = [
-    "BCSResourceViewSet",
-    "ClusterViewSet",
-    "ClusterComponentViewSet",
-    "ClusterDefaultsViewSet",
-    "ClusterFeatureFlagViewSet",
-    "ClusterAllocationPolicyViewSet",
-]
+
+class ClusterDefaultsListOutputSLZ(serializers.Serializer):
+    image_repository = serializers.CharField(help_text="镜像仓库")
+    feature_flags = serializers.JSONField(help_text="特性标志")

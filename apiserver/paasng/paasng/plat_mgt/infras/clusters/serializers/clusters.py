@@ -530,11 +530,6 @@ class ClusterStatusRetrieveOutputSLZ(serializers.Serializer):
     feature = serializers.BooleanField(help_text="集群特性")
 
 
-class ClusterDefaultsRetrieveOutputSLZ(serializers.Serializer):
-    image_repository = serializers.CharField(help_text="镜像仓库")
-    feature_flags = serializers.JSONField(help_text="特性标志")
-
-
 class AppModuleEnvSLZ(serializers.Serializer):
     app_code = serializers.CharField(help_text="应用 Code")
     module_name = serializers.CharField(help_text="模块名称")

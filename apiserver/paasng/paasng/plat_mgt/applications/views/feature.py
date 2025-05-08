@@ -69,14 +69,13 @@ class ApplicationFeatureViewSet(viewsets.GenericViewSet):
         )
         application.feature_flag.set_feature(name, effect)
 
+        operation = constants.OperationEnum.ENABLE if effect else constants.OperationEnum.DISABLE
+
         add_admin_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
+            operation=operation,
             target=constants.OperationTarget.FEATURE_FLAG,
             app_code=application.code,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
-            ),
             data_before=data_before,
         )
 

@@ -8,7 +8,7 @@
     />
 
     <paas-content-loader
-      class="app-container middle code-container"
+      class="app-container middle code-container card-style"
       :is-loading="isLoading"
       placeholder="code-review-loading"
       :offset-top="30"
@@ -31,7 +31,8 @@
             >
               <template slot-scope="{ row }">
                 <span v-bk-tooltips="row.deployment.repo.revision || ''">
-                  {{ row.deployment.repo.revision.substring(0, 8) || '--' }}</span>
+                  {{ row.deployment.repo.revision.substring(0, 8) || '--' }}
+                </span>
               </template>
             </bk-table-column>
             <bk-table-column
@@ -75,11 +76,11 @@
           </bk-table>
         </div>
         <div class="hlep-docu">
-          <label class="label"> {{ $t('帮助文档') }} </label>
-          <div style="margin-top: 10px;">
+          <label class="label">{{ $t('帮助文档') }}</label>
+          <div class="mt10">
             <bk-button
               text
-              style="padding-left: 0;"
+              class="pl0"
               @click="handleCodeDocu"
             >
               {{ $t('代码检查服务说明') }}
@@ -94,7 +95,7 @@
             {{ $t('该模块暂不支持代码检查功能，可通过') }}
             <bk-button
               text
-              style="padding-left: 0;"
+              style="padding-left: 0"
               @click="handleCodeDocu"
             >
               {{ $t('代码检查服务说明') }}
@@ -107,7 +108,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
 export default {
@@ -141,7 +143,7 @@ export default {
     };
   },
   watch: {
-    '$route'() {
+    $route() {
       this.envVal = 'all';
       this.isLoading = true;
       this.requestQueue = ['ci', 'list'];
@@ -245,27 +247,26 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .code-container{
-      background: #fff;
-      padding-top:0px;
-      margin: 16px auto 30px;
-      width: calc(100% - 48px);
-    }
-    .warn-icon {
-        font-size: 40px;
-        color: rgb(255, 195, 73);
-        text-align: center;
-    }
-    .no-git-wrapper {
-        margin-top: 10px;
-        text-align: center;
-    }
-    .hlep-docu {
-        margin-top: 20px;
-        padding: 0 24px;
-        .label {
-            color: #55545a;
-            font-weight: 600;
-        }
-    }
+.code-container {
+  background: #fff;
+  padding: 16px;
+  margin: 16px auto 30px;
+  width: calc(100% - 48px);
+}
+.warn-icon {
+  font-size: 40px;
+  color: rgb(255, 195, 73);
+  text-align: center;
+}
+.no-git-wrapper {
+  margin-top: 10px;
+  text-align: center;
+}
+.hlep-docu {
+  margin-top: 20px;
+  .label {
+    color: #55545a;
+    font-weight: 600;
+  }
+}
 </style>

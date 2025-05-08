@@ -23,9 +23,12 @@ from attrs import define
 from django.db import models
 from jsonfield import JSONField
 
-from paasng.platform.bkapp_model.constants import DEFAULT_SLUG_RUNNER_ENTRYPOINT
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.models import UuidAuditedModel, make_legacy_json_field
+
+# Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
+# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
+DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
 
 @define
@@ -38,17 +41,14 @@ class Hook:
     def get_command(self) -> List[str]:
         """get_args: 获取 hook 的命令部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
-        TODO 确认已在 HooksManifestConstructor 中使用?
         """
         if isinstance(self.command, str):
-            # TODO: runner 的 Dockerfile 默认的入口程序为 ["/runner/init"], 理论上返回空列表即可
-            return DEFAULT_SLUG_RUNNER_ENTRYPOINT
+            return []
         return self.command
 
     def get_args(self) -> List[str]:
         """get_args: 获取 hook 的参数部分
         使用场景: 云原生应用构造 manifest 时调用 -> HooksManifestConstructor
-        TODO 确认已在 HooksManifestConstructor 中使用?
         """
         if isinstance(self.command, str):
             command = shlex.split(self.command)

@@ -49,20 +49,20 @@ urlpatterns = [
         views.AccountFeatureFlagViewSet.as_view({"get": "feature_list"}),
         name="plat_mgt.users.account_features.feature_list",
     ),
-    # 系统 API 用户
+    # 已授权应用
     path(
-        "api/plat_mgt/users/system_api_user/",
-        views.SystemApiUserViewSet.as_view({"get": "list", "post": "create", "put": "update"}),
-        name="plat_mgt.users.system_api_user.bulk",
+        "api/plat_mgt/users/sysapi_client/",
+        views.SystemApiClientViewSet.as_view({"get": "list", "post": "create", "put": "update"}),
+        name="plat_mgt.users.sysapi_client.bulk",
     ),
     path(
-        "api/plat_mgt/users/system_api_user/<str:name>/",
-        views.SystemApiUserViewSet.as_view({"delete": "destroy"}),
-        name="plat_mgt.users.system_api_user.delete",
+        "api/plat_mgt/users/sysapi_client/<str:name>/",
+        views.SystemApiClientViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.users.sysapi_client.delete",
     ),
     path(
         "api/plat_mgt/users/system_api_roles/",
-        views.SystemApiUserViewSet.as_view({"get": "role_list"}),
-        name="plat_mgt.users.system_api_roles.role_list",
+        views.SystemApiClientViewSet.as_view({"get": "role_list"}),
+        name="plat_mgt.users.sysapi_client.role_list",
     ),
 ]

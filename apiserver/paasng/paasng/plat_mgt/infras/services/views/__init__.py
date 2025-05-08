@@ -17,6 +17,14 @@
 
 from .binding_policies import BindingPolicyViewSet, CategoryViewSet, ProviderViewSet
 from .plans import PlanViewSet
-from .services import AddonsServiceViewSet
+from .pre_created_instances import PreCreatedInstanceViewSet
+from .services import ServiceViewSet
 
-__all__ = ["BindingPolicyViewSet", "PlanViewSet", "AddonsServiceViewSet", "CategoryViewSet", "ProviderViewSet"]
+__all__ = [
+    "BindingPolicyViewSet",
+    "PlanViewSet",
+    "ServiceViewSet",
+    "CategoryViewSet",
+    "ProviderViewSet",
+    "PreCreatedInstanceViewSet",
+]

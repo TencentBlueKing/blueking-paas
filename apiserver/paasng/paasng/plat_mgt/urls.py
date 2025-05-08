@@ -18,6 +18,7 @@
 from django.urls import include, path
 
 urlpatterns = [
+    path("", include("paasng.plat_mgt.applications.urls")),
     path("", include("paasng.plat_mgt.infras.urls")),
     path("", include("paasng.plat_mgt.overview.urls")),
     path("", include("paasng.plat_mgt.users.urls")),

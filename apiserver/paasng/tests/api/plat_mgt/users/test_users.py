@@ -26,6 +26,7 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
+from paasng.platform.applications.models import Application
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -101,6 +102,11 @@ class TestAccountFeatureFlagManageViewSet:
         user_id = user_id_encoder.encode(settings.USER_TYPE, user)
         assert AccountFeatureFlag.objects.filter(user=user_id, name=feature, effect=True).exists()
 
+        # 尝试再次添加同一特性
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+        assert rsp.data["code"] == "USER_FEATURE_FLAG_ALREADY_EXISTS"
+
     def test_destroy_feature_flags(self, plat_mgt_api_client):
         """测试删除用户特性"""
         user = f"test_user_{generate_random_string(6)}"
@@ -140,81 +146,117 @@ class TestAccountFeatureFlagManageViewSet:
         for item in rsp.data:
             assert "value" in item
             assert "label" in item
+            assert "default_flag" in item
 
 
-class TestSystemAPIUserViewSet:
+class TestSystemAPIClientViewSet:
     def test_list_system_api_users(self, plat_mgt_api_client):
-        """测试获取系统 API 用户列表"""
-        bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
+        """测试获取已授权应用列表"""
+        bulk_url = reverse("plat_mgt.users.sysapi_client.bulk")
         rsp = plat_mgt_api_client.get(bulk_url)
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
-    def test_create_system_api_users(self, plat_mgt_api_client):
-        """测试创建系统 API 用户"""
-        bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
-        bk_app_code = f"{generate_random_string(6)}"
-        user = f"authed-app-{bk_app_code}"
-        role = ClientRole.BASIC_READER.value
-        data = {"bk_app_code": bk_app_code, "role": role}
+    def test_create_system_api_clients(self, plat_mgt_api_client):
+        """测试创建已授权应用"""
+        bulk_url = reverse("plat_mgt.users.sysapi_client.bulk")
 
+        # 创建一个有效的应用
+        app_code = f"test_app_{generate_random_string(6)}"
+        Application.objects.create(code=app_code, name=app_code)
+
+        # 校验是否成功创建新已验证应用
+        role = ClientRole.BASIC_READER.value
+        data = {"bk_app_code": app_code, "role": role}
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
-        sys_api_client = SysAPIClient.objects.filter(name=user, role=50).first()
-        assert sys_api_client
-        assert AuthenticatedAppAsClient.objects.filter(client=sys_api_client).exists()
+        client_name = f"authed-app-{app_code}"
+        client = SysAPIClient.objects.get(name=client_name)
+        assert client.role == role
+        assert client.is_active is True
 
-    def test_update_system_api_users(self, plat_mgt_api_client):
-        """测试更新系统 API 用户"""
-        bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
-        bk_app_code = f"{generate_random_string(6)}"
-        user = f"authed-app-{bk_app_code}"
-        role = ClientRole.BASIC_READER.value
-        data = {"bk_app_code": bk_app_code, "role": role}
+        auth_relation = AuthenticatedAppAsClient.objects.get(client=client)
+        assert auth_relation.bk_app_code == app_code
 
-        # 先创建一个系统 API 用户
+        # 尝试为已认证的应用再次创建客户端 (预期失败)
+        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+        assert rsp.data["code"] == "APP_AUTHENTICATED_ALREADY_EXISTS"
+
+        # 删除认证关系并将客户端设为非活动状态
+        auth_relation.delete()
+        client.is_active = False
+        client.save()
+
+        # 测试重新激活一个非活动的客户端
         rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_201_CREATED
 
+        client.refresh_from_db()
+        assert client.is_active is True
+        assert client.role == role
+        assert AuthenticatedAppAsClient.objects.filter(client=client, bk_app_code=app_code).exists()
+
+    def test_update_system_api_clients(self, plat_mgt_api_client):
+        """测试更新已授权应用"""
+        bulk_url = reverse("plat_mgt.users.sysapi_client.bulk")
+        app_code = f"{generate_random_string(6)}"
+
+        # 创建一个有效的已授权应用
+        Application.objects.create(code=app_code, name=app_code)
+        client_name = f"authed-app-{app_code}"
+        init_role = ClientRole.BASIC_READER.value
+        client = SysAPIClient.objects.create(name=client_name, role=init_role, is_active=True)
+        auth_app_client = AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=app_code)
+
+        # 测试更新为不同的角色
         new_role = ClientRole.BASIC_MAINTAINER.value
-        data = {"bk_app_code": bk_app_code, "role": new_role}
+        data = {"bk_app_code": app_code, "role": new_role}
         rsp = plat_mgt_api_client.put(bulk_url, data, format="json")
         assert rsp.status_code == status.HTTP_204_NO_CONTENT
+        client.refresh_from_db()
+        assert client.role == new_role
 
-        # 验证数据库中的角色已更新
-        sys_api_client = SysAPIClient.objects.get(name=user)
-        assert sys_api_client.role == new_role
+        # 测试更新不存在的客户端
+        non_existent_app = f"non_existent_app_{generate_random_string(6)}"
+        data = {"bk_app_code": non_existent_app, "role": new_role}
+        rsp = plat_mgt_api_client.put(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+        assert rsp.data["code"] == "SYSAPI_CLIENT_NOT_FOUND"
 
-    def test_destroy_system_api_users(self, plat_mgt_api_client):
-        """测试删除系统 API 用户"""
-        # 先创建一个系统 API 用户
-        bulk_url = reverse("plat_mgt.users.system_api_user.bulk")
-        bk_app_code = f"{generate_random_string(6)}"
-        name = f"authed-app-{bk_app_code}"
-        role = ClientRole.BASIC_READER.value
-        data = {"name": name, "bk_app_code": bk_app_code, "role": role}
+        # 测试更新已禁用的客户端
+        client.is_active = False
+        client.save()
+        auth_app_client.delete()
+        data = {"bk_app_code": app_code, "role": new_role}
+        rsp = plat_mgt_api_client.put(bulk_url, data, format="json")
+        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+        assert rsp.data["code"] == "SYSAPI_CLIENT_NOT_FOUND"
 
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_201_CREATED
+    def test_destroy_system_api_clients(self, plat_mgt_api_client):
+        """测试删除已授权应用"""
+        app_code = f"{generate_random_string(6)}"
+        client_name = f"authed-app-{app_code}"
+        # 先创建一个已授权应用
+        Application.objects.create(code=app_code, name=app_code)
+        client_name = f"authed-app-{app_code}"
+        init_role = ClientRole.BASIC_READER.value
+        client = SysAPIClient.objects.create(name=client_name, role=init_role, is_active=True)
+        AuthenticatedAppAsClient.objects.create(client=client, bk_app_code=app_code)
 
-        # 验证已在数据库写入
-        assert SysAPIClient.objects.filter(name=name, role=role, is_active=True).exists()
-
-        # 删除该用户
-        delete_url = reverse(
-            "plat_mgt.users.system_api_user.delete",
-            kwargs={"name": name},
-        )
-        delete_rsp = plat_mgt_api_client.delete(delete_url)
-        assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT
-
+        delete_url = reverse("plat_mgt.users.sysapi_client.delete", kwargs={"name": app_code})
+        rsp = plat_mgt_api_client.delete(delete_url)
+        assert rsp.status_code == status.HTTP_204_NO_CONTENT
         # 验证已被删除
-        assert not SysAPIClient.objects.filter(name=name, is_active=True).exists()
+        client.refresh_from_db()
+        assert not client.is_active
+        # 认证关系应该已经删除
+        assert not AuthenticatedAppAsClient.objects.filter(client=client, bk_app_code=app_code).exists()
 
     def test_list_system_api_roles(self, plat_mgt_api_client):
-        """测试获取系统 API 权限种类列表"""
-        list_url = reverse("plat_mgt.users.system_api_roles.role_list")
+        """测试获取授权应用的权限种类列表"""
+        list_url = reverse("plat_mgt.users.sysapi_client.role_list")
         rsp = plat_mgt_api_client.get(list_url)
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)

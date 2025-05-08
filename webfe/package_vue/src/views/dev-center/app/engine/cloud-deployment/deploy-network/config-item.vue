@@ -149,7 +149,7 @@
               >
                 <bk-input
                   v-model="service.id"
-                  :placeholder="$t('请输入应用 ID')"
+                  :placeholder="' '"
                 ></bk-input>
               </bk-form-item>
               <!-- 非必填，默认为default -->
@@ -163,7 +163,7 @@
               >
                 <bk-input
                   v-model="service.module"
-                  :placeholder="$t('请输入模块名称，不填则默认为主模块')"
+                  :placeholder="$t('可选，不填默认为主模块')"
                 ></bk-input>
               </bk-form-item>
               <!-- 第一个元素设置 -->
@@ -220,7 +220,7 @@
               >
                 <bk-input
                   v-model="service.ip"
-                  :placeholder="$t('请输入 IP')"
+                  :placeholder="$t('示例：127.0.0.1')"
                 ></bk-input>
               </bk-form-item>
               <bk-form-item
@@ -233,7 +233,7 @@
                 :property="'service.' + index + '.hostnames'"
               >
                 <bk-tag-input
-                  :placeholder="$t('请输入域名')"
+                  :placeholder="$t('示例：example.com，支持输入多个值')"
                   v-model="service.hostnames"
                   :allow-create="true"
                   :allow-auto-match="true"
@@ -293,7 +293,7 @@
               >
                 <bk-input
                   v-model="service.name"
-                  :placeholder="$t('请输入')"
+                  :placeholder="$t('输入有效的 IP 地址')"
                 ></bk-input>
               </bk-form-item>
               <bk-form-item

@@ -16,8 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from django.conf import settings
 from rest_framework import serializers
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
@@ -37,7 +39,17 @@ class CreatePlatformManagerSLZ(serializers.Serializer):
     """创建平台管理员序列化器"""
 
     user = serializers.CharField(help_text="用户 ID")
-    tenant_id = serializers.CharField(help_text="租户 ID", required=False)
+    tenant_id = serializers.CharField(help_text="租户 ID", default="")
+
+    def validate_tenant_id(self, tenant_id) -> str:
+        """根据多租户模式验证和填充租户ID"""
+        if not settings.ENABLE_MULTI_TENANT_MODE:
+            # 如果多租户模式未启用，则将租户 ID 设置为默认值
+            return DEFAULT_TENANT_ID
+        # 开启多租户, tenant_id 为必填项
+        elif not tenant_id:
+            raise serializers.ValidationError("missing tenant_id")
+        return tenant_id
 
 
 # --------- 用户特性相关序列化器 ---------
@@ -90,23 +102,22 @@ class AccountFeatureFlagKindSLZ(serializers.Serializer):
 
     value = serializers.CharField(help_text="特性名称")
     label = serializers.CharField(help_text="特性描述")
+    default_flag = serializers.BooleanField(help_text="默认值")
 
 
-# --------- 系统 API 用户相关序列化器 ---------
+# --------- 已授权应用相关序列化器 ---------
 
 
-class SystemAPIUserSLZ(serializers.Serializer):
-    """系统 API 用户序列化器"""
+class SystemAPIClientSLZ(serializers.Serializer):
+    """已授权应用序列化器"""
 
-    name = serializers.CharField(help_text="用户 ID")
     bk_app_code = serializers.CharField(help_text="应用 ID", required=False)
-    private_token = serializers.CharField(help_text="私钥", required=False)
     role = serializers.CharField(help_text="权限")
     updated = serializers.DateTimeField(help_text="添加时间")
 
 
-class UpsertSystemAPIUserSLZ(serializers.Serializer):
-    """创建或更新系统 API 用户序列化器"""
+class UpsertSystemAPIClientSLZ(serializers.Serializer):
+    """创建或更新已授权应用序列化器"""
 
     bk_app_code = serializers.CharField(help_text="应用 ID", required=True)
     role = serializers.IntegerField(help_text="权限")
@@ -122,8 +133,8 @@ class UpsertSystemAPIUserSLZ(serializers.Serializer):
 
 
 # --------- 系统 API 权限相关序列化器 ---------
-class SystemAPIUserRoleSLZ(serializers.Serializer):
-    """系统 API 权限序列化器"""
+class SystemAPIClientRoleSLZ(serializers.Serializer):
+    """已授权应用权限序列化器"""
 
     value = serializers.IntegerField(help_text="角色 ID")
     label = serializers.CharField(help_text="角色描述")

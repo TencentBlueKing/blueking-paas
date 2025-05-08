@@ -1040,6 +1040,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-overview1:before {
 	content: "\e298";
 }
+.paasng-user-line:before {
+	content: "\e299";
+}
 .paasng-circle-correct-filled:before {
 	content: "\e291";
 }

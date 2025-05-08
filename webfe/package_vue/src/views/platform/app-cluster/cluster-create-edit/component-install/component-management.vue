@@ -3,7 +3,7 @@
     <div class="component-header mb15">
       <div
         class="icon-warpper"
-        :style="{ backgroundColor: statusColors[detailStatus] }"
+        :style="{ backgroundColor: statusColors[details?.status || component.status] }"
       >
         <i class="paasng-icon paasng-plugin"></i>
       </div>
@@ -257,7 +257,7 @@ export default {
         },
       },
       statusColors: {
-        not_installed: '#F8B64F',
+        not_installed: '#C4C6CC',
         installing: '#3A84FF',
         installed: '#18C0A1',
         installation_failed: '#E71818',

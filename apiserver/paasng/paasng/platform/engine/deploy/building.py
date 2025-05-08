@@ -20,12 +20,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
@@ -34,8 +36,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
-from paasng.platform.bkapp_model.services import upsert_process_service_flag
-from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.bkapp_model.services import upsert_proc_svc_by_spec_version
 from paasng.platform.declarative.deployment.controller import DeployHandleResult
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
@@ -165,9 +166,7 @@ class BaseBuilder(DeployStep):
             )
             result = handler.handle(self.deployment)
 
-            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
-            implicit_needed = result.spec_version != AppSpecVersion.VER_3
-            upsert_process_service_flag(app_environment.module, implicit_needed)
+            upsert_proc_svc_by_spec_version(app_environment.module, result.spec_version)
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
@@ -310,18 +309,19 @@ class ApplicationBuilder(BaseBuilder):
         )
 
         # Start the background build process
+        build_metadata = BuildMetadata(
+            image=app_image,
+            use_cnb=build_info.use_cnb,
+            image_repository=app_image_repository,
+            buildpacks=build_process.buildpacks_as_build_env(),
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs,
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "buildpacks": build_process.buildpacks_as_build_env(),
-                "use_cnb": build_info.use_cnb,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
@@ -406,18 +406,19 @@ class DockerBuilder(BaseBuilder):
             invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
 
+        build_metadata = BuildMetadata(
+            image=app_image,
+            image_repository=app_image_repository,
+            use_dockerfile=True,
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs or {},
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "use_dockerfile": True,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )

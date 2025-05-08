@@ -15,7 +15,12 @@
               {{ curVersion.current_release.created }} {{ $t('发布') }}
             </div>
           </template>
-          <div class="fl mr25" v-else>{{ $t('暂无已发布成功的版本') }}</div>
+          <div
+            class="fl mr25"
+            v-else
+          >
+            {{ $t('暂无已发布成功的版本') }}
+          </div>
         </div>
       </div>
 
@@ -76,13 +81,13 @@
                   :disabled="isOptionDisabled(option)"
                   v-bk-tooltips="{
                     content: $t('当前分支正在测试中，请先终止测试才能新建版本'),
-                    disabled: isOfficialVersion || !isOptionDisabled(option)
+                    disabled: isOfficialVersion || !isOptionDisabled(option),
                   }"
                 />
                 <div
                   v-if="curVersionData.version_type === 'tag'"
                   slot="extension"
-                  style="cursor: pointer;text-align: center"
+                  style="cursor: pointer; text-align: center"
                   @click="handleAddTag"
                 >
                   <i class="bk-icon icon-plus-circle mr5" />
@@ -95,7 +100,8 @@
                   :theme="'default'"
                   type="submit"
                   :disabled="!curVersion.current_release"
-                  @click="handleShowCommits">
+                  @click="handleShowCommits"
+                >
                   <i class="paasng-icon paasng-diff-4"></i>
                   {{ $t('代码差异') }}
                 </bk-button>
@@ -103,9 +109,14 @@
             </div>
             <div
               class="ribbon"
-              :style="{ 'right': -offset + 'px' }"
+              :style="{ right: -offset + 'px' }"
             >
-              <bk-button :text="true" :title="$t('刷新')" class="mr15" @click="refresh">
+              <bk-button
+                :text="true"
+                :title="$t('刷新')"
+                class="mr15"
+                @click="refresh"
+              >
                 {{ $t('刷新') }}
               </bk-button>
             </div>
@@ -347,15 +358,17 @@ export default {
     },
     codeBranchPlaceholder() {
       const revisionPolicy = this.curVersionData.revision_policy;
-      return revisionPolicy === 'disallow_releasing_source_version' ? this.$t('请选择代码分支，正在发布的代码分支不可选择') : this.$t('请选择版本，已经发布过的版本不可选择');
+      return revisionPolicy === 'disallow_releasing_source_version'
+        ? this.$t('请选择代码分支，正在发布的代码分支不可选择')
+        : this.$t('请选择版本，已经发布过的版本不可选择');
     },
     commitId() {
-      return this.sourceVersions.find(item => item.name === this.curVersion.source_versions)?.revision || '--';
+      return this.sourceVersions.find((item) => item.name === this.curVersion.source_versions)?.revision || '--';
     },
   },
   watch: {
     'curVersion.source_versions'() {
-      const versionData = this.sourceVersions.find(item => item.name === this.curVersion.source_versions) || {};
+      const versionData = this.sourceVersions.find((item) => item.name === this.curVersion.source_versions) || {};
       this.curVersion.comment = versionData.message;
       if (this.curVersion.version_no === 'revision' || this.curVersion.version_no === 'commit-hash') {
         if (this.curVersion.version_no === 'revision') {
@@ -413,18 +426,21 @@ export default {
     },
 
     submitVersionForm() {
-      this.$refs.versionForm.validate().then(() => {
-        this.createVersion();
-      }, (validator) => {
-        console.error(validator.content);
-      });
+      this.$refs.versionForm.validate().then(
+        () => {
+          this.createVersion();
+        },
+        (validator) => {
+          console.error(validator.content);
+        }
+      );
     },
 
     // 新建版本并发布
     async createVersion() {
       this.isSubmitLoading = true;
       // 当前选中分支的数据
-      const versionData = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
+      const versionData = this.sourceVersions.filter((item) => item.name === this.curVersion.source_versions);
 
       // 数据
       const data = {
@@ -494,7 +510,7 @@ export default {
       }
 
       const fromRevision = this.curVersion.current_release.source_hash;
-      const curCodeItem = this.sourceVersions.filter(item => item.name === this.curVersion.source_versions);
+      const curCodeItem = this.sourceVersions.filter((item) => item.name === this.curVersion.source_versions);
       const toRevision = `${curCodeItem[0].type}:${curCodeItem[0].name}`;
       const res = await this.$store.dispatch('plugin/getGitCompareUrl', {
         pdId: this.pdId,
@@ -540,9 +556,9 @@ export default {
 
     handleSourceVersionChange(v) {
       if (this.curVersionData.version_no === 'branch-timestamp') {
-        const time = dayjs().format('YYMMDDHHmm');
+        const time = dayjs().format('YYMMDDHHmmss');
         this.curVersion.version = `${v}-${time}`;
-        const curVersionData = this.sourceVersions.find(item => item.name === v) || {};
+        const curVersionData = this.sourceVersions.find((item) => item.name === v) || {};
         this.curVersion.comment = curVersionData.message;
       }
     },
@@ -624,7 +640,7 @@ export default {
   .code-differences {
     margin-left: 8px;
     .paasng-diff-4 {
-      color: #979BA5;
+      color: #979ba5;
     }
   }
 }

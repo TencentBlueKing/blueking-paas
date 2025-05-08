@@ -1,35 +1,57 @@
 <template lang="html">
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle role-container shadow-card-style"
+      class="app-container middle role-container"
       :is-loading="loading"
       placeholder="roles-loading"
     >
       <div class="header">
-        <bk-button
-          v-if="enableToAddRole"
-          theme="primary"
-          icon="plus"
-          @click="createMember"
-        >
-          {{ $t('新增成员') }}
-        </bk-button>
+        <div class="flex-row align-items-center">
+          <bk-button
+            v-if="enableToAddRole"
+            theme="primary"
+            icon="plus"
+            class="mr12"
+            @click="toggleMemberSideslider(true, 'add')"
+          >
+            {{ $t('新增成员') }}
+          </bk-button>
+          <!-- 胶囊tab筛选 -->
+          <CustomRadioCapsule
+            class="mr12"
+            :list="filterList"
+            v-model="selectedRole"
+            @change="handlerFilterChange"
+          >
+            <template slot-scope="{ item }">{{ `${item.label}（${item.count}）` }}</template>
+          </CustomRadioCapsule>
+          <bk-button
+            class="pl0"
+            theme="primary"
+            size="small"
+            text
+            @click="viewPermissionModel"
+          >
+            {{ $t('查看权限模型') }}
+          </bk-button>
+        </div>
         <user
           v-model="searchValues"
-          style="width: 360px"
+          style="width: 300px"
           :multiple="true"
-          :placeholder="$t('请输入成员姓名')"
+          :placeholder="$t('请输入用户名')"
           :empty-text="$t('无匹配人员')"
           @change="handleSearch"
         />
       </div>
-      <div class="content-wrapper">
+      <div class="content-wrapper card-style">
         <bk-table
           :data="paginatedData"
           size="small"
           :pagination="pagination"
           @page-change="pageChange"
           @page-limit-change="limitChange"
+          v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
         >
           <div slot="empty">
             <table-empty
@@ -40,7 +62,16 @@
             />
           </div>
           <bk-table-column
-            :label="$t('成员姓名')"
+            :label="`${$t('用户')} ID`"
+            :width="160"
+            v-if="platformFeature.MULTI_TENANT_MODE"
+          >
+            <template #default="{ row }">
+              <span>{{ row.user.username }}</span>
+            </template>
+          </bk-table-column>
+          <bk-table-column
+            :label="$t('用户名')"
             :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
@@ -59,32 +90,26 @@
               </div>
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('角色')">
-            <template #default="props">
-              <span
-                v-for="(role, index) in props.row.roles"
-                :key="index"
-                class="role-label"
-              >
-                {{ $t(roleNames[role.name]) }}
-              </span>
+          <bk-table-column
+            :label="$t('角色')"
+            :width="220"
+            :show-overflow-tooltip="true"
+          >
+            <template #default="{ row }">
+              <span>{{ row.displayRoles }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
-            :label="$t('权限')"
+            :label="$t('权限描述')"
             min-width="170"
+            :show-overflow-tooltip="true"
           >
-            <template #default="props">
-              <span
-                v-for="(perm, index) in genUserPerms(props.row.roles)"
-                :key="index"
-                class="ps-pr"
-              >
-                {{ $t(perm) }}
-              </span>
-            </template>
+            <template #default="{ row }">{{ getExactPermissionDescription(row.roles) }}</template>
           </bk-table-column>
-          <bk-table-column :label="$t('操作')">
+          <bk-table-column
+            :label="$t('操作')"
+            width="220"
+          >
             <template #default="props">
               <template v-if="canManageMe(props.row)">
                 <bk-button
@@ -99,7 +124,7 @@
                 v-if="canChangeMembers()"
                 text
                 class="mr8"
-                @click="updateMember(props.row.user.id, props.row.user.username, props.row.roles)"
+                @click="showMemberSideslider(props.row)"
               >
                 {{ $t('更换角色') }}
               </bk-button>
@@ -117,92 +142,14 @@
       </div>
     </paas-content-loader>
 
-    <bk-dialog
-      v-model="memberMgrConfig.visiable"
-      width="540"
-      :title="memberMgrConfig.title"
-      header-position="left"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="memberMgrConfig.isLoading"
-      @confirm="memberMgrSave"
-      @cancel="closeMemberMgrModal"
-      @after-leave="hookAfterClose"
-    >
-      <div
-        v-if="memberMgrConfig.showForm"
-        style="min-height: 130px"
-      >
-        <bk-alert
-          v-if="memberMgrConfig.type === 'edit'"
-          type="warning"
-          :title="$t('更新后仅保留用户的新角色')"
-          style="margin-bottom: 15px"
-        />
-        <bk-form
-          :label-width="120"
-          form-type="vertical"
-        >
-          <bk-form-item
-            :label="$t('成员名称')"
-            :required="true"
-          >
-            <template v-if="memberMgrConfig.userEditable">
-              <user
-                v-model="personnelSelectorList"
-                :placeholder="$t('请输入用户')"
-                :empty-text="$t('无匹配人员')"
-              />
-              <!-- <bk-member-selector
-                                @change="updateValue"
-                                v-model="personnelSelectorList"
-                                ref="member_selector">
-                            </bk-member-selector> -->
-            </template>
-            <template v-else>
-              <bk-input
-                v-model="selectedMember.name"
-                :readonly="true"
-              />
-            </template>
-          </bk-form-item>
-          <bk-form-item :label="$t('角色')">
-            <bk-radio-group v-model="roleName">
-              <bk-radio
-                v-for="(chineseName, name) in roleNames"
-                :key="name"
-                :value="name"
-              >
-                {{ $t(chineseName) }}
-              </bk-radio>
-            </bk-radio-group>
-          </bk-form-item>
-          <bk-form-item :label="$t('权限列表')">
-            <div class="ps-rights-list">
-              <span
-                v-for="(perm, permIndex) in roleSpec[roleName]"
-                :key="permIndex"
-              >
-                <a
-                  v-if="perm[Object.keys(perm)[0]]"
-                  class="available-right"
-                >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
-                  <i class="paasng-icon paasng-check-1" />
-                </a>
-                <a
-                  v-else
-                  class="not-available-right"
-                >
-                  <span>{{ $t(Object.keys(perm)[0]) }}</span>
-                  <i class="paasng-icon paasng-close" />
-                </a>
-              </span>
-            </div>
-          </bk-form-item>
-        </bk-form>
-      </div>
-    </bk-dialog>
+    <!-- 新增、更改侧栏 -->
+    <MembersSideslider
+      :show.sync="membersSidesliderConfig.visiable"
+      :data="membersSidesliderConfig.row"
+      :config="membersSidesliderConfig"
+      :title="membersSidesliderConfig.titleMap[membersSidesliderConfig.type]"
+      @confirm="handleSidesliderConfirm"
+    />
 
     <bk-dialog
       v-model="removeUserDialog.visiable"
@@ -210,12 +157,32 @@
       :title="`${$t('删除成员')} ${selectedMember.name}`"
       :theme="'primary'"
       :mask-close="false"
+      header-position="left"
       :loading="removeUserDialog.isLoading"
       @confirm="delSave"
       @cancel="closeDelModal"
     >
-      <div class="tc">
-        {{ $t('用户') }} {{ selectedMember.name }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
+      <div
+        slot="header"
+        class="del-dialog-header"
+        v-bk-overflow-tips
+      >
+        <span>{{ $t('删除成员') }}</span>
+        &nbsp;
+        <bk-user-display-name
+          :user-id="selectedMember.name"
+          v-if="platformFeature.MULTI_TENANT_MODE"
+        ></bk-user-display-name>
+        <span v-else>{{ selectedMember.name }}</span>
+      </div>
+      <div>
+        {{ $t('用户') }}
+        <bk-user-display-name
+          :user-id="selectedMember.name"
+          v-if="platformFeature.MULTI_TENANT_MODE"
+        ></bk-user-display-name>
+        <span v-else>{{ selectedMember.name }}</span>
+        {{ $t('将失去此应用的对应权限，是否确定删除？') }}
       </div>
     </bk-dialog>
 
@@ -225,109 +192,38 @@
       :title="$t('退出应用')"
       :theme="'primary'"
       :mask-close="false"
+      header-position="left"
       :loading="leaveAppDialog.isLoading"
       @confirm="leaveSave"
       @cancel="closeLeaveApp"
     >
-      <div class="tc">
+      <div>
         {{ $t('退出并放弃此应用的对应权限，是否确定？') }}
       </div>
-    </bk-dialog>
-
-    <bk-dialog
-      v-model="permissionNoticeDialog.visiable"
-      width="540"
-      :title="$t('权限须知')"
-      :theme="'primary'"
-      :mask-close="false"
-      :loading="permissionNoticeDialog.isLoading"
-    >
-      <div class="tc">
-        {{
-          $t(
-            '由于应用目前使用了第三方源码托管系统，当管理员添加新的“开发者”角色用户后，需要同时在源码系统中添加对应的账号权限。否则无法进行正常开发工作'
-          )
-        }}
-      </div>
-      <template #footer>
-        <bk-button
-          theme="primary"
-          @click="iKnow"
-        >
-          {{ $t('我知道了') }}
-        </bk-button>
-      </template>
     </bk-dialog>
   </div>
 </template>
 
 <script>
-import { APP_ROLE_NAMES } from '@/common/constants';
 import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
-import i18n from '@/language/i18n.js';
+import CustomRadioCapsule from '@/components/custom-radio-capsule';
 import { mapState } from 'vuex';
 import { paginationFun } from '@/common/utils';
+import MembersSideslider from './members-sideslider.vue';
 
-const ROLE_BACKEND_IDS = {
-  administrator: 2,
-  developer: 3,
-  operator: 4,
-};
-
-const ROLE_SPEC = {
-  administrator: [
-    {
-      应用开发: true,
-    },
-    {
-      上线审核: true,
-    },
-    {
-      应用推广: true,
-    },
-    {
-      成员管理: true,
-    },
-  ],
-  developer: [
-    {
-      应用开发: true,
-    },
-    {
-      上线审核: false,
-    },
-    {
-      应用推广: true,
-    },
-    {
-      成员管理: false,
-    },
-  ],
-  operator: [
-    {
-      应用开发: false,
-    },
-    {
-      上线审核: true,
-    },
-    {
-      应用推广: true,
-    },
-    {
-      成员管理: false,
-    },
-  ],
-};
-
-const ROLE_DESC_MAP = {
-  administrator: i18n.t('该角色仅影响用户在“开发者中心”管理该应用的权限，不涉及应用内部权限，请勿混淆'),
+const ROLE_MAPPING = {
+  administrator: '管理员',
+  developer: '开发者',
+  operator: '运营者',
 };
 
 export default {
   components: {
     user,
+    CustomRadioCapsule,
+    MembersSideslider,
   },
   mixins: [appBaseMixin],
   data() {
@@ -336,21 +232,10 @@ export default {
       loading: true,
       memberList: [],
       filteredData: [],
-      roleNames: APP_ROLE_NAMES,
-      roleSpec: ROLE_SPEC,
       roleName: 'administrator',
       selectedMember: {
         id: 0,
         name: '',
-      },
-      personnelSelectorList: [],
-      memberMgrConfig: {
-        visiable: false,
-        isLoading: false,
-        type: 'create',
-        userEditable: true,
-        title: this.$t('新增成员'),
-        showForm: false,
       },
       leaveAppDialog: {
         visiable: false,
@@ -376,13 +261,29 @@ export default {
       },
       // 多租户人员搜索
       searchValues: [],
+      isTableLoading: false,
+      selectedRole: 'all',
+      filterList: [
+        { id: 0, name: 'all', label: this.$t('全部成员'), count: 0 },
+        { id: 2, name: 'administrator', label: this.$t('管理员'), count: 0 },
+        { id: 3, name: 'developer', label: this.$t('开发者'), count: 0 },
+        { id: 4, name: 'operator', label: this.$t('运营者'), count: 0 },
+      ],
+      membersSidesliderConfig: {
+        visiable: false,
+        loading: false,
+        row: {},
+        type: 'add',
+        titleMap: {
+          add: this.$t('新增成员'),
+          edit: this.$t('更换角色'),
+          view: this.$t('权限模型'),
+        },
+      },
     };
   },
   computed: {
     ...mapState(['platformFeature']),
-    currentRoleDesc() {
-      return ROLE_DESC_MAP[this.roleName] || '';
-    },
     // 分页数据
     paginatedData() {
       const { pageData } = paginationFun(this.filteredData, this.pagination.current, this.pagination.limit);
@@ -407,15 +308,6 @@ export default {
       this.pagination.current = 1;
     },
 
-    iKnow() {
-      this.permissionNoticeDialog.visiable = false;
-      !localStorage.getItem('membersNoticeDialogHasShow') && localStorage.setItem('membersNoticeDialogHasShow', true);
-    },
-
-    updateValue(curVal) {
-      curVal ? (this.personnelSelectorList = curVal) : (this.personnelSelectorList = '');
-    },
-
     init() {
       this.enableToAddRole = this.curAppInfo && this.curAppInfo.role.name === 'administrator';
       this.fetchMemberList();
@@ -423,11 +315,20 @@ export default {
 
     // 获取成员列表
     async fetchMemberList() {
+      this.isTableLoading = true;
       try {
         const res = await this.$store.dispatch('member/getMemberList', { appCode: this.appCode });
-        this.memberList = res.results || [];
+        this.memberList = res.results.map((user) => {
+          const translatedRoles = user.roles.map((role) => this.$t(ROLE_MAPPING[role.name]));
+          return {
+            ...user,
+            displayRoles: translatedRoles.join('，'), // 转换为中文
+          };
+        });
         this.filteredData = [...this.memberList]; // 过滤数据
         this.pagination.count = res.results.length;
+        // 更新角色计数
+        this.updateFilterCounts();
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -438,61 +339,49 @@ export default {
         });
       } finally {
         this.loading = false;
+        this.isTableLoading = false;
       }
     },
 
-    createMember() {
-      this.roleName = 'developer';
-      this.personnelSelectorList = [];
-      this.memberMgrConfig = {
-        visiable: true,
-        isLoading: false,
-        type: 'create',
-        userEditable: true,
-        title: this.$t('新增成员'),
-        showForm: true,
-      };
-    },
-
-    hookAfterClose() {
-      this.memberMgrConfig.showForm = false;
-    },
-
-    async createSave() {
-      this.memberMgrConfig.isLoading = true;
-      if (!this.personnelSelectorList.length) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('请选择成员！'),
+    // 更新 filterList 的 count
+    updateFilterCounts() {
+      // 初始化计数器 {all: 0, administrator: 0, developer: 0, operator: 0}
+      const roleCounts = this.filterList.reduce((acc, item) => {
+        acc[item.name] = 0;
+        return acc;
+      }, {});
+      // 统计各角色数量
+      this.memberList.forEach((member) => {
+        roleCounts.all++;
+        member.roles.forEach((role) => {
+          switch (role.id) {
+            case 2:
+              roleCounts.administrator++;
+              break;
+            case 3:
+              roleCounts.developer++;
+              break;
+            case 4:
+              roleCounts.operator++;
+              break;
+          }
         });
-        setTimeout(() => {
-          this.memberMgrConfig.isLoading = false;
-        }, 100);
-        return;
-      }
+      });
+      this.filterList = this.filterList.map((item) => ({
+        ...item,
+        count: roleCounts[item.name],
+      }));
+    },
 
-      let createParam = {};
-      const createSuc = [];
-      for (let i = 0; i < this.personnelSelectorList.length; i++) {
-        createParam = {
-          application: {
-            code: this.appCode,
-          },
-          user: {
-            username: this.personnelSelectorList[i],
-          },
-          roles: [
-            {
-              id: ROLE_BACKEND_IDS[this.roleName],
-            },
-          ],
-        };
-        createSuc.push(createParam);
-      }
-
+    /**
+     * 新增成员
+     * @parmas 新增成员请求参数
+     */
+    async addMember(parmas) {
+      this.toggleMemberSidesliderLoading(true);
       try {
-        await this.$store.dispatch('member/addMember', { appCode: this.appCode, postParams: createSuc });
-        this.closeMemberMgrModal();
+        await this.$store.dispatch('member/addMember', { appCode: this.appCode, postParams: parmas });
+        this.toggleMemberSideslider(false);
         this.fetchMemberList();
         this.$paasMessage({
           theme: 'success',
@@ -504,10 +393,11 @@ export default {
           message: `${this.$t('添加用户角色失败：')} ${e.detail}`,
         });
       } finally {
-        this.memberMgrConfig.isLoading = false;
+        this.toggleMemberSidesliderLoading(false);
       }
     },
 
+    // 退出应用弹窗
     leaveApp(delMemberID, delMemberName) {
       this.selectedMember.id = delMemberID;
       this.selectedMember.name = delMemberName;
@@ -537,44 +427,32 @@ export default {
       this.leaveAppDialog.visiable = false;
     },
 
-    updateMember(updateMemberID, updateMemberName, memberRoles) {
-      this.selectedMember.id = updateMemberID;
-      this.selectedMember.name = updateMemberName;
-      this.roleName = memberRoles[0].name;
-      this.memberMgrConfig = {
-        visiable: true,
-        isLoading: false,
-        type: 'edit',
-        userEditable: false,
-        title: this.$t('更换角色'),
-        showForm: true,
+    // 显示更换成员权限侧栏
+    showMemberSideslider({ user, roles }) {
+      this.selectedMember.id = user.id;
+      this.selectedMember.name = user.username;
+      this.roleName = roles[0].name;
+      this.membersSidesliderConfig.type = 'edit';
+      this.membersSidesliderConfig.row = {
+        role: roles[0].id,
+        user: user.username,
       };
+      this.toggleMemberSideslider(true, 'edit');
     },
 
-    memberMgrSave() {
-      const mgrType = this.memberMgrConfig.type;
-      if (mgrType === 'edit') {
-        return this.updateSave();
-      }
-      if (mgrType === 'create') {
-        return this.createSave();
-      }
-    },
-
-    async updateSave() {
-      const updateParam = {
-        role: {
-          id: ROLE_BACKEND_IDS[this.roleName],
-        },
-      };
-      this.memberMgrConfig.isLoading = true;
+    /**
+     * 更换成员权限
+     * @parmas 请求参数
+     */
+    async updateSave(parmas) {
+      this.toggleMemberSidesliderLoading(true);
       try {
         await this.$store.dispatch('member/updateRole', {
           appCode: this.appCode,
           id: this.selectedMember.id,
-          params: updateParam,
+          params: parmas,
         });
-        this.closeMemberMgrModal();
+        this.toggleMemberSideslider(false);
         this.fetchMemberList();
         this.$paasMessage({
           theme: 'success',
@@ -589,7 +467,7 @@ export default {
           message: `${this.$t('角色更换失败：')} ${e.detail}`,
         });
       } finally {
-        this.memberMgrConfig.isLoading = false;
+        this.toggleMemberSidesliderLoading(false);
       }
     },
 
@@ -623,10 +501,6 @@ export default {
       this.removeUserDialog.visiable = false;
     },
 
-    closeMemberMgrModal() {
-      this.memberMgrConfig.visiable = false;
-    },
-
     canManageMe(roleInfo) {
       if (roleInfo.user.username !== this.currentUser) {
         return false;
@@ -649,41 +523,110 @@ export default {
       return true;
     },
     // 搜索处理
-    handleDefaultSearch() {
-      // 如果没有搜索值，返回全部数据
-      if (!this.searchValues?.length) {
-        return [...this.memberList];
-      }
-      const searchSet = new Set(this.searchValues);
-      return this.memberList.filter((item) => item.user?.username && searchSet.has(item.user.username));
-    },
-    // 关键字搜索
     handleSearch() {
+      const { searchValues, selectedRole } = this;
+      // 重置分页
       this.pagination.current = 1;
-      this.filteredData = this.handleDefaultSearch();
+      // 如果没有搜索值且选择"全部成员"（或未选择），返回全部数据
+      if (!searchValues?.length && (!selectedRole || selectedRole === 'all')) {
+        this.filteredData = [...this.memberList];
+        this.pagination.count = this.filteredData.length;
+        this.updateTableEmptyConfig();
+        return;
+      }
+      const searchSet = new Set(searchValues || []);
+      this.filteredData = this.memberList.filter((item) => {
+        // 1. 检查用户名是否匹配（如果 searchValues 有值）
+        const usernameMatch = !searchValues?.length || (item.user?.username && searchSet.has(item.user.username));
+
+        // 2. 检查权限是否匹配（如果 selectedRole 有值且不是 'all'）
+        const roleMatch =
+          !selectedRole ||
+          selectedRole === 'all' ||
+          item.roles?.some((role) => {
+            switch (selectedRole) {
+              case 'administrator':
+                return role.id === 2; // 管理员
+              case 'developer':
+                return role.id === 3; // 开发者
+              case 'operator':
+                return role.id === 4; // 运营者
+              default:
+                return false; // 未知角色
+            }
+          });
+
+        // 同时满足用户名和权限条件
+        return usernameMatch && roleMatch;
+      });
+
+      // 更新分页和空状态
       this.pagination.count = this.filteredData.length;
       this.updateTableEmptyConfig();
     },
-    genUserPerms(userRoles) {
-      const userPerms = [];
-      for (let i = 0; i < userRoles.length; i++) {
-        const rolePerm = this.roleSpec[userRoles[i].name];
-        for (let j = 0; j < rolePerm.length; j++) {
-          const perm = rolePerm[j];
-          const name = Object.keys(perm)[0];
-          if (perm[name] && userPerms.indexOf(name) === -1) {
-            userPerms.push(name);
-          }
-        }
-      }
-      return userPerms;
-    },
+    // 重置过滤、搜索条件
     clearFilterKey() {
       this.searchValues = [];
+      this.selectedRole = 'all';
       this.handleSearch();
     },
     updateTableEmptyConfig() {
-      this.tableEmptyConf.keyword = !!this.searchValues.length;
+      if (this.searchValues.length || this.selectedRole !== 'all') {
+        this.tableEmptyConf.keyword = 'placeholder';
+        return;
+      }
+      this.tableEmptyConf.keyword = '';
+    },
+    // 查看权限模型
+    viewPermissionModel() {
+      this.toggleMemberSideslider(true, 'view');
+    },
+    // 切换tab过滤
+    handlerFilterChange(data) {
+      const { name } = data;
+      this.selectedRole = name;
+      this.handleSearch();
+    },
+    // 显示/关闭
+    toggleMemberSideslider(falg, type = 'add') {
+      this.membersSidesliderConfig.visiable = falg;
+      this.membersSidesliderConfig.type = type;
+    },
+    // 开启/关闭成员管理侧栏
+    toggleMemberSidesliderLoading(falg) {
+      this.membersSidesliderConfig.loading = falg;
+    },
+    // 侧栏确认事件处理
+    handleSidesliderConfirm(parmas) {
+      if (this.membersSidesliderConfig.type === 'add') {
+        this.addMember(parmas);
+      } else {
+        this.updateSave(parmas);
+      }
+    },
+    /**
+     * 获取精确权限描述（严格匹配业务需求）
+     * @param roles 用户角色数组
+     * @returns 精确匹配的权限描述文本
+     */
+    getExactPermissionDescription(roles = []) {
+      const hasRole = (id) => roles.some((role) => role.id === id);
+      // 管理员
+      if (hasRole(2)) {
+        return this.$t('拥有应用全部权限');
+      }
+      // 开发者+运营者组合（需同时存在）
+      if (hasRole(3) && hasRole(4)) {
+        return this.$t('拥有开发（部署、日志、配置、云API）、运营（应用访问权限、应用市场信息）等权限');
+      }
+      // 开发者
+      if (hasRole(3)) {
+        return this.$t('拥有开发相关的权限（部署、日志、配置、云API），但无法管理应用访问权限和应用成员');
+      }
+      // 运营者
+      if (hasRole(4)) {
+        return this.$t('仅可修改应用名称/市场信息、管理应用访问权限、查看访问统计数据和告警记录');
+      }
     },
   },
 };
@@ -691,16 +634,16 @@ export default {
 
 <style lang="scss" scoped>
 .role-container {
-  background: #fff;
   width: calc(100% - 48px);
   margin: 16px auto 30px;
-  padding: 16px 24px;
 }
 .content-wrapper {
   margin-top: 16px;
+  padding: 16px;
+  background: #fff;
 }
 .user-photo {
-  margin: 5px 0;
+  margin: 5px 8px 5px 0;
   display: inline-block;
   width: 40px;
   height: 40px;
@@ -732,43 +675,6 @@ export default {
   padding-top: 15px;
 }
 
-.ps-rights-list {
-  line-height: 36px;
-
-  a {
-    margin-right: 7px;
-    padding: 6px 15px;
-    font-size: 13px;
-    line-height: 1;
-    border-radius: 14px;
-    color: #666;
-    cursor: default;
-
-    &.available-right {
-      border: 1px solid #3a84ff;
-
-      i {
-        color: #3a84ff;
-        transform: scale(0.95);
-      }
-    }
-
-    &.not-available-right {
-      border: 1px solid #ddd;
-      color: #ddd;
-
-      i {
-        transform: scale(0.75);
-      }
-    }
-
-    i {
-      display: inline-block;
-      margin-left: 3px;
-    }
-  }
-}
-
 .role-label {
   display: inline-block;
   background: #fafafa;
@@ -790,5 +696,16 @@ export default {
 .app-container .header {
   display: flex;
   justify-content: space-between;
+  .mr12 {
+    margin-right: 12px;
+  }
+}
+
+.del-dialog-header {
+  color: #313238;
+  font-size: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

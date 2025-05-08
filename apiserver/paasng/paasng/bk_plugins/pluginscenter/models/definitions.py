@@ -30,6 +30,7 @@ from paasng.bk_plugins.pluginscenter.definitions import (
     PluginCreateApproval,
     PluginFeature,
     PluginLogConfig,
+    PluginOptions,
     PluginoverviewPage,
     PluginVisibleRangeLevel,
     ReleaseRevisionDefinition,
@@ -52,6 +53,7 @@ PluginConfigColumnDefinitionField = make_json_field(
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
 PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
 PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", List[PluginVisibleRangeLevel])
+PluginOptionsField = make_json_field("PluginOptionsField", PluginOptions)
 
 
 class PluginDefinition(UuidAuditedModel):
@@ -74,6 +76,8 @@ class PluginDefinition(UuidAuditedModel):
     release_stages: List[ReleaseStageDefinition] = ReleaseStageDefinitionField()
     log_config: PluginLogConfig = PluginLogConfigField(null=True)
     features: List[PluginFeature] = PluginFeaturesField(default=list)
+
+    options = PluginOptionsField(help_text="插件额外配置项", default=None, null=True)
 
     # 测试版本
     test_release_revision: ReleaseRevisionDefinition = ReleaseRevisionDefinitionField(null=True)

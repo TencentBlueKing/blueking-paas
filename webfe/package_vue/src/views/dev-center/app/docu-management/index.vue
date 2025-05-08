@@ -1,46 +1,44 @@
 <template>
   <div class="right-main paas-docu-manager-wrapper">
-    <div class="ps-top-bar">
-      <h2>
-        {{ $t('文档管理') }}
-        <a
-          v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
-          class="link fr"
-          :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
-          target="_blank"
-        > {{ $t('蓝鲸 SaaS 研发管理参考规范') }} </a>
-      </h2>
-    </div>
     <paas-content-loader
-      class="app-container middle docu-container"
+      class="app-container docu-container card-style"
       :is-loading="isLoading"
       placeholder="docu-manager-loading"
     >
       <div v-if="!isLoading && tableList.length > 0">
-        <bk-alert
-          type="warning"
-          :title="curTitle"
-        />
+        <bk-alert type="warning">
+          <div slot="title">
+            <span>{{ curTitle }}</span>
+            <a
+              v-if="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+              class="link fr"
+              :href="GLOBAL.DOC.PROJECT_MANAGER_GUIDE"
+              target="_blank"
+            >
+              {{ $t('蓝鲸 SaaS 研发管理参考规范') }}
+            </a>
+          </div>
+        </bk-alert>
         <table class="bk-table docu-manager-custom-table">
           <colgroup>
-            <col style="width: 200px;">
-            <col style="width: 200px;">
-            <col style="width: 100px;">
-            <col style="width: 250px;">
-            <col style="width: 100px;">
-            <col>
-            <col style="width: 102px;">
+            <col style="width: 200px" />
+            <col style="width: 200px" />
+            <col style="width: 100px" />
+            <col style="width: 250px" />
+            <col style="width: 100px" />
+            <col />
+            <col style="width: 102px" />
           </colgroup>
           <thead>
-            <th> {{ $t('文档分类') }} </th>
-            <th> {{ $t('文档细项') }} </th>
-            <th> {{ $t('是否使用') }} </th>
-            <th> {{ $t('详细信息') }} </th>
-            <th> {{ $t('更新人') }} </th>
-            <th> {{ $t('更新时间') }} </th>
-            <th> {{ $t('操作') }} </th>
+            <th>{{ $t('文档分类') }}</th>
+            <th>{{ $t('文档细项') }}</th>
+            <th>{{ $t('是否使用') }}</th>
+            <th>{{ $t('详细信息') }}</th>
+            <th>{{ $t('更新人') }}</th>
+            <th>{{ $t('更新时间') }}</th>
+            <th>{{ $t('操作') }}</th>
           </thead>
-          <tbody style="background: #fff;">
+          <tbody style="background: #fff">
             <template v-for="row in tableList">
               <template v-if="row.children.length < 1">
                 <tr :key="row.id">
@@ -48,16 +46,22 @@
                     <span
                       v-bk-tooltips.top="row.name"
                       class="name"
-                    >{{ row.name }}</span>
+                    >
+                      {{ row.name }}
+                    </span>
                     <i
                       v-if="row.is_required"
                       class="is-required"
-                    >*</i>
+                    >
+                      *
+                    </i>
                   </td>
                   <td>--</td>
                   <td>
                     <template v-if="!row.isEdit">
-                      <span :class="row.instance.is_used ? 'active' : ''">{{ row.instance.is_used ? $t('是') : $t('否') }}</span>
+                      <span :class="row.instance.is_used ? 'active' : ''">
+                        {{ row.instance.is_used ? $t('是') : $t('否') }}
+                      </span>
                     </template>
                     <template v-else>
                       <bk-switcher
@@ -72,7 +76,7 @@
                       <span>
                         <i
                           class="paasng-icon paasng-exclamation-circle"
-                          style="color: #ffb848;"
+                          style="color: #ffb848"
                         />
                         {{ $t('请填写') }}
                       </span>
@@ -91,7 +95,15 @@
                             <div slot="content">
                               {{ row.instance.url }}
                             </div>
-                            <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+                            <span
+                              style="
+                                display: inline-block;
+                                max-width: 220px;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                              "
+                            >
                               {{ row.instance.url }}
                             </span>
                           </bk-popconfirm>
@@ -120,7 +132,9 @@
                     {{ row.instance ? row.instance.latest_operator || '--' : '--' }}
                   </td>
                   <td>
-                    {{ row.instance ? row.instance.updated ? smartTime(row.instance.updated, 'fromNow') : '--' : '--' }}
+                    {{
+                      row.instance ? (row.instance.updated ? smartTime(row.instance.updated, 'fromNow') : '--') : '--'
+                    }}
                   </td>
                   <td>
                     <template v-if="!row.isEdit">
@@ -142,7 +156,7 @@
                         {{ $t('保存') }}
                       </bk-button>
                       <bk-button
-                        style="margin-left: 5px;"
+                        style="margin-left: 5px"
                         theme="primary"
                         text
                         @click.stop="handleCancel(row)"
@@ -159,11 +173,15 @@
                     <span
                       v-bk-tooltips.top="row.name"
                       class="name"
-                    >{{ row.name }}</span>
+                    >
+                      {{ row.name }}
+                    </span>
                     <i
                       v-if="row.is_required"
                       class="is-required"
-                    >*</i>
+                    >
+                      *
+                    </i>
                   </td>
                   <td
                     colspan="6"
@@ -171,12 +189,12 @@
                   >
                     <table class="bk-table sub-table">
                       <colgroup>
-                        <col style="width: 200px;">
-                        <col style="width: 100px;">
-                        <col style="width: 250px;">
-                        <col style="width: 100px;">
-                        <col>
-                        <col style="width: 102px;">
+                        <col style="width: 200px" />
+                        <col style="width: 100px" />
+                        <col style="width: 250px" />
+                        <col style="width: 100px" />
+                        <col />
+                        <col style="width: 102px" />
                       </colgroup>
                       <template v-for="subRow in row.children">
                         <tr :key="subRow.id">
@@ -184,15 +202,21 @@
                             <span
                               v-bk-tooltips.top="subRow.name"
                               class="name"
-                            >{{ subRow.name }}</span>
+                            >
+                              {{ subRow.name }}
+                            </span>
                             <i
                               v-if="subRow.is_required"
                               class="is-required"
-                            >*</i>
+                            >
+                              *
+                            </i>
                           </td>
                           <td>
                             <template v-if="!subRow.isEdit">
-                              <span :class="subRow.instance.is_used ? 'active' : ''">{{ subRow.instance.is_used ? $t('是') : $t('否') }}</span>
+                              <span :class="subRow.instance.is_used ? 'active' : ''">
+                                {{ subRow.instance.is_used ? $t('是') : $t('否') }}
+                              </span>
                             </template>
                             <template v-else>
                               <bk-switcher
@@ -203,11 +227,15 @@
                             </template>
                           </td>
                           <td class="url-td">
-                            <template v-if="subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit">
+                            <template
+                              v-if="
+                                subRow.instance.is_used && subRow.is_required && !subRow.instance.url && !subRow.isEdit
+                              "
+                            >
                               <span>
                                 <i
                                   class="paasng-icon paasng-exclamation-circle"
-                                  style="color: #ffb848;"
+                                  style="color: #ffb848"
                                 />
                                 {{ $t('请填写') }}
                               </span>
@@ -226,7 +254,15 @@
                                     <div slot="content">
                                       {{ subRow.instance.url }}
                                     </div>
-                                    <span style="display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+                                    <span
+                                      style="
+                                        display: inline-block;
+                                        max-width: 220px;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;
+                                        white-space: nowrap;
+                                      "
+                                    >
                                       {{ subRow.instance.url }}
                                     </span>
                                   </bk-popconfirm>
@@ -261,7 +297,13 @@
                             v-bk-overflow-tips
                             class="text-ellipsis"
                           >
-                            {{ subRow.instance ? subRow.instance.updated ? smartTime(subRow.instance.updated, 'fromNow') : '--' : '--' }}
+                            {{
+                              subRow.instance
+                                ? subRow.instance.updated
+                                  ? smartTime(subRow.instance.updated, 'fromNow')
+                                  : '--'
+                                : '--'
+                            }}
                           </td>
                           <td>
                             <template v-if="!subRow.isEdit">
@@ -283,7 +325,7 @@
                                 {{ $t('保存') }}
                               </bk-button>
                               <bk-button
-                                style="margin-left: 5px;"
+                                style="margin-left: 5px"
                                 theme="primary"
                                 text
                                 @click.stop="handleCancel(subRow)"
@@ -311,7 +353,8 @@
     </paas-content-loader>
   </div>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 
 export default {
   name: 'PaasDocuManager',
@@ -329,7 +372,7 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.notCompletedCount = 0;
       this.fetchData();
     },
@@ -362,7 +405,7 @@ export default {
             }
           });
         });
-        const templateList = docuList.filter(item => !childrenList.map(_ => _.id).includes(item.id));
+        const templateList = docuList.filter((item) => !childrenList.map((_) => _.id).includes(item.id));
         this.notCompletedCount = count;
         this.tableList = JSON.parse(JSON.stringify(templateList));
       } catch (res) {
@@ -484,113 +527,113 @@ export default {
 };
 </script>
 <style lang="scss">
-    @import '~@/assets/css/mixins/ellipsis.scss';
-    .docu-container{
-      background: #fff;
-      margin-top: 16px;
-      padding: 16px 24px;
+@import '~@/assets/css/mixins/ellipsis.scss';
+.docu-container {
+  background: #fff;
+  margin-top: 16px;
+  padding: 16px 24px;
+}
+.paas-docu-manager-wrapper {
+  .link {
+    font-size: 12px;
+    &:hover {
+      color: #699df4;
     }
-    .paas-docu-manager-wrapper {
-        .link {
-            font-size: 12px;
-            &:hover {
-                color: #699df4;
-            }
-        }
-        .middle {
-            position: relative;
-        }
-        .empty-wrapper {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            i {
-                font-size: 65px;
-                color: #c3cdd7;
-            }
-            .empty-text {
-                font-size: 12px;
-                text-align: center;
-            }
-        }
-        .docu-manager-custom-table {
-            margin-top: 16px;
-            border: none;
-            thead {
-                border-top: 1px solid #dcdee5;
-                border-bottom: 1px solid #dcdee5;
-                th {
-                    padding-left: 30px;
-                    color: #313238;
-                    font-weight: 400 !important;
-                }
-                th:nth-child(1) {
-                    border-right: 1px solid #dcdee5;
-                }
-            }
-            tbody {
-                tr {
-                    td {
-                        padding-left: 30px;
-                    }
-                    .url-td {
-                        .bk-form-control {
-                            margin: 5px 0;
-                        }
-                    }
-                    td:nth-child(1) {
-                        border-right: 1px solid #dcdee5;
-                    }
-                    .children-td {
-                        padding: 0;
-                        border-bottom: 1px solid #dcdee5;
-                    }
-                }
-                .active {
-                    color: #62d18a;
-                }
-                .name {
-                    display: inline-block;
-                    max-width: 145px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    vertical-align: bottom;
-                }
-                .is-required {
-                    color: #ea3636;
-                }
-            }
-            .sub-table {
-                position: relative;
-                top: 1px;
-                border: none;
-                table-layout: fixed;
-                tr {
-                    td:nth-child(1) {
-                        border-right: none !important;
-                    }
-                    .url-td {
-                        .bk-form-control {
-                            margin: 5px 0;
-                        }
-                    }
-                }
-                tr:last-child {
-                    td {
-                        border-bottom: 1px solid #dcdee5 !important;
-                    }
-                }
-                .name {
-                    display: inline-block;
-                    max-width: 145px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    vertical-align: bottom;
-                }
-            }
-        }
+  }
+  .middle {
+    position: relative;
+  }
+  .empty-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    i {
+      font-size: 65px;
+      color: #c3cdd7;
     }
+    .empty-text {
+      font-size: 12px;
+      text-align: center;
+    }
+  }
+  .docu-manager-custom-table {
+    margin-top: 16px;
+    border: none;
+    thead {
+      border-top: 1px solid #dcdee5;
+      border-bottom: 1px solid #dcdee5;
+      th {
+        padding-left: 30px;
+        color: #313238;
+        font-weight: 400 !important;
+      }
+      th:nth-child(1) {
+        border-right: 1px solid #dcdee5;
+      }
+    }
+    tbody {
+      tr {
+        td {
+          padding-left: 30px;
+        }
+        .url-td {
+          .bk-form-control {
+            margin: 5px 0;
+          }
+        }
+        td:nth-child(1) {
+          border-right: 1px solid #dcdee5;
+        }
+        .children-td {
+          padding: 0;
+          border-bottom: 1px solid #dcdee5;
+        }
+      }
+      .active {
+        color: #62d18a;
+      }
+      .name {
+        display: inline-block;
+        max-width: 145px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+      }
+      .is-required {
+        color: #ea3636;
+      }
+    }
+    .sub-table {
+      position: relative;
+      top: 1px;
+      border: none;
+      table-layout: fixed;
+      tr {
+        td:nth-child(1) {
+          border-right: none !important;
+        }
+        .url-td {
+          .bk-form-control {
+            margin: 5px 0;
+          }
+        }
+      }
+      tr:last-child {
+        td {
+          border-bottom: 1px solid #dcdee5 !important;
+        }
+      }
+      .name {
+        display: inline-block;
+        max-width: 145px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+      }
+    }
+  }
+}
 </style>

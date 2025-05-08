@@ -194,7 +194,7 @@ def update_image_runtime_config(deployment: Deployment):
     slug_runner = mgr.get_slug_runner(raise_exception=False)
     metadata: Dict = getattr(slug_runner, "metadata", {})
     if entrypoint := metadata.get("entrypoint"):
-        build_obj.artifact_metadata.update(entrypoint=entrypoint)
+        build_obj.artifact_metadata.entrypoint = entrypoint
         build_obj.save(update_fields=["artifact_metadata", "updated"])
 
     # Update the config property of WlApp object

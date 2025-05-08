@@ -17,10 +17,6 @@
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
-# legacy: Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
-# TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
-DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
-
 # 为方便用户填写而设计的端口占位符, 并非实际的 shell 环境变量. 在转换成 BkApp 模型时会被平台替换成预设值 settings.CONTAINER_PORT
 PORT_PLACEHOLDER = "${PORT}"
 

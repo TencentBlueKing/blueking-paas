@@ -221,7 +221,14 @@ export default {
             trigger: 'change',
           },
         ],
-        name: [...requiredRules],
+        name: [
+          ...requiredRules,
+          {
+            regex: /^[a-zA-Z][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]$/,
+            message: this.$t('由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾'),
+            trigger: 'blur',
+          },
+        ],
         display_name: [...requiredRules],
         category_id: [...requiredRules],
         description: [...requiredRules],

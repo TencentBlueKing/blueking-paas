@@ -41,6 +41,7 @@ class TestModuleProcessSpecViewSet:
             ModuleProcessSpec,
             module=bk_module,
             name="web",
+            proc_command="python -m http.server",
             command=["python"],
             args=["-m", "http.server"],
             port=8000,
@@ -60,6 +61,7 @@ class TestModuleProcessSpecViewSet:
         assert len(proc_specs) == 2
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "example.com/foo"
+        assert proc_specs[0]["proc_command"] == "python -m http.server"
         assert proc_specs[0]["command"] == ["python"]
         assert proc_specs[0]["args"] == ["-m", "http.server"]
         assert proc_specs[0]["env_overlay"]["stag"]["scaling_config"] == {
@@ -71,6 +73,7 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["services"] is None
 
         assert proc_specs[1]["name"] == "worker"
+        assert proc_specs[1]["proc_command"] is None
         assert proc_specs[1]["image"] == "example.com/foo"
         assert proc_specs[1]["command"] == ["celery"]
         assert proc_specs[1]["args"] == []

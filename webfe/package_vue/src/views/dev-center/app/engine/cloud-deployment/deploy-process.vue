@@ -159,7 +159,7 @@
                     :key="tagInputIndex"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例：start_server，多个命令可用回车键分隔') }}
+                    {{ $t('数组类型，示例数据：[\'/serverctl\', \'start\']，按回车键分隔每个元素') }}
                   </p>
                 </bk-form-item>
 
@@ -172,14 +172,14 @@
                     v-model="formData.args"
                     style="width: 500px"
                     ext-cls="tag-extra"
-                    :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+                    :placeholder="$t('留空将使用镜像的默认值')"
                     :allow-create="allowCreate"
                     :allow-auto-match="true"
                     :has-delete-icon="hasDeleteIcon"
                     :paste-fn="copyCommandParameter"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
+                    {{ $t('数组类型，示例数据：[\'--port\', \'8081\']，按回车键分隔每个元素') }}
                   </p>
                 </bk-form-item>
                 <!-- 进程服务编辑态 -->

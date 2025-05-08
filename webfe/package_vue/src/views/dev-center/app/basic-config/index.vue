@@ -1,11 +1,12 @@
 <template>
-  <div>
+  <div class="basic-config-container">
     <cloud-app-top-bar
       :title="$t('应用配置')"
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
       :is-trace="true"
+      :key="routeIndex"
       @change="handleTabChange"
       @right-config-click="toDeployHistory"
     />
@@ -43,6 +44,7 @@ export default {
         { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
         { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
+        { name: 'doc', label: this.$t('文档管理'), routeName: 'docuManagement' },
       ];
       // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)
       if (this.curAppModule?.region !== 'ieod' || this.isCloudNativeApp || !this.isEngineEnabled) {
@@ -51,6 +53,10 @@ export default {
       // 普通应用不支持 | feature判断
       if (!this.isCloudNativeApp || !this.curAppInfo.feature?.ENABLE_PERSISTENT_STORAGE) {
         panels = panels.filter((tab) => tab.name !== 'storage');
+      }
+      // feature判断
+      if (!this.curAppInfo.feature?.DOCUMENT_MANAGEMENT) {
+        panels = panels.filter((tab) => tab.name !== 'doc');
       }
       return panels;
     },
@@ -67,6 +73,9 @@ export default {
         }
       },
       immediate: true,
+    },
+    appCode() {
+      this.routeIndex += 1;
     },
   },
   methods: {
@@ -94,3 +103,10 @@ export default {
   },
 };
 </script>
+
+<style lang="scss" scoped>
+.basic-config-container,
+.router-container {
+  height: 100%;
+}
+</style>

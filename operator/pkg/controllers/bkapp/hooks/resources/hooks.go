@@ -113,9 +113,11 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		}
 	}
 
-	useCNB, _ := strconv.ParseBool(bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey])
 	command := bkapp.Spec.Hooks.PreRelease.Command
 	args := bkapp.Spec.Hooks.PreRelease.Args
+
+	// NOTE: UseCNBAnnoKey 保留仅用于兼容存量模型. 新部署的 bkapp 模型已不再包含该注解, 模型中已正确处理 command/args
+	useCNB, _ := strconv.ParseBool(bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey])
 	if useCNB {
 		// cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下
 		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go

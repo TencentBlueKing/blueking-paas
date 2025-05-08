@@ -25,10 +25,13 @@ class ErrorCodes:
 
     # 用户特性相关
     USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))
+    USER_FEATURE_FLAG_ALREADY_EXISTS = ErrorCode(_("用户特性已存在"))
 
-    # System API client related
+    # 已授权应用相关
+    APP_NOT_FOUND = ErrorCode(_("应用不存在"))
     SYSAPI_CLIENT_ROLE_NOT_FOUND = ErrorCode(_("指定的 sysapi client 权限不存在"))
     SYSAPI_CLIENT_NOT_FOUND = ErrorCode(_("请求未携带有效的 sysapi client 信息"))
+    APP_AUTHENTICATED_ALREADY_EXISTS = ErrorCode(_("应用已经添加了授权关系"))
     SYSAPI_CLIENT_ALREADY_EXISTS = ErrorCode(_("指定的 sysapi client 已存在"))
     SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
 
@@ -64,6 +67,7 @@ class ErrorCodes:
     CREATE_SHARED_ATTACHMENT_ERROR = ErrorCode(_("共享增强服务失败"), code_num=4313050)
     CANNOT_DESTROY_CI_RESOURCES = ErrorCode(_("CI相关资源删除失败"), code_num=4313081)
     CANNOT_READ_INSTANCE_INFO = ErrorCode(_("读取增强服务实例信息失败"), code_num=4313082)
+    UNSUPPORTED_OPERATION = ErrorCode(_("增强服务暂时不支持该操作"))
     # 部署
     CANNOT_GET_DEPLOYMENT = ErrorCode(_("查询部署信息失败"), code_num=4311001)
     CANNOT_GET_DEPLOYMENT_PHASES = ErrorCode(_("查询部署阶段信息失败"), code_num=4311002)

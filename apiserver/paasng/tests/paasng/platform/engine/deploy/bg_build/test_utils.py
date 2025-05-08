@@ -23,6 +23,7 @@ import pytest
 import urllib3
 from django.conf import settings
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paasng.platform.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,
@@ -37,7 +38,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestEnvVars:
     def test_generate_env_vars_without_metadata(self, build_proc, wl_app):
-        env_vars = generate_builder_env_vars(build_proc, {})
+        env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
         cache_path = f"{wl_app.region}/home/{wl_app.name}/cache"
         assert env_vars.pop("TAR_PATH") == f"{bucket}/{build_proc.source_tar_path}", "TAR_PATH 与预期不符"
@@ -57,10 +58,10 @@ class TestEnvVars:
             {"type": "tar", "url": "https://rgw.com/x.tar", "name": "x", "version": "1.2"},
         ]
 
-        metadata = {"extra_envs": {"a": "b"}, "buildpacks": build_proc.buildpacks_as_build_env()}
+        metadata = BuildMetadata(image="", extra_envs={"a": "b"}, buildpacks=build_proc.buildpacks_as_build_env())
         update_env_vars_with_metadata(env, metadata)
 
-        assert metadata["extra_envs"]["a"] == env["a"]
+        assert metadata.extra_envs["a"] == env["a"]
         assert env["REQUIRED_BUILDPACKS"] == "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2"
 
 
@@ -79,15 +80,15 @@ class TestUtils:
         ),
     )
     def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
-        env_vars = generate_builder_env_vars(build_proc, {})
+        env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
-        assert slug_tmpl.name == f"slug-builder--{wl_app.module_name}", (
-            "slugbuilder_template 的 name 与app的 name 不一致"
-        )
+        assert (
+            slug_tmpl.name == f"slug-builder--{wl_app.module_name}"
+        ), "slugbuilder_template 的 name 与app的 name 不一致"
         assert slug_tmpl.namespace == wl_app.namespace, "slugbuilder_template 的namespace 与 app 的 namespace 不一致"
-        assert slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE, (
-            "slugbuilder_template 的镜像与默认镜像不一致"
-        )
+        assert (
+            slug_tmpl.runtime.image == settings.DEFAULT_SLUGBUILDER_IMAGE
+        ), "slugbuilder_template 的镜像与默认镜像不一致"
         assert slug_tmpl.runtime.envs == env_vars, "slugbuilder_template 的 ConfigVars 与生成的环境变量不一致"
 
         assert slug_tmpl.schedule.cluster_name == "foo-cluster"

@@ -154,13 +154,21 @@ export default {
     },
 
     /**
-     * --
-     * @param {Object} params 请求参数：无
+     * 创建插件
+     * @param {Object} params 请求参数：data
      */
     savePlugins({ commit, state }, data, config = {}) {
       const url = `${BACKEND_URL}/api/bkplugins/${data.pd_id}/plugins/`;
       delete data.pd_id;
       return http.post(url, data, config);
+    },
+
+    /**
+     * 获取AI空间列表
+     */
+    getBkaidevSpaces() {
+      const url = `${BACKEND_URL}/api/bkaidev/spaces/`;
+      return http.get(url);
     },
 
     /**

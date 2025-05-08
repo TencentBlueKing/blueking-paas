@@ -4,13 +4,11 @@
       :is-loading="isPageLoading"
       placeholder="analysis-loading"
       :offset-top="20"
-      class="app-container middle event-analy-container"
+      class="app-container middle event-analy-container card-style"
     >
       <div class="ps-top-card mt20">
         <section class="content no-border">
-          <div
-            :class="['content-header', { 'mt15': engineEnabled }]"
-          >
+          <div :class="['content-header', { mt15: engineEnabled }]">
             <div
               v-if="engineEnabled"
               class="bk-button-group fl"
@@ -33,7 +31,7 @@
             <div
               v-else
               class="f12 fl"
-              style="color: #666;"
+              style="color: #666"
             >
               {{ $t('基于网站嵌入的统计脚本进行访问量统计') }}
               <bk-button
@@ -98,37 +96,39 @@
                 <div class="chart-action">
                   <ul class="dimension fl">
                     <li
-                      :class="{ 'active': chartFilterType.ue }"
+                      :class="{ active: chartFilterType.ue }"
                       @click="handleChartFilte('ue')"
                     >
-                      <span class="dot warning" /> {{ $t('事件总数') }}
+                      <span class="dot warning" />
+                      {{ $t('事件总数') }}
                     </li>
                     <li
-                      :class="{ 'active': chartFilterType.ev }"
+                      :class="{ active: chartFilterType.ev }"
                       @click="handleChartFilte('ev')"
                     >
-                      <span class="dot primary" /> {{ $t('唯一身份事件数') }}
+                      <span class="dot primary" />
+                      {{ $t('唯一身份事件数') }}
                     </li>
                   </ul>
 
                   <ul class="time fr">
                     <li
                       v-if="allowRanges.includes('5m')"
-                      :class="{ 'active': defaultRange === '5m' }"
+                      :class="{ active: defaultRange === '5m' }"
                       @click="handleRangeChange('5m')"
                     >
                       {{ $t('5分钟') }}
                     </li>
                     <li
                       v-if="allowRanges.includes('1h')"
-                      :class="{ 'active': defaultRange === '1h', 'disabled': !allowRanges.includes('1h') }"
+                      :class="{ active: defaultRange === '1h', disabled: !allowRanges.includes('1h') }"
                       @click="handleRangeChange('1h')"
                     >
                       {{ $t('小时') }}
                     </li>
                     <li
                       v-if="allowRanges.includes('1d')"
-                      :class="{ 'active': defaultRange === '1d' }"
+                      :class="{ active: defaultRange === '1d' }"
                       @click="handleRangeChange('1d')"
                     >
                       {{ $t('天') }}
@@ -139,7 +139,7 @@
                   ref="chart"
                   :options="chartOption"
                   auto-resize
-                  style="width: 100%; height: 240px; background: #1e1e21;"
+                  style="width: 100%; height: 240px; background: #1e1e21"
                 />
               </div>
             </div>
@@ -150,7 +150,9 @@
               <span
                 :class="['title', { 'has-cursor': curCategory !== '' }]"
                 @click="handleBackEventList"
-              > {{ $t('类别列表') }} </span>
+              >
+                {{ $t('类别列表') }}
+              </span>
               <i
                 v-if="curCategory !== ''"
                 class="paasng-icon paasng-ps-arrow-right"
@@ -158,7 +160,9 @@
               <span
                 v-if="curCategory !== ''"
                 class="cur-event-name"
-              >{{ curCategory }}</span>
+              >
+                {{ curCategory }}
+              </span>
             </div>
             <bk-button
               class="export-button"
@@ -172,7 +176,7 @@
           </div>
           <bk-table
             v-bkloading="{ isLoading: isPathDataLoading }"
-            style="margin-top: 15px;"
+            style="margin-top: 15px"
             :data="pathData"
             :size="'small'"
             :pagination="pagination"
@@ -219,7 +223,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import appTopBar from '@/components/paas-app-bar';
 
 import moment from 'moment';
@@ -229,7 +234,7 @@ import 'echarts/lib/component/tooltip';
 import RenderSideslider from './comps/access-guide-sideslider';
 import chartOption from '@/json/analysis-chart-option';
 // eslint-disable-next-line
-    import { export_json_to_excel } from '@/common/Export2Excel'
+import { export_json_to_excel } from '@/common/Export2Excel';
 import { formatDate } from '@/common/tools';
 
 export default {
@@ -337,8 +342,7 @@ export default {
         const end = this.dateRange.endTime;
 
         const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days')
-          .valueOf(); // 一天后
+        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -346,12 +350,14 @@ export default {
 
       if (this.defaultRange === '1d') {
         return 'MM-DD';
-      } if (this.defaultRange === '1h') {
+      }
+      if (this.defaultRange === '1h') {
         if (isInDay) {
           return 'HH:mm';
         }
         return 'MM-DD HH:mm';
-      } if (this.defaultRange === '5m') {
+      }
+      if (this.defaultRange === '5m') {
         if (isInDay) {
           return 'HH:mm';
         }
@@ -377,12 +383,9 @@ export default {
 
         const startSeconds = moment(start).valueOf();
         const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days')
-          .valueOf(); // 一天后
-        const threeEndSeconds = moment(start).add(3, 'days')
-          .valueOf(); // 三天后
-        const sevenEndSeconds = moment(now).add(-7, 'days')
-          .valueOf(); // 七天后
+        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
+        const threeEndSeconds = moment(start).add(3, 'days').valueOf(); // 三天后
+        const sevenEndSeconds = moment(now).add(-7, 'days').valueOf(); // 七天后
 
         // 精度规则:
         // if 时间选择器选择访问 < 1d
@@ -435,7 +438,7 @@ export default {
     allowRanges() {
       this.defaultRange = this.allowRanges[this.allowRanges.length - 1];
     },
-    '$route'() {
+    $route() {
       this.engineEnabled = this.curAppInfo.web_config.engine_enabled;
       this.refresh();
     },
@@ -472,12 +475,15 @@ export default {
         return;
       }
       this.curCategory = '';
-      this.pagination = Object.assign({}, {
-        current: 1,
-        count: 0,
-        limit: 10,
-        ordering: '',
-      });
+      this.pagination = Object.assign(
+        {},
+        {
+          current: 1,
+          count: 0,
+          limit: 10,
+          ordering: '',
+        }
+      );
       this.getEventData();
     },
 
@@ -486,12 +492,15 @@ export default {
         return;
       }
       this.curCategory = payload;
-      this.pagination = Object.assign({}, {
-        current: 1,
-        count: 0,
-        limit: 10,
-        ordering: '',
-      });
+      this.pagination = Object.assign(
+        {},
+        {
+          current: 1,
+          count: 0,
+          limit: 10,
+          ordering: '',
+        }
+      );
       this.getEventData();
     },
 
@@ -525,10 +534,12 @@ export default {
           requestParams.category = category;
         }
         const res = await this.$store.dispatch(url, requestParams);
-        const fields = this.fieldList.map(item => item.name);
-        const props = this.fieldList.map(item => item.prop);
+        const fields = this.fieldList.map((item) => item.name);
+        const props = this.fieldList.map((item) => item.prop);
         const data = this.formatJson(props, res.resources);
-        const fileName = this.engineEnabled ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}` : `${appCode}_custom_event_statistics_${this.dimensionType}`;
+        const fileName = this.engineEnabled
+          ? `${appCode}_${this.curModuleId}_custom_event_statistics_${this.dimensionType}`
+          : `${appCode}_custom_event_statistics_${this.dimensionType}`;
         export_json_to_excel(fields, data, fileName);
       } catch (e) {
         if (e.detail && e.detail !== this.$t('未找到。')) {
@@ -543,18 +554,13 @@ export default {
     },
 
     formatJson(filterVal, jsonData) {
-      return jsonData.map(v => filterVal.map(j => v[j]));
+      return jsonData.map((v) => filterVal.map((j) => v[j]));
     },
 
     refresh() {
       this.clearData();
       this.requestQueue = ['evuv', 'config', 'chart', 'event'];
-      const promises = [
-        this.getEvUv(),
-        this.getAnalysisConfig(),
-        this.showInstanceChart(),
-        this.getEventData(),
-      ];
+      const promises = [this.getEvUv(), this.getAnalysisConfig(), this.showInstanceChart(), this.getEventData()];
 
       this.$nextTick(() => {
         Promise.all(promises).finally(() => {
@@ -693,26 +699,28 @@ export default {
     },
 
     /**
-             * 显示实例指标数据
-             */
+     * 显示实例指标数据
+     */
     showInstanceChart(instance, processes) {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [],
-      });
+      chartRef &&
+        chartRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
+            },
+          ],
+          series: [],
+        });
 
-      chartRef && chartRef.showLoading({
-        text: this.$t('正在加载'),
-        color: '#30d878',
-        textColor: '#fff',
-        maskColor: 'rgba(255, 255, 255, 0.8)',
-      });
+      chartRef &&
+        chartRef.showLoading({
+          text: this.$t('正在加载'),
+          color: '#30d878',
+          textColor: '#fff',
+          maskColor: 'rgba(255, 255, 255, 0.8)',
+        });
 
       this.getChartData();
     },
@@ -762,10 +770,10 @@ export default {
     },
 
     /**
-             * 图表初始化
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart() {
       const series = [];
       const xAxisData = [];
@@ -843,31 +851,32 @@ export default {
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      chartRef &&
+        chartRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     sortPV(data1, data2) {
@@ -930,184 +939,184 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-    .event-analy-container{
-        background: #fff;
-        margin: 16px auto 30px;
-        padding: 1px 24px;
-        width: calc(100% - 50px);
-        padding-bottom: 24px;
+.event-analy-container {
+  background: #fff;
+  margin: 16px auto 30px;
+  padding: 1px 24px;
+  width: calc(100% - 50px);
+  padding-bottom: 24px;
+}
+.content-header {
+  position: relative;
+  height: 32px;
+  .export-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  .event-title-wrapper {
+    position: absolute;
+    line-height: 32px;
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      &.has-cursor {
+        cursor: pointer;
+      }
     }
-    .content-header {
-        position: relative;
-        height: 32px;
-        .export-button {
-            position: absolute;
-            top: 0;
-            right: 0;
-        }
-
-        .event-title-wrapper {
-            position: absolute;
-            line-height: 32px;
-            .title {
-                font-size: 14px;
-                font-weight: 700;
-                &.has-cursor {
-                    cursor: pointer;
-                }
-            }
-            .cur-event-name {
-                color: #3a84ff;
-            }
-        }
+    .cur-event-name {
+      color: #3a84ff;
     }
+  }
+}
 
-    .fix {
-        line-height: 40px;
-        color: #666;
-    }
+.fix {
+  line-height: 40px;
+  color: #666;
+}
 
-    .analysis-box {
-        height: 285px;
-        border: 1px solid #DCDEE5;
-        display: flex;
-        border-radius: 2px;
-        overflow: hidden;
-        &.set-margin-top {
-            margin-top: 16px;
-        }
+.analysis-box {
+  height: 285px;
+  border: 1px solid #dcdee5;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  &.set-margin-top {
+    margin-top: 16px;
+  }
 
-        .summary {
-            padding: 20px 0 20px 20px;
+  .summary {
+    padding: 20px 0 20px 20px;
 
-            .title {
-                font-weight: normal;
-                color: #313238;
-                font-size: 28px;
-            }
-
-            .desc {
-                color: #63656E;
-                font-size: 12px;
-            }
-
-            .pv {
-                padding: 33px 0 0 30px;
-                width: 200px;
-                height: 119px;
-                border-radius: 2px;
-                background: #f5f6fa;
-            }
-
-            .uv {
-                padding: 33px 0 0 30px;
-                margin-top: 2px;
-                width: 200px;
-                height: 119px;
-                border-radius: 2px;
-                background: #f5f6fa;
-            }
-        }
-
-        .chart-wrapper {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .event-tips {
-            margin-left: 2px;
-            color: #63656e;
-        }
+    .title {
+      font-weight: normal;
+      color: #313238;
+      font-size: 28px;
     }
 
-    .bk-table {
-        .display-name {
-            color: #3a84ff;
-            cursor: pointer;
-            &:hover {
-                color: #699df4;
-            }
-        }
+    .desc {
+      color: #63656e;
+      font-size: 12px;
     }
 
-    .chart-box {
-        width: 100%;
-        min-height: 150px;
-
-        .chart-action {
-            height: 20px;
-            margin-top: 15px;
-            padding: 0 30px;
-        }
-
-        .dimension {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 30px;
-                cursor: pointer;
-                opacity: 0.4;
-
-                &.active {
-                    opacity: 1;
-                }
-
-                &:last-child {
-                    margin-right: 0;
-                }
-            }
-
-            .dot {
-                width: 10px;
-                height: 10px;
-                display: inline-block;
-                border: 1px solid #3A84FF;
-                background: #A3C5FD;
-                border-radius: 50%;
-                vertical-align: middle;
-                float: left;
-                margin: 3px 5px 0 0;
-
-                &.warning {
-                    border: 1px solid #FF9C01;
-                    background: #FFD695;
-                }
-            }
-        }
-
-        .time {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 20px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 0 2px;
-                border-bottom: 2px solid #fff;
-
-                &:last-child {
-                    margin-right: 0;
-                }
-
-                &.active {
-                    border-bottom: 2px solid #3a84ff;
-                }
-
-                &.disabled {
-                    color: #ccc;
-                    cursor: not-allowed;
-                    border-bottom: 2px solid #fff;
-                }
-            }
-        }
+    .pv {
+      padding: 33px 0 0 30px;
+      width: 200px;
+      height: 119px;
+      border-radius: 2px;
+      background: #f5f6fa;
     }
 
-    .info-button {
-        height: 30px;
-        padding: 0 5px;
-        line-height: 30px;
-        font-size: 12px;
+    .uv {
+      padding: 33px 0 0 30px;
+      margin-top: 2px;
+      width: 200px;
+      height: 119px;
+      border-radius: 2px;
+      background: #f5f6fa;
     }
+  }
+
+  .chart-wrapper {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .event-tips {
+    margin-left: 2px;
+    color: #63656e;
+  }
+}
+
+.bk-table {
+  .display-name {
+    color: #3a84ff;
+    cursor: pointer;
+    &:hover {
+      color: #699df4;
+    }
+  }
+}
+
+.chart-box {
+  width: 100%;
+  min-height: 150px;
+
+  .chart-action {
+    height: 20px;
+    margin-top: 15px;
+    padding: 0 30px;
+  }
+
+  .dimension {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 30px;
+      cursor: pointer;
+      opacity: 0.4;
+
+      &.active {
+        opacity: 1;
+      }
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border: 1px solid #3a84ff;
+      background: #a3c5fd;
+      border-radius: 50%;
+      vertical-align: middle;
+      float: left;
+      margin: 3px 5px 0 0;
+
+      &.warning {
+        border: 1px solid #ff9c01;
+        background: #ffd695;
+      }
+    }
+  }
+
+  .time {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 2px;
+      border-bottom: 2px solid #fff;
+
+      &:last-child {
+        margin-right: 0;
+      }
+
+      &.active {
+        border-bottom: 2px solid #3a84ff;
+      }
+
+      &.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+        border-bottom: 2px solid #fff;
+      }
+    }
+  }
+}
+
+.info-button {
+  height: 30px;
+  padding: 0 5px;
+  line-height: 30px;
+  font-size: 12px;
+}
 </style>

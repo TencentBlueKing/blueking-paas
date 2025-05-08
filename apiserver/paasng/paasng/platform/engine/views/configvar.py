@@ -206,7 +206,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
                 environment_id=config_var.environment_id,
                 value=config_var.value,
                 description=config_var.description,
-                is_global=slz.validated_data["is_global"],
+                is_global=config_var.is_global,
             )
 
         return Response(status=status.HTTP_201_CREATED)

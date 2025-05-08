@@ -44,10 +44,10 @@ def check_replicas_manually_scaled(m: Module) -> bool:
 
 
 def upsert_proc_svc_by_spec_version(m: Module, spec_version: AppSpecVersion | None):
-    """upsert process services base on spec version in app_desc.yaml file.
+    """upsert process services base on spec version defined in app_desc.yaml file.
 
-    When spec version lower than 3 (or when only a Procfile exists),
-    process services must be upserted. Otherwise, this function performs no operation.
+    When spec version lower than 3 (or when only a Procfile exists), default process services must be upserted.
+    Otherwise, this function performs no operation.
     """
     # 由于低于 3 版本的 app_desc.yaml/Procfile 不支持显式配置 process services, 因此由平台创建
     if spec_version in [None, AppSpecVersion.VER_1, AppSpecVersion.VER_2]:

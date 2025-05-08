@@ -28,25 +28,6 @@
             url: "{% url 'admin.deployments.list' %}"
         },
         {
-            name: '增强服务管理',
-            icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.services.manage' %}",
-            children: [
-                {
-                    name: '服务管理',
-                    url: '{% url "admin.services.manage" %}'
-                },
-                {
-                    name: '方案管理',
-                    url: '{% url "admin.plans.manage" %}'
-                },
-                {
-                    name: '资源池管理',
-                    url: '{% url "admin.pre_created_instances.manage" %}'
-                }
-            ]
-        },
-        {
             name: '运行时管理',
             icon: 'icon-tree-module-shape',
             url: "{% url 'admin.runtimes.buildpack.manage' %}",

@@ -82,7 +82,7 @@ const state = {
   loadingConf: {
     speed: 2,
     primaryColor: '#f5f6fa',
-    secondaryColor: '#FAFAFC',
+    secondaryColor: '#ecebeb',
   },
   localLanguage,
   navType: {},

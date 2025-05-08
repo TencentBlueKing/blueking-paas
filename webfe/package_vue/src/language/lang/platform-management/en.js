@@ -231,4 +231,5 @@ export default {
   编辑实例: 'Edit Instance',
   当前租户暂无可用方案: 'No Available Plans for the Current Tenant',
   '1. 在 [服务方案] 中添加新方案': '1. Add a new plan in [Service Plans]',
+  '由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开头，字母或数字结尾': 'Consists of 3-32 letters, numbers, hyphens (-), and underscores (_), starts with a letter, and ends with a letter or number',
 };

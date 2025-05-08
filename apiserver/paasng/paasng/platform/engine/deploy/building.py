@@ -20,16 +20,20 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
 from paasng.platform.bkapp_model.services import upsert_process_service_flag
@@ -45,8 +49,7 @@ from paasng.platform.engine.configurations.building import (
 from paasng.platform.engine.configurations.config_var import get_env_variables
 from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,
-    generate_image_repository,
-    get_app_image_registry_info,
+    generate_image_repository_by_env,
 )
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
@@ -293,7 +296,7 @@ class ApplicationBuilder(BaseBuilder):
         # Use the default image when it's None, which means no images are bound to the app
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = runtime_info.generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
@@ -309,18 +312,19 @@ class ApplicationBuilder(BaseBuilder):
         )
 
         # Start the background build process
+        build_metadata = BuildMetadata(
+            image=app_image,
+            use_cnb=build_info.use_cnb,
+            image_repository=app_image_repository,
+            buildpacks=build_process.buildpacks_as_build_env(),
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs,
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "buildpacks": build_process.buildpacks_as_build_env(),
-                "use_cnb": build_info.use_cnb,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
@@ -379,20 +383,20 @@ class DockerBuilder(BaseBuilder):
         """Start a new build process[using Dockerfile], this will start a celery task in the background without
         blocking current process.
         """
-        env = self.deployment.app_environment
+        env: ApplicationEnvironment = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
 
-        image_registry, skip_tls_verify = get_app_image_registry_info(env.module)
+        image_registry = get_image_registry_by_app(env.wl_app)
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
             "BUILD_ARG": get_build_args(env.module),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
-            "SKIP_TLS_VERIFY_REGISTRIES": image_registry if skip_tls_verify else "",
+            "SKIP_TLS_VERIFY_REGISTRIES": image_registry.host if image_registry.skip_tls_verify else "",
         }
 
         # Create the Build object and start a background build task
@@ -405,18 +409,19 @@ class DockerBuilder(BaseBuilder):
             invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
 
+        build_metadata = BuildMetadata(
+            image=app_image,
+            image_repository=app_image_repository,
+            use_dockerfile=True,
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs or {},
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "use_dockerfile": True,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )

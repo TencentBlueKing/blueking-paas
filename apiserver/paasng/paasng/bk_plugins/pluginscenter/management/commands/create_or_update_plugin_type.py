@@ -71,6 +71,7 @@ class Command(BaseCommand):
                 "logo": pd_data.logo,
                 "administrator": pd_data.administrator,
                 "approval_config": pd_data.approvalConfig,
+                "options": pd_data.options,
                 "release_revision": pd_data.releaseRevision,
                 "release_stages": pd_data.releaseStages,
                 "test_release_revision": pd_data.testReleaseRevision,

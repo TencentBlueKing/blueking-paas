@@ -897,7 +897,7 @@ export default {
       return this.$store.state.cloudApi.cloudAppData;
     },
     clusterList() {
-      // 目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
+      // TODO（mh）目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
       return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
     },
     mirrorExamplePlaceholder() {
@@ -995,12 +995,8 @@ export default {
   },
   methods: {
     async init() {
-      await Promise.all([
-        this.fetchLanguageInfo(),
-        this.fetchSourceControlTypesData(),
-        this.fetchAdvancedOptions(),
-        this.getPluginTmpls(),
-      ]);
+      await Promise.all([this.fetchLanguageInfo(), this.fetchSourceControlTypesData(), this.fetchAdvancedOptions()]);
+      this.getPluginTmpls();
       // 收集依赖
       const data = this.collectDependencies();
       this.initSidebarFormData(data);
@@ -1078,7 +1074,7 @@ export default {
     },
 
     // 获取代码源仓库信息
-    fetchSourceControlTypesData() {
+    async fetchSourceControlTypesData() {
       this.$store.dispatch('fetchAccountAllowSourceControlType', {}).then((res) => {
         this.sourceControlTypes = res;
         this.sourceControlTypes = this.sourceControlTypes.map((e) => {
@@ -1336,7 +1332,7 @@ export default {
       // 集群名称
       if (this.formData.clusterName) {
         params.advanced_options = {
-          // 暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
+          // TODO（mh）暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
           env_cluster_names: {
             stag: this.formData.clusterName,
             prod: this.formData.clusterName,

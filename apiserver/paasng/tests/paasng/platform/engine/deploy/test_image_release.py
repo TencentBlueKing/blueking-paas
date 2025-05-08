@@ -21,7 +21,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.models import Build
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.entities import DeployHandleResult
@@ -68,11 +68,28 @@ class TestHandleProcessesAndDummyBuild:
         assert str(deployment.build_id) == deployment.advanced_options.build_id
 
     @pytest.mark.usefixtures("_with_wl_apps")
-    def test_for_smart_app(self, bk_app, simple_deployment):
+    @pytest.mark.parametrize(
+        "init_artifact_metadata",
+        [
+            {},
+            {"use_cnb": True},
+            {"use_cnb": False},
+            {"use_cnb": True, "proc_entrypoints": {"web": ["frontend-web"]}},
+            {"use_cnb": False, "proc_entrypoints": {"web": ["web"]}},
+        ],
+    )
+    def test_for_smart_app(self, bk_app, bk_module, simple_deployment, init_artifact_metadata):
         """test ImageReleaseMgr._handle_smart_app_description"""
         app = Application.objects.get(id=bk_app.id)
         app.is_smart_app = True
         app.save()
+
+        smart_app_extra = SMartAppExtraInfo.objects.create(app=app)
+        smart_app_extra.set_use_cnb_flag(bool(init_artifact_metadata.get("use_cnb")))
+
+        proc_entrypoints = init_artifact_metadata.get("proc_entrypoints") or {}
+        if proc_entrypoints:
+            smart_app_extra.set_proc_entrypoints(bk_module.name, proc_entrypoints)
 
         with mock.patch(
             "paasng.platform.engine.deploy.image_release.ImageReleaseMgr._handle_smart_app_description",
@@ -81,7 +98,9 @@ class TestHandleProcessesAndDummyBuild:
             ImageReleaseMgr.from_deployment_id(simple_deployment.id)._handle_app_processes_and_dummy_build()
             deployment = Deployment.objects.get(id=simple_deployment.id)
             build = Build.objects.get(uuid=deployment.build_id)
-            assert build.artifact_metadata.get("use_cnb") is True
+
+            assert build.artifact_metadata.use_cnb == bool(init_artifact_metadata.get("use_cnb"))
+            assert build.artifact_metadata.proc_entrypoints == init_artifact_metadata.get("proc_entrypoints")
 
     @pytest.mark.usefixtures("_with_wl_apps")
     def test_for_image_app(self, bk_module, simple_deployment):

@@ -24,7 +24,7 @@ from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlug
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from tests.utils.basic import generate_random_string
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 _placeholder_response = {
@@ -81,12 +81,16 @@ class TestModuleBuildConfigViewSet:
         slugrunner = G(AppSlugRunner, name=bp_stack_name, is_hidden=False)
         return slugrunner
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_retrieve_legacy_bp(self, api_client, bk_app, bk_module):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,
-            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "env_image_repositories": {
+                "prod": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+                "stag": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            },
             "build_method": "buildpack",
             "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
             "bp_stack_name": None,
@@ -94,6 +98,7 @@ class TestModuleBuildConfigViewSet:
             "use_bk_ci_pipeline": False,
         }
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_retrieve_bp(self, api_client, bk_app, bk_module, slugbuilder, slugrunner, buildpack_x):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/build_config/"
         binder = ModuleRuntimeBinder(bk_module)
@@ -103,7 +108,10 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,
-            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "env_image_repositories": {
+                "prod": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+                "stag": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            },
             "build_method": "buildpack",
             "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
             "bp_stack_name": slugbuilder.name,
@@ -119,6 +127,7 @@ class TestModuleBuildConfigViewSet:
             "use_bk_ci_pipeline": False,
         }
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_retrieve_docker(self, api_client, bk_app, bk_module):
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         cfg.build_method = RuntimeType.DOCKERFILE
@@ -129,7 +138,10 @@ class TestModuleBuildConfigViewSet:
         resp = api_client.get(url)
         assert resp.json() == {
             **_placeholder_response,  # type: ignore
-            "image_repository": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            "env_image_repositories": {
+                "prod": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+                "stag": f"example.com/bkapps/{bk_app.code}/{bk_module.name}",
+            },
             "build_method": "dockerfile",
             "tag_options": {"prefix": None, "with_version": True, "with_build_time": True, "with_commit_id": False},
             "dockerfile_path": "rootfs/Dockerfile",
@@ -137,6 +149,7 @@ class TestModuleBuildConfigViewSet:
             "use_bk_ci_pipeline": False,
         }
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_retrieve_custom_image(self, api_client, bk_app, bk_module):
         cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
         cfg.build_method = RuntimeType.CUSTOM_IMAGE
@@ -148,12 +161,14 @@ class TestModuleBuildConfigViewSet:
 
         assert resp.json() == {
             **_placeholder_response,  # type: ignore
+            "env_image_repositories": None,
             "image_repository": "example.com/foo",
             "image_credential_name": "foo",
             "build_method": "custom_image",
             "use_bk_ci_pipeline": False,
         }
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_modify_bp(
         self,
         api_client,
@@ -183,6 +198,7 @@ class TestModuleBuildConfigViewSet:
         assert cfg.tag_options == ImageTagOptions("foo", True, False, True)
         assert ModuleRuntimeManager(bk_module).list_buildpacks() == [buildpack_z, buildpack_x, buildpack_y]
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_modify_dockerbuild(self, api_client, bk_app, bk_module):
         data = {
             "build_method": RuntimeType.DOCKERFILE,
@@ -198,6 +214,7 @@ class TestModuleBuildConfigViewSet:
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
         assert cfg.docker_build_args == {"GO_VERSION": "1.19", "GOARCH": "amd64", "CFLAGS": "-g -Wall"}
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_modify_dockerbuild_with_emtpy_build_args(self, api_client, bk_app, bk_module):
         data = {
             "build_method": RuntimeType.DOCKERFILE,
@@ -213,6 +230,7 @@ class TestModuleBuildConfigViewSet:
         assert cfg.tag_options == ImageTagOptions("foo", False, False, True)
         assert cfg.docker_build_args == {}
 
+    @pytest.mark.usefixtures("_with_wl_apps")
     def test_modify_custom_image(self, api_client, bk_app, bk_module):
         data = {
             "build_method": RuntimeType.CUSTOM_IMAGE,

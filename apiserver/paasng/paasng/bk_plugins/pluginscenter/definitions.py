@@ -364,6 +364,11 @@ class PluginCreateApproval(BaseModel):
 
 
 @prepare_json_field
+class PluginOptions(BaseModel):
+    shouldAddAdmins: bool = Field(default=False, description="是否将插件的平台管理员默认添加到插件实例的成员中")
+
+
+@prepare_json_field
 class PluginDefinition(BaseModel):
     """插件模板定义"""
 
@@ -382,6 +387,7 @@ class PluginDefinition(BaseModel):
 
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
     features: List[PluginFeature] = Field(default_factory=list)
+    options: PluginOptions = Field(description="插件额外配置项")
 
 
 def find_stage_by_id(

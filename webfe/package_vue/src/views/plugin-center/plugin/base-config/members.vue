@@ -305,7 +305,7 @@ export default {
   },
   computed: {
     curUserInfo() {
-      return this.memberList.find(item => item.username === this.currentUser) || {};
+      return this.memberList.find((item) => item.username === this.currentUser) || {};
     },
     // 当前用户是否为当前插件的管理员
     isPluginAdmin() {
@@ -314,7 +314,7 @@ export default {
     isExitDisabled() {
       if (this.curUserInfo.role.roleName === 'developer') return false; // 开发者允许退出
       // 当前插件如果只剩下一个管理员，不允许退出
-      const adminUsers = this.memberList.filter(user => user.role.roleName === 'administrator');
+      const adminUsers = this.memberList.filter((user) => user.role.roleName === 'administrator');
       return adminUsers.length <= 1;
     },
     localLanguage() {
@@ -328,7 +328,7 @@ export default {
     },
     filterMemberList() {
       return this.keyword
-        ? this.memberList.filter(v => v.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1)
+        ? this.memberList.filter((v) => v.username.toLowerCase().indexOf(this.keyword.toLowerCase()) > -1)
         : this.memberList;
     },
   },
@@ -633,7 +633,7 @@ export default {
   display: inline-block;
 }
 .user-photo {
-  margin: 5px 0;
+  margin: 5px 8px 5px 0;
   display: inline-block;
   width: 40px;
   height: 40px;

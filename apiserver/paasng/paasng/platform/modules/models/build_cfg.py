@@ -74,7 +74,7 @@ class BuildConfig(UuidAuditedModel):
     docker_build_args = DockerBuildArgsField(default=dict)
 
     # custom image 相关配置
-    # Note: 如需要支持将镜像推送到外部仓库时, 可复用 image_repository 字段
+    # 重要！image_repository 与 image_credential_name 只能用于纯镜像应用，不能用于 buildpacks / dockerfile 构建
     image_repository = models.TextField(verbose_name=_("镜像仓库"), null=True)
     image_credential_name = models.CharField(verbose_name=_("镜像凭证名称"), null=True, max_length=32)
 

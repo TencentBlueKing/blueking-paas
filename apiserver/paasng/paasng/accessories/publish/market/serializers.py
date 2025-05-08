@@ -49,7 +49,7 @@ class AppLogoField(serializers.ImageField):
 
 
 class VisiableLabelsSlz(serializers.Serializer):
-    id = serializers.IntegerField(label="ID")
+    id = serializers.CharField(label="ID")
     type = serializers.CharField(label="类型", min_length=1)
     name = serializers.CharField(label="名称", min_length=1)
     display_name = serializers.CharField(

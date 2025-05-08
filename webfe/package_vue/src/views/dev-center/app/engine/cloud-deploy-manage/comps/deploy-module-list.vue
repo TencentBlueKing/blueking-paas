@@ -328,6 +328,7 @@ export default {
       isDialogShowSideslider: false, // 部署的侧边栏
       currentAllExpandedItems: [],
       curModuleSequence: [],
+      isDeployEnvVarChange: false,
     };
   },
 
@@ -341,6 +342,10 @@ export default {
     },
     disableModuleTitle() {
       return this.$t('是否下架 {n} 模块', { n: this.curModuleId });
+    },
+    // 进入页面是否直接显示部署弹窗
+    isShowDeploymentDialog() {
+      return this.$route.params?.isShowDeploy;
     },
   },
 
@@ -515,6 +520,9 @@ export default {
         });
       } finally {
         this.listLoading = false;
+        this.$nextTick(() => {
+          this.handleDeployEnvVarChange();
+        });
       }
     },
 
@@ -655,6 +663,22 @@ export default {
         });
       } catch (e) {
         this.catchErrorHandler(e);
+      }
+    },
+
+    // 处理环境变量变更需要部署的情况
+    handleDeployEnvVarChange() {
+      if (!this.isShowDeploymentDialog || this.isDeployEnvVarChange) return;
+      this.isDeployEnvVarChange = true;
+      const deployModleId = this.$route.params.deployModuleId;
+      const deployIndex = this.deploymentInfoData.findIndex((item) => item.module_name === deployModleId);
+      if (deployIndex !== -1) {
+        const additionalData = this.isSmartApp ? { activeImagePullPolicy: 'Always' } : { activeImageSource: 'image' };
+        const deployData = {
+          ...this.deploymentInfoData[deployIndex],
+          ...additionalData,
+        };
+        this.handleDeploy(deployData, deployIndex);
       }
     },
   },

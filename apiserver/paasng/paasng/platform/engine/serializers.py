@@ -255,10 +255,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     deleted_num = serializers.IntegerField()
 
 
-class ConfigVarFormatSLZ(serializers.Serializer):
-    """Serializer for ConfigVar"""
-
-    key = field_env_var_key()
+class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="环境变量值")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
@@ -287,6 +284,12 @@ class ConfigVarFormatSLZ(serializers.Serializer):
             data["is_global"] = False
             data["environment_id"] = module.envs.get(environment=env_name).pk
         return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
+
+
+class ConfigVarFormatSLZ(ConfigVarWithoutKeyFormatSLZ):
+    """Serializer for ConfigVar"""
+
+    key = field_env_var_key()
 
 
 class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):

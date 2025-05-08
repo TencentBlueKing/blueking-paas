@@ -127,13 +127,10 @@ class AppDescriptionSLZ(serializers.Serializer):
             module_desc.name = module_name
         return modules
 
-    def to_internal_value(self, data: Dict) -> ApplicationDesc:
-        attrs = super().to_internal_value(data)
-        attrs["name_en"] = attrs.get("name_en") or attrs["name_zh_cn"]
-
-        # 验证至少有一个主模块
+    def _validate_default_module(self, modules: Dict[str, ModuleDesc]):
+        """校验默认模块"""
         has_default = False
-        for module_desc in attrs["modules"].values():
+        for module_desc in modules.values():
             if module_desc.is_default:
                 if has_default:
                     raise serializers.ValidationError({"modules": _("一个应用只能有一个主模块")})
@@ -141,13 +138,40 @@ class AppDescriptionSLZ(serializers.Serializer):
         if not has_default:
             raise serializers.ValidationError({"modules": _("一个应用必须有一个主模块")})
 
-        # 校验 shared_from 的模块是否存在
-        for module_name, module_desc in attrs["modules"].items():
+    def _validate_shared_services(self, modules: Dict[str, ModuleDesc]):
+        """校验服务共享配置的合法性"""
+        for module_name, module_desc in modules.items():
             for svc in module_desc.services:
-                if svc.shared_from and svc.shared_from not in attrs["modules"]:
+                # 检查 shared_from 的模块是否存在
+                if not svc.shared_from:
+                    continue
+
+                if svc.shared_from not in modules:
                     raise serializers.ValidationError(
                         {f"modules[{module_name}].services": _("提供共享增强服务的模块不存在")}
                     )
+
+                ref_module = modules[svc.shared_from]
+                ref_service = next((s for s in ref_module.services if s.name == svc.name), None)
+
+                # 检查依赖 module 中是否存在该服务
+                if not ref_service:
+                    raise serializers.ValidationError(
+                        {f"modules[{module_name}].services": _("提供共享增强服务的模块未启用该服务")}
+                    )
+                # 检查依赖的服务是否也有 shared_from
+                if ref_service.shared_from:
+                    raise serializers.ValidationError(
+                        {f"modules[{module_name}].services": _("不允许嵌套共享增强服务")}
+                    )
+
+    def to_internal_value(self, data: Dict) -> ApplicationDesc:
+        attrs = super().to_internal_value(data)
+        attrs["name_en"] = attrs.get("name_en") or attrs["name_zh_cn"]
+
+        # 执行校验
+        self._validate_default_module(attrs["modules"])
+        self._validate_shared_services(attrs["modules"])
 
         attrs.setdefault("plugins", [])
         if self.context.get("app_version"):

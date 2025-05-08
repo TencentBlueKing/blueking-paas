@@ -1,0 +1,21 @@
+specVersion: 3
+appVersion: "1.0.0"
+app:
+  bkAppCode: "TO_BE_CHANGED"
+  bkAppName: "TO_BE_CHANGED"
+  market:
+    introduction: "A demo application"
+    description: "Description of a demo application"
+    displayOptions:
+      width: 800
+      height: 600
+modules:
+  - name: "main"
+    isDefault: true
+    sourceDir: "main"
+    language: "Python"
+    spec:
+      processes:
+        - name: web
+          command: ["python"]
+

@@ -97,14 +97,17 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.WithError(err)
 	}
 
-	hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	if err != nil {
+		return r.Result.WithError(err)
+	}
 	if hook != nil {
 		// Apply service discovery related changes
 		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToPod(ctx, hook.Pod); ok {
 			log.V(1).Info("Applied svc-discovery related changes to the pre-release pod.")
 		}
 
-		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
+		if err = r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.WithError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环

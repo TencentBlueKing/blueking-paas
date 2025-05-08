@@ -106,9 +106,9 @@ func IsPreReleaseProgressing(bkapp *paasv1alpha2.BkApp) bool {
 }
 
 // BuildPreReleaseHook 从应用描述中解析 Pre-Release-Hook 对象
-func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookStatus) *HookInstance {
+func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookStatus) (*HookInstance, error) {
 	if bkapp.Spec.Hooks == nil || bkapp.Spec.Hooks.PreRelease == nil {
-		return nil
+		return nil, nil
 	}
 
 	if status == nil {
@@ -179,15 +179,15 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 	mounterMap, err := volumes.GetAllVolumeMounterMap(bkapp)
 	if err != nil {
 		log.Error(err, "Failed to get volume mounter map for pre-release-hook", "bkappName", bkapp.Name)
-		return hook
+		return nil, err
 	}
 
 	for _, mounter := range mounterMap {
-		err = mounter.ApplyToPod(bkapp, hook.Pod)
-		if err != nil {
+		if err = mounter.ApplyToPod(bkapp, hook.Pod); err != nil {
 			log.Error(err, "Failed to inject mounts info to pre-release-hook")
+			return nil, err
 		}
 	}
 
-	return hook
+	return hook, nil
 }

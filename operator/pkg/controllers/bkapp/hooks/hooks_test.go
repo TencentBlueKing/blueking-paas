@@ -125,7 +125,9 @@ var _ = Describe("Test HookReconciler", func() {
 				}
 				bkapp.Status.SetHookStatus(hookStatus)
 
-				hook := hookres.BuildPreReleaseHook(bkapp, &hookStatus)
+				hook, err := hookres.BuildPreReleaseHook(bkapp, &hookStatus)
+				Expect(err).To(BeNil())
+
 				hook.Pod.Status.Phase = phase
 				hook.Pod.SetCreationTimestamp(startTime)
 				r := NewHookReconciler(builder.WithObjects(bkapp, hook.Pod).Build())
@@ -182,7 +184,8 @@ var _ = Describe("Test HookReconciler", func() {
 		It("Pod Execute Failed", func() {
 			Expect(r.Client.Create(ctx, bkapp)).To(BeNil())
 
-			hook := hookres.BuildPreReleaseHook(bkapp, nil)
+			hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 			Expect(r.ExecuteHook(ctx, bkapp, hook)).To(BeNil())
 
 			hook.Pod.Status.Phase = corev1.PodFailed
@@ -208,7 +211,9 @@ var _ = Describe("Test HookReconciler", func() {
 				panic(err)
 			}
 
-			hook := hookres.BuildPreReleaseHook(bkapp, nil)
+			hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
+
 			if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
 				panic(err)
 			}
@@ -305,7 +310,9 @@ var _ = Describe("Test HookReconciler", func() {
 			timeoutThreshold time.Duration,
 			executing, succeeded, failed, timeout bool,
 		) {
-			hook := hookres.BuildPreReleaseHook(bkapp, nil)
+			hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
+
 			hook.Pod.Status.Phase = phase
 			hook.Pod.Status.StartTime = lo.ToPtr(metav1.Now())
 			hook.Pod.SetCreationTimestamp(*hook.Pod.Status.StartTime)
@@ -335,9 +342,10 @@ var _ = Describe("Test HookReconciler", func() {
 			r := NewHookReconciler(builder.Build())
 
 			Expect(r.Client.Create(ctx, bkapp)).To(BeNil())
-			hook := hookres.BuildPreReleaseHook(bkapp, nil)
+			hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 
-			err := r.ExecuteHook(ctx, bkapp, hook)
+			err = r.ExecuteHook(ctx, bkapp, hook)
 			Expect(err).NotTo(HaveOccurred())
 
 			hookStatus := bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease)
@@ -347,10 +355,12 @@ var _ = Describe("Test HookReconciler", func() {
 		})
 
 		It("Pod Existed!", func() {
-			hook := hookres.BuildPreReleaseHook(bkapp, nil)
+			hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
+
 			r := NewHookReconciler(builder.WithObjects(hook.Pod).Build())
 
-			err := r.ExecuteHook(ctx, bkapp, hook)
+			err = r.ExecuteHook(ctx, bkapp, hook)
 			Expect(errors.Is(err, hookres.ErrHookPodExists)).To(BeTrue())
 		})
 	})
@@ -363,8 +373,10 @@ var _ = Describe("Test HookReconciler", func() {
 			createdHookPodNames := []string{}
 			for i := 0; i < 5; i++ {
 				bkapp.Status.DeployId = strconv.FormatInt(int64(i), 10)
-				hook := hookres.BuildPreReleaseHook(bkapp, nil)
-				err := r.ExecuteHook(ctx, bkapp, hook)
+				hook, err := hookres.BuildPreReleaseHook(bkapp, nil)
+				Expect(err).To(BeNil())
+
+				err = r.ExecuteHook(ctx, bkapp, hook)
 				Expect(err).NotTo(HaveOccurred())
 
 				createdHookPodNames = append(createdHookPodNames, hook.Pod.Name)

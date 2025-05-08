@@ -2992,8 +2992,6 @@ export default {
   拥有应用全部权限: 'Has all application permissions',
   基础信息查看: 'Basic Info View',
   基础开发: 'Basic Development',
-  '云 API 查看': 'Cloud API View',
-  告警积累: 'Alert Accumulation',
   基本信息编辑: 'Basic Info Edit',
   应用删除: 'APP Deletion',
   增强服务管理: 'Enhanced Service Management',

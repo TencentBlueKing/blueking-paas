@@ -68,7 +68,7 @@
               </li>
               <li
                 v-for="(val, key) in PERMISSIONS"
-                :class="['role-item', { 'is-last': '告警策略配置' === key }]"
+                :class="['role-item', { 'is-last': '模块管理' === key }]"
               >
                 <div
                   class="operate text-ellipsis"
@@ -79,7 +79,7 @@
                 <div
                   v-for="role in roleList"
                   :key="role.id"
-                  :class="{ 'last-column': '告警策略配置' === key }"
+                  :class="{ 'last-column': '模块管理' === key }"
                 >
                   <i
                     class="paasng-icon paasng-correct"
@@ -175,11 +175,12 @@ export default {
       // 权限模型列表：2管理员、3开发者、4运营者
       PERMISSIONS: {
         基础信息查看: [2, 3, 4],
-        基础开发: [2, 3],
         数据统计: [2, 3, 4],
-        '云 API 查看': [2, 3],
-        告警积累: [2, 3, 4],
+        告警记录: [2, 3, 4],
         应用推广: [2, 3, 4],
+        基础开发: [2, 3],
+        '云 API 管理': [2, 3],
+        告警策略配置: [2, 3],
         基本信息编辑: [2, 4],
         权限管理: [2, 4],
         应用删除: [2],
@@ -187,7 +188,6 @@ export default {
         增强服务管理: [2],
         部署环境限制管理: [2],
         模块管理: [2],
-        告警策略配置: [2, 3],
       },
     };
   },

@@ -85,30 +85,6 @@
             </template>
           </bk-table-column>
           <bk-table-column
-            :label="$t('预发布环境')"
-            width="100"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
-                <i class="paasng-icon paasng-correct success-icon" />
-              </span>
-              <span v-else>--</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('生产环境')"
-            width="100"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
-                <i class="paasng-icon paasng-correct success-icon" />
-              </span>
-              <span v-else>--</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
             :label="$t('配置信息')"
             :render-header="$renderHeader"
           >
@@ -886,7 +862,7 @@ export default {
   .row-img {
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: 2px;
   }
   .ps-switcher-wrapper {
     margin-left: 0;

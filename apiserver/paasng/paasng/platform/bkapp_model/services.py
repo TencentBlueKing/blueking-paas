@@ -21,6 +21,7 @@ from paas_wl.bk_app.cnative.specs.constants import DEFAULT_PROCESS_NAME
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities.proc_service import ExposedType, ProcService
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
 
@@ -42,22 +43,27 @@ def check_replicas_manually_scaled(m: Module) -> bool:
     return fieldmgr.FieldMgrName.WEB_FORM in managers.values()
 
 
-def upsert_proc_svc_if_implicit_needed(m: Module):
-    """upsert process service. When using app_desc.yaml with spec_version: 2
-    or only a Procfile, process services must be implicitly upsert"""
-    proc_specs = ModuleProcessSpec.objects.filter(module=m)
+def upsert_proc_svc_by_spec_version(m: Module, spec_version: AppSpecVersion | None):
+    """upsert process services base on spec version in app_desc.yaml file.
 
-    for proc_spec in proc_specs:
-        proc_svc = ProcService(
-            name=proc_spec.name,
-            target_port=settings.CONTAINER_PORT,
-            protocol="TCP",
-            port=80,
-        )
-        if proc_spec.name == DEFAULT_PROCESS_NAME:
-            proc_svc.exposed_type = ExposedType()
+    When spec version lower than 3 (or when only a Procfile exists),
+    process services must be upserted. Otherwise, this function performs no operation.
+    """
+    # 由于低于 3 版本的 app_desc.yaml/Procfile 不支持显式配置 process services, 因此由平台创建
+    if spec_version in [None, AppSpecVersion.VER_1, AppSpecVersion.VER_2]:
+        proc_specs = ModuleProcessSpec.objects.filter(module=m)
 
-        proc_spec.services = [proc_svc]
+        for proc_spec in proc_specs:
+            proc_svc = ProcService(
+                name=proc_spec.name,
+                target_port=settings.CONTAINER_PORT,
+                protocol="TCP",
+                port=80,
+            )
+            if proc_spec.name == DEFAULT_PROCESS_NAME:
+                proc_svc.exposed_type = ExposedType()
 
-    if proc_specs:
-        ModuleProcessSpec.objects.bulk_update(proc_specs, ["services"])
+            proc_spec.services = [proc_svc]
+
+        if proc_specs:
+            ModuleProcessSpec.objects.bulk_update(proc_specs, ["services"])

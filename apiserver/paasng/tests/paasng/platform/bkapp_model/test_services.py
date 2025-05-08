@@ -22,7 +22,8 @@ from django_dynamic_fixture import G
 from paasng.platform.bkapp_model.entities.proc_service import ExposedType, ProcService
 from paasng.platform.bkapp_model.fieldmgr import FieldManager, FieldMgrName, f_overlay_replicas
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.bkapp_model.services import check_replicas_manually_scaled, upsert_proc_svc_if_implicit_needed
+from paasng.platform.bkapp_model.services import check_replicas_manually_scaled, upsert_proc_svc_by_spec_version
+from paasng.platform.declarative.constants import AppSpecVersion
 
 pytestmark = pytest.mark.django_db(databases=["default"])
 
@@ -45,15 +46,18 @@ class Test__check_replicas_manually_scaled:
         assert check_replicas_manually_scaled(bk_module) is False
 
 
-class Test__upsert_proc_svc_if_implicit_needed:
-    def test(self, bk_module):
+class Test__upsert_proc_svc_by_spec_version:
+    @pytest.fixture(autouse=True)
+    def _create_module_specs(self, bk_module):
         G(ModuleProcessSpec, module=bk_module, name="web")
         G(ModuleProcessSpec, module=bk_module, name="backend")
 
+    @pytest.mark.parametrize("spec_version", [None, AppSpecVersion.VER_1, AppSpecVersion.VER_2])
+    def test_by_spec_version_lower_than_3(self, bk_module, spec_version):
         assert ModuleProcessSpec.objects.get(name="web", module=bk_module).services is None
         assert ModuleProcessSpec.objects.get(name="backend", module=bk_module).services is None
 
-        upsert_proc_svc_if_implicit_needed(bk_module)
+        upsert_proc_svc_by_spec_version(bk_module, spec_version)
 
         assert ModuleProcessSpec.objects.get(name="web", module=bk_module).services == [
             ProcService(
@@ -67,3 +71,12 @@ class Test__upsert_proc_svc_if_implicit_needed:
         assert ModuleProcessSpec.objects.get(name="backend", module=bk_module).services == [
             ProcService(name="backend", target_port=settings.CONTAINER_PORT, protocol="TCP", port=80)
         ]
+
+    def test_by_spec_version_3(self, bk_module):
+        assert ModuleProcessSpec.objects.get(name="web", module=bk_module).services is None
+        assert ModuleProcessSpec.objects.get(name="backend", module=bk_module).services is None
+
+        upsert_proc_svc_by_spec_version(bk_module, AppSpecVersion.VER_3)
+
+        assert ModuleProcessSpec.objects.get(name="web", module=bk_module).services is None
+        assert ModuleProcessSpec.objects.get(name="backend", module=bk_module).services is None

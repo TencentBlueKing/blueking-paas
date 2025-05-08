@@ -24,7 +24,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
-from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     HostAlias,
@@ -197,16 +197,6 @@ class ProcessSpecEnvOverlay(TimestampedModel):
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
-
-
-class ProcessServicesFlag(TimestampedModel):
-    """Deprecated: ProcessServicesFlag 主要用途是标记是否隐式需要 process services 配置"""
-
-    app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
-    # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设计 implicit_needed 字段来标记是否需要平台隐式创建
-    implicit_needed = models.BooleanField("是否隐式需要 process services 配置", default=False)
-
-    tenant_id = tenant_id_field_factory()
 
 
 class ModuleDeployHookManager(models.Manager):

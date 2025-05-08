@@ -294,6 +294,7 @@ export default {
   overflow: hidden;
   .sideslider-main {
     flex: 1;
+    overflow: auto;
     padding: 16px 40px;
     /* 查看模式 */
     &.view .permission-list {

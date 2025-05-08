@@ -297,7 +297,7 @@ class ModuleDeployHookSLZ(serializers.Serializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not data["proc_command"] and hasattr(instance, "get_proc_command"):
+        if not data.get("proc_command") and hasattr(instance, "get_proc_command"):
             data["proc_command"] = instance.get_proc_command()
         return data
 

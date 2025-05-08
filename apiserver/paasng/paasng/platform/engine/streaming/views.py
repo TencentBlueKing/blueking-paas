@@ -55,6 +55,7 @@ class StreamViewSet(ViewSet):
     @swagger_auto_schema(
         query_serializer=StreamingQuerySLZ,
         responses={200: StreamEventSLZ(many=True)},
+        tags=["streams"],
     )
     def streaming(self, request, channel_id):
         query_serializer = StreamingQuerySLZ(data=request.query_params)

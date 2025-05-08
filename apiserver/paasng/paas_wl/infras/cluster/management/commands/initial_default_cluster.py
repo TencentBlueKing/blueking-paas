@@ -25,7 +25,7 @@ from django.db import transaction
 from environ import Env
 
 from paas_wl.infras.cluster.components import get_default_component_configs
-from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag, ClusterType
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import (
     APIServer,
@@ -184,7 +184,7 @@ class Command(BaseCommand):
             feature_flags = {k: v for k, v in feature_flags.items() if k in ClusterFeatureFlag and v is not None}
         else:
             self.stdout.write("No feature flags found, using default feature flags")
-            feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL)
+            feature_flags = ClusterFeatureFlag.get_default_flags()
 
         # 节点选择器 & 污点容忍度
         node_selector = env.json(EnvVarKey.NODE_SELECTOR, {})

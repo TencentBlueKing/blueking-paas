@@ -30,11 +30,11 @@ urlpatterns = [
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster.retrieve_update_destroy",
     ),
-    # 集群默认特性标记
+    # 集群默认配置
     path(
-        "api/plat_mgt/infras/clusters/<str:cluster_name>/default_feature_flags/",
-        views.ClusterViewSet.as_view({"get": "retrieve_default_feature_flags"}),
-        name="plat_mgt.infras.cluster.default_feature_flags",
+        "api/plat_mgt/infras/clusters/defaults/",
+        views.ClusterViewSet.as_view({"get": "retrieve_defaults"}),
+        name="plat_mgt.infras.cluster.defaults",
     ),
     # 集群状态
     path(

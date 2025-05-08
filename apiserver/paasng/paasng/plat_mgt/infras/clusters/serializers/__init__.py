@@ -22,7 +22,7 @@ from .bcs_resources import (
 )
 from .clusters import (
     ClusterCreateInputSLZ,
-    ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
+    ClusterDefaultsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
@@ -50,7 +50,7 @@ __all__ = [
     "ClusterCreateInputSLZ",
     "ClusterUpdateInputSLZ",
     "ClusterStatusRetrieveOutputSLZ",
-    "ClusterDefaultFeatureFlagsRetrieveOutputSLZ",
+    "ClusterDefaultsRetrieveOutputSLZ",
     "ClusterUsageRetrieveOutputSLZ",
     # components
     "ClusterComponentListOutputSLZ",

@@ -14,17 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from .binding_policies import BindingPolicyViewSet, CategoryViewSet, ProviderViewSet
-from .plans import PlanViewSet
-from .pre_created_instances import PreCreatedInstanceViewSet
-from .services import ServiceViewSet
-
-__all__ = [
-    "BindingPolicyViewSet",
-    "PlanViewSet",
-    "ServiceViewSet",
-    "CategoryViewSet",
-    "ProviderViewSet",
-    "PreCreatedInstanceViewSet",
-]

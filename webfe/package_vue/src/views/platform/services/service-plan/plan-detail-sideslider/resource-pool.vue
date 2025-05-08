@@ -176,7 +176,7 @@ export default {
         isShow: true,
         row,
         type: 'edit',
-        planId: row.plan,
+        planId: row.plan_id,
         service: this.formatServiceName(),
       };
     },
@@ -184,7 +184,7 @@ export default {
     async handleDelete(row) {
       try {
         await this.$store.dispatch('tenant/deleteResourcePool', {
-          planId: row.plan,
+          planId: row.plan_id,
           id: row.uuid,
         });
         this.$paasMessage({

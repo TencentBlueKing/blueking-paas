@@ -225,7 +225,7 @@ class TestSystemAPIClientViewSet:
         assert rsp.status_code == status.HTTP_400_BAD_REQUEST
         assert rsp.data["code"] == "SYSAPI_CLIENT_NOT_FOUND"
 
-        # 测试更新已警用的客户端
+        # 测试更新已禁用的客户端
         client.is_active = False
         client.save()
         auth_app_client.delete()

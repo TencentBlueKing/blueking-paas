@@ -8,7 +8,7 @@
       :offset-left="0"
       placeholder="roles-loading"
     >
-      <div class="middle ps-main">
+      <div class="ps-main">
         <bk-alert
           v-if="recyclingCount"
           type="warning"
@@ -35,7 +35,7 @@
         </bk-alert>
         <bk-table
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
-          :data="tableList"
+          :data="pgPaginatedData"
           size="small"
           :outer-border="false"
           :pagination="pagination"
@@ -59,8 +59,9 @@
                   alt=""
                 />
                 <p
-                  class="row-title-text"
+                  class="row-title-text text-ellipsis"
                   :class="row.isStartUp ? '' : 'text-disabled'"
+                  v-bk-overflow-tips
                   @click="handleToPage(row)"
                 >
                   {{ row.display_name || '--' }}
@@ -75,27 +76,12 @@
             </template>
           </bk-table-column>
           <bk-table-column
-            :label="$t('预发布环境')"
-            width="100"
+            :label="$t('服务介绍')"
+            show-overflow-tooltip
             :render-header="$renderHeader"
           >
             <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.stag">
-                <i class="paasng-icon paasng-correct success-icon" />
-              </span>
-              <span v-else>--</span>
-            </template>
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('生产环境')"
-            width="100"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="{ row }">
-              <span v-if="row.type === 'bound' && row.provision_infos && row.provision_infos.prod">
-                <i class="paasng-icon paasng-correct success-icon" />
-              </span>
-              <span v-else>--</span>
+              {{ row.description || '--' }}
             </template>
           </bk-table-column>
           <bk-table-column
@@ -107,26 +93,28 @@
                 v-if="row.isStartUp && row.plans"
                 class="config-info-tag"
               >
-                <bk-tag
+                <span
+                  class="g-tag-default text-ellipsis"
                   v-if="row.plans?.stag?.name === row.plans?.prod?.name"
-                  v-bk-overflow-tips="{ allowHTML: true }"
+                  v-bk-overflow-tips
                 >
                   {{ row.plans.stag?.name }}
-                </bk-tag>
-                <bk-tag
+                </span>
+                <span
+                  class="g-tag-default text-ellipsis"
                   v-else
                   v-for="(value, key) in row.plans"
                   :key="key"
                   v-bk-overflow-tips
                 >
                   {{ getEnvironmentName(key) }}：{{ value.name }}
-                </bk-tag>
+                </span>
               </div>
               <span v-else>{{ $t('无') }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
-            width="180"
+            width="160"
             :label="$t('启/停')"
             class-name="services-table-cloumn"
             :render-header="$renderHeader"
@@ -384,6 +372,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import SharedDialog from './comps/shared-dialog';
 import RecycleSideslider from '../../services/comps/recycle-sideslider.vue';
 import { marked } from 'marked';
+import { paginationFun } from '@/common/utils';
 
 export default {
   components: {
@@ -496,6 +485,11 @@ export default {
       }
       return this.switcherTips;
     },
+    // 当前页数据
+    pgPaginatedData() {
+      const { pageData } = paginationFun(this.tableList, this.pagination.current, this.pagination.limit);
+      return pageData;
+    },
   },
   watch: {
     curAppCode() {
@@ -538,6 +532,7 @@ export default {
           return e;
         });
         this.tableList = [...res.bound, ...res.shared, ...res.unbound];
+        this.pagination.count = this.tableList.length;
 
         // 处理服务->数据存储服务详情跳转
         const redirectData = this.tableList.find((v) => v.uuid === this.$route.params?.service);
@@ -862,21 +857,18 @@ export default {
   }
   .image-content {
     background: #fff;
-    padding-top: 0;
+    padding: 0 0 24px;
   }
   .row-img {
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: 2px;
   }
   .ps-switcher-wrapper {
     margin-left: 0;
   }
   .row-title-text {
     margin-left: 8px;
-    overflow: hidden; //超出的文本隐藏
-    text-overflow: ellipsis; //溢出用省略号显示
-    white-space: nowrap; //溢出不换行
     cursor: pointer;
     color: #3a84ff;
   }
@@ -897,6 +889,7 @@ export default {
   .success-icon {
     font-size: 24px;
     color: #2dcb56;
+    transform: translateX(-6px);
   }
 }
 .header-title {
@@ -948,10 +941,11 @@ export default {
 }
 .config-info-tag {
   display: flex;
-  .bk-tag {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 0;
+  .g-tag-default {
+    margin: 0px;
   }
 }
 .recycle-alert-cls {

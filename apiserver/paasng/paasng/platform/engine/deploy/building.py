@@ -36,8 +36,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
-from paasng.platform.bkapp_model.services import upsert_process_service_flag
-from paasng.platform.declarative.constants import AppSpecVersion
+from paasng.platform.bkapp_model.services import upsert_proc_svc_by_spec_version
 from paasng.platform.declarative.deployment.controller import DeployHandleResult
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
@@ -167,9 +166,7 @@ class BaseBuilder(DeployStep):
             )
             result = handler.handle(self.deployment)
 
-            # 非 3 版本的 app_desc.yaml/Procfile, 由于不支持用户显式配置 process services, 因此设置隐式标记, 由平台负责创建
-            implicit_needed = result.spec_version != AppSpecVersion.VER_3
-            upsert_process_service_flag(app_environment.module, implicit_needed)
+            upsert_proc_svc_by_spec_version(app_environment.module, result.spec_version)
         except InitDeployDescHandlerError as e:
             raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:

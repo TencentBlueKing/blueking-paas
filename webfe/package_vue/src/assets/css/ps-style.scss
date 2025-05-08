@@ -24,6 +24,8 @@
 @import './pages/main.scss';
 @import './pages/overview.scss';
 @import './pages/service.scss';
+@import './mixins/ellipsis.scss';
+@import './global-styles.scss';
 
 @font-face {
     font-family: 'PingFang';

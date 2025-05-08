@@ -228,11 +228,6 @@ def _need_exposed_services(res: BkAppResource) -> bool:
     """
     _need_exposed_services checks if the bkapp needs to expose services outside the cluster
     """
-    enabled = res.get_proc_services_annotation()
-    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: false 时, 表示版本低于 specVersion: 3, 因此向后兼容, 需要向集群外暴露服务
-    if enabled == "false":
-        return True
-
     # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要向集群外暴露服务
     for proc in res.spec.processes:
         for svc in proc.services or []:

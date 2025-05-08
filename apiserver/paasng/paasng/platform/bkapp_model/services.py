@@ -15,8 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
+
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_PROCESS_NAME
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessServicesFlag
+from paasng.platform.bkapp_model.entities.proc_service import ExposedType, ProcService
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.models import Module
 
@@ -38,14 +43,27 @@ def check_replicas_manually_scaled(m: Module) -> bool:
     return fieldmgr.FieldMgrName.WEB_FORM in managers.values()
 
 
-def upsert_process_service_flag(m: Module, implicit_needed: bool):
-    """upsert process service flag by app module
+def upsert_proc_svc_by_spec_version(m: Module, spec_version: AppSpecVersion | None):
+    """upsert process services base on spec version defined in app_desc.yaml file.
 
-    :param m: app module
-    :param implicit_needed: 是否隐式需要 process services 配置
+    When spec version lower than 3 (or when only a Procfile exists), default process services must be upserted.
+    Otherwise, this function performs no operation.
     """
-    for env in m.get_envs():
-        ProcessServicesFlag.objects.update_or_create(
-            app_environment=env,
-            defaults={"implicit_needed": implicit_needed, "tenant_id": m.tenant_id},
-        )
+    # 由于低于 3 版本的 app_desc.yaml/Procfile 不支持显式配置 process services, 因此由平台创建
+    if spec_version in [None, AppSpecVersion.VER_1, AppSpecVersion.VER_2]:
+        proc_specs = ModuleProcessSpec.objects.filter(module=m)
+
+        for proc_spec in proc_specs:
+            proc_svc = ProcService(
+                name=proc_spec.name,
+                target_port=settings.CONTAINER_PORT,
+                protocol="TCP",
+                port=80,
+            )
+            if proc_spec.name == DEFAULT_PROCESS_NAME:
+                proc_svc.exposed_type = ExposedType()
+
+            proc_spec.services = [proc_svc]
+
+        if proc_specs:
+            ModuleProcessSpec.objects.bulk_update(proc_specs, ["services"])

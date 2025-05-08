@@ -62,53 +62,6 @@ urlpatterns = [
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
     ),
-    # 平台管理-增强服务管理-服务管理页
-    re_path(r"^platform/services/manage$", services.PlatformServicesView.as_view(), name="admin.services.manage"),
-    # 平台管理-增强服务管理-服务管理API
-    re_path(
-        r"^platform/services/$",
-        services.PlatformServicesManageViewSet.as_view(dict(post="create", get="list")),
-        name="admin.services",
-    ),
-    re_path(
-        r"^platform/services/(?P<pk>[^/]+)/$",
-        services.PlatformServicesManageViewSet.as_view(dict(put="update", delete="destroy")),
-        name="admin.services.detail",
-    ),
-    # 平台管理-增强服务管理-方案管理页
-    re_path(r"^platform/plans/manage$", services.PlatformPlanView.as_view(), name="admin.plans.manage"),
-    # 平台管理-增强服务管理-方案管理API
-    re_path(
-        r"^platform/plans/$",
-        services.PlatformPlanManageViewSet.as_view(dict(get="list")),
-        name="admin.plans.list",
-    ),
-    re_path(
-        r"^platform/services/(?P<service_id>[^/]+)/plans/$",
-        services.PlatformPlanManageViewSet.as_view(dict(post="create")),
-        name="admin.plans.create",
-    ),
-    re_path(
-        r"^platform/services/(?P<service_id>[^/]+)/plans/(?P<plan_id>[^/]+)/$",
-        services.PlatformPlanManageViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.plans.detail",
-    ),
-    # 平台管理-增强服务管理-资源池管理
-    re_path(
-        r"^platform/pre-created-instances/manage$",
-        services.PreCreatedInstanceView.as_view(),
-        name="admin.pre_created_instances.manage",
-    ),
-    re_path(
-        r"^platform/pre-created-instances/$",
-        services.PreCreatedInstanceManageViewSet.as_view(dict(post="create", get="list")),
-        name="admin.pre_created_instances",
-    ),
-    re_path(
-        r"^platform/pre-created-instances/(?P<plan_id>[^/]+)/(?P<uuid>[^/]+)/$",
-        services.PreCreatedInstanceManageViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.pre_created_instances.detail",
-    ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
         r"^platform/smart-advisor/documents/manage$",

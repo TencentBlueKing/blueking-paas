@@ -181,6 +181,9 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="进程名称")
 
     image = serializers.CharField(help_text="镜像仓库/镜像地址（仅纯镜像应用会提供）", allow_null=True, required=False)
+    proc_command = serializers.CharField(
+        help_text="进程启动命令(包含完整启动命令和参数的字符串)", allow_null=True, read_only=True
+    )
     command = serializers.ListSerializer(
         child=serializers.CharField(), help_text="启动命令", default=list, allow_null=True
     )
@@ -291,6 +294,12 @@ class ModuleDeployHookSLZ(serializers.Serializer):
     command = serializers.ListSerializer(child=serializers.CharField(), help_text="启动命令", default=list)
     args = serializers.ListSerializer(child=serializers.CharField(), help_text="命令参数", default=list)
     enabled = serializers.BooleanField(allow_null=True, default=False)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get("proc_command") and hasattr(instance, "get_proc_command"):
+            data["proc_command"] = instance.get_proc_command()
+        return data
 
 
 class SvcDiscEntryBkSaaSSLZ(serializers.Serializer):

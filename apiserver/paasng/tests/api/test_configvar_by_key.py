@@ -83,3 +83,10 @@ def test_configvar_by_key(
     env_map = {d["environment_name"]: d["value"] for d in data}
     for env, val in zip(expected_envs, expected_values):
         assert env_map[env] == val
+
+    # 添加对 is_global 的测试
+    for item in data:
+        if item["environment_name"] == global_env:
+            assert item["is_global"] is True
+        else:
+            assert item["is_global"] is False

@@ -140,6 +140,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             data = {
                 "name": spec.name,
                 "image": image_repository,
+                "proc_command": spec.proc_command,
                 "command": spec.command or [],
                 "args": spec.args or [],
                 "port": spec.port,

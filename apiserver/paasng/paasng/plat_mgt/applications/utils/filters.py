@@ -18,7 +18,7 @@
 from django.db.models import Q
 from rest_framework.filters import BaseFilterBackend
 
-from paasng.plat_mgt.applications.serializers.application import ApplicationFilterSLZ
+from paasng.plat_mgt.applications import serializers as slzs
 from paasng.platform.applications.models import Application
 
 
@@ -29,7 +29,7 @@ class ApplicationFilterBackend(BaseFilterBackend):
         if queryset.model != Application:
             raise ValueError("ApplicationFilterBackend only support to filter Application")
 
-        slz = ApplicationFilterSLZ(data=request.query_params)
+        slz = slzs.ApplicationListFilterSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         validate_params = slz.data
 

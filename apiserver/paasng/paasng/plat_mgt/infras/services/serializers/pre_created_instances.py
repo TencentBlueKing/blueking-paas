@@ -15,13 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from rest_framework import serializers
 
-from .application import ApplicationListViewSet
-from .feature import ApplicationFeatureViewSet
 
-__all__ = [
-    # application
-    "ApplicationListViewSet",
-    # feature
-    "ApplicationFeatureViewSet",
-]
+class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
+    config = serializers.JSONField(help_text="预创建实例的配置")
+    credentials = serializers.JSONField(help_text="预创建实例的凭据")
+
+
+class PreCreatedInstanceOutputSLZ(serializers.Serializer):
+    plan_id = serializers.CharField(help_text="方案 ID", source="plan.uuid")
+    uuid = serializers.CharField(help_text="实例 ID")
+    config = serializers.JSONField(help_text="预创建实例的配置")
+    credentials = serializers.JSONField(help_text="预创建实例的凭据")
+    is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
+    tenant_id = serializers.CharField(help_text="租户 id")

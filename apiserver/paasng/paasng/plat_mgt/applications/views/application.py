@@ -27,19 +27,14 @@ from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.applications.serializers.application import (
-    ApplicationSLZ,
-    ApplicationTypeListSLZ,
-    TenantIdListSLZ,
-    TenantModeListSLZ,
-)
+from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
 
 
-class ApplicationView(viewsets.GenericViewSet):
+class ApplicationListViewSet(viewsets.GenericViewSet):
     """平台管理 - 应用列表 API"""
 
     queryset = Application.objects.all()
@@ -50,7 +45,7 @@ class ApplicationView(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用列表",
-        responses={status.HTTP_200_OK: ApplicationSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ApplicationListSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取应用列表"""
@@ -60,7 +55,7 @@ class ApplicationView(viewsets.GenericViewSet):
         page = self.paginate_queryset(filter_queryset)
         app_resource_quotas = self.get_app_resource_quotas()
 
-        slz = ApplicationSLZ(
+        slz = slzs.ApplicationListSLZ(
             page,
             many=True,
             context={"request": request, "app_resource_quotas": app_resource_quotas},
@@ -82,11 +77,11 @@ class ApplicationView(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
-        operation_description="获取应用租户类型列表",
-        responses={status.HTTP_200_OK: TenantIdListSLZ(many=True)},
+        operation_description="获取各租户的应用数量",
+        responses={status.HTTP_200_OK: slzs.TenantAppStatisticsSLZ(many=True)},
     )
-    def list_tenant_id(self, request):
-        """获取数据库中各租户的应用数量"""
+    def list_tenant_app_statistics(self, request):
+        """获取各租户的应用数量"""
         # 应用所有过滤条件, 获取过滤后的查询集
         filtered_queryset = self.filter_queryset(self.get_queryset())
 
@@ -106,27 +101,27 @@ class ApplicationView(viewsets.GenericViewSet):
         tenant_id_counts = Counter(tenant_ids)
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
-        slz = TenantIdListSLZ(tenant_id_list, many=True)
+        slz = slzs.TenantAppStatisticsSLZ(tenant_id_list, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
-        operation_description="获取应用租户模式列表",
-        responses={status.HTTP_200_OK: TenantModeListSLZ(many=True)},
+        operation_description="获取应用租户模式类型列表",
+        responses={status.HTTP_200_OK: slzs.TenantModeSLZ(many=True)},
     )
-    def list_tenant_mode(self, request, *args, **kwargs):
-        """获取应用租户模式列表"""
+    def list_tenant_modes(self, request, *args, **kwargs):
+        """获取应用租户模式类型列表"""
         tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
-        slz = TenantModeListSLZ(tenant_modes, many=True)
+        slz = slzs.TenantModeSLZ(tenant_modes, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用类型列表",
-        responses={status.HTTP_200_OK: ApplicationTypeListSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ApplicationTypeSLZ(many=True)},
     )
     def list_app_types(self, request):
         """获取应用类型列表"""
         app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
-        slz = ApplicationTypeListSLZ(app_types, many=True)
+        slz = slzs.ApplicationTypeSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)

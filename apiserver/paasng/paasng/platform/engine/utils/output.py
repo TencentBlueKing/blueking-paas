@@ -214,6 +214,4 @@ def sanitize_message(message: str) -> str:
     max_length = 4096
     if len(message) > max_length:
         message = message[:max_length] + "...(content too long, truncated)"
-
-    message = message.replace("\x1b[1G", "")
     return message

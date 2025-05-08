@@ -190,6 +190,16 @@ class DeploymentResultSLZ(serializers.Serializer):
     error_tips = DeploymentErrorTipsSLZ()
 
 
+class DeploymentResultQuerySLZ(serializers.Serializer):
+    """部署结果查询参数序列化器"""
+
+    include_ansi_codes = serializers.BooleanField(
+        default=False,
+        required=False,
+        help_text="是否包含 ANSI 转义序列. true 保留终端颜色和格式控制字符, false 过滤这些字符",
+    )
+
+
 class BuildProcessSLZ(serializers.Serializer):
     """构建历史"""
 

@@ -147,9 +147,4 @@ def get_all_logs(d: Deployment) -> str:
 
 def serialize_stream_logs(output_stream: OutputStream) -> List[str]:
     """Serialize all logs of the given output_stream object."""
-    return [polish_line(line.line) for line in output_stream.lines.all().order_by("created")]
-
-
-def polish_line(line: str) -> str:
-    """Return the line with special characters removed"""
-    return line.replace("\x1b[1G", "")
+    return [line.line for line in output_stream.lines.all().order_by("created")]

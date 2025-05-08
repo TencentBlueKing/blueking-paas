@@ -206,6 +206,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
                 environment_id=config_var.environment_id,
                 value=config_var.value,
                 description=config_var.description,
+                is_global=config_var.environment_id == ENVIRONMENT_ID_FOR_GLOBAL,
             )
 
         return Response(status=status.HTTP_201_CREATED)

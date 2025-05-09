@@ -111,7 +111,6 @@ export default {
   watch: {
     '$route'(newVal, oldVal) {
       if (newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId) {
-        console.log('init-overview');
         // eslint-disable-next-line no-plusplus
         this.renderIndex++;
         this.init();

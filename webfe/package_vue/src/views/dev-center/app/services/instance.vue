@@ -18,7 +18,6 @@
         :initial-divide="asideWidth"
         ext-cls="instance-resize-layout-cls"
         style="width: 100%; height: 100%"
-        @collapse-change="handleCollapseChange"
       >
         <div
           class="instance-container-cls"
@@ -257,7 +256,6 @@
         <!-- 使用指南 -->
         <usage-guide
           slot="aside"
-          :class="{ isExpand: !isExpand }"
           :data="compiledMarkdown"
           :is-cloud-native="isCloudNativeApp"
           :is-loading="isTableLoading"
@@ -265,7 +263,7 @@
         />
 
         <div
-          :class="['floating-button', { expand: isExpand }]"
+          :class="['floating-button', { expand: !isCollapsed }]"
           slot="collapse-trigger"
           @click="handleSetCollapse"
         >
@@ -372,7 +370,6 @@ export default {
       requestQueue: ['init', 'enabled'],
       isTableLoading: false,
       credentialsDisabled: false,
-      isExpand: true,
       isEnhancedFeatureEnabled: true,
       isEnabled: false,
       isCollapsed: false,
@@ -620,13 +617,6 @@ export default {
 
     handleSetCollapse() {
       this.isCollapsed = !this.isCollapsed;
-    },
-
-    handleCollapseChange(data) {
-      const updateExpand = () => {
-        this.isExpand = !data;
-      };
-      data ? updateExpand() : setTimeout(updateExpand, 200);
     },
 
     showDeleteServiceDialog() {

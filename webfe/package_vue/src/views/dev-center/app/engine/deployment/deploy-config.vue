@@ -445,7 +445,6 @@ export default {
           moduleId: this.curModuleId,
           params,
         });
-        console.log('res', res);
         this.$paasMessage({
           limit: 1,
           theme: 'success',
@@ -467,7 +466,6 @@ export default {
           moduleId: this.curModuleId,
           type: this.configInfo.type,
         });
-        console.log('res', res);
         this.$paasMessage({
           limit: 1,
           theme: 'success',

@@ -141,7 +141,7 @@ class TestApplicationListView:
     def test_list_tenant_mode(self, plat_mgt_api_client):
         """测试获取租户模式列表"""
 
-        url = reverse("plat_mgt.applications.list_tenant_mode")
+        url = reverse("plat_mgt.applications.list_tenant_modes")
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
         assert len(rsp.data) == len(AppTenantMode.get_choices())
@@ -149,7 +149,7 @@ class TestApplicationListView:
     def test_list_tenant_id(self, plat_mgt_api_client, prepare_applications):
         """测试获取租户 ID 列表"""
 
-        url = reverse("plat_mgt.applications.list_tenant_id")
+        url = reverse("plat_mgt.applications.list_tenant_app_statistics")
 
         # 测试不带查询参数的情况
         rsp = plat_mgt_api_client.get(url)

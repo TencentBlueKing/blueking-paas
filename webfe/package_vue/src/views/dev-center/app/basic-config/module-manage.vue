@@ -1681,8 +1681,6 @@ export default {
       this.sourceControlChangeForm.sourceRepoUrl = data.url;
       this.sourceControlChangeForm.sourceDir = data.sourceDir;
 
-      console.log('change', this.sourceControlChangeForm);
-
       match.selectedRepoUrl = data.url;
       match.authInfo = {
         account: data.account,

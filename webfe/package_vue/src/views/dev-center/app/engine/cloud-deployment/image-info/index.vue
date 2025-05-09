@@ -197,8 +197,8 @@ export default {
           });
           this.$refs.baseInfoRef?.clearError();
           this.isBasePageEdit = false;
-        } catch (error) {
-          console.log(error);
+        } catch (e) {
+          console.error(e);
         }
       }
     },

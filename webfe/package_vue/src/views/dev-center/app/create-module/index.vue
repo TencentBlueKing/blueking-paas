@@ -775,8 +775,8 @@ export default {
       if (this.$refs.validate2) {
         try {
           await this.$refs.validate2.validate();
-        } catch (error) {
-          console.log('error', error);
+        } catch (e) {
+          console.error(e);
           return;
         }
       }

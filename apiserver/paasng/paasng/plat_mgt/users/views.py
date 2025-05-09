@@ -76,7 +76,7 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="批量创建平台管理员",
-        request_body=CreatePlatformManagerSLZ,
+        request_body=CreatePlatformManagerSLZ(many=True),
         responses={status.HTTP_201_CREATED: None},
     )
     def bulk_create(self, request, *args, **kwargs):

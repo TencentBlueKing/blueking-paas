@@ -80,18 +80,21 @@ var _ = Describe("HookUtils", func() {
 	Describe("TestParsePreReleaseHook", func() {
 		It("no hooks", func() {
 			bkapp.Spec.Hooks = nil
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 			Expect(hook).To(BeNil())
 		})
 
 		It("no pre-release-hook", func() {
 			bkapp.Spec.Hooks.PreRelease = nil
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 			Expect(hook).To(BeNil())
 		})
 
 		It("normal case", func() {
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-rel-fake-app-1"))
 			Expect(hook.Pod.ObjectMeta.Labels[paasv1alpha2.HookTypeKey]).To(Equal(string(paasv1alpha2.HookPreRelease)))
@@ -119,7 +122,8 @@ var _ = Describe("HookUtils", func() {
 			bkapp.Status.DeployId = "100"
 			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{Type: paasv1alpha2.HookPreRelease})
 
-			hook := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			hook, err := BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
 			Expect(hook.Pod.ObjectMeta.Name).To(Equal("pre-rel-fake-app-100"))
 			Expect(hook.Status.Phase).To(Equal(paasv1alpha2.HealthPhase("")))
 		})
@@ -127,14 +131,17 @@ var _ = Describe("HookUtils", func() {
 		It("complex case - with env vars", func() {
 			bkapp.Spec.Configuration.Env = append(bkapp.Spec.Configuration.Env, paasv1alpha2.AppEnvVar{Name: "FOO"})
 
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 			Expect(len(hook.Pod.Spec.Containers[0].Env)).To(Equal(1))
 		})
 
 		It("test build pre-release hook for cnb runtime image", func() {
 			bkapp.Annotations[paasv1alpha2.UseCNBAnnoKey] = "true"
 			bkapp.Spec.Hooks.PreRelease.Args = []string{"-c", "echo foo"}
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
+
 			c := hook.Pod.Spec.Containers[0]
 			By("test prepend 'launcher' to Command")
 			Expect(len(c.Command)).To(Equal(1 + len(bkapp.Spec.Hooks.PreRelease.Command)))
@@ -144,7 +151,8 @@ var _ = Describe("HookUtils", func() {
 		})
 		It("test build pre-release hook for egress config", func() {
 			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
-			hook := BuildPreReleaseHook(bkapp, nil)
+			hook, err := BuildPreReleaseHook(bkapp, nil)
+			Expect(err).To(BeNil())
 			Expect(hook.Pod.Spec.NodeSelector).To(Equal(map[string]string{"eng-cstate-test": "1"}))
 		})
 	})

@@ -24,22 +24,29 @@ from .binding_policies import (
 from .plans import (
     BasePlanObjSLZ,
     PlanUpsertInputSLZ,
+    PlanWithPreCreatedInstanceSLZ,
     PlanWithSvcSLZ,
-    PreCreatedInstanceSLZ,
 )
-from .services import ServiceListOutputSLZ
+from .pre_created_instances import PreCreatedInstanceOutputSLZ, PreCreatedInstanceUpsertSLZ
+from .services import ServiceCreateSLZ, ServiceObjOutputListSLZ, ServiceObjOutputSLZ, ServiceUpdateSLZ
 
 __all__ = [
     # plans
     "PlanWithSvcSLZ",
     "PlanUpsertInputSLZ",
     "BasePlanObjSLZ",
-    "PreCreatedInstanceSLZ",
+    "PlanWithPreCreatedInstanceSLZ",
     # binding_policy
     "DeletePolicyCombinationSLZ",
     "PolicyCombinationConfigUpsertSLZ",
     "PolicyCombinationConfigOutputSLZ",
     "PrecedencePolicyCondTypeOutputSLZ",
-    # addons_services
-    "ServiceListOutputSLZ",
+    # services
+    "ServiceObjOutputSLZ",
+    "ServiceObjOutputListSLZ",
+    "ServiceCreateSLZ",
+    "ServiceUpdateSLZ",
+    # pre_created_instance
+    "PreCreatedInstanceUpsertSLZ",
+    "PreCreatedInstanceOutputSLZ",
 ]

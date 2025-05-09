@@ -413,7 +413,7 @@ export default {
         const response = await axios({ method: 'get', url, headers, timeout: 1000 });
         return response.data.status === 'active';
       } catch (e) {
-        console.log('dev sandbox status ready but inaccessible!', e);
+        console.error('dev sandbox status ready but inaccessible!', e);
       }
 
       return false;

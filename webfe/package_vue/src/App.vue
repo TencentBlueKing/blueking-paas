@@ -129,6 +129,7 @@ export default {
 @import './assets/css/patch.scss';
 @import './assets/css/ps-style.scss';
 @import '~@/assets/css/mixins/dashed.scss';
+@import '~@/assets/css/mixins/ellipsis.scss';
 .notice-cls {
   position: fixed;
   top: 0px;

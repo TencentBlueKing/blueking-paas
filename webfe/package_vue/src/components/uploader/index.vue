@@ -293,7 +293,7 @@ export default {
     },
     // 配置说明链接
     importConfigExplain() {
-      console.log(this.$t('配置说明地址'));
+      console.warn(this.$t('需要配置说明地址'));
     },
     // 发送HTTP请求
     handleHttpRequest(option) {

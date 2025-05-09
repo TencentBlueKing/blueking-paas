@@ -24,7 +24,7 @@ from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 
-class ApplicationSLZ(serializers.Serializer):
+class ApplicationListSLZ(serializers.Serializer):
     """应用序列化器"""
 
     logo = serializers.CharField(read_only=True, help_text="应用 logo")
@@ -52,7 +52,7 @@ class ApplicationSLZ(serializers.Serializer):
         return app_resource_quotas.get(instance.code, default_quotas)
 
 
-class ApplicationFilterSLZ(serializers.Serializer):
+class ApplicationListFilterSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 
     valid_order_by_fields = ("is_active", "created")
@@ -86,22 +86,22 @@ class ApplicationFilterSLZ(serializers.Serializer):
         return fields
 
 
-class TenantIdListSLZ(serializers.Serializer):
-    """租户 ID 列表序列化器"""
+class TenantAppStatisticsSLZ(serializers.Serializer):
+    """租户应用统计序列化器"""
 
     tenant_id = serializers.CharField(help_text="租户 ID")
     app_count = serializers.IntegerField(help_text="应用数量")
 
 
-class TenantModeListSLZ(serializers.Serializer):
-    """租户模式列表序列化器"""
+class TenantModeSLZ(serializers.Serializer):
+    """租户模式序列化器"""
 
     type = serializers.CharField(help_text="租户模式")
     label = serializers.CharField(help_text="租户模式标签")
 
 
-class ApplicationTypeListSLZ(serializers.Serializer):
-    """应用类型列表序列化器"""
+class ApplicationTypeSLZ(serializers.Serializer):
+    """应用类型序列化器"""
 
     type = serializers.CharField(help_text="应用类型")
     label = serializers.CharField(help_text="应用类型标签")

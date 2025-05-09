@@ -445,13 +445,18 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    # The default number of lines to view when retrieving previous logs
+    view_prev_log_lines_limit = 400
+
     def retrieve_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例上一次运行时的日志（400行）"""
+        """获取进程实例上一次运行时的日志（目前限定 400 行）"""
         env = self.get_env_via_path()
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_previous_logs(process_type, process_instance_name, tail_lines=400)
+            logs = manager.get_previous_logs(
+                process_type, process_instance_name, tail_lines=self.view_prev_log_lines_limit
+            )
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
 

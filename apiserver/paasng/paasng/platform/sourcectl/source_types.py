@@ -38,6 +38,7 @@ from paasng.utils.text import camel_to_snake, remove_suffix
 
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.connector import ModuleRepoConnector
+    from paasng.platform.sourcectl.initializer import RepoInitializer
     from paasng.platform.sourcectl.repo_controller import RepoController
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,9 @@ class SourceTypeSpec:
 
     # 用来操作源码系统的功能类型，提供了导出项目源码、查看 diff 日志等能力
     repo_controller_class: Type["RepoController"]
+
+    # 初始化代码仓库
+    initializer_class: Optional[Type["RepoInitializer"]]
 
     # 处理用户通过 OAuth 协议连接到外部 VCS 系统的后端类，部分源码系统（比如 GitHub、GitLab）适用，
     # 为空时表示当前源码系统不支持 OAuth 功能

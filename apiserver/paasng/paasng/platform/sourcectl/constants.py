@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from blue_krill.data_types.enum import EnumField, FeatureFlagField, StrStructuredEnum
+from blue_krill.data_types.enum import EnumField, FeatureFlagField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.infras.accounts.constants import AccountFeatureFlag
@@ -59,3 +59,17 @@ class FileChangeType(StrStructuredEnum):
     ADDED = EnumField("added", label=_("新增"))
     MODIFIED = EnumField("modified", label=_("修改"))
     DELETED = EnumField("deleted", label=_("删除"))
+
+
+class TencentGitVisibleLevel(IntStructuredEnum):
+    """工蜂代码仓库的可见范围"""
+
+    PRIVATE = 0
+    PUBLIC = 10
+
+
+class TencentGitMemberRole(IntStructuredEnum):
+    """工蜂代码仓库的成员角色"""
+
+    MASTER = 40
+    DEVELOPER = 30

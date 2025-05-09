@@ -37,6 +37,7 @@ from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.platform.sourcectl.serializers import RepositorySLZ
+from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.validators import validate_image_url
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
@@ -260,6 +261,9 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    is_new_repo_and_init = serializers.BooleanField(
+        required=False, default=False, help_text="是否需要创建代码仓库并初始化代码"
+    )
 
     def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:
@@ -274,6 +278,19 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
 
         return tmpl_name
+
+    def validate(self, attrs):
+        # 新建代码仓库并初始化，则初始化模板、源码仓库类型必填
+        if attrs["is_new_repo_and_init"]:
+            if not attrs.get("source_init_template"):
+                raise ValidationError(_("新建代码仓库时，必须选择应用模板"))
+            if not attrs.get("source_control_type"):
+                raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
+            # 检查源码仓库类型是否支持初始化代码
+            if get_sourcectl_type(attrs["source_control_type"]).initializer_class is None:
+                raise ValidationError(_(f"源码仓库类型({attrs['source_control_type']})不支持新建代码仓库"))
+
+        return attrs
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):

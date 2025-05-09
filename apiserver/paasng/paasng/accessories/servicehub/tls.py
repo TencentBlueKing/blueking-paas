@@ -23,19 +23,26 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
 
 
+def is_tls_enabled(rel: EngineAppInstanceRel) -> bool:
+    """判断指定的增强服务实例是否启用了 TLS"""
+    cfg = rel.get_instance().config
+    return cfg and cfg.get("provider_name") and cfg.get("enable_tls")
+
+
 def list_provisioned_tls_enabled_rels(env: ModuleEnvironment) -> Iterable[EngineAppInstanceRel]:
     """获取指定环境的已经分配 & 启用 TLS 证书的增强服务实例引用"""
 
     # 绑定的增强服务
-    bound_services = list(mixed_service_mgr.list_binded(env.module))
-    # 共享的增强服务
-    shared_services = [info.service for info in ServiceSharingManager(env.module).list_all_shared_info()]
-    # 合并两个列表
-    all_services = bound_services + shared_services
-
-    for service in all_services:
+    for service in mixed_service_mgr.list_binded(env.module):
         for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
-            cfg = rel.get_instance().config
-            # 只有当能够获取增强服务提供方名称，且明确有 TLS 证书时才继续
-            if cfg and cfg.get("provider_name") and cfg.get("enable_tls"):
+            if is_tls_enabled(rel):
+                yield rel
+
+    # 共享的增强服务
+    for shared_info in ServiceSharingManager(env.module).list_all_shared_info():
+        # 找到引用的模块环境
+        ref_module = env.application.get_module(shared_info.ref_module.name)
+        ref_env = ref_module.get_envs(env.environment)
+        for rel in mixed_service_mgr.list_provisioned_rels(ref_env.engine_app, service=shared_info.service):
+            if is_tls_enabled(rel):
                 yield rel

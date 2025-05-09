@@ -15,47 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List, Optional
-
 from pydantic.main import BaseModel
 
 
 # Plan Schema
 class BaseConfigSchema(BaseModel):
     """The base schema for all types of configurations"""
-
-
-class RabbitMQConfigSchema(BaseConfigSchema):
-    host: str
-    port: int
-    user: str
-    password: str
-    http_port: int
-
-
-class MySQLConfigSchema(BaseConfigSchema):
-    host: str
-    port: int
-    user: str
-    password: str
-    auth_ip_list: List[str]
-
-
-class GCSMySQLServerValue(BaseModel):
-    host: str
-    port: int
-
-
-class GCSMySQLServer(BaseModel):
-    values: GCSMySQLServerValue
-    weight: int
-
-
-class GCSMySQLConfigSchema(BaseConfigSchema):
-    host: Optional[str]
-    port: Optional[int]
-    auth_ip_list: List[str]
-    servers: List[GCSMySQLServer] = []
 
 
 class APMConfigSchema(BaseConfigSchema):
@@ -87,14 +52,6 @@ class APMInstanceSchema(BaseModel):
     DD_TRACE_SAMPLE_RATE: float
 
 
-class MySQLInstanceSchema(BaseModel):
-    name: str
-    host: str
-    port: int
-    user: str
-    password: str
-
-
 class RedisInstanceSchema(BaseModel):
     host: str
     port: int
@@ -103,11 +60,3 @@ class RedisInstanceSchema(BaseModel):
 
 class SentryInstanceSchema(BaseModel):
     dsn: str
-
-
-class RabbitMQInstanceSchema(BaseModel):
-    host: str
-    port: int
-    user: str
-    vhost: str
-    password: str

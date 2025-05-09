@@ -54,6 +54,7 @@ from paasng.platform.engine.serializers import (
     CreateDeploymentResponseSLZ,
     CreateDeploymentSLZ,
     DeployFramePhaseSLZ,
+    DeploymentResultQuerySLZ,
     DeploymentResultSLZ,
     DeploymentSLZ,
     DeployPhaseSLZ,
@@ -219,14 +220,25 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DEPLOY_APP.f(_("对象存储服务异常, 请稍后再试"))
         raise error_codes.CANNOT_DEPLOY_APP.f(_("部署请求异常，请稍候再试"))
 
-    @swagger_auto_schema(responses={200: DeploymentResultSLZ}, paginator_inspectors=[])
+    @swagger_auto_schema(
+        responses={200: DeploymentResultSLZ},
+        query_serializer=DeploymentResultQuerySLZ(),
+        paginator_inspectors=[],
+    )
     def get_deployment_result(self, request, code, module_name, uuid):
         """查询部署任务结果"""
+        query_slz = DeploymentResultQuerySLZ(data=request.query_params)
+        query_slz.is_valid(raise_exception=True)
+        include_ansi_codes = query_slz.validated_data.get("include_ansi_codes", False)
+
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        logs = get_all_logs(deployment)
+        if not include_ansi_codes:
+            logs = strip_ansi(logs)
         hint = get_failure_hint(deployment)
         result = {
             "status": deployment.status,
-            "logs": get_all_logs(deployment),
+            "logs": logs,
             "error_detail": deployment.err_detail,
             "error_tips": asdict(hint),
         }

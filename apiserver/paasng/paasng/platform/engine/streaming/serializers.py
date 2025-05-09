@@ -33,3 +33,13 @@ class StreamEventSLZ(serializers.Serializer):
         help_text="事件类型",
     )
     data = serializers.CharField(help_text="事件内容")
+
+
+class StreamingQuerySLZ(serializers.Serializer):
+    """用于流式传输接口的查询参数序列化器"""
+
+    include_ansi_codes = serializers.BooleanField(
+        default=False,
+        required=False,
+        help_text="是否包含 ANSI 转义序列",
+    )

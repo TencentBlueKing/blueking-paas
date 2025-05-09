@@ -25,7 +25,6 @@ from django.conf import settings
 
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.platform.engine.models import Deployment
-from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.utils import termcolors
 
 
@@ -215,6 +214,4 @@ def sanitize_message(message: str) -> str:
     max_length = 4096
     if len(message) > max_length:
         message = message[:max_length] + "...(content too long, truncated)"
-
-    message = strip_ansi(message)
     return message

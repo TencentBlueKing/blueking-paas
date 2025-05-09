@@ -30,6 +30,8 @@ from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.misc.audit import constants
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.platform.applications.constants import ApplicationType
@@ -141,9 +143,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         operation_description="获取应用详情",
         responses={status.HTTP_200_OK: slzs.ApplicationDetailOutputSLZ()},
     )
-    def retrieve(self, request, *args, **kwargs):
+    def retrieve(self, request, app_code):
         """获取应用详情"""
-        app_code = kwargs["app_code"]
         application = get_object_or_404(self.get_queryset(), code=app_code)
 
         slz = slzs.ApplicationDetailOutputSLZ(
@@ -160,9 +161,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         request_body=slzs.ApplicationNameUpdateInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def update_app_name(self, request, *args, **kwargs):
+    def update_app_name(self, request, app_code):
         """更新应用名称"""
-        app_code = kwargs["app_code"]
         application = get_object_or_404(self.get_queryset(), code=app_code)
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -176,9 +176,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         request_body=slzs.ApplicationClusterSLZ(),
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def update_cluster(self, request, *args, **kwargs):
+    def update_cluster(self, request, app_code, module_name, env_name):
         """更新应用集群"""
-        app_code, module_name, env_name = kwargs["app_code"], kwargs["module_name"], kwargs["env_name"]
         slz = slzs.ApplicationClusterSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
@@ -189,7 +188,30 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         cluster_name = slz.validated_data["name"]
         cluster = get_object_or_404(Cluster, name=cluster_name)
 
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "cluster": env.wl_app.latest_config.cluster,
+            },
+        )
+
         EnvClusterService(env).bind_cluster(cluster.name)
+
+        data_after = DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "cluster": cluster.name,
+            },
+        )
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=constants.OperationEnum.MODIFY,
+            target=constants.OperationTarget.CLUSTER,
+            app_code=application.code,
+            data_before=data_before,
+            data_after=data_after,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

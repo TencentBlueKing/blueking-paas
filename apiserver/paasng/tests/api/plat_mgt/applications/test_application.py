@@ -179,6 +179,16 @@ class TestApplicationListView:
 class TestApplicationDetailView:
     """测试平台管理 - 应用详情 API"""
 
+    @pytest.fixture
+    def prepare_clusters(self):
+        """准备测试集群"""
+        Cluster.objects.create(
+            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+        Cluster.objects.create(
+            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+
     def test_get_application_detail(self, bk_app, plat_mgt_api_client):
         """测试获取应用详情"""
 
@@ -200,16 +210,8 @@ class TestApplicationDetailView:
         bk_app.refresh_from_db()
         assert bk_app.name == "new_name"
 
-    def test_update_cluster(self, bk_app, plat_mgt_api_client):
+    def test_update_cluster(self, bk_app, plat_mgt_api_client, prepare_clusters):
         """测试更新应用集群"""
-
-        # 准备测试集群
-        Cluster.objects.create(
-            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
-        )
-        Cluster.objects.create(
-            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
-        )
 
         env = bk_app.get_default_module().envs.get(environment="prod")
         WlApp.objects.create(name=env.engine_app.name)
@@ -226,15 +228,8 @@ class TestApplicationDetailView:
         env.refresh_from_db()
         assert env.wl_app.latest_config.cluster == "new-cluster"
 
-    def test_list_clusters(self, plat_mgt_api_client):
+    def test_list_clusters(self, plat_mgt_api_client, prepare_clusters):
         """测试获取应用集群列表"""
-
-        Cluster.objects.create(
-            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
-        )
-        Cluster.objects.create(
-            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
-        )
 
         url = reverse("plat_mgt.applications.list_clusters")
         rsp = plat_mgt_api_client.get(url)

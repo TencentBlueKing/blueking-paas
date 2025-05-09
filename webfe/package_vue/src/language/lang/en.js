@@ -173,7 +173,7 @@ export default {
   '文件准备中...': 'File preparation...',
   '正在上传文件...': 'Uploading file...',
   '确定要终止上传?': 'Are you sure you want to abort the upload?',
-  配置说明地址: 'Configuration description address',
+  需要配置说明地址: 'Need to configure the address',
   用户或组织: 'User or organization',
   搜索无结果: 'Search with no results',
   已选择: 'Chosen',

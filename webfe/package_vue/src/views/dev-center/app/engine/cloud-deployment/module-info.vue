@@ -376,7 +376,6 @@ export default {
               this.deployLimit[item.environment] = true;
             });
           } else {
-            console.log('res', res);
             const curEnv = res[0].environment;
             if (curEnv === 'stag') {
               this.deployLimit.stag = true;

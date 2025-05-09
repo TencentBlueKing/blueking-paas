@@ -1264,7 +1264,6 @@ export default {
       this.serverProcessEvent.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log(this.$t('接受到推送'), data);
 
           // 如果模块名称不匹配，直接返回
           if (data.object.module_name !== this.curModuleId) return;
@@ -1273,14 +1272,13 @@ export default {
           if (['process', 'instance'].includes(data.object_type)) {
             this.updateProcessData(data);
           }
-        } catch (error) {
-          console.error(error);
+        } catch (e) {
+          console.error(e);
         }
       };
 
       // 服务异常
       this.serverProcessEvent.onerror = () => {
-        console.error(this.$t('推送异常'));
         this.serverProcessEvent.close();
       };
 

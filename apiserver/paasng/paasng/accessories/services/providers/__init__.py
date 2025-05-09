@@ -19,33 +19,25 @@ from typing import Dict, Type
 
 from . import schemas
 from .base import BaseProvider, ResourcePoolProvider
-from .mysql.provider import MySQLProvider
-from .rabbitmq.provider import RabbitMQProvider
 from .sentry.provider import SentryProvider
 
 active_provider_maps = {
     "pool": ResourcePoolProvider,
 }
 
-# mysql、rabbitmq 已经迁移为远程增强服务，sentry 尽在特定版本提供服务
+# sentry 只在特定版本提供服务
 deprecated_provider_maps = {
-    "mysql": MySQLProvider,
-    "rabbitmq": RabbitMQProvider,
     "sentry": SentryProvider,
 }
 
 provider_maps: Dict[str, Type[BaseProvider]] = {**active_provider_maps, **deprecated_provider_maps}
 
 plan_schema_maps: Dict[str, Dict] = {
-    "mysql": schemas.MySQLConfigSchema.schema(),
-    "rabbitmq": schemas.RabbitMQConfigSchema.schema(),
     "sentry": schemas.SentryConfigSchema.schema(),
     "pool": schemas.ResourcePoolConfigSchema.schema(),
 }
 
 instance_schema_maps: Dict[str, Dict] = {
-    "mysql": schemas.MySQLInstanceSchema.schema(),
-    "rabbitmq": schemas.RabbitMQInstanceSchema.schema(),
     "sentry": schemas.SentryInstanceSchema.schema(),
     "redis": schemas.RedisInstanceSchema.schema(),
 }

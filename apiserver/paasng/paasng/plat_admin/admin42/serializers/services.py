@@ -23,7 +23,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.servicehub.local.manager import LocalServiceObj
 from paasng.accessories.servicehub.remote.manager import RemoteServiceObj
-from paasng.accessories.services.models import Plan, PreCreatedInstance
+from paasng.accessories.services.models import Plan
 from paasng.plat_admin.admin42.serializers.engine import EnvironmentSLZ
 from paasng.utils.i18n import to_translated_field
 
@@ -100,18 +100,6 @@ class PlanSLZ(serializers.ModelSerializer):
     class Meta:
         model = Plan
         fields = "__all__"
-
-
-class PreCreatedInstanceSLZ(serializers.ModelSerializer):
-    config = serializers.JSONField()
-
-    class Meta:
-        model = PreCreatedInstance
-        fields = "__all__"
-
-
-class PlanWithPreCreatedInstanceSLZ(PlanSLZ):
-    pre_created_instances = PreCreatedInstanceSLZ(many=True, read_only=True, source="precreatedinstance_set")
 
 
 class ServiceInstanceSLZ(serializers.Serializer):

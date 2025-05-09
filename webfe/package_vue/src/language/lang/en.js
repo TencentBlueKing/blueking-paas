@@ -1253,7 +1253,7 @@ export default {
   使用环境: 'Use environment',
   管理入口: 'Management portal',
   '服务正在创建中，请通过“管理入口”查看进度': 'The service is being created, please check the progress through the "Admin Portal"',
-  '敏感字段，请参考下方使用指南，通过环境变量获取': 'For sensitive fields, please refer to the usage guide below and obtain them through env variables',
+  '敏感字段，请参考右侧使用指南，通过环境变量获取': 'For sensitive fields, please refer to the usage guide on the right and obtain them through env variables',
   '敏感字段，点击后显示': 'Sensitive fields, displayed after clicking',
   暂无增强服务配置信息: 'No Add-ons configuration information yet',
   部署应用: 'Deploy the APP',

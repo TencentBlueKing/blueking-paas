@@ -162,7 +162,7 @@
                           <span class="gray">{{ key }}:</span>
                           ******
                           <i
-                            v-bk-tooltips="$t('敏感字段，请参考下方使用指南，通过环境变量获取')"
+                            v-bk-tooltips="$t('敏感字段，请参考右侧使用指南，通过环境变量获取')"
                             class="paasng-icon paasng-question-circle"
                           />
                         </div>

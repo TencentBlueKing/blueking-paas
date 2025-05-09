@@ -23,6 +23,7 @@ from django.db import IntegrityError
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
+from paas_wl.bk_app.cnative.specs.credentials import deploy_addons_tls_certs
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
@@ -147,6 +148,8 @@ def release_by_k8s_operator(
         # TODO: There is no way to set svc-disc related spec currently.
         svc_disc.apply_configmap(env, bkapp_res)
 
+        # 下发 TLS 证书（Secrets）
+        deploy_addons_tls_certs(env)
         # 下发待挂载的 volume source
         deploy_volume_source(env)
 

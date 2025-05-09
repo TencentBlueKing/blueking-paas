@@ -351,7 +351,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         return Response({"result": services})
 
-    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
+    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ())
     def list_related_apps(self, request, service_id):
         """获取服务绑定的所有应用"""
         serializer = slzs.ServiceAttachmentQuerySLZ(data=request.query_params)
@@ -502,7 +502,7 @@ class ServiceSetViewSet(viewsets.ViewSet):
             }
         )
 
-    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
+    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ())
     def list_by_name(self, request, service_name):
         """根据增强服务的英文名字，查询所有命名为该名字的增强服务, 并带上绑定服务的实例信息"""
         # 查询用户具有权限的应用id列表

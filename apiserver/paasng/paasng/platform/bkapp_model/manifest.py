@@ -46,6 +46,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MountEnvName,
 )
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
@@ -55,6 +56,8 @@ from paas_wl.workloads.networking.egress.models import RCStateAppBinding
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
+from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
@@ -365,10 +368,40 @@ class MountsManifestConstructor(ManifestConstructor):
     """Construct the mounts part."""
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
+        # 初始化，确保数据类型符合预期
         model_res.spec.mounts = model_res.spec.mounts or []
+        model_res.spec.envOverlay = model_res.spec.envOverlay or crd.EnvOverlay()
+        # 增强服务 TLS 证书
+        self._apply_addons_tls_certs(model_res, module)
+        # 用户自定义的挂载卷
+        self._apply_mounts(model_res, module)
+
+    def _apply_addons_tls_certs(self, model_res: crd.BkAppResource, module: Module):
+        """将增强服务的 TLS 证书添加到 bkapp 定义中"""
+        for env in module.envs.all():
+            for rel in list_provisioned_tls_enabled_rels(env):
+                svc_inst = rel.get_instance()
+                provider_name = svc_inst.config["provider_name"]
+
+                secret_name = gen_addons_cert_secret_name(provider_name)
+                model_res.spec.envOverlay.append_item(  # type: ignore
+                    "mounts",
+                    crd.MountOverlay(
+                        envName=env.environment,
+                        # 挂载卷名称
+                        name=secret_name,
+                        # 挂载路径
+                        mountPath=gen_addons_cert_mount_dir(provider_name),
+                        # 引用的 Secret 信息
+                        source=VolumeSource(secret=SecretSource(name=secret_name)),
+                    ),
+                )
+
+    def _apply_mounts(self, model_res: crd.BkAppResource, module: Module):
+        """将用户自定义的挂载卷添加到 bkapp 定义中"""
         # The global mounts
         for config in Mount.objects.filter(module_id=module.pk, environment_name=MountEnvName.GLOBAL.value):
-            model_res.spec.mounts.append(
+            model_res.spec.mounts.append(  # type: ignore
                 crd.Mount(
                     name=config.name,
                     mountPath=config.mount_path,
@@ -377,13 +410,9 @@ class MountsManifestConstructor(ManifestConstructor):
                 )
             )
 
-        # The environment specific mounts
-        overlay = model_res.spec.envOverlay
-        if not overlay:
-            overlay = crd.EnvOverlay()
-        for env in [AppEnvName.STAG.value, AppEnvName.PROD.value]:
+        for env in [AppEnvName.STAG, AppEnvName.PROD]:
             for config in Mount.objects.filter(module_id=module.pk, environment_name=env):
-                overlay.append_item(
+                model_res.spec.envOverlay.append_item(  # type: ignore
                     "mounts",
                     crd.MountOverlay(
                         envName=env,
@@ -393,8 +422,6 @@ class MountsManifestConstructor(ManifestConstructor):
                         subPaths=config.sub_paths,
                     ),
                 )
-
-        model_res.spec.envOverlay = overlay
 
 
 class SvcDiscoveryManifestConstructor(ManifestConstructor):

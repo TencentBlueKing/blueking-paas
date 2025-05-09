@@ -65,6 +65,8 @@
 <script>
 import { mapState } from 'vuex';
 
+// 操作记录筛选的 localStorage 键名
+const SHOW_ONLY_MY_OPERATIONS_PREFERENCE = 'show_only_my_operations_preference';
 export default {
   name: 'RecentOperationRecords',
   props: {
@@ -75,17 +77,14 @@ export default {
   },
   data() {
     return {
-      isExecutedByMe: false,
+      isExecutedByMe: this.loadLocalStorageBoolean(SHOW_ONLY_MY_OPERATIONS_PREFERENCE, false),
       isLoading: true,
       records: [],
       defaultMinHeight: 562,
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
-    curUserInfo() {
-      return this.$store.state.curUserInfo;
-    },
+    ...mapState(['platformFeature', 'curUserInfo']),
   },
   created() {
     this.getRecentOperationRecords();
@@ -111,6 +110,7 @@ export default {
     },
     handleChange(val) {
       this.getRecentOperationRecords(val);
+      window.localStorage.setItem(SHOW_ONLY_MY_OPERATIONS_PREFERENCE, val);
     },
     // 概览
     toAppOverview(row) {
@@ -121,6 +121,10 @@ export default {
     },
     formattedOperate(operate) {
       return operate ? operate.split(' ').slice(1).join(' ') : '';
+    },
+    loadLocalStorageBoolean(key, defaultValue) {
+      const value = window.localStorage.getItem(key);
+      return value === null ? defaultValue : value === 'true';
     },
   },
 };

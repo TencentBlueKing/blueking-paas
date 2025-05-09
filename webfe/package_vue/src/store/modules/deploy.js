@@ -324,7 +324,7 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId, env, deployId
      */
   getDeployLog({}, { appCode, moduleId, deployId }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/?include_ansi_codes=true`;
     return http.get(url, config);
   },
 

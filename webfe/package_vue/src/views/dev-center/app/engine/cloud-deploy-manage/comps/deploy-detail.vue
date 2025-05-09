@@ -190,7 +190,7 @@
         <bk-table-column
           label=""
           class-name="table-colum-instance-cls"
-          :width="columWidth"
+          :width="220"
         >
           <template slot-scope="{ row }">
             <div
@@ -203,9 +203,9 @@
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceEvents(instance, row.name)"
+                @click="showInstanceConsole(instance, row)"
               >
-                {{ $t('查看事件') }}
+                WebConsole
               </bk-button>
               <bk-button
                 class="mr10"
@@ -213,23 +213,34 @@
                 title="primary"
                 @click="showInstanceLog(instance, row)"
               >
-                {{ $t('查看日志') }}
+                {{ $t('日志') }}
               </bk-button>
-              <bk-button
-                class="mr10"
-                :text="true"
-                title="primary"
-                @click="showInstanceConsole(instance, row)"
+              <bk-popover
+                class="table-more-popover-cls"
+                theme="light"
+                ext-cls="more-operations"
+                placement="bottom"
               >
-                {{ $t('访问控制台') }}
-              </bk-button>
-              <bk-button
-                :text="true"
-                title="primary"
-                @click="showRestartPopup('instance', instance)"
-              >
-                {{ $t('重启实例') }}
-              </bk-button>
+                <i class="paasng-icon paasng-ellipsis more"></i>
+                <div
+                  slot="content"
+                  class="more-content"
+                  style="white-space: normal"
+                >
+                  <div
+                    class="option"
+                    @click="showInstanceEvents(instance, row.name, $index)"
+                  >
+                    {{ $t('查看事件') }}
+                  </div>
+                  <div
+                    class="option"
+                    @click="showRestartPopup('instance', instance, $index)"
+                  >
+                    {{ $t('重启实例') }}
+                  </div>
+                </div>
+              </bk-popover>
             </div>
           </template>
         </bk-table-column>
@@ -298,8 +309,6 @@
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom"
-                :tippy-options="{ hideOnClick: false }"
-                :ref="`moreRef${$index}`"
               >
                 <i class="paasng-icon paasng-ellipsis more"></i>
                 <div
@@ -340,7 +349,7 @@
         class="p0 chart-wrapper"
       >
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           v-bk-clickoutside="hideDatePicker"
           class="action-box"
         >
@@ -378,7 +387,7 @@
           </bk-form>
         </div>
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           class="chart-box"
         >
           <strong class="title">
@@ -393,7 +402,7 @@
           />
         </div>
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           class="chart-box"
         >
           <strong class="title">
@@ -733,9 +742,6 @@ export default {
         return p + readyInstancesCount;
       }, 0);
     },
-    columWidth() {
-      return this.localLanguage === 'en' ? 330 : 260;
-    },
     // 滑框的宽度
     computedWidth() {
       const defaultWidth = 980;
@@ -799,7 +805,6 @@ export default {
       this.curUpdateProcess = row; // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
-      this.$refs[`moreRef${i}`].instance?.hide();
     },
 
     // 对数据进行处理
@@ -889,7 +894,7 @@ export default {
       this.curProcessKey = process.name;
       this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
       this.chartSlider.isShow = true;
-      if (this.curAppInfo.feature.RESOURCE_METRICS) {
+      if (this.platformFeature.RESOURCE_METRICS) {
         this.getInstanceChart(process);
       }
     },
@@ -1577,8 +1582,6 @@ export default {
           }
         },
       });
-      // 关闭popover
-      this.$refs[`moreRef${i}`].instance?.hide();
     },
 
     // 滚动重启
@@ -1681,14 +1684,16 @@ export default {
         color: #63656e;
       }
     }
-    .more {
-      transform: rotate(90deg);
-      border-radius: 50%;
-      padding: 3px;
-      color: #63656e;
-      &:hover {
-        background: #f0f1f5;
-      }
+  }
+
+  i.more {
+    transform: rotate(90deg);
+    border-radius: 50%;
+    padding: 3px;
+    color: #63656e;
+    cursor: pointer;
+    &:hover {
+      background: #f0f1f5;
     }
   }
 
@@ -1732,8 +1737,23 @@ export default {
         }
 
         .operation-column {
+          align-items: center;
           justify-content: end;
           padding-right: 12px;
+          .more {
+            font-size: 16px;
+          }
+          .bk-primary.bk-button-text {
+            height: auto;
+          }
+          .table-more-popover-cls {
+            height: 22px;
+            .bk-tooltip-ref {
+              height: 22px;
+              display: flex;
+              align-items: center;
+            }
+          }
         }
 
         .instance-item-cls {

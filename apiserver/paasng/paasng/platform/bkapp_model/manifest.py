@@ -482,7 +482,6 @@ def get_bkapp_resource_for_deploy(
     deployment: Deployment,
     force_image: Optional[str] = None,
     image_pull_policy: Optional[str] = None,
-    use_cnb: bool = False,
 ) -> crd.BkAppResource:
     """Get the BkApp manifest for deploy.
 
@@ -491,7 +490,6 @@ def get_bkapp_resource_for_deploy(
     :param deployment: The related deployment instance.
     :param force_image: If given, set the image of the application to this value.
     :param image_pull_policy: If given, set the imagePullPolicy to this value.
-    :param use_cnb: A bool flag describe if the bkapp image is built with cnb.
     :returns: The BkApp resource that is ready for deploying.
     """
     model_res = get_bkapp_resource(env.module)

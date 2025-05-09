@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 @receiver(cnative_custom_domain_updated)
 def on_custom_domain_updated(sender, env: ModuleEnvironment, **kwargs):
     """Trigger a new networking deploy."""
+    # 自定义域名不支持 bk/grpc, 仅支持 bk/http
     deploy_networking(env)
 
 

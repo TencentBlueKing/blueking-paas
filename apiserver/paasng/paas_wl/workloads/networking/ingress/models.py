@@ -26,7 +26,7 @@ from paas_wl.bk_app.applications.relationship import ModuleAttrFromID, ModuleEnv
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.utils.text import DNS_SAFE_PATTERN
-from paas_wl.workloads.networking.ingress.constants import AppDomainSchema, AppSubpathSource
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppSubpathSource
 from paasng.core.tenant.fields import tenant_id_field_factory
 
 
@@ -36,8 +36,8 @@ class AppDomain(AuditedModel):
     app = models.ForeignKey(WlApp, on_delete=models.CASCADE)
     host = models.CharField(max_length=128)
 
-    # See `AppDomainSchema` for possible values
-    schema = models.CharField(max_length=10, default=AppDomainSchema.HTTP_OR_HTTPS.value)
+    # See `AppDomainProtocol` for possible values
+    protocol = models.CharField(max_length=10, default=AppDomainProtocol.HTTP_OR_HTTPS.value)
 
     # This field was designed for supported `path_prefix` customization, but only '/' (or None)
     # values are currently used.

@@ -23,11 +23,15 @@ from django.db import IntegrityError
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.cnative.specs.credentials import deploy_addons_tls_certs
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
+from paas_wl.bk_app.cnative.specs.resource import is_exposed_grpc_svc
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
@@ -36,7 +40,7 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
-from paasng.platform.engine.exceptions import StepNotInPresetListError
+from paasng.platform.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeployStep
@@ -133,8 +137,10 @@ def release_by_k8s_operator(
             deployment=deployment,
             force_image=build.image,
             image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
-            use_cnb=build.is_build_from_cnb(),
         )
+
+        # 部署预检
+        preflight_deploy(env, bkapp_res)
 
         # 下发 k8s 资源前需要确保命名空间存在
         ensure_namespace(env)
@@ -179,6 +185,19 @@ def release_by_k8s_operator(
         DeployStatusHandler,
     )
     return str(app_model_deploy.id)
+
+
+def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
+    """执行应用部署前的关键条件预检，确保集群满足部署要求。
+
+    - 当检测到应用声明了 bk/grpc 来暴露服务, 但集群不支持对应特性时, 中止部署流程
+    """
+    if not is_exposed_grpc_svc(res):
+        return
+
+    cluster = get_cluster_by_app(env.wl_app)
+    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_GRPC_INGRESS):
+        raise DeployShouldAbortError("grpc ingress feature is not available in the current cluster")
 
 
 def ensure_namespace(env: ModuleEnvironment, max_wait_seconds: int = 15) -> bool:

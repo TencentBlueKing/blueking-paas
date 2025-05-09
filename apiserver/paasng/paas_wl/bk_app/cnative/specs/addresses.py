@@ -35,7 +35,7 @@ from paas_wl.workloads.networking.ingress.certs import (
     pick_shared_cert,
     update_or_create_secret_by_cert,
 )
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppDomainSource
 from paas_wl.workloads.networking.ingress.entities import AutoGenDomain
 from paas_wl.workloads.networking.ingress.managers.domain import save_subdomains
 from paas_wl.workloads.networking.ingress.managers.subpath import save_subpaths
@@ -46,32 +46,41 @@ from paasng.platform.applications.models import ModuleEnvironment
 logger = logging.getLogger(__name__)
 
 
-def save_addresses(env: ModuleEnvironment) -> Set[WlApp]:
-    """Save an environment's pre-allocated addresses to database, includes both
-    subdomains and subpaths.
+def save_addresses(env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTTP_OR_HTTPS) -> Set[WlApp]:
+    """Save an environment's pre-allocated addresses to database. raw http/https protocol includes both
+    subdomains and subpaths, grpc protocol only supports subdomains
 
     :return: Affected engine apps, "affected" means the app's domains or
         paths were updated during this save operation.
     """
     from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 
-    apps = set()
-    domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]
-    subpaths = [d.subpath for d in AppDefaultSubpaths(env).subpaths]
-    apps.update(save_subdomains(env.wl_app, domains))
-    apps.update(save_subpaths(env.wl_app, subpaths))
+    if protocol == AppDomainProtocol.GRPCS:
+        domains = [AutoGenDomain(host=d.host, https_enabled=True) for d in AppDefaultDomains(env).domains]
+        apps = save_subdomains(env.wl_app, domains)
+    else:
+        apps = set()
+        domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]
+        subpaths = [d.subpath for d in AppDefaultSubpaths(env).subpaths]
+        apps.update(save_subdomains(env.wl_app, domains))
+        apps.update(save_subpaths(env.wl_app, subpaths))
     return apps
 
 
 class AddrResourceManager:
-    """Manage kubernetes resources which was related with addresses"""
+    """Manage kubernetes resources which was related with addresses. Used for raw http or https protocol"""
 
-    def __init__(self, env: ModuleEnvironment):
+    def __init__(self, env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTTP_OR_HTTPS):
         self.env = env
-        self.application = env.application
         self.wl_app = env.wl_app
+        self.protocol = protocol
 
     def build_mapping(self) -> DomainGroupMapping:
+        if self.protocol == AppDomainProtocol.GRPCS:
+            return self._build_mapping_for_grpc()
+        return self._build_mapping_for_http()
+
+    def _build_mapping_for_http(self) -> DomainGroupMapping:
         """Build the mapping resource object"""
         # Make domain groups of all source types
         #
@@ -86,13 +95,23 @@ class AddrResourceManager:
         data = [subdomain_group, subpath_group, custom_group]
         data = [d for d in data if d.domains]
         return DomainGroupMapping(
-            metadata=ObjectMetadata(name=self.wl_app.scheduler_safe_name),
+            metadata=ObjectMetadata(name=gen_domain_group_mapping_name(self.wl_app)),
             spec=DomainGroupMappingSpec(ref=MappingRef(name=app_name), data=data),
+        )
+
+    def _build_mapping_for_grpc(self) -> DomainGroupMapping:
+        """Build the mapping resource object. grpc protocol only supports subdomains"""
+        subdomain_group = DomainGroup(sourceType=DomainGroupSource.SUBDOMAIN, domains=self._get_subdomain_domains())
+
+        app_name = generate_bkapp_name(self.env)
+        return DomainGroupMapping(
+            metadata=ObjectMetadata(name=gen_domain_group_mapping_name(self.wl_app)),
+            spec=DomainGroupMappingSpec(ref=MappingRef(name=app_name), data=[subdomain_group]),
         )
 
     def _get_subdomain_domains(self) -> List[Domain]:
         """Get all "subdomain" source domain objects"""
-        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN)
+        subdomains = AppDomain.objects.filter(app=self.wl_app, source=AppDomainSource.AUTO_GEN, protocol=self.protocol)
         return [to_domain(d) for d in subdomains]
 
     def _get_subpath_domains(self) -> List[Domain]:
@@ -157,3 +176,7 @@ def to_shared_tls_domain(d: Domain, app: WlApp) -> Domain:
         logger.info("created a secret %s for host %s", secret_name, d.host)
     d.tlsSecretName = secret_name
     return d
+
+
+def gen_domain_group_mapping_name(wl_app: WlApp) -> str:
+    return wl_app.scheduler_safe_name

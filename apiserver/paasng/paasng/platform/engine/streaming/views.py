@@ -62,7 +62,7 @@ class StreamViewSet(ViewSet):
         query_serializer.is_valid(raise_exception=True)
 
         subscriber = self.get_subscriber(channel_id)
-        include_ansi_codes = query_serializer.validated_data.get("include_ansi_codes", False)
+        include_ansi_codes = query_serializer.validated_data["include_ansi_codes"]
 
         def process_event_line(line: str) -> str:
             """处理事件行，过滤掉 ANSI 转义序列"""
@@ -71,15 +71,17 @@ class StreamViewSet(ViewSet):
 
             if not line.startswith("data: "):
                 return line
+            if line.endswith("\n\n"):
+                line = line[:-2]
 
-            content = line[6:].strip()
+            content = line[6:]
             try:
                 data = json.loads(content)
             except json.JSONDecodeError:
-                return line
+                return line + "\n\n"
 
             if "line" not in data:
-                return line
+                return line + "\n\n"
             data["line"] = strip_ansi(data["line"])
             return line[:6] + json.dumps(data) + "\n\n"
 

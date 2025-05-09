@@ -37,10 +37,6 @@ def prepare_data(bk_app, bk_module):
     return bk_app, bk_module, deployment
 
 
-def fake_get_all_logs(deployment):
-    return ansi_log
-
-
 def fake_get_failure_hint(deployment):
     @dataclass
     class Hint:
@@ -63,7 +59,7 @@ def test_get_deployment_result(api_client, prepare_data, query, expected):
     base_url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/deployments/{deployment.id}/result/"
     url = base_url + query
     with (
-        mock.patch("paasng.platform.engine.views.deploy.get_all_logs", fake_get_all_logs),
+        mock.patch("paasng.platform.engine.views.deploy.get_all_logs", return_value=ansi_log),
         mock.patch("paasng.platform.engine.views.deploy.get_failure_hint", fake_get_failure_hint),
     ):
         rsp = api_client.get(url)

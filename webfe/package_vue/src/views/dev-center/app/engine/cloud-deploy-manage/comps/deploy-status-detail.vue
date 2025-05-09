@@ -407,7 +407,7 @@ export default {
 
       clearInterval(this.watchTimer);
       if (this.serverLogEvent === null || this.serverLogEvent.readyState === this.eventSourceState.CLOSED) {
-        this.serverLogEvent = new EventSource(`${BACKEND_URL}/streams/${deployId}`, {
+        this.serverLogEvent = new EventSource(`${BACKEND_URL}/streams/${deployId}?include_ansi_codes=true`, {
           withCredentials: true,
         });
         this.serverLogEvent.onmessage = (event) => {

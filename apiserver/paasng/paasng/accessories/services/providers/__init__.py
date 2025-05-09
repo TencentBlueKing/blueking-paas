@@ -59,17 +59,5 @@ def get_provider_cls_by_provider_name(name: str) -> Type[BaseProvider]:
     return provider_maps[name]
 
 
-def get_provider_choices() -> Dict[str, str]:
-    return {name: cls.display_name for name, cls in provider_maps.items()}
-
-
 def get_active_provider_choices() -> Dict[str, str]:
     return {name: cls.display_name for name, cls in active_provider_maps.items()}
-
-
-def get_plan_schema_by_provider_name(name: str) -> Dict:
-    return plan_schema_maps.get(name, _default_schema)
-
-
-def get_instance_schema_by_service_name(name: str) -> Dict:
-    return instance_schema_maps.get(name, _default_schema)

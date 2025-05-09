@@ -20,6 +20,8 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from paas_wl.infras.cluster.constants import BK_LOG_DEFAULT_ENABLED
+
 
 class FrontendFeatureViewSet(ViewSet):
     @swagger_auto_schema(tags=["前端特性配置"])
@@ -73,5 +75,7 @@ class FrontendFeatureViewSet(ViewSet):
             "ESB_API": not settings.ENABLE_MULTI_TENANT_MODE,
             # 是否开启多租户模式
             "MULTI_TENANT_MODE": settings.ENABLE_MULTI_TENANT_MODE,
+            # 是否使用蓝鲸日志平台方案
+            "BK_LOG": BK_LOG_DEFAULT_ENABLED,
         }
         return Response(data={**features_reuses_backend_settings, **fronted_features})

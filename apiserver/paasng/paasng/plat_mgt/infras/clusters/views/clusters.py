@@ -26,11 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.infras.cluster.components import get_default_component_configs
-from paas_wl.infras.cluster.constants import (
-    ClusterFeatureFlag,
-    ClusterTokenType,
-    ClusterType,
-)
+from paas_wl.infras.cluster.constants import ClusterTokenType, ClusterType
 from paas_wl.infras.cluster.models import (
     APIServer,
     Cluster,
@@ -52,7 +48,6 @@ from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
-    ClusterDefaultFeatureFlagsRetrieveOutputSLZ,
     ClusterListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
@@ -346,16 +341,6 @@ class ClusterViewSet(viewsets.GenericViewSet):
         }
 
         return Response(ClusterStatusRetrieveOutputSLZ(state).data)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.infras.cluster"],
-        operation_description="获取集群默认特性",
-        responses={status.HTTP_200_OK: ClusterDefaultFeatureFlagsRetrieveOutputSLZ()},
-    )
-    def retrieve_default_feature_flags(self, request, cluster_name, *args, **kwargs):
-        cluster = self.get_object()
-        feature_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(cluster.type)
-        return Response(ClusterDefaultFeatureFlagsRetrieveOutputSLZ({"feature_flags": feature_flags}).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],

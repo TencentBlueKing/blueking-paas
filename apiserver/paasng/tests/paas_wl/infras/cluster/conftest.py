@@ -20,7 +20,7 @@ from textwrap import dedent
 
 import pytest
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 
 
 @pytest.fixture()
@@ -36,7 +36,7 @@ def example_cluster_config():
         "ca_data": "",
         "cert_data": "",
         "key_data": "",
-        "feature_flags": ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL),
+        "feature_flags": ClusterFeatureFlag.get_default_flags(),
     }
 
 

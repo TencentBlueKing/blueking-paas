@@ -40,6 +40,22 @@ urlpatterns = [
         views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
     ),
+    # 平台管理 - 应用详情
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/$",
+        views.ApplicationDetailViewSet.as_view({"get": "retrieve", "post": "update_app_name"}),
+        name="plat_mgt.applications.retrieve_app_name",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/envs/(?P<env_name>[^/]+)/cluster/$",
+        views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
+        name="plat_mgt.applications.update_cluster",
+    ),
+    re_path(
+        r"^api/plat_mgt/clusters/$",
+        views.ApplicationDetailViewSet.as_view({"get": "list_clusters"}),
+        name="plat_mgt.applications.list_clusters",
+    ),
     # 平台管理 - 应用特性
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/feature_flags/$",

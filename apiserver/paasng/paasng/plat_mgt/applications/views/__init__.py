@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-from .application import ApplicationListViewSet
+from .application import ApplicationDetailViewSet, ApplicationListViewSet
 from .feature import ApplicationFeatureViewSet
 
 __all__ = [
@@ -24,4 +24,6 @@ __all__ = [
     "ApplicationListViewSet",
     # feature
     "ApplicationFeatureViewSet",
+    # application detail
+    "ApplicationDetailViewSet",
 ]

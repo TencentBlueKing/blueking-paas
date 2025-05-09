@@ -29,7 +29,7 @@ class ApplicationFilterBackend(BaseFilterBackend):
         if queryset.model != Application:
             raise ValueError("ApplicationFilterBackend only support to filter Application")
 
-        slz = slzs.ApplicationListFilterSLZ(data=request.query_params)
+        slz = slzs.ApplicationListFilterInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
         validate_params = slz.data
 

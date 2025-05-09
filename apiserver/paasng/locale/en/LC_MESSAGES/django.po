@@ -2476,6 +2476,7 @@ msgid "S-Mart 不可关闭应用描述文件"
 msgstr "S-Mart cannot close the APP description file"
 
 #: paasng/platform/applications/serializers/app.py:88
+#: paasng/plat_mgt/applications/serializers/application.py:216
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 

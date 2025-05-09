@@ -20,7 +20,7 @@ from rest_framework import serializers
 from paasng.platform.applications.constants import AppFeatureFlag
 
 
-class ApplicationFeatureFlagSLZ(serializers.Serializer):
+class ApplicationFeatureFlagListOutputSLZ(serializers.Serializer):
     """平台管理 - 应用特性序列化器"""
 
     name = serializers.CharField(help_text="特性名称")
@@ -37,7 +37,7 @@ class ApplicationFeatureFlagSLZ(serializers.Serializer):
         return AppFeatureFlag.get_default_flags().get(obj["name"], False)
 
 
-class UpdateApplicationFeatureFlagSLZ(serializers.Serializer):
+class ApplicationFeatureFlagUpdateInputSLZ(serializers.Serializer):
     """平台管理 - 更新应用特性序列化器"""
 
     name = serializers.CharField(help_text="特性名称")

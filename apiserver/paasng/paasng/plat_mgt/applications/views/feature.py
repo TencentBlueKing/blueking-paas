@@ -38,27 +38,27 @@ class ApplicationFeatureViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationFeatureFlagSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ApplicationFeatureFlagListOutputSLZ(many=True)},
     )
     def list(self, request, app_code):
         """获取指定应用的列表"""
         application = get_object_or_404(Application, code=app_code)
         application_features = ApplicationFeatureFlag.objects.get_application_features(application=application)
-        slz = slzs.ApplicationFeatureFlagSLZ(
-            ({"name": key, "effect": value} for key, value in application_features.items()), many=True
+        slz = slzs.ApplicationFeatureFlagListOutputSLZ(
+            [{"name": key, "effect": value} for key, value in application_features.items()], many=True
         )
         return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用特性",
-        request_body=slzs.UpdateApplicationFeatureFlagSLZ(many=True),
+        request_body=slzs.ApplicationFeatureFlagUpdateInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update(self, request, app_code):
         """更新应用特性"""
         application = get_object_or_404(Application, code=app_code)
-        slz = slzs.UpdateApplicationFeatureFlagSLZ(data=request.data)
+        slz = slzs.ApplicationFeatureFlagUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 

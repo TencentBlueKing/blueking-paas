@@ -35,7 +35,7 @@ class TestResourcePoolProvider:
     def pools(self, request, bk_plan):
         result = []
         for i in range(request.param):
-            result.append(G(PreCreatedInstance, plan=bk_plan, credentials=json.dumps({"idx": i}), config={"idx": i}))
+            result.append(G(PreCreatedInstance, plan=bk_plan, credentials=json.dumps({"idx": i})))
         return result
 
     def test_provision(self, bk_service, bk_plan, pools):
@@ -43,7 +43,7 @@ class TestResourcePoolProvider:
         assert json.loads(instance.credentials)["REDIS_IDX"] == json.loads(pools[0].credentials)["idx"]
         expect = PreCreatedInstance.objects.get(pk=pools[0].pk)
         assert instance.config.pop("__pk__") == expect.pk
-        assert instance.config == expect.config
+        assert instance.config == {"enable_tls": False, "is_pre_created": True, "provider_name": "redis"}
         assert expect.is_allocated
 
     def test_delete(self, bk_service, bk_plan, pools):

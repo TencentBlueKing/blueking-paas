@@ -22,6 +22,10 @@ from .application import (
     TenantAppStatisticsSLZ,
     TenantModeSLZ,
 )
+from .feature import (
+    ApplicationFeatureFlagSLZ,
+    UpdateApplicationFeatureFlagSLZ,
+)
 
 __all__ = [
     # application
@@ -30,4 +34,7 @@ __all__ = [
     "ApplicationTypeSLZ",
     "TenantAppStatisticsSLZ",
     "TenantModeSLZ",
+    # feature
+    "ApplicationFeatureFlagSLZ",
+    "UpdateApplicationFeatureFlagSLZ",
 ]

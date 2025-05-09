@@ -15,8 +15,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 import functools
+from typing import Dict
+from unittest import mock
 
 import pytest
+from attr import define
 from django.conf import settings
 from django.test import override_settings
 from django_dynamic_fixture import G
@@ -372,6 +375,45 @@ class TestMountsManifestConstructor:
                 subPaths=["configmap_z"],
             )
         ]
+
+    def test_tls_credentials(self, bk_module, blank_resource):
+        @define
+        class FakeSvcInstance:
+            config: Dict[str, str]
+
+        @define
+        class FakeSvcRelation:
+            instance: FakeSvcInstance
+
+            def get_instance(self):
+                return self.instance
+
+        with mock.patch(
+            "paasng.platform.bkapp_model.manifest.list_provisioned_tls_enabled_rels",
+            new=lambda env: (
+                [
+                    FakeSvcRelation(instance=FakeSvcInstance(config={"provider_name": "redis"})),
+                    FakeSvcRelation(instance=FakeSvcInstance(config={"provider_name": "mysql"})),
+                ]
+                if env.environment == "stag"
+                else []
+            ),
+        ):
+            MountsManifestConstructor().apply_to(blank_resource, bk_module)
+            assert blank_resource.spec.envOverlay.mounts == [
+                crd.MountOverlay(
+                    envName="stag",
+                    mountPath="/opt/blueking/bkapp-addons-certs/redis",
+                    name="bkapp-addons-certs-redis",
+                    source=crd.VolumeSource(secret=crd.SecretSource(name="bkapp-addons-certs-redis")),
+                ),
+                crd.MountOverlay(
+                    envName="stag",
+                    mountPath="/opt/blueking/bkapp-addons-certs/mysql",
+                    name="bkapp-addons-certs-mysql",
+                    source=crd.VolumeSource(secret=crd.SecretSource(name="bkapp-addons-certs-mysql")),
+                ),
+            ]
 
 
 class TestHooksManifestConstructor:

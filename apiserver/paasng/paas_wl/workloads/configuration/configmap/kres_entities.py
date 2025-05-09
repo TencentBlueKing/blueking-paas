@@ -17,6 +17,7 @@
 
 import logging
 from dataclasses import dataclass
+from typing import Dict
 
 from paas_wl.infras.resources.base.kres import KConfigMap
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ConfigMap(AppEntity):
-    data: str
+    data: Dict[str, str]
 
     class Meta:
         kres_class = KConfigMap

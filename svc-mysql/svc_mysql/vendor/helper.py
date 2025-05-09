@@ -16,15 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
-import typing
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from typing import Dict, List
 
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.utils import DEFAULT_DB_ALIAS, ConnectionHandler, DatabaseError
 from django.utils.functional import cached_property
 from paas_service.utils import get_node_ip
+
 from svc_mysql.vendor import constants
 from svc_mysql.vendor.exceptions import MySQLException, MySQLExecuteFailed
 
@@ -38,8 +40,13 @@ class MySQLEngine:
     user: str
     password: str
     name: str = ""
+    ssl_options: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
+        options = {"init_command": "SET default_storage_engine=INNODB"}
+        if self.ssl_options:
+            options["ssl"] = self.ssl_options
+
         self.DATABASES = {
             DEFAULT_DB_ALIAS: {
                 "ENGINE": "django.db.backends.mysql",
@@ -48,9 +55,7 @@ class MySQLEngine:
                 "PASSWORD": self.password,
                 "HOST": self.host,
                 "PORT": self.port,
-                "OPTIONS": {
-                    "init_command": "SET default_storage_engine=INNODB",
-                },
+                "OPTIONS": options,
             }
         }
 
@@ -92,17 +97,18 @@ class MySQLEngine:
         """替换原始的 DatabaseError 为 MySQLException"""
         try:
             yield
-        except DatabaseError as e:
+        except DatabaseError:
             if self.db.connection is None:
                 logger.exception(f"MySQL创建连接失败: {self.user, self.password, self.name}")
                 raise MySQLException("MySQL创建连接失败")
-            logger.exception("未知数据库异常: %s", e)
+
+            logger.exception("未知数据库异常: %s")
             raise MySQLException("未知数据库异常")
 
 
 @dataclass
 class MySQLAuthorizer(MySQLEngine):
-    client_hosts: typing.List[str] = field(default_factory=list)
+    client_hosts: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         super().__post_init__()

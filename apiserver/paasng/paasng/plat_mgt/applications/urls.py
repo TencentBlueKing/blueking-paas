@@ -40,4 +40,10 @@ urlpatterns = [
         views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
     ),
+    # 平台管理 - 应用特性
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/feature_flags/$",
+        views.ApplicationFeatureViewSet.as_view({"get": "list", "put": "update"}),
+        name="plat_mgt.applications.feature_flags",
+    ),
 ]

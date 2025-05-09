@@ -541,7 +541,8 @@ def create_svc_instance_obj_from_remote(
         Turn credential keys in to upper case and add prefix (svc name),
         also replace '-' with '_' to match the unix environment variable name format
         """
-        return f"{field_prefix.replace('-', '_')}_{val.replace('-', '_')}".upper()
+        key = f"{field_prefix}_{val}".upper()
+        return key.replace("-", "_")
 
     _credentials = {_format_key(key): value for key, value in credentials.items()}
 

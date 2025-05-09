@@ -861,6 +861,32 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
+		It("[mountOverlay] secret normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-tls-mount",
+						MountPath: "/etc/tls/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							Secret: &paasv1alpha2.SecretSource{Name: "nginx-tls-certs"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-tls-mount",
+						MountPath: "/etc/tls/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							Secret: &paasv1alpha2.SecretSource{Name: "etcd-tls-certs"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
 		It("[mountOverlay] persistentStorage normal", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{

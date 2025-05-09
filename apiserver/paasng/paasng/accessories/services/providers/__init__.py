@@ -19,33 +19,25 @@ from typing import Dict, Type
 
 from . import schemas
 from .base import BaseProvider, ResourcePoolProvider
-from .mysql.provider import MySQLProvider
-from .rabbitmq.provider import RabbitMQProvider
 from .sentry.provider import SentryProvider
 
 active_provider_maps = {
     "pool": ResourcePoolProvider,
 }
 
-# mysql、rabbitmq 已经迁移为远程增强服务，sentry 尽在特定版本提供服务
+# sentry 只在特定版本提供服务
 deprecated_provider_maps = {
-    "mysql": MySQLProvider,
-    "rabbitmq": RabbitMQProvider,
     "sentry": SentryProvider,
 }
 
 provider_maps: Dict[str, Type[BaseProvider]] = {**active_provider_maps, **deprecated_provider_maps}
 
 plan_schema_maps: Dict[str, Dict] = {
-    "mysql": schemas.MySQLConfigSchema.schema(),
-    "rabbitmq": schemas.RabbitMQConfigSchema.schema(),
     "sentry": schemas.SentryConfigSchema.schema(),
     "pool": schemas.ResourcePoolConfigSchema.schema(),
 }
 
 instance_schema_maps: Dict[str, Dict] = {
-    "mysql": schemas.MySQLInstanceSchema.schema(),
-    "rabbitmq": schemas.RabbitMQInstanceSchema.schema(),
     "sentry": schemas.SentryInstanceSchema.schema(),
     "redis": schemas.RedisInstanceSchema.schema(),
 }
@@ -59,17 +51,5 @@ def get_provider_cls_by_provider_name(name: str) -> Type[BaseProvider]:
     return provider_maps[name]
 
 
-def get_provider_choices() -> Dict[str, str]:
-    return {name: cls.display_name for name, cls in provider_maps.items()}
-
-
 def get_active_provider_choices() -> Dict[str, str]:
     return {name: cls.display_name for name, cls in active_provider_maps.items()}
-
-
-def get_plan_schema_by_provider_name(name: str) -> Dict:
-    return plan_schema_maps.get(name, _default_schema)
-
-
-def get_instance_schema_by_service_name(name: str) -> Dict:
-    return instance_schema_maps.get(name, _default_schema)

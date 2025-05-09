@@ -425,7 +425,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -576,7 +578,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -727,7 +731,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -955,22 +961,16 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: |-
-                    Condition contains details for one aspect of the current state of this API Resource.
-                    ---
-                    This struct is intended for direct use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{
-                        // Represents the observations of a foo's current state.
-                        // Known .status.conditions.type are: "Available", "Progressing", and "Degraded"
-                        // +patchMergeKey=type
-                        // +patchStrategy=merge
-                        // +listType=map
-                        // +listMapKey=type
-                        Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-
-                        // other fields
-                    }
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -1338,9 +1338,8 @@ spec:
                           description: Source of the mount
                           properties:
                             configMap:
-                              description: |-
-                                ConfigMapSource represents a configMap that should
-                                populate this volume
+                              description: ConfigMapSource represents a configMap
+                                that should populate this volume
                               properties:
                                 name:
                                   type: string
@@ -1350,6 +1349,15 @@ spec:
                             persistentStorage:
                               description: PersistentStorage represents a PersistentStorage
                                 that should populate this volume
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            secret:
+                              description: SecretSource represents a secret that should
+                                populate this volume
                               properties:
                                 name:
                                   type: string
@@ -1449,9 +1457,8 @@ spec:
                       description: Source of the mount
                       properties:
                         configMap:
-                          description: |-
-                            ConfigMapSource represents a configMap that should
-                            populate this volume
+                          description: ConfigMapSource represents a configMap that
+                            should populate this volume
                           properties:
                             name:
                               type: string
@@ -1461,6 +1468,15 @@ spec:
                         persistentStorage:
                           description: PersistentStorage represents a PersistentStorage
                             that should populate this volume
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        secret:
+                          description: SecretSource represents a secret that should
+                            populate this volume
                           properties:
                             name:
                               type: string
@@ -1626,7 +1642,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -1777,7 +1795,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -1928,7 +1948,9 @@ spec:
                                       to be used in HTTP probes
                                     properties:
                                       name:
-                                        description: The header field name
+                                        description: |-
+                                          The header field name.
+                                          This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                         type: string
                                       value:
                                         description: The header field value
@@ -2177,22 +2199,16 @@ spec:
                 description: Conditions Represents the latest available observations
                   of a BkApp's current state.
                 items:
-                  description: |-
-                    Condition contains details for one aspect of the current state of this API Resource.
-                    ---
-                    This struct is intended for direct use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{
-                        // Represents the observations of a foo's current state.
-                        // Known .status.conditions.type are: "Available", "Progressing", and "Degraded"
-                        // +patchMergeKey=type
-                        // +patchStrategy=merge
-                        // +listType=map
-                        // +listMapKey=type
-                        Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-
-                        // other fields
-                    }
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
                       description: |-

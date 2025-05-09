@@ -286,7 +286,6 @@ export default {
     async valid() {
       try {
         const validRet = await this.$refs.repoInfo.validate();
-        console.log('validRet', validRet);
         return validRet;
       } catch (error) {
         const { field } = error;

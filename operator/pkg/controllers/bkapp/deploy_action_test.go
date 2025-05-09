@@ -154,9 +154,10 @@ var _ = Describe("Test DeployActionReconciler", func() {
 				Phase:     paasv1alpha2.HealthUnhealthy,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
-			hook := hookres.BuildPreReleaseHook(
+			hook, err := hookres.BuildPreReleaseHook(
 				bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
 			)
+			Expect(err).To(BeNil())
 
 			client := builder.WithObjects(bkapp, hook.Pod).Build()
 			ret := NewDeployActionReconciler(client).Reconcile(context.Background(), bkapp)
@@ -173,7 +174,8 @@ var _ = Describe("Test DeployActionReconciler", func() {
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
 
-			hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
 			Expect(hook.Pod).NotTo(BeNil())
 
 			client := builder.WithObjects(bkapp, hook.Pod).Build()
@@ -200,7 +202,8 @@ var _ = Describe("Test DeployActionReconciler", func() {
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
 
-			hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
 			Expect(hook.Pod).NotTo(BeNil())
 
 			client := builder.WithObjects(bkapp, hook.Pod).Build()

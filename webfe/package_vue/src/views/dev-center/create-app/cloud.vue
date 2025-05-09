@@ -1215,18 +1215,14 @@ export default {
           }
         }
         this.repoData = this.$refs?.repoInfo?.getData() ?? {};
-        // this.initCloudAppDataFunc();   // 初始化应用编排数据
         this.curStep = 2;
         this.$nextTick(() => {
           // 默认编辑态
           this.$refs.processRef?.handleEditClick();
           this.$refs.hookRef?.handleEditClick();
         });
-        // if (this.structureType === 'mirror') {
-        //   this.getProcessData();
-        // }
-      } catch (error) {
-        console.log(error);
+      } catch (e) {
+        console.error(e);
       }
     },
 

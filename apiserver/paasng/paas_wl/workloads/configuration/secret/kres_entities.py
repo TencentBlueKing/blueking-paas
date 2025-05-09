@@ -15,6 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
+from dataclasses import dataclass
+from typing import Dict
 
-class CreateDatabaseFailed(Exception):
-    pass
+from paas_wl.infras.resources.base.kres import KSecret
+from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
+
+from .constants import SecretType
+from .kres_slzs import SecretDeserializer, SecretSerializer
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Secret(AppEntity):
+    type: SecretType
+    data: Dict[str, str]
+
+    class Meta:
+        kres_class = KSecret
+        deserializer = SecretDeserializer
+        serializer = SecretSerializer
+
+
+secret_kmodel: AppEntityManager[Secret] = AppEntityManager(Secret)

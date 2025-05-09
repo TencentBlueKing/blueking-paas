@@ -470,7 +470,6 @@ export default {
             this.isWatchDeploying = false;
           } else if (item.status === 'interrupted') {
             // 停止部署成功
-            console.log('停止部署');
             this.isDeployInterrupted = true;
             this.isDeployInterrupting = false;
           }
@@ -938,7 +937,6 @@ export default {
           rvInst: res.rv_inst,
           rvProc: res.rv_proc,
         };
-        console.log('this.curModuleId', this.curModuleId, this.curModuleInfo);
         this.formatProcesses(this.curModuleInfo);
         return Promise.resolve(true);
       } catch (e) {
@@ -1005,7 +1003,6 @@ export default {
       });
       // this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
       this.$set(this, 'allProcesses', JSON.parse(JSON.stringify(allProcesses)));
-      console.log('this.allProcesses', this.allProcesses);
     },
 
     // 监听进程事件流

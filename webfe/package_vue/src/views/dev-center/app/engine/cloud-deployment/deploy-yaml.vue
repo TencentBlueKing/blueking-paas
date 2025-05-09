@@ -62,7 +62,6 @@ export default {
     cloudAppData: {
       handler(val) {
         if (val.length) {
-          console.log(11111, val);
           this.$nextTick(() => {
             setTimeout(() => {
               this.detail = val[0];

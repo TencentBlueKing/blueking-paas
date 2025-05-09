@@ -30,7 +30,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers.fields import AppNameField
 from paasng.platform.applications.signals import prepare_change_application_name
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
-from paasng.utils.i18n.serializers import I18NExtend
+from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
@@ -194,16 +194,13 @@ class ApplicationDetailOutputSLZ(serializers.Serializer):
     modules_info = serializers.ListSerializer(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 
+@i18n
 class ApplicationNameUpdateInputSLZ(serializers.Serializer):
     """更新应用名称序列化器"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
 
     def _validate_duplicated_field(self, data):
-        """Universal validate method for code and name"""
-        # Send signal, when console_db if given, this function call will raise
-        # ValidationError if name is duplicated.
-        # 仅修改对应语言的应用名称
         update_fields = {}
         if get_language() == "zh-cn":
             update_fields["name"] = data["name_zh_cn"]
@@ -221,7 +218,7 @@ class ApplicationNameUpdateInputSLZ(serializers.Serializer):
         return self._validate_duplicated_field(data)
 
     def update(self, instance, validated_data):
-        # 仅修改对应语言的应用名称, 如果前端允许同时填写中英文的应用名称, 则可以去掉该逻辑.
+        # 仅修改对应语言的应用名称
         if get_language() == "zh-cn":
             instance.name = validated_data["name_zh_cn"]
         elif get_language() == "en":

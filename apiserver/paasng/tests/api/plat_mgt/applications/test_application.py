@@ -202,13 +202,29 @@ class TestApplicationDetailView:
         """测试更新应用名称"""
 
         url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": bk_app.code})
-        data = {"name": "new_name"}
-        rsp = plat_mgt_api_client.post(url, data=data)
-        assert rsp.status_code == 204
 
-        # 验证应用名称是否更新成功
+        # 测试中文环境下修改
+        data_zh = {"name": "新中文名"}
+        rsp = plat_mgt_api_client.post(
+            url,
+            data=data_zh,
+            HTTP_ACCEPT_LANGUAGE="zh-cn",
+        )
+        assert rsp.status_code == 204
         bk_app.refresh_from_db()
-        assert bk_app.name == "new_name"
+        assert bk_app.name == "新中文名"
+
+        # 测试英文环境下修改
+        data_en = {"name": "new_name"}
+        rsp = plat_mgt_api_client.post(
+            url,
+            data=data_en,
+            HTTP_ACCEPT_LANGUAGE="en",
+        )
+        assert rsp.status_code == 204
+        bk_app.refresh_from_db()
+
+        assert bk_app.name_en == "new_name"
 
     def test_update_cluster(self, bk_app, plat_mgt_api_client, prepare_clusters):
         """测试更新应用集群"""

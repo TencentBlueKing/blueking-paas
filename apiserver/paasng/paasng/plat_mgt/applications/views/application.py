@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 from collections import Counter
 
 from django.shortcuts import get_object_or_404
@@ -30,13 +31,18 @@ from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
+from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit import constants
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record, add_app_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationListViewSet(viewsets.GenericViewSet):
@@ -164,10 +170,28 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     def update_app_name(self, request, app_code):
         """更新应用名称"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
-        slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data)
+
+        slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
-        application.name = slz.validated_data["name"]
-        application.save()
+        application = slz.save()
+
+        # 修改应用在蓝鲸监控命名空间的名称
+        # 蓝鲸监控查询、更新一个不存在的应用返回的 code 都是 500，没有具体的错误码来标识是不是应用不存在，故直接调用更新API，忽略错误信息
+        try:
+            update_or_create_bk_monitor_space(application)
+        except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
+            logger.info(f"Failed to update app space on BK Monitor, {e}")
+        except Exception:
+            logger.exception("Failed to update app space on BK Monitor")
+
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.EDIT_BASIC_INFO,
+            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
+            target=constants.OperationTarget.APP,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

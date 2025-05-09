@@ -20,6 +20,9 @@ import datetime
 import pytest
 from django.urls import reverse
 
+from paas_wl.bk_app.applications.models.app import WlApp
+from paas_wl.infras.cluster.constants import ClusterType
+from paas_wl.infras.cluster.models import Cluster
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -170,3 +173,70 @@ class TestApplicationListView:
             {"tenant_id": "tenant1", "app_count": 2},
             {"tenant_id": "tenant2", "app_count": 1},
         ]
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+class TestApplicationDetailView:
+    """测试平台管理 - 应用详情 API"""
+
+    def test_get_application_detail(self, bk_app, plat_mgt_api_client):
+        """测试获取应用详情"""
+
+        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": bk_app.code})
+        rsp = plat_mgt_api_client.get(url)
+        assert rsp.status_code == 200
+        assert "basic_info" in rsp.data
+        assert "modules_info" in rsp.data
+
+    def test_update_application_name(self, bk_app, plat_mgt_api_client):
+        """测试更新应用名称"""
+
+        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": bk_app.code})
+        data = {"name": "new_name"}
+        rsp = plat_mgt_api_client.post(url, data=data)
+        assert rsp.status_code == 204
+
+        # 验证应用名称是否更新成功
+        bk_app.refresh_from_db()
+        assert bk_app.name == "new_name"
+
+    def test_update_cluster(self, bk_app, plat_mgt_api_client):
+        """测试更新应用集群"""
+
+        # 准备测试集群
+        Cluster.objects.create(
+            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+        Cluster.objects.create(
+            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+
+        env = bk_app.get_default_module().envs.get(environment="prod")
+        WlApp.objects.create(name=env.engine_app.name)
+
+        url = reverse(
+            "plat_mgt.applications.update_cluster",
+            kwargs={"app_code": bk_app.code, "module_name": bk_app.get_default_module().name, "env_name": "prod"},
+        )
+        data = {"name": "new-cluster"}
+        rsp = plat_mgt_api_client.post(url, data=data)
+        assert rsp.status_code == 204
+
+        # 验证集群是否更新成功
+        env.refresh_from_db()
+        assert env.wl_app.latest_config.cluster == "new-cluster"
+
+    def test_list_clusters(self, plat_mgt_api_client):
+        """测试获取应用集群列表"""
+
+        Cluster.objects.create(
+            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+        Cluster.objects.create(
+            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+        )
+
+        url = reverse("plat_mgt.applications.list_clusters")
+        rsp = plat_mgt_api_client.get(url)
+        assert rsp.status_code == 200
+        assert len(rsp.data) > 0

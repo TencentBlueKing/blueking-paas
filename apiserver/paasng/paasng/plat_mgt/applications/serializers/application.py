@@ -15,16 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from typing import Optional
+
 from rest_framework import serializers
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
+# 应用列表序列化器
 
-class ApplicationListSLZ(serializers.Serializer):
+
+class ApplicationListOutputSLZ(serializers.Serializer):
     """应用序列化器"""
 
     logo = serializers.CharField(read_only=True, help_text="应用 logo")
@@ -52,7 +58,7 @@ class ApplicationListSLZ(serializers.Serializer):
         return app_resource_quotas.get(instance.code, default_quotas)
 
 
-class ApplicationListFilterSLZ(serializers.Serializer):
+class ApplicationListFilterInputSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 
     valid_order_by_fields = ("is_active", "created")
@@ -86,22 +92,108 @@ class ApplicationListFilterSLZ(serializers.Serializer):
         return fields
 
 
-class TenantAppStatisticsSLZ(serializers.Serializer):
+class TenantAppStatisticsOutputSLZ(serializers.Serializer):
     """租户应用统计序列化器"""
 
     tenant_id = serializers.CharField(help_text="租户 ID")
     app_count = serializers.IntegerField(help_text="应用数量")
 
 
-class TenantModeSLZ(serializers.Serializer):
+class TenantModeListOutputSLZ(serializers.Serializer):
     """租户模式序列化器"""
 
     type = serializers.CharField(help_text="租户模式")
     label = serializers.CharField(help_text="租户模式标签")
 
 
-class ApplicationTypeSLZ(serializers.Serializer):
+class ApplicationTypeOutputSLZ(serializers.Serializer):
     """应用类型序列化器"""
 
     type = serializers.CharField(help_text="应用类型")
     label = serializers.CharField(help_text="应用类型标签")
+
+
+# 应用详情序列化器
+
+
+class ApplicationBasicInfoSLZ(serializers.Serializer):
+    """应用基本信息序列化器"""
+
+    code = serializers.CharField(read_only=True, help_text="应用 ID")
+    name = serializers.CharField(read_only=True, help_text="应用名称")
+    app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
+    owner = serializers.CharField(read_only=True, help_text="应用所有者")
+    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
+    creator = UserNameField(read_only=True, help_text="创建人")
+    created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
+
+    def get_type(self, instance: Application) -> str:
+        return ApplicationType.get_choice_label(instance.type)
+
+
+class ApplicationEnvironmentOperationSLZ(serializers.Serializer):
+    """应用环境操作序列化器"""
+
+    operator = UserNameField(read_only=True, help_text="操作人")
+    updated = serializers.DateTimeField(read_only=True, help_text="操作时间")
+    operation_type = serializers.CharField(read_only=True, help_text="操作类型")
+    status = serializers.CharField(read_only=True, help_text="操作状态")
+
+
+class ApplicationEnvironmentSLZ(serializers.Serializer):
+    """应用环境序列化器"""
+
+    name = serializers.CharField(source="environment", read_only=True, help_text="环境名称")
+    is_offlined = serializers.BooleanField(read_only=True, help_text="环境状态")
+
+    deploy_cluster = serializers.SerializerMethodField(help_text="部署集群")
+    recent_operation = serializers.SerializerMethodField(help_text="最近操作")
+
+    def get_deploy_cluster(self, env) -> str:
+        """获取集群名称"""
+        try:
+            cluster = EnvClusterService(env).get_cluster()
+        except Exception:
+            return ""
+        else:
+            return cluster.name
+
+    def get_recent_operation(self, env) -> Optional[dict]:
+        """获取最近操作"""
+        last_op = ModuleEnvironmentOperations.objects.filter(app_environment=env).order_by("-created").first()
+        if not last_op:
+            return None
+        return {
+            "operator": last_op.operator,
+            "updated": last_op.created,
+            "operation_type": last_op.operation_type,
+            "status": last_op.status,
+        }
+
+
+class ApplicationModuleSLZ(serializers.Serializer):
+    """应用模块序列化器"""
+
+    name = serializers.CharField(read_only=True, help_text="模块名称")
+    is_default = serializers.BooleanField(read_only=True, help_text="是否默认模块")
+    environment = ApplicationEnvironmentSLZ(source="envs.all", many=True, read_only=True, help_text="环境信息")
+
+
+class ApplicationDetailOutputSLZ(serializers.Serializer):
+    """应用详情序列化器"""
+
+    basic_info = ApplicationBasicInfoSLZ(read_only=True, help_text="应用基本信息")
+    modules_info = serializers.ListSerializer(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
+
+
+class ApplicationNameUpdateInputSLZ(serializers.Serializer):
+    """更新应用名称序列化器"""
+
+    name = serializers.CharField(required=True, help_text="应用名称")
+
+
+class ApplicationClusterSLZ(serializers.Serializer):
+    """更新应用集群序列化器"""
+
+    name = serializers.CharField(required=True, help_text="集群名称")

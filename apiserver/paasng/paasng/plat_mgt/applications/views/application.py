@@ -17,12 +17,15 @@
 
 from collections import Counter
 
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -45,7 +48,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationListSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ApplicationListOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """获取应用列表"""
@@ -55,7 +58,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         page = self.paginate_queryset(filter_queryset)
         app_resource_quotas = self.get_app_resource_quotas()
 
-        slz = slzs.ApplicationListSLZ(
+        slz = slzs.ApplicationListOutputSLZ(
             page,
             many=True,
             context={"request": request, "app_resource_quotas": app_resource_quotas},
@@ -78,7 +81,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取各租户的应用数量",
-        responses={status.HTTP_200_OK: slzs.TenantAppStatisticsSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.TenantAppStatisticsOutputSLZ(many=True)},
     )
     def list_tenant_app_statistics(self, request):
         """获取各租户的应用数量"""
@@ -101,27 +104,102 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         tenant_id_counts = Counter(tenant_ids)
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
-        slz = slzs.TenantAppStatisticsSLZ(tenant_id_list, many=True)
+        slz = slzs.TenantAppStatisticsOutputSLZ(tenant_id_list, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用租户模式类型列表",
-        responses={status.HTTP_200_OK: slzs.TenantModeSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.TenantModeListOutputSLZ(many=True)},
     )
     def list_tenant_modes(self, request, *args, **kwargs):
         """获取应用租户模式类型列表"""
         tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
-        slz = slzs.TenantModeSLZ(tenant_modes, many=True)
+        slz = slzs.TenantModeListOutputSLZ(tenant_modes, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="获取应用类型列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationTypeSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ApplicationTypeOutputSLZ(many=True)},
     )
     def list_app_types(self, request):
         """获取应用类型列表"""
         app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
-        slz = slzs.ApplicationTypeSLZ(app_types, many=True)
+        slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
+        return Response(slz.data, status=status.HTTP_200_OK)
+
+
+class ApplicationDetailViewSet(viewsets.GenericViewSet):
+    """平台管理 - 应用详情 API"""
+
+    queryset = Application.objects.all()
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取应用详情",
+        responses={status.HTTP_200_OK: slzs.ApplicationDetailOutputSLZ()},
+    )
+    def retrieve(self, request, *args, **kwargs):
+        """获取应用详情"""
+        app_code = kwargs["app_code"]
+        application = get_object_or_404(self.get_queryset(), code=app_code)
+
+        slz = slzs.ApplicationDetailOutputSLZ(
+            {
+                "basic_info": application,
+                "modules_info": application.modules.all(),
+            }
+        )
+        return Response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="更新应用名称",
+        request_body=slzs.ApplicationNameUpdateInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def update_app_name(self, request, *args, **kwargs):
+        """更新应用名称"""
+        app_code = kwargs["app_code"]
+        application = get_object_or_404(self.get_queryset(), code=app_code)
+        slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        application.name = slz.validated_data["name"]
+        application.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="更新应用集群",
+        request_body=slzs.ApplicationClusterSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def update_cluster(self, request, *args, **kwargs):
+        """更新应用集群"""
+        app_code, module_name, env_name = kwargs["app_code"], kwargs["module_name"], kwargs["env_name"]
+        slz = slzs.ApplicationClusterSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        application = get_object_or_404(self.get_queryset(), code=app_code)
+        module = application.get_module(module_name)
+        env = get_object_or_404(module.envs, environment=env_name)
+
+        cluster_name = slz.validated_data["name"]
+        cluster = get_object_or_404(Cluster, name=cluster_name)
+
+        EnvClusterService(env).bind_cluster(cluster.name)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取应用集群列表",
+        responses={status.HTTP_200_OK: slzs.ApplicationClusterSLZ(many=True)},
+    )
+    def list_clusters(self, request, *args, **kwargs):
+        """获取应用集群列表"""
+        clusters = Cluster.objects.all()
+        slz = slzs.ApplicationClusterSLZ(clusters, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)

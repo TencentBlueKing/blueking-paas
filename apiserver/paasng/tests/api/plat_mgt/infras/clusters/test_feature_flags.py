@@ -27,4 +27,4 @@ class TestClusterFeatureFlagViewSet:
         resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_feature_flag.list"))
         assert resp.status_code == status.HTTP_200_OK
 
-        assert len(resp.json()) == 6
+        assert len(resp.json()) == 7

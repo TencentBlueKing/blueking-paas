@@ -57,12 +57,12 @@ def save_addresses(env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTT
 
     if protocol == AppDomainProtocol.GRPCS:
         domains = [AutoGenDomain(host=d.host, https_enabled=True) for d in AppDefaultDomains(env).domains]
-        apps = save_subdomains(env.wl_app, domains)
+        apps = save_subdomains(env.wl_app, domains, protocol)
     else:
         apps = set()
         domains = [AutoGenDomain(host=d.host, https_enabled=d.https_enabled) for d in AppDefaultDomains(env).domains]
         subpaths = [d.subpath for d in AppDefaultSubpaths(env).subpaths]
-        apps.update(save_subdomains(env.wl_app, domains))
+        apps.update(save_subdomains(env.wl_app, domains, protocol))
         apps.update(save_subpaths(env.wl_app, subpaths))
     return apps
 

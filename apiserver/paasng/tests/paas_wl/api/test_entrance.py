@@ -17,6 +17,7 @@
 
 import pytest
 
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol
 from paas_wl.workloads.networking.ingress.models import AppDomain, Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
@@ -164,3 +165,12 @@ class TestAppEntranceViewSet:
                 },
             }
         ]
+
+        # test grpc app domain
+        AppDomain.objects.filter(app=bk_stag_wl_app, host=f"stag-dot-{bk_app.code}.example.com", source=2).update(
+            protocol=AppDomainProtocol.GRPCS
+        )
+        resp = api_client.get(url)
+        assert (
+            resp.json()[0]["envs"]["stag"][0]["address"]["url"] == f"grpcs://stag-dot-{bk_app.code}.example.com:8080/"
+        )

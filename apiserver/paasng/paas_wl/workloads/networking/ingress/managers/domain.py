@@ -42,6 +42,7 @@ def assign_custom_hosts(app: WlApp, domains: List[AutoGenDomain], default_servic
         as default.
     :raise ValidCertNotFound: raise if any domain requires https, but the cert cannot be found
     """
+    # 自定义域名不支持 bk/grpc, 仅支持 bk/http
     affected_apps = save_subdomains(app, domains)
     for a_app in affected_apps:
         logger.info("Syncing app %s's default ingress...", a_app.name)
@@ -49,7 +50,7 @@ def assign_custom_hosts(app: WlApp, domains: List[AutoGenDomain], default_servic
 
 
 def save_subdomains(
-    app: WlApp, domains: List[AutoGenDomain], protocol: AppDomainProtocol = AppDomainProtocol.HTTP_OR_HTTPS
+    app: WlApp, domains: List[AutoGenDomain], protocol: str = AppDomainProtocol.HTTP_OR_HTTPS
 ) -> Set[WlApp]:
     """Save subdomains to database, return apps affected by this save operation.
 

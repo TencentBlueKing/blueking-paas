@@ -273,121 +273,106 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         assert expected_detail_str in resp.data.get("detail", "")
 
     @pytest.mark.parametrize(
-        ("request_data", "exposed_type"),
+        ("request_services", "exposed_type"),
         [
+            # 单个进程内的 bk/http 重复
             (
                 [
-                    {
-                        "name": "web",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                            {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/http"}},
-                        ],
-                    },
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/http"}},
+                    ]
                 ],
                 "bk/http",
             ),
+            # 多个进程间的 bk/http 重复
             (
                 [
-                    {
-                        "name": "web",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                        ],
-                    },
-                    {
-                        "name": "celery",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                        ],
-                    },
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                    ],
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                    ],
                 ],
                 "bk/http",
             ),
+            # 多个进程间的 bk/grpc 重复
             (
                 [
-                    {
-                        "name": "web",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
-                        ],
-                    },
-                    {
-                        "name": "celery",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
-                        ],
-                    },
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                    ],
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                    ],
                 ],
                 "bk/grpc",
             ),
         ],
     )
-    def test_validate_duplicated_exposed_type(self, api_client, bk_cnative_app, bk_module, request_data, exposed_type):
+    def test_validate_duplicated_exposed_type(
+        self, api_client, bk_cnative_app, bk_module, request_services, exposed_type
+    ):
+        """测试 proc services 中含有重复 exposed type 的场景"""
+        request_proc_specs = []
+        for services in request_services:
+            request_proc_specs.append(
+                {
+                    "name": "foo",
+                    "image": "python:latest",
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "services": services,
+                }
+            )
+
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
-        resp = api_client.post(url, data={"proc_specs": request_data})
+        resp = api_client.post(url, data={"proc_specs": request_proc_specs})
         assert resp.status_code == 400
         assert f"exposed_type {exposed_type} is duplicated in an app module" in resp.data.get("detail", "")
 
     @pytest.mark.parametrize(
-        "request_data",
+        "request_services",
         [
+            # 单个进程内配置了不同的 exposed type
             (
                 [
-                    {
-                        "name": "web",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                            {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/grpc"}},
-                        ],
-                    }
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                        {"name": "backend", "target_port": 5001, "exposed_type": {"name": "bk/grpc"}},
+                    ],
                 ]
             ),
+            # 不同的进程配置了不同的 exposed type
             (
                 [
-                    {
-                        "name": "web",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
-                        ],
-                    },
-                    {
-                        "name": "celery",
-                        "image": "python:latest",
-                        "command": ["python", "-m"],
-                        "args": ["http.server"],
-                        "services": [
-                            {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
-                        ],
-                    },
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/http"}},
+                    ],
+                    [
+                        {"name": "web", "target_port": 5000, "exposed_type": {"name": "bk/grpc"}},
+                    ],
                 ]
             ),
         ],
     )
-    def test_validate_multiple_exposed_type(self, api_client, bk_cnative_app, bk_module, web, request_data):
+    def test_validate_multiple_exposed_type(self, api_client, bk_cnative_app, bk_module, web, request_services):
+        """测试 proc services 中含有多个 exposed type 的场景"""
+        request_proc_specs = []
+        for services in request_services:
+            request_proc_specs.append(
+                {
+                    "name": "foo",
+                    "image": "python:latest",
+                    "command": ["python", "-m"],
+                    "args": ["http.server"],
+                    "services": services,
+                }
+            )
+
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
-        resp = api_client.post(url, data={"proc_specs": request_data})
+        resp = api_client.post(url, data={"proc_specs": request_proc_specs})
         assert resp.status_code == 400
         assert "setting multiple exposed_types in an app module is not supported" in resp.data.get("detail", "")
 

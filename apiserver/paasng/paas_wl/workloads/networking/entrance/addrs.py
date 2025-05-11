@@ -39,7 +39,7 @@ class URL:
 
     def as_address(self):
         if self.protocol == AppDomainProtocol.GRPCS:
-            return f"{self.protocol}://{self.hostname}:{self.port}"
+            return f"{self.protocol}://{self.hostname}:{self.port}{self.path}"
 
         query = f"?{self.query}" if self.query else ""
         if default_port_map.get_port_num(self.protocol) == self.port:

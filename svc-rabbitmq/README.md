@@ -39,11 +39,11 @@
 export PAAS_SERVICE_JWT_CLIENTS_KEY="xxx"
 
 # 数据库配置
-export DATABASE_NAME="svc_rabbitmq"
-export DATABASE_USER="root"
-export DATABASE_PASSWORD=""
-export DATABASE_HOST=""
-export DATABASE_PORT="3306"
+export MYSQL_NAME="svc_rabbitmq"
+export MYSQL_USER="root"
+export MYSQL_PASSWORD=""
+export MYSQL_HOST=""
+export MYSQL_PORT="3306"
 
 # 数据库加密密钥，设置后不能变更，否则已加密的 DB 数据将无法解密
 # tr -dc A-Za-z0-9 </dev/urandom | head -c 32 | base64

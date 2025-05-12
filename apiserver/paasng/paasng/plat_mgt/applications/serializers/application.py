@@ -17,20 +17,14 @@
 
 from typing import Optional
 
-from django.utils.translation import get_language
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.serializers.fields import AppNameField
-from paasng.platform.applications.signals import prepare_change_application_name
+from paasng.platform.applications.serializers import UpdateApplicationSLZ
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
-from paasng.utils.i18n.serializers import I18NExtend, i18n
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
@@ -191,40 +185,11 @@ class ApplicationDetailOutputSLZ(serializers.Serializer):
     """应用详情序列化器"""
 
     basic_info = ApplicationBasicInfoSLZ(read_only=True, help_text="应用基本信息")
-    modules_info = serializers.ListSerializer(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
+    modules_info = serializers.ListField(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 
-@i18n
-class ApplicationNameUpdateInputSLZ(serializers.Serializer):
+class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
     """更新应用名称序列化器"""
-
-    name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
-
-    def _validate_duplicated_field(self, data):
-        update_fields = {}
-        if get_language() == "zh-cn":
-            update_fields["name"] = data["name_zh_cn"]
-        elif get_language() == "en":
-            update_fields["name_en"] = data["name_en"]
-
-        try:
-            prepare_change_application_name.send(sender=self.__class__, code=self.instance.code, **update_fields)
-        except IntegrityError as e:
-            detail = {e.field: [_("{}已经被占用").format(e.get_field_display())]}
-            raise ValidationError(detail=detail)
-        return data
-
-    def validate(self, data):
-        return self._validate_duplicated_field(data)
-
-    def update(self, instance, validated_data):
-        # 仅修改对应语言的应用名称
-        if get_language() == "zh-cn":
-            instance.name = validated_data["name_zh_cn"]
-        elif get_language() == "en":
-            instance.name_en = validated_data["name_en"]
-        instance.save()
-        return instance
 
 
 class ApplicationClusterSLZ(serializers.Serializer):

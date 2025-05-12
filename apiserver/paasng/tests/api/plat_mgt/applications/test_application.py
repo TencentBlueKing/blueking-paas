@@ -23,9 +23,12 @@ from django.urls import reverse
 from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.constants import ClusterType
 from paas_wl.infras.cluster.models import Cluster
+from paasng.accessories.publish.market.constant import AppType
+from paasng.accessories.publish.market.models import Product
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
+from tests.utils.helpers import override_settings
 
 pytestmark = pytest.mark.django_db
 
@@ -180,53 +183,63 @@ class TestApplicationDetailView:
     """测试平台管理 - 应用详情 API"""
 
     @pytest.fixture
-    def prepare_clusters(self):
-        """准备测试集群"""
-        Cluster.objects.create(
+    def clusters(self):
+        """准备测试集群，并在测试完成后清理创建的集群"""
+        cluster1 = Cluster.objects.create(
             name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
         )
-        Cluster.objects.create(
+        cluster2 = Cluster.objects.create(
             name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
         )
 
-    def test_get_application_detail(self, bk_app, plat_mgt_api_client):
+        yield cluster1, cluster2
+        # 清理测试集群
+        cluster1.delete()
+        cluster2.delete()
+
+    @pytest.fixture()
+    def app_with_market_product(self, bk_app):
+        Product.objects.create(
+            code=bk_app.code,
+            name_zh_cn=bk_app.name,
+            name_en=bk_app.name_en,
+            type=AppType.PAAS_APP.value,
+        )
+        return bk_app
+
+    def test_get_app_detail(self, app_with_market_product, plat_mgt_api_client):
         """测试获取应用详情"""
 
-        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": bk_app.code})
+        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": app_with_market_product.code})
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
         assert "basic_info" in rsp.data
         assert "modules_info" in rsp.data
 
-    def test_update_application_name(self, bk_app, plat_mgt_api_client):
+    def test_update_app_name_and_sync_product(self, app_with_market_product, plat_mgt_api_client):
         """测试更新应用名称"""
 
-        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": bk_app.code})
+        url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": app_with_market_product.code})
 
         # 测试中文环境下修改
-        data_zh = {"name": "新中文名"}
-        rsp = plat_mgt_api_client.post(
-            url,
-            data=data_zh,
-            HTTP_ACCEPT_LANGUAGE="zh-cn",
-        )
-        assert rsp.status_code == 204
-        bk_app.refresh_from_db()
-        assert bk_app.name == "新中文名"
+        with override_settings(LANGUAGE_CODE="zh-hans"):
+            rsp = plat_mgt_api_client.post(url, data={"name": "新中文名"})
+            assert rsp.status_code == 204
+            app_with_market_product.refresh_from_db()
+            assert app_with_market_product.name == "新中文名"
+            product = Product.objects.filter(code=app_with_market_product.code).first()
+            assert product.name_zh_cn == app_with_market_product.name
 
         # 测试英文环境下修改
-        data_en = {"name": "new_name"}
-        rsp = plat_mgt_api_client.post(
-            url,
-            data=data_en,
-            HTTP_ACCEPT_LANGUAGE="en",
-        )
-        assert rsp.status_code == 204
-        bk_app.refresh_from_db()
+        with override_settings(LANGUAGE_CODE="en"):
+            rsp = plat_mgt_api_client.post(url, data={"name": "new_name"})
+            assert rsp.status_code == 204
+            app_with_market_product.refresh_from_db()
+            assert app_with_market_product.name_en == "new_name"
+            product = Product.objects.get(code=app_with_market_product.code)
+            assert product.name_en == app_with_market_product.name_en
 
-        assert bk_app.name_en == "new_name"
-
-    def test_update_cluster(self, bk_app, plat_mgt_api_client, prepare_clusters):
+    def test_update_cluster(self, bk_app, plat_mgt_api_client, clusters):
         """测试更新应用集群"""
 
         env = bk_app.get_default_module().envs.get(environment="prod")
@@ -242,9 +255,10 @@ class TestApplicationDetailView:
 
         # 验证集群是否更新成功
         env.refresh_from_db()
+        assert env.wl_app.latest_config is not None, "latest_config is None"
         assert env.wl_app.latest_config.cluster == "new-cluster"
 
-    def test_list_clusters(self, plat_mgt_api_client, prepare_clusters):
+    def test_list_clusters(self, plat_mgt_api_client, clusters):
         """测试获取应用集群列表"""
 
         url = reverse("plat_mgt.applications.list_clusters")

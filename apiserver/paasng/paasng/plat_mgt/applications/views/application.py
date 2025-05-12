@@ -27,6 +27,7 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.accessories.publish.market.models import Product
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -174,6 +175,8 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
         application = slz.save()
+
+        Product.objects.filter(code=app_code).update(name_zh_cn=application.name, name_en=application.name_en)
 
         # 修改应用在蓝鲸监控命名空间的名称
         # 蓝鲸监控查询、更新一个不存在的应用返回的 code 都是 500，没有具体的错误码来标识是不是应用不存在，故直接调用更新API，忽略错误信息

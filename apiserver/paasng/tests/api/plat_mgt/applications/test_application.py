@@ -25,6 +25,7 @@ from paas_wl.infras.cluster.constants import ClusterType
 from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.market.constant import AppType
 from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.sync_market.handlers import register_app_core_data
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
@@ -205,6 +206,7 @@ class TestApplicationDetailView:
             name_en=bk_app.name_en,
             type=AppType.PAAS_APP.value,
         )
+        register_app_core_data(sender=None, application=bk_app)
         return bk_app
 
     def test_get_app_detail(self, app_with_market_product, plat_mgt_api_client):

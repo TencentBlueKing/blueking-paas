@@ -962,9 +962,9 @@ export default {
     showInstanceChart(module) {
       // 获取对应模块chart实例
       const chartRef = this.getEnvChrtRefs();
-      chartRef &&
+      if (chartRef) {
         chartRef.forEach((refItem) => {
-          refItem &&
+          if (refItem) {
             refItem.mergeOptions({
               xAxis: [
                 {
@@ -973,19 +973,19 @@ export default {
               ],
               series: [],
             });
-
-          refItem &&
             refItem.showLoading({
               text: this.$t('正在加载'),
               color: '#30d878',
               textColor: '#fff',
               maskColor: 'rgba(255, 255, 255, 0.8)',
             });
-          // 避免首次加载出现宽度丢失问题
-          setTimeout(() => {
-            refItem && refItem.resize();
-          }, 50);
+            // 避免首次加载出现宽度丢失问题
+            setTimeout(() => {
+              refItem.resize();
+            }, 50);
+          }
         });
+      }
       // 获取已部署环境的图表数据
       if (this.overViewData[module]) {
         this.envData.forEach((item) => {
@@ -1026,7 +1026,7 @@ export default {
         this.renderEnvChart(env);
       } catch (e) {
         const chartRef = this.getEnvChrtRefs();
-        chartRef &&
+        if (chartRef) {
           chartRef.forEach((refItem) => {
             refItem && refItem.hideLoading();
             if (e.detail && e.detail !== this.$t('未找到。')) {
@@ -1036,6 +1036,7 @@ export default {
               });
             }
           });
+        }
       }
     },
 
@@ -1110,12 +1111,13 @@ export default {
       setTimeout(() => {
         // 获取对应模块下对应环境的图表实例
         const chartRef = this.getEnvChrtRefs(env);
-        chartRef &&
+        if (chartRef) {
           chartRef.forEach((chartItem) => {
             chartItem && chartItem.mergeOptions(this.envChartOption[env], true);
             chartItem && chartItem.resize();
             chartItem && chartItem.hideLoading();
           });
+        }
       }, 1000);
     },
 

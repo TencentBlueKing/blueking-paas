@@ -44,26 +44,24 @@ class Command(BaseCommand):
         with open(path, "r") as f:
             plan_cfgs = json.load(f)
 
-        for plan_cfg in plan_cfgs:
+        for cfg in plan_cfgs:
             try:
-                plan = Plan.objects.get(pk=plan_cfg["pk"])
+                plan = Plan.objects.get(pk=cfg["pk"])
             except ObjectDoesNotExist:
                 # 该命令只做更新操作
                 # 因此如果没有找到对应的 Plan 对象，则跳过
-                logger.warning("plan not found, pk: %s", plan_cfg["pk"])
+                logger.warning("skip updating plan config, plan not found, pk: %s", cfg["pk"])
                 continue
 
-            original_config = plan.config
-            config = update_dict_without_overwrite(
-                json.loads(original_config), json.loads(plan_cfg["fields"]["config"])
-            )
+            original_cfg = plan.config
+            updated_cfg = update_dict_without_overwrite(json.loads(original_cfg), json.loads(cfg["fields"]["config"]))
 
             if not dry_run:
-                plan.config = json.dumps(config)
+                plan.config = json.dumps(updated_cfg)
                 plan.save(update_fields=["config", "updated"])
 
             self.stdout.write(
-                self.style.NOTICE(f"plan config change: \n before:{original_config} \n after:{config} \n")
+                self.style.NOTICE(f"plan config change: \n before:{original_cfg} \n after:{updated_cfg} \n")
             )
 
 

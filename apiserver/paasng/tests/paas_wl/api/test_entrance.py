@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.conf import settings
 
 from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol
 from paas_wl.workloads.networking.ingress.models import AppDomain, Domain
@@ -172,5 +173,6 @@ class TestAppEntranceViewSet:
         )
         resp = api_client.get(url)
         assert (
-            resp.json()[0]["envs"]["stag"][0]["address"]["url"] == f"grpcs://stag-dot-{bk_app.code}.example.com:8080/"
+            resp.json()[0]["envs"]["stag"][0]["address"]["url"]
+            == f"grpcs://stag-dot-{bk_app.code}.example.com:{settings.GRPCS_PORT}/"
         )

@@ -296,7 +296,7 @@ class ProcessManager:
         self,
         process_type: str,
         instance_name: str,
-        container_name=None,
+        container_name: str | None = None,
         tail_lines: Optional[int] = None,
     ):
         """获取进程实例上一次运行时日志
@@ -322,9 +322,11 @@ class ProcessManager:
                 tail_lines=tail_lines,
             )
         except ApiException as e:
-            # k8s 没有找到上一个终止的容器
+            # k8s apiserver 返回错误 未找到上一个中断退出的容器
             if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
-                raise PreviousInstanceNotFound
+                raise PreviousInstanceNotFound("Terminated container not found")
+            elif e.status == 404:
+                raise PreviousInstanceNotFound("Instance not found")
             else:
                 raise
 

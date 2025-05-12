@@ -143,7 +143,7 @@ class SADBManager:
         try:
             dbstr = make_sa_conn_string(db_config, driver_type="pymysql")
             pool_options = db_config.get("POOL_OPTIONS") or DEFAULT_POOL_OPTIONS
-            return create_engine(dbstr, echo=echo, **pool_options)
+            return create_engine(dbstr, connect_args=db_config.get("OPTIONS", {}), echo=echo, **pool_options)
         except Exception as e:
             raise RuntimeError(
                 "engine<{db_name}> is not successfully initialized".format(db_name=db_config["NAME"])

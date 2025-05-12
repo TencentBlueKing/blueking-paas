@@ -30,12 +30,6 @@ urlpatterns = [
         views.ClusterViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster.retrieve_update_destroy",
     ),
-    # 集群默认特性标记
-    path(
-        "api/plat_mgt/infras/clusters/<str:cluster_name>/default_feature_flags/",
-        views.ClusterViewSet.as_view({"get": "retrieve_default_feature_flags"}),
-        name="plat_mgt.infras.cluster.default_feature_flags",
-    ),
     # 集群状态
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/status/",
@@ -86,6 +80,12 @@ urlpatterns = [
         "api/plat_mgt/infras/cluster_allocation_policies/<str:policy_id>/",
         views.ClusterAllocationPolicyViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="plat_mgt.infras.cluster_allocation_policy.update_destroy",
+    ),
+    # 集群默认配置
+    path(
+        "api/plat_mgt/infras/cluster_default_configs/",
+        views.ClusterDefaultConfigViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.cluster_default_config.list",
     ),
     # 可选集群特性
     path(

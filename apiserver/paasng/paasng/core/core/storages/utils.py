@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """sqlalchemy db manager"""
+
 import logging
 import urllib.parse
 from contextlib import contextmanager
@@ -53,17 +54,13 @@ class DummyObject(LazyObject):
 
 class DBManagerProtocol(Protocol):
     @property
-    def engine(self) -> Engine:
-        ...
+    def engine(self) -> Engine: ...
 
-    def get_model(self, table_name: str):
-        ...
+    def get_model(self, table_name: str): ...
 
-    def get_scoped_session(self):
-        ...
+    def get_scoped_session(self): ...
 
-    def session_scope(self):
-        ...
+    def session_scope(self): ...
 
 
 class DummyDB:
@@ -146,7 +143,7 @@ class SADBManager:
         try:
             dbstr = make_sa_conn_string(db_config, driver_type="pymysql")
             pool_options = db_config.get("POOL_OPTIONS") or DEFAULT_POOL_OPTIONS
-            return create_engine(dbstr, echo=echo, **pool_options)
+            return create_engine(dbstr, connect_args=db_config["OPTIONS"], echo=echo, **pool_options)
         except Exception as e:
             raise RuntimeError(
                 "engine<{db_name}> is not successfully initialized".format(db_name=db_config["NAME"])

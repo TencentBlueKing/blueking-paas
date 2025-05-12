@@ -26,6 +26,12 @@ from .feature import (
     ApplicationFeatureFlagSLZ,
     UpdateApplicationFeatureFlagSLZ,
 )
+from .member import (
+    ApplicationMembershipCreateInputSLZ,
+    ApplicationMembershipListOutputSLZ,
+    ApplicationMembershipUpdateInputSLZ,
+    PermissionModelListOutputSLZ,
+)
 
 __all__ = [
     # application
@@ -37,4 +43,9 @@ __all__ = [
     # feature
     "ApplicationFeatureFlagSLZ",
     "UpdateApplicationFeatureFlagSLZ",
+    # member
+    "ApplicationMembershipCreateInputSLZ",
+    "ApplicationMembershipListOutputSLZ",
+    "ApplicationMembershipUpdateInputSLZ",
+    "PermissionModelListOutputSLZ",
 ]

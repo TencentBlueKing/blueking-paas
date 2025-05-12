@@ -18,10 +18,13 @@
 
 from .application import ApplicationListViewSet
 from .feature import ApplicationFeatureViewSet
+from .member import ApplicationMemberViewSet
 
 __all__ = [
     # application
     "ApplicationListViewSet",
     # feature
     "ApplicationFeatureViewSet",
+    # member
+    "ApplicationMemberViewSet",
 ]

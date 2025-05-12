@@ -18,10 +18,14 @@ to the current version of the project delivered to anyone in the future.
 """
 
 import json
+import logging
+from typing import Any, Dict
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from paas_service.models import Plan
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -29,49 +33,46 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--path", dest="path", help="plan fixture file path")
-
         parser.add_argument(
-            "--no-dry-run",
+            "--dry-run",
             dest="dry_run",
-            default=True,
-            action="store_false",
+            action="store_true",
             help="试运行模式（只显示变更不实际保存）",
         )
 
     def handle(self, path: str, dry_run: bool, **options):
         with open(path, "r") as f:
-            plan_fixtures = json.load(f)
+            plan_cfgs = json.load(f)
 
-        for p in plan_fixtures:
+        for plan_cfg in plan_cfgs:
             try:
-                plan = Plan.objects.get(pk=p["pk"])
+                plan = Plan.objects.get(pk=plan_cfg["pk"])
             except ObjectDoesNotExist:
                 # 该命令只做更新操作
                 # 因此如果没有找到对应的 Plan 对象，则跳过
+                logger.warning("plan not found, pk: %s", plan_cfg["pk"])
                 continue
 
             original_config = plan.config
-            config = update_config_safely(json.loads(original_config), json.loads(p["fields"]["config"]))
+            config = update_dict_without_overwrite(
+                json.loads(original_config), json.loads(plan_cfg["fields"]["config"])
+            )
 
             if not dry_run:
                 plan.config = json.dumps(config)
-                plan.save(update_fields=["config"])
+                plan.save(update_fields=["config", "updated"])
 
-            self.stdout.write(self.style.NOTICE(f"plan config 变化：\n before:{original_config} \n after:{config} \n"))
+            self.stdout.write(
+                self.style.NOTICE(f"plan config change: \n before:{original_config} \n after:{config} \n")
+            )
 
 
-def update_config_safely(original_config: dict, new_config: dict) -> dict:
+def update_dict_without_overwrite(base: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
     """
-    安全更新配置字典，只添加原配置中不存在的新字段，保留已有字段不变
+    安全合并字典，仅添加基础字典不存在的新键值对
 
-    :param original_config: 原始配置字典，将被更新
-    :param new_config: 包含新字段的配置
-
-    :returns: 更新后的配置字典
+    :params base: 基础字典，已有键值将被保留
+    :params updates: 提供需要合并的新键值对
+    :return: 合并后的字典
     """
-    for key, value in new_config.items():
-        # 仅当原配置中不存在该键时，才添加新字段
-        if key not in original_config:
-            original_config[key] = value
-
-    return original_config
+    return {**updates, **base}

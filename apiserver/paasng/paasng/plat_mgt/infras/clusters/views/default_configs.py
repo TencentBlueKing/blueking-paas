@@ -25,18 +25,18 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID, get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.infras.clusters.serializers import ClusterDefaultsListOutputSLZ
+from paasng.plat_mgt.infras.clusters.serializers import ClusterDefaultConfigListOutputSLZ
 
 
-class ClusterDefaultsViewSet(viewsets.GenericViewSet):
+class ClusterDefaultConfigViewSet(viewsets.GenericViewSet):
     """集群默认配置相关 API"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
-        tags=["plat_mgt.infras.cluster_defaults"],
+        tags=["plat_mgt.infras.cluster_default_configs"],
         operation_description="集群默认配置",
-        responses={status.HTTP_200_OK: ClusterDefaultsListOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: ClusterDefaultConfigListOutputSLZ(many=True)},
     )
     def list(self, request, *args, **kwargs):
         # 默认当前集群不能使用平台默认镜像仓库
@@ -46,4 +46,4 @@ class ClusterDefaultsViewSet(viewsets.GenericViewSet):
             image_repository = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
 
         defaults = {"image_repository": image_repository, "feature_flags": ClusterFeatureFlag.get_default_flags()}
-        return Response(ClusterDefaultsListOutputSLZ(defaults).data)
+        return Response(ClusterDefaultConfigListOutputSLZ(defaults).data)

@@ -18,6 +18,6 @@
 from rest_framework import serializers
 
 
-class ClusterDefaultsListOutputSLZ(serializers.Serializer):
+class ClusterDefaultConfigListOutputSLZ(serializers.Serializer):
     image_repository = serializers.CharField(help_text="镜像仓库")
     feature_flags = serializers.JSONField(help_text="特性标志")

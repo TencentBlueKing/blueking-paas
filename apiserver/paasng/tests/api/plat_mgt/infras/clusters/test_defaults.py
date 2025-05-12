@@ -25,11 +25,11 @@ from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-class TestClusterDefaultsViewSet:
+class TestClusterDefaultConfigViewSet:
     """获取集群默认配置"""
 
     def test_list(self, plat_mgt_api_client, init_default_cluster):
-        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_defaults"))
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.infras.cluster_default_config.list"))
         assert resp.status_code == status.HTTP_200_OK
 
         assert resp.json() == {

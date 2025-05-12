@@ -83,9 +83,9 @@ urlpatterns = [
     ),
     # 集群默认配置
     path(
-        "api/plat_mgt/infras/cluster_defaults/",
-        views.ClusterDefaultsViewSet.as_view({"get": "list"}),
-        name="plat_mgt.infras.cluster_defaults",
+        "api/plat_mgt/infras/cluster_default_configs/",
+        views.ClusterDefaultConfigViewSet.as_view({"get": "list"}),
+        name="plat_mgt.infras.cluster_default_config.list",
     ),
     # 可选集群特性
     path(

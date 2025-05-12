@@ -236,7 +236,7 @@ export const PLATFORM_CONFIG = {
         APIGW_USER_API: BK_APIGW_DOC_URL + '/guide/use-api.html',
 
         // APIGW QUICK_START
-        APIGW_QUICK_START: BK_APIGW_DOC_URL + '/guide/quickstart.html',
+        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 

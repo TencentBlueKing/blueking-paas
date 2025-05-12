@@ -23,36 +23,34 @@
  * @returns { disabled, tips }
  */
 export function formatRenewFun(status, row) {
-  if (!row.expires_in && status === 'owned') {
-    return {
-      disabled: true,
-      tips: '有效期为永久，不可续期',
-    };
-  }
-  const data = {
-    disabled: false,
-    tips: '',
-  };
   switch (status) {
     case 'unlimited':
-      data.disabled = true;
-      data.tips = '权限无限制，无需续期';
-      break;
-    case 'expired':
-      // 允许续期
-      data.disabled = false;
-      break;
+      return {
+        disabled: true,
+        tips: '权限无限制，无需续期',
+      };
     case 'owned':
-      // 允许续期
-      data.disabled = false;
-      break;
+      if (row.expires_in === null) {
+        return {
+          disabled: true,
+          tips: '有效期为永久，无需续期',
+        };
+      }
+      return {
+        disabled: false,
+        tips: '',
+      };
+    case 'expired':
+      return {
+        disabled: false,
+        tips: '',
+      };
     default:
-      // 无权限
-      data.disabled = true;
-      data.tips = '无权限';
-      break;
+      return {
+        disabled: true,
+        tips: '尚未获得资源权限，不支持续期',
+      };
   }
-  return data;
 }
 
 /**

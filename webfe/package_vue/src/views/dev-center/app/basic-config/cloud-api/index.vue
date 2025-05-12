@@ -40,7 +40,7 @@
             theme="primary"
             @click="toLink('gateway')"
           >
-            {{ $t('API 网关接入指引') }}
+            {{ $t('API 调用指引') }}
             <i class="paasng-icon paasng-jump-link"></i>
           </bk-button>
           <bk-tab

@@ -2,34 +2,6 @@
   <div class="paasng-api-panel">
     <div class="search-wrapper flex-row justify-content-between">
       <div class="left-btns flex-row flex-shrink-0">
-        <bk-radio-group
-          v-model="typeValue"
-          @change="handleSelect"
-        >
-          <bk-radio-button
-            v-for="item in typeList"
-            :value="item.id"
-            :key="item.id"
-          >
-            {{ item.name }}
-          </bk-radio-button>
-        </bk-radio-group>
-        <!-- 申请：不支持跨网关/组件申请 -->
-        <span
-          class="flex-shrink-0"
-          v-bk-tooltips="{
-            content: $t('仅支持对同一{t}下的 API 进行批量申请', { t: isComponentApi ? $t('组件') : $t('网关') }),
-            disabled: !isTooltipsDisabled,
-          }"
-        >
-          <bk-button
-            theme="primary"
-            :disabled="isApplyDisabled"
-            @click="handleBatchApply"
-          >
-            {{ $t('批量申请') }}
-          </bk-button>
-        </span>
         <!-- 续期：支持跨网关/组件续期 -->
         <bk-button
           class="flex-shrink-0"
@@ -40,7 +12,23 @@
           {{ $t('批量续期') }}
         </bk-button>
       </div>
-      <section>
+      <section class="right-wrapper flex-row align-items-center">
+        <div class="flex-row align-items-center">
+          <div class="label mr15">{{ $t('类型') }}</div>
+          <bk-select
+            v-model="typeValue"
+            style="width: 180px"
+            :clearable="false"
+            @change="handleSelect"
+          >
+            <bk-option
+              v-for="option in typeList"
+              :key="option.id"
+              :id="option.id"
+              :name="option.name"
+            ></bk-option>
+          </bk-select>
+        </div>
         <div class="input-wrapper">
           <bk-input
             v-model="searchValue"
@@ -403,19 +391,6 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    // 是否允许批量申请、不支持跨网关/组件申请
-    isApplyDisabled() {
-      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return (
-        !this.selectedList.some((item) => item.applyDisabled === false) ||
-        new Set(this.selectedList.map((item) => item[idField])).size > 1
-      );
-    },
-    // 跨网关批量申请禁用，只支持单个网关下接口的批量申请
-    isTooltipsDisabled() {
-      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return new Set(this.selectedList.map((item) => item[idField])).size > 1;
-    },
     // 是否允许批量续期
     isRenewalDisabled() {
       return !this.selectedList.some((item) => item.renewDisabled === false);
@@ -473,21 +448,6 @@ export default {
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
       this.renewalDialog.rows = [...this.selectedList];
-    },
-
-    // 批量申请权限-不允许跨网关/组件申请
-    handleBatchApply() {
-      if (!this.selectedList.length) {
-        return;
-      }
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 跨网关/组件申请已禁用，取第一项即可
-      this.applyDialog.superiorId = this.selectedList[0][id];
-      this.applyDialog.superiorName = this.selectedList[0][name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('批量申请权限');
-      this.applyDialog.rows = [...this.selectedList];
     },
 
     nameFilterMethod(value, row, column) {
@@ -866,18 +826,6 @@ export default {
       this.selectedList = selected;
     },
 
-    // 申请权限弹窗
-    handleApply(item) {
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 获取对应权限的网关、组件数据
-      this.applyDialog.superiorId = item[id];
-      this.applyDialog.superiorName = item[name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('申请权限');
-      this.applyDialog.rows = [item];
-    },
-
     // 申请
     handleSuccessApply() {
       this.applyDialog.visiable = false;
@@ -951,7 +899,8 @@ export default {
 <style lang="scss" scoped>
 .search-wrapper {
   margin-bottom: 16px;
-  .left-btns {
+  .left-btns,
+  .right-wrapper {
     gap: 12px;
   }
   .label {

@@ -3010,5 +3010,6 @@ export default {
   请输入网关名: 'Please enter gateway name',
   请输入系统名称: 'Please enter system name',
   '搜索网关名称/申请人': 'Search gateway name/applicant',
-  '有效期为永久，不可续期': 'Validity period is permanent, cannot be renewed',
+  '有效期为永久，无需续期': 'Validity is permanent, no renewal needed',
+  '尚未获得资源权限，不支持续期': 'Resource permissions not yet obtained, renewal not supported',
 };

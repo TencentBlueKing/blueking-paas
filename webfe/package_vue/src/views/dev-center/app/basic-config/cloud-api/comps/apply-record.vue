@@ -1,32 +1,18 @@
 <template>
   <div class="paasng-api-panel">
     <div class="search-wrapper">
-      <bk-radio-group
-        class="record-type-cls"
-        v-model="typeValue"
-        @change="handleSelect"
-      >
-        <bk-radio-button
-          v-for="item in typeList"
-          :value="item.id"
-          :key="item.id"
-        >
-          {{ item.name }}
-        </bk-radio-button>
-      </bk-radio-group>
-      <div class="right-wrapper flex-row">
+      <div class="left flex-row">
         <section class="search-item">
-          <div class="label">
+          <div class="label mr15">
             {{ $t('申请时间') }}
           </div>
           <div class="date-wrapper">
             <bk-date-picker
               v-model="initDateTimeRange"
               ext-cls="application-time"
-              style="width: 195px"
+              style="width: 200px"
               :placeholder="$t('选择日期范围')"
               :type="'daterange'"
-              placement="bottom-end"
               :shortcuts="shortcuts"
               :shortcut-close="true"
               :options="dateOptions"
@@ -34,8 +20,26 @@
             />
           </div>
         </section>
+        <div class="flex-row align-items-center">
+          <div class="label mr15">{{ $t('类型') }}</div>
+          <bk-select
+            v-model="typeValue"
+            style="width: 200px"
+            :clearable="false"
+            @change="handleSelect"
+          >
+            <bk-option
+              v-for="option in typeList"
+              :key="option.id"
+              :id="option.id"
+              :name="option.name"
+            ></bk-option>
+          </bk-select>
+        </div>
+      </div>
+      <div class="right-wrapper flex-row">
         <bk-search-select
-          style="width: 420px"
+          style="width: 100%"
           v-model="searchSelectValue"
           :data="searchSelectData"
           :placeholder="$t('搜索网关名称/申请人')"
@@ -760,21 +764,24 @@ export default {
 <style lang="scss" scoped>
 .search-wrapper {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 12px;
   justify-content: space-between;
   margin-bottom: 16px;
   .record-type-cls {
     width: auto;
   }
-  .right-wrapper {
+  .left {
+    flex-shrink: 0;
     gap: 12px;
+  }
+  .right-wrapper {
+    flex: 1;
+    max-width: 420px;
   }
   .search-item {
     display: inline-block;
     vertical-align: middle;
-    .label {
-      margin-right: 6px;
-    }
   }
   .label,
   .member-wrapper,

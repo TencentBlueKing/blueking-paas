@@ -5,13 +5,14 @@ VERSION := v163
 
 ##@ Build
 .PHONY: package
-package: package-heroku-buildpack ## package the buildpack
+package: package-heroku-buildpack  ## package the buildpack
 	cp shim/* cnb-buildpack/bin/
 	tar -xvf target/output/bk-buildpack-nodejs-${VERSION}.tar -C cnb-buildpack/target
 	pack buildpack package $(NAME)-$(VERSION).cnb -p cnb-buildpack/ -f file
 
+
 .PHONY: package-heroku-buildpack
-package-heroku-buildpack: init-submodule ## 打包 heroku-buildpack
+package-heroku-buildpack: init-submodule  ## package heroku buildpack
 	cd target && make pack version=v163
 
 

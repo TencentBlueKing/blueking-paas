@@ -1,9 +1,9 @@
 ARG IMAGE=heroku/heroku
-ARG TAG=18.v27
+ARG TAG=24.v149
 
 FROM ${IMAGE}:${TAG}
 
-ARG STACK_ID="heroku-18"
+ARG STACK_ID="heroku-24"
 ARG sources
 ARG packages
 ARG package_args='--allow-downgrades --allow-remove-essential --allow-change-held-packages --no-install-recommends'
@@ -13,7 +13,9 @@ ARG package_args='--allow-downgrades --allow-remove-essential --allow-change-hel
 LABEL io.buildpacks.stack.id=${STACK_ID}
 ENV CNB_USER_ID=2000 CNB_GROUP_ID=2000 CNB_STACK_ID=${STACK_ID} STACK=${STACK_ID}
 
-# Create the user
+# Use root to create cnb user
+USER root
+
 RUN groupadd --gid ${CNB_GROUP_ID} cnb && \
   useradd --uid ${CNB_USER_ID} --gid ${CNB_GROUP_ID} -m -s /bin/bash --home-dir /app cnb && \
   chown cnb:cnb /app /tmp -R

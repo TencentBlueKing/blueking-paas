@@ -123,6 +123,7 @@ def generate_env_vars_for_app(app: "Application", config_vars_prefix: str) -> Di
     app_info_envs = {
         AppInfoBuiltinEnv.APP_ID.value: app.code,
         AppInfoBuiltinEnv.APP_SECRET.value: app_secret,
+        AppInfoBuiltinEnv.APP_TENANT_ID.value: app.app_tenant_id,
         # 兼容之前的数据，不确定是否有应用使用到了 BKPAAS_APP_CODE 这个环境变量，故先保留
         "APP_CODE": app.code,
     }

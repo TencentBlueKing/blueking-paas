@@ -304,7 +304,7 @@
           class="p0 chart-wrapper"
         >
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             v-bk-clickoutside="hideDatePicker"
             class="action-box"
           >
@@ -342,7 +342,7 @@
             </bk-form>
           </div>
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             class="chart-box"
           >
             <strong class="title">
@@ -357,7 +357,7 @@
             />
           </div>
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             class="chart-box"
           >
             <strong class="title">
@@ -1938,7 +1938,7 @@ export default {
       this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
       this.chartSlider.isShow = true;
       this.initSidebarFormData(this.initDateTimeRange);
-      if (this.curAppInfo.feature.RESOURCE_METRICS) {
+      if (this.platformFeature.RESOURCE_METRICS) {
         this.getInstanceChart(process);
       }
     },

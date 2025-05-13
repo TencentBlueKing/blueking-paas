@@ -1,58 +1,33 @@
 <template>
   <div class="paasng-api-panel">
-    <div class="search-wrapper">
-      <!-- 申请：不支持跨网关/组件申请 -->
-      <span
-        v-bk-tooltips="{
-          content: $t('仅支持对同一{t}下的 API 进行批量申请', { t: isComponentApi ? $t('组件') : $t('网关') }),
-          disabled: !isTooltipsDisabled,
-        }"
-      >
+    <div class="search-wrapper flex-row justify-content-between">
+      <div class="left-btns flex-row flex-shrink-0">
+        <!-- 续期：支持跨网关/组件续期 -->
         <bk-button
+          class="flex-shrink-0"
           theme="primary"
-          :disabled="isApplyDisabled"
-          @click="handleBatchApply"
+          :disabled="isRenewalDisabled"
+          @click="handleBatchRenewal"
         >
-          {{ $t('批量申请') }}
+          {{ $t('批量续期') }}
         </bk-button>
-      </span>
-      <!-- 续期：支持跨网关/组件续期 -->
-      <bk-button
-        style="margin-left: 6px"
-        theme="primary"
-        :disabled="isRenewalDisabled"
-        @click="handleBatchRenewal"
-      >
-        {{ $t('批量续期') }}
-      </bk-button>
-      <section class="fr">
-        <div class="label mr15">
-          {{ $t('类型') }}
-        </div>
-        <div class="select-wrapper">
+      </div>
+      <section class="right-wrapper flex-row align-items-center">
+        <div class="flex-row align-items-center">
+          <div class="label mr15">{{ $t('类型') }}</div>
           <bk-select
             v-model="typeValue"
-            searchable
+            style="width: 180px"
             :clearable="false"
-            @selected="handleSelect"
+            @change="handleSelect"
           >
             <bk-option
               v-for="option in typeList"
-              :id="option.id"
               :key="option.id"
+              :id="option.id"
               :name="option.name"
-            />
+            ></bk-option>
           </bk-select>
-        </div>
-        <div class="checkbox-wrapper">
-          <bk-checkbox
-            v-model="isRenewalPerm"
-            :true-value="true"
-            :false-value="false"
-            @change="handleChange"
-          >
-            {{ $t('可续期权限') }}
-          </bk-checkbox>
         </div>
         <div class="input-wrapper">
           <bk-input
@@ -62,14 +37,6 @@
             right-icon="paasng-icon paasng-search"
             @input="handleSearch"
           />
-        </div>
-        <div class="search-button">
-          <bk-button
-            theme="primary"
-            @click="handlePageSearch"
-          >
-            {{ $t('查询') }}
-          </bk-button>
         </div>
       </section>
     </div>
@@ -93,6 +60,7 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :outer-border="false"
           @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -113,11 +81,25 @@
             width="60"
           ></bk-table-column>
           <bk-table-column
-            :label="$t('API类型')"
-            :render-header="$renderHeader"
+            label="API"
+            min-width="120"
           >
             <template slot-scope="props">
-              {{ typeMap[props.row.type] }}
+              <template v-if="props.row.doc_link">
+                <a
+                  target="_blank"
+                  :href="props.row.doc_link"
+                >
+                  <span v-html="highlight(props.row)" />
+                  <i
+                    class="fa fa-book"
+                    aria-hidden="true"
+                  />
+                </a>
+              </template>
+              <template v-else>
+                <span v-html="highlight(props.row)" />
+              </template>
             </template>
           </bk-table-column>
           <template v-if="tableList.length > 0">
@@ -131,10 +113,10 @@
             >
               <template slot-scope="props">
                 <template v-if="isComponentApi">
-                  {{ props.row.system_name }}
+                  {{ props.row.system_name || '--' }}
                 </template>
                 <template v-else>
-                  {{ props.row.api_name }}
+                  {{ props.row.api_name || '--' }}
                 </template>
               </template>
             </bk-table-column>
@@ -164,28 +146,6 @@
               </template>
             </bk-table-column>
           </template>
-          <bk-table-column
-            label="API"
-            min-width="120"
-          >
-            <template slot-scope="props">
-              <template v-if="props.row.doc_link">
-                <a
-                  target="_blank"
-                  :href="props.row.doc_link"
-                >
-                  <span v-html="highlight(props.row)" />
-                  <i
-                    class="fa fa-book"
-                    aria-hidden="true"
-                  />
-                </a>
-              </template>
-              <template v-else>
-                <span v-html="highlight(props.row)" />
-              </template>
-            </template>
-          </bk-table-column>
           <bk-table-column
             :label="$t('描述')"
             min-width="120"
@@ -294,23 +254,6 @@
                 <bk-button
                   style="padding: 0 0 0 10px"
                   theme="primary"
-                  :disabled="row.applyDisabled"
-                  size="small"
-                  text
-                  @click="handleApply(row)"
-                >
-                  <span
-                    v-bk-tooltips="{
-                      content: $t(row.applyTips),
-                      disabled: !row.applyDisabled,
-                    }"
-                  >
-                    {{ $t('申请') }}
-                  </span>
-                </bk-button>
-                <bk-button
-                  style="padding: 0 0 0 10px"
-                  theme="primary"
                   :disabled="row.renewDisabled"
                   size="small"
                   text
@@ -398,12 +341,7 @@ export default {
         rows: [],
         name: '',
       },
-      typeMap: {
-        component: this.$t('组件API'),
-        gateway: this.$t('网关API'),
-      },
       typeValue: 'gateway',
-      isRenewalPerm: false,
       levelMap: {
         normal: this.$t('普通'),
         special: this.$t('特殊'),
@@ -447,27 +385,11 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
-    isPageDisabled() {
-      return this.tableList.every((item) => !item.permission_action) || !this.tableList.length;
-    },
     curDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
     },
     localLanguage() {
       return this.$store.state.localLanguage;
-    },
-    // 是否允许批量申请、不支持跨网关/组件申请
-    isApplyDisabled() {
-      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return (
-        !this.selectedList.some((item) => item.applyDisabled === false) ||
-        new Set(this.selectedList.map((item) => item[idField])).size > 1
-      );
-    },
-    // 跨网关批量申请禁用，只支持单个网关下接口的批量申请
-    isTooltipsDisabled() {
-      const idField = this.isComponentApi ? 'system_id' : 'gateway_id';
-      return new Set(this.selectedList.map((item) => item[idField])).size > 1;
     },
     // 是否允许批量续期
     isRenewalDisabled() {
@@ -526,21 +448,6 @@ export default {
       this.renewalDialog.visiable = true;
       this.renewalDialog.title = this.$t('批量续期权限');
       this.renewalDialog.rows = [...this.selectedList];
-    },
-
-    // 批量申请权限-不允许跨网关/组件申请
-    handleBatchApply() {
-      if (!this.selectedList.length) {
-        return;
-      }
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 跨网关/组件申请已禁用，取第一项即可
-      this.applyDialog.superiorId = this.selectedList[0][id];
-      this.applyDialog.superiorName = this.selectedList[0][name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('批量申请权限');
-      this.applyDialog.rows = [...this.selectedList];
     },
 
     nameFilterMethod(value, row, column) {
@@ -674,17 +581,6 @@ export default {
       );
     },
 
-    handleChange(newVal, oldVal, val) {
-      if (newVal) {
-        this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
-      } else {
-        this.allData = this.apiList;
-      }
-      this.initPageConf();
-      this.tableList = this.getDataByPage();
-      this.updateTableEmptyConfig();
-    },
-
     /**
      * 初始化弹层翻页条
      */
@@ -767,11 +663,7 @@ export default {
       try {
         await this.fetchList();
         this.handleSearch();
-        if (this.isRenewalPerm) {
-          this.allData = this.apiList.filter((item) => item.permission_action === 'renew');
-        } else {
-          this.allData = this.apiList;
-        }
+        this.allData = this.apiList;
         this.initPageConf();
         this.tableList = this.getDataByPage();
         this.handleSearch();
@@ -817,7 +709,7 @@ export default {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
-            const renew = formatRenewFun(v.permission_status);
+            const renew = formatRenewFun(v.permission_status, v);
             return {
               ...v,
               applyDisabled: apply.disabled,
@@ -846,11 +738,7 @@ export default {
             }
           }
         });
-        if (this.isRenewalPerm) {
-          this.allData = res.data.filter((item) => item.permission_action === 'renew');
-        } else {
-          this.allData = res.data;
-        }
+        this.allData = res.data;
         this.initPageConf();
         this.tableList = this.getDataByPage();
         this.indeterminate = false;
@@ -902,7 +790,6 @@ export default {
       this.nameFilterValues = [];
       this.statusFilterValues = [];
       this.searchValue = '';
-      this.isRenewalPerm = false;
       this.allFilterData = {};
       this.$refs.permRef?.clearFilter();
       this.fetchList();
@@ -911,7 +798,7 @@ export default {
     updateTableEmptyConfig() {
       const isTableFilter = this.isFilterCriteria();
 
-      if (this.searchValue || this.isRenewalPerm || isTableFilter) {
+      if (this.searchValue || isTableFilter) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
@@ -937,18 +824,6 @@ export default {
     // 表格change事件
     handleSelectionChange(selected) {
       this.selectedList = selected;
-    },
-
-    // 申请权限弹窗
-    handleApply(item) {
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 获取对应权限的网关、组件数据
-      this.applyDialog.superiorId = item[id];
-      this.applyDialog.superiorName = item[name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('申请权限');
-      this.applyDialog.rows = [item];
     },
 
     // 申请
@@ -1024,29 +899,15 @@ export default {
 <style lang="scss" scoped>
 .search-wrapper {
   margin-bottom: 16px;
-  .label,
-  .select-wrapper,
-  .checkbox-wrapper,
-  .search-button,
-  .input-wrapper {
-    display: inline-block;
-    vertical-align: top;
+  .left-btns,
+  .right-wrapper {
+    gap: 12px;
   }
   .label {
     line-height: 32px;
   }
-  .select-wrapper {
-    width: 200px;
-  }
-  .checkbox-wrapper {
-    margin: 0 15px;
-    line-height: 32px;
-  }
   .input-wrapper {
-    width: 300px;
-  }
-  .search-button {
-    margin-left: 10px;
+    width: 420px;
   }
 }
 

@@ -170,9 +170,13 @@ class TestBuiltInEnvVars:
     def test_builtin_env_keys(self, bk_stag_env):
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
 
-        assert {"BKPAAS_LOGIN_URL", "BKPAAS_APP_CODE", "BKPAAS_APP_ID", "BKPAAS_APP_SECRET"}.issubset(
-            config_vars.keys()
-        )
+        assert {
+            "BKPAAS_LOGIN_URL",
+            "BKPAAS_APP_CODE",
+            "BKPAAS_APP_ID",
+            "BKPAAS_APP_SECRET",
+            "BKPAAS_APP_TENANT_ID",
+        }.issubset(config_vars.keys())
 
         # 运行时相关的环境变量，其中 DEFAULT_PREALLOCATED_URLS 是在 _default_preallocated_urls() 中单独处理的环境变量
         runtime_env_keys = [

@@ -1,104 +1,54 @@
 <template>
   <div class="paasng-api-panel">
     <div class="search-wrapper">
-      <section class="search-item">
-        <div class="label">
-          {{ $t('类型') }}
-        </div>
-        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
+      <div class="left flex-row">
+        <section class="search-item">
+          <div class="label mr15">
+            {{ $t('申请时间') }}
+          </div>
+          <div class="date-wrapper">
+            <bk-date-picker
+              v-model="initDateTimeRange"
+              ext-cls="application-time"
+              style="width: 200px"
+              :placeholder="$t('选择日期范围')"
+              :type="'daterange'"
+              :shortcuts="shortcuts"
+              :shortcut-close="true"
+              :options="dateOptions"
+              @change="handleDateChange"
+            />
+          </div>
+        </section>
+        <div class="flex-row align-items-center">
+          <div class="label mr15">{{ $t('类型') }}</div>
           <bk-select
-            v-bk-tooltips.top="{
-              content: curSelectedType,
-              disabled: localLanguage !== 'en',
-            }"
             v-model="typeValue"
+            style="width: 200px"
             :clearable="false"
-            @selected="handleSelect"
+            @change="handleSelect"
           >
             <bk-option
               v-for="option in typeList"
-              :id="option.id"
               :key="option.id"
+              :id="option.id"
               :name="option.name"
-            />
+            ></bk-option>
           </bk-select>
         </div>
-      </section>
-      <section class="search-item set-ml">
-        <div class="label">
-          {{ $t('申请人') }}
-        </div>
-        <div class="member-wrapper">
-          <user
-            v-model="applicants"
-            :placeholder="$t('请输入用户')"
-            style="width: 180px"
-            :multiple="false"
-            :empty-text="$t('无匹配人员')"
-            @change="handleMemberSelect"
-          />
-        </div>
-      </section>
-      <section class="search-item set-ml">
-        <div class="label">
-          {{ $t('状态') }}
-        </div>
-        <div :class="['select-wrapper', { en: localLanguage === 'en' }]">
-          <bk-select
-            v-bk-tooltips.top="{
-              content: curSelectedStatus,
-              disabled: localLanguage !== 'en',
-            }"
-            v-model="statusValue"
-            clearable
-            @selected="handleStatusSelect"
-            @clear="handleClear"
-          >
-            <bk-option
-              v-for="option in statusList"
-              :id="option.id"
-              :key="option.id"
-              :name="option.name"
-            />
-          </bk-select>
-        </div>
-      </section>
-      <section class="search-item set-ml">
-        <div class="label">
-          {{ $t('申请时间') }}
-        </div>
-        <div class="date-wrapper">
-          <bk-date-picker
-            v-model="initDateTimeRange"
-            ext-cls="application-time"
-            style="width: 195px"
-            :placeholder="$t('选择日期范围')"
-            :type="'daterange'"
-            placement="bottom-end"
-            :shortcuts="shortcuts"
-            :shortcut-close="true"
-            :options="dateOptions"
-            @change="handleDateChange"
-          />
-        </div>
-      </section>
-      <section class="search-item set-ml auto">
-        <bk-input
-          v-model="searchValue"
-          :placeholder="`${$t('输入')}${isComponentApi ? $t('系统名称') : $t('网关名称，按Enter搜索')}`"
-          clearable
-          right-icon="paasng-icon paasng-search"
-          @enter="handleSearch"
+      </div>
+      <div class="right-wrapper flex-row">
+        <bk-search-select
+          style="width: 100%"
+          v-model="searchSelectValue"
+          :data="searchSelectData"
+          :placeholder="$t('搜索网关名称/申请人')"
+          :clearable="true"
+          :show-condition="false"
+          :remote-method="handleRemoteMethod"
+          :remote-empty-text="Object.keys(searchData).length ? $t('无匹配人员') : $t('请输入申请人')"
         />
-      </section>
-      <section class="search-item search-btn">
-        <bk-button
-          theme="primary"
-          @click="handlePageSearch"
-        >
-          {{ $t('查询') }}
-        </bk-button>
-      </section>
+      </div>
     </div>
     <paas-content-loader
       :is-loading="loading"
@@ -109,13 +59,16 @@
       <div>
         <bk-table
           :data="tableList"
+          ref="tableRef"
           size="small"
           :empty-text="$t('暂无数据')"
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :outer-border="false"
           @page-change="pageChange"
           @page-limit-change="limitChange"
+          @filter-change="handleFilterChange"
         >
           <div slot="empty">
             <table-empty
@@ -129,8 +82,12 @@
             :label="$t('申请人')"
             :render-header="$renderHeader"
           >
-            <template slot-scope="props">
-              {{ props.row.applied_by }}
+            <template slot-scope="{ row }">
+              <bk-user-display-name
+                v-if="platformFeature.MULTI_TENANT_MODE"
+                :user-id="row.applied_by"
+              ></bk-user-display-name>
+              <span v-else>{{ row.applied_by }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -170,20 +127,31 @@
           <bk-table-column
             :label="$t('审批人')"
             :render-header="$renderHeader"
+            :show-overflow-tooltip="true"
           >
-            <template slot-scope="props">
-              <template v-if="getHandleBy(props.row.handled_by) === '--'">--</template>
-              <span
-                v-else
-                v-bk-tooltips="getHandleBy(props.row.handled_by)"
-              >
-                {{ getHandleBy(props.row.handled_by) }}
+            <template slot-scope="{ row }">
+              <template v-if="!row.handled_by.length">--</template>
+              <span v-else>
+                <template v-if="platformFeature.MULTI_TENANT_MODE">
+                  <span
+                    v-for="userId in row.handled_by"
+                    :key="userId"
+                  >
+                    <bk-user-display-name :user-id="userId"></bk-user-display-name>
+                    <span>，</span>
+                  </span>
+                </template>
+                <template>{{ getHandleBy(row.handled_by) }}</template>
               </span>
             </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('审批状态')"
             :render-header="$renderHeader"
+            prop="apply_status"
+            column-key="apply_status"
+            :filters="statusFilters"
+            :filter-multiple="false"
           >
             <template slot-scope="props">
               <template v-if="props.row.apply_status === 'approved'">
@@ -438,13 +406,9 @@
 
 <script>
 import moment from 'moment';
-import User from '@/components/user';
+import { mapState, mapGetters } from 'vuex';
 
 export default {
-  name: '',
-  components: {
-    User,
-  },
   props: {
     typeList: {
       type: Array,
@@ -526,6 +490,15 @@ export default {
             return [start, end];
           },
         },
+        {
+          text: this.$t('最近半年'),
+          value() {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 180);
+            return [start, end];
+          },
+        },
       ],
       dateOptions: {
         // 大于今天的都不能选
@@ -533,19 +506,21 @@ export default {
           return date && date.valueOf() > Date.now() - 86400;
         },
       },
-      applicants: [],
       dateRange: {
         startTime: '',
         endTime: '',
       },
-      searchValue: '',
       tableEmptyConf: {
         keyword: '',
         isAbnormal: false,
       },
+      searchSelectValue: [],
+      searchData: {},
     };
   },
   computed: {
+    ...mapState(['localLanguage', 'platformFeature']),
+    ...mapGetters(['tenantId']),
     isComponentApi() {
       return this.typeValue === 'component';
     },
@@ -561,14 +536,32 @@ export default {
     sliderTitle() {
       return this.isComponentApi ? this.$t('申请组件API单据详情') : this.$t('申请网关API单据详情');
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
+    statusFilters() {
+      return this.statusList.map((v) => {
+        return {
+          text: v.name,
+          value: v.id,
+        };
+      });
     },
-    curSelectedType() {
-      return this.typeList.find((v) => v.id === this.typeValue)?.name;
-    },
-    curSelectedStatus() {
-      return this.statusList.find((v) => v.id === this.statusValue)?.name;
+    searchSelectData() {
+      const isTenantMode = this.platformFeature.MULTI_TENANT_MODE || false;
+      return [
+        {
+          name: this.isComponentApi ? this.$t('系统名称') : this.$t('网关名称'),
+          id: 'keyword',
+          placeholder: this.isComponentApi ? this.$t('请输入系统名称') : this.$t('请输入网关名'),
+          children: [],
+        },
+        {
+          name: this.$t('申请人'),
+          id: 'applied_by',
+          placeholder: this.$t('请输入申请人'),
+          remote: isTenantMode,
+          async: isTenantMode,
+          children: [],
+        },
+      ];
     },
   },
   watch: {
@@ -583,14 +576,13 @@ export default {
       this.dateRange.endTime = `${this.dateRange.endTime} 23:59:59`;
       this.init();
     },
-    searchValue(newVal, oldVal) {
-      if (newVal === '' && oldVal !== '' && this.isFilter) {
-        this.isFilter = false;
-        this.fetchList();
-      }
-    },
     'pagination.current'(value) {
       this.currentBackup = value;
+    },
+    searchSelectValue(newVal) {
+      this.searchData = newVal.length ? Object.fromEntries(newVal.map((v) => [v.id, v.values[0].id])) : {};
+      this.resetPagination();
+      this.fetchList();
     },
   },
   created() {
@@ -638,37 +630,6 @@ export default {
       this.fetchList();
     },
 
-    handleMemberSelect(payload) {
-      this.applicants = [...payload];
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handleClear() {
-      this.statusValue = '';
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handleStatusSelect() {
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handleSearch() {
-      if (this.searchValue === '') {
-        return;
-      }
-      this.isFilter = true;
-      this.resetPagination();
-      this.fetchList();
-    },
-
-    handlePageSearch() {
-      this.resetPagination();
-      this.fetchList();
-    },
-
     handleSelect(value, option) {
       this.resetPagination();
       this.fetchList();
@@ -696,11 +657,13 @@ export default {
       this.fetchList();
     },
 
-    computedExpires(currentExpires) {
-      if (!currentExpires) {
-        return '--';
+    // 表头过滤
+    handleFilterChange(filds) {
+      if (filds.apply_status) {
+        this.statusValue = filds.apply_status.length ? filds.apply_status[0] : '';
       }
-      return `${Math.ceil(currentExpires / (24 * 3600))}天`;
+      this.resetPagination();
+      this.fetchList();
     },
 
     init() {
@@ -713,11 +676,11 @@ export default {
         limit: this.pagination.limit,
         offset: this.pagination.limit * (this.pagination.current - 1),
         appCode: this.appCode,
-        applied_by: this.applicants.length > 0 ? this.applicants[0] : '',
+        applied_by: this.searchData['applied_by'] || '',
         apply_status: this.statusValue,
         applied_time_start: new Date(this.dateRange.startTime).getTime() / 1000,
         applied_time_end: new Date(this.dateRange.endTime).getTime() / 1000,
-        query: this.searchValue,
+        query: this.searchData['keyword'] || '',
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
@@ -753,18 +716,46 @@ export default {
     },
 
     clearFilterKey() {
-      this.searchValue = '';
-      this.applicants = [];
-      this.handleClear();
+      this.statusValue = '';
+      this.searchSelectValue = [];
+      this.$refs.tableRef.clearFilter();
+      this.resetPagination();
     },
 
     updateTableEmptyConfig() {
-      if (this.searchValue || this.statusValue || this.applicants.length) {
+      if (this.searchSelectValue.length || this.statusValue) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
       // 恒定条件不展示清空交互
       this.tableEmptyConf.keyword = '$CONSTANT';
+    },
+    handleRemoteMethod(val) {
+      return new Promise(async (resolve) => {
+        if (val.includes(this.$t('申请人'))) {
+          resolve([]);
+          return;
+        }
+        const users = await this.getTenantUsers(val);
+        resolve(users);
+      });
+    },
+    // 获取多租户人员数据
+    async getTenantUsers(keyword) {
+      if (!this.tenantId) return [];
+      try {
+        const { data = [] } = await this.$store.dispatch('tenant/searchTenantUsers', {
+          keyword,
+          tenantId: this.tenantId,
+        });
+        return data.map(({ login_name, bk_username, ...rest }) => ({
+          ...rest,
+          name: login_name,
+          id: bk_username,
+        }));
+      } catch {
+        return [];
+      }
     },
   },
 };
@@ -773,26 +764,23 @@ export default {
 <style lang="scss" scoped>
 .search-wrapper {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 12px;
   margin-bottom: 16px;
+  .record-type-cls {
+    width: auto;
+  }
+  .left {
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .right-wrapper {
+    flex: 1;
+    max-width: 420px;
+  }
   .search-item {
     display: inline-block;
     vertical-align: middle;
-    .label {
-      margin-right: 6px;
-    }
-  }
-  .search-item.auto {
-    flex: 1;
-    .bk-form-control {
-      width: 100%;
-      max-width: 360px;
-      min-width: 120px;
-      margin-left: auto;
-    }
-  }
-  .search-btn {
-    margin-left: 5px;
   }
   .label,
   .member-wrapper,
@@ -809,9 +797,6 @@ export default {
     &.en {
       width: 130px;
     }
-  }
-  .set-ml {
-    margin-left: 18px;
   }
 }
 

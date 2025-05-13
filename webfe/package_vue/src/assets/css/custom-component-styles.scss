@@ -1,0 +1,30 @@
+@charset "UTF-8";
+
+/*MagicBox 组件兼容自定义公共样式*/
+/*tab start*/
+.paas-custom-tab-card-grid {
+  .bk-tab-header {
+    height: 42px !important;
+    background-image: none !important;
+    background: #f5f7fa;
+    .bk-tab-label-list {
+      border: none !important;
+      .bk-tab-label-item {
+        line-height: 42px !important;
+        border: none;
+        border-radius: 4px 4px 0 0;
+        background: #eaebf0;
+        margin-right: 8px;
+        &.active {
+          background: #fff;
+        }
+      }
+    }
+  }
+  .bk-tab-section {
+    border: none;
+    background-color: #fff;
+    padding: 16px 40px;
+  }
+}
+/*tab end*/

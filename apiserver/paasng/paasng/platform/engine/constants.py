@@ -152,6 +152,7 @@ class AppInfoBuiltinEnv(StrStructuredEnum):
 
     APP_ID = EnumField("APP_ID", label=_("蓝鲸应用ID"))
     APP_SECRET = EnumField("APP_SECRET", label=_("蓝鲸应用密钥"))
+    APP_TENANT_ID = EnumField("APP_TENANT_ID", label=_("蓝鲸应用租户 ID"))
 
 
 class AppRunTimeBuiltinEnv(StrStructuredEnum):

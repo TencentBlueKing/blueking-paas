@@ -236,7 +236,7 @@ export const PLATFORM_CONFIG = {
         APIGW_USER_API: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
         // APIGW API 网关接入指引
-        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/Connect/connect-gateway.md',
+        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 

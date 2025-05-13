@@ -339,6 +339,7 @@ export default {
   '输入API名称或描述，多个API以逗号分割': 'Enter API name/description, separate with commas.',
   查询: 'Query',
   '若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。': 'If the validity period is less than 180 days, but the APP is still accessing the API, the validity period will be automatically extended to 180 days (unlimited times)',
+  '将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限': 'Will apply for {t} {n} permissions for <i class="l1">{l}</i> {y} APIs',
   暂无数据: 'No Data',
   API的权限: 'API permissions',
   系统: 'System',
@@ -3005,4 +3006,10 @@ export default {
   '基础开发：包含部署管理、进程管理、日志查询、环境配置、访问入口、增强服务信息查看、代码库配置、镜像凭证等功能': 'Basic Development: Includes deployment management, process management, log query, environment configuration, access entry, enhanced service information viewing, code repository configuration, and image credentials',
   '模块管理：包含设置为主模块、新建模块': 'Module Management: Includes setting as main module and creating new module',
   '增强服务管理：包含增强服务的解绑、删除等功能': 'Enhanced Service Management: Includes unbinding and deleting enhanced services',
+  请输入申请人: 'Please enter applicant',
+  请输入网关名: 'Please enter gateway name',
+  请输入系统名称: 'Please enter system name',
+  '搜索网关名称/申请人': 'Search gateway name/applicant',
+  '有效期为永久，无需续期': 'Validity is permanent, no renewal needed',
+  '尚未获得资源权限，不支持续期': 'Resource permissions not yet obtained, renewal not supported',
 };

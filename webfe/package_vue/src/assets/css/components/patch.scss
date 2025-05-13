@@ -626,6 +626,12 @@ th.bk-table-column-selection .cell .bk-table-header-label {
     }
 }
 
+.bk-search-select-theme-theme {
+    .tippy-content {
+        padding: 0;
+    }
+}
+
 .bk-message-content {
     min-width: 130px !important;
 }

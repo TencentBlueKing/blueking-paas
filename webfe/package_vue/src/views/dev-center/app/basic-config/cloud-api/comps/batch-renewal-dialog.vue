@@ -13,7 +13,10 @@
       <paasng-alert>
         <div slot="title">
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-html="dialogTips" class="renew-tips-container"></div>
+          <div
+            v-html="dialogTips"
+            class="renew-tips-container"
+          ></div>
         </div>
       </paasng-alert>
       <div class="api-batch-apply-content">
@@ -51,14 +54,9 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
-              <span
-                v-if="props.row.permission_action === 'apply'"
-                style="color: #ff5656;"
-              > {{ $t('无权限，不可续期') }} </span>
-              <span
-                v-else
-                style="color: #ffb400;"
-              >{{ applyNewTime }}</span>
+              <span style="color: #ffb400">
+                {{ applyNewTime }}
+              </span>
             </template>
           </bk-table-column>
         </bk-table>
@@ -66,27 +64,24 @@
       <bk-form
         :label-width="localLanguage === 'en' ? 110 : 80"
         :model="formData"
-        style="margin-top: 25px;"
+        style="margin-top: 25px"
       >
         <bk-form-item
           :label="$t('授权期限')"
           required
           property="expired"
         >
-          <div class="bk-button-group bk-button-group-cls">
-            <bk-button
-              :class="formData.expired === 6 ? 'is-selected' : ''"
-              @click="formData.expired = 6"
-            >
+          <bk-radio-group v-model="formData.expired">
+            <bk-radio-button :value="6">
               {{ $t('6个月') }}
-            </bk-button>
-            <bk-button
-              :class="formData.expired === 12 ? 'is-selected' : ''"
-              @click="formData.expired = 12"
-            >
+            </bk-radio-button>
+            <bk-radio-button :value="12">
               {{ $t('12个月') }}
-            </bk-button>
-          </div>
+            </bk-radio-button>
+            <bk-radio-button :value="0">
+              {{ $t('永久') }}
+            </bk-radio-button>
+          </bk-radio-group>
         </bk-form-item>
       </bk-form>
     </div>
@@ -100,7 +95,7 @@
         {{ $t('确定') }}
       </bk-button>
       <bk-button
-        style="margin-left: 10px;"
+        style="margin-left: 10px"
         @click="handleCancel"
       >
         {{ $t('取消') }}
@@ -148,7 +143,7 @@ export default {
       visible: false,
       loading: false,
       formData: {
-        expired: 6,
+        expired: 12,
       },
       renewKey: -1,
       applyNewTime: 0,
@@ -157,11 +152,11 @@ export default {
   computed: {
     // 可申请
     applyRows() {
-      return this.rows.filter(item => !item.applyDisabled);
+      return this.rows.filter((item) => !item.applyDisabled);
     },
     // 可续期
     renewalRows() {
-      return this.rows.filter(item => !item.renewDisabled);
+      return this.rows.filter((item) => !item.renewDisabled);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -170,7 +165,10 @@ export default {
       if (!this.applyRows.length) {
         return this.$t('您将续期 <i>{n1}</i> 个权限；', { n1: this.renewalRows.length });
       }
-      return this.$t('您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限已过期、权限永久有效等情况不支持续期', { n1: this.renewalRows.length, n2: this.applyRows.length });
+      return this.$t(
+        '您将续期 <i>{n1}</i> 个权限；<i class="n2">{n2}</i> 个权限不可续期，API 无权限、权限已过期、权限永久有效等情况不支持续期',
+        { n1: this.renewalRows.length, n2: this.applyRows.length }
+      );
     },
   },
   watch: {
@@ -178,7 +176,7 @@ export default {
       handler(value) {
         this.visible = !!value;
         if (this.visible) {
-          const timestamp = (new Date().getTime()) + this.formData.expired * 30 * 24 * 60 * 60 * 1000;
+          const timestamp = new Date().getTime() + this.formData.expired * 30 * 24 * 60 * 60 * 1000;
           this.applyNewTime = formatDate(timestamp);
           this.renewKey = +new Date();
         }
@@ -186,7 +184,7 @@ export default {
       immediate: true,
     },
     'formData.expired'(value) {
-      const timestamp = (new Date().getTime()) + value * 30 * 24 * 60 * 60 * 1000;
+      const timestamp = new Date().getTime() + value * 30 * 24 * 60 * 60 * 1000;
       this.applyNewTime = formatDate(timestamp);
       this.renewKey = +new Date();
     },
@@ -205,9 +203,9 @@ export default {
           appCode: this.appCode,
         };
         if (this.isComponent) {
-          params.data.component_ids = this.renewalRows.map(item => item.id);
+          params.data.component_ids = this.renewalRows.map((item) => item.id);
         } else {
-          params.data.resource_ids = this.renewalRows.map(item => item.id);
+          params.data.resource_ids = this.renewalRows.map((item) => item.id);
         }
         const methods = this.isComponent ? 'sysRenewal' : 'renewal';
         await this.$store.dispatch(`cloudApi/${methods}`, params);
@@ -254,12 +252,12 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-    .paasng-api-batch-renewal-dialog {
-        .api-batch-apply-content {
-            position: relative;
-            margin-top: 10px;
-        }
-    }
+.paasng-api-batch-renewal-dialog {
+  .api-batch-apply-content {
+    position: relative;
+    margin-top: 10px;
+  }
+}
 </style>
 <style lang="scss">
 .renew-tips-container {

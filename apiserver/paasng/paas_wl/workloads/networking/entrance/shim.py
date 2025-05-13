@@ -110,7 +110,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
             addrs.append(
                 Address(
                     AddressType.SUBDOMAIN,
-                    self._make__url_by_protocol(d.protocol, d.https_enabled, d.host),
+                    self._make_url_by_protocol(d.protocol, d.https_enabled, d.host),
                     is_sys_reserved,
                 )
             )
@@ -126,7 +126,7 @@ class LiveEnvAddresses(BaseEnvAddresses):
                 addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
         return self._sort(addrs)
 
-    def _make__url_by_protocol(self, protocol: str, https_enabled: bool, host: str) -> str:
+    def _make_url_by_protocol(self, protocol: str, https_enabled: bool, host: str) -> str:
         if protocol == AppDomainProtocol.GRPCS:
             port = self.ingress_cfg.port_map.get_port_num(protocol)
             return URL(protocol, hostname=host, port=port, path="/").as_address()

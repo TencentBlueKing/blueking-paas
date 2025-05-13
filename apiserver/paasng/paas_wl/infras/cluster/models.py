@@ -177,9 +177,7 @@ class Cluster(UuidAuditedModel):
 
     def has_feature_flag(self, ff: ClusterFeatureFlag) -> bool:
         """检查当前集群是否支持某个特性"""
-        default_flags = ClusterFeatureFlag.get_default_flags_by_cluster_type(
-            cluster_type=ClusterType(self.type),
-        )
+        default_flags = ClusterFeatureFlag.get_default_flags()
         return self.feature_flags.get(ff, default_flags[ff])
 
 

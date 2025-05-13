@@ -20,7 +20,7 @@ import os
 import pytest
 from django.core.management import call_command
 
-from paas_wl.infras.cluster.constants import ClusterFeatureFlag, ClusterType
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.models import APIServer, Cluster
 
 pytestmark = pytest.mark.django_db(databases=["workloads"])
@@ -75,7 +75,7 @@ def test_init_cluster(https_enabled, expect):
         "bk_biz_id": "1",
     }
     assert cluster.token_value == "blueking"
-    assert cluster.feature_flags == ClusterFeatureFlag.get_default_flags_by_cluster_type(ClusterType.NORMAL)
+    assert cluster.feature_flags == ClusterFeatureFlag.get_default_flags()
     assert cluster.default_tolerations == [
         {"effect": "NoSchedule", "key": "dedicated", "operator": "Equal", "value": "bkSaaS"}
     ]

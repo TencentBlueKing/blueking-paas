@@ -34,6 +34,7 @@ from paas_wl.bk_app.processes.entities import (
     ProbeSet as WLProbeSet,
 )
 from paas_wl.bk_app.processes.entities import TCPSocketAction as WLTCPSocketAction
+from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import ProcessDeserializer, ProcessSerializer
 from paas_wl.bk_app.processes.processes import (
@@ -164,12 +165,12 @@ def test_list_cnative_module_processes_specs(bk_cnative_app):
 
 
 class TestProcessManager:
-    def test_get_previous_logs(self, bk_stag_env, wl_app):
-        """
-        测试获取进程实例上一次运行时重启日志
+    @pytest.fixture
+    def setup_log_pod(self, wl_app):
+        """Setup the pod for log retrieving.
 
-        测试需要兼容测试流水线的执行环境(无 controller)，因此通过下发 pod 进行日志测试
-        原设计是通过创建 process，再获取 pod 日志
+        测试需要兼容测试特殊执行环境(比如无 deployment controller 负责创建 Pod)，因此未采用
+        创建进程 Process 而是使用直接创建 Pod 的方式。
         """
         k8s_client = get_client_by_app(wl_app)
         KPod(k8s_client).create_or_update(
@@ -178,9 +179,15 @@ class TestProcessManager:
             body=construct_foo_pod(wl_app.scheduler_safe_name, restart_policy="Never"),
         )
 
-        manager = ProcessManager(bk_stag_env)
-        logs = manager.get_previous_logs("", wl_app.scheduler_safe_name, "main")
+    def test_get_previous_logs_normal(self, setup_log_pod, bk_stag_env, wl_app):
+        logs = ProcessManager(bk_stag_env).get_previous_logs("", wl_app.scheduler_safe_name, "main")
         assert logs is not None
+        assert isinstance(logs, str)
+
+    def test_get_previous_logs_inst_not_found(self, setup_log_pod, bk_stag_env, wl_app):
+        bad_inst_name = wl_app.scheduler_safe_name + "-bad"
+        with pytest.raises(PreviousInstanceNotFound):
+            _ = ProcessManager(bk_stag_env).get_previous_logs("", bad_inst_name, "main")
 
     @pytest.mark.usefixtures("bk_stag_wl_app")
     def test_list_cnative_processes_specs(self, bk_cnative_app, bk_stag_env):

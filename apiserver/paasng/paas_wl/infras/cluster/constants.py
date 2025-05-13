@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict
-
 from blue_krill.data_types.enum import EnumField, FeatureFlag, FeatureFlagField, IntStructuredEnum, StrStructuredEnum
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -62,16 +60,6 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_BCS_EGRESS = FeatureFlagField(label=_("支持 BCS Egress"), default=False)
     # 集群配置了子域名, 并且子域名有证书，才能启用 gRPC Ingress
     ENABLE_GRPC_INGRESS = FeatureFlagField(label=_("支持 gRPC Ingress"), default=False)
-
-    @classmethod
-    def get_default_flags_by_cluster_type(cls, cluster_type: ClusterType) -> Dict[str, bool]:
-        """get default flags by cluster_type
-
-        for virtual cluster, ENABLE_MOUNT_LOG_TO_HOST is default to False"""
-        default_flags = cls.get_default_flags()
-        if cluster_type == ClusterType.VIRTUAL:
-            default_flags[cls.ENABLE_MOUNT_LOG_TO_HOST] = False
-        return default_flags
 
 
 class ClusterAnnotationKey(StrStructuredEnum):

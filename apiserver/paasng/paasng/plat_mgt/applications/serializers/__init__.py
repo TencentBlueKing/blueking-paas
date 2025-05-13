@@ -16,25 +16,31 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .application import (
-    ApplicationListFilterSLZ,
-    ApplicationListSLZ,
-    ApplicationTypeSLZ,
-    TenantAppStatisticsSLZ,
-    TenantModeSLZ,
+    ApplicationClusterSLZ,
+    ApplicationDetailOutputSLZ,
+    ApplicationListFilterInputSLZ,
+    ApplicationListOutputSLZ,
+    ApplicationNameUpdateInputSLZ,
+    ApplicationTypeOutputSLZ,
+    TenantAppStatisticsOutputSLZ,
+    TenantModeListOutputSLZ,
 )
 from .feature import (
-    ApplicationFeatureFlagSLZ,
-    UpdateApplicationFeatureFlagSLZ,
+    ApplicationFeatureFlagListOutputSLZ,
+    ApplicationFeatureFlagUpdateInputSLZ,
 )
 
 __all__ = [
     # application
-    "ApplicationListSLZ",
-    "ApplicationListFilterSLZ",
-    "ApplicationTypeSLZ",
-    "TenantAppStatisticsSLZ",
-    "TenantModeSLZ",
+    "ApplicationClusterSLZ",
+    "ApplicationDetailOutputSLZ",
+    "ApplicationListFilterInputSLZ",
+    "ApplicationListOutputSLZ",
+    "ApplicationNameUpdateInputSLZ",
+    "ApplicationTypeOutputSLZ",
+    "TenantAppStatisticsOutputSLZ",
+    "TenantModeListOutputSLZ",
     # feature
-    "ApplicationFeatureFlagSLZ",
-    "UpdateApplicationFeatureFlagSLZ",
+    "ApplicationFeatureFlagListOutputSLZ",
+    "ApplicationFeatureFlagUpdateInputSLZ",
 ]

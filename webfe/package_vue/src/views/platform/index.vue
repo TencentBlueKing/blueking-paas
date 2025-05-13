@@ -11,11 +11,13 @@
       <TopBar
         :title="title"
         :tab-panels="panels"
-        :key="routeIndex"
         @tab-change="handleTabChange"
       ></TopBar>
       <div class="content-area">
-        <router-view :tab-active="active" />
+        <router-view
+          :tab-active="active"
+          :key="routeIndex"
+        />
       </div>
     </div>
   </div>
@@ -38,7 +40,7 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }],
+      groups: [{ platform: this.$t('服务接入') }, { user: this.$t('用户管理') }],
       active: '',
       routeIndex: 0,
     };

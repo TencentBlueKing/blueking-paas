@@ -364,5 +364,89 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/overview/tenant_config_statuses/`;
       return http.get(url);
     },
+    /**
+     * 获取平台管理员
+     */
+    getAdminUser() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/`;
+      return http.get(url);
+    },
+    /**
+     * 添加平台管理员
+     */
+    addPlatformAdministrators({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/`;
+      return http.post(url, data);
+    },
+    /**
+     * 删除平台管理员
+     */
+    deletePlatformAdministrator({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/admin_user/${id}/`;
+      return http.delete(url);
+    },
+    /**
+     * 获取已授权应用列表
+     */
+    getSysapiClient() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
+      return http.get(url);
+    },
+    /**
+     * 获取系统API权限列表
+     */
+    getSystemApiRoles() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/system_api_roles/`;
+      return http.get(url);
+    },
+    /**
+     * 添加已授权应用列表权限
+     */
+    addSystemApiUser({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
+      return http.post(url, data);
+    },
+    /**
+     * 修改已授权应用权限
+     */
+    updateSystemApiUser({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除已授权应用
+     */
+    deleteSystemApiUser({}, { name }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/sysapi_client/${name}/`;
+      return http.delete(url);
+    },
+    /**
+     * 获取用户特性
+     */
+    getAccountFeatureFlags() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/`;
+      return http.get(url);
+    },
+    /**
+     * 获取特性列表
+     */
+    getAccountFeatures() {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_features/`;
+      return http.get(url);
+    },
+    /**
+     * 添加用户特性
+     */
+    addAccountFeatureFlags({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/`;
+      return http.post(url, data);
+    },
+    /**
+     * 删除用户特性
+     */
+    deleteAccountFeatureFlags({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/users/account_feature_flags/${id}/`;
+      return http.delete(url);
+    },
   },
 };

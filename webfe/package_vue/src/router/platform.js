@@ -35,6 +35,13 @@ const platformAddOns = () =>
       window.showDeployTip(error);
     });
 
+const platformUserManagement = () =>
+  import(/* webpackChunkName: 'platform-user' */ '@/views/platform/user-management')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -88,6 +95,19 @@ export const platformRouters = [
           panels: [
             { name: 'config', label: i18n.t('服务配置') },
             { name: 'plan', label: i18n.t('服务方案') },
+          ],
+        },
+      },
+      {
+        path: 'user',
+        component: platformUserManagement,
+        name: 'platformUserManagement',
+        meta: {
+          title: i18n.t('用户管理'),
+          panels: [
+            { name: 'admin', label: i18n.t('平台管理员') },
+            { name: 'feature', label: i18n.t('用户特性') },
+            { name: 'authorized', label: i18n.t('已授权应用') },
           ],
         },
       },

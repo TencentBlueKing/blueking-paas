@@ -27,7 +27,7 @@ from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
 from paasng.platform.applications.models import Application
-from tests.utils.helpers import generate_random_string
+from tests.utils.helpers import generate_random_string, override_settings
 
 pytestmark = pytest.mark.django_db
 
@@ -42,21 +42,48 @@ class TestPlatformManagerViewSet:
         assert rsp.status_code == status.HTTP_200_OK
         assert isinstance(rsp.data, list)
 
-    def test_bulk_create_manager(self, plat_mgt_api_client):
-        """测试批量创建平台管理员"""
+    def test_bulk_create_manager_single_tenant(self, plat_mgt_api_client):
+        """测试单租户模式下批量创建平台管理员"""
         bulk_url = reverse("plat_mgt.users.admin_user.bulk")
-        users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
-        user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+        with override_settings(ENABLE_MULTI_TENANT_MODE=False):
+            users = [f"test_user_{generate_random_string(6)}" for _ in range(3)]
+            user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+            data = [
+                {"user": users[0], "tenant_id": "non-default"},
+                {"user": users[1], "tenant_id": None},
+                {"user": users[2]},
+            ]
+            rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+            assert rsp.status_code == status.HTTP_201_CREATED
 
-        data = [{"user": users[0], "tenant_id": "default"}, {"user": users[1], "tenant_id": "default"}]
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_201_CREATED
+            for user_id in user_ids:
+                profile = UserProfile.objects.get(user=user_id)
+                assert profile.role == SiteRole.ADMIN.value
+                assert profile.tenant_id == "default"
 
-        # 验证用户角色已创建且为管理员, 租户为给定租户
-        for user_id in user_ids:
-            profile = UserProfile.objects.get(user=user_id)
-            assert profile.role == SiteRole.ADMIN.value
-            assert profile.tenant_id == "default"
+    def test_bulk_create_manager_multi_tenant(self, plat_mgt_api_client):
+        """测试多租户模式下批量创建平台管理员"""
+        bulk_url = reverse("plat_mgt.users.admin_user.bulk")
+        with override_settings(ENABLE_MULTI_TENANT_MODE=True):
+            # 测试租户 ID 为 None 或缺失的情况
+            users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
+            data = [{"user": users[0]}, {"user": users[1], "tenant_id": None}]
+            rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+            assert rsp.status_code == status.HTTP_400_BAD_REQUEST
+            assert "VALIDATION_ERROR" in rsp.data["code"]
+
+            # 测试租户 ID 为有效值的情况
+            users = [f"test_user_{generate_random_string(6)}" for _ in range(2)]
+            user_ids = [user_id_encoder.encode(settings.USER_TYPE, user) for user in users]
+            tenant_id = "non-default"
+            data = [{"user": users[0], "tenant_id": tenant_id}, {"user": users[1], "tenant_id": tenant_id}]
+            rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
+            assert rsp.status_code == status.HTTP_201_CREATED
+
+            for user_id in user_ids:
+                profile = UserProfile.objects.get(user=user_id)
+                assert profile.role == SiteRole.ADMIN.value
+                assert profile.tenant_id == tenant_id
 
     def test_destroy_manager(self, plat_mgt_api_client):
         """测试删除平台管理员"""

@@ -39,7 +39,7 @@ class CreatePlatformManagerSLZ(serializers.Serializer):
     """创建平台管理员序列化器"""
 
     user = serializers.CharField(help_text="用户 ID")
-    tenant_id = serializers.CharField(help_text="租户 ID", default="")
+    tenant_id = serializers.CharField(help_text="租户 ID", allow_null=True, default=None)
 
     def validate_tenant_id(self, tenant_id) -> str:
         """根据多租户模式验证和填充租户ID"""

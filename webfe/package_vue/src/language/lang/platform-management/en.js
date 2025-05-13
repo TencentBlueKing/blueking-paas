@@ -268,5 +268,6 @@ export default {
   '管理员能查看并执行 “平台管理” 导航下所有操作。': 'Administrators can view and perform all operations under the "Platform Management" navigation.',
   '平台通过用户特性功能，将部分功能以灰度方式开放给用户。添加用户特性后，用户可以在产品页面上访问相关功能。': 'The platform partially opens features to users in a phased manner through the user feature function. After adding user feature, users can access related features on the product page.',
   '请输入应用 ID，按 Enter 搜索': 'Please enter the application ID and press Enter to search',
-  '删除后将无法再使用平台管理相关功能。': 'After deletion, platform management-related features will no longer be available.',
+  删除后: 'After deletion',
+  '将无法再使用平台管理相关功能。': 'will no longer be able to use platform management-related features.',
 };

@@ -112,7 +112,14 @@
       :title="$t('确认删除平台管理员')"
       @confirm="deletePlatformAdministrator"
     >
-      {{ $t('删除后将无法再使用平台管理相关功能。') }}
+      <span>{{ $t('删除后') }}，</span>
+      <bk-user-display-name
+        v-if="platformFeature.MULTI_TENANT_MODE"
+        :user-id="deleteDialogConfig.user"
+      ></bk-user-display-name>
+      <span v-else>{{ deleteDialogConfig.user }}</span>
+      &nbsp;
+      {{ $t('将无法再使用平台管理相关功能。') }}
     </bk-dialog>
   </div>
 </template>
@@ -143,6 +150,7 @@ export default {
         visible: false,
         input: '',
         isLoading: false,
+        user: '',
       },
       userRule: [
         {
@@ -225,6 +233,7 @@ export default {
     handleDelete(row) {
       this.deleteDialogConfig.visible = true;
       this.deleteDialogConfig.input = row.user;
+      this.deleteDialogConfig.user = row.user;
     },
     async handleConfirm() {
       try {

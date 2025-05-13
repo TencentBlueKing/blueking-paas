@@ -15,13 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List
 
 from rest_framework import serializers
 
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.infras.iam.utils import get_app_actions_by_role
-from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.serializers.member_role import RoleField
 from paasng.utils.serializers import UserField
 
@@ -45,27 +41,3 @@ class ApplicationMembershipUpdateInputSLZ(serializers.Serializer):
     """平台管理 - 修改应用成员序列化器"""
 
     role = RoleField(help_text="用户角色")
-
-
-class PermissionModelListOutputSLZ(serializers.Serializer):
-    """权限模型序列化器"""
-
-    name = serializers.CharField(help_text="角色名称")
-    label = serializers.SerializerMethodField(help_text="角色名称标签")
-    actions = serializers.SerializerMethodField(help_text="角色权限列表")
-
-    def get_label(self, obj) -> str:
-        role = ApplicationRole[obj["name"].upper()]
-        return role.get_choice_label(role)
-
-    def get_actions(self, obj) -> List[Dict[str, str]]:
-        role = ApplicationRole[obj["name"].upper()]
-        app_actions = get_app_actions_by_role(role)
-        actions = [
-            {
-                "action": action,
-                "label": AppAction.get_choice_label(action),
-            }
-            for action in app_actions
-        ]
-        return actions

@@ -69,13 +69,13 @@ urlpatterns = [
         name="plat_mgt.applications.members",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/(?P<user_id>[^/]+)/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/(?P<user_id>[0-9a-z]+)/?$",
         views.ApplicationMemberViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="plat_mgt.applications.members.detail",
     ),
     re_path(
-        r"^api/plat_mgt/applications/view_permission_model/$",
-        views.ApplicationMemberViewSet.as_view({"get": "view_permission_model"}),
-        name="plat_mgt.applications.members.view_permission_model",
+        r"^api/plat_mgt/applications/members/roles/$",
+        views.ApplicationMemberViewSet.as_view({"get": "get_roles"}),
+        name="plat_mgt.applications.members.get_roles",
     ),
 ]

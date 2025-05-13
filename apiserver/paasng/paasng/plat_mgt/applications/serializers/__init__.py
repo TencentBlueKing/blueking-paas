@@ -33,7 +33,6 @@ from .member import (
     ApplicationMembershipCreateInputSLZ,
     ApplicationMembershipListOutputSLZ,
     ApplicationMembershipUpdateInputSLZ,
-    PermissionModelListOutputSLZ,
 )
 
 __all__ = [
@@ -53,5 +52,4 @@ __all__ = [
     "ApplicationMembershipCreateInputSLZ",
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
-    "PermissionModelListOutputSLZ",
 ]

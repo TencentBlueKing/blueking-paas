@@ -118,13 +118,8 @@ class TestApplicationMemberViewSet:
         # 检查成员已被删除
         assert self._assert_user_in_role(bk_app, 2, test_user.username, should_exist=False)
 
-    def test_view_permission_model(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.applications.members.view_permission_model")
+    def test_get_roles(self, plat_mgt_api_client):
+        url = reverse("plat_mgt.applications.members.get_roles")
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
-        assert isinstance(rsp.data, list)
-        assert len(rsp.data) == 3
-        for role in rsp.data:
-            assert "name" in role
-            assert "label" in role
-            assert "actions" in role
+        assert "results" in rsp.data

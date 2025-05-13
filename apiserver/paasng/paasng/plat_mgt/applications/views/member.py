@@ -19,7 +19,6 @@
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -30,11 +29,8 @@ from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
-    fetch_user_roles,
     remove_user_all_roles,
 )
-from paasng.misc.audit import constants
-from paasng.misc.audit.service import DataDetail
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationMembership, JustLeaveAppManager
@@ -49,17 +45,6 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
 
     queryset = ApplicationMembership.objects.all()
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
-    pagination_class = LimitOffsetPagination
-
-    @staticmethod
-    def _gen_data_detail(code: str, username: str) -> DataDetail:
-        return DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "username": username,
-                "roles": [ApplicationRole(role).name.lower() for role in fetch_user_roles(code, username)],
-            },
-        )
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
@@ -143,21 +128,9 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications.members"],
-        responses={status.HTTP_200_OK: slzs.PermissionModelListOutputSLZ(many=True)},
-    )
-    def view_permission_model(self, request):
-        """查看权限模型"""
-
-        data = []
-        excluded_roles = {"NOBODY", "COLLABORATOR", "_choices_labels"}
-        for role in ApplicationRole:
-            if role.name in excluded_roles:
-                continue
-            data.append({"name": role.name.lower()})
-        slz = slzs.PermissionModelListOutputSLZ(data, many=True)
-        return Response(data=slz.data, status=status.HTTP_200_OK)
+    def get_roles(self, request):
+        """查看所有角色列表"""
+        return Response({"results": ApplicationRole.get_django_choices()})
 
     def check_admin_count(self, app_code: str, username: str):
         # Check whether the application has at least one administrator when the membership was deleted

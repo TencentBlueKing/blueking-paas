@@ -49,13 +49,11 @@ def assign_custom_hosts(app: WlApp, domains: List[AutoGenDomain], default_servic
         SubdomainAppIngressMgr(a_app).sync(default_service_name=default_service_name, delete_when_empty=True)
 
 
-def save_subdomains(
-    app: WlApp, domains: List[AutoGenDomain], protocol: str = AppDomainProtocol.HTTP_OR_HTTPS
-) -> Set[WlApp]:
+def save_subdomains(app: WlApp, domains: List[AutoGenDomain], protocol: str = AppDomainProtocol.HTTP) -> Set[WlApp]:
     """Save subdomains to database, return apps affected by this save operation.
 
     :param domains: List of AutoGenDomain
-    :param protocol: protocol for all subdomains
+    :param protocol: protocol for all subdomains. protocol options: AppDomainProtocol.HTTP, AppDomainProtocol.GRPC
     """
     hosts = [domain.host for domain in domains]
     existed_domains = AppDomain.objects.filter(
@@ -70,7 +68,7 @@ def save_subdomains(
             defaults={
                 "app": app,
                 "source": AppDomainSource.AUTO_GEN,
-                "https_enabled": True if protocol == AppDomainProtocol.GRPCS else domain.https_enabled,
+                "https_enabled": domain.https_enabled,
                 "protocol": protocol,
             },
         )

@@ -30,7 +30,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 class Test__save_addresses:
     @pytest.mark.parametrize(
         ("protocol", "expected_app_domain_count", "expected_sub_path_count"),
-        [(AppDomainProtocol.HTTP_OR_HTTPS, 3 * 2, 3), (AppDomainProtocol.GRPCS, 3 * 2, 0)],
+        [(AppDomainProtocol.HTTP, 3 * 2, 3), (AppDomainProtocol.GRPC, 3 * 2, 0)],
     )
     def test(
         self,
@@ -137,26 +137,3 @@ class TestAddrResourceManager:
         Domain.objects.all().delete()
         mapping = addr_mgr.build_mapping()
         assert len(mapping.spec.data) == 0
-
-    def test_intergrated_for_grpc(self, bk_module, bk_stag_env, bk_stag_wl_app):
-        AppDomain.objects.create(
-            app=bk_stag_wl_app,
-            host="foo-subdomain.example.com",
-            source=AppDomainSource.AUTO_GEN,
-            protocol=AppDomainProtocol.GRPCS,
-            https_enabled=True,
-        )
-        AppDomain.objects.create(
-            app=bk_stag_wl_app,
-            host="bar-subdomain.example.com",
-            source=AppDomainSource.AUTO_GEN,
-            protocol=AppDomainProtocol.GRPCS,
-            https_enabled=False,
-        )
-        AppSubpath.objects.create(app=bk_stag_wl_app, subpath="/foo-subpath/", source=AppSubpathSource.DEFAULT)
-
-        addr_mgr = AddrResourceManager(bk_stag_env, AppDomainProtocol.GRPCS)
-        mapping = addr_mgr.build_mapping()
-
-        # grpc 仅支持生成 app domain, 并且启用了 https
-        assert len(mapping.spec.data) == 1

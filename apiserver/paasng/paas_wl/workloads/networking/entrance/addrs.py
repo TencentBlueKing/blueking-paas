@@ -38,7 +38,7 @@ class URL:
     query: str = ""
 
     def as_address(self):
-        if self.protocol == AppDomainProtocol.GRPCS:
+        if self.protocol.startswith(AppDomainProtocol.GRPC):
             return f"{self.protocol}://{self.hostname}:{self.port}{self.path}"
 
         query = f"?{self.query}" if self.query else ""

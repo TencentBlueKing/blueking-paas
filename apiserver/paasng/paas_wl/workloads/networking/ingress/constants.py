@@ -49,8 +49,8 @@ class AppDomainSource(IntStructuredEnum):
 
 
 class AppDomainProtocol(StrStructuredEnum):
-    HTTP_OR_HTTPS = EnumField("http_or_https")
-    GRPCS = EnumField("grpcs")
+    HTTP = EnumField("http")
+    GRPC = EnumField("grpc")
 
 
 class AppSubpathSource(IntStructuredEnum):

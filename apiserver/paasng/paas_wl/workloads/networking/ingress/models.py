@@ -37,7 +37,7 @@ class AppDomain(AuditedModel):
     host = models.CharField(max_length=128)
 
     # See `AppDomainProtocol` for possible values
-    protocol = models.CharField(max_length=16, default=AppDomainProtocol.HTTP_OR_HTTPS.value)
+    protocol = models.CharField(max_length=16, default=AppDomainProtocol.HTTP.value)
 
     # This field was designed for supported `path_prefix` customization, but only '/' (or None)
     # values are currently used.

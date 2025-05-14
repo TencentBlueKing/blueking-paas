@@ -121,22 +121,19 @@ def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
     """Sync the networking related resources for env, such as Ingress etc."""
 
     if _need_exposed_services(res):
-        exposed_type = _find_exposed_type(res) or ExposedType()
-        protocol = (
-            AppDomainProtocol.HTTP_OR_HTTPS
-            if exposed_type.name == ExposedTypeName.BK_HTTP
-            else ExposedTypeName.BK_GRPC
-        )
+        exposed_type = _find_exposed_type(res)
+        assert exposed_type is not None, "exposed type should not be None when need exposed services"
+        protocol = AppDomainProtocol.HTTP if exposed_type.name == ExposedTypeName.BK_HTTP else ExposedTypeName.BK_GRPC
         deploy_networking(env, protocol=protocol)
     else:
         delete_networking(env)
 
 
-def deploy_networking(env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTTP_OR_HTTPS) -> None:
+def deploy_networking(env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTTP) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
 
     save_addresses(env, protocol)
-    mapping = AddrResourceManager(env, protocol).build_mapping()
+    mapping = AddrResourceManager(env).build_mapping()
 
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:

@@ -127,8 +127,11 @@ class LiveEnvAddresses(BaseEnvAddresses):
         return self._sort(addrs)
 
     def _make_url_by_protocol(self, protocol: str, https_enabled: bool, host: str) -> str:
-        if protocol == AppDomainProtocol.GRPCS:
+        if protocol == AppDomainProtocol.GRPC:
             port = self.ingress_cfg.port_map.get_port_num(protocol)
+            if https_enabled:
+                protocol = "grpcs"
+
             return URL(protocol, hostname=host, port=port, path="/").as_address()
 
         return self._make_url(https_enabled, host)

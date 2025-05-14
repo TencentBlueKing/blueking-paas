@@ -15,7 +15,6 @@ clean:  ## 清理产物
 pack: ${ROOT}/output  ## 打包 buildpack
 	$(eval name ?= bk-buildpack-go-${version}.tar)
 	cd buildpack && tar cvhf ${ROOT}/output/${name} --exclude=test *
-	make unpatch
 
 
 ##@ Test

@@ -3,7 +3,7 @@
 # 在安装 Python 环境之前执行
 
 # 设置 vendor 到 PATH
-export PATH=$PATH:$ROOT_DIR/vendor/
+export PATH=$PATH:$BUILDPACK_DIR/vendor/
 
 # 为 heroku pip-install 提供可编辑目录
 mkdir -p /app/.heroku/src

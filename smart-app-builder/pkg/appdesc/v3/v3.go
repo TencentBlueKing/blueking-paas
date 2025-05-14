@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
-	
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 // AppDescConfig specVersion: 3 版本的 app_desc

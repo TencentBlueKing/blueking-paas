@@ -1,0 +1,9 @@
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+      - id: smart-app-builder-lint
+        language: system
+        name: run make lint for "smart-app-builder"
+        entry: bash -c "cd smart-app-builder && make lint"
+        files: '^smart-app-builder/'

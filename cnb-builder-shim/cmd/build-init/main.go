@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -30,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/buildpack"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/dockercreds"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
@@ -149,9 +152,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("Setting buildpacks execute order...")
-	if err = setupBuildpacksOrder(logger, *buildpacks, cnbDir); err != nil {
-		logger.Error(err, "Failed to set buildpacks execute order")
+	logger.Info("Setup buildpacks...")
+	if err = setupBuildpacks(logger, *buildpacks, cnbDir); err != nil {
+		logger.Error(err, "Failed to setup buildpacks")
 		os.Exit(1)
 	}
 
@@ -160,13 +163,13 @@ func main() {
 		logger.Error(err, "Failed to fetch source code")
 		os.Exit(1)
 	}
-	if err = ChownR(appDir, *uid, *gid); err != nil {
+	if err = chownR(appDir, *uid, *gid); err != nil {
 		logger.Error(err, "Failed to ChownR")
 		os.Exit(1)
 	}
 }
 
-// fetchSource: 拉取源码
+// 拉取应用源代码
 func fetchSource(logger logr.Logger, appDir string) error {
 	url, err := url.Parse(*sourceUrl)
 	if err != nil {
@@ -189,7 +192,7 @@ func fetchSource(logger logr.Logger, appDir string) error {
 	return nil
 }
 
-// setupPlatformEnv: 初始化 build 阶段可使用的环境变量
+// 初始化 build 阶段可使用的环境变量
 // 基于 lifecycle 协议, build 阶段的环境变量需要将环境变量按文件写入到 /platform/env 目录
 func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) error {
 	err := os.MkdirAll(filepath.Join(platformDir, "env"), 0744)
@@ -251,32 +254,62 @@ type GroupElement struct {
 	Optional bool `toml:"optional,omitempty" json:"optional,omitempty"`
 }
 
-// setupBuildpacksOrder: 根据环境变量设置 buildpacks 的执行顺序
-func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) error {
-	err := os.MkdirAll(cnbDir, 0744)
-	if err != nil {
+// 根据环境变量设置 buildpacks 的执行顺序，若发现某 buildpack 声明为远程，则下载并解压到 /cnb/buildpacks 目录
+//
+// buildpack 的格式为:
+// oci-image bk-buildpack-apt urn:cnb:registry:fagiani/apt v2  ->  builder 镜像内置
+// oci-embedded bk-buildpack-python blueking/python v213       ->  builder 镜像内置
+// tgz bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205   ->  远程下载
+// 具体构建包类型说明可查看 buildpack.Type 及其常量定义
+func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error {
+	if err := os.MkdirAll(cnbDir, 0744); err != nil {
 		return errors.Wrap(err, "failed to create cnb dir")
 	}
-	parts := strings.Split(buildpacks, ";")
+
 	var group Group
-	for _, part := range parts {
-		items := strings.SplitN(part, " ", 4)
-		if len(items) < 4 || len(items) > 5 {
-			logger.V(2).Info("Invalid buildpack config", "bp", part)
+	for _, bp := range strings.Split(buildpacks, ";") {
+		items := strings.SplitN(bp, " ", 4)
+		if len(items) != 4 {
+			logger.Info("Invalid buildpack config", "bp", bp)
 			continue
 		}
 
-		bpName := items[1]
-		version := items[3]
-		group.Group = append(group.Group, GroupElement{
-			ID:      bpName,
-			Version: version,
-		})
+		// 构建包类型
+		bpType := buildpack.Type(items[0])
+
+		// 检查 bpType 是否为受支持的类型
+		if !slices.Contains(buildpack.SupportedBuildpackTypes, bpType) {
+			logger.Info("Unsupported buildpack type", "type", bpType)
+			continue
+		}
+
+		// 构建包名称、Url、版本
+		bpName, bpUrl, bpVersion := items[1], items[2], items[3]
+
+		// 目前按约定，仅支持下载 tgz 类型的 buildpack，其是适配云原生 builder 的
+		// 注：不支持下载 tar 是避免下载到 slug-pilot 使用的，历史版本的 buildpack
+		if bpType == buildpack.Tgz {
+			destDir := path.Join(cnbDir, "buildpacks", bpName, bpVersion)
+			// 如果目标目录已经存在，则先清理再下载远程 buildpack（覆盖）
+			if _, err := os.Stat(destDir); err == nil {
+				logger.Info("Overwritten directory with remote buildpack", "destDir", destDir)
+
+				if err = os.RemoveAll(destDir); err != nil {
+					return errors.Wrapf(err, "failed to remove dir %s", destDir)
+				}
+			}
+
+			// 下载远程 buildpack 并解压到指定目录
+			logger.Info("Downloading remote buildpack...", "name", bpName)
+			if err := http.NewFetcher(logger).Fetch(bpUrl, destDir); err != nil {
+				return err
+			}
+		}
+
+		group.Group = append(group.Group, GroupElement{ID: bpName, Version: bpVersion})
 	}
-	var order = Order{
-		Order: []Group{group},
-	}
-	data, err := toml.Marshal(order)
+
+	data, err := toml.Marshal(Order{Order: []Group{group}})
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal order")
 	}
@@ -287,7 +320,7 @@ func setupBuildpacksOrder(logger logr.Logger, buildpacks string, cnbDir string) 
 	return nil
 }
 
-// verifyOutputImageWritable: 测试是否具有 output image 镜像的写权限
+// 测试是否具有 output image 镜像的写权限
 func verifyOutputImageWritable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyWriteAccess(keychain, *outputImage); err != nil {
 		return errors.Wrapf(err, "Error verifying write access to %q", *outputImage)
@@ -295,7 +328,7 @@ func verifyOutputImageWritable(keychain authn.Keychain) error {
 	return nil
 }
 
-// verifyCacheImageWritable: 测试是否具有 output image 镜像的写权限
+// 测试是否具有 cache image 镜像的写权限
 func verifyCacheImageWritable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyWriteAccess(keychain, *cacheImage); err != nil {
 		return errors.Wrapf(err, "Error verifying write access to %q", *cacheImage)
@@ -303,7 +336,7 @@ func verifyCacheImageWritable(keychain authn.Keychain) error {
 	return nil
 }
 
-// verifyRunImageReadable: 测试 run image 镜像存在且具有读权限
+// 测试是否具有 run image 镜像的写权限
 func verifyRunImageReadable(keychain authn.Keychain) error {
 	if err := dockercreds.VerifyReadAccess(keychain, *runImage); err != nil {
 		return errors.Wrapf(err, "Error verifying read access to run image %q", *runImage)
@@ -311,8 +344,8 @@ func verifyRunImageReadable(keychain authn.Keychain) error {
 	return nil
 }
 
-// ChownR changes the numeric uid and gid of all files in path.
-func ChownR(path string, uid, gid int) error {
+// changes the numeric uid and gid of all files in path.
+func chownR(path string, uid, gid int) error {
 	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err == nil {
 			err = os.Chown(name, uid, gid)

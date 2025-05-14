@@ -168,7 +168,14 @@ curl --location 'http://{devsandbox_ip}:8000/deploys/{deployID}/results?log=true
 
 ```json
 {
-    "log":"0 info  | 15:26:08.952363 | Starting builder... \n0 info  | 15:26:08.952393 | --> Detecting Buildpacks... \n..."
+    "log":"0 info  | 15:26:08.952363 | Starting builder... \n0 info  | 15:26:08.952393 | --> Detecting Buildpacks... \n...",
     "status": "Success"
 }
 ```
+
+## 构建包类型说明
+
+- `tgz`：压缩包类型，可以在构建阶段远程下载
+- `oci-embedded`：builder 镜像内置的本地目录类型 buildpack
+- `oci-image`：builder 镜像内置的镜像类型 buildpack
+- `oci-file`：builder 镜像内置的文件类型 buildpack

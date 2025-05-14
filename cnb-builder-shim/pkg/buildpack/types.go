@@ -16,29 +16,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package phase
+package buildpack
 
-import (
-	"context"
-	"os/exec"
-	"path/filepath"
+// Type 构建包类型
+type Type string
+
+const (
+	// Tgz tgz 类型
+	Tgz Type = "tgz"
+	// OCIEmbedded oci 内嵌类型（builder 内置）
+	OCIEmbedded Type = "oci-embedded"
+	// OCIImage oci 镜像类型
+	OCIImage Type = "oci-image"
+	// OCIFile oci 文件类型
+	OCIFile Type = "oci-file"
 )
 
-// MakeDetectorStep build the detector step
-// detector will generate group.toml(to groupPath) and plan.toml(to planPath)
-// based on order.toml(in orderPath) and source code(in appDir)
-func MakeDetectorStep(
-	ctx context.Context,
-	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string, uid, gid uint32,
-) Step {
-	args := []string{
-		"-app", appDir,
-		"-order", orderPath,
-		"-group", groupPath,
-		"-plan", planPath,
-		"-layers", layersDir,
-		"-log-level", logLevel,
-	}
-	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "detector"), args...)
-	return makeStep("Detect", "Detecting Buildpacks...", cmd, WithUser(uid, gid))
-}
+// SupportedBuildpackTypes 受支持的构建包类型
+var SupportedBuildpackTypes = []Type{Tgz, OCIEmbedded, OCIImage, OCIFile}

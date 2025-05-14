@@ -27,7 +27,6 @@ from paasng.accessories.publish.market.constant import AppType
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.sync_market.handlers import register_app_core_data
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from tests.utils.helpers import override_settings
 
@@ -136,22 +135,6 @@ class TestApplicationListView:
         else:
             # 多个结果比较集合
             assert set(actual_codes) == set(expected_codes)
-
-    def test_list_app_types(self, plat_mgt_api_client):
-        """测试获取应用类型列表"""
-
-        url = reverse("plat_mgt.applications.types")
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-        assert len(rsp.data) == len(ApplicationType.get_choices())
-
-    def test_list_tenant_mode(self, plat_mgt_api_client):
-        """测试获取租户模式列表"""
-
-        url = reverse("plat_mgt.applications.list_tenant_modes")
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-        assert len(rsp.data) == len(AppTenantMode.get_choices())
 
     def test_list_tenant_id(self, plat_mgt_api_client, prepare_applications):
         """测试获取租户 ID 列表"""

@@ -39,7 +39,6 @@ from paasng.misc.audit import constants
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record, add_app_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
 
@@ -114,28 +113,6 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
         slz = slzs.TenantAppStatisticsOutputSLZ(tenant_id_list, many=True)
-        return Response(slz.data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取应用租户模式类型列表",
-        responses={status.HTTP_200_OK: slzs.TenantModeListOutputSLZ(many=True)},
-    )
-    def list_tenant_modes(self, request, *args, **kwargs):
-        """获取应用租户模式类型列表"""
-        tenant_modes = [{"type": type, "label": label} for type, label in AppTenantMode.get_choices()]
-        slz = slzs.TenantModeListOutputSLZ(tenant_modes, many=True)
-        return Response(slz.data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取应用类型列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationTypeOutputSLZ(many=True)},
-    )
-    def list_app_types(self, request):
-        """获取应用类型列表"""
-        app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
-        slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
 

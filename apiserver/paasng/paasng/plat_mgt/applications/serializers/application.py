@@ -100,20 +100,6 @@ class TenantAppStatisticsOutputSLZ(serializers.Serializer):
     app_count = serializers.IntegerField(help_text="应用数量")
 
 
-class TenantModeListOutputSLZ(serializers.Serializer):
-    """租户模式序列化器"""
-
-    type = serializers.CharField(help_text="租户模式")
-    label = serializers.CharField(help_text="租户模式标签")
-
-
-class ApplicationTypeOutputSLZ(serializers.Serializer):
-    """应用类型序列化器"""
-
-    type = serializers.CharField(help_text="应用类型")
-    label = serializers.CharField(help_text="应用类型标签")
-
-
 # 应用详情序列化器
 
 

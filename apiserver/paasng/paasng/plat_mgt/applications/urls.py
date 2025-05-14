@@ -30,16 +30,6 @@ urlpatterns = [
         views.ApplicationListViewSet.as_view({"get": "list_tenant_app_statistics"}),
         name="plat_mgt.applications.list_tenant_app_statistics",
     ),
-    re_path(
-        r"^api/plat_mgt/applications/tenant_mode_list/$",
-        views.ApplicationListViewSet.as_view({"get": "list_tenant_modes"}),
-        name="plat_mgt.applications.list_tenant_modes",
-    ),
-    re_path(
-        r"^api/plat_mgt/applications/types/$",
-        views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
-        name="plat_mgt.applications.types",
-    ),
     # 平台管理 - 应用详情
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/$",

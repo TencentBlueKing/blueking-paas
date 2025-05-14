@@ -4,15 +4,15 @@
 > if [[ -f $APT_PROFILE_FILE ]]; then
 >     source $APT_PROFILE_FILE
 > fi
->
+> 
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/setup-user-compile-hook
->
+> 
 166a176,178
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/pre-install
->
+> 
 298a311,313
 > # -- Added by blueking builder-stack --
 > source ${ROOT_DIR}/hooks/post-install
->
+> 

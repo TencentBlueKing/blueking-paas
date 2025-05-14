@@ -42,6 +42,20 @@ const platformUserManagement = () =>
       window.showDeployTip(error);
     });
 
+const platformAppList = () =>
+  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const platformAppDetails = () =>
+  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations/details')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -109,6 +123,26 @@ export const platformRouters = [
             { name: 'admin', label: i18n.t('平台管理员') },
             { name: 'feature', label: i18n.t('用户特性') },
             { name: 'authorized', label: i18n.t('已授权应用') },
+          ],
+        },
+      },
+      {
+        path: 'apps',
+        component: platformAppList,
+        name: 'platformAppList',
+        meta: {
+          title: i18n.t('应用列表'),
+        },
+      },
+      {
+        path: 'app-detail/:code',
+        component: platformAppDetails,
+        name: 'platformAppDetails',
+        meta: {
+          title: i18n.t('应用详情'),
+          panels: [
+            { name: 'overview', label: i18n.t('概览') },
+            { name: 'feature', label: i18n.t('特性管理') },
           ],
         },
       },
